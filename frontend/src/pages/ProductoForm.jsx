@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { crearProducto, actualizarProducto, obtenerProducto } from "../services/productoService";
-import "../css/productos.css";
 import "../css/producto-form.css";
 
 const CATEGORIAS = [
@@ -29,14 +28,16 @@ function ProductoForm({ id, onVolver }) {
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [step, setStep] = useState(1);
+  const [error, setError]     = useState(null);
 
   useEffect(() => {
-    if (esEdicion) obtenerProducto(id).then(setForm).catch(err => setError(err.message));
+    if (esEdicion) obtenerProducto(id).then(setForm).catch(e => setError(e.message));
   }, [id]);
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+  };
 
   const handleCompatibilidadChange = (index, e) => {
     const nuevos = [...form.modelosCompatibles];
@@ -58,153 +59,211 @@ function ProductoForm({ id, onVolver }) {
     e.preventDefault();
     setLoading(true); setError(null);
     try {
-      esEdicion ? await actualizarProducto(id, form) : await crearProducto(form);
+      const payload = {
+        ...form,
+        precioCompra: Number(form.precioCompra),
+        precioVenta:  Number(form.precioVenta),
+        stockActual:  Number(form.stockActual),
+        stockMinimo:  Number(form.stockMinimo),
+      };
+      esEdicion ? await actualizarProducto(id, payload) : await crearProducto(payload);
       onVolver();
-    } catch (err) { setError(err.message); }
+    } catch(e) { setError(e.message); }
     finally { setLoading(false); }
   };
 
-  const margen = form.precioVenta && form.precioCompra
-    ? (((form.precioVenta - form.precioCompra) / form.precioCompra) * 100).toFixed(1)
+  const compra = Number(form.precioCompra);
+  const venta  = Number(form.precioVenta);
+  const margen = compra > 0 && venta > 0
+    ? (((venta - compra) / compra) * 100).toFixed(1)
     : null;
 
   return (
-    <div className="form-container">
-      <div className="form-page-header">
-        <button onClick={onVolver} className="btn-back">← Volver</button>
-        <h1>{esEdicion ? "✏️ Editar Producto" : "➕ Nuevo Producto"}</h1>
+    <div className="pf-page">
+
+      <header className="pf-topbar">
+        <div className="pf-topbar-left">
+          <span className="pf-topbar-title">{esEdicion ? "Editar Producto" : "Agregar Producto"}</span>
+        </div>
+        <div className="pf-topbar-right">
+          <div className="pf-search-wrap">
+            <span className="pf-search-icon">🔍</span>
+            <input className="pf-topbar-search" placeholder="Buscar en catálogo..." />
+          </div>
+          <button type="button" className="pf-icon-btn">🔔</button>
+          <button type="button" className="pf-icon-btn">⚙</button>
+          <div className="pf-avatar-sm">A</div>
+        </div>
+      </header>
+
+      <div className="pf-tabs">
+        <button type="button" className="pf-tab pf-tab--active">
+          + {esEdicion ? "Editar Producto" : "Agregar Producto"}
+        </button>
+        <button type="button" className="pf-tab" onClick={onVolver}>
+          Paquete Ver Productos
+        </button>
       </div>
 
-      {error && <p className="estado error" style={{marginBottom:"1rem"}}>{error}</p>}
+      {error && <p className="pf-error">{error}</p>}
 
-      {/* Step tabs */}
-      <div className="step-tabs">
-        <button className={`step-tab ${step === 1 ? "activo" : ""}`} onClick={() => setStep(1)}>
-          <span className="step-num">01</span> Información Básica
-        </button>
-        <button className={`step-tab ${step === 2 ? "activo" : ""}`} onClick={() => setStep(2)}>
-          <span className="step-num">02</span> Inventario y Precio
-        </button>
-        <button className={`step-tab ${step === 3 ? "activo" : ""}`} onClick={() => setStep(3)}>
-          <span className="step-num">03</span> Compatibilidad
-        </button>
-      </div>
+      <form onSubmit={handleSubmit} className="pf-layout">
 
-      <form onSubmit={handleSubmit}>
-        {/* STEP 1 */}
-        {step === 1 && (
-          <div className="producto-form">
-            <div className="step-section-title">
-              <span className="step-badge">01</span>
-              <div>
-                <h3>Información Básica</h3>
-                <p>Datos de identificación del producto</p>
-              </div>
+        <div className="pf-left">
+
+          <div className="pf-section">
+            <div className="pf-section-header">
+              <h3>Información General</h3>
             </div>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Código *</label>
-                <input name="codigo" value={form.codigo} onChange={handleChange} placeholder="Ej: FIL-001" required />
-              </div>
-              <div className="form-group">
-                <label>Nombre del Producto *</label>
-                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Ej: Filtro de aceite premium" required />
-              </div>
-              <div className="form-group">
-                <label>Marca *</label>
-                <select name="marca" value={form.marca} onChange={handleChange} required className="select-form">
-                  <option value="">Seleccionar marca...</option>
-                  {MARCAS.map(m => <option key={m}>{m}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Categoría del Producto *</label>
-                <select name="categoria" value={form.categoria} onChange={handleChange} required className="select-form">
-                  <option value="">Seleccionar categoría...</option>
+
+            <div className="pf-field pf-field--full">
+              <label>Nombre del Producto</label>
+              <input
+                name="nombre" value={form.nombre} onChange={handleChange}
+                placeholder="Ej. Pastillas de Freno Cerámicas Brembo" required
+              />
+            </div>
+
+            <div className="pf-row">
+              <div className="pf-field">
+                <label>Categoría</label>
+                <select name="categoria" value={form.categoria} onChange={handleChange} required>
+                  <option value="">Seleccionar categoría</option>
                   {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
+              <div className="pf-field">
+                <label>SKU / Código</label>
+                <input
+                  name="codigo" value={form.codigo} onChange={handleChange}
+                  placeholder="Ej. KNT-BRK-001" required
+                />
+              </div>
             </div>
-            <div className="form-actions">
-              <button type="button" onClick={onVolver} className="btn-cancelar">Cancelar</button>
-              <button type="button" onClick={() => setStep(2)} className="btn-guardar">Siguiente →</button>
+
+            <div className="pf-field pf-field--full">
+              <label>Marca</label>
+              <select name="marca" value={form.marca} onChange={handleChange} required>
+                <option value="">Seleccionar marca</option>
+                {MARCAS.map(m => <option key={m}>{m}</option>)}
+              </select>
             </div>
           </div>
-        )}
 
-        {/* STEP 2 */}
-        {step === 2 && (
-          <div className="producto-form">
-            <div className="step-section-title">
-              <span className="step-badge">02</span>
-              <div>
-                <h3>Inventario y Precio</h3>
-                <p>Control de stock y precio de venta</p>
-              </div>
-            </div>
-            <div className="form-grid">
-              <div className="form-group">
-                <label>Precio Compra *</label>
-                <input name="precioCompra" type="number" value={form.precioCompra} onChange={handleChange} placeholder="0" required />
-              </div>
-              <div className="form-group">
-                <label>Precio Venta *</label>
-                <input name="precioVenta" type="number" value={form.precioVenta} onChange={handleChange} placeholder="0" required />
-              </div>
-              <div className="form-group">
-                <label>Stock Actual *</label>
-                <input name="stockActual" type="number" value={form.stockActual} onChange={handleChange} placeholder="0" required />
-              </div>
-              <div className="form-group">
-                <label>Stock Mínimo *</label>
-                <input name="stockMinimo" type="number" value={form.stockMinimo} onChange={handleChange} placeholder="0" required />
-              </div>
-            </div>
-
-            {margen && (
-              <div className="margen-box">
-                <span>Margen de ganancia</span>
-                <strong style={{ color: margen > 0 ? "var(--success)" : "var(--error)" }}>{margen}%</strong>
-              </div>
-            )}
-
-            <div className="form-actions">
-              <button type="button" onClick={() => setStep(1)} className="btn-cancelar">← Anterior</button>
-              <button type="button" onClick={() => setStep(3)} className="btn-guardar">Siguiente →</button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3 */}
-        {step === 3 && (
-          <div className="producto-form">
-            <div className="step-section-title">
-              <span className="step-badge">03</span>
-              <div>
-                <h3>Modelos Compatibles</h3>
-                <p>Vehículos con los que es compatible este producto</p>
-              </div>
+          <div className="pf-section">
+            <div className="pf-section-header">
+              <h3>Modelos Compatibles</h3>
             </div>
 
             {form.modelosCompatibles.map((comp, index) => (
-              <div key={index} className="compatibilidad-row">
-                <input placeholder="Marca vehículo" name="marca" value={comp.marca} onChange={e => handleCompatibilidadChange(index, e)} />
-                <input placeholder="Modelo" name="modelo" value={comp.modelo} onChange={e => handleCompatibilidadChange(index, e)} />
-                <input placeholder="Año desde" name="anoDesde" type="number" value={comp.anoDesde} onChange={e => handleCompatibilidadChange(index, e)} />
-                <input placeholder="Año hasta" name="anoHasta" type="number" value={comp.anoHasta} onChange={e => handleCompatibilidadChange(index, e)} />
-                <button type="button" onClick={() => eliminarCompatibilidad(index)} className="btn-eliminar">✕</button>
+              <div key={index} className="pf-compat-row">
+                <input placeholder="Marca vehículo" name="marca" value={comp.marca}
+                  onChange={e => handleCompatibilidadChange(index, e)} />
+                <input placeholder="Modelo" name="modelo" value={comp.modelo}
+                  onChange={e => handleCompatibilidadChange(index, e)} />
+                <input placeholder="Año desde" name="anoDesde" type="number" value={comp.anoDesde}
+                  onChange={e => handleCompatibilidadChange(index, e)} />
+                <input placeholder="Año hasta" name="anoHasta" type="number" value={comp.anoHasta}
+                  onChange={e => handleCompatibilidadChange(index, e)} />
+                <button type="button" onClick={() => eliminarCompatibilidad(index)} className="pf-compat-del">X</button>
               </div>
             ))}
-            <button type="button" onClick={agregarCompatibilidad} className="btn-agregar">+ Agregar modelo</button>
+            <button type="button" onClick={agregarCompatibilidad} className="pf-add-compat">
+              + Agregar modelo compatible
+            </button>
+          </div>
+        </div>
 
-            <div className="form-actions">
-              <button type="button" onClick={() => setStep(2)} className="btn-cancelar">← Anterior</button>
-              <button type="submit" className="btn-guardar" disabled={loading}>
-                {loading ? "Guardando..." : esEdicion ? "💾 Actualizar" : "✅ Crear Producto"}
-              </button>
+        <div className="pf-right">
+          <div className="pf-section">
+            <div className="pf-section-header">
+              <h3>Precio e Inventario</h3>
+            </div>
+
+            <div className="pf-field pf-field--full">
+              <label>Precio de Compra</label>
+              <div className="pf-money-input">
+                <span>$</span>
+                <input
+                  name="precioCompra"
+                  type="text"
+                  inputMode="decimal"
+                  value={form.precioCompra}
+                  onChange={handleChange}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="pf-field pf-field--full">
+              <label>Precio de Venta</label>
+              <div className="pf-money-input">
+                <span>$</span>
+                <input
+                  name="precioVenta"
+                  type="text"
+                  inputMode="decimal"
+                  value={form.precioVenta}
+                  onChange={handleChange}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            {margen !== null && (
+              <div className={`pf-margen ${Number(margen) >= 0 ? "pf-margen--pos" : "pf-margen--neg"}`}>
+                <span>Margen de ganancia</span>
+                <strong>{margen}%</strong>
+              </div>
+            )}
+
+            <div className="pf-row">
+              <div className="pf-field">
+                <label>Stock Real</label>
+                <div className="pf-stock-input">
+                  <input
+                    name="stockActual"
+                    type="text"
+                    inputMode="numeric"
+                    value={form.stockActual}
+                    onChange={handleChange}
+                    placeholder="0"
+                  />
+                  <span>UNIDADES</span>
+                </div>
+              </div>
+              <div className="pf-field">
+                <label>Stock Mínimo</label>
+                <div className="pf-stock-input">
+                  <input
+                    name="stockMinimo"
+                    type="text"
+                    inputMode="numeric"
+                    value={form.stockMinimo}
+                    onChange={handleChange}
+                    placeholder="0"
+                  />
+                  <span>UNIDADES</span>
+                </div>
+              </div>
             </div>
           </div>
-        )}
+
+          <button type="submit" className="pf-btn-save" disabled={loading}>
+            {loading ? "Guardando..." : esEdicion ? "Actualizar Producto" : "Guardar Producto"}
+          </button>
+          <button type="button" onClick={onVolver} className="pf-btn-cancel">
+            Descartar Cambios
+          </button>
+
+          <div className="pf-info-card">
+            <p className="pf-info-title">Sincronización Automática</p>
+            <p className="pf-info-text">
+              Los productos guardados se sincronizarán automáticamente con el inventario
+              y estarán disponibles para facturación inmediata.
+            </p>
+          </div>
+        </div>
       </form>
     </div>
   );
