@@ -1,141 +1,272 @@
-.form-page-header {
-  display: flex;
-  align-items: center;
-  gap: 1.2rem;
-  margin-bottom: 1.8rem;
+/* ── TOPBAR ── */
+.pf-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 2rem; height: 56px;
+  background: #080808; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 30;
+}
+.pf-topbar-left { display: flex; align-items: center; gap: 0.75rem; }
+.pf-topbar-title {
+  font-family: 'Manrope',sans-serif; font-weight: 800;
+  font-size: 1rem; color: var(--primary);
+}
+.pf-topbar-right { display: flex; align-items: center; gap: 0.75rem; }
+.pf-search-wrap { position: relative; }
+.pf-search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #6b7280; }
+.pf-topbar-search {
+  background: #131313; border: none; border-radius: 8px;
+  padding: 0.4rem 0.9rem 0.4rem 2.2rem;
+  color: var(--text); font-size: 0.82rem; width: 200px; outline: none;
+  font-family: 'Inter',sans-serif;
+}
+.pf-topbar-search:focus { box-shadow: 0 0 0 1px var(--primary); }
+.pf-icon-btn { background: none; border: none; color: #6b7280; cursor: pointer; font-size: 1rem; padding: 0.3rem; }
+.pf-icon-btn:hover { color: var(--text); }
+.pf-avatar-sm {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), #ff6b35);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 800; color: white;
 }
 
-.btn-back {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  padding: 0.5rem 1rem;
-  border-radius: 9px;
-  cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.85rem;
-  transition: all 0.18s;
-}
-
-.btn-back:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-/* Step tabs */
-.step-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  background: var(--surface);
-  padding: 0.4rem;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-}
-
-.step-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
-  border-radius: 9px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.step-tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
-
-.step-tab.activo {
-  background: var(--primary);
-  color: #fff;
-  box-shadow: 0 0 16px rgba(37,99,235,0.35);
-}
-
-.step-num {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 700;
-  opacity: 0.7;
-}
-
-.step-tab.activo .step-num { opacity: 1; }
-
-/* Step section title */
-.step-section-title {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.2rem;
+/* ── TABS ── */
+.pf-tabs {
+  display: flex; gap: 0.5rem;
+  padding: 1rem 2rem 0;
   border-bottom: 1px solid var(--border);
 }
+.pf-tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: #6b7280; font-family: 'Inter',sans-serif; font-size: 0.85rem;
+  font-weight: 600; padding: 0.5rem 1rem 0.8rem; cursor: pointer; transition: all 0.15s;
+}
+.pf-tab:hover { color: var(--text); }
+.pf-tab--active { color: var(--primary); border-bottom-color: var(--primary); }
 
-.step-badge {
-  background: rgba(37,99,235,0.15);
-  color: var(--primary);
-  border: 1px solid rgba(37,99,235,0.3);
-  border-radius: 8px;
-  padding: 0.3rem 0.6rem;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 1rem;
-  font-weight: 700;
-  flex-shrink: 0;
+/* ── ERROR ── */
+.pf-error {
+  margin: 1rem 2rem 0; color: var(--error);
+  background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.85rem;
 }
 
-.step-section-title h3 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 0.2rem;
+/* ── LAYOUT ── */
+.pf-page { width: 100%; animation: pfFade 0.25s ease; }
+@keyframes pfFade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+.pf-layout {
+  display: grid; grid-template-columns: 1fr 340px;
+  gap: 1.5rem; padding: 1.5rem 2rem 2rem;
 }
 
-.step-section-title p {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-}
+/* ── SECTIONS ── */
+.pf-left  { display: flex; flex-direction: column; gap: 1.2rem; }
+.pf-right { display: flex; flex-direction: column; gap: 1rem; }
 
-/* Select inside form */
-.select-form {
-  background: var(--bg);
+.pf-section {
+  background: #1a1a1a; border-radius: 16px; padding: 1.5rem;
   border: 1px solid var(--border);
-  color: var(--text);
-  padding: 0.7rem 1rem;
-  border-radius: 9px;
-  font-size: 0.92rem;
-  font-family: 'DM Sans', sans-serif;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+
+.pf-section-header {
+  display: flex; align-items: center; gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.pf-section-icon { font-size: 1.1rem; }
+.pf-section-header h3 {
+  font-family: 'Manrope',sans-serif; font-size: 1rem;
+  font-weight: 700; color: var(--text);
+}
+
+/* ── FIELDS ── */
+.pf-field {
+  display: flex; flex-direction: column; gap: 0.45rem; flex: 1;
+}
+.pf-field--full { width: 100%; }
+
+.pf-field label {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: #6b7280;
+}
+
+.pf-field input,
+.pf-field select,
+.pf-compat-row input {
+  background: #131313; border: 1px solid var(--border);
+  color: var(--text); padding: 0.75rem 1rem;
+  border-radius: 10px; font-size: 0.88rem;
+  font-family: 'Inter',sans-serif; outline: none;
+  transition: border 0.2s; width: 100%;
+}
+.pf-field input:focus,
+.pf-field select:focus,
+.pf-compat-row input:focus { border-color: var(--primary); }
+.pf-field input::placeholder { color: #3a3a3a; }
+
+.pf-field select option { background: #1a1a1a; }
+
+.pf-row { display: flex; gap: 1rem; }
+
+/* ── COMPAT ── */
+.pf-compat-row {
+  display: flex; gap: 0.5rem; align-items: center;
+  margin-bottom: 0.5rem;
+}
+.pf-compat-row input { flex: 1; padding: 0.6rem 0.8rem; }
+.pf-compat-del {
+  background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
+  color: var(--error); border-radius: 8px; width: 32px; height: 36px;
+  cursor: pointer; font-size: 0.8rem; flex-shrink: 0; transition: all 0.15s;
+}
+.pf-compat-del:hover { background: rgba(239,68,68,0.2); }
+
+.pf-add-compat {
+  background: transparent; border: 1px dashed var(--border);
+  color: #6b7280; border-radius: 8px; padding: 0.5rem 1rem;
+  font-family: 'Inter',sans-serif; font-size: 0.82rem; cursor: pointer;
+  transition: all 0.18s; margin-top: 0.3rem;
+}
+.pf-add-compat:hover { border-color: var(--primary); color: var(--primary); }
+
+/* ── MONEY & STOCK INPUTS ── */
+.pf-money-input {
+  display: flex; align-items: center;
+  background: #131313; border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; transition: border 0.2s;
+}
+.pf-money-input:focus-within { border-color: var(--primary); }
+.pf-money-input span {
+  padding: 0 0.9rem; color: #6b7280;
+  font-size: 0.9rem; font-weight: 600; background: #0d0d0d;
+  border-right: 1px solid var(--border); height: 100%;
+  display: flex; align-items: center;
+}
+.pf-money-input input {
+  border: none; border-radius: 0; background: transparent;
+  flex: 1; padding: 0.75rem 1rem;
+  font-family: 'Manrope',sans-serif; font-size: 1rem; font-weight: 700;
+}
+.pf-money-input input:focus { box-shadow: none; border: none; }
+
+.pf-stock-input {
+  display: flex; align-items: center;
+  background: #131313; border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; transition: border 0.2s;
+}
+.pf-stock-input:focus-within { border-color: var(--primary); }
+.pf-stock-input input {
+  flex: 1; border: none; background: transparent;
+  padding: 0.75rem 0.8rem; color: var(--text);
+  font-family: 'Manrope',sans-serif; font-size: 1rem; font-weight: 700;
   outline: none;
+}
+.pf-stock-input span {
+  padding: 0 0.8rem; color: #6b7280;
+  font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+/* ── MARGEN ── */
+.pf-margen {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.7rem 1rem; border-radius: 8px;
+  font-size: 0.82rem; color: #6b7280;
+}
+.pf-margen--pos { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.15); }
+.pf-margen--neg { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.15); }
+.pf-margen--pos strong { color: var(--success); font-size: 1.1rem; font-family: 'Manrope',sans-serif; }
+.pf-margen--neg strong { color: var(--error);   font-size: 1.1rem; font-family: 'Manrope',sans-serif; }
+
+/* ── BUTTONS ── */
+.pf-btn-save {
   width: 100%;
-  transition: border 0.2s, box-shadow 0.2s;
+  background: linear-gradient(135deg, var(--primary), #ff6b35);
+  color: black; border: none; padding: 1rem;
+  border-radius: 12px; font-family: 'Manrope',sans-serif;
+  font-weight: 800; font-size: 1rem; cursor: pointer;
+  transition: all 0.18s; box-shadow: 0 4px 20px rgba(255,61,0,0.35);
+}
+.pf-btn-save:hover { box-shadow: 0 6px 28px rgba(255,61,0,0.55); transform: translateY(-1px); }
+.pf-btn-save:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.pf-btn-cancel {
+  width: 100%; background: none; border: none;
+  color: #6b7280; font-family: 'Inter',sans-serif;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  padding: 0.6rem; transition: color 0.15s;
+}
+.pf-btn-cancel:hover { color: var(--text); }
+
+/* ── INFO CARD ── */
+.pf-info-card {
+  background: rgba(255,61,0,0.06);
+  border: 1px solid rgba(255,61,0,0.15);
+  border-radius: 14px; padding: 1.2rem;
+}
+.pf-info-title {
+  font-family: 'Manrope',sans-serif; font-weight: 800;
+  color: var(--primary); font-size: 0.88rem; margin-bottom: 0.5rem;
+}
+.pf-info-text { font-size: 0.78rem; color: #6b7280; line-height: 1.6; }
+
+/* ── QUITAR FLECHAS NUMBER ── */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] { -moz-appearance: textfield; }
+
+/* ── STOCK INPUT ARREGLADO ── */
+.pf-stock-input {
+  display: flex; align-items: stretch;
+  background: #131313; border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+  transition: border 0.2s; height: 52px;
+}
+.pf-stock-input:focus-within { border-color: var(--primary); }
+.pf-stock-input input {
+  flex: 1; border: none; background: transparent;
+  padding: 0 1rem; color: var(--text);
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.4rem; font-weight: 800;
+  outline: none; width: 100%;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.pf-stock-input input::placeholder { color: #3a3a3a; }
+.pf-stock-input span {
+  padding: 0 0.8rem; color: #6b7280;
+  font-size: 0.62rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  border-left: 1px solid var(--border);
+  display: flex; align-items: center;
+  background: #0d0d0d; flex-shrink: 0;
 }
 
-.select-form:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+/* ── MONEY INPUT ARREGLADO ── */
+.pf-money-input {
+  display: flex; align-items: stretch;
+  background: #131313; border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+  transition: border 0.2s; height: 52px;
 }
-
-/* Margen box */
-.margen-box {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.9rem 1.2rem;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  color: var(--text-muted);
+.pf-money-input:focus-within { border-color: var(--primary); }
+.pf-money-input span {
+  padding: 0 1rem; color: #6b7280;
+  font-size: 0.95rem; font-weight: 700;
+  border-right: 1px solid var(--border);
+  display: flex; align-items: center;
+  background: #0d0d0d; flex-shrink: 0;
 }
-
-.margen-box strong {
-  font-size: 1.3rem;
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 700;
+.pf-money-input input {
+  flex: 1; border: none; background: transparent;
+  padding: 0 1rem; color: var(--text);
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.2rem; font-weight: 700;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
+.pf-money-input input::placeholder { color: #3a3a3a; }
