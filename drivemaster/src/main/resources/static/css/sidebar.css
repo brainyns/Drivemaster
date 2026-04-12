@@ -1,0 +1,74 @@
+/* RESET */
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #969696;
+}
+
+
+/* SIDEBAR */
+
+.sidebar {
+    position: fixed;
+    height: 100vh;
+    width: 230px;
+    background-color: #fdfeff;
+    padding-top: 20px;
+}
+
+
+/* LOGO */
+
+.logo {
+    text-align: center;
+    color: white;
+    margin-bottom: 30px;
+}
+
+/* ICONOS */
+.icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+}
+
+/* LINKS */
+
+.sidebar a {
+    display: block;
+    color: white;
+    padding: 15px 20px;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+
+/* HOVER LINKS */
+
+.sidebar a:hover {
+    background-color: #374151;
+    padding-left: 25px;
+}
+
+
+/* BOTON LOGOUT */
+
+.logout {
+    color: #f87171;
+}
+
+
+/* CONTENIDO PRINCIPAL */
+
+.content {
+    margin-left: 230px;
+    padding: 40px;
+}
+
+
+/* TITULOS */
+
+.content h1 {
+    color: #111827;
+}

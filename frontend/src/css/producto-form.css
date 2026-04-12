@@ -1,0 +1,141 @@
+.form-page-header {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 1.8rem;
+}
+
+.btn-back {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.5rem 1rem;
+  border-radius: 9px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  transition: all 0.18s;
+}
+
+.btn-back:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Step tabs */
+.step-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background: var(--surface);
+  padding: 0.4rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.step-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.step-tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+
+.step-tab.activo {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(37,99,235,0.35);
+}
+
+.step-num {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.step-tab.activo .step-num { opacity: 1; }
+
+/* Step section title */
+.step-section-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.step-badge {
+  background: rgba(37,99,235,0.15);
+  color: var(--primary);
+  border: 1px solid rgba(37,99,235,0.3);
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.step-section-title h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+}
+
+.step-section-title p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Select inside form */
+.select-form {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.7rem 1rem;
+  border-radius: 9px;
+  font-size: 0.92rem;
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  width: 100%;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.select-form:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+
+/* Margen box */
+.margen-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.9rem 1.2rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.margen-box strong {
+  font-size: 1.3rem;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+}
