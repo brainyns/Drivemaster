@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Compras</title>
+</head>
+<body>
+
+<h1>Compras Registradas</h1>
+
+<a th:href="@{/compras/nueva}">Registrar nueva compra</a>
+<br><br>
+
+<table border="1">
+    <tr>
+        <th>Fecha</th>
+        <th>Proveedor</th>
+        <th>Total</th>
+        <th># Productos</th>
+        <th>Acciones</th>
+    </tr>
+
+    <tr th:each="c : ${compras}">
+        <td th:text="${c.fecha}"></td>
+        <td th:text="${c.proveedorId}"></td>
+        <td th:text="${c.total}"></td>
+        <td th:text="${#lists.size(c.productos)}"></td>
+
+        <td>
+            <a th:href="@{/compras/detalle/{id}(id=${c.id})}">
+                Ver detalle
+            </a>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --primary:   #FF3D00;
+  --primary-h: #e63600;
+  --secondary: #1A237E;
+  --tertiary:  #9F5BBB;
+  --neutral:   #121212;
+  --bg:        #0d0d0d;
+  --surface:   #1a1a1a;
+  --surface2:  #222222;
+  --border:    #2a2a2a;
+  --text:      #F1F5F9;
+  --text-muted:#6b7280;
+  --success:   #22C55E;
+  --error:     #EF4444;
+  --warning:   #F59E0B;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+h1, h2, h3, .brand-name {
+  font-family: 'Manrope', sans-serif;
+}
+
+/* ── LAYOUT ── */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-content {
+  margin-left: 220px;
+  flex: 1;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 100vh;
+  width: 220px;
+  background: #111111;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1.4rem 1.2rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-brand-icon {
+  width: 36px; height: 36px;
+  background: var(--primary);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(255,61,0,0.5);
+}
+
+.sidebar-brand-name {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1rem; font-weight: 800;
+  color: var(--text); letter-spacing: 0.02em; line-height: 1.1;
+}
+
+.sidebar-brand-sub {
+  font-size: 0.58rem; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+}
+
+.sidebar-nav {
+  flex: 1; padding: 1rem 0.6rem;
+  display: flex; flex-direction: column; gap: 0.1rem;
+}
+
+.sidebar-item {
+  width: 100%;
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px; border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; text-align: left;
+}
+
+.sidebar-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+
+.sidebar-item.activo {
+  background: rgba(255,61,0,0.12);
+  color: var(--primary); font-weight: 600;
+}
+
+.sidebar-item-icon {
+  width: 20px; height: 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0.5;
+}
+
+.sidebar-item.activo .sidebar-item-icon { opacity: 1; }
+
+.sidebar-arrow {
+  margin-left: auto; font-size: 0.8rem;
+  color: var(--text-muted); transition: transform 0.2s;
+}
+.sidebar-arrow.abierto { transform: rotate(90deg); }
+
+.sidebar-submenu { overflow: hidden; max-height: 0; transition: max-height 0.25s ease; }
+.sidebar-submenu.abierto { max-height: 200px; }
+
+.sidebar-subitem {
+  width: 100%; display: flex; align-items: center;
+  padding: 0.45rem 0.85rem 0.45rem 3rem;
+  border-radius: 7px; border: none;
+  background: transparent; color: var(--text-muted);
+  font-family: 'Inter', sans-serif; font-size: 0.8rem;
+  font-weight: 500; cursor: pointer; transition: all 0.15s; text-align: left;
+  position: relative;
+}
+.sidebar-subitem::before {
+  content: ''; position: absolute; left: 2rem;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--border);
+}
+.sidebar-subitem:hover { color: var(--text); }
+.sidebar-subitem:hover::before { background: var(--primary); }
+.sidebar-subitem.activo { color: var(--primary); font-weight: 600; }
+.sidebar-subitem.activo::before { background: var(--primary); }
+
+.sidebar-footer {
+  display: flex; align-items: center; gap: 0.8rem;
+  padding: 1rem 1.2rem;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-avatar {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--primary), #ff6b35);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 0.8rem; color: white; flex-shrink: 0;
+  font-family: 'Manrope', sans-serif;
+}
+
+.sidebar-user-name { font-size: 0.82rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+.sidebar-user-role { font-size: 0.65rem; color: var(--text-muted); font-weight: 500; }
+
+/* Full width content fix */
+.app-content {
+  width: calc(100vw - 220px);
+  overflow-x: hidden;
+}

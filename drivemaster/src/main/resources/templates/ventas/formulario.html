@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Nueva Venta</title>
+</head>
+
+<body>
+
+    <h1>Registrar Venta</h1>
+
+    <form th:action="@{/ventas/guardar}" th:object="${venta}" method="post">
+
+        <!-- ================= DATOS GENERALES ================= -->
+        <h3>Datos Generales</h3>
+
+        Cliente:
+        <select th:field="*{clienteId}">
+            <option value="">Seleccione</option>
+            <option th:each="c : ${clientes}" th:value="${c.id}" th:text="${c.nombre}">
+            </option>
+        </select>
+
+        <br><br>
+
+        Usuario ID:
+        <input type="text" th:field="*{usuarioId}" />
+
+        <br><br>
+
+
+        <!-- ================= PRODUCTOS ================= -->
+        <h3>Productos</h3>
+
+        <div id="productos">
+
+            <div>
+
+                Producto:
+                <select name="productos[0].productoId" onchange="productoSeleccionado(this)">
+                    <option value="">Seleccione</option>
+                    <option th:each="p : ${productosDisponibles}" th:value="${p.id}" th:text="${p.nombre}"
+                        th:attr="data-precio=${p.precioVenta}">
+                    </option>
+                </select>
+
+                Precio:
+                <input type="number" name="productos[0].precioUnitario" readonly />
+
+                Cantidad:
+                <input type="number" min="1" name="productos[0].cantidad" oninput="calcularSubtotal(this)" />
+
+                Subtotal:
+                <input type="number" class="subtotal" readonly />
+
+                <br><br>
+
+            </div>
+
+        </div>
+
+        <button type="button" onclick="agregarProducto()">Agregar producto</button>
+
+        <br><br>
+
+
+        <!-- ================= TOTAL ================= -->
+        <h3>Total Venta</h3>
+
+        <input type="number" id="totalVenta" readonly />
+
+        <br><br>
+
+
+        <!-- ================= PAGOS ================= -->
+        <h3>Pagos</h3>
+
+        <div id="pagos">
+
+            <div>
+
+                Método:
+                <select name="pagos[0].metodo">
+                    <option value="EFECTIVO">EFECTIVO</option>
+                    <option value="TARJETA">TARJETA</option>
+                    <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+                </select>
+
+                Monto:
+                <input type="number" step="0.01" name="pagos[0].monto" oninput="calcularTotalPagos()" />
+
+                Referencia:
+                <input type="text" name="pagos[0].referencia" />
+
+                <br><br>
+
+            </div>
+
+        </div>
+
+        <button type="button" onclick="agregarPago()">Agregar pago</button>
+
+        <br><br>
+
+        <h3>Total Pagos</h3>
+
+        <input type="number" id="totalPagos" readonly />
+
+        <br><br>
+
+        <button type="submit" id="btnGuardar" disabled>
+            Registrar Venta
+        </button>
+
+    </form>
+
+    <br>
+
+    <a th:href="@{/ventas}">Volver a ventas</a>
+
+
+    <!-- ================= JAVASCRIPT ================= -->
+
+    <script>
+
+        function productoSeleccionado(select) {
+
+            const fila = select.parentElement;
+
+            const precio = parseFloat(
+                select.options[select.selectedIndex].getAttribute("data-precio")
+            ) || 0;
+
+            fila.querySelector('input[name$=".precioUnitario"]').value = precio;
+
+            calcularSubtotal(
+                fila.querySelector('input[name$=".cantidad"]')
+            );
+
+        }
+
+
+        function calcularSubtotal(inputCantidad) {
+
+            const fila = inputCantidad.parentElement;
+
+            const precio = parseFloat(
+                fila.querySelector('input[name$=".precioUnitario"]').value || 0
+            );
+
+            const cantidad = parseInt(inputCantidad.value || 0);
+
+            fila.querySelector('.subtotal').value = precio * cantidad;
+
+            calcularTotalVenta();
+
+        }
+
+
+        function calcularTotalVenta() {
+
+            let total = 0;
+
+            document.querySelectorAll('.subtotal').forEach(s => {
+
+                total += parseFloat(s.value || 0);
+
+            });
+
+            document.getElementById("totalVenta").value = total;
+
+            validarPagos();
+
+        }
+
+
+        function calcularTotalPagos() {
+
+            let total = 0;
+
+            document.querySelectorAll(
+                'input[name^="pagos"][name$=".monto"]'
+            ).forEach(p => {
+
+                total += parseFloat(p.value || 0);
+
+            });
+
+            document.getElementById("totalPagos").value = total;
+
+            validarPagos();
+
+        }
+
+
+        function validarPagos() {
+
+            const totalVenta = parseFloat(
+                document.getElementById("totalVenta").value || 0
+            );
+
+            const totalPagos = parseFloat(
+                document.getElementById("totalPagos").value || 0
+            );
+
+            document.getElementById("btnGuardar").disabled =
+                totalVenta !== totalPagos;
+
+        }
+
+
+        function agregarProducto() {
+
+            const index =
+                document.querySelectorAll('#productos > div').length;
+
+            const options =
+                document.querySelector('#productos select').innerHTML;
+
+            const div = document.createElement('div');
+
+            div.innerHTML = `
+Producto:
+<select name="productos[${index}].productoId"
+onchange="productoSeleccionado(this)">
+${options}
+</select>
+
+Precio:
+<input type="number"
+name="productos[${index}].precioUnitario"
+readonly />
+
+Cantidad:
+<input type="number"
+min="1"
+name="productos[${index}].cantidad"
+oninput="calcularSubtotal(this)" />
+
+Subtotal:
+<input type="number"
+class="subtotal"
+readonly />
+
+<br><br>
+`;
+
+            document.getElementById('productos').appendChild(div);
+
+        }
+
+
+        function agregarPago() {
+
+            const index =
+                document.querySelectorAll('#pagos > div').length;
+
+            const div = document.createElement('div');
+
+            div.innerHTML = `
+Método:
+<select name="pagos[${index}].metodo">
+<option value="EFECTIVO">EFECTIVO</option>
+<option value="TARJETA">TARJETA</option>
+<option value="TRANSFERENCIA">TRANSFERENCIA</option>
+</select>
+
+Monto:
+<input type="number"
+step="0.01"
+name="pagos[${index}].monto"
+oninput="calcularTotalPagos()" />
+
+Referencia:
+<input type="text"
+name="pagos[${index}].referencia" />
+
+<br><br>
+`;
+
+            document.getElementById('pagos').appendChild(div);
+
+        }
+
+    </script>
+
+</body>
+
+</html>
