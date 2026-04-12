@@ -88,7 +88,7 @@ function Productos({ onNuevo, onEditar }) {
         <div className="kp-stat kp-stat--valor">
           <p className="kp-stat-label">VALOR INVENTARIO</p>
           <p className="kp-stat-value kp-stat-value--primary">
-            ${valorTotal >= 1000 ? (valorTotal/1000).toFixed(1)+"k" : valorTotal.toLocaleString()}
+            ${valorTotal.toLocaleString()}
           </p>
         </div>
       </div>
