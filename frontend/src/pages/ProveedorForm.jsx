@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { crearProveedor, actualizarProveedor, obtenerProveedor } from "../services/proveedorService";
 import "../css/productos.css";
 
-function ProveedorForm({ id, onVolver }) {
+function ProveedorForm({ id, onVolver, token }) {
   const esEdicion = Boolean(id);
 
   const [form, setForm] = useState({
@@ -17,9 +17,9 @@ function ProveedorForm({ id, onVolver }) {
 
   useEffect(() => {
     if (esEdicion) {
-      obtenerProveedor(id).then(setForm).catch((err) => setError(err.message));
+      obtenerProveedor(id, token).then(setForm).catch((err) => setError(err.message));
     }
-  }, [id]);
+  }, [id, token]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -29,9 +29,9 @@ function ProveedorForm({ id, onVolver }) {
     setError(null);
     try {
       if (esEdicion) {
-        await actualizarProveedor(id, form);
+        await actualizarProveedor(id, form, token);
       } else {
-        await crearProveedor(form);
+        await crearProveedor(form, token);
       }
       onVolver();
     } catch (err) {

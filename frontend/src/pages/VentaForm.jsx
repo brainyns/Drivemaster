@@ -12,7 +12,7 @@ const METODOS = [
 
 const getIniciales = (n) => n ? n.split(" ").map(x => x[0]).join("").toUpperCase().slice(0,2) : "?";
 
-function VentaForm({ onVolver }) {
+function VentaForm({ onVolver, token }) {
   const [clientes, setClientes]             = useState([]);
   const [productos, setProductos]           = useState([]);
   const [loading, setLoading]               = useState(false);
@@ -44,9 +44,11 @@ function VentaForm({ onVolver }) {
   const TAX = 0.16;
 
   useEffect(() => {
-    listarClientes().then(setClientes).catch(() => {});
-    listarProductos().then(setProductos).catch(() => {});
-  }, []);
+    if (token) {
+      listarClientes(token).then(setClientes).catch(() => {});
+      listarProductos(token).then(setProductos).catch(() => {});
+    }
+  }, [token]);
 
   // ── Buscar cliente por ID ──
   const buscarCliente = () => {
@@ -102,7 +104,7 @@ function VentaForm({ onVolver }) {
         clienteId: clienteEncontrado.id,
         productos: items.map(i => ({ productoId: i.productoId, cantidad: i.cantidad })),
         pagos: [{ metodo: metodoPago, monto: subtotal }]
-      });
+      }, token);
       onVolver();
     } catch(e) { setError(e.message); }
     finally { setLoading(false); }

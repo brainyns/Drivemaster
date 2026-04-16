@@ -14,52 +14,129 @@ import CompraDetalle from "./pages/CompraDetalle";
 import Proveedores from "./pages/Proveedores";
 import ProveedorForm from "./pages/ProveedorForm";
 import Movimientos from "./pages/Movimientos";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Usuarios from "./pages/Usuarios";
+
+const storedUser = localStorage.getItem("dm-user");
+const storedToken = localStorage.getItem("dm-token");
+const initialUser = storedUser ? JSON.parse(storedUser) : null;
+const initialPage = initialUser ? (initialUser.rol === "VENDEDOR" ? "ventas" : "productos") : "login";
 
 function App() {
-  const [pagina, setPagina] = useState("productos");
+  const [pagina, setPagina] = useState(initialPage);
+  const [user, setUser] = useState(initialUser);
+  const [token, setToken] = useState(storedToken || null);
   const [idSeleccionado, setIdSeleccionado] = useState(null);
 
-  const irA = (p, id = null) => { setIdSeleccionado(id); setPagina(p); };
+  const irA = (p, id = null) => {
+    setIdSeleccionado(id);
+    setPagina(p);
+  };
+
+  const handleLogin = (auth) => {
+    const newUser = {
+      id: auth.id,
+      nombre: auth.nombre,
+      correo: auth.correo,
+      rol: auth.rol,
+    };
+    setUser(newUser);
+    setToken(auth.token);
+    localStorage.setItem("dm-user", JSON.stringify(newUser));
+    localStorage.setItem("dm-token", auth.token);
+    setPagina(newUser.rol === "VENDEDOR" ? "ventas" : "productos");
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setToken(null);
+    setPagina("login");
+    localStorage.removeItem("dm-user");
+    localStorage.removeItem("dm-token");
+  };
+
+  const allowedPages = {
+    VENDEDOR: ["clientes", "clienteNuevo", "clienteEditar", "ventas", "ventaNueva", "ventaDetalle"],
+    ADMIN: [
+      "productos",
+      "productoNuevo",
+      "productoEditar",
+      "clientes",
+      "clienteNuevo",
+      "clienteEditar",
+      "ventas",
+      "ventaNueva",
+      "ventaDetalle",
+      "compras",
+      "compraNueva",
+      "compraDetalle",
+      "proveedores",
+      "proveedorNuevo",
+      "proveedorEditar",
+      "movimientos",
+      "reportes",
+    ],
+    SUPERADMIN: [
+      "productos",
+      "productoNuevo",
+      "productoEditar",
+      "clientes",
+      "clienteNuevo",
+      "clienteEditar",
+      "ventas",
+      "ventaNueva",
+      "ventaDetalle",
+      "compras",
+      "compraNueva",
+      "compraDetalle",
+      "proveedores",
+      "proveedorNuevo",
+      "proveedorEditar",
+      "movimientos",
+      "reportes",
+      "usuarios",
+    ],
+  };
 
   const renderPagina = () => {
-    if (pagina === "productos")       return <Productos onNuevo={() => irA("productoNuevo")} onEditar={(id) => irA("productoEditar", id)} />;
-    if (pagina === "productoNuevo")   return <ProductoForm onVolver={() => irA("productos")} />;
-    if (pagina === "productoEditar")  return <ProductoForm id={idSeleccionado} onVolver={() => irA("productos")} />;
+    if (!user) {
+      if (pagina === "register") {
+        return <Register onRegister={handleLogin} onBack={() => setPagina("login")} />;
+      }
+      return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} />;
+    }
 
-        // AJUSTE INVENTARIO
-    if (pagina === "inventarioAjuste")
-      return (
-        <AjusteInventarioForm
-          productoId={idSeleccionado}
-          onVolver={() => irA("productos")}
-        />
-      );
+    if (!allowedPages[user.rol]?.includes(pagina)) {
+      return <div>Acceso no autorizado a esta sección.</div>;
+    }
 
-    if (pagina === "clientes")        return <Clientes onNuevo={() => irA("clienteNuevo")} onEditar={(id) => irA("clienteEditar", id)} />;
-    if (pagina === "clienteNuevo")    return <ClienteForm onVolver={() => irA("clientes")} />;
-    if (pagina === "clienteEditar")   return <ClienteForm id={idSeleccionado} onVolver={() => irA("clientes")} />;
+    if (pagina === "productos") return <Productos onNuevo={() => irA("productoNuevo")} onEditar={(id) => irA("productoEditar", id)} token={token} />;
+    if (pagina === "productoNuevo") return <ProductoForm onVolver={() => irA("productos")} token={token} />;
+    if (pagina === "productoEditar") return <ProductoForm id={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
+    if (pagina === "inventarioAjuste") return <AjusteInventarioForm productoId={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
+    if (pagina === "clientes") return <Clientes onNuevo={() => irA("clienteNuevo")} onEditar={(id) => irA("clienteEditar", id)} token={token} />;
+    if (pagina === "clienteNuevo") return <ClienteForm onVolver={() => irA("clientes")} token={token} />;
+    if (pagina === "clienteEditar") return <ClienteForm id={idSeleccionado} onVolver={() => irA("clientes")} token={token} />;
+    if (pagina === "ventas") return <Ventas onNueva={() => irA("ventaNueva")} onDetalle={(id) => irA("ventaDetalle", id)} token={token} />;
+    if (pagina === "ventaNueva") return <VentaForm onVolver={() => irA("ventas")} token={token} />;
+    if (pagina === "ventaDetalle") return <VentaDetalle id={idSeleccionado} onVolver={() => irA("ventas")} token={token} />;
+    if (pagina === "compras") return <Compras onNueva={() => irA("compraNueva")} onDetalle={(id) => irA("compraDetalle", id)} token={token} />;
+    if (pagina === "compraNueva") return <CompraForm onVolver={() => irA("compras")} token={token} />;
+    if (pagina === "compraDetalle") return <CompraDetalle id={idSeleccionado} onVolver={() => irA("compras")} token={token} />;
+    if (pagina === "proveedores") return <Proveedores onNuevo={() => irA("proveedorNuevo")} onEditar={(id) => irA("proveedorEditar", id)} token={token} />;
+    if (pagina === "proveedorNuevo") return <ProveedorForm onVolver={() => irA("proveedores")} token={token} />;
+    if (pagina === "proveedorEditar") return <ProveedorForm id={idSeleccionado} onVolver={() => irA("proveedores")} token={token} />;
+    if (pagina === "movimientos") return <Movimientos token={token} />;
+    if (pagina === "usuarios") return <Usuarios token={token} />;
 
-    if (pagina === "ventas")          return <Ventas onNueva={() => irA("ventaNueva")} onDetalle={(id) => irA("ventaDetalle", id)} />;
-    if (pagina === "ventaNueva")      return <VentaForm onVolver={() => irA("ventas")} />;
-    if (pagina === "ventaDetalle")    return <VentaDetalle id={idSeleccionado} onVolver={() => irA("ventas")} />;
-
-    if (pagina === "compras")         return <Compras onNueva={() => irA("compraNueva")} onDetalle={(id) => irA("compraDetalle", id)} />;
-    if (pagina === "compraNueva")     return <CompraForm onVolver={() => irA("compras")} />;
-    if (pagina === "compraDetalle")   return <CompraDetalle id={idSeleccionado} onVolver={() => irA("compras")} />;
-
-    if (pagina === "proveedores")     return <Proveedores onNuevo={() => irA("proveedorNuevo")} onEditar={(id) => irA("proveedorEditar", id)} />;
-    if (pagina === "proveedorNuevo")  return <ProveedorForm onVolver={() => irA("proveedores")} />;
-    if (pagina === "proveedorEditar") return <ProveedorForm id={idSeleccionado} onVolver={() => irA("proveedores")} />;
-
-    if (pagina === "movimientos")     return <Movimientos />;
+    return <div>Seleccione una sección válida.</div>;
   };
 
   return (
     <div className="app-layout">
-      <Sidebar paginaActual={pagina} irA={irA} />
-      <main className="app-content">
-        {renderPagina()}
-      </main>
+      {user && <Sidebar paginaActual={pagina} irA={irA} userRole={user.rol} onLogout={handleLogout} />}
+      <main className="app-content">{renderPagina()}</main>
     </div>
   );
 }

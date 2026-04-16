@@ -2,24 +2,24 @@ import { useEffect, useState } from "react";
 import { listarProductos, eliminarProducto } from "../services/productoService";
 import "../css/productos.css";
 
-function Productos({ onNuevo, onEditar }) {
+function Productos({ onNuevo, onEditar, token }) {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
 
-  useEffect(() => { cargarProductos(); }, []);
+  useEffect(() => { cargarProductos(); }, [token]);
 
   const cargarProductos = async () => {
-    try { const d = await listarProductos(); setProductos(d); }
+    try { const d = await listarProductos(token); setProductos(d); }
     catch (e) { setError(e.message); }
     finally { setLoading(false); }
   };
 
   const handleEliminar = async (id) => {
     if (!confirm("¿Eliminar este producto?")) return;
-    try { await eliminarProducto(id); setProductos(prev => prev.filter(p => p.id !== id)); }
+    try { await eliminarProducto(id, token); setProductos(prev => prev.filter(p => p.id !== id)); }
     catch (e) { alert(e.message); }
   };
 

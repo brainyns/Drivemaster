@@ -5,7 +5,7 @@ import { listarProductos } from "../services/productoService";
 import "../css/productos.css";
 import "../css/venta.css";
 
-function CompraForm({ onVolver }) {
+function CompraForm({ onVolver, token }) {
   const [proveedores, setProveedores] = useState([]);
   const [productosDisponibles, setProductosDisponibles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -18,9 +18,9 @@ function CompraForm({ onVolver }) {
   });
 
   useEffect(() => {
-    listarProveedores().then(setProveedores).catch(() => {});
-    listarProductos().then(setProductosDisponibles).catch(() => {});
-  }, []);
+    listarProveedores(token).then(setProveedores).catch(() => {});
+    listarProductos(token).then(setProductosDisponibles).catch(() => {});
+  }, [token]);
 
   const calcularTotal = () =>
     form.productos.reduce((acc, d) => acc + (Number(d.costo) * Number(d.cantidad)), 0);
@@ -54,7 +54,7 @@ function CompraForm({ onVolver }) {
     setLoading(true);
     setError(null);
     try {
-      await crearCompra(form);
+      await crearCompra(form, token);
       onVolver();
     } catch (err) {
       setError(err.message);
