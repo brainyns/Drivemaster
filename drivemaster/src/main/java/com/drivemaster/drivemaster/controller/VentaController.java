@@ -10,7 +10,7 @@ import com.drivemaster.drivemaster.service.VentaService;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
-@RequestMapping("/ventas")
+@RequestMapping("/api/ventas")
 public class VentaController {
 
     private final VentaService ventaService;

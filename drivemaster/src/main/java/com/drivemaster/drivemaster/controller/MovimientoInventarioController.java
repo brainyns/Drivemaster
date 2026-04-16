@@ -17,7 +17,7 @@ import com.drivemaster.drivemaster.service.MovimientoInventarioService;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
-@RequestMapping("/movimientos")
+@RequestMapping("/api/movimientos")
 public class MovimientoInventarioController {
 
     private final MovimientoInventarioService movimientoService;
@@ -34,9 +34,11 @@ public class MovimientoInventarioController {
             @RequestParam(required = false) String fechaFin) {
 
         LocalDateTime inicio = fechaInicio != null && !fechaInicio.isBlank()
-                ? LocalDate.parse(fechaInicio).atStartOfDay() : null;
+                ? LocalDate.parse(fechaInicio).atStartOfDay()
+                : null;
         LocalDateTime fin = fechaFin != null && !fechaFin.isBlank()
-                ? LocalDate.parse(fechaFin).atTime(23, 59, 59) : null;
+                ? LocalDate.parse(fechaFin).atTime(23, 59, 59)
+                : null;
 
         return movimientoService.buscarConFiltros(productoId, tipo, inicio, fin);
     }

@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8080/compras";
+const BASE_URL = "http://localhost:8080/api/compras";
 
 const buildHeaders = (token, contentType = "application/json") => {
   const headers = {};

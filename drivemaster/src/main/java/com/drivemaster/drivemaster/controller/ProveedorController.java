@@ -8,7 +8,7 @@ import com.drivemaster.drivemaster.service.ProveedorService;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
-@RequestMapping("/proveedores")
+@RequestMapping("/api/proveedores")
 public class ProveedorController {
 
     private final ProveedorService proveedorService;
