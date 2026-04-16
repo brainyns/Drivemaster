@@ -17,7 +17,7 @@ const CATEGORIAS = [
 
 const MARCAS = ["Toyota","Chevrolet","Ford","Renault","Kia","Hyundai","Nissan","AC Delco","Bosch","Gates","Otro"];
 
-function ProductoForm({ id, onVolver }) {
+function ProductoForm({ id, onVolver, token }) {
   const esEdicion = Boolean(id);
 
   const [form, setForm] = useState({
@@ -31,8 +31,8 @@ function ProductoForm({ id, onVolver }) {
   const [error, setError]     = useState(null);
 
   useEffect(() => {
-    if (esEdicion) obtenerProducto(id).then(setForm).catch(e => setError(e.message));
-  }, [id]);
+    if (esEdicion) obtenerProducto(id, token).then(setForm).catch(e => setError(e.message));
+  }, [id, token]);
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -66,7 +66,7 @@ function ProductoForm({ id, onVolver }) {
         stockActual:  Number(form.stockActual),
         stockMinimo:  Number(form.stockMinimo),
       };
-      esEdicion ? await actualizarProducto(id, payload) : await crearProducto(payload);
+      esEdicion ? await actualizarProducto(id, payload, token) : await crearProducto(payload, token);
       onVolver();
     } catch(e) { setError(e.message); }
     finally { setLoading(false); }

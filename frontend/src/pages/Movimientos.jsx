@@ -3,7 +3,7 @@ import { listarMovimientos, registrarMovimiento } from "../services/movimientoSe
 import { listarProductos } from "../services/productoService";
 import "../css/movimientos.css";
 
-function Movimientos() {
+function Movimientos({ token }) {
   const [movimientos, setMovimientos] = useState([]);
   const [productos, setProductos]     = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -21,14 +21,14 @@ function Movimientos() {
   const [loadingAjuste, setLoadingAjuste] = useState(false);
 
   useEffect(() => {
-    listarProductos().then(setProductos).catch(() => {});
+    listarProductos(token).then(setProductos).catch(() => {});
     cargar();
-  }, []);
+  }, [token]);
 
   const cargar = async (f = filtros) => {
     setLoading(true);
     try {
-      const data = await listarMovimientos(f);
+      const data = await listarMovimientos(f, token);
       setMovimientos(data);
     } catch(e) { console.error(e); }
     finally { setLoading(false); }
@@ -82,7 +82,7 @@ function Movimientos() {
     if (!ajuste.productoId || !ajuste.motivo || !ajuste.cantidad) return;
     setLoadingAjuste(true);
     try {
-      await registrarMovimiento({ ...ajuste, cantidad: Number(ajuste.cantidad) });
+      await registrarMovimiento({ ...ajuste, cantidad: Number(ajuste.cantidad) }, token);
       setMostrarModal(false);
       setAjuste({ productoId: "", tipo: "AJUSTE", cantidad: "", motivo: "" });
       cargar();

@@ -25,19 +25,19 @@ function formatFecha(f) {
        + "\n" + d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
 }
 
-function Ventas({ onNueva, onDetalle }) {
+function Ventas({ onNueva, onDetalle, token }) {
   const [ventas, setVentas]     = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina]     = useState(1);
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { cargar(); }, [token]);
 
   const cargar = async () => {
     setLoading(true);
     try {
-      const data = await listarVentas();
+      const data = await listarVentas(token);
       setVentas(data);
     } catch(e) { setError(e.message); }
     finally { setLoading(false); }
@@ -46,7 +46,7 @@ function Ventas({ onNueva, onDetalle }) {
   const handleAnular = async (id) => {
     if (!confirm("¿Anular esta venta?")) return;
     try {
-      await anularVenta(id);
+      await anularVenta(id, token);
       cargar();
     } catch(e) { alert(e.message); }
   };

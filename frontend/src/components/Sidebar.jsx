@@ -15,28 +15,39 @@ const Icons = {
 };
 
 const menu = [
+  { key: "ventas",      label: "Ventas",      icon: "ventas"      },
+  { key: "clientes",    label: "Clientes",    icon: "clientes"    },
   { key: "productos",   label: "Productos",   icon: "productos",
     subItems: [
       { key: "productoNuevo", label: "Agregar Producto" },
       { key: "productos",     label: "Ver Productos" },
     ]
   },
-  { key: "clientes",    label: "Clientes",    icon: "clientes"    },
   { key: "movimientos", label: "Inventario",  icon: "movimientos" },
-  { key: "ventas",      label: "Ventas",      icon: "ventas"      },
   { key: "compras",     label: "Compras",     icon: "compras"     },
   { key: "proveedores", label: "Proveedores", icon: "proveedores" },
   { key: "reportes",    label: "Reportes",    icon: "reportes"    },
+  { key: "usuarios",    label: "Usuarios",    icon: "admin"       },
 ];
 
-function Sidebar({ paginaActual, irA }) {
+function Sidebar({ paginaActual, irA, userRole, onLogout }) {
   const [abiertos, setAbiertos] = useState(["productos"]);
 
   const toggleAbierto = (key) => {
-    setAbiertos(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    setAbiertos((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   };
+
+  const visibleMenu = menu.filter((item) => {
+    if (item.key === "usuarios") {
+      return userRole === "SUPERADMIN";
+    }
+    if (userRole === "VENDEDOR") {
+      return ["clientes", "ventas"].includes(item.key);
+    }
+    return true;
+  });
 
   return (
     <aside className="sidebar">
@@ -49,27 +60,27 @@ function Sidebar({ paginaActual, irA }) {
       </div>
 
       <nav className="sidebar-nav">
-        {menu.map((item) => {
+        {visibleMenu.map((item) => {
           const tieneSubItems = item.subItems?.length > 0;
-          const estaAbierto  = abiertos.includes(item.key);
-          const activo       = paginaActual === item.key || (tieneSubItems && item.subItems.some(s => s.key === paginaActual));
+          const estaAbierto = abiertos.includes(item.key);
+          const activo =
+            paginaActual === item.key ||
+            (tieneSubItems && item.subItems.some((s) => s.key === paginaActual));
 
           return (
             <div key={item.key + item.label}>
               <button
                 className={`sidebar-item ${activo && !tieneSubItems ? "activo" : activo ? "activo" : ""}`}
-                onClick={() => tieneSubItems ? toggleAbierto(item.key) : irA(item.key)}
+                onClick={() => (tieneSubItems ? toggleAbierto(item.key) : irA(item.key))}
               >
                 <span className="sidebar-item-icon">{Icons[item.icon]}</span>
                 <span>{item.label}</span>
-                {tieneSubItems && (
-                  <span className={`sidebar-arrow ${estaAbierto ? "abierto" : ""}`}>›</span>
-                )}
+                {tieneSubItems && <span className={`sidebar-arrow ${estaAbierto ? "abierto" : ""}`}>›</span>}
               </button>
 
               {tieneSubItems && (
                 <div className={`sidebar-submenu ${estaAbierto ? "abierto" : ""}`}>
-                  {item.subItems.map(sub => (
+                  {item.subItems.map((sub) => (
                     <button
                       key={sub.key + sub.label}
                       className={`sidebar-subitem ${paginaActual === sub.key ? "activo" : ""}`}
@@ -88,9 +99,12 @@ function Sidebar({ paginaActual, irA }) {
       <div className="sidebar-footer">
         <div className="sidebar-avatar">A</div>
         <div>
-          <p className="sidebar-user-name">Admin</p>
-          <p className="sidebar-user-role">Administrador</p>
+          <p className="sidebar-user-name">{userRole || "Invitado"}</p>
+          <p className="sidebar-user-role">{userRole === "SUPERADMIN" ? "Superadmin" : userRole === "ADMIN" ? "Administrador" : "Vendedor"}</p>
         </div>
+        <button className="sidebar-logout" onClick={onLogout}>
+          Salir
+        </button>
       </div>
     </aside>
   );

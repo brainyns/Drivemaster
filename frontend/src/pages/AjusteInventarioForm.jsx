@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ajustarStock } from "../services/inventarioService";
 
-function AjusteInventarioForm({ productoId, onVolver }) {
+function AjusteInventarioForm({ productoId, onVolver, token }) {
   const [nuevoStock, setNuevoStock] = useState("");
   const [motivo, setMotivo] = useState("");
   const [mensaje, setMensaje] = useState("");
@@ -10,7 +10,7 @@ function AjusteInventarioForm({ productoId, onVolver }) {
     e.preventDefault();
 
     try {
-      await ajustarStock(productoId, nuevoStock, motivo);
+      await ajustarStock(productoId, nuevoStock, motivo, token);
 
       setMensaje("Stock ajustado correctamente");
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { crearCliente, actualizarCliente, obtenerCliente } from "../services/clienteService";
 import "../css/clientes.css";
 
-function ClienteForm({ id, onVolver }) {
+function ClienteForm({ id, onVolver, token }) {
   const esEdicion = Boolean(id);
 
   const [form, setForm] = useState({
@@ -12,8 +12,8 @@ function ClienteForm({ id, onVolver }) {
   const [error, setError]     = useState(null);
 
   useEffect(() => {
-    if (esEdicion) obtenerCliente(id).then(setForm).catch(e => setError(e.message));
-  }, [id]);
+    if (esEdicion) obtenerCliente(id, token).then(setForm).catch(e => setError(e.message));
+  }, [id, token]);
 
   const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -21,7 +21,7 @@ function ClienteForm({ id, onVolver }) {
     e.preventDefault();
     setLoading(true); setError(null);
     try {
-      esEdicion ? await actualizarCliente(id, form) : await crearCliente(form);
+      esEdicion ? await actualizarCliente(id, form, token) : await crearCliente(form, token);
       onVolver();
     } catch(e) { setError(e.message); }
     finally { setLoading(false); }

@@ -16,13 +16,13 @@ const ESTADO_CLASS = {
   ANULADA:    "anulada",
 };
 
-function VentaDetalle({ id, onVolver }) {
+function VentaDetalle({ id, onVolver, token }) {
   const [venta, setVenta]   = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    obtenerVenta(id).then(setVenta).catch(console.error).finally(() => setLoading(false));
-  }, [id]);
+    obtenerVenta(id, token).then(setVenta).catch(console.error).finally(() => setLoading(false));
+  }, [id, token]);
 
   if (loading) return (
     <div className="vd-page" style={{ justifyContent:"center", alignItems:"center" }}>

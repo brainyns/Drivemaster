@@ -1,38 +1,48 @@
 const BASE_URL = "http://localhost:8080/proveedores";
 
-export async function listarProveedores() {
-  const res = await fetch(BASE_URL);
+const buildHeaders = (token, contentType = "application/json") => {
+  const headers = {};
+  if (contentType) headers["Content-Type"] = contentType;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+};
+
+export async function listarProveedores(token) {
+  const res = await fetch(BASE_URL, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Error al obtener proveedores");
   return res.json();
 }
 
-export async function obtenerProveedor(id) {
-  const res = await fetch(`${BASE_URL}/${id}`);
+export async function obtenerProveedor(id, token) {
+  const res = await fetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Proveedor no encontrado");
   return res.json();
 }
 
-export async function crearProveedor(proveedor) {
+export async function crearProveedor(proveedor, token) {
   const res = await fetch(`${BASE_URL}/guardar`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: buildHeaders(token),
     body: JSON.stringify(proveedor),
   });
   if (!res.ok) throw new Error("Error al crear proveedor");
   return res.json();
 }
 
-export async function actualizarProveedor(id, proveedor) {
+export async function actualizarProveedor(id, proveedor, token) {
   const res = await fetch(`${BASE_URL}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: buildHeaders(token),
     body: JSON.stringify(proveedor),
   });
   if (!res.ok) throw new Error("Error al actualizar proveedor");
   return res.json();
 }
 
-export async function eliminarProveedor(id) {
-  const res = await fetch(`${BASE_URL}/${id}`, { method: "DELETE" });
+export async function eliminarProveedor(id, token) {
+  const res = await fetch(`${BASE_URL}/${id}`, {
+    method: "DELETE",
+    headers: buildHeaders(token),
+  });
   if (!res.ok) throw new Error("Error al eliminar proveedor");
 }
