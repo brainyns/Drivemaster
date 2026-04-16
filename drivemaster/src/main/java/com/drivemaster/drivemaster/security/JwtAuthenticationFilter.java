@@ -28,54 +28,70 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
+            HttpServletResponse response,
+            FilterChain filterChain)
             throws ServletException, IOException {
 
         try {
-            // Obtener token desde cookie
-            String jwt = getTokenFromCookie(request);
+
+            String jwt = null;
+
+            // 1️⃣ Intentar obtener token desde Authorization header
+            String authHeader = request.getHeader("Authorization");
+
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                jwt = authHeader.substring(7);
+            }
+
+            // 2️⃣ Si no existe en header, intentar cookie
+            if (jwt == null) {
+                jwt = getTokenFromCookie(request);
+            }
 
             if (jwt != null) {
+
                 String correo = jwtUtil.extractUsername(jwt);
 
-                if (correo != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                if (correo != null &&
+                        SecurityContextHolder.getContext().getAuthentication() == null) {
 
                     UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
 
                     if (jwtUtil.validateToken(jwt, userDetails)) {
 
-                        UsernamePasswordAuthenticationToken authToken =
-                                new UsernamePasswordAuthenticationToken(
-                                        userDetails,
-                                        null,
-                                        userDetails.getAuthorities()
-                                );
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities());
 
                         authToken.setDetails(
-                                new WebAuthenticationDetailsSource().buildDetails(request)
-                        );
+                                new WebAuthenticationDetailsSource()
+                                        .buildDetails(request));
 
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                        SecurityContextHolder
+                                .getContext()
+                                .setAuthentication(authToken);
                     }
                 }
             }
 
-            // continuar flujo
             filterChain.doFilter(request, response);
 
         } catch (Exception ex) {
-            // Manejo de error profesional
+
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Token inválido o sesión expirada\"}");
+
+            response.getWriter().write(
+                    "{\"error\": \"Token inválido o sesión expirada\"}");
         }
     }
 
     // Método para obtener el token desde la cookie
     private String getTokenFromCookie(HttpServletRequest request) {
 
-        if (request.getCookies() == null) return null;
+        if (request.getCookies() == null)
+            return null;
 
         for (Cookie cookie : request.getCookies()) {
             if ("jwt".equals(cookie.getName())) {

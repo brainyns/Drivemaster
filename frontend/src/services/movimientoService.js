@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8080/movimientos";
+const BASE_URL = "http://localhost:8080/api/movimientos";
 
 const buildHeaders = (token, contentType) => {
   const headers = {};

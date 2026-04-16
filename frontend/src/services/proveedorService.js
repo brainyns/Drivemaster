@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8080/proveedores";
+const BASE_URL = "http://localhost:8080/api/proveedores";
 
 const buildHeaders = (token, contentType = "application/json") => {
   const headers = {};

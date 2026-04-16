@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8080/clientes";
+const BASE_URL = "http://localhost:8080/api/clientes";
 
 const buildHeaders = (token) => {
   const headers = { "Content-Type": "application/json" };

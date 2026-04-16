@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8080/ventas";
+const BASE_URL = "http://localhost:8080/api/ventas";
 
 const buildHeaders = (token, contentType = "application/json") => {
   const headers = {};

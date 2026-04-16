@@ -1,4 +1,4 @@
-const API = "http://localhost:8080/inventario";
+const API = "http://localhost:8080/api/inventario";
 
 const buildHeaders = (token, contentType) => {
   const headers = {};
