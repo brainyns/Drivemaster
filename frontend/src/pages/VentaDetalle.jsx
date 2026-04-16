@@ -1,71 +1,211 @@
 import { useEffect, useState } from "react";
 import { obtenerVenta } from "../services/ventaService";
-import "../css/productos.css";
+import "../css/venta.css";
 
-function VentaDetalle({ id, onVolver }) {
-  const [venta, setVenta] = useState(null);
+const METODO_ICO = {
+  TARJETA:       "💳",
+  EFECTIVO:      "💵",
+  TRANSFERENCIA: "🏦",
+};
+
+const ESTADO_CLASS = {
+  COMPLETADA: "completada",
+  PAGADA:     "pagada",
+  PENDIENTE:  "pendiente",
+  CANCELADA:  "cancelada",
+  ANULADA:    "anulada",
+};
+
+function VentaDetalle({ id, onVolver, token }) {
+  const [venta, setVenta]   = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    obtenerVenta(id).then(setVenta).finally(() => setLoading(false));
-  }, [id]);
+    obtenerVenta(id, token).then(setVenta).catch(console.error).finally(() => setLoading(false));
+  }, [id, token]);
 
-  if (loading) return <p className="estado">Cargando...</p>;
-  if (!venta) return <p className="estado error">Venta no encontrada</p>;
+  if (loading) return (
+    <div className="vd-page" style={{ justifyContent:"center", alignItems:"center" }}>
+      <p style={{ color:"var(--muted)", fontFamily:"DM Sans,sans-serif" }}>Cargando venta...</p>
+    </div>
+  );
+  if (!venta) return (
+    <div className="vd-page" style={{ justifyContent:"center", alignItems:"center" }}>
+      <p style={{ color:"var(--red)", fontFamily:"DM Sans,sans-serif" }}>Venta no encontrada</p>
+    </div>
+  );
+
+  const total    = parseFloat(venta.total || 0);
+  const subtotal = venta.productos?.reduce((a,p) => a + parseFloat(p.subtotal||0), 0) || total;
+  const impuesto = total - subtotal;
+  const estadoKey = venta.estado?.toUpperCase?.() || "";
+  const fecha = venta.fecha ? new Date(venta.fecha).toLocaleDateString("es-CO", { day:"2-digit", month:"numeric", year:"numeric" }) : "—";
 
   return (
-    <div className="form-container">
-      <div className="productos-header">
-        <h1>Detalle de Venta</h1>
-        <button onClick={onVolver} className="btn-cancelar">← Volver</button>
+    <div className="vd-page">
+
+      {/* Topbar */}
+      <header className="vt-top">
+        <div className="vt-top-left">
+          <span className="vt-brand">DriveMaster</span>
+          <span className="vt-div">|</span>
+          <span className="vt-breadcrumb">Ventas</span>
+        </div>
+        <div className="vt-tabs">
+          <button className="vt-tab" onClick={onVolver}>Historial</button>
+          <button className="vt-tab active">Detalle de Venta</button>
+        </div>
+        <div className="vt-top-right">
+          <button className="vt-ico-btn">🔔</button>
+          <button className="vt-ico-btn">⚙</button>
+          <div className="vt-avatar">A</div>
+        </div>
+      </header>
+
+      {/* Sub-header */}
+      <div className="vd-subheader">
+        <button className="vd-back" onClick={onVolver}>
+          ← Volver al historial
+        </button>
+        <div className="vd-subheader-actions">
+          <button className="vt-btn-outline">🖨 Imprimir</button>
+          <button className="vt-btn-primary">↗ Compartir Comprobante</button>
+        </div>
       </div>
 
-      <div className="producto-form">
-        <p><strong>Fecha:</strong> {new Date(venta.fecha).toLocaleString()}</p>
-        <p><strong>Estado:</strong> {venta.estado}</p>
-        <p><strong>Total:</strong> ${venta.total}</p>
+      {/* Title */}
+      <div className="vd-page-title">
+        <h1>Detalle de Venta</h1>
+      </div>
 
-        <h3 style={{ marginTop: "1.5rem" }}>Productos</h3>
-        <table className="productos-tabla">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Cantidad</th>
-              <th>Precio Unitario</th>
-              <th>Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {venta.productos.map((p, i) => (
-              <tr key={i}>
-                <td>{p.nombre}</td>
-                <td>{p.cantidad}</td>
-                <td>${p.precioUnitario}</td>
-                <td>${p.subtotal}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Body */}
+      <div className="vd-body">
 
-        <h3 style={{ marginTop: "1.5rem" }}>Pagos</h3>
-        <table className="productos-tabla">
-          <thead>
-            <tr>
-              <th>Método</th>
-              <th>Monto</th>
-              <th>Referencia</th>
-            </tr>
-          </thead>
-          <tbody>
-            {venta.pagos.map((p, i) => (
-              <tr key={i}>
-                <td>{p.metodo}</td>
-                <td>${p.monto}</td>
-                <td>{p.referencia}</td>
-              </tr>
+        {/* ── Columna izquierda ── */}
+        <div className="vd-left">
+
+          {/* Resumen */}
+          <div className="vd-panel relative">
+            <div className="vd-resumen-ico">🧾</div>
+            <p className="vd-panel-label">Resumen de Venta</p>
+            <p className="vd-resumen-fecha-label">Fecha de Transacción</p>
+            <p className="vd-resumen-fecha">{fecha}</p>
+            <p className="vd-resumen-estado-label">Estado</p>
+            <span className={`vt-badge ${ESTADO_CLASS[estadoKey] || "pendiente"}`}>
+              {venta.estado || "—"}
+            </span>
+            <p className="vd-resumen-monto-label">Monto Total</p>
+            <p className="vd-resumen-monto">${total.toLocaleString("es-CO", { minimumFractionDigits:2 })}</p>
+          </div>
+
+          {/* Cliente */}
+          <div className="vd-panel">
+            <p className="vd-panel-label">Cliente</p>
+            <div className="vd-client-row">
+              <div className="vd-client-ava">👤</div>
+              <div>
+                <p className="vd-client-name">{venta.clienteNombre || `Cliente #${venta.clienteId}`}</p>
+                <p className="vd-client-id">ID: {venta.clienteIdentificacion || venta.clienteId}</p>
+              </div>
+            </div>
+            {venta.clienteCorreo && (
+              <div className="vd-detail-row">
+                <span className="vd-detail-label">Email</span>
+                <span className="vd-detail-val">{venta.clienteCorreo}</span>
+              </div>
+            )}
+            {venta.clienteTelefono && (
+              <div className="vd-detail-row">
+                <span className="vd-detail-label">Teléfono</span>
+                <span className="vd-detail-val">{venta.clienteTelefono}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Columna derecha ── */}
+        <div className="vd-right">
+
+          {/* Productos */}
+          <div className="vd-panel" style={{ padding:0, overflow:"hidden" }}>
+            <div style={{ padding:"1.2rem 1.25rem .75rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <p className="vd-panel-title">Productos y Servicios</p>
+              </div>
+              <span style={{ fontSize:".74rem", color:"var(--muted)" }}>
+                {venta.productos?.length || 0} {venta.productos?.length === 1 ? "ítem" : "ítems"} en total
+              </span>
+            </div>
+            <table className="vd-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th className="right">Cant.</th>
+                  <th className="right">Precio Unit.</th>
+                  <th className="right">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(venta.productos || []).map((p, i) => (
+                  <tr key={i}>
+                    <td>
+                      <p className="vd-prod-name">{p.nombre}</p>
+                      {p.categoria && <p className="vd-prod-cat">{p.categoria}</p>}
+                    </td>
+                    <td className="right">{p.cantidad}</td>
+                    <td className="right">${parseFloat(p.precioUnitario||0).toLocaleString("es-CO", { minimumFractionDigits:2 })}</td>
+                    <td className="right vd-subtotal-orange">${parseFloat(p.subtotal||0).toLocaleString("es-CO", { minimumFractionDigits:2 })}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="vd-totals">
+              <div className="vd-totals-row">
+                <span className="vd-totals-label">Subtotal Bruto</span>
+                <span className="vd-totals-val">${subtotal.toLocaleString("es-CO", { minimumFractionDigits:2 })}</span>
+              </div>
+              <div className="vd-totals-row">
+                <span className="vd-totals-label">Impuestos (0%)</span>
+                <span className="vd-totals-val">${impuesto.toLocaleString("es-CO", { minimumFractionDigits:2 })}</span>
+              </div>
+              <div className="vd-totals-row final">
+                <span className="vd-totals-label">Total Final</span>
+                <span className="vd-totals-val">${total.toLocaleString("es-CO", { minimumFractionDigits:2 })}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Pagos */}
+          <div className="vd-panel">
+            <div className="vd-pagos-header">
+              <p className="vd-panel-title">Registro de Pagos</p>
+              <span className="vd-pagos-count">{venta.pagos?.length || 0} registro(s)</span>
+            </div>
+            <table className="vd-table" style={{ marginBottom:".5rem" }}>
+              <thead>
+                <tr>
+                  <th>Método</th>
+                  <th className="right">Monto</th>
+                  <th className="right">Referencia</th>
+                </tr>
+              </thead>
+            </table>
+            {(venta.pagos || []).map((p, i) => (
+              <div key={i} className="vd-pago-row">
+                <div className="vd-pago-left">
+                  <span className="vd-pago-ico">{METODO_ICO[p.metodo] || "💰"}</span>
+                  <span className="vd-pago-metodo">{p.metodo}</span>
+                </div>
+                <span className="vd-pago-monto">${parseFloat(p.monto||0).toLocaleString("es-CO", { minimumFractionDigits:2 })}</span>
+                {p.referencia && <span className="vd-pago-ref">{p.referencia}</span>}
+              </div>
             ))}
-          </tbody>
-        </table>
+            <div className="vd-footer" style={{ paddingTop:"1rem", paddingLeft:0, paddingRight:0, marginTop:"1rem" }}>
+              <span>Creado por: <strong>{venta.creadoPor || "Admin"}</strong> &nbsp; Terminal: <strong>{venta.terminal || "POS-01"}</strong></span>
+              <span className="vd-footer-secure">🔒 Transacción Encriptada</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
