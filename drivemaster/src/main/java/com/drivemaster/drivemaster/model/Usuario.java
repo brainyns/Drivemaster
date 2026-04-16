@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -15,6 +16,10 @@ public class Usuario {
 
     private String nombre;
     private String correo;
-    private String rol; // ADMIN, VENDEDOR, ALMACEN
+
+    @JsonIgnore
+    private String password;
+
+    private String rol; // SUPERADMIN, ADMIN, VENDEDOR
     private Boolean activo;
 }
