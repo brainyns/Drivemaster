@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-DrivemasterApplication<drivemaster>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.drivemaster.drivemaster.DrivemasterApplication",
+            "projectName": "drivemaster",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

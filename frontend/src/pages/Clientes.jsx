@@ -8,17 +8,17 @@ const getColor = (n) => n ? AVATARES[n.charCodeAt(0) % AVATARES.length] : AVATAR
 
 const POR_PAG = 10;
 
-function Clientes({ onNuevo, onEditar }) {
+function Clientes({ onNuevo, onEditar, token }) {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina]     = useState(1);
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { cargar(); }, [token]);
 
   const cargar = async () => {
     try {
-      const data = await listarClientes();
+      const data = await listarClientes(token);
       setClientes(data);
     } catch(e) { console.error(e); }
     finally { setLoading(false); }
@@ -27,7 +27,7 @@ function Clientes({ onNuevo, onEditar }) {
   const handleEliminar = async (id) => {
     if (!confirm("¿Eliminar este cliente?")) return;
     try {
-      await eliminarCliente(id);
+      await eliminarCliente(id, token);
       setClientes(p => p.filter(c => c.id !== id));
     } catch(e) { alert(e.message); }
   };

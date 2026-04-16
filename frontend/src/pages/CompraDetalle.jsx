@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { obtenerCompra } from "../services/compraService";
 import "../css/productos.css";
 
-function CompraDetalle({ id, onVolver }) {
+function CompraDetalle({ id, onVolver, token }) {
   const [compra, setCompra] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    obtenerCompra(id).then(setCompra).finally(() => setLoading(false));
-  }, [id]);
+    obtenerCompra(id, token).then(setCompra).finally(() => setLoading(false));
+  }, [id, token]);
 
   if (loading) return <p className="estado">Cargando...</p>;
   if (!compra) return <p className="estado error">Compra no encontrada</p>;

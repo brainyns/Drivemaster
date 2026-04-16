@@ -3,17 +3,17 @@ import { listarCompras } from "../services/compraService";
 import "../css/productos.css";
 import "../css/venta.css";
 
-function Compras({ onNueva, onDetalle }) {
+function Compras({ onNueva, onDetalle, token }) {
   const [compras, setCompras] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    listarCompras()
+    listarCompras(token)
       .then(setCompras)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [token]);
 
   if (loading) return <p className="estado">Cargando compras...</p>;
   if (error) return <p className="estado error">Error: {error}</p>;

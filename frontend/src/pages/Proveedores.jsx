@@ -2,22 +2,22 @@ import { useEffect, useState } from "react";
 import { listarProveedores, eliminarProveedor } from "../services/proveedorService";
 import "../css/productos.css";
 
-function Proveedores({ onNuevo, onEditar }) {
+function Proveedores({ onNuevo, onEditar, token }) {
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    listarProveedores()
+    listarProveedores(token)
       .then(setProveedores)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [token]);
 
   const handleEliminar = async (id) => {
     if (!confirm("¿Seguro que deseas eliminar este proveedor?")) return;
     try {
-      await eliminarProveedor(id);
+      await eliminarProveedor(id, token);
       setProveedores(proveedores.filter((p) => p.id !== id));
     } catch (err) {
       alert("Error al eliminar: " + err.message);
