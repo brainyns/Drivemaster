@@ -1,6 +1,5 @@
 package com.drivemaster.drivemaster.service;
 
-
 import org.springframework.stereotype.Service;
 
 import com.drivemaster.drivemaster.model.Producto;
@@ -25,8 +24,7 @@ public class ProductoServiceImpl implements ProductoService {
         }
 
         producto.setStockActual(
-                producto.getStockActual() != null ? producto.getStockActual() : 0
-        );
+                producto.getStockActual() != null ? producto.getStockActual() : 0);
 
         return productoRepository.save(producto);
     }
@@ -82,4 +80,30 @@ public class ProductoServiceImpl implements ProductoService {
 
         return productoRepository.save(producto);
     }
+
+    @Override
+    public List<Producto> obtenerPorCategoria(String categoria) {
+        return productoRepository.findByCategoria(categoria);
+    }
+
+    @Override
+    public List<Producto> obtenerPorMarca(String marca) {
+        return productoRepository.findByMarca(marca);
+    }
+
+    @Override
+    public List<Producto> buscarPorNombre(String nombre) {
+        return productoRepository.findByNombreContainingIgnoreCase(nombre);
+    }
+
+    @Override
+    public List<Producto> obtenerPorModeloCompatible(String modelo) {
+        return productoRepository.findByModeloCompatible(modelo);
+    }
+
+    @Override
+    public List<Producto> obtenerConStockBajo() {
+        return productoRepository.findProductosConStockBajo();
+    }
+
 }
