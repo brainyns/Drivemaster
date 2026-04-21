@@ -8,4 +8,5 @@ public class RegisterRequest {
     private String correo;
     private String password;
     private String rol;
+    private Boolean activo;
 }
