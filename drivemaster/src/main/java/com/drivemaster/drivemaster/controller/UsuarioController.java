@@ -1,13 +1,17 @@
 package com.drivemaster.drivemaster.controller;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,7 +23,7 @@ import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.service.UsuarioService;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/usuarios")
 @CrossOrigin(origins = "http://localhost:5173")
 public class UsuarioController {
 
@@ -50,13 +54,92 @@ public class UsuarioController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Correo ya registrado");
         }
 
-        Usuario usuario = new Usuario();
-        usuario.setNombre(request.getNombre());
-        usuario.setCorreo(request.getCorreo());
-        usuario.setPassword(passwordEncoder.encode(request.getPassword()));
-        usuario.setRol(request.getRol() == null ? "VENDEDOR" : request.getRol().trim().toUpperCase());
-        usuario.setActivo(true);
+        String rol = request.getRol() == null ? "VENDEDOR" : request.getRol().trim().toUpperCase();
+        List<String> permisos = getPermisosPorRol(rol);
+
+        Usuario usuario = Usuario.builder()
+                .nombre(request.getNombre())
+                .correo(request.getCorreo())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .rol(rol)
+                .permisos(permisos)
+                .activo(true)
+                .fechaCreacion(Instant.now())
+                .intentosFallidos(0)
+                .bloqueado(false)
+                .build();
 
         return ResponseEntity.status(HttpStatus.CREATED).body(usuarioService.crearUsuario(usuario));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Usuario> actualizarUsuario(@PathVariable String id, @RequestBody RegisterRequest request) {
+        Usuario usuario = usuarioService.obtenerPorId(id);
+        if (usuario == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
+        }
+
+        if (request.getNombre() != null) {
+            usuario.setNombre(request.getNombre());
+        }
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            usuario.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        if (request.getRol() != null) {
+            String rol = request.getRol().trim().toUpperCase();
+            usuario.setRol(rol);
+            usuario.setPermisos(getPermisosPorRol(rol));
+        }
+
+        if (request.getActivo() != null) {
+            usuario.setActivo(request.getActivo());
+        }
+
+        return ResponseEntity.ok(usuarioService.actualizarUsuario(usuario));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarUsuario(@PathVariable String id) {
+        Usuario usuario = usuarioService.obtenerPorId(id);
+        if (usuario == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
+        }
+
+        usuario.setActivo(false);
+        usuarioService.actualizarUsuario(usuario);
+        return ResponseEntity.ok().build();
+    }
+
+    private List<String> getPermisosPorRol(String rol) {
+        return switch (rol) {
+            case "SUPERADMIN" -> List.of(
+                    "USUARIOS_READ", "USUARIOS_WRITE", "USUARIOS_DELETE",
+                    "PRODUCTOS_READ", "PRODUCTOS_WRITE", "PRODUCTOS_DELETE",
+                    "CLIENTES_READ", "CLIENTES_WRITE", "CLIENTES_DELETE",
+                    "VENTAS_READ", "VENTAS_WRITE", "VENTAS_DELETE",
+                    "COMPRAS_READ", "COMPRAS_WRITE", "COMPRAS_DELETE",
+                    "PROVEEDORES_READ", "PROVEEDORES_WRITE", "PROVEEDORES_DELETE",
+                    "MOVIMIENTOS_READ", "MOVIMIENTOS_WRITE",
+                    "AJUSTES_READ", "AJUSTES_WRITE"
+            );
+            case "ADMIN" -> List.of(
+                    "USUARIOS_READ", "USUARIOS_WRITE",
+                    "PRODUCTOS_READ", "PRODUCTOS_WRITE",
+                    "CLIENTES_READ", "CLIENTES_WRITE",
+                    "VENTAS_READ", "VENTAS_WRITE",
+                    "COMPRAS_READ", "COMPRAS_WRITE",
+                    "PROVEEDORES_READ", "PROVEEDORES_WRITE",
+                    "MOVIMIENTOS_READ", "MOVIMIENTOS_WRITE",
+                    "AJUSTES_READ", "AJUSTES_WRITE"
+            );
+            case "VENDEDOR" -> List.of(
+                    "PRODUCTOS_READ",
+                    "CLIENTES_READ", "CLIENTES_WRITE",
+                    "VENTAS_READ", "VENTAS_WRITE"
+            );
+            default -> List.of();
+        };
     }
 }
