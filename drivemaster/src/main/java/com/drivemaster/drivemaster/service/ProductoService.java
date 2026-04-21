@@ -20,4 +20,14 @@ public interface ProductoService {
 
     Producto actualizarStock(String productoId, Integer nuevoStock);
 
+    List<Producto> obtenerPorCategoria(String categoria);
+
+    List<Producto> obtenerPorMarca(String marca);
+
+    List<Producto> buscarPorNombre(String nombre);
+
+    List<Producto> obtenerPorModeloCompatible(String modelo);
+
+    List<Producto> obtenerConStockBajo();
+
 }
