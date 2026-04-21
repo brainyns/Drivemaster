@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.security;
 
 import java.io.IOException;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,6 +22,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
+    @Value("${security.session.max-inactive-minutes:30}")
+    private int maxInactiveMinutes;
+
     public JwtAuthenticationFilter(JwtUtil jwtUtil, CustomUserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
@@ -28,22 +32,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
             throws ServletException, IOException {
 
         try {
 
             String jwt = null;
 
-            // 1️⃣ Intentar obtener token desde Authorization header
             String authHeader = request.getHeader("Authorization");
 
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 jwt = authHeader.substring(7);
             }
 
-            // 2️⃣ Si no existe en header, intentar cookie
             if (jwt == null) {
                 jwt = getTokenFromCookie(request);
             }
@@ -71,6 +73,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         SecurityContextHolder
                                 .getContext()
                                 .setAuthentication(authToken);
+
+                        response.setHeader("X-Session-Expires-In", String.valueOf(maxInactiveMinutes * 60));
                     }
                 }
             }
@@ -83,11 +87,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
 
             response.getWriter().write(
-                    "{\"error\": \"Token inválido o sesión expirada\"}");
+                    "{\"error\": \"Token inválido o sesión expirada\", \"code\": \"SESSION_EXPIRED\"}");
         }
     }
 
-    // Método para obtener el token desde la cookie
     private String getTokenFromCookie(HttpServletRequest request) {
 
         if (request.getCookies() == null)
