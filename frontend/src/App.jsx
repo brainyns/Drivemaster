@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import Productos from "./pages/Productos";
 import ProductoForm from "./pages/ProductoForm";
@@ -17,17 +17,37 @@ import Movimientos from "./pages/Movimientos";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Usuarios from "./pages/Usuarios";
+import { getUser, getToken, clearSession, refreshToken, logout } from "./services/authService";
 
-const storedUser = localStorage.getItem("dm-user");
-const storedToken = localStorage.getItem("dm-token");
-const initialUser = storedUser ? JSON.parse(storedUser) : null;
+const storedUser = getUser();
+const storedToken = getToken();
+const initialUser = storedUser;
 const initialPage = initialUser ? (initialUser.rol === "VENDEDOR" ? "ventas" : "productos") : "login";
 
 function App() {
   const [pagina, setPagina] = useState(initialPage);
   const [user, setUser] = useState(initialUser);
-  const [token, setToken] = useState(storedToken || null);
+  const [token, setToken] = useState(storedToken);
   const [idSeleccionado, setIdSeleccionado] = useState(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        await refreshToken();
+      } catch (e) {
+        setSessionExpired(true);
+      }
+    }, 25 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (sessionExpired) {
+      handleLogout();
+    }
+  }, [sessionExpired]);
 
   const irA = (p, id = null) => {
     setIdSeleccionado(id);
@@ -43,17 +63,16 @@ function App() {
     };
     setUser(newUser);
     setToken(auth.token);
-    localStorage.setItem("dm-user", JSON.stringify(newUser));
-    localStorage.setItem("dm-token", auth.token);
     setPagina(newUser.rol === "VENDEDOR" ? "ventas" : "productos");
+    setSessionExpired(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout();
     setUser(null);
     setToken(null);
     setPagina("login");
-    localStorage.removeItem("dm-user");
-    localStorage.removeItem("dm-token");
+    setSessionExpired(false);
   };
 
   const allowedPages = {
@@ -107,6 +126,16 @@ function App() {
       return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} />;
     }
 
+    if (sessionExpired) {
+      return (
+          <div style={{ padding: "20px", textAlign: "center" }}>
+            <h2>Sesión expirada</h2>
+            <p>Tu sesión ha expirado. Por favor, inicia sesión nuevamente.</p>
+            <button onClick={() => { clearSession(); setPagina("login"); }}>Volver al login</button>
+          </div>
+      );
+    }
+
     if (!allowedPages[user.rol]?.includes(pagina)) {
       return <div>Acceso no autorizado a esta sección.</div>;
     }
@@ -134,10 +163,10 @@ function App() {
   };
 
   return (
-    <div className="app-layout">
-      {user && <Sidebar paginaActual={pagina} irA={irA} userRole={user.rol} onLogout={handleLogout} />}
-      <main className="app-content">{renderPagina()}</main>
-    </div>
+      <div className="app-layout">
+        {user && <Sidebar paginaActual={pagina} irA={irA} userRole={user.rol} onLogout={handleLogout} />}
+        <main className="app-content">{renderPagina()}</main>
+      </div>
   );
 }
 

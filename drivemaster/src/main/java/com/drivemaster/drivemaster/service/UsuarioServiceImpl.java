@@ -31,4 +31,15 @@ public class UsuarioServiceImpl implements UsuarioService {
         return usuarioRepository.findByCorreo(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
+
+    @Override
+    public Usuario obtenerPorId(String id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    }
+
+    @Override
+    public Usuario actualizarUsuario(Usuario usuario) {
+        return usuarioRepository.save(usuario);
+    }
 }
