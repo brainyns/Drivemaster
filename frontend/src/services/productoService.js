@@ -7,21 +7,22 @@ const buildHeaders = (token, contentType = "application/json") => {
   return headers;
 };
 
-// Listar todos los productos
+// ─────────────────────────────────────────────────────────────────────────────
+// PANEL ADMIN — requieren token
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function listarProductos(token) {
   const res = await fetch(BASE_URL, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Error al obtener productos");
   return res.json();
 }
 
-// Obtener producto por ID
 export async function obtenerProducto(id, token) {
   const res = await fetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Producto no encontrado");
   return res.json();
 }
 
-// Crear producto
 export async function crearProducto(producto, token) {
   const res = await fetch(`${BASE_URL}/guardar`, {
     method: "POST",
@@ -32,7 +33,6 @@ export async function crearProducto(producto, token) {
   return res.json();
 }
 
-// Actualizar producto
 export async function actualizarProducto(id, producto, token) {
   const res = await fetch(`${BASE_URL}/${id}`, {
     method: "PUT",
@@ -43,7 +43,6 @@ export async function actualizarProducto(id, producto, token) {
   return res.json();
 }
 
-// Eliminar producto
 export async function eliminarProducto(id, token) {
   const res = await fetch(`${BASE_URL}/${id}`, {
     method: "DELETE",
@@ -52,7 +51,6 @@ export async function eliminarProducto(id, token) {
   if (!res.ok) throw new Error("Error al eliminar producto");
 }
 
-// Actualizar stock
 export async function actualizarStock(id, nuevoStock, token) {
   const res = await fetch(`${BASE_URL}/${id}/stock`, {
     method: "PATCH",
@@ -61,4 +59,58 @@ export async function actualizarStock(id, nuevoStock, token) {
   });
   if (!res.ok) throw new Error("Error al actualizar stock");
   return res.json();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CATÁLOGO PÚBLICO — sin token, leen del backend directo
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Todos los productos (catálogo público)
+export async function obtenerProductos() {
+  const res = await fetch(BASE_URL);
+  if (!res.ok) throw new Error("Error al obtener productos");
+  return res.json();
+}
+
+// Un producto por ID (catálogo público)
+export async function obtenerProductoCatalogo(id) {
+  const res = await fetch(`${BASE_URL}/${id}`);
+  if (!res.ok) throw new Error("Producto no encontrado");
+  return res.json();
+}
+
+// Búsqueda + filtros para el catálogo público
+// El filtrado se hace en frontend sobre la lista completa
+export async function buscarProductos(filtros = {}) {
+  const res = await fetch(BASE_URL);
+  if (!res.ok) throw new Error("Error al obtener productos");
+  let resultado = await res.json();
+
+  if (filtros.nombre) {
+    const query = filtros.nombre.toLowerCase();
+    resultado = resultado.filter(
+      (p) =>
+        p.nombre.toLowerCase().includes(query) ||
+        p.categoria.toLowerCase().includes(query)
+    );
+  }
+
+  if (filtros.categoria && filtros.categoria !== "Todas") {
+    resultado = resultado.filter((p) => p.categoria === filtros.categoria);
+  }
+
+  if (filtros.soloMasVendidos) {
+    resultado = resultado.filter((p) => p.masVendido === true);
+  }
+
+  return resultado;
+}
+
+// Categorías únicas extraídas de los productos del backend
+export async function obtenerCategorias() {
+  const res = await fetch(BASE_URL);
+  if (!res.ok) throw new Error("Error al obtener categorías");
+  const productos = await res.json();
+  const unicas = [...new Set(productos.map((p) => p.categoria).filter(Boolean))];
+  return unicas;
 }

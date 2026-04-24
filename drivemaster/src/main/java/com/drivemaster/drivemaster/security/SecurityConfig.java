@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -56,6 +57,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
                         .requestMatchers("/api/auth/logout").authenticated()
                         .requestMatchers("/api/usuarios/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/productos", "/api/productos/").permitAll()
                         .requestMatchers("/api/productos/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/clientes/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/ventas/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")

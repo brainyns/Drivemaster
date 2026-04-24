@@ -1,32 +1,37 @@
 import "../css/navbar.css";
 
-function Navbar({ paginaActual, irA }) {
-  const links = [
-    { key: "productos",    label: "Productos",    icon: "📦" },
-    { key: "clientes",     label: "Clientes",     icon: "👤" },
-    { key: "proveedores",  label: "Proveedores",  icon: "🏭" },
-    { key: "compras",      label: "Compras",      icon: "🛒" },
-    { key: "ventas",       label: "Ventas",       icon: "💰" },
-    { key: "movimientos",  label: "Movimientos",  icon: "📊" },
-  ];
-
+const Navbar = ({ busqueda, onBusquedaChange, onIrAdmin }) => {
   return (
     <nav className="navbar">
-      <div className="navbar-brand">⚙️ Drive<span>Master</span></div>
-      <ul className="navbar-links">
-        {links.map(link => (
-          <li key={link.key}>
-            <button
-              onClick={() => irA(link.key)}
-              className={paginaActual.startsWith(link.key) ? "active" : ""}
-            >
-              {link.icon} {link.label}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <div className="navbar__logo">
+        <div className="navbar__logo-icon">⚙️</div>
+        <span className="navbar__logo-text">
+          DRIVE<span>MASTER</span>
+        </span>
+      </div>
+
+      <div className="navbar__search">
+        <span className="navbar__search-icon">🔍</span>
+        <input
+          className="navbar__search-input"
+          type="text"
+          placeholder="Buscar repuesto, marca, categoría..."
+          value={busqueda}
+          onChange={(e) => onBusquedaChange(e.target.value)}
+        />
+      </div>
+
+      <div className="navbar__actions">
+        <button className="navbar__cart-btn" title="Carrito">🛒</button>
+        <button
+          className="navbar__login-btn"
+          onClick={onIrAdmin}
+        >
+          Iniciar Sesión
+        </button>
+      </div>
     </nav>
   );
-}
+};
 
 export default Navbar;
