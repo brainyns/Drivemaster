@@ -1,0 +1,92 @@
+/* ─── PRODUCT LIST ────────────────────────────────────────────── */
+.product-list {
+  background: #0a0a0a;
+  padding: 56px 48px 80px;
+  max-width: 100%;
+}
+
+.product-list__header {
+  max-width: 1280px;
+  margin: 0 auto 36px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.product-list__title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(28px, 3.5vw, 44px);
+  font-weight: 900;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: 1;
+}
+
+.product-list__subtitle {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.product-list__grid {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 2px;
+}
+
+/* ── Empty state ── */
+.product-list__empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 100px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.product-list__empty-icon {
+  font-size: 40px;
+  opacity: 0.3;
+}
+
+.product-list__empty-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.product-list__empty-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: rgba(255,255,255,0.18);
+  max-width: 280px;
+}
+
+@media (max-width: 768px) {
+  .product-list {
+    padding: 40px 24px 60px;
+  }
+
+  .product-list__grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .product-list__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+  }
+}

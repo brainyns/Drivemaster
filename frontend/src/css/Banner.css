@@ -1,0 +1,244 @@
+/* ─── BANNER ─────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=DM+Sans:wght@300;400;500&display=swap');
+
+.banner {
+  position: relative;
+  min-height: 100vh;
+  background: #0a0a0a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+/* Fondo textura + gradiente dramático */
+.banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 70% 50%, rgba(234, 88, 12, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 80% at 10% 50%, rgba(234, 88, 12, 0.06) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Grid de líneas tipo plano técnico */
+.banner__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  z-index: 0;
+}
+
+.banner__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 120px 48px 80px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+/* ── Texto izq ── */
+.banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.banner__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(234, 88, 12, 0.1);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  color: #ea580c;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 2px;
+  width: fit-content;
+}
+
+.banner__badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ea580c;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.banner__title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(56px, 7vw, 96px);
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.banner__title span {
+  color: #ea580c;
+  display: block;
+}
+
+.banner__subtitle {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.7;
+  max-width: 440px;
+  margin: 0;
+}
+
+.banner__cta {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.banner__btn-primary {
+  background: #ea580c;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 14px 32px;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.banner__btn-primary:hover {
+  background: #c2410c;
+  transform: translateY(-1px);
+}
+
+.banner__btn-secondary {
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 14px 24px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.banner__btn-secondary:hover {
+  border-color: rgba(255,255,255,0.35);
+  color: #fff;
+}
+
+.banner__stats {
+  display: flex;
+  gap: 40px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.banner__stat-value {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.banner__stat-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+/* ── Visual der ── */
+.banner__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.banner__car-graphic {
+  position: relative;
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.banner__car-graphic img {
+  width: 100%;
+  height: 420px;
+  object-fit: cover;
+  display: block;
+  filter: brightness(0.75) contrast(1.1);
+}
+
+.banner__car-graphic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(234,88,12,0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.banner__car-label {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 6px 12px;
+  border-radius: 2px;
+  backdrop-filter: blur(8px);
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .banner__content {
+    grid-template-columns: 1fr;
+    padding: 100px 24px 60px;
+    gap: 40px;
+  }
+
+  .banner__visual {
+    order: -1;
+  }
+
+  .banner__car-graphic img {
+    height: 260px;
+  }
+}
