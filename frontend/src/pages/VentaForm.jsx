@@ -80,6 +80,7 @@ function VentaForm({ onVolver, token }) {
     setCatalogQty(1);
     setCatalogSearch("");
   };
+  
 
   // ── Agregar por SKU/ID ──
   const agregarPorSku = () => {
