@@ -38,15 +38,15 @@ function Productos({ onNuevo, onEditar, token }) {
     const match = p.nombre?.toLowerCase().includes(q) ||
                   p.codigo?.toLowerCase().includes(q) ||
                   p.categoria?.toLowerCase().includes(q);
-    if (filtro === "todos") return match;
-    if (filtro === "activo") return getEstado(p) === "activo" && match;
-    if (filtro === "medio")  return getEstado(p) === "medio"  && match;
-    if (filtro === "critico")return getEstado(p) === "critico" && match;
+    if (filtro === "todos")   return match;
+    if (filtro === "activo")  return getEstado(p) === "activo"  && match;
+    if (filtro === "medio")   return getEstado(p) === "medio"   && match;
+    if (filtro === "critico") return getEstado(p) === "critico" && match;
     return match;
   });
 
   const getStockPct = p => {
-    const max = p.stockMinimo * 5 || 100;
+    const max = (p.stockMinimo * 5) || 100;
     return Math.min((p.stockActual / max) * 100, 100);
   };
 
@@ -56,52 +56,54 @@ function Productos({ onNuevo, onEditar, token }) {
   return (
     <div className="kp-page">
 
-      {/* Page header */}
+      {/* Header */}
       <div className="kp-page-header">
         <div>
           <h1 className="kp-page-title">Gestión de Productos</h1>
           <p className="kp-page-sub">🔧 Inventario centralizado de refacciones y consumibles automotrices.</p>
         </div>
         <div className="kp-page-actions">
-          <button className="kp-btn kp-btn--primary" onClick={onNuevo}>Ver Productos</button>
-          <button className="kp-btn kp-btn--outline" onClick={onNuevo}>Agregar Producto</button>
+          <button className="kp-btn kp-btn--outline" onClick={onNuevo}>Ver Productos</button>
+          <button className="kp-btn kp-btn--primary" onClick={onNuevo}>Agregar Producto</button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats — siempre 4 columnas */}
       <div className="kp-stats">
         <div className="kp-stat">
-          <p className="kp-stat-label">TOTAL REFACCIONES</p>
-          <p className="kp-stat-value">{productos.length.toLocaleString()}</p>
+          <p className="kp-stat-label">Total Refacciones</p>
+          <p className="kp-stat-value">{productos.length}</p>
         </div>
-        <div className="kp-stat kp-stat--critico">
-          <p className="kp-stat-label">STOCK CRÍTICO</p>
+
+        <div className={`kp-stat${stockCritico > 0 ? " kp-stat--critico" : ""}`}>
+          <p className="kp-stat-label">Stock Crítico</p>
           <p className="kp-stat-value">
             {stockCritico}
             {stockCritico > 0 && <span className="kp-revisar">Revisar</span>}
           </p>
         </div>
+
         <div className="kp-stat">
-          <p className="kp-stat-label">CATEGORÍAS</p>
+          <p className="kp-stat-label">Categorías</p>
           <p className="kp-stat-value">{categorias}</p>
         </div>
-        <div className="kp-stat kp-stat--valor">
-          <p className="kp-stat-label">VALOR INVENTARIO</p>
+
+        <div className="kp-stat">
+          <p className="kp-stat-label">Valor Inventario</p>
           <p className="kp-stat-value kp-stat-value--primary">
-            ${valorTotal.toLocaleString()}
+            ${valorTotal.toLocaleString("es-CO")}
           </p>
         </div>
       </div>
 
-      {/* Catalog */}
+      {/* Catálogo */}
       <div className="kp-card">
         <div className="kp-card-header">
           <div className="kp-card-title">
-            <span className="kp-accent-bar"></span>
+            <span className="kp-accent-bar" />
             Catálogo de Existencias
           </div>
           <div className="kp-card-tools">
-            {/* Filtros */}
             <div className="kp-filters">
               {[
                 { k: "todos",   l: "Todos" },
@@ -112,7 +114,7 @@ function Productos({ onNuevo, onEditar, token }) {
                 <button
                   key={f.k}
                   onClick={() => setFiltro(f.k)}
-                  className={`kp-filter-btn ${filtro === f.k ? "activo" : ""} kp-filter-btn--${f.k}`}
+                  className={`kp-filter-btn kp-filter-btn--${f.k}${filtro === f.k ? " activo" : ""}`}
                 >{f.l}</button>
               ))}
             </div>
@@ -125,17 +127,16 @@ function Productos({ onNuevo, onEditar, token }) {
           </div>
         </div>
 
-        {/* Table */}
         <table className="kp-table">
           <thead>
             <tr>
               <th>ID</th>
-              <th>PRODUCTO</th>
-              <th>CATEGORÍA</th>
-              <th>PRECIO</th>
-              <th>STOCK</th>
-              <th>ESTADO</th>
-              <th>ACCIONES</th>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -146,32 +147,29 @@ function Productos({ onNuevo, onEditar, token }) {
               const pct    = getStockPct(p);
               return (
                 <tr key={p.id} className="kp-row">
-                  <td className="kp-id">#{p.codigo || String(i+1).padStart(4,"0")}</td>
+                  <td className="kp-id">#{p.codigo || String(i + 1).padStart(4, "0")}</td>
                   <td>
                     <div className="kp-product-cell">
                       <div className="kp-product-thumb">{p.nombre?.[0]?.toUpperCase()}</div>
                       <div>
                         <p className="kp-product-name">{p.nombre}</p>
-                        <p className="kp-product-sub">Marca: {p.marca}</p>
+                        <p className="kp-product-sub">Marca: {p.marca || "—"}</p>
                       </div>
                     </div>
                   </td>
-                  <td><span className="kp-cat-badge">{p.categoria}</span></td>
-                  <td className="kp-price">${p.precioVenta?.toLocaleString()}</td>
+                  <td><span className="kp-cat-badge">{p.categoria || "—"}</span></td>
+                  <td className="kp-price">${p.precioVenta?.toLocaleString("es-CO")}</td>
                   <td>
                     <div className="kp-stock-cell">
                       <div className="kp-stock-bar-bg">
-                        <div
-                          className={`kp-stock-bar kp-stock-bar--${estado}`}
-                          style={{ width: `${pct}%` }}
-                        />
+                        <div className={`kp-stock-bar kp-stock-bar--${estado}`} style={{ width: `${pct}%` }} />
                       </div>
                       <span className={`kp-stock-num kp-stock-num--${estado}`}>{p.stockActual}</span>
                     </div>
                   </td>
                   <td>
                     <span className={`kp-estado kp-estado--${estado}`}>
-                      {estado === "activo" ? "● ACTIVO" : estado === "medio" ? "! MEDIO" : "▲ BAJO STOCK"}
+                      {estado === "activo" ? "● ACTIVO" : estado === "medio" ? "! MEDIO" : "▲ BAJO"}
                     </span>
                   </td>
                   <td>
@@ -187,7 +185,7 @@ function Productos({ onNuevo, onEditar, token }) {
         </table>
 
         <div className="kp-table-footer">
-          Mostrando <strong>1-{filtrados.length}</strong> de <strong>{productos.length}</strong> productos
+          Mostrando <strong>1–{filtrados.length}</strong> de <strong>{productos.length}</strong> productos
         </div>
       </div>
     </div>
