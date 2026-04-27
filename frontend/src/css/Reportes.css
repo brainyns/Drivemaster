@@ -1,0 +1,546 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   REPORTES.CSS — DriveMaster Reports Module
+   Paleta: --bg #0a0a0a | --primary #ff3d00 | dark industrial
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ── ROOT DE LA PÁGINA ─────────────────────────────────────────────────────── */
+.rp-root {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOPBAR ─────────────────────────────────────────────────────────────────── */
+.rp-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .85rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.rp-brand   { font-weight: 800; font-size: 1rem; color: var(--primary); letter-spacing: -.02em; }
+.rp-div     { color: var(--border2); font-size: .9rem; }
+.rp-breadcrumb { font-size: .82rem; color: var(--muted); font-weight: 500; }
+.rp-top-right { margin-left: auto; display: flex; align-items: center; gap: .6rem; }
+.rp-avatar  { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 800; font-size: .8rem; display: grid; place-items: center; }
+.rp-ico-btn { background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--muted); padding: .3rem; border-radius: 8px; transition: color .15s; }
+.rp-ico-btn:hover { color: var(--text); }
+
+/* ── PAGE HEADER ────────────────────────────────────────────────────────────── */
+.rp-page-header {
+  padding: 1.75rem 1.75rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.rp-h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  margin: 0 0 .2rem;
+}
+.rp-sub { font-size: .83rem; color: var(--muted); margin: 0; }
+
+/* ── MENÚ DESPLEGABLE PRINCIPAL ─────────────────────────────────────────────── */
+.rp-nav {
+  display: flex;
+  gap: .5rem;
+  padding: 0 1.75rem 1.25rem;
+  flex-wrap: wrap;
+}
+
+.rp-nav-item {
+  position: relative;
+}
+
+.rp-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: .82rem;
+  padding: .55rem 1rem;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.rp-nav-btn:hover  { background: var(--surface3); border-color: rgba(255,255,255,.2); }
+.rp-nav-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.rp-nav-btn .arrow {
+  font-size: .65rem;
+  transition: transform .2s;
+  display: inline-block;
+}
+.rp-nav-btn.open .arrow { transform: rotate(180deg); }
+
+/* Dropdown submenu */
+.rp-dropdown {
+  position: absolute;
+  top: calc(100% + .4rem);
+  left: 0;
+  min-width: 200px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: .4rem;
+  z-index: 100;
+  box-shadow: 0 12px 40px rgba(0,0,0,.6);
+  animation: rp-fade-in .15s ease;
+}
+@keyframes rp-fade-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.rp-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  width: 100%;
+  padding: .6rem .85rem;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: .82rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background .15s, color .15s;
+}
+.rp-dropdown-item:hover  { background: var(--surface3); }
+.rp-dropdown-item.active { background: var(--primary-soft); color: var(--primary); font-weight: 700; }
+.rp-dropdown-item .ico   { font-size: 1rem; }
+
+/* ── CONTENIDO PRINCIPAL ─────────────────────────────────────────────────────── */
+.rp-content {
+  padding: 0 1.75rem 2rem;
+  flex: 1;
+}
+
+/* ── DASHBOARD CARDS KPI ────────────────────────────────────────────────────── */
+.rp-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: .85rem;
+  margin-bottom: 1.5rem;
+}
+
+.rp-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.1rem 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.rp-kpi:hover { border-color: var(--border2); }
+.rp-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--primary);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.rp-kpi:hover::before { opacity: 1; }
+
+.rp-kpi-top    { display: flex; align-items: center; justify-content: space-between; margin-bottom: .65rem; }
+.rp-kpi-ico    { font-size: 1.1rem; }
+.rp-kpi-delta  { font-size: .72rem; font-weight: 700; padding: .2rem .5rem; border-radius: 20px; }
+.rp-kpi-delta.pos { background: rgba(34,197,94,.12); color: var(--green); }
+.rp-kpi-delta.neg { background: rgba(239,68,68,.12);  color: var(--red); }
+.rp-kpi-delta.neu { background: var(--surface2); color: var(--muted); }
+.rp-kpi-label  { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; margin-bottom: .3rem; }
+.rp-kpi-val    { font-size: 1.5rem; font-weight: 800; letter-spacing: -.03em; }
+.rp-kpi-val.orange { color: var(--primary); }
+.rp-kpi-val.green  { color: var(--green); }
+.rp-kpi-val.blue   { color: var(--blue); }
+.rp-kpi-val.red    { color: var(--red); }
+.rp-kpi-sub    { font-size: .73rem; color: var(--muted); margin-top: .25rem; }
+
+/* ── PANEL GENÉRICO ─────────────────────────────────────────────────────────── */
+.rp-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.rp-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+.rp-panel-title {
+  font-size: .92rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+.rp-panel-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+
+/* ── FILTRO PERÍODO ─────────────────────────────────────────────────────────── */
+.rp-period-tabs {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.rp-period-tab {
+  padding: .3rem .7rem;
+  border-radius: 6px;
+  background: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+}
+.rp-period-tab.active { background: var(--primary); color: #fff; }
+
+/* ── BUSCADOR ────────────────────────────────────────────────────────────────── */
+.rp-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.rp-search-wrap .ico { position: absolute; left: .75rem; color: var(--muted); font-size: .85rem; pointer-events: none; }
+.rp-search {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: .8rem;
+  padding: .45rem .75rem .45rem 2.1rem;
+  outline: none;
+  transition: border-color .15s;
+  width: 200px;
+}
+.rp-search:focus { border-color: var(--primary); }
+
+/* ── TABLA ───────────────────────────────────────────────────────────────────── */
+.rp-table-wrap { overflow-x: auto; }
+.rp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .82rem;
+}
+.rp-table thead tr { border-bottom: 1px solid var(--border); }
+.rp-table th {
+  padding: .75rem 1rem;
+  text-align: left;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.rp-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .12s;
+}
+.rp-table tbody tr:last-child { border-bottom: none; }
+.rp-table tbody tr:hover { background: var(--surface2); }
+.rp-table td { padding: .75rem 1rem; color: var(--text); vertical-align: middle; }
+.rp-table .rp-empty { text-align: center; color: var(--muted); padding: 2.5rem; }
+
+/* ── AVATAR CLIENTE ─────────────────────────────────────────────────────────── */
+.rp-avatar-cell { display: flex; align-items: center; gap: .65rem; }
+.rp-avatar-ico  {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: .75rem; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.rp-avatar-name { font-weight: 600; font-size: .83rem; }
+.rp-avatar-sub  { font-size: .72rem; color: var(--muted); }
+
+/* ── BADGES ─────────────────────────────────────────────────────────────────── */
+.rp-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .25rem .6rem; border-radius: 20px;
+  font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.rp-badge.frecuente { background: rgba(59,130,246,.12); color: var(--blue); }
+.rp-badge.ocasional { background: rgba(245,158,11,.12);  color: var(--amber); }
+.rp-badge.nuevo     { background: rgba(34,197,94,.12);   color: var(--green); }
+.rp-badge.normal    { background: rgba(34,197,94,.12);   color: var(--green); }
+.rp-badge.bajo      { background: rgba(245,158,11,.12);  color: var(--amber); }
+.rp-badge.critico   { background: rgba(255,61,0,.12);    color: var(--primary); }
+.rp-badge.agotado   { background: rgba(239,68,68,.12);   color: var(--red); }
+
+/* ── RANKING NÚMERO ─────────────────────────────────────────────────────────── */
+.rp-rank {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: .72rem; font-weight: 800;
+  flex-shrink: 0;
+}
+.rp-rank.gold   { background: rgba(245,158,11,.2); color: var(--amber); }
+.rp-rank.silver { background: rgba(107,114,128,.2); color: #9ca3af; }
+.rp-rank.bronze { background: rgba(217,119,6,.15); color: #b45309; }
+.rp-rank.normal { background: var(--surface3); color: var(--muted); }
+
+/* ── BARRA DE STOCK ─────────────────────────────────────────────────────────── */
+.rp-stock-bar-bg {
+  width: 80px; height: 5px; border-radius: 3px;
+  background: var(--surface3); overflow: hidden; display: inline-block;
+}
+.rp-stock-bar { height: 100%; border-radius: 3px; transition: width .4s; }
+.rp-stock-bar.normal  { background: var(--green); }
+.rp-stock-bar.bajo    { background: var(--amber); }
+.rp-stock-bar.critico { background: var(--primary); }
+.rp-stock-bar.agotado { background: var(--red); }
+
+/* ── GRÁFICA BARRAS SIMPLE ───────────────────────────────────────────────────── */
+.rp-chart {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+}
+.rp-chart-row { display: flex; align-items: center; gap: .75rem; }
+.rp-chart-label { font-size: .75rem; color: var(--muted); width: 80px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+.rp-chart-bar-bg { flex: 1; height: 22px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
+.rp-chart-bar    { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width .6s cubic-bezier(.4,0,.2,1); display: flex; align-items: center; padding-left: .5rem; }
+.rp-chart-bar-val { font-size: .68rem; font-weight: 700; color: rgba(255,255,255,.9); white-space: nowrap; }
+
+/* ── GRÁFICA LÍNEA (días) ────────────────────────────────────────────────────── */
+.rp-linechart {
+  padding: 1rem 1.25rem 1.25rem;
+}
+.rp-linechart-bars {
+  display: flex; align-items: flex-end; gap: .35rem;
+  height: 100px; margin-bottom: .5rem;
+}
+.rp-linechart-col { display: flex; flex-direction: column; align-items: center; gap: .25rem; flex: 1; }
+.rp-linechart-bar { width: 100%; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--primary), rgba(255,61,0,.4)); transition: height .5s cubic-bezier(.4,0,.2,1); min-height: 3px; }
+.rp-linechart-day { font-size: .65rem; color: var(--muted); }
+
+/* ── DOS COLUMNAS ────────────────────────────────────────────────────────────── */
+.rp-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+@media (max-width: 900px) { .rp-two-col { grid-template-columns: 1fr; } }
+
+/* ── LOADING / ERROR ─────────────────────────────────────────────────────────── */
+.rp-loading {
+  display: flex; align-items: center; justify-content: center;
+  padding: 3rem; color: var(--muted); font-size: .85rem;
+  flex-direction: column; gap: .75rem;
+}
+.rp-spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid var(--surface3);
+  border-top-color: var(--primary);
+  animation: rp-spin .7s linear infinite;
+}
+@keyframes rp-spin { to { transform: rotate(360deg); } }
+.rp-error { padding: .75rem 1.25rem; background: rgba(239,68,68,.1); border-left: 3px solid var(--red); border-radius: 8px; color: var(--red); font-size: .83rem; margin-bottom: 1rem; }
+
+/* ── ALERTA STOCK ────────────────────────────────────────────────────────────── */
+.rp-alert-banner {
+  display: flex; align-items: center; gap: .75rem;
+  background: rgba(255,61,0,.08); border: 1px solid rgba(255,61,0,.2);
+  border-radius: 10px; padding: .75rem 1.1rem;
+  margin-bottom: 1rem; font-size: .82rem;
+}
+.rp-alert-banner .ico { font-size: 1.1rem; }
+.rp-alert-banner strong { color: var(--primary); }
+
+/* ── INACTIVOS LISTA ─────────────────────────────────────────────────────────── */
+.rp-inactivos { display: flex; flex-direction: column; gap: 0; }
+.rp-inactivo-item {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .7rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  transition: background .12s;
+}
+.rp-inactivo-item:last-child { border-bottom: none; }
+.rp-inactivo-item:hover { background: var(--surface2); }
+.rp-inactivo-name { font-size: .82rem; font-weight: 600; flex: 1; }
+.rp-inactivo-dias { font-size: .72rem; color: var(--red); font-weight: 700; }
+.rp-inactivo-fecha { font-size: .72rem; color: var(--muted); }
+
+/* ── STAT ROW ────────────────────────────────────────────────────────────────── */
+.rp-stat-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: .75rem; padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.rp-stat-item { text-align: center; }
+.rp-stat-lbl { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; margin-bottom: .3rem; }
+.rp-stat-num { font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em; }
+.rp-stat-num.orange { color: var(--primary); }
+.rp-stat-num.green  { color: var(--green); }
+.rp-stat-num.blue   { color: var(--blue); }
+.rp-stat-num.red    { color: var(--red); }
+.rp-stat-num.amber  { color: var(--amber); }
+
+/* ── HIGHLIGHT BOX ───────────────────────────────────────────────────────────── */
+.rp-highlight {
+  background: linear-gradient(135deg, rgba(255,61,0,.08), rgba(255,112,67,.04));
+  border: 1px solid rgba(255,61,0,.18);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex; gap: 1rem; align-items: center;
+  margin-bottom: 1rem;
+}
+.rp-highlight-ico { font-size: 2rem; }
+.rp-highlight-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; }
+.rp-highlight-val { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+
+/* ── HISTORIAL MODAL ─────────────────────────────────────────────────────────── */
+.rp-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  display: grid; place-items: center; z-index: 200;
+  animation: rp-fade-in .15s ease;
+}
+.rp-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-xl);
+  width: min(600px, 95vw);
+  max-height: 80vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.rp-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+}
+.rp-modal-title { font-weight: 700; font-size: .95rem; }
+.rp-modal-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 1.1rem; border-radius: 6px;
+  width: 28px; height: 28px; display: grid; place-items: center;
+  transition: background .15s, color .15s;
+}
+.rp-modal-close:hover { background: var(--surface3); color: var(--text); }
+.rp-modal-body { overflow-y: auto; flex: 1; }
+
+/* ── BTN OUTLINE ─────────────────────────────────────────────────────────────── */
+.rp-btn {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .45rem .9rem; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif; font-size: .78rem; font-weight: 600;
+  cursor: pointer; transition: all .15s; border: none;
+}
+.rp-btn-outline { background: var(--surface2); border: 1px solid var(--border2); color: var(--text); }
+.rp-btn-outline:hover { border-color: rgba(255,255,255,.25); }
+.rp-btn-primary { background: var(--primary); color: #fff; }
+.rp-btn-primary:hover { background: var(--accent); }
+
+/* ── PAGINACIÓN ──────────────────────────────────────────────────────────────── */
+.rp-pag {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 1.25rem; border-top: 1px solid var(--border);
+  font-size: .78rem; color: var(--muted); flex-wrap: wrap; gap: .5rem;
+}
+.rp-pag-right { display: flex; gap: .3rem; align-items: center; }
+.rp-pag-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 7px; padding: .3rem .65rem; font-size: .75rem;
+  color: var(--text); cursor: pointer; transition: all .15s;
+}
+.rp-pag-btn:hover:not(:disabled) { border-color: var(--border2); }
+.rp-pag-btn:disabled { opacity: .35; cursor: default; }
+.rp-pag-num {
+  background: none; border: 1px solid transparent;
+  border-radius: 7px; padding: .3rem .55rem; font-size: .75rem;
+  color: var(--muted); cursor: pointer; transition: all .15s;
+}
+.rp-pag-num:hover { border-color: var(--border2); color: var(--text); }
+.rp-pag-num.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ── EMPTY STATE ─────────────────────────────────────────────────────────────── */
+.rp-empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: .65rem; padding: 3rem 1rem; color: var(--muted);
+}
+.rp-empty-state .icon { font-size: 2.5rem; }
+.rp-empty-state p { font-size: .85rem; }
+
+/* ── CHART EMPTY BOX ─────────────────────────────────────────────────────────── */
+.rp-chart-empty-box {
+  padding: 2.5rem 1rem; text-align: center;
+  color: var(--muted); font-size: .8rem;
+  border: 1px dashed var(--border2); border-radius: 10px;
+  margin: 1rem 1.25rem;
+}
+
+/* ── ICON BUTTON ──────────────────────────────────────────────────────────────── */
+.rp-icon-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  cursor: pointer;
+  color: var(--muted);
+  transition: border-color .15s, color .15s, background .15s;
+}
+.rp-icon-btn:hover { border-color: var(--border2); color: var(--text); background: var(--surface3); }
+.rp-icon-btn:disabled { opacity: .4; cursor: default; }
+
+/* ── MENÚ 3 PUNTOS ───────────────────────────────────────────────────────────── */
+.rp-3p-menu {
+  position: absolute; right: 0; top: calc(100% + .3rem);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: .35rem;
+  min-width: 150px;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  animation: rp-fade-in .12s ease;
+}
+.rp-3p-item {
+  display: block; width: 100%; text-align: left;
+  padding: .5rem .8rem; border-radius: 7px;
+  background: none; border: none;
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: .79rem; cursor: pointer;
+  transition: background .12s;
+}
+.rp-3p-item:hover { background: var(--surface3); }
+.rp-3p-item--danger { color: var(--red); }
+.rp-3p-item--danger:hover { background: rgba(239,68,68,.08); }
+
+/* ── PAGE WRAPPER (cuando se usa como subpágina sin topbar propio) ────────────── */
+.rp-subpage {
+  padding: 1.5rem 1.75rem 2.5rem;
+  min-height: 100vh;
+  background: var(--bg);
+}

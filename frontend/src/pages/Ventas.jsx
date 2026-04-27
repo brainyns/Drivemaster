@@ -133,7 +133,8 @@ function Ventas({ onNueva, onDetalle, token }) {
                   {paginadas.length === 0 ? (
                       <tr><td colSpan={7} className="vt-empty">No hay ventas registradas</td></tr>
                   ) : paginadas.map(v => {
-                    const m = METODO_ICO[v.metodoPago] || { ico:"💰", label: v.metodoPago || "—" };
+                    const metodo = v.pagos?.[0]?.metodo;
+                    const m = METODO_ICO[metodo] || { ico:"💰", label: metodo || "—" };
                     const estadoKey = v.estado?.toUpperCase?.() || "";
                     return (
                         <tr key={v.id}>

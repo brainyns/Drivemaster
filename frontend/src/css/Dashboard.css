@@ -1,0 +1,251 @@
+/* ─────────────────────────────────────────────────────────────
+   DASHBOARD.CSS — DriveMaster Main Dashboard
+   Paleta dark: #0a0a0a / #ff3d00 / #111 / #181818
+───────────────────────────────────────────────────────────── */
+
+.db-root {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  padding: 1.5rem 1.75rem 2.5rem;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+.db-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+.db-h1 {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -.035em;
+  margin: 0 0 .2rem;
+}
+.db-sub  { font-size: .83rem; color: var(--muted); margin: 0; }
+.db-date { font-size: .78rem; color: var(--muted); font-weight: 500; text-transform: capitalize; padding-top: .35rem; }
+
+/* ── Loading / Error ────────────────────────────────────────── */
+.db-loading {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60vh; flex-direction: column; gap: .85rem;
+  color: var(--muted); font-size: .85rem;
+}
+.db-spinner {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2.5px solid var(--surface3);
+  border-top-color: var(--primary);
+  animation: db-spin .7s linear infinite;
+}
+@keyframes db-spin { to { transform: rotate(360deg); } }
+.db-error { padding: 1rem; background: rgba(239,68,68,.1); border-left: 3px solid var(--red); border-radius: 8px; color: var(--red); }
+
+/* ── Alertas inteligentes ───────────────────────────────────── */
+.db-alertas {
+  display: flex; flex-direction: column; gap: .4rem;
+  margin-bottom: 1.25rem;
+}
+.db-alerta {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .6rem 1rem; border-radius: 10px;
+  font-size: .8rem; font-weight: 500;
+  border: 1px solid;
+}
+.db-alerta-ico { display: flex; align-items: center; flex-shrink: 0; }
+.db-alerta--warn   { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.2); color: var(--amber); }
+.db-alerta--danger { background: rgba(239,68,68,.08);  border-color: rgba(239,68,68,.2);  color: var(--red); }
+.db-alerta--info   { background: rgba(59,130,246,.08); border-color: rgba(59,130,246,.2); color: var(--blue); }
+
+/* ── KPI Grid ───────────────────────────────────────────────── */
+.db-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+.db-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.15rem;
+  position: relative; overflow: hidden;
+  transition: border-color .2s, transform .15s;
+}
+.db-kpi:hover { border-color: var(--border2); transform: translateY(-1px); }
+.db-kpi::after {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--primary), transparent);
+  opacity: 0; transition: opacity .2s;
+}
+.db-kpi:hover::after { opacity: 1; }
+
+.db-kpi-top   { display: flex; align-items: center; justify-content: space-between; margin-bottom: .55rem; }
+.db-kpi-ico   { color: var(--muted); display: flex; }
+.db-kpi-delta { font-size: .68rem; font-weight: 700; padding: .18rem .45rem; border-radius: 20px; }
+.db-kpi-delta.pos { background: rgba(34,197,94,.12); color: var(--green); }
+.db-kpi-delta.neg { background: rgba(239,68,68,.12);  color: var(--red); }
+.db-kpi-delta.neu { background: var(--surface2); color: var(--muted); }
+.db-kpi-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; color: var(--muted); margin-bottom: .3rem; }
+.db-kpi-val   { font-size: 1.45rem; font-weight: 800; letter-spacing: -.03em; }
+.db-kpi-val.orange { color: var(--primary); }
+.db-kpi-val.blue   { color: var(--blue); }
+.db-kpi-val.green  { color: var(--green); }
+.db-kpi-val.red    { color: var(--red); }
+
+/* ── Highlights ─────────────────────────────────────────────── */
+.db-highlights {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+@media (max-width: 640px) { .db-highlights { grid-template-columns: 1fr; } }
+.db-highlight {
+  background: linear-gradient(135deg, rgba(255,61,0,.07), rgba(255,112,67,.03));
+  border: 1px solid rgba(255,61,0,.16);
+  border-radius: 12px;
+  padding: .9rem 1.1rem;
+  display: flex; align-items: center; gap: .85rem;
+}
+.db-hl-ico    { color: var(--primary); display: flex; flex-shrink: 0; }
+.db-hl-label  { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; margin-bottom: .2rem; }
+.db-hl-val    { font-size: .95rem; font-weight: 700; color: var(--primary); }
+
+/* ── Cards genéricas ────────────────────────────────────────── */
+.db-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.db-card--lg   { flex: 2; min-width: 0; }
+.db-card--full { margin-top: 1rem; }
+
+.db-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .9rem 1.15rem;
+  border-bottom: 1px solid var(--border);
+}
+.db-card-title { font-size: .88rem; font-weight: 700; }
+.db-card-sub   { font-size: .73rem; color: var(--muted); }
+
+/* ── Rows de gráficas ───────────────────────────────────────── */
+.db-charts-row {
+  display: flex; gap: .75rem;
+  margin-bottom: .75rem;
+  flex-wrap: wrap;
+}
+.db-charts-row .db-card { flex: 1; min-width: 240px; }
+
+/* ── Gráfica de barras verticales ───────────────────────────── */
+.db-chart-empty {
+  padding: 2rem 1rem; text-align: center;
+  color: var(--muted); font-size: .8rem;
+}
+.db-barchart {
+  display: flex; align-items: flex-end; gap: .35rem;
+  padding: 1.25rem 1.15rem .9rem;
+  height: 160px;
+}
+.db-barchart-col {
+  display: flex; flex-direction: column; align-items: center;
+  flex: 1; gap: .35rem; position: relative;
+}
+.db-barchart-col:hover .db-barchart-tooltip { opacity: 1; }
+.db-barchart-tooltip {
+  position: absolute; top: -28px;
+  background: var(--surface3); border: 1px solid var(--border2);
+  border-radius: 6px; padding: .2rem .45rem;
+  font-size: .65rem; font-weight: 700; color: var(--text);
+  white-space: nowrap; opacity: 0; transition: opacity .15s;
+  pointer-events: none; z-index: 5;
+}
+.db-barchart-bar-wrap {
+  width: 100%; flex: 1; display: flex; align-items: flex-end;
+}
+.db-barchart-bar {
+  width: 100%; border-radius: 5px 5px 0 0;
+  min-height: 3px;
+  transition: height .5s cubic-bezier(.4,0,.2,1);
+}
+.db-barchart-label {
+  font-size: .62rem; color: var(--muted); text-align: center; white-space: nowrap;
+}
+
+/* ── Pie chart ──────────────────────────────────────────────── */
+.db-pie-wrap {
+  display: flex; align-items: center; gap: 1.25rem;
+  padding: 1rem 1.15rem;
+  flex-wrap: wrap;
+}
+.db-pie-legend { display: flex; flex-direction: column; gap: .45rem; }
+.db-pie-legend-item {
+  display: flex; align-items: center; gap: .5rem;
+  font-size: .76rem;
+}
+.db-pie-dot   { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.db-pie-lbl   { color: var(--text); flex: 1; }
+.db-pie-pct   { color: var(--muted); font-weight: 700; font-size: .73rem; }
+
+/* ── Barra horizontal (top productos) ──────────────────────── */
+.db-hbar { padding: .85rem 1.15rem; display: flex; flex-direction: column; gap: .55rem; }
+.db-hbar-row { display: flex; align-items: center; gap: .65rem; }
+.db-hbar-label {
+  font-size: .74rem; color: var(--text); width: 100px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex-shrink: 0; text-align: right;
+}
+.db-hbar-bg {
+  flex: 1; height: 20px;
+  background: var(--surface2); border-radius: 5px; overflow: hidden;
+}
+.db-hbar-fill {
+  height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  transition: width .55s cubic-bezier(.4,0,.2,1);
+}
+.db-hbar-val { font-size: .72rem; font-weight: 700; color: var(--muted); width: 28px; text-align: right; }
+
+/* ── Tabla últimas ventas ───────────────────────────────────── */
+.db-table-wrap { overflow-x: auto; }
+.db-table {
+  width: 100%; border-collapse: collapse;
+  font-size: .81rem;
+}
+.db-table thead tr { border-bottom: 1px solid var(--border); }
+.db-table th {
+  padding: .65rem 1rem;
+  font-size: .69rem; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--muted); font-weight: 700; text-align: left; white-space: nowrap;
+}
+.db-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .12s;
+}
+.db-table tbody tr:last-child { border-bottom: none; }
+.db-table tbody tr:hover { background: var(--surface2); }
+.db-table td { padding: .7rem 1rem; vertical-align: middle; }
+
+.db-id      { font-size: .73rem; color: var(--muted); font-weight: 700; font-family: monospace; }
+.db-cliente { font-weight: 600; }
+.db-muted   { color: var(--muted); font-size: .77rem; }
+.db-fecha   { font-size: .73rem; }
+.db-total   { text-align: right; font-weight: 800; color: var(--primary); }
+.db-metodo  { font-size: .76rem; color: var(--text); }
+
+.db-empty   { text-align: center; color: var(--muted); padding: 2.5rem; font-size: .83rem; }
+
+/* Estados de venta */
+.db-estado {
+  display: inline-block; padding: .22rem .6rem; border-radius: 20px;
+  font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.st-pagada    { background: rgba(34,197,94,.12);  color: var(--green); }
+.st-pendiente { background: rgba(245,158,11,.12); color: var(--amber); }
+.st-cancelada { background: rgba(239,68,68,.12);  color: var(--red); }
+.st-anulada   { background: rgba(107,114,128,.12);color: var(--muted); }
