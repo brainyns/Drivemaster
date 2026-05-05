@@ -2,35 +2,16 @@ import { useEffect, useState } from "react";
 import { crearProveedor, actualizarProveedor, obtenerProveedor } from "../services/proveedorService";
 import "../css/proveedores.css";
 
-const CATEGORIAS = [
-  "Motores & Transmisión",
-  "Neumáticos",
-  "Mantenimiento",
-  "Electrónica & Sensores",
-  "Carrocería & Pintura",
-  "Frenos & Suspensión",
-  "Climatización",
-  "Eléctrico & Batería",
-  "Filtros & Aceites",
-  "Otro",
-];
-
 // ── Iconos ────────────────────────────────────────────────────────────────────
 const IconBuilding = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
     <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
   </svg>
 );
-const IconTag = () => (
+const IconHash = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-    <line x1="7" y1="7" x2="7.01" y2="7"/>
-  </svg>
-);
-const IconUser = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-    <circle cx="12" cy="7" r="4"/>
+    <line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/>
+    <line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>
   </svg>
 );
 const IconPhone = () => (
@@ -42,16 +23,6 @@ const IconMail = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
     <polyline points="22,6 12,13 2,6"/>
-  </svg>
-);
-const IconMapPin = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-  </svg>
-);
-const IconChevronDown = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="6 9 12 15 18 9"/>
   </svg>
 );
 const IconCheck = () => (
@@ -76,18 +47,15 @@ export default function ProveedorForm({ id, onVolver, token }) {
 
   const [form, setForm] = useState({
     nombre: "",
-    categoria: "",
-    contacto: "",
+    contacto: "",   // NIT
     telefono: "",
     correo: "",
-    direccion: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
   const [error, setError] = useState(null);
   const [guardado, setGuardado] = useState(false);
-  const [catOpen, setCatOpen] = useState(false);
 
   useEffect(() => {
     if (esEdicion) {
@@ -169,47 +137,17 @@ export default function ProveedorForm({ id, onVolver, token }) {
                     </div>
                   </div>
 
-                  {/* Categoría */}
+                  {/* NIT (campo contacto en el modelo) */}
                   <div className="kpf-group">
-                    <label className="kpf-label">Categoría de Repuestos</label>
-                    <div className="kpf-select-wrap">
-                      <span className="kpf-select-icon"><IconTag /></span>
-                      <button
-                        type="button"
-                        className={`kpf-select-btn ${catOpen ? "open" : ""} ${!form.categoria ? "empty" : ""}`}
-                        onClick={() => setCatOpen(!catOpen)}
-                      >
-                        {form.categoria || "Seleccionar categoría..."}
-                        <span className="arrow"><IconChevronDown /></span>
-                      </button>
-                      {catOpen && (
-                        <div className="kpf-dropdown">
-                          {CATEGORIAS.map((cat) => (
-                            <div
-                              key={cat}
-                              className={`kpf-option ${form.categoria === cat ? "selected" : ""}`}
-                              onClick={() => { setForm({ ...form, categoria: cat }); setCatOpen(false); }}
-                            >
-                              {cat}
-                              {form.categoria === cat && <IconCheck />}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Contacto */}
-                  <div className="kpf-group">
-                    <label className="kpf-label">Persona de Contacto</label>
+                    <label className="kpf-label">NIT</label>
                     <div className="kpf-input-wrap">
-                      <span className="kpf-input-icon"><IconUser /></span>
+                      <span className="kpf-input-icon"><IconHash /></span>
                       <input
                         className="kpf-input"
                         name="contacto"
                         value={form.contacto}
                         onChange={handleChange}
-                        placeholder="Nombre completo del representante"
+                        placeholder="Ej: 900123456-7"
                       />
                     </div>
                   </div>
@@ -224,14 +162,14 @@ export default function ProveedorForm({ id, onVolver, token }) {
                         name="telefono"
                         value={form.telefono}
                         onChange={handleChange}
-                        placeholder="+52 55 1234 5678"
+                        placeholder="+57 300 123 4567"
                       />
                     </div>
                   </div>
 
                   {/* Correo */}
-                  <div className="kpf-group full">
-                    <label className="kpf-label">Correo Electrónico Corporativo <span className="req">*</span></label>
+                  <div className="kpf-group">
+                    <label className="kpf-label">Correo Electrónico <span className="req">*</span></label>
                     <div className="kpf-input-wrap">
                       <span className="kpf-input-icon"><IconMail /></span>
                       <input
@@ -242,21 +180,6 @@ export default function ProveedorForm({ id, onVolver, token }) {
                         onChange={handleChange}
                         placeholder="contacto@proveedor.com"
                         required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Dirección */}
-                  <div className="kpf-group full">
-                    <label className="kpf-label">Dirección Fiscal / Almacén</label>
-                    <div className="kpf-input-wrap" style={{ alignItems: "flex-start" }}>
-                      <span className="kpf-input-icon" style={{ top: "13px", position: "absolute" }}><IconMapPin /></span>
-                      <textarea
-                        className="kpf-textarea"
-                        name="direccion"
-                        value={form.direccion}
-                        onChange={handleChange}
-                        placeholder="Calle, número, código postal y ciudad..."
                       />
                     </div>
                   </div>
@@ -321,7 +244,7 @@ export default function ProveedorForm({ id, onVolver, token }) {
               <div className="kpf-tip-icon">💡</div>
               <div className="kpf-tip-title">Consejo de Eficiencia</div>
               <div className="kpf-tip-text">
-                Asigna la categoría correcta ahora para habilitar las alertas de stock crítico automáticas.
+                Registra el NIT correctamente para habilitar la facturación electrónica automática.
               </div>
             </div>
           </div>

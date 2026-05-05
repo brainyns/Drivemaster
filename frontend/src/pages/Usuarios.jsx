@@ -66,11 +66,19 @@ export default function Usuarios({ token }) {
 
   return (
     <div className="us-root">
+      {/* ── Page header ── */}
+      <div className="us-page-header">
+        <div>
+          <h1 className="us-page-title">Usuarios</h1>
+          <p className="us-page-sub">Gestiona los usuarios y roles de acceso al sistema.</p>
+        </div>
+      </div>
+
       {/* ── Stat cards ── */}
       <div className="us-stats">
         <div className="us-stat us-stat--superadmin">
           <div className="us-stat__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
           </div>
           <span className="us-stat__priority">PRIORIDAD ALTA</span>
           <p className="us-stat__label">Super Admins</p>
@@ -80,7 +88,7 @@ export default function Usuarios({ token }) {
 
         <div className="us-stat us-stat--admin">
           <div className="us-stat__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>
           </div>
           <p className="us-stat__label">Administradores</p>
           <p className="us-stat__value">{String(conteo.ADMIN).padStart(2, "0")}</p>
@@ -89,7 +97,7 @@ export default function Usuarios({ token }) {
 
         <div className="us-stat us-stat--vendedor">
           <div className="us-stat__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 0-4 0v2"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 0-4 0v2" /></svg>
           </div>
           <p className="us-stat__label">Vendedores</p>
           <p className="us-stat__value">{String(conteo.VENDEDOR).padStart(2, "0")}</p>
@@ -104,7 +112,7 @@ export default function Usuarios({ token }) {
           <div className="us-panel__header">
             <h2 className="us-panel__title">Usuarios registrados</h2>
             <div className="us-filter">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
               <select
                 className="us-filter__select"
                 value={filterRol}
@@ -168,7 +176,7 @@ export default function Usuarios({ token }) {
 
           {success && (
             <div className="us-toast us-toast--success">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
               Usuario creado correctamente
             </div>
           )}
@@ -216,9 +224,9 @@ export default function Usuarios({ token }) {
                   tabIndex={-1}
                 >
                   {showPassword ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                   ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                   )}
                 </button>
               </div>
@@ -236,7 +244,7 @@ export default function Usuarios({ token }) {
                   <option value="ADMIN">Administrador</option>
                   <option value="SUPERADMIN">Superadmin</option>
                 </select>
-                <svg className="us-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg className="us-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
               </div>
             </div>
 
