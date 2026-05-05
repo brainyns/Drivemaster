@@ -64,3 +64,55 @@
   border-bottom: 2px solid var(--primary);
   border-radius: 8px 8px 0 0;
 }
+
+
+.navbar__search {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 0.5rem;
+  width: 350px;
+}
+
+
+.navbar__search-icon {
+  margin-right: 0.3rem;
+  color: var(--text-muted);
+}
+
+
+.navbar__search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  padding: 0.5rem;
+  width: 100%;
+}
+
+
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+
+.navbar__login-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+
+.navbar__cart-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+}

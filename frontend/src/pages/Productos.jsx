@@ -18,7 +18,7 @@ function Productos({ onNuevo, onEditar, token }) {
   };
 
   const handleEliminar = async (id) => {
-    if (!confirm("¿Eliminar este producto?")) return;
+    if (!confirm("Eliminar este producto?")) return;
     try { await eliminarProducto(id, token); setProductos(prev => prev.filter(p => p.id !== id)); }
     catch (e) { alert(e.message); }
   };
@@ -56,11 +56,10 @@ function Productos({ onNuevo, onEditar, token }) {
   return (
     <div className="kp-page">
 
-      {/* Header */}
       <div className="kp-page-header">
         <div>
-          <h1 className="kp-page-title">Gestión de Productos</h1>
-          <p className="kp-page-sub">🔧 Inventario centralizado de refacciones y consumibles automotrices.</p>
+          <h1 className="kp-page-title">Gestion de Productos</h1>
+          <p className="kp-page-sub">Inventario centralizado de refacciones y consumibles automotrices.</p>
         </div>
         <div className="kp-page-actions">
           <button className="kp-btn kp-btn--outline" onClick={onNuevo}>Ver Productos</button>
@@ -68,7 +67,6 @@ function Productos({ onNuevo, onEditar, token }) {
         </div>
       </div>
 
-      {/* Stats — siempre 4 columnas */}
       <div className="kp-stats">
         <div className="kp-stat">
           <p className="kp-stat-label">Total Refacciones</p>
@@ -76,7 +74,7 @@ function Productos({ onNuevo, onEditar, token }) {
         </div>
 
         <div className={`kp-stat${stockCritico > 0 ? " kp-stat--critico" : ""}`}>
-          <p className="kp-stat-label">Stock Crítico</p>
+          <p className="kp-stat-label">Stock Critico</p>
           <p className="kp-stat-value">
             {stockCritico}
             {stockCritico > 0 && <span className="kp-revisar">Revisar</span>}
@@ -84,7 +82,7 @@ function Productos({ onNuevo, onEditar, token }) {
         </div>
 
         <div className="kp-stat">
-          <p className="kp-stat-label">Categorías</p>
+          <p className="kp-stat-label">Categorias</p>
           <p className="kp-stat-value">{categorias}</p>
         </div>
 
@@ -96,20 +94,19 @@ function Productos({ onNuevo, onEditar, token }) {
         </div>
       </div>
 
-      {/* Catálogo */}
       <div className="kp-card">
         <div className="kp-card-header">
           <div className="kp-card-title">
             <span className="kp-accent-bar" />
-            Catálogo de Existencias
+            Catalogo de Existencias
           </div>
           <div className="kp-card-tools">
             <div className="kp-filters">
               {[
                 { k: "todos",   l: "Todos" },
-                { k: "activo",  l: "● Normal" },
-                { k: "medio",   l: "! Medio" },
-                { k: "critico", l: "▲ Bajo" },
+                { k: "activo",  l: "Normal" },
+                { k: "medio",   l: "Medio" },
+                { k: "critico", l: "Bajo" },
               ].map(f => (
                 <button
                   key={f.k}
@@ -127,65 +124,67 @@ function Productos({ onNuevo, onEditar, token }) {
           </div>
         </div>
 
-        <table className="kp-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Producto</th>
-              <th>Categoría</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtrados.length === 0 ? (
-              <tr><td colSpan="7" className="kp-empty">No se encontraron productos</td></tr>
-            ) : filtrados.map((p, i) => {
-              const estado = getEstado(p);
-              const pct    = getStockPct(p);
-              return (
-                <tr key={p.id} className="kp-row">
-                  <td className="kp-id">#{p.codigo || String(i + 1).padStart(4, "0")}</td>
-                  <td>
-                    <div className="kp-product-cell">
-                      <div className="kp-product-thumb">{p.nombre?.[0]?.toUpperCase()}</div>
-                      <div>
-                        <p className="kp-product-name">{p.nombre}</p>
-                        <p className="kp-product-sub">Marca: {p.marca || "—"}</p>
+        <div className="kp-table-wrap">
+          <table className="kp-table">
+            <thead>
+              <tr>
+                <th>Codigo</th>
+                <th>Producto</th>
+                <th>Categoria</th>
+                <th>Precio Venta</th>
+                <th>Stock</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtrados.length === 0 ? (
+                <tr><td colSpan="7" className="kp-empty">No se encontraron productos</td></tr>
+              ) : filtrados.map((p, i) => {
+                const estado = getEstado(p);
+                const pct    = getStockPct(p);
+                return (
+                  <tr key={p.id} className="kp-row">
+                    <td className="kp-id">#{p.codigo || String(i + 1).padStart(4, "0")}</td>
+                    <td>
+                      <div className="kp-product-cell">
+                        <div className="kp-product-thumb">{p.nombre?.[0]?.toUpperCase()}</div>
+                        <div>
+                          <p className="kp-product-name">{p.nombre}</p>
+                          <p className="kp-product-sub">{p.marca || "Sin marca"}</p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td><span className="kp-cat-badge">{p.categoria || "—"}</span></td>
-                  <td className="kp-price">${p.precioVenta?.toLocaleString("es-CO")}</td>
-                  <td>
-                    <div className="kp-stock-cell">
-                      <div className="kp-stock-bar-bg">
-                        <div className={`kp-stock-bar kp-stock-bar--${estado}`} style={{ width: `${pct}%` }} />
+                    </td>
+                    <td><span className="kp-cat-badge">{p.categoria || "Sin categoria"}</span></td>
+                    <td className="kp-price">${p.precioVenta?.toLocaleString("es-CO")}</td>
+                    <td>
+                      <div className="kp-stock-cell">
+                        <div className="kp-stock-bar-bg">
+                          <div className={`kp-stock-bar kp-stock-bar--${estado}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className={`kp-stock-num kp-stock-num--${estado}`}>{p.stockActual}</span>
                       </div>
-                      <span className={`kp-stock-num kp-stock-num--${estado}`}>{p.stockActual}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`kp-estado kp-estado--${estado}`}>
-                      {estado === "activo" ? "● ACTIVO" : estado === "medio" ? "! MEDIO" : "▲ BAJO"}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="kp-actions">
-                      <button onClick={() => onEditar(p.id)} className="kp-action-btn" title="Editar">✏</button>
-                      <button onClick={() => handleEliminar(p.id)} className="kp-action-btn kp-action-btn--del" title="Eliminar">🗑</button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                    <td>
+                      <span className={`kp-estado kp-estado--${estado}`}>
+                        {estado === "activo" ? "ACTIVO" : estado === "medio" ? "MEDIO" : "BAJO"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="kp-actions">
+                        <button onClick={() => onEditar(p.id)} className="kp-action-btn" title="Editar">&#9998;</button>
+                        <button onClick={() => handleEliminar(p.id)} className="kp-action-btn kp-action-btn--del" title="Eliminar">&#128465;</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
         <div className="kp-table-footer">
-          Mostrando <strong>1–{filtrados.length}</strong> de <strong>{productos.length}</strong> productos
+          Mostrando <strong>1-{filtrados.length}</strong> de <strong>{productos.length}</strong> productos
         </div>
       </div>
     </div>
