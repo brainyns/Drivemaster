@@ -1,29 +1,28 @@
-const BASE_URL = "http://localhost:8080/api/ventas";
+const BASE = "http://localhost:8080/api";
 
-const buildHeaders = (token, contentType = "application/json") => {
-  const headers = {};
-  if (contentType) headers["Content-Type"] = contentType;
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-};
+const headers = (token) => ({
+  "Content-Type": "application/json",
+  ...(token && { Authorization: `Bearer ${token}` }),
+});
 
+// ── Ventas ───────────────────────────────────────────
 export async function listarVentas(token) {
-  const res = await fetch(BASE_URL, { headers: buildHeaders(token) });
-  if (!res.ok) throw new Error("Error al obtener ventas");
+  const res = await fetch(`${BASE}/ventas`, { headers: headers(token) });
+  if (!res.ok) throw new Error("Error al listar ventas");
   return res.json();
 }
 
 export async function obtenerVenta(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
+  const res = await fetch(`${BASE}/ventas/${id}`, { headers: headers(token) });
   if (!res.ok) throw new Error("Venta no encontrada");
   return res.json();
 }
 
-export async function crearVenta(venta, token) {
-  const res = await fetch(`${BASE_URL}/guardar`, {
+export async function crearVenta(data, token) {
+  const res = await fetch(`${BASE}/ventas/guardar`, {
     method: "POST",
-    headers: buildHeaders(token),
-    body: JSON.stringify(venta),
+    headers: headers(token),
+    body: JSON.stringify(data),
   });
   if (!res.ok) {
     const err = await res.text();
@@ -33,9 +32,26 @@ export async function crearVenta(venta, token) {
 }
 
 export async function anularVenta(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}/anular`, {
+  const res = await fetch(`${BASE}/ventas/${id}/anular`, {
     method: "PATCH",
-    headers: buildHeaders(token),
+    headers: headers(token),
   });
   if (!res.ok) throw new Error("Error al anular venta");
+}
+
+// ── Config (MySQL) ───────────────────────────────────
+export async function listarMetodosPago(token) {
+  const res = await fetch(`${BASE}/config/metodos-pago`, {
+    headers: headers(token),
+  });
+  if (!res.ok) throw new Error("Error al cargar métodos de pago");
+  return res.json();
+}
+
+export async function obtenerParametro(clave, token) {
+  const res = await fetch(`${BASE}/config/parametros/${clave}`, {
+    headers: headers(token),
+  });
+  if (!res.ok) throw new Error(`Parámetro ${clave} no encontrado`);
+  return res.json();
 }
