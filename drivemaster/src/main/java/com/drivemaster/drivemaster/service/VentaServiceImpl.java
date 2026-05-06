@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.service;
 
 import org.springframework.stereotype.Service;
 
+import com.drivemaster.drivemaster.model.Cliente;
 import com.drivemaster.drivemaster.model.DetalleVenta;
 import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Producto;
@@ -22,18 +23,24 @@ public class VentaServiceImpl implements VentaService {
     private final MovimientoInventarioService movimientoService;
     private final MetodoPagoRepository metodoPagoRepo;
     private final ParametroRepository parametroRepo;
+    private final EmailsService emailService;
+    private final ClienteService clienteService;
 
     public VentaServiceImpl(
             VentaRepository ventaRepository,
             ProductoService productoService,
             MovimientoInventarioService movimientoService,
             MetodoPagoRepository metodoPagoRepo,
-            ParametroRepository parametroRepo) {
-        this.ventaRepository  = ventaRepository;
-        this.productoService  = productoService;
+            ParametroRepository parametroRepo,
+            EmailsService emailService,
+            ClienteService clienteService) {
+        this.ventaRepository = ventaRepository;
+        this.productoService = productoService;
         this.movimientoService = movimientoService;
-        this.metodoPagoRepo   = metodoPagoRepo;
-        this.parametroRepo    = parametroRepo;
+        this.metodoPagoRepo = metodoPagoRepo;
+        this.parametroRepo = parametroRepo;
+        this.emailService = emailService;
+        this.clienteService = clienteService;
     }
 
     @Override
@@ -62,8 +69,7 @@ public class VentaServiceImpl implements VentaService {
             metodoPagoRepo.findByCodigo(pago.getMetodo())
                     .filter(mp -> mp.getActivo())
                     .orElseThrow(() -> new RuntimeException(
-                            "Método de pago inválido o inactivo: " + pago.getMetodo()
-                    ));
+                            "Método de pago inválido o inactivo: " + pago.getMetodo()));
         }
 
         // ── Calcular total ────────────────────────────
@@ -87,7 +93,7 @@ public class VentaServiceImpl implements VentaService {
                 .sum();
 
         if (Double.compare(Math.round(totalPagos * 100.0) / 100.0,
-                           Math.round(totalConIva  * 100.0) / 100.0) != 0) {
+                Math.round(totalConIva * 100.0) / 100.0) != 0) {
             throw new RuntimeException("El total de pagos no coincide con la venta");
         }
 
@@ -109,9 +115,16 @@ public class VentaServiceImpl implements VentaService {
                     detalle.getCantidad(),
                     "Venta",
                     ventaGuardada.getId(),
-                    ventaGuardada.getUsuarioId()
-            );
+                    ventaGuardada.getUsuarioId());
         }
+
+        // ── Enviar correo electrónico ─────────────────
+        Cliente cliente = clienteService.obtenerPorId(ventaGuardada.getClienteId());
+        emailService.enviarEmail(
+                cliente.getCorreo(),
+                "Confirmación de venta",
+                "Buenos dias, " + cliente.getNombre() + ".\nSu venta ha sido registrada exitosamente.\nTotal: "
+                        + totalConIva);
 
         return ventaGuardada;
     }
@@ -145,8 +158,7 @@ public class VentaServiceImpl implements VentaService {
                     detalle.getCantidad(),
                     "Anulación de venta",
                     ventaId,
-                    venta.getUsuarioId()
-            );
+                    venta.getUsuarioId());
         }
 
         venta.setEstado(estadoAnulada);
