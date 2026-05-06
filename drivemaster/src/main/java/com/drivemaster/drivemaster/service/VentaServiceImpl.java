@@ -7,6 +7,8 @@ import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Venta;
 import com.drivemaster.drivemaster.repository.VentaRepository;
+import com.drivemaster.drivemaster.repository.mysql.MetodoPagoRepository;
+import com.drivemaster.drivemaster.repository.mysql.ParametroRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -18,82 +20,101 @@ public class VentaServiceImpl implements VentaService {
     private final VentaRepository ventaRepository;
     private final ProductoService productoService;
     private final MovimientoInventarioService movimientoService;
+    private final MetodoPagoRepository metodoPagoRepo;
+    private final ParametroRepository parametroRepo;
 
-    public VentaServiceImpl(VentaRepository ventaRepository, ProductoService productoService,
-            MovimientoInventarioService movimientoService) {
-        this.ventaRepository = ventaRepository;
-        this.productoService = productoService;
+    public VentaServiceImpl(
+            VentaRepository ventaRepository,
+            ProductoService productoService,
+            MovimientoInventarioService movimientoService,
+            MetodoPagoRepository metodoPagoRepo,
+            ParametroRepository parametroRepo) {
+        this.ventaRepository  = ventaRepository;
+        this.productoService  = productoService;
         this.movimientoService = movimientoService;
+        this.metodoPagoRepo   = metodoPagoRepo;
+        this.parametroRepo    = parametroRepo;
     }
 
-   @Override
-public Venta registrarVenta(Venta venta) {
+    @Override
+    public Venta registrarVenta(Venta venta) {
 
-    // Instante único para toda la venta
-    LocalDateTime ahora = LocalDateTime.now().withNano(0);
+        LocalDateTime ahora = LocalDateTime.now().withNano(0);
+        venta.setFecha(ahora);
 
-    // Fecha de la venta
-    venta.setFecha(ahora);
-    venta.setEstado("PAGADA");
+        // ── Estado desde MySQL ────────────────────────
+        String estadoPagada = "PAGADA"; // fallback
+        var estadoParam = parametroRepo.findByClave("ESTADO_VENTA_DEFAULT");
+        if (estadoParam.isPresent()) {
+            estadoPagada = estadoParam.get().getValor();
+        }
+        venta.setEstado(estadoPagada);
 
-    // Calcular total de la venta
-    double totalVenta = 0;
+        // ── IVA desde MySQL ───────────────────────────
+        double iva = 0.16; // fallback
+        var ivaParam = parametroRepo.findByClave("IVA");
+        if (ivaParam.isPresent()) {
+            iva = Double.parseDouble(ivaParam.get().getValor()) / 100.0;
+        }
 
-    for (DetalleVenta detalle : venta.getProductos()) {
+        // ── Validar métodos de pago contra MySQL ──────
+        for (Pago pago : venta.getPagos()) {
+            metodoPagoRepo.findByCodigo(pago.getMetodo())
+                    .filter(mp -> mp.getActivo())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Método de pago inválido o inactivo: " + pago.getMetodo()
+                    ));
+        }
 
-        Producto producto = productoService
-                .obtenerPorId(detalle.getProductoId());
+        // ── Calcular total ────────────────────────────
+        double totalVenta = 0;
+        for (DetalleVenta detalle : venta.getProductos()) {
+            Producto producto = productoService.obtenerPorId(detalle.getProductoId());
+            double subtotal = producto.getPrecioVenta() * detalle.getCantidad();
+            detalle.setNombre(producto.getNombre());
+            detalle.setPrecioUnitario(producto.getPrecioVenta());
+            detalle.setSubtotal(subtotal);
+            totalVenta += subtotal;
+        }
 
-        double subtotal = producto.getPrecioVenta() * detalle.getCantidad();
+        // ── Aplicar IVA ───────────────────────────────
+        double totalConIva = totalVenta * (1 + iva);
+        venta.setTotal(totalConIva);
 
-        detalle.setNombre(producto.getNombre());
-        detalle.setPrecioUnitario(producto.getPrecioVenta());
-        detalle.setSubtotal(subtotal);
+        // ── Validar pagos ─────────────────────────────
+        double totalPagos = venta.getPagos().stream()
+                .mapToDouble(Pago::getMonto)
+                .sum();
 
-        totalVenta += subtotal;
+        if (Double.compare(Math.round(totalPagos * 100.0) / 100.0,
+                           Math.round(totalConIva  * 100.0) / 100.0) != 0) {
+            throw new RuntimeException("El total de pagos no coincide con la venta");
+        }
+
+        // ── Completar pagos ───────────────────────────
+        String refBase = ahora.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        for (Pago pago : venta.getPagos()) {
+            pago.setFecha(ahora);
+            pago.setReferencia("RFF_" + refBase);
+        }
+
+        // ── Guardar en MongoDB ────────────────────────
+        Venta ventaGuardada = ventaRepository.save(venta);
+
+        // ── Movimientos de inventario ─────────────────
+        for (DetalleVenta detalle : ventaGuardada.getProductos()) {
+            movimientoService.registrarMovimiento(
+                    detalle.getProductoId(),
+                    "SALIDA",
+                    detalle.getCantidad(),
+                    "Venta",
+                    ventaGuardada.getId(),
+                    ventaGuardada.getUsuarioId()
+            );
+        }
+
+        return ventaGuardada;
     }
-
-    venta.setTotal(totalVenta);
-
-    // Validar pagos
-    double totalPagos = venta.getPagos().stream()
-            .mapToDouble(Pago::getMonto)
-            .sum();
-
-    if (Double.compare(totalPagos, totalVenta) != 0) {
-        throw new RuntimeException(
-                "El total de pagos no coincide con la venta"
-        );
-    }
-
-    // Completar pagos
-    for (Pago pago : venta.getPagos()) {
-        pago.setFecha(ahora);
-        pago.setReferencia("RFF_" +
-                ahora.format(
-                        DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-                )
-        );
-    }
-
-    // Guardar venta 
-    Venta ventaGuardada = ventaRepository.save(venta);
-
-    // Movimientos de inventario
-    for (DetalleVenta detalle : ventaGuardada.getProductos()) {
-        movimientoService.registrarMovimiento(
-                detalle.getProductoId(),
-                "SALIDA",
-                detalle.getCantidad(),
-                "Venta",
-                ventaGuardada.getId(),
-                ventaGuardada.getUsuarioId()
-        );
-    }
-
-    return ventaGuardada;
-}
-
 
     @Override
     public Venta obtenerPorId(String id) {
@@ -108,14 +129,15 @@ public Venta registrarVenta(Venta venta) {
 
     @Override
     public void anularVenta(String ventaId) {
-
         Venta venta = obtenerPorId(ventaId);
+
+        // ── Estado desde MySQL ────────────────────────
+        String estadoAnulada = "ANULADA";
 
         if ("ANULADA".equals(venta.getEstado())) {
             throw new RuntimeException("La venta ya está anulada");
         }
 
-        // Revertir inventario
         for (DetalleVenta detalle : venta.getProductos()) {
             movimientoService.registrarMovimiento(
                     detalle.getProductoId(),
@@ -123,10 +145,11 @@ public Venta registrarVenta(Venta venta) {
                     detalle.getCantidad(),
                     "Anulación de venta",
                     ventaId,
-                    venta.getUsuarioId());
+                    venta.getUsuarioId()
+            );
         }
 
-        venta.setEstado("ANULADA");
+        venta.setEstado(estadoAnulada);
         ventaRepository.save(venta);
     }
 }
