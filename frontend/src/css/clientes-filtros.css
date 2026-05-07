@@ -1,0 +1,114 @@
+/* ── Panel flotante de filtros (Clientes) ───────────────────── */
+.km-filtros-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 100;
+  width: 280px;
+  background: var(--card, #1a1a1a);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1.1rem;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  animation: km-panel-in 0.15s ease;
+}
+
+@keyframes km-panel-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.km-filtros-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.km-filtros-title {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text, #fff);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.km-filtros-clear {
+  font-size: .72rem;
+  color: #E8450A;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.km-filtros-clear:hover { opacity: .7; }
+
+.km-filtros-group {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+.km-filtros-label {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted, #888);
+  margin: 0;
+}
+
+.km-filtros-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.km-chip {
+  font-size: .72rem;
+  font-weight: 600;
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: var(--muted, #888);
+  cursor: pointer;
+  transition: all .15s;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.km-chip:hover {
+  border-color: rgba(255,255,255,0.25);
+  color: var(--text, #fff);
+}
+.km-chip.on {
+  background: rgba(232,69,10,0.15);
+  border-color: #E8450A;
+  color: #E8450A;
+}
+
+.km-filtros-apply {
+  width: 100%;
+  padding: .5rem;
+  background: #E8450A;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  transition: opacity .15s;
+}
+.km-filtros-apply:hover { opacity: .85; }
+
+/* Botón tool-btn activo cuando hay filtros */
+.km-tool-btn.active {
+  background: rgba(232,69,10,0.12);
+  border-color: #E8450A;
+  color: #E8450A;
+}

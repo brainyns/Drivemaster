@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { listarClientes, eliminarCliente } from "../services/clienteService";
 import "../css/clientes.css";
+import "../css/clientes-filtros.css";
 
 const AVATARES = ["#2563eb","#7c3aed","#db2777","#059669","#d97706","#dc2626","#0891b2"];
 const getIniciales = (n) => n ? n.split(" ").map(x=>x[0]).join("").toUpperCase().slice(0,2) : "?";
@@ -8,11 +9,97 @@ const getColor = (n) => n ? AVATARES[n.charCodeAt(0) % AVATARES.length] : AVATAR
 
 const POR_PAG = 10;
 
+// ─── Helpers de fecha ────────────────────────────────────────────────────────
+function esHoy(fechaStr) {
+  if (!fechaStr) return false;
+  const hoy = new Date();
+  const f   = new Date(fechaStr);
+  return (
+    f.getFullYear() === hoy.getFullYear() &&
+    f.getMonth()    === hoy.getMonth()    &&
+    f.getDate()     === hoy.getDate()
+  );
+}
+
+// ─── Panel de filtros ─────────────────────────────────────────────────────────
+function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (
+        panelRef.current  && !panelRef.current.contains(e.target) &&
+        anchorRef.current && !anchorRef.current.contains(e.target)
+      ) onCerrar();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onCerrar, anchorRef]);
+
+  const limpiar = () => onChange({ conCorreo: false, conTelefono: false, soloHoy: false, busqueda: filtros.busqueda });
+
+  const hayFiltros = filtros.conCorreo || filtros.conTelefono || filtros.soloHoy;
+
+  return (
+    <div className="km-filtros-panel" ref={panelRef}>
+      <div className="km-filtros-header">
+        <span className="km-filtros-title">⚙ Filtros</span>
+        {hayFiltros && (
+          <button className="km-filtros-clear" onClick={limpiar}>Limpiar todo</button>
+        )}
+      </div>
+
+      {/* Registros */}
+      <div className="km-filtros-group">
+        <p className="km-filtros-label">Período</p>
+        <div className="km-filtros-chips">
+          <button
+            className={`km-chip${filtros.soloHoy ? " on" : ""}`}
+            onClick={() => onChange({ ...filtros, soloHoy: !filtros.soloHoy })}
+          >
+            📅 Registrados hoy
+          </button>
+        </div>
+      </div>
+
+      {/* Datos de contacto */}
+      <div className="km-filtros-group">
+        <p className="km-filtros-label">Datos de contacto</p>
+        <div className="km-filtros-chips">
+          <button
+            className={`km-chip${filtros.conCorreo ? " on" : ""}`}
+            onClick={() => onChange({ ...filtros, conCorreo: !filtros.conCorreo })}
+          >
+            ✉ Con correo
+          </button>
+          <button
+            className={`km-chip${filtros.conTelefono ? " on" : ""}`}
+            onClick={() => onChange({ ...filtros, conTelefono: !filtros.conTelefono })}
+          >
+            📞 Con teléfono
+          </button>
+        </div>
+      </div>
+
+      <button className="km-filtros-apply" onClick={onCerrar}>Aplicar filtros</button>
+    </div>
+  );
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
 function Clientes({ onNuevo, onEditar, token }) {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading]   = useState(true);
-  const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina]     = useState(1);
+
+  const [filtros, setFiltros]       = useState({
+    busqueda:    "",
+    conCorreo:   false,
+    conTelefono: false,
+    soloHoy:     false,
+  });
+  const [filtrosOpen, setFiltrosOpen] = useState(false);
+  const filtrosRef = useRef(null);
 
   useEffect(() => { cargar(); }, [token]);
 
@@ -32,15 +119,34 @@ function Clientes({ onNuevo, onEditar, token }) {
     } catch(e) { alert(e.message); }
   };
 
-  const filtrados = clientes.filter(c =>
-    [c.nombre, c.identificacion, c.correo, c.telefono, c.direccion]
-      .some(v => v?.toLowerCase().includes(busqueda.toLowerCase()))
-  );
+  // ── Filtrado ──────────────────────────────────────────────
+  const filtrados = clientes.filter(c => {
+    // Búsqueda de texto
+    const matchTexto = [c.nombre, c.identificacion, c.correo, c.telefono, c.direccion]
+      .some(v => v?.toLowerCase().includes(filtros.busqueda.toLowerCase()));
+    if (!matchTexto) return false;
+
+    // Solo hoy
+    if (filtros.soloHoy && !esHoy(c.fechaRegistro ?? c.createdAt ?? c.fecha)) return false;
+
+    // Con correo
+    if (filtros.conCorreo && !c.correo) return false;
+
+    // Con teléfono
+    if (filtros.conTelefono && !c.telefono) return false;
+
+    return true;
+  });
 
   const totalPags = Math.ceil(filtrados.length / POR_PAG) || 1;
   const paginados = filtrados.slice((pagina-1)*POR_PAG, pagina*POR_PAG);
-  const conCorreo   = clientes.filter(c => c.correo).length;
-  const conTelefono = clientes.filter(c => c.telefono).length;
+
+  const conCorreo      = clientes.filter(c => c.correo).length;
+  const conTelefono    = clientes.filter(c => c.telefono).length;
+  const registradosHoy = clientes.filter(c => esHoy(c.fechaRegistro ?? c.createdAt ?? c.fecha)).length;
+
+  const hayFiltros = filtros.conCorreo || filtros.conTelefono || filtros.soloHoy;
+  const contFiltros = [filtros.conCorreo, filtros.conTelefono, filtros.soloHoy].filter(Boolean).length;
 
   return (
     <div className="km-root km-page">
@@ -63,8 +169,8 @@ function Clientes({ onNuevo, onEditar, token }) {
             <span className="km-search-ico">🔍</span>
             <input
               placeholder="Buscar cliente..."
-              value={busqueda}
-              onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
+              value={filtros.busqueda}
+              onChange={e => { setFiltros(f => ({ ...f, busqueda: e.target.value })); setPagina(1); }}
             />
           </div>
           <button className="km-ico-btn">🔔</button>
@@ -93,7 +199,7 @@ function Clientes({ onNuevo, onEditar, token }) {
         </div>
         <div className="km-stat">
           <p className="km-stat-label">Registrados Hoy</p>
-          <p className="km-stat-val purple">—</p>
+          <p className="km-stat-val purple">{registradosHoy}</p>
         </div>
         <div className="km-stat">
           <p className="km-stat-label">Con Correo</p>
@@ -109,7 +215,27 @@ function Clientes({ onNuevo, onEditar, token }) {
       <div className="km-card">
         <div className="km-toolbar">
           <div className="km-toolbar-l">
-            <button className="km-tool-btn">⚙ Filtro</button>
+
+            {/* Botón Filtro con panel */}
+            <div style={{ position: "relative" }}>
+              <button
+                ref={filtrosRef}
+                className={`km-tool-btn${hayFiltros ? " active" : ""}`}
+                onClick={() => setFiltrosOpen(p => !p)}
+              >
+                ⚙ Filtro{hayFiltros ? ` (${contFiltros})` : ""}
+              </button>
+
+              {filtrosOpen && (
+                <FiltrosPanel
+                  filtros={filtros}
+                  onChange={(f) => { setFiltros(f); setPagina(1); }}
+                  onCerrar={() => setFiltrosOpen(false)}
+                  anchorRef={filtrosRef}
+                />
+              )}
+            </div>
+
             <button className="km-tool-btn">↓ Exportador</button>
           </div>
           <span className="km-count">

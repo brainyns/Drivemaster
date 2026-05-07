@@ -1,0 +1,247 @@
+/* ================================================================
+   FILTER PANEL — pegar al final de compras.css
+   ================================================================ */
+
+.cp-btn-outline.active {
+  border-color: #ff4500;
+  color: #ff4500;
+  background: rgba(255, 69, 0, 0.08);
+}
+
+.cp-filter-badge {
+  background: #ff4500;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 6px;
+  margin-left: 4px;
+  line-height: 1.4;
+}
+
+.cp-filter-wrap {
+  position: relative;
+}
+
+.cp-fp-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 292px;
+  background: #161616;
+  border: 1px solid #2e2e2e;
+  border-radius: 12px;
+  z-index: 300;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+  animation: cp-fp-in 0.14s ease;
+}
+
+@keyframes cp-fp-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cp-fp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 16px 11px;
+  border-bottom: 1px solid #242424;
+}
+
+.cp-fp-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #d0d0d0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cp-fp-close {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 5px;
+  transition: color 0.1s, background 0.1s;
+}
+.cp-fp-close:hover {
+  color: #fff;
+  background: #2a2a2a;
+}
+
+.cp-fp-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cp-fp-label {
+  font-size: 10px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.cp-fp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cp-fp-chip {
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 20px;
+  padding: 5px 13px;
+  font-size: 12px;
+  color: #777;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.cp-fp-chip:hover {
+  border-color: #444;
+  color: #ccc;
+}
+
+.cp-fp-chip--recibida.on  { background: #0b3326; border-color: #1a6e50; color: #4ade80; }
+.cp-fp-chip--pendiente.on { background: #261d00; border-color: #b07800; color: #f0a500; }
+.cp-fp-chip--cancelada.on { background: #330d0d; border-color: #b83333; color: #f87171; }
+.cp-fp-chip--pagada.on    { background: #0c1e38; border-color: #2a6fd6; color: #60a5fa; }
+
+.cp-fp-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-fp-range-sep {
+  color: #444;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.cp-fp-input {
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: #ccc;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.12s;
+  color-scheme: dark;
+}
+.cp-fp-input:focus {
+  border-color: #ff4500;
+}
+.cp-fp-input::placeholder {
+  color: #444;
+}
+
+.cp-fp-footer {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid #1e1e1e;
+}
+
+.cp-fp-btn-clear {
+  flex: 1;
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 7px;
+  color: #888;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+}
+.cp-fp-btn-clear:hover {
+  border-color: #555;
+  color: #ccc;
+}
+
+.cp-fp-btn-apply {
+  flex: 2;
+  background: #ff4500;
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.cp-fp-btn-apply:hover {
+  background: #e03d00;
+}
+
+.cp-filter-tags-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 20px;
+  background: rgba(255, 69, 0, 0.04);
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.cp-filter-tags-label {
+  font-size: 11px;
+  color: #555;
+}
+
+.cp-filter-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 69, 0, 0.1);
+  border: 1px solid rgba(255, 69, 0, 0.25);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #ff6a1a;
+}
+
+.cp-filter-tag button {
+  background: none;
+  border: none;
+  color: #ff6a1a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  opacity: 0.7;
+  transition: opacity 0.1s;
+}
+.cp-filter-tag button:hover {
+  opacity: 1;
+}
+
+.cp-filter-clear-all {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.1s;
+}
+.cp-filter-clear-all:hover {
+  color: #ccc;
+}
