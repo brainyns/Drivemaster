@@ -5,7 +5,9 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.drivemaster.drivemaster.model.MovimientoInventario;
 import com.drivemaster.drivemaster.model.Producto;
+import com.drivemaster.drivemaster.service.MovimientoInventarioService;
 import com.drivemaster.drivemaster.service.ProductoService;
 
 @RestController
@@ -14,9 +16,12 @@ import com.drivemaster.drivemaster.service.ProductoService;
 public class ProductoController {
 
     private final ProductoService productoService;
+    private final MovimientoInventarioService movimientoInventarioService;
 
-    public ProductoController(ProductoService productoService) {
+    public ProductoController(ProductoService productoService,
+            MovimientoInventarioService movimientoInventarioService) {
         this.productoService = productoService;
+        this.movimientoInventarioService = movimientoInventarioService;
     }
 
     // LISTAR
@@ -33,8 +38,8 @@ public class ProductoController {
 
     // CREAR
     @PostMapping("/guardar")
-    public ResponseEntity<Producto> guardar(@RequestBody Producto producto) {
-        return ResponseEntity.ok(productoService.crearProducto(producto));
+    public ResponseEntity<MovimientoInventario> guardar(@RequestBody Producto producto) {
+        return ResponseEntity.ok(movimientoInventarioService.registrarNuevoProducto(producto, "admin"));
     }
 
     // ACTUALIZAR

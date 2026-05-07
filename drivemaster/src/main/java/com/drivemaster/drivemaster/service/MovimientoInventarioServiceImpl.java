@@ -118,4 +118,21 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return movimientos;
     }
 
+    @Override
+    public MovimientoInventario registrarNuevoProducto(Producto producto, String usuarioId) {
+        productoService.crearProducto(producto);
+        MovimientoInventario movimiento = new MovimientoInventario();
+        movimiento.setProductoId(producto.getId());
+        movimiento.setTipo("ENTRADA");
+        movimiento.setCantidad(producto.getStockActual());
+        movimiento.setStockAnterior(0);
+        movimiento.setStockNuevo(producto.getStockActual());
+        movimiento.setMotivo("Registro de nuevo producto");
+        movimiento.setReferencia("PROD_" + producto.getId());
+        movimiento.setUsuarioId(usuarioId);
+        movimiento.setFecha(LocalDateTime.now());
+
+        return movimientoRepository.save(movimiento);
+    }
+
 }

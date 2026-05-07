@@ -3,6 +3,7 @@ package com.drivemaster.drivemaster.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.drivemaster.drivemaster.model.MovimientoInventario;
+import com.drivemaster.drivemaster.model.Producto;
 
 public interface MovimientoInventarioService {
 
@@ -13,6 +14,8 @@ public interface MovimientoInventarioService {
                         String motivo,
                         String referencia,
                         String usuarioId);
+
+        MovimientoInventario registrarNuevoProducto(Producto producto, String usuarioId);
 
         List<MovimientoInventario> obtenerMovimientosPorProducto(String productoId);
 
