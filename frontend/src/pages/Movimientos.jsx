@@ -20,6 +20,13 @@ function Movimientos({ token }) {
     fechaFin: "",
   });
 
+  const [filtrosAplicados, setFiltrosAplicados] = useState({
+    busqueda: "",
+    tipo: "",
+    fechaInicio: "",
+    fechaFin: "",
+  });
+
   const [mostrarModal, setMostrarModal] = useState(false);
   const [ajuste, setAjuste] = useState({
     productoId: "",
@@ -36,10 +43,10 @@ function Movimientos({ token }) {
     cargar();
   }, [token]);
 
-  const cargar = async (f = filtros) => {
+  const cargar = async () => {
     setLoading(true);
     try {
-      const data = await listarMovimientos(f, token);
+      const data = await listarMovimientos({}, token);
       setMovimientos(data);
     } catch (e) {
       console.error(e);
@@ -51,7 +58,7 @@ function Movimientos({ token }) {
   const aplicarFiltros = (e) => {
     e.preventDefault();
     setPagina(1);
-    cargar(filtros);
+    setFiltrosAplicados({ ...filtros });
   };
 
   const getNombre = (id) => {
@@ -70,7 +77,7 @@ function Movimientos({ token }) {
   };
 
   const formatFecha = (fecha) => {
-    if (!fecha) return "—";
+    if (!fecha) return { fecha: "—", hora: "—" };
     const d = new Date(fecha);
     return {
       fecha: d.toLocaleDateString("es-CO", {
@@ -96,14 +103,30 @@ function Movimientos({ token }) {
   const filtradosBusqueda = movimientos.filter((m) => {
     const nombre = getNombre(m.productoId).toLowerCase();
     const codigo = getCodigo(m.productoId).toLowerCase();
-    const q = filtros.busqueda.toLowerCase();
-    return nombre.includes(q) || codigo.includes(q);
+    const q = filtrosAplicados.busqueda.toLowerCase();
+
+    const matchBusqueda = !q || nombre.includes(q) || codigo.includes(q);
+
+    const matchTipo =
+      !filtrosAplicados.tipo || m.tipo === filtrosAplicados.tipo;
+
+    const fechaMov = m.fecha ? new Date(m.fecha) : null;
+    const desde = filtrosAplicados.fechaInicio
+      ? new Date(filtrosAplicados.fechaInicio)
+      : null;
+    const hasta = filtrosAplicados.fechaFin
+      ? new Date(filtrosAplicados.fechaFin + "T23:59:59")
+      : null;
+    const matchDesde = !desde || !fechaMov || fechaMov >= desde;
+    const matchHasta = !hasta || !fechaMov || fechaMov <= hasta;
+
+    return matchBusqueda && matchTipo && matchDesde && matchHasta;
   });
 
   const totalPags = Math.ceil(filtradosBusqueda.length / POR_PAGINA);
   const paginados = filtradosBusqueda.slice(
     (pagina - 1) * POR_PAGINA,
-    pagina * POR_PAGINA,
+    pagina * POR_PAGINA
   );
 
   const handleAjuste = async () => {
@@ -112,7 +135,7 @@ function Movimientos({ token }) {
     try {
       await registrarMovimiento(
         { ...ajuste, cantidad: Number(ajuste.cantidad) },
-        token,
+        token
       );
       setMostrarModal(false);
       setAjuste({ productoId: "", tipo: "AJUSTE", cantidad: "", motivo: "" });
@@ -373,10 +396,12 @@ function Movimientos({ token }) {
             <span className="mv-count">
               Mostrando{" "}
               <strong>
-                {Math.min(
-                  (pagina - 1) * POR_PAGINA + 1,
-                  filtradosBusqueda.length,
-                )}
+                {filtradosBusqueda.length === 0
+                  ? 0
+                  : Math.min(
+                      (pagina - 1) * POR_PAGINA + 1,
+                      filtradosBusqueda.length
+                    )}
                 -{Math.min(pagina * POR_PAGINA, filtradosBusqueda.length)}
               </strong>{" "}
               de <strong>{filtradosBusqueda.length}</strong> movimientos
@@ -392,7 +417,7 @@ function Movimientos({ token }) {
                 </button>
                 {Array.from(
                   { length: Math.min(totalPags, 5) },
-                  (_, i) => i + 1,
+                  (_, i) => i + 1
                 ).map((n) => (
                   <button
                     key={n}
@@ -453,7 +478,9 @@ function Movimientos({ token }) {
               <label>Tipo</label>
               <select
                 value={ajuste.tipo}
-                onChange={(e) => setAjuste({ ...ajuste, tipo: e.target.value })}
+                onChange={(e) =>
+                  setAjuste({ ...ajuste, tipo: e.target.value })
+                }
               >
                 <option value="ENTRADA">Entrada</option>
                 <option value="SALIDA">Salida</option>
