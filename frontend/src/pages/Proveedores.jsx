@@ -170,7 +170,7 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
                   onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
                 />
               </div>
-              <button className="kp-btn-icon"><IconFilter /> Filtrar</button>
+             
             </div>
           </div>
 
