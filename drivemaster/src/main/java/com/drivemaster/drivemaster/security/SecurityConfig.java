@@ -63,6 +63,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/ventas/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/compras/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/proveedores/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/movimientos", "/api/movimientos/").permitAll()
                         .requestMatchers("/api/movimientos/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/ajustes/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/home/**").authenticated()

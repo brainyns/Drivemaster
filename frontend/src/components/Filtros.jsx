@@ -1,6 +1,6 @@
 import "../css/filtros.css";
 
-const CATEGORIAS = ["Todas", "Aceites", "Frenos", "Suspensión", "Refacciones"];
+const CATEGORIAS = ["Todos los productos"];
 
 const Filtros = ({ categoriaActiva, onCategoriaChange, soloMasVendidos, onMasVendidosChange, total }) => {
   return (
