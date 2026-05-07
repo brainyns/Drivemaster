@@ -1,5 +1,9 @@
 package com.drivemaster.drivemaster.service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.drivemaster.drivemaster.model.Cliente;
@@ -7,13 +11,10 @@ import com.drivemaster.drivemaster.model.DetalleVenta;
 import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Venta;
-import com.drivemaster.drivemaster.repository.VentaRepository;
+import com.drivemaster.drivemaster.repository.VentaRepository; // ← NUEVO
 import com.drivemaster.drivemaster.repository.mysql.MetodoPagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.ParametroRepository;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
+import com.drivemaster.drivemaster.util.EmailVentaBuilder;
 
 @Service
 public class VentaServiceImpl implements VentaService {
@@ -50,7 +51,7 @@ public class VentaServiceImpl implements VentaService {
         venta.setFecha(ahora);
 
         // ── Estado desde MySQL ────────────────────────
-        String estadoPagada = "PAGADA"; // fallback
+        String estadoPagada = "PAGADA";
         var estadoParam = parametroRepo.findByClave("ESTADO_VENTA_DEFAULT");
         if (estadoParam.isPresent()) {
             estadoPagada = estadoParam.get().getValor();
@@ -58,7 +59,7 @@ public class VentaServiceImpl implements VentaService {
         venta.setEstado(estadoPagada);
 
         // ── IVA desde MySQL ───────────────────────────
-        double iva = 0.16; // fallback
+        double iva = 0.16;
         var ivaParam = parametroRepo.findByClave("IVA");
         if (ivaParam.isPresent()) {
             iva = Double.parseDouble(ivaParam.get().getValor()) / 100.0;
@@ -120,11 +121,16 @@ public class VentaServiceImpl implements VentaService {
 
         // ── Enviar correo electrónico ─────────────────
         Cliente cliente = clienteService.obtenerPorId(ventaGuardada.getClienteId());
+
+        String htmlFactura = EmailVentaBuilder.construir(cliente, ventaGuardada, iva); // ← NUEVO
+
         emailService.enviarEmail(
                 cliente.getCorreo(),
-                "Confirmación de venta",
-                "Buenos dias, " + cliente.getNombre() + ".\nSu venta ha sido registrada exitosamente.\nTotal: "
-                        + totalConIva);
+                "Factura de venta #" + ventaGuardada.getId()
+                        .substring(ventaGuardada.getId().length() - 8)
+                        .toUpperCase(),
+                htmlFactura // ← NUEVO: antes era el texto plano
+        );
 
         return ventaGuardada;
     }
@@ -144,7 +150,6 @@ public class VentaServiceImpl implements VentaService {
     public void anularVenta(String ventaId) {
         Venta venta = obtenerPorId(ventaId);
 
-        // ── Estado desde MySQL ────────────────────────
         String estadoAnulada = "ANULADA";
 
         if ("ANULADA".equals(venta.getEstado())) {
