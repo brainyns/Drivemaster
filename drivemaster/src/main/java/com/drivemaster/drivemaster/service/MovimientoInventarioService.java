@@ -6,21 +6,21 @@ import com.drivemaster.drivemaster.model.MovimientoInventario;
 
 public interface MovimientoInventarioService {
 
-    MovimientoInventario registrarMovimiento(
-            String productoId,
-            String tipo,
-            Integer cantidad,
-            String motivo,
-            String referencia,
-            String usuarioId);
+        MovimientoInventario registrarMovimiento(
+                        String productoId,
+                        String tipo,
+                        Integer cantidad,
+                        String motivo,
+                        String referencia,
+                        String usuarioId);
 
-    List<MovimientoInventario> obtenerMovimientosPorProducto(String productoId);
+        List<MovimientoInventario> obtenerMovimientosPorProducto(String productoId);
 
-    List<MovimientoInventario> listarTodos();
+        List<MovimientoInventario> listarTodos();
 
-    List<MovimientoInventario> buscarConFiltros(
-            String productoId,
-            String tipo,
-            LocalDateTime fechaInicio,
-            LocalDateTime fechaFin);
+        List<MovimientoInventario> buscarConFiltros(
+                        String productoId,
+                        String tipo,
+                        LocalDateTime fechaInicio,
+                        LocalDateTime fechaFin);
 }

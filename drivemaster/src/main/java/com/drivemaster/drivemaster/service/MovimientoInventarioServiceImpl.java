@@ -48,7 +48,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 break;
 
             case "AJUSTE":
-                stockNuevo = stockAnterior + cantidad;
+                stockNuevo = cantidad;
                 break;
 
             default:
@@ -85,9 +85,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         return movimientoRepository.findAllByOrderByFechaDesc();
     }
 
-
     @Override
-    public List<MovimientoInventario> buscarConFiltros(String productoId, String tipo, LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+    public List<MovimientoInventario> buscarConFiltros(String productoId, String tipo, LocalDateTime fechaInicio,
+            LocalDateTime fechaFin) {
         List<MovimientoInventario> movimientos;
 
         // Caso 1: todos sin filtros
