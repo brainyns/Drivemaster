@@ -5,7 +5,6 @@ const headers = (token) => ({
   ...(token && { Authorization: `Bearer ${token}` }),
 });
 
-// ── Ventas ───────────────────────────────────────────
 export async function listarVentas(token) {
   const res = await fetch(`${BASE}/ventas`, { headers: headers(token) });
   if (!res.ok) throw new Error("Error al listar ventas");
@@ -39,7 +38,34 @@ export async function anularVenta(id, token) {
   if (!res.ok) throw new Error("Error al anular venta");
 }
 
-// ── Config (MySQL) ───────────────────────────────────
+export async function descargarPdfVenta(id, token) {
+  const res = await fetch(`${BASE}/ventas/${id}/pdf`, {
+    headers: headers(token),
+  });
+  if (!res.ok) throw new Error("Error al generar el PDF");
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `Factura-DriveMaster-${id.slice(-8).toUpperCase()}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function exportarVentasExcel(token) {
+  const res = await fetch(`${BASE}/ventas/exportar`, {
+    headers: headers(token),
+  });
+  if (!res.ok) throw new Error("Error al exportar");
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `Ventas-DriveMaster.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function listarMetodosPago(token) {
   const res = await fetch(`${BASE}/config/metodos-pago`, {
     headers: headers(token),

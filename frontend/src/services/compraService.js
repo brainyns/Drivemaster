@@ -31,3 +31,17 @@ export async function crearCompra(compra, token) {
   }
   return res.json();
 }
+
+export async function descargarPdfCompra(id, token) {
+  const res = await fetch(`${BASE_URL}/${id}/pdf`, {
+    headers: buildHeaders(token),
+  });
+  if (!res.ok) throw new Error("Error al generar el PDF de la compra");
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `Factura-Compra-PO-${id.slice(-5).toUpperCase()}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

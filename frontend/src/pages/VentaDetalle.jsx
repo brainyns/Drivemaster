@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { obtenerVenta } from "../services/ventaService";
+import { obtenerVenta, descargarPdfVenta } from "../services/ventaService";
 import "../css/venta.css";
 
 const METODO_ICO = {
   TARJETA:       "💳",
   EFECTIVO:      "💵",
   TRANSFERENCIA: "🏦",
+  NEQUI:         "💰",
 };
 
 const ESTADO_CLASS = {
@@ -17,29 +18,58 @@ const ESTADO_CLASS = {
 };
 
 function VentaDetalle({ id, onVolver, token }) {
-  const [venta, setVenta]   = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [venta, setVenta]       = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [descargando, setDescargando] = useState(false);
 
   useEffect(() => {
-    obtenerVenta(id, token).then(setVenta).catch(console.error).finally(() => setLoading(false));
+    obtenerVenta(id, token)
+      .then(setVenta)
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [id, token]);
 
+  const handleDescargarPdf = async () => {
+    setDescargando(true);
+    try {
+      await descargarPdfVenta(id, token);
+    } catch (e) {
+      alert("Error al generar PDF: " + e.message);
+    } finally {
+      setDescargando(false);
+    }
+  };
+
+  const handleImprimir = async () => {
+    setDescargando(true);
+    try {
+      await descargarPdfVenta(id, token);
+      setTimeout(() => window.print(), 800);
+    } catch (e) {
+      alert("Error al imprimir: " + e.message);
+    } finally {
+      setDescargando(false);
+    }
+  };
+
   if (loading) return (
-    <div className="vd-page" style={{ justifyContent:"center", alignItems:"center" }}>
-      <p style={{ color:"var(--muted)", fontFamily:"DM Sans,sans-serif" }}>Cargando venta...</p>
+    <div className="vd-page" style={{ justifyContent: "center", alignItems: "center" }}>
+      <p style={{ color: "var(--muted)", fontFamily: "DM Sans,sans-serif" }}>Cargando venta...</p>
     </div>
   );
   if (!venta) return (
-    <div className="vd-page" style={{ justifyContent:"center", alignItems:"center" }}>
-      <p style={{ color:"var(--red)", fontFamily:"DM Sans,sans-serif" }}>Venta no encontrada</p>
+    <div className="vd-page" style={{ justifyContent: "center", alignItems: "center" }}>
+      <p style={{ color: "var(--red)", fontFamily: "DM Sans,sans-serif" }}>Venta no encontrada</p>
     </div>
   );
 
-  const total    = parseFloat(venta.total || 0);
-  const subtotal = venta.productos?.reduce((a,p) => a + parseFloat(p.subtotal||0), 0) || total;
-  const impuesto = total - subtotal;
+  const total     = parseFloat(venta.total || 0);
+  const subtotal  = venta.productos?.reduce((a, p) => a + parseFloat(p.subtotal || 0), 0) || total;
+  const impuesto  = total - subtotal;
   const estadoKey = venta.estado?.toUpperCase?.() || "";
-  const fecha = venta.fecha ? new Date(venta.fecha).toLocaleDateString("es-CO", { day:"2-digit", month:"numeric", year:"numeric" }) : "—";
+  const fecha     = venta.fecha
+    ? new Date(venta.fecha).toLocaleDateString("es-CO", { day: "2-digit", month: "numeric", year: "numeric" })
+    : "—";
 
   return (
     <div className="vd-page">
@@ -64,12 +94,22 @@ function VentaDetalle({ id, onVolver, token }) {
 
       {/* Sub-header */}
       <div className="vd-subheader">
-        <button className="vd-back" onClick={onVolver}>
-          ← Volver al historial
-        </button>
+        <button className="vd-back" onClick={onVolver}>← Volver al historial</button>
         <div className="vd-subheader-actions">
-          <button className="vt-btn-outline">🖨 Imprimir</button>
-          <button className="vt-btn-primary">↗ Compartir Comprobante</button>
+          <button
+            className="vt-btn-outline"
+            onClick={handleImprimir}
+            disabled={descargando}
+          >
+            🖨 Imprimir
+          </button>
+          <button
+            className="vt-btn-primary"
+            onClick={handleDescargarPdf}
+            disabled={descargando}
+          >
+            {descargando ? "Generando..." : "↓ Descargar PDF"}
+          </button>
         </div>
       </div>
 
@@ -81,10 +121,9 @@ function VentaDetalle({ id, onVolver, token }) {
       {/* Body */}
       <div className="vd-body">
 
-        {/* ── Columna izquierda ── */}
+        {/* Columna izquierda */}
         <div className="vd-left">
 
-          {/* Resumen */}
           <div className="vd-panel relative">
             <div className="vd-resumen-ico">🧾</div>
             <p className="vd-panel-label">Resumen de Venta</p>
@@ -95,10 +134,9 @@ function VentaDetalle({ id, onVolver, token }) {
               {venta.estado || "—"}
             </span>
             <p className="vd-resumen-monto-label">Monto Total</p>
-            <p className="vd-resumen-monto">${total.toLocaleString("es-CO", { minimumFractionDigits:2 })}</p>
+            <p className="vd-resumen-monto">${total.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</p>
           </div>
 
-          {/* Cliente */}
           <div className="vd-panel">
             <p className="vd-panel-label">Cliente</p>
             <div className="vd-client-row">
@@ -123,16 +161,13 @@ function VentaDetalle({ id, onVolver, token }) {
           </div>
         </div>
 
-        {/* ── Columna derecha ── */}
+        {/* Columna derecha */}
         <div className="vd-right">
 
-          {/* Productos */}
-          <div className="vd-panel" style={{ padding:0, overflow:"hidden" }}>
-            <div style={{ padding:"1.2rem 1.25rem .75rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div>
-                <p className="vd-panel-title">Productos y Servicios</p>
-              </div>
-              <span style={{ fontSize:".74rem", color:"var(--muted)" }}>
+          <div className="vd-panel" style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "1.2rem 1.25rem .75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <p className="vd-panel-title">Productos y Servicios</p>
+              <span style={{ fontSize: ".74rem", color: "var(--muted)" }}>
                 {venta.productos?.length || 0} {venta.productos?.length === 1 ? "ítem" : "ítems"} en total
               </span>
             </div>
@@ -153,8 +188,8 @@ function VentaDetalle({ id, onVolver, token }) {
                       {p.categoria && <p className="vd-prod-cat">{p.categoria}</p>}
                     </td>
                     <td className="right">{p.cantidad}</td>
-                    <td className="right">${parseFloat(p.precioUnitario||0).toLocaleString("es-CO", { minimumFractionDigits:2 })}</td>
-                    <td className="right vd-subtotal-orange">${parseFloat(p.subtotal||0).toLocaleString("es-CO", { minimumFractionDigits:2 })}</td>
+                    <td className="right">${parseFloat(p.precioUnitario || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}</td>
+                    <td className="right vd-subtotal-orange">${parseFloat(p.subtotal || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}</td>
                   </tr>
                 ))}
               </tbody>
@@ -162,26 +197,25 @@ function VentaDetalle({ id, onVolver, token }) {
             <div className="vd-totals">
               <div className="vd-totals-row">
                 <span className="vd-totals-label">Subtotal Bruto</span>
-                <span className="vd-totals-val">${subtotal.toLocaleString("es-CO", { minimumFractionDigits:2 })}</span>
+                <span className="vd-totals-val">${subtotal.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="vd-totals-row">
-                <span className="vd-totals-label">Impuestos (0%)</span>
-                <span className="vd-totals-val">${impuesto.toLocaleString("es-CO", { minimumFractionDigits:2 })}</span>
+                <span className="vd-totals-label">Impuestos</span>
+                <span className="vd-totals-val">${impuesto.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="vd-totals-row final">
                 <span className="vd-totals-label">Total Final</span>
-                <span className="vd-totals-val">${total.toLocaleString("es-CO", { minimumFractionDigits:2 })}</span>
+                <span className="vd-totals-val">${total.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
 
-          {/* Pagos */}
           <div className="vd-panel">
             <div className="vd-pagos-header">
               <p className="vd-panel-title">Registro de Pagos</p>
               <span className="vd-pagos-count">{venta.pagos?.length || 0} registro(s)</span>
             </div>
-            <table className="vd-table" style={{ marginBottom:".5rem" }}>
+            <table className="vd-table" style={{ marginBottom: ".5rem" }}>
               <thead>
                 <tr>
                   <th>Método</th>
@@ -196,11 +230,11 @@ function VentaDetalle({ id, onVolver, token }) {
                   <span className="vd-pago-ico">{METODO_ICO[p.metodo] || "💰"}</span>
                   <span className="vd-pago-metodo">{p.metodo}</span>
                 </div>
-                <span className="vd-pago-monto">${parseFloat(p.monto||0).toLocaleString("es-CO", { minimumFractionDigits:2 })}</span>
+                <span className="vd-pago-monto">${parseFloat(p.monto || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
                 {p.referencia && <span className="vd-pago-ref">{p.referencia}</span>}
               </div>
             ))}
-            <div className="vd-footer" style={{ paddingTop:"1rem", paddingLeft:0, paddingRight:0, marginTop:"1rem" }}>
+            <div className="vd-footer" style={{ paddingTop: "1rem", paddingLeft: 0, paddingRight: 0, marginTop: "1rem" }}>
               <span>Creado por: <strong>{venta.creadoPor || "Admin"}</strong> &nbsp; Terminal: <strong>{venta.terminal || "POS-01"}</strong></span>
               <span className="vd-footer-secure">🔒 Transacción Encriptada</span>
             </div>

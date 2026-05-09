@@ -1,7 +1,11 @@
 package com.drivemaster.drivemaster.controller;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,5 +42,31 @@ public class VentaController {
     public ResponseEntity<Void> anular(@PathVariable String id) {
         ventaService.anularVenta(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> descargarPdf(@PathVariable String id) {
+        byte[] pdf     = ventaService.generarPdf(id);
+        String idCorto = id.substring(Math.max(0, id.length() - 8)).toUpperCase();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"Factura-DriveMaster-" + idCorto + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
+
+    @GetMapping("/exportar")
+    public ResponseEntity<byte[]> exportarExcel() {
+        byte[] excel   = ventaService.exportarExcel();
+        String filename = "Ventas-DriveMaster-"
+                + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
     }
 }

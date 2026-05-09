@@ -1,8 +1,7 @@
 import { useEffect, useState, useRef } from "react";
-import { listarVentas, anularVenta } from "../services/ventaService";
+import { listarVentas, anularVenta, exportarVentasExcel } from "../services/ventaService";
 import "../css/venta.css";
 import "../css/filtros-panel.css";
-
 
 const POR_PAG = 10;
 
@@ -10,6 +9,7 @@ const METODO_ICO = {
   TARJETA:       { ico: "💳", label: "Tarjeta" },
   EFECTIVO:      { ico: "💵", label: "Efectivo" },
   TRANSFERENCIA: { ico: "🏦", label: "Transferencia" },
+  NEQUI:         { ico: "💰", label: "Nequi" },
 };
 
 const ESTADO_CLASS = {
@@ -27,11 +27,10 @@ function formatFecha(f) {
       + "\n" + d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
 }
 
-// ─── Componente panel de filtros ─────────────────────────────────────────────
+// ─── Panel de filtros ────────────────────────────────────────────────────────
 function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
   const panelRef = useRef(null);
 
-  // Cerrar al hacer click fuera
   useEffect(() => {
     const handler = (e) => {
       if (
@@ -45,8 +44,8 @@ function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [onCerrar, anchorRef]);
 
-  const ESTADOS   = ["COMPLETADA", "PAGADA", "PENDIENTE", "CANCELADA", "ANULADA"];
-  const METODOS   = ["TARJETA", "EFECTIVO", "TRANSFERENCIA"];
+  const ESTADOS = ["COMPLETADA", "PAGADA", "PENDIENTE", "CANCELADA", "ANULADA"];
+  const METODOS = ["TARJETA", "EFECTIVO", "TRANSFERENCIA", "NEQUI"];
 
   const toggleEstado = (est) => {
     const set = new Set(filtros.estados);
@@ -74,13 +73,10 @@ function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
       <div className="vt-filtros-header">
         <span className="vt-filtros-title">⚙ Filtros</span>
         {hayFiltros && (
-          <button className="vt-filtros-clear" onClick={limpiar}>
-            Limpiar todo
-          </button>
+          <button className="vt-filtros-clear" onClick={limpiar}>Limpiar todo</button>
         )}
       </div>
 
-      {/* Estado */}
       <div className="vt-filtros-group">
         <p className="vt-filtros-label">Estado</p>
         <div className="vt-filtros-chips">
@@ -96,7 +92,6 @@ function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
         </div>
       </div>
 
-      {/* Método de pago */}
       <div className="vt-filtros-group">
         <p className="vt-filtros-label">Método de pago</p>
         <div className="vt-filtros-chips">
@@ -112,7 +107,6 @@ function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
         </div>
       </div>
 
-      {/* Rango de monto */}
       <div className="vt-filtros-group">
         <p className="vt-filtros-label">Monto ($)</p>
         <div className="vt-filtros-range">
@@ -134,33 +128,25 @@ function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
         </div>
       </div>
 
-      <button className="vt-filtros-apply" onClick={onCerrar}>
-        Aplicar filtros
-      </button>
+      <button className="vt-filtros-apply" onClick={onCerrar}>Aplicar filtros</button>
     </div>
   );
 }
 
 // ─── Componente principal ────────────────────────────────────────────────────
 function Ventas({ onNueva, onDetalle, token }) {
-  const [ventas, setVentas]         = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [busqueda, setBusqueda]     = useState("");
-  const [pagina, setPagina]         = useState(1);
-
-  // ── Filtro 30 días ─────────────────────────────────────────
-  const [ultimos30, setUltimos30]   = useState(false);
-
-  // ── Panel filtros ──────────────────────────────────────────
+  const [ventas, setVentas]           = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [busqueda, setBusqueda]       = useState("");
+  const [pagina, setPagina]           = useState(1);
+  const [ultimos30, setUltimos30]     = useState(false);
   const [filtrosOpen, setFiltrosOpen] = useState(false);
+  const [exportando, setExportando]   = useState(false);
   const [filtros, setFiltros]         = useState({
-    estados: [],
-    metodos: [],
-    montoMin: "",
-    montoMax: "",
+    estados: [], metodos: [], montoMin: "", montoMax: "",
   });
-  const filtrosRef = useRef(null); // anchor del botón
+  const filtrosRef = useRef(null);
 
   useEffect(() => { cargar(); }, [token]);
 
@@ -169,8 +155,11 @@ function Ventas({ onNueva, onDetalle, token }) {
     try {
       const data = await listarVentas(token);
       setVentas(data);
-    } catch(e) { setError(e.message); }
-    finally { setLoading(false); }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAnular = async (id) => {
@@ -178,39 +167,41 @@ function Ventas({ onNueva, onDetalle, token }) {
     try {
       await anularVenta(id, token);
       cargar();
-    } catch(e) { alert(e.message); }
+    } catch (e) {
+      alert(e.message);
+    }
   };
 
-  // ── Lógica de filtrado completa ────────────────────────────
+  const handleExportar = async () => {
+    setExportando(true);
+    try {
+      await exportarVentasExcel(token);
+    } catch (e) {
+      alert("Error al exportar: " + e.message);
+    } finally {
+      setExportando(false);
+    }
+  };
+
   const hace30Dias = new Date();
   hace30Dias.setDate(hace30Dias.getDate() - 30);
 
   const filtradas = ventas.filter(v => {
-    // Búsqueda de texto
     const matchBusqueda =
       String(v.id).includes(busqueda) ||
       v.clienteNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
       v.clienteId?.toLowerCase?.().includes(busqueda.toLowerCase());
     if (!matchBusqueda) return false;
 
-    // Últimos 30 días
-    if (ultimos30) {
-      const fecha = new Date(v.fecha);
-      if (fecha < hace30Dias) return false;
-    }
+    if (ultimos30 && new Date(v.fecha) < hace30Dias) return false;
 
-    // Estado
-    if (filtros.estados.length > 0) {
-      if (!filtros.estados.includes(v.estado?.toUpperCase())) return false;
-    }
+    if (filtros.estados.length > 0 && !filtros.estados.includes(v.estado?.toUpperCase())) return false;
 
-    // Método de pago
     if (filtros.metodos.length > 0) {
       const metodo = v.pagos?.[0]?.metodo;
       if (!filtros.metodos.includes(metodo)) return false;
     }
 
-    // Rango de monto
     const total = parseFloat(v.total) || 0;
     if (filtros.montoMin !== "" && total < parseFloat(filtros.montoMin)) return false;
     if (filtros.montoMax !== "" && total > parseFloat(filtros.montoMax)) return false;
@@ -219,14 +210,13 @@ function Ventas({ onNueva, onDetalle, token }) {
   });
 
   const totalPags = Math.ceil(filtradas.length / POR_PAG) || 1;
-  const paginadas = filtradas.slice((pagina-1)*POR_PAG, pagina*POR_PAG);
+  const paginadas = filtradas.slice((pagina - 1) * POR_PAG, pagina * POR_PAG);
 
-  const totalVentas    = ventas.reduce((a,v) => a + (parseFloat(v.total)||0), 0);
-  const transacciones  = ventas.length;
-  const ticketPromedio = transacciones ? (totalVentas / transacciones) : 0;
-  const cancelaciones  = ventas.filter(v => ["CANCELADA","ANULADA"].includes(v.estado)).length;
+  const totalVentas   = ventas.reduce((a, v) => a + (parseFloat(v.total) || 0), 0);
+  const transacciones = ventas.length;
+  const ticketPromedio = transacciones ? totalVentas / transacciones : 0;
+  const cancelaciones  = ventas.filter(v => ["CANCELADA", "ANULADA"].includes(v.estado)).length;
 
-  // Indicador visual de filtros activos
   const hayFiltros =
     filtros.estados.length > 0 ||
     filtros.metodos.length > 0 ||
@@ -267,12 +257,11 @@ function Ventas({ onNueva, onDetalle, token }) {
           <h1 className="vt-h1">Ventas</h1>
         </div>
         <div className="vt-header-actions">
-          <div className="vt-toggle-group" style={{ border:"none", background:"none", padding:0, display:"flex" }}>
+          <div className="vt-toggle-group" style={{ border: "none", background: "none", padding: 0, display: "flex" }}>
             <button className="vt-toggle" onClick={onNueva}>Registrar Venta</button>
             <button className="vt-toggle active">Ver Ventas</button>
           </div>
 
-          {/* Botón últimos 30 días */}
           <button
             className={`vt-btn-outline${ultimos30 ? " active" : ""}`}
             onClick={() => { setUltimos30(p => !p); setPagina(1); }}
@@ -280,7 +269,6 @@ function Ventas({ onNueva, onDetalle, token }) {
             📅 {ultimos30 ? "Últimos 30 días ✓" : "Últimos 30 días"}
           </button>
 
-          {/* Botón filtros — posición relativa para el panel */}
           <div style={{ position: "relative" }}>
             <button
               ref={filtrosRef}
@@ -292,7 +280,6 @@ function Ventas({ onNueva, onDetalle, token }) {
                 (filtros.montoMin !== "" || filtros.montoMax !== "" ? 1 : 0)
               })` : ""}
             </button>
-
             {filtrosOpen && (
               <FiltrosPanel
                 filtros={filtros}
@@ -303,102 +290,110 @@ function Ventas({ onNueva, onDetalle, token }) {
             )}
           </div>
 
-          <button className="vt-btn-primary">↓ Exportar</button>
+          <button
+            className="vt-btn-primary"
+            onClick={handleExportar}
+            disabled={exportando}
+          >
+            {exportando ? "Exportando..." : "↓ Exportar"}
+          </button>
         </div>
       </div>
 
       {error && <p className="vt-error">{error}</p>}
 
-      {/* Table */}
+      {/* Tabla */}
       <div className="vt-card">
         {loading ? (
           <p className="vt-empty">Cargando ventas...</p>
         ) : (
-          <div style={{ overflowX:"auto" }}>
+          <div style={{ overflowX: "auto" }}>
             <table className="vt-table">
               <thead>
-              <tr>
-                <th>ID Venta</th>
-                <th>Cliente</th>
-                <th>Fecha</th>
-                <th>Método</th>
-                <th>Estado</th>
-                <th style={{ textAlign:"right" }}>Total</th>
-                <th></th>
-              </tr>
+                <tr>
+                  <th>ID Venta</th>
+                  <th>Cliente</th>
+                  <th>Fecha</th>
+                  <th>Método</th>
+                  <th>Estado</th>
+                  <th style={{ textAlign: "right" }}>Total</th>
+                  <th></th>
+                </tr>
               </thead>
               <tbody>
-              {paginadas.length === 0 ? (
-                <tr><td colSpan={7} className="vt-empty">No hay ventas que coincidan con los filtros</td></tr>
-              ) : paginadas.map(v => {
-                const metodo = v.pagos?.[0]?.metodo;
-                const m = METODO_ICO[metodo] || { ico:"💰", label: metodo || "—" };
-                const estadoKey = v.estado?.toUpperCase?.() || "";
-                return (
-                  <tr key={v.id}>
-                    <td>
-                      <span className="vt-id">
-                        #VK-{String(v.id).padStart(5,"0")}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="vt-client-cell">
-                        <span className="vt-client-name">{v.clienteNombre || `Cliente #${v.clienteId}`}</span>
-                        <span className="vt-client-id">{v.clienteIdentificacion || v.clienteId || "—"}</span>
-                      </div>
-                    </td>
-                    <td style={{ whiteSpace:"pre-line", fontSize:".8rem", color:"var(--text)", lineHeight:1.5 }}>
-                      {formatFecha(v.fecha)}
-                    </td>
-                    <td>
-                      <div className="vt-metodo">
-                        <span className="vt-metodo-ico">{m.ico}</span>
-                        {m.label}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`vt-badge ${ESTADO_CLASS[estadoKey] || "pendiente"}`}>
-                        {v.estado || "—"}
-                      </span>
-                    </td>
-                    <td style={{ textAlign:"right" }}>
-                      <span className="vt-total">${parseFloat(v.total || 0).toLocaleString("es-CO", { minimumFractionDigits:2 })}</span>
-                    </td>
-                    <td>
-                      <div className="vt-row-actions">
-                        <button className="vt-action-btn ver" onClick={() => onDetalle(v.id)}>Ver detalle</button>
-                        {!["CANCELADA","ANULADA"].includes(estadoKey) && (
-                          <button className="vt-action-btn anular" onClick={() => handleAnular(v.id)}>Anular</button>
-                        )}
-                        <button className="vt-menu-btn">⋮</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                {paginadas.length === 0 ? (
+                  <tr><td colSpan={7} className="vt-empty">No hay ventas que coincidan con los filtros</td></tr>
+                ) : paginadas.map(v => {
+                  const metodo   = v.pagos?.[0]?.metodo;
+                  const m        = METODO_ICO[metodo] || { ico: "💰", label: metodo || "—" };
+                  const estadoKey = v.estado?.toUpperCase?.() || "";
+                  return (
+                    <tr key={v.id}>
+                      <td>
+                        <span className="vt-id">
+                          #VK-{String(v.id).toUpperCase()}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="vt-client-cell">
+                          <span className="vt-client-name">{v.clienteNombre || `Cliente #${v.clienteId}`}</span>
+                          <span className="vt-client-id">{v.clienteIdentificacion || v.clienteId || "—"}</span>
+                        </div>
+                      </td>
+                      <td style={{ whiteSpace: "pre-line", fontSize: ".8rem", color: "var(--text)", lineHeight: 1.5 }}>
+                        {formatFecha(v.fecha)}
+                      </td>
+                      <td>
+                        <div className="vt-metodo">
+                          <span className="vt-metodo-ico">{m.ico}</span>
+                          {m.label}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`vt-badge ${ESTADO_CLASS[estadoKey] || "pendiente"}`}>
+                          {v.estado || "—"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <span className="vt-total">
+                          ${parseFloat(v.total || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="vt-row-actions">
+                          <button className="vt-action-btn ver" onClick={() => onDetalle(v.id)}>Ver detalle</button>
+                          {!["CANCELADA", "ANULADA"].includes(estadoKey) && (
+                            <button className="vt-action-btn anular" onClick={() => handleAnular(v.id)}>Anular</button>
+                          )}
+                          <button className="vt-menu-btn">⋮</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Paginación */}
         <div className="vt-pag">
           <span className="vt-pag-info">
-            Mostrando <strong>{filtradas.length === 0 ? 0 : (pagina-1)*POR_PAG+1}-{Math.min(pagina*POR_PAG, filtradas.length)}</strong> de <strong>{filtradas.length}</strong> ventas
+            Mostrando <strong>{filtradas.length === 0 ? 0 : (pagina - 1) * POR_PAG + 1}-{Math.min(pagina * POR_PAG, filtradas.length)}</strong> de <strong>{filtradas.length}</strong> ventas
           </span>
           <div className="vt-pag-right">
-            <button className="vt-pag-btn" onClick={() => setPagina(p=>Math.max(1,p-1))} disabled={pagina===1}>‹</button>
-            {Array.from({ length: Math.min(totalPags,5) }, (_,i) => i+1).map(n => (
-              <button key={n} className={`vt-pag-num${pagina===n?" on":""}`} onClick={() => setPagina(n)}>{n}</button>
+            <button className="vt-pag-btn" onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}>‹</button>
+            {Array.from({ length: Math.min(totalPags, 5) }, (_, i) => i + 1).map(n => (
+              <button key={n} className={`vt-pag-num${pagina === n ? " on" : ""}`} onClick={() => setPagina(n)}>{n}</button>
             ))}
-            {totalPags > 5 && <span style={{ color:"var(--muted)", padding:"0 .2rem" }}>...</span>}
+            {totalPags > 5 && <span style={{ color: "var(--muted)", padding: "0 .2rem" }}>...</span>}
             {totalPags > 5 && <button className="vt-pag-num" onClick={() => setPagina(totalPags)}>{totalPags}</button>}
-            <button className="vt-pag-btn" onClick={() => setPagina(p=>Math.min(totalPags,p+1))} disabled={pagina===totalPags}>›</button>
+            <button className="vt-pag-btn" onClick={() => setPagina(p => Math.min(totalPags, p + 1))} disabled={pagina === totalPags}>›</button>
           </div>
         </div>
       </div>
 
-      {/* Stats cards */}
+      {/* Stats */}
       <div className="vt-stats">
         <div className="vt-stat-card">
           <div className="vt-stat-top">
@@ -406,7 +401,7 @@ function Ventas({ onNueva, onDetalle, token }) {
             <span className="vt-stat-delta pos">+12.5%</span>
           </div>
           <p className="vt-stat-label">Ventas Totales</p>
-          <p className="vt-stat-val orange">${totalVentas.toLocaleString("es-CO", { minimumFractionDigits:2 })}</p>
+          <p className="vt-stat-val orange">${totalVentas.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="vt-stat-card">
           <div className="vt-stat-top">
@@ -422,7 +417,7 @@ function Ventas({ onNueva, onDetalle, token }) {
             <span className="vt-stat-delta neu">Avg.</span>
           </div>
           <p className="vt-stat-label">Ticket Promedio</p>
-          <p className="vt-stat-val">${ticketPromedio.toLocaleString("es-CO", { minimumFractionDigits:2 })}</p>
+          <p className="vt-stat-val">${ticketPromedio.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="vt-stat-card">
           <div className="vt-stat-top">

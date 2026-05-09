@@ -18,31 +18,28 @@ function CompraForm({ onVolver, token }) {
   const [error,        setError]        = useState(null);
   const [showConfirm,  setShowConfirm]  = useState(false);
 
-  // Proveedor seleccionado
   const [proveedorId,  setProveedorId]  = useState("");
   const [provSearch,   setProvSearch]   = useState("");
   const [showProvDrop, setShowProvDrop] = useState(false);
 
-  // Búsqueda de producto para agregar
   const [prodSearch,   setProdSearch]   = useState("");
   const [prodQty,      setProdQty]      = useState(1);
   const [prodCosto,    setProdCosto]    = useState(0);
   const [prodSel,      setProdSel]      = useState(null);
   const [showProdDrop, setShowProdDrop] = useState(false);
 
-  // Carrito
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    listarProveedores(token).then(setProveedores).catch(()=>{});
-    listarProductos(token).then(setProductos).catch(()=>{});
+    listarProveedores(token).then(setProveedores).catch(() => {});
+    listarProductos(token).then(setProductos).catch(() => {});
   }, [token]);
 
   const proveedorActivo = proveedores.find(p => p.id === proveedorId);
 
   const provFiltrados = proveedores.filter(p =>
     p.nombre?.toLowerCase().includes(provSearch.toLowerCase()) ||
-    p.contacto?.toLowerCase().includes(provSearch.toLowerCase())
+    p.nit?.toLowerCase().includes(provSearch.toLowerCase())
   );
 
   const prodFiltrados = productos.filter(p =>
@@ -78,7 +75,7 @@ function CompraForm({ onVolver, token }) {
 
   const quitarItem = id => setItems(prev => prev.filter(i => i.productoId !== id));
 
-  const subtotal = items.reduce((s,i) => s + i.subtotal, 0);
+  const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
   const total    = subtotal;
 
   const confirmar = async () => {
@@ -90,13 +87,12 @@ function CompraForm({ onVolver, token }) {
         productos: items.map(i => ({ productoId: i.productoId, cantidad: i.cantidad, costo: i.costo })),
       }, token);
       onVolver();
-    } catch(e) { setError(e.message); setShowConfirm(false); }
+    } catch (e) { setError(e.message); setShowConfirm(false); }
     finally { setLoading(false); }
   };
 
   return (
     <div className="cp-root">
-      {/* Header */}
       <div className="cp-header">
         <div>
           <p className="cp-breadcrumb">
@@ -110,8 +106,6 @@ function CompraForm({ onVolver, token }) {
       {error && <p className="cp-error">{error}</p>}
 
       <div className="cp-form-layout">
-
-        {/* ── COLUMNA IZQUIERDA ── */}
         <div className="cp-form-left">
 
           {/* 1. Proveedor */}
@@ -124,7 +118,7 @@ function CompraForm({ onVolver, token }) {
               </div>
             </div>
 
-            <div style={{ position:"relative" }}>
+            <div style={{ position: "relative" }}>
               <div className="cp-prov-search-wrap" onClick={() => setShowProvDrop(v => !v)}>
                 <span className="cp-prov-search-ico">{IcSearch}</span>
                 <input
@@ -143,10 +137,10 @@ function CompraForm({ onVolver, token }) {
                     : provFiltrados.map(p => (
                         <button key={p.id} className="cp-dropdown-item"
                           onClick={() => { setProveedorId(p.id); setProvSearch(p.nombre); setShowProvDrop(false); }}>
-                          <div className="cp-prov-ico" style={{ width:28,height:28,fontSize:".72rem" }}>{p.nombre[0]}</div>
+                          <div className="cp-prov-ico" style={{ width: 28, height: 28, fontSize: ".72rem" }}>{p.nombre[0]}</div>
                           <div>
-                            <p style={{fontWeight:600,fontSize:".82rem"}}>{p.nombre}</p>
-                            <p style={{fontSize:".72rem",color:"var(--muted)"}}>{p.contacto}</p>
+                            <p style={{ fontWeight: 600, fontSize: ".82rem" }}>{p.nombre}</p>
+                            <p style={{ fontSize: ".72rem", color: "var(--muted)" }}>{p.nit || "—"}</p>
                           </div>
                         </button>
                       ))
@@ -159,8 +153,8 @@ function CompraForm({ onVolver, token }) {
               <div className="cp-prov-info">
                 <div className="cp-prov-info-row">
                   <div>
-                    <p className="cp-prov-info-label">Contacto</p>
-                    <p className="cp-prov-info-val">{proveedorActivo.contacto || "—"}</p>
+                    <p className="cp-prov-info-label">NIT</p>
+                    <p className="cp-prov-info-val">{proveedorActivo.nit || "—"}</p>
                   </div>
                   <div>
                     <p className="cp-prov-info-label">Teléfono</p>
@@ -168,14 +162,14 @@ function CompraForm({ onVolver, token }) {
                   </div>
                   <div>
                     <p className="cp-prov-info-label">Email</p>
-                    <p className="cp-prov-info-val">{proveedorActivo.email || "—"}</p>
+                    <p className="cp-prov-info-val">{proveedorActivo.correo || "—"}</p>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* 2. Agregar productos */}
+          {/* 2. Productos */}
           <div className="cp-panel">
             <div className="cp-panel-head">
               <span className="cp-panel-ico">{IcBox}</span>
@@ -186,8 +180,7 @@ function CompraForm({ onVolver, token }) {
             </div>
 
             <div className="cp-line-grid">
-              {/* Búsqueda producto */}
-              <div className="cp-field cp-field--lg" style={{ position:"relative" }}>
+              <div className="cp-field cp-field--lg" style={{ position: "relative" }}>
                 <label>Producto / SKU</label>
                 <div className="cp-prod-search-wrap">
                   <span>{IcSearch}</span>
@@ -207,11 +200,11 @@ function CompraForm({ onVolver, token }) {
                           <button key={p.id} className="cp-dropdown-item" onClick={() => seleccionarProd(p)}>
                             <div className="cp-prod-thumb">{p.nombre[0]}</div>
                             <div>
-                              <p style={{fontWeight:600,fontSize:".82rem"}}>{p.nombre}</p>
-                              <p style={{fontSize:".71rem",color:"var(--muted)"}}>SKU: {p.codigo||p.id.slice(-6)} · Stock: {p.stockActual}</p>
+                              <p style={{ fontWeight: 600, fontSize: ".82rem" }}>{p.nombre}</p>
+                              <p style={{ fontSize: ".71rem", color: "var(--muted)" }}>SKU: {p.codigo || p.id.slice(-6)} · Stock: {p.stockActual}</p>
                             </div>
-                            <span style={{marginLeft:"auto",fontWeight:700,color:"var(--primary)",fontSize:".78rem",flexShrink:0}}>
-                              ${p.precioCompra?.toLocaleString()||"—"}
+                            <span style={{ marginLeft: "auto", fontWeight: 700, color: "var(--primary)", fontSize: ".78rem", flexShrink: 0 }}>
+                              ${p.precioCompra?.toLocaleString() || "—"}
                             </span>
                           </button>
                         ))
@@ -220,30 +213,24 @@ function CompraForm({ onVolver, token }) {
                 )}
               </div>
 
-              {/* Cantidad */}
               <div className="cp-field">
                 <label>Cantidad</label>
-                <input type="number" min="1" value={prodQty} onChange={e=>setProdQty(e.target.value)} className="cp-input" placeholder="0.00"/>
+                <input type="number" min="1" value={prodQty} onChange={e => setProdQty(e.target.value)} className="cp-input" />
               </div>
 
-              {/* Costo */}
               <div className="cp-field">
                 <label>Costo unit. ($)</label>
-                <input type="number" min="0" value={prodCosto} onChange={e=>setProdCosto(e.target.value)} className="cp-input" placeholder="0.00"/>
+                <input type="number" min="0" value={prodCosto} onChange={e => setProdCosto(e.target.value)} className="cp-input" />
               </div>
             </div>
 
-            <button
-              className="cp-btn-add-item"
-              onClick={agregarItem}
-              disabled={!prodSel}
-            >
+            <button className="cp-btn-add-item" onClick={agregarItem} disabled={!prodSel}>
               {IcPlus} Add Item to Registry
             </button>
           </div>
         </div>
 
-        {/* ── CARRITO LATERAL ── */}
+        {/* Carrito */}
         <div className="cp-basket">
           <div className="cp-basket-header">
             <span className="cp-basket-title">Purchase Basket</span>
@@ -268,7 +255,7 @@ function CompraForm({ onVolver, token }) {
                 </div>
                 <div className="cp-basket-item-right">
                   <span className="cp-basket-item-total">
-                    ${it.subtotal.toLocaleString("es-CO",{minimumFractionDigits:2})}
+                    ${it.subtotal.toLocaleString("es-CO", { minimumFractionDigits: 2 })}
                   </span>
                   <button className="cp-basket-item-del" onClick={() => quitarItem(it.productoId)}>{IcX}</button>
                 </div>
@@ -277,12 +264,12 @@ function CompraForm({ onVolver, token }) {
           </div>
 
           <div className="cp-basket-totals">
-            <div className="cp-basket-row"><span>Subtotal</span><span>${subtotal.toLocaleString("es-CO",{minimumFractionDigits:2})}</span></div>
+            <div className="cp-basket-row"><span>Subtotal</span><span>${subtotal.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span></div>
           </div>
 
           <div className="cp-basket-total-final">
             <span>TOTAL</span>
-            <span>${total.toLocaleString("es-CO",{minimumFractionDigits:2})}</span>
+            <span>${total.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
           </div>
 
           <button
@@ -300,16 +287,16 @@ function CompraForm({ onVolver, token }) {
         </div>
       </div>
 
-      {/* ── MODAL CONFIRMACIÓN ── */}
+      {/* Modal confirmación */}
       {showConfirm && (
-        <div className="cp-modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowConfirm(false)}>
+        <div className="cp-modal-overlay" onClick={e => e.target === e.currentTarget && setShowConfirm(false)}>
           <div className="cp-modal">
             <div className="cp-modal-header">
               <div>
                 <p className="cp-modal-tag">Confirmar Orden</p>
                 <h2 className="cp-modal-title">Registro de Compra</h2>
               </div>
-              <button className="cp-modal-close" onClick={()=>setShowConfirm(false)}>{IcX}</button>
+              <button className="cp-modal-close" onClick={() => setShowConfirm(false)}>{IcX}</button>
             </div>
 
             <div className="cp-modal-body">
@@ -320,17 +307,17 @@ function CompraForm({ onVolver, token }) {
 
               <table className="cp-modal-table">
                 <thead>
-                  <tr><th>Producto</th><th>SKU</th><th style={{textAlign:"center"}}>Cant.</th><th style={{textAlign:"right"}}>Costo</th><th style={{textAlign:"right"}}>Subtotal</th></tr>
+                  <tr><th>Producto</th><th>SKU</th><th style={{ textAlign: "center" }}>Cant.</th><th style={{ textAlign: "right" }}>Costo</th><th style={{ textAlign: "right" }}>Subtotal</th></tr>
                 </thead>
                 <tbody>
-                  {items.map((it,i) => (
+                  {items.map((it, i) => (
                     <tr key={i}>
-                      <td style={{fontWeight:600}}>{it.nombre}</td>
-                      <td style={{color:"var(--muted)",fontSize:".75rem"}}>{it.sku}</td>
-                      <td style={{textAlign:"center"}}>{String(it.cantidad).padStart(2,"0")}</td>
-                      <td style={{textAlign:"right"}}>${it.costo.toLocaleString()}</td>
-                      <td style={{textAlign:"right",fontWeight:700,color:"var(--primary)"}}>
-                        ${it.subtotal.toLocaleString("es-CO",{minimumFractionDigits:2})}
+                      <td style={{ fontWeight: 600 }}>{it.nombre}</td>
+                      <td style={{ color: "var(--muted)", fontSize: ".75rem" }}>{it.sku}</td>
+                      <td style={{ textAlign: "center" }}>{String(it.cantidad).padStart(2, "0")}</td>
+                      <td style={{ textAlign: "right" }}>${it.costo.toLocaleString()}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--primary)" }}>
+                        ${it.subtotal.toLocaleString("es-CO", { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))}
@@ -339,13 +326,13 @@ function CompraForm({ onVolver, token }) {
 
               <div className="cp-modal-total">
                 <span>TOTAL DUE</span>
-                <span>${total.toLocaleString("es-CO",{minimumFractionDigits:2})}</span>
+                <span>${total.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
             <div className="cp-modal-footer">
-              <button className="cp-btn-outline" onClick={()=>setShowConfirm(false)}>Cancelar</button>
-              <button className="cp-btn-register" onClick={confirmar} disabled={loading} style={{padding:".65rem 1.5rem"}}>
+              <button className="cp-btn-outline" onClick={() => setShowConfirm(false)}>Cancelar</button>
+              <button className="cp-btn-register" onClick={confirmar} disabled={loading} style={{ padding: ".65rem 1.5rem" }}>
                 {loading ? "Procesando..." : <>{IcCheck} Confirmar Compra</>}
               </button>
             </div>

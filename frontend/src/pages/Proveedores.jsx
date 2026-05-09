@@ -190,7 +190,7 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
               <thead>
                 <tr>
                   <th>Nombre del Proveedor</th>
-                  <th>Contacto</th>
+                  <th>Nit</th>
                   <th>Teléfono</th>
                   <th>Correo Electrónico</th>
                   <th>Acciones</th>
@@ -212,7 +212,7 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
                           </div>
                         </div>
                       </td>
-                      <td><span className="kp-cell-text">{p.contacto || "—"}</span></td>
+                      <td><span className="kp-cell-text">{p.nit || "—"}</span></td>
                       <td><span className="kp-cell-mono">{p.telefono || "—"}</span></td>
                       <td><span className="kp-cell-email">{p.correo || "—"}</span></td>
                       <td>

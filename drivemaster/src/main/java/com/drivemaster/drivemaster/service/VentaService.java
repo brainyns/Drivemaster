@@ -12,6 +12,8 @@ public interface VentaService {
     List<Venta> listarTodas();
 
     void anularVenta(String ventaId);
-}
 
- 
+    byte[] generarPdf(String id);
+
+    byte[] exportarExcel();
+}
