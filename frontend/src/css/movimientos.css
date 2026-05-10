@@ -2,20 +2,20 @@
 .mv-topbar {
   display: flex; justify-content: space-between; align-items: center;
   padding: 0 2rem; height: 56px;
-  background: #080808; border-bottom: 1px solid var(--border);
+  background: var(--surface); border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 30;
 }
 .mv-topbar-left { display: flex; align-items: center; gap: 0.75rem; }
 .mv-topbar-brand { color: var(--primary); font-family: 'Manrope',sans-serif; font-weight: 800; font-size: 1rem; }
-.mv-topbar-div   { color: #333; }
-.mv-topbar-sub   { color: #6b7280; font-size: 0.85rem; }
+.mv-topbar-div   { color: var(--text-muted); }
+.mv-topbar-sub   { color: var(--text-muted); font-size: 0.85rem; }
 .mv-topbar-right { display: flex; align-items: center; gap: 0.75rem; }
-.mv-icon-btn { background: none; border: none; color: #6b7280; cursor: pointer; font-size: 1rem; padding: 0.3rem; transition: color 0.15s; }
+.mv-icon-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 0.3rem; transition: color 0.15s; }
 .mv-icon-btn:hover { color: var(--text); }
 .mv-user-pill { display: flex; align-items: center; gap: 0.6rem; }
 .mv-user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #ff6b35); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.75rem; color: white; }
 .mv-user-name { font-size: 0.8rem; font-weight: 700; color: var(--text); line-height: 1.1; }
-.mv-user-role { font-size: 0.62rem; color: #6b7280; }
+.mv-user-role { font-size: 0.62rem; color: var(--text-muted); }
 
 /* ── PAGE ── */
 .mv-page { width: 100%; animation: mvFade 0.25s ease; }
@@ -38,7 +38,7 @@
   display: flex; align-items: center; justify-content: center;
   font-size: 1rem; font-weight: 700;
 }
-.mv-stat-icon--blue   { background: rgba(37,99,235,0.15);  color: #60a5fa; }
+.mv-stat-icon--blue   { background: rgba(37,99,235,0.15);  color: var(--blue); }
 .mv-stat-icon--green  { background: rgba(34,197,94,0.15);  color: var(--success); }
 .mv-stat-icon--red    { background: rgba(239,68,68,0.15);  color: var(--error); }
 .mv-stat-icon--orange { background: rgba(255,61,0,0.15);   color: var(--primary); }
@@ -48,7 +48,7 @@
 .mv-stat-pct--neg { background: rgba(239,68,68,0.1);  color: var(--error); }
 .mv-stat-pct--adj { background: rgba(255,61,0,0.1);   color: var(--primary); }
 
-.mv-stat-label { font-size: 0.78rem; color: #6b7280; font-weight: 500; }
+.mv-stat-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
 .mv-stat-val   { font-family: 'Manrope',sans-serif; font-size: 2rem; font-weight: 800; color: var(--text); line-height: 1; }
 
 /* ── FILTERS ── */
@@ -64,11 +64,11 @@
 
 .mv-filter-group label {
   font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.08em; color: #6b7280;
+  letter-spacing: 0.08em; color: var(--text-muted);
 }
 
 .mv-search-wrap { position: relative; }
-.mv-search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: #6b7280; }
+.mv-search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--text-muted); }
 
 .mv-search, .mv-select, .mv-date {
   background: var(--bg); border: 1px solid var(--border);
@@ -79,7 +79,7 @@
 }
 .mv-search { padding-left: 2.2rem; }
 .mv-search:focus, .mv-select:focus, .mv-date:focus { border-color: var(--primary); }
-.mv-select option { background: #1a1a1a; }
+.mv-select option { background: var(--surface); }
 
 .mv-btn-filter {
   background: var(--surface2); border: 1px solid var(--border);
@@ -111,20 +111,20 @@
 .mv-table th {
   padding: 0.85rem 1.2rem;
   text-align: left; font-size: 0.65rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280;
-  border-bottom: 1px solid var(--border); background: #111;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);
+  border-bottom: 1px solid var(--border); background: var(--surface);
 }
 
 .mv-table td {
   padding: 1rem 1.2rem;
-  border-bottom: 1px solid rgba(42,42,42,0.5);
+  border-bottom: 1px solid var(--border);
   font-size: 0.83rem; color: var(--text);
 }
-.mv-row:hover td { background: rgba(255,255,255,0.02); }
+.mv-row:hover td { background: var(--surface2); }
 .mv-row:last-child td { border-bottom: none; }
 
 .mv-fecha { font-weight: 600; font-size: 0.83rem; color: var(--text); }
-.mv-hora  { font-size: 0.72rem; color: #6b7280; margin-top: 0.15rem; }
+.mv-hora  { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
 
 .mv-product-cell { display: flex; align-items: center; gap: 0.8rem; }
 .mv-product-avatar {
@@ -134,7 +134,7 @@
   font-size: 0.85rem; color: white;
 }
 .mv-product-name { font-weight: 600; font-size: 0.85rem; color: var(--text); }
-.mv-product-sku  { font-size: 0.7rem; color: #6b7280; margin-top: 0.1rem; }
+.mv-product-sku  { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.1rem; }
 
 .mv-badge {
   display: inline-flex; align-items: center; gap: 0.3rem;
@@ -150,13 +150,13 @@
 .mv-cantidad--neg { color: var(--error); }
 .mv-cantidad--adj { color: var(--primary); }
 
-.mv-muted { color: #6b7280; }
+.mv-muted { color: var(--text-muted); }
 .mv-stock-nuevo { color: var(--text); font-family: 'Manrope',sans-serif; font-size: 0.95rem; }
 
 .mv-motivo {
-  background: #1a1a1a; border: 1px solid var(--border);
+  background: var(--surface); border: 1px solid var(--border);
   border-radius: 6px; padding: 0.2rem 0.6rem;
-  font-size: 0.72rem; color: #6b7280;
+  font-size: 0.72rem; color: var(--text-muted);
 }
 
 .mv-ref {
@@ -164,20 +164,20 @@
   font-size: 0.78rem; font-weight: 700;
 }
 
-.mv-empty { text-align: center; color: #6b7280; padding: 3rem; font-size: 0.9rem; }
+.mv-empty { text-align: center; color: var(--text-muted); padding: 3rem; font-size: 0.9rem; }
 
 /* ── FOOTER / PAGINATION ── */
 .mv-table-footer {
   display: flex; justify-content: space-between; align-items: center;
   padding: 1rem 1.2rem; border-top: 1px solid var(--border);
 }
-.mv-count { font-size: 0.78rem; color: #6b7280; }
+.mv-count { font-size: 0.78rem; color: var(--text-muted); }
 .mv-count strong { color: var(--text); }
 
 .mv-pag { display: flex; align-items: center; gap: 0.3rem; }
 .mv-pag-arrow {
   width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border);
-  background: transparent; color: #6b7280; cursor: pointer; font-size: 1rem;
+  background: transparent; color: var(--text-muted); cursor: pointer; font-size: 1rem;
   display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
 .mv-pag-arrow:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
@@ -185,7 +185,7 @@
 
 .mv-pag-num {
   width: 30px; height: 30px; border-radius: 7px; border: none;
-  background: transparent; color: #6b7280;
+  background: transparent; color: var(--text-muted);
   font-size: 0.78rem; font-weight: 700; font-family: 'Inter',sans-serif;
   cursor: pointer; transition: all 0.15s;
 }
@@ -206,9 +206,9 @@
   animation: mvFade 0.2s ease;
 }
 .mv-modal h2 { font-family: 'Manrope',sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text); }
-.mv-modal-sub { font-size: 0.82rem; color: #6b7280; margin-top: -0.5rem; }
+.mv-modal-sub { font-size: 0.82rem; color: var(--text-muted); margin-top: -0.5rem; }
 .mv-modal-field { display: flex; flex-direction: column; gap: 0.4rem; }
-.mv-modal-field label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; }
+.mv-modal-field label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
 .mv-modal-field input, .mv-modal-field select {
   background: var(--bg); border: 1px solid var(--border);
   color: var(--text); padding: 0.7rem 0.9rem;
@@ -218,7 +218,7 @@
 .mv-modal-field input:focus, .mv-modal-field select:focus { border-color: var(--primary); }
 .mv-modal-actions { display: flex; gap: 0.8rem; justify-content: flex-end; padding-top: 0.5rem; border-top: 1px solid var(--border); }
 .mv-modal-cancel {
-  background: transparent; border: 1px solid var(--border); color: #6b7280;
+  background: transparent; border: 1px solid var(--border); color: var(--text-muted);
   padding: 0.6rem 1.3rem; border-radius: 9px; cursor: pointer;
   font-family: 'Inter',sans-serif; font-weight: 600; font-size: 0.85rem; transition: all 0.15s;
 }

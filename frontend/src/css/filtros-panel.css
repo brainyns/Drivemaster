@@ -5,8 +5,8 @@
   right: 0;
   z-index: 100;
   width: 320px;
-  background: var(--card, #1a1a1a);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.2rem;
   box-shadow: 0 16px 48px rgba(0,0,0,0.5);
@@ -73,8 +73,8 @@
   font-weight: 600;
   padding: .28rem .7rem;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  background: var(--surface2);
   color: var(--muted, #888);
   cursor: pointer;
   transition: all .15s;
@@ -82,8 +82,8 @@
   letter-spacing: .04em;
 }
 .vt-chip:hover {
-  border-color: rgba(255,255,255,0.25);
-  color: var(--text, #fff);
+  border-color: var(--border2);
+  color: var(--text);
 }
 
 /* Chip activo genérico */
@@ -109,11 +109,11 @@
 
 .vt-filtros-input {
   flex: 1;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--surface2);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: .4rem .6rem;
-  color: var(--text, #fff);
+  color: var(--text);
   font-size: .8rem;
   outline: none;
   transition: border-color .15s;

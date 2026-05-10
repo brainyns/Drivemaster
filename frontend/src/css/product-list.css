@@ -1,6 +1,6 @@
 /* ─── PRODUCT LIST ────────────────────────────────────────────── */
 .product-list {
-  background: #0a0a0a;
+  background: var(--bg);
   padding: 56px 48px 80px;
   max-width: 100%;
 }
@@ -18,7 +18,7 @@
   font-family: 'Barlow Condensed', sans-serif;
   font-size: clamp(28px, 3.5vw, 44px);
   font-weight: 900;
-  color: #fff;
+  color: var(--text);
   text-transform: uppercase;
   letter-spacing: -0.01em;
   margin: 0;
@@ -29,7 +29,7 @@
   font-family: 'DM Sans', sans-serif;
   font-size: 12px;
   font-weight: 400;
-  color: rgba(255,255,255,0.25);
+  color: var(--text-muted);
   letter-spacing: 0.05em;
   white-space: nowrap;
 }
@@ -62,7 +62,7 @@
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 28px;
   font-weight: 700;
-  color: rgba(255,255,255,0.2);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -70,7 +70,7 @@
 .product-list__empty-text {
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
-  color: rgba(255,255,255,0.18);
+  color: var(--text-muted);
   max-width: 280px;
 }
 

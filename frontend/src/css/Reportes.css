@@ -78,7 +78,7 @@
   transition: all .18s;
   white-space: nowrap;
 }
-.rp-nav-btn:hover  { background: var(--surface3); border-color: rgba(255,255,255,.2); }
+.rp-nav-btn:hover  { background: var(--surface3); border-color: var(--border2); }
 .rp-nav-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .rp-nav-btn .arrow {
   font-size: .65rem;
@@ -331,7 +331,7 @@
 .rp-chart-label { font-size: .75rem; color: var(--muted); width: 80px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
 .rp-chart-bar-bg { flex: 1; height: 22px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
 .rp-chart-bar    { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width .6s cubic-bezier(.4,0,.2,1); display: flex; align-items: center; padding-left: .5rem; }
-.rp-chart-bar-val { font-size: .68rem; font-weight: 700; color: rgba(255,255,255,.9); white-space: nowrap; }
+.rp-chart-bar-val { font-size: .68rem; font-weight: 700; color: var(--text); white-space: nowrap; }
 
 /* ── GRÁFICA LÍNEA (días) ────────────────────────────────────────────────────── */
 .rp-linechart {
@@ -458,7 +458,7 @@
   cursor: pointer; transition: all .15s; border: none;
 }
 .rp-btn-outline { background: var(--surface2); border: 1px solid var(--border2); color: var(--text); }
-.rp-btn-outline:hover { border-color: rgba(255,255,255,.25); }
+.rp-btn-outline:hover { border-color: var(--border2); }
 .rp-btn-primary { background: var(--primary); color: #fff; }
 .rp-btn-primary:hover { background: var(--accent); }
 

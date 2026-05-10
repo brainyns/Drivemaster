@@ -594,7 +594,7 @@
 .kp-action-btn {
   width: 29px;
   height: 29px;
-  background: rgba(255, 255, 255, .05);
+  background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 7px;
   cursor: pointer;

@@ -15,13 +15,18 @@ import com.lowagie.text.pdf.PdfWriter;
 
 public class PdfCompraBuilder {
 
-    private static final Color ORANGE     = new Color(232, 69, 10);
-    private static final Color BG_DARK    = new Color(13, 13, 13);
-    private static final Color SURFACE    = new Color(20, 20, 20);
-    private static final Color SURFACE2   = new Color(26, 26, 26);
-    private static final Color TEXT_MAIN  = new Color(240, 240, 240);
-    private static final Color TEXT_MUTED = new Color(107, 114, 128);
-    private static final Color BORDER     = new Color(42, 42, 42);
+    // ── Paleta blanca / profesional ───────────────────────────────────────────
+    private static final Color ORANGE      = new Color(232, 69, 10);
+    private static final Color BG_PAGE     = new Color(243, 244, 246);  // fondo gris muy claro
+    private static final Color BG_WHITE    = new Color(255, 255, 255);  // secciones principales
+    private static final Color BG_SURFACE  = new Color(249, 250, 251);  // filas alternas / paneles
+    private static final Color TEXT_DARK   = new Color(17,  24,  39);   // títulos
+    private static final Color TEXT_BODY   = new Color(55,  65,  81);   // texto normal
+    private static final Color TEXT_MUTED  = new Color(107, 114, 128);  // etiquetas
+    private static final Color TEXT_LIGHT  = new Color(156, 163, 175);  // notas / copyright
+    private static final Color BORDER      = new Color(229, 231, 235);  // bordes suaves
+    private static final Color BORDER_ROW  = new Color(243, 244, 246);  // separadores de fila
+
     private static final Locale LOCALE_CO = new Locale("es", "CO");
 
     private static final float PAD = 32f;
@@ -34,7 +39,6 @@ public class PdfCompraBuilder {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-            // Calculamos altura real según productos
             int numProductos = compra.getProductos() != null ? compra.getProductos().size() : 0;
 
             float headerH = 75f;
@@ -65,8 +69,7 @@ public class PdfCompraBuilder {
                     ? compra.getId().substring(Math.max(0, compra.getId().length() - 5)).toUpperCase()
                     : "XXXXX");
             String fecha = compra.getFecha() != null
-                    ? compra.getFecha().format(DateTimeFormatter.ofPattern(
-                        "dd/MM/yyyy HH:mm"))
+                    ? compra.getFecha().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
                     : "—";
 
             double subtotal = compra.getProductos().stream()
@@ -78,17 +81,18 @@ public class PdfCompraBuilder {
 
             float CW = PW - PAD * 2;
 
-            // Fondo general
-            drawRect(cb, 0, 0, PW, pageH, new Color(10, 10, 10));
+            // Fondo general de página
+            drawRect(cb, 0, 0, PW, pageH, BG_PAGE);
 
             // ── HEADER ──
             float headerY = pageH - headerH;
-            drawRect(cb, 0, headerY, PW, headerH, BG_DARK);
+            drawRect(cb, 0, headerY, PW, headerH, BG_WHITE);
             drawRect(cb, 0, pageH - 3, PW, 3, ORANGE);
+            drawLine(cb, 0, headerY, PW, BORDER);
 
             cb.beginText();
             cb.setFontAndSize(bfBold, 22);
-            cb.setColorFill(TEXT_MAIN);
+            cb.setColorFill(TEXT_DARK);
             cb.setTextMatrix(PAD, headerY + 38);
             cb.showText("Drive");
             cb.setColorFill(ORANGE);
@@ -97,7 +101,7 @@ public class PdfCompraBuilder {
 
             cb.beginText();
             cb.setFontAndSize(bf, 7);
-            cb.setColorFill(TEXT_MUTED);
+            cb.setColorFill(TEXT_LIGHT);
             cb.setTextMatrix(PAD, headerY + 22);
             cb.showText("REPUESTOS AUTOMOTRICES");
             cb.endText();
@@ -115,14 +119,14 @@ public class PdfCompraBuilder {
             float lwId = bfBold.getWidthPoint(idText, 15);
             cb.beginText();
             cb.setFontAndSize(bfBold, 15);
-            cb.setColorFill(TEXT_MAIN);
+            cb.setColorFill(TEXT_DARK);
             cb.setTextMatrix(PW - PAD - lwId, headerY + 30);
             cb.showText(idText);
             cb.endText();
 
             // ── SECCIÓN PROVEEDOR ──
             float secY = headerY - gap;
-            drawRect(cb, 0, secY - secH, PW, secH, SURFACE);
+            drawRect(cb, 0, secY - secH, PW, secH, BG_SURFACE);
             drawLine(cb, 0, secY, PW, BORDER);
             drawLine(cb, 0, secY - secH, PW, BORDER);
 
@@ -134,14 +138,14 @@ public class PdfCompraBuilder {
                 drawText(cb, bf, 8, proveedorCorreo, PAD, secY - 57, TEXT_MUTED);
 
             float col2X = PW * 0.42f;
-            drawSmallLabel(cb, bf, "SHIP TO",        col2X, secY - 14, TEXT_MUTED);
-            drawText(cb, bfBold, 10, "DriveMaster",  col2X, secY - 30, TEXT_MAIN);
+            drawSmallLabel(cb, bf, "SHIP TO",           col2X, secY - 14, TEXT_MUTED);
+            drawText(cb, bfBold, 10, "DriveMaster",     col2X, secY - 30, TEXT_DARK);
             drawText(cb, bf,      8, "Almacén Central", col2X, secY - 44, TEXT_MUTED);
-            drawText(cb, bf,      8, "Colombia",     col2X, secY - 57, TEXT_MUTED);
+            drawText(cb, bf,      8, "Colombia",        col2X, secY - 57, TEXT_MUTED);
 
             float col3X = PW * 0.72f;
             drawSmallLabel(cb, bf, "ISSUE DATE", col3X, secY - 14, TEXT_MUTED);
-            drawText(cb, bfBold, 9, fecha,       col3X, secY - 30, TEXT_MAIN);
+            drawText(cb, bfBold, 9, fecha,       col3X, secY - 30, TEXT_BODY);
 
             // ── TABLA PRODUCTOS ──
             float tblTopY = secY - secH - gap;
@@ -149,7 +153,9 @@ public class PdfCompraBuilder {
             float wCant   = CW * 0.14f;
             float wCost   = CW * 0.23f;
 
-            drawRect(cb, 0, tblTopY - tblHdr, PW, tblHdr, SURFACE2);
+            // Cabecera tabla
+            drawRect(cb, 0, tblTopY - tblHdr, PW, tblHdr, BG_SURFACE);
+            drawLine(cb, 0, tblTopY,          PW, BORDER);
             drawLine(cb, 0, tblTopY - tblHdr, PW, BORDER);
             drawTableHeader(cb, bf, PAD,                               tblTopY - 13, "PRODUCT NAME", TEXT_MUTED);
             drawTableHeaderCenter(cb, bf, PAD + wNom + wCant * 0.5f,  tblTopY - 13, "QUANTITY",     TEXT_MUTED);
@@ -159,20 +165,20 @@ public class PdfCompraBuilder {
             float rowY = tblTopY - tblHdr;
             boolean odd = true;
             for (DetalleCompra d : compra.getProductos()) {
-                Color rowBg = odd ? SURFACE : new Color(17, 17, 17);
+                Color rowBg = odd ? BG_WHITE : BG_SURFACE;
                 drawRect(cb, 0, rowY - rowH, PW, rowH, rowBg);
-                drawLine(cb, 0, rowY - rowH, PW, new Color(30, 30, 30));
+                drawLine(cb, 0, rowY - rowH, PW, BORDER_ROW);
 
-                drawText(cb, bfBold, 9, safe(d.getNombre()), PAD, rowY - 12, TEXT_MAIN);
+                drawText(cb, bfBold, 9, safe(d.getNombre()), PAD, rowY - 12, TEXT_DARK);
                 String sku = d.getProductoId() != null
                         ? "SKU: " + d.getProductoId().substring(
                             Math.max(0, d.getProductoId().length() - 8)).toUpperCase()
                         : "SKU: —";
-                drawText(cb, bf, 7, sku, PAD, rowY - 23, TEXT_MUTED);
+                drawText(cb, bf, 7, sku, PAD, rowY - 23, TEXT_LIGHT);
 
                 drawTextCenter(cb, bfBold, 10,
                         String.format("%02d", d.getCantidad()),
-                        PAD + wNom + wCant * 0.5f, rowY - 17, TEXT_MAIN);
+                        PAD + wNom + wCant * 0.5f, rowY - 17, TEXT_BODY);
                 drawTextRight(cb, bf, 9,
                         fmt.format(d.getCosto() != null ? d.getCosto() : 0),
                         PAD + wNom + wCant + wCost, rowY - 17, TEXT_MUTED);
@@ -190,21 +196,21 @@ public class PdfCompraBuilder {
             float totW  = CW * 0.42f;
             float totX  = PW - PAD - totW;
 
-            drawRect(cb, totX, totY - totH, totW, totH, SURFACE2);
+            drawRect(cb, totX, totY - totH, totW, totH, BG_SURFACE);
             drawBorder(cb, totX, totY - totH, totW, totH, BORDER);
             drawRect(cb, totX, totY - totH, 3, totH, ORANGE);
 
             drawText(cb, bf, 9, "Subtotal", totX + 12, totY - 16, TEXT_MUTED);
-            drawTextRight(cb, bf, 9, fmt.format(subtotal), totX + totW - 10, totY - 16, TEXT_MAIN);
+            drawTextRight(cb, bf, 9, fmt.format(subtotal), totX + totW - 10, totY - 16, TEXT_BODY);
             drawLine(cb, totX + 10, totY - 30, totW - 20, BORDER);
-            drawText(cb, bfBold, 12, "TOTAL DUE", totX + 12, totY - 46, TEXT_MAIN);
+            drawText(cb, bfBold, 12, "TOTAL DUE", totX + 12, totY - 46, TEXT_DARK);
             drawTextRight(cb, bfBold, 13,
                     fmt.format(compra.getTotal() != null ? compra.getTotal() : subtotal),
                     totX + totW - 10, totY - 46, ORANGE);
 
-            // ── FOOTER — pegado justo debajo de los totales ──
+            // ── FOOTER ──
             float footY = totY - totH - gap;
-            drawRect(cb, 0, footY - footH, PW, footH, BG_DARK);
+            drawRect(cb, 0, footY - footH, PW, footH, BG_SURFACE);
             drawLine(cb, 0, footY, PW, BORDER);
 
             String footTxt = "Documento oficial de compra — DriveMaster Repuestos Automotrices";
@@ -220,7 +226,7 @@ public class PdfCompraBuilder {
             float lwC = bf.getWidthPoint(copy, 7);
             cb.beginText();
             cb.setFontAndSize(bf, 7);
-            cb.setColorFill(new Color(68, 68, 68));
+            cb.setColorFill(TEXT_LIGHT);
             cb.setTextMatrix((PW - lwC) / 2, footY - footH + 11);
             cb.showText(copy);
             cb.endText();

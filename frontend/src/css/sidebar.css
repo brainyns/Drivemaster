@@ -17,6 +17,23 @@
   --warning:   #F59E0B;
 }
 
+html[data-theme="light"] {
+  --primary:   #FF3D00;
+  --primary-h: #e63600;
+  --secondary: #1A237E;
+  --tertiary:  #9F5BBB;
+  --neutral:   #e5e5e5;
+  --bg:        #ffffff;
+  --surface:   #f5f5f5;
+  --surface2:  #eeeeee;
+  --border:    #d4d4d4;
+  --text:      #1a1a1a;
+  --text-muted:#8a8a9a;
+  --success:   #22C55E;
+  --error:     #EF4444;
+  --warning:   #F59E0B;
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -49,7 +66,7 @@ h1, h2, h3, .brand-name {
   top: 0; left: 0;
   height: 100vh;
   width: 220px;
-  background: #111111;
+  background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -102,7 +119,7 @@ h1, h2, h3, .brand-name {
   cursor: pointer; transition: all 0.15s; text-align: left;
 }
 
-.sidebar-item:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+.sidebar-item:hover { background: var(--surface2); color: var(--text); }
 
 .sidebar-item.activo {
   background: rgba(255,61,0,0.12);
@@ -169,7 +186,7 @@ h1, h2, h3, .brand-name {
 }
 
 .sidebar-logout {
-  background: #ef4444;
+  background: var(--error);
   color: var(--text);
   border: 1px solid var(--border);
   padding: 0.3rem 0.6rem;
@@ -180,8 +197,8 @@ h1, h2, h3, .brand-name {
 }
 
 .sidebar-logout:hover {
-  color: #ef4444;
-  border-color: #ef4444;
+  color: var(--error);
+  border-color: var(--error);
   background: rgba(239, 68, 68, 0.08);
 }
 
@@ -192,6 +209,6 @@ h1, h2, h3, .brand-name {
   padding: 0.8rem;
   margin: 0.2rem;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface2);
 }
 

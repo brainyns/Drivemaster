@@ -19,6 +19,27 @@
   --text-secondary: #888888;
   --text-muted:     #555555;
   --error:          #e05a2b;
+  --watermark:      rgba(255,255,255,0.025);
+  --card-shine:     rgba(255,255,255,0.03);
+  --radius-card:    10px;
+  --radius-input:   6px;
+}
+
+html[data-theme="light"] {
+  --bg-deep:        #f0f0f0;
+  --bg-card:        #ffffff;
+  --bg-input:       #f5f5f5;
+  --border:         #d4d4d4;
+  --border-focus:   #e05a2b;
+  --accent:         #e05a2b;
+  --accent-hover:   #c94d22;
+  --accent-glow:    rgba(224, 90, 43, 0.25);
+  --text-primary:   #1a1a1a;
+  --text-secondary: #666666;
+  --text-muted:     #999999;
+  --error:          #e05a2b;
+  --watermark:      rgba(0,0,0,0.04);
+  --card-shine:     rgba(0,0,0,0.03);
   --radius-card:    10px;
   --radius-input:   6px;
 }
@@ -48,7 +69,7 @@
   font-family: 'Barlow Condensed', sans-serif;
   font-size: clamp(80px, 16vw, 180px);
   font-weight: 800;
-  color: rgba(255,255,255,0.025);
+  color: var(--watermark);
   letter-spacing: -4px;
   user-select: none;
   pointer-events: none;
@@ -66,7 +87,7 @@
   display: flex;
   flex-direction: column;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.03),
+    0 0 0 1px var(--card-shine),
     0 20px 60px rgba(0,0,0,0.6),
     0 0 40px rgba(224,90,43,0.04);
   animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) both;

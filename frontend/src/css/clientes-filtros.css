@@ -5,8 +5,8 @@
   left: 0;
   z-index: 100;
   width: 280px;
-  background: var(--card, #1a1a1a);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.1rem;
   box-shadow: 0 16px 48px rgba(0,0,0,0.5);
@@ -72,17 +72,17 @@
   font-weight: 600;
   padding: .3rem .75rem;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04);
-  color: var(--muted, #888);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted);
   cursor: pointer;
   transition: all .15s;
   text-transform: uppercase;
   letter-spacing: .03em;
 }
 .km-chip:hover {
-  border-color: rgba(255,255,255,0.25);
-  color: var(--text, #fff);
+  border-color: var(--border2);
+  color: var(--text);
 }
 .km-chip.on {
   background: rgba(232,69,10,0.15);

@@ -51,7 +51,7 @@
   font-family: 'DM Sans', sans-serif; font-size: .78rem; font-weight: 600;
   padding: .45rem .9rem; cursor: pointer; transition: border-color .15s;
 }
-.cp-btn-outline:hover { border-color: rgba(255,255,255,.25); }
+.cp-btn-outline:hover { border-color: var(--border2); }
 
 .cp-btn-register {
   display: flex; align-items: center; justify-content: center; gap: .45rem;

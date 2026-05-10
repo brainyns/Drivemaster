@@ -9,7 +9,7 @@ import Filtros from "../components/Filtros";
 import ProductList from "../components/ProductList";
 import ProductDetail from "../components/ProductDetail";
 
-const CatalogoPage = ({ onIrAdmin }) => {
+const CatalogoPage = ({ onIrAdmin, theme, onToggleTheme }) => {
   const [busqueda,             setBusqueda]             = useState("");
   const [categoriaActiva,      setCategoriaActiva]      = useState("Todas");
   const [soloMasVendidos,      setSoloMasVendidos]      = useState(false);
@@ -77,6 +77,8 @@ const CatalogoPage = ({ onIrAdmin }) => {
         busqueda={busqueda}
         onBusquedaChange={setBusqueda}
         onIrAdmin={onIrAdmin}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
       />
       <Banner onVerCatalogo={handleVerCatalogo} />
       <Categorias

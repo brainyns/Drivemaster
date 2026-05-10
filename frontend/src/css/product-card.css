@@ -1,7 +1,7 @@
 /* ─── PRODUCT CARD ────────────────────────────────────────────── */
 .product-card {
-  background: #111111;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--surface);
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   cursor: pointer;
@@ -31,7 +31,7 @@
 .product-card__image-wrap {
   position: relative;
   aspect-ratio: 4/3;
-  background: #0d0d0d;
+  background: var(--bg);
   overflow: hidden;
 }
 
@@ -54,7 +54,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.08);
+  color: var(--text-muted);
   font-size: 40px;
 }
 
@@ -123,7 +123,7 @@
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 20px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text);
   line-height: 1.15;
   text-transform: uppercase;
   letter-spacing: 0.01em;
@@ -134,7 +134,7 @@
   font-family: 'DM Sans', sans-serif;
   font-size: 11px;
   font-weight: 400;
-  color: rgba(255,255,255,0.3);
+  color: var(--text-muted);
   letter-spacing: 0.05em;
 }
 
@@ -145,14 +145,14 @@
   justify-content: space-between;
   margin-top: auto;
   padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid var(--border);
 }
 
 .product-card__precio {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 22px;
   font-weight: 800;
-  color: #fff;
+  color: var(--text);
   line-height: 1;
 }
 
@@ -160,7 +160,7 @@
   font-family: 'DM Sans', sans-serif;
   font-size: 9px;
   font-weight: 400;
-  color: rgba(255,255,255,0.25);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-top: 3px;
@@ -172,9 +172,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid var(--border);
   border-radius: 2px;
-  color: rgba(255,255,255,0.3);
+  color: var(--text-muted);
   font-size: 14px;
   transition: border-color 0.2s, color 0.2s, background 0.2s;
 }

@@ -1,6 +1,7 @@
 import "../css/navbar.css";
+import ThemeToggle from "./ThemeToggle";
 
-const Navbar = ({ busqueda, onBusquedaChange, onIrAdmin }) => {
+const Navbar = ({ busqueda, onBusquedaChange, onIrAdmin, theme, onToggleTheme }) => {
   return (
     <nav className="navbar">
       <div className="navbar__logo">
@@ -22,6 +23,7 @@ const Navbar = ({ busqueda, onBusquedaChange, onIrAdmin }) => {
       </div>
 
       <div className="navbar__actions">
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         <button className="navbar__cart-btn" title="Carrito">🛒</button>
         <button
           className="navbar__login-btn"

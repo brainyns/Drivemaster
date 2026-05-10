@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Sidebar               from "./components/Sidebar";
+import ThemeToggle           from "./components/ThemeToggle";
 import Productos             from "./pages/Productos";
 import ProductoForm          from "./pages/ProductoForm";
 import AjusteInventarioForm  from "./pages/AjusteInventarioForm";
@@ -39,6 +40,14 @@ function App() {
   const [token,          setToken]          = useState(storedToken);
   const [idSeleccionado, setIdSeleccionado] = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === "dark" ? "light" : "dark");
 
   useEffect(() => {
     if (!user) return;
@@ -99,7 +108,7 @@ function App() {
 
   const renderPagina = () => {
     // ── Catálogo público ──────────────────────────────────────────
-    if (pagina === "catalogo") return <CatalogoPage onIrAdmin={() => setPagina("login")} />;
+    if (pagina === "catalogo") return <CatalogoPage onIrAdmin={() => setPagina("login")} theme={theme} onToggleTheme={toggleTheme} />;
 
     // ── Auth ──────────────────────────────────────────────────────
     if (!user) {
@@ -171,6 +180,8 @@ function App() {
           irA={irA}
           userRole={user.rol}
           onLogout={handleLogout}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       )}
       <main className={mostrarSidebar ? "app-content" : ""}>

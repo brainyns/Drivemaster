@@ -18,36 +18,39 @@ import java.util.Locale;
 
 public class PdfVentaBuilder {
 
-    private static final Color ORANGE     = new Color(232, 69, 10);
-    private static final Color BG_DARK    = new Color(13, 13, 13);
-    private static final Color SURFACE    = new Color(20, 20, 20);
-    private static final Color SURFACE2   = new Color(26, 26, 26);
-    private static final Color TEXT_MAIN  = new Color(240, 240, 240);
-    private static final Color TEXT_MUTED = new Color(107, 114, 128);
-    private static final Color GREEN      = new Color(34, 197, 94);
-    private static final Color BORDER     = new Color(42, 42, 42);
-    private static final Locale LOCALE_CO = new Locale("es", "CO");
+    // ── Paleta blanca / profesional ───────────────────────────────────────────
+    private static final Color ORANGE      = new Color(232, 69, 10);
+    private static final Color BG_PAGE     = new Color(243, 244, 246);  // gris claro de página
+    private static final Color BG_WHITE    = new Color(255, 255, 255);  // fondo principal
+    private static final Color BG_SURFACE  = new Color(249, 250, 251);  // filas alternas / paneles
+    private static final Color BG_HEADER   = new Color(255, 255, 255);  // cabecera
+    private static final Color TEXT_DARK   = new Color(17,  24,  39);   // títulos
+    private static final Color TEXT_BODY   = new Color(55,  65,  81);   // texto normal
+    private static final Color TEXT_MUTED  = new Color(107, 114, 128);  // etiquetas / notas
+    private static final Color TEXT_LIGHT  = new Color(156, 163, 175);  // placeholders
+    private static final Color GREEN_BG    = new Color(209, 250, 229);  // badge PAGADA fondo
+    private static final Color GREEN_TEXT  = new Color(6,   95,  70);   // badge PAGADA texto
+    private static final Color BORDER      = new Color(229, 231, 235);  // bordes suaves
+    private static final Color BORDER_ROW  = new Color(243, 244, 246);  // separador filas
 
-    private static final float PAD = 32f;
-    private static final float PW  = PageSize.A4.getWidth();
-    private static final float PH  = PageSize.A4.getHeight();
-    private static final float CW  = PW - PAD * 2;
+    private static final Locale LOCALE_CO = new Locale("es", "CO");
+    private static final float  PAD = 32f;
+    private static final float  PW  = PageSize.A4.getWidth();
+    private static final float  CW  = PW - PAD * 2;
 
     public static byte[] construir(Cliente cliente, Venta venta, double iva) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-            // Calculamos altura real del contenido primero
             int numProductos = venta.getProductos() != null ? venta.getProductos().size() : 0;
-            int numPagos     = venta.getPagos()     != null ? venta.getPagos().size()     : 0;
 
-            float headerH  = 75f;
-            float secH     = 78f;
-            float tblHdr   = 20f;
-            float rowH     = 24f;
-            float botH     = 95f;
-            float footH    = 40f;
-            float gap      = 12f;
+            float headerH = 75f;
+            float secH    = 78f;
+            float tblHdr  = 20f;
+            float rowH    = 24f;
+            float botH    = 95f;
+            float footH   = 40f;
+            float gap     = 12f;
 
             float totalH = headerH + gap
                          + secH    + gap * 2
@@ -55,7 +58,6 @@ public class PdfVentaBuilder {
                          + botH    + gap
                          + footH;
 
-            // Usamos la altura calculada si es menor que A4, o A4 si es mayor
             float pageH = Math.max(totalH, 400f);
 
             com.lowagie.text.Rectangle pageSize = new com.lowagie.text.Rectangle(PW, pageH);
@@ -70,8 +72,8 @@ public class PdfVentaBuilder {
                     ? venta.getId().substring(Math.max(0, venta.getId().length() - 8)).toUpperCase()
                     : "XXXXXXXX";
             String fecha = venta.getFecha() != null
-                    ? venta.getFecha().format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy, HH:mm",
-                        new Locale("es", "CO")))
+                    ? venta.getFecha().format(DateTimeFormatter.ofPattern(
+                        "dd 'de' MMMM 'de' yyyy, HH:mm", new Locale("es", "CO")))
                     : "—";
 
             double subtotalBruto = venta.getProductos().stream()
@@ -83,17 +85,18 @@ public class PdfVentaBuilder {
             BaseFont bfBold = BaseFont.createFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, false);
             PdfContentByte cb = writer.getDirectContent();
 
-            // Fondo general oscuro
-            drawRect(cb, 0, 0, PW, pageH, new Color(10, 10, 10));
+            // Fondo general de página (gris muy claro)
+            drawRect(cb, 0, 0, PW, pageH, BG_PAGE);
 
-            // ── HEADER ──
+            // ── HEADER (fondo blanco + línea naranja arriba) ──
             float headerY = pageH - headerH;
-            drawRect(cb, 0, headerY, PW, headerH, BG_DARK);
+            drawRect(cb, 0, headerY, PW, headerH, BG_HEADER);
             drawRect(cb, 0, pageH - 3, PW, 3, ORANGE);
+            drawLine(cb, 0, headerY, PW, BORDER);
 
             cb.beginText();
             cb.setFontAndSize(bfBold, 22);
-            cb.setColorFill(TEXT_MAIN);
+            cb.setColorFill(TEXT_DARK);
             cb.setTextMatrix(PAD, headerY + 38);
             cb.showText("Drive");
             cb.setColorFill(ORANGE);
@@ -102,7 +105,7 @@ public class PdfVentaBuilder {
 
             cb.beginText();
             cb.setFontAndSize(bf, 7);
-            cb.setColorFill(TEXT_MUTED);
+            cb.setColorFill(TEXT_LIGHT);
             cb.setTextMatrix(PAD, headerY + 22);
             cb.showText("REPUESTOS AUTOMOTRICES");
             cb.endText();
@@ -120,33 +123,33 @@ public class PdfVentaBuilder {
             float lwId = bfBold.getWidthPoint(idText, 20);
             cb.beginText();
             cb.setFontAndSize(bfBold, 20);
-            cb.setColorFill(TEXT_MAIN);
+            cb.setColorFill(TEXT_DARK);
             cb.setTextMatrix(PW - PAD - lwId, headerY + 28);
             cb.showText(idText);
             cb.endText();
 
             // ── SECCIÓN CLIENTE / FECHA ──
             float secY = headerY - gap;
-            drawRect(cb, 0, secY - secH, PW, secH, SURFACE);
+            drawRect(cb, 0, secY - secH, PW, secH, BG_SURFACE);
             drawLine(cb, 0, secY, PW, BORDER);
             drawLine(cb, 0, secY - secH, PW, BORDER);
 
             drawSmallLabel(cb, bf, "CLIENTE", PAD, secY - 14, TEXT_MUTED);
             drawText(cb, bfBold, 11, cliente.getNombre() != null ? cliente.getNombre() : "—",
-                    PAD, secY - 30, TEXT_MAIN);
+                    PAD, secY - 30, TEXT_DARK);
             drawText(cb, bf, 8, cliente.getCorreo() != null ? cliente.getCorreo() : "",
                     PAD, secY - 44, TEXT_MUTED);
             if (cliente.getIdentificacion() != null && !cliente.getIdentificacion().isBlank())
-                drawText(cb, bf, 8, "CC: " + cliente.getIdentificacion(), PAD, secY - 57, TEXT_MUTED);
+                drawText(cb, bf, 8, "CC: " + cliente.getIdentificacion(), PAD, secY - 57, TEXT_LIGHT);
 
             float col2X = PW * 0.55f;
             drawSmallLabel(cb, bf, "FECHA DE EMISIÓN", col2X, secY - 14, TEXT_MUTED);
-            drawText(cb, bf, 9, fecha, col2X, secY - 30, TEXT_MAIN);
+            drawText(cb, bf, 9, fecha, col2X, secY - 30, TEXT_BODY);
 
             String estado = venta.getEstado() != null ? venta.getEstado() : "PAGADA";
             float badgeW = bfBold.getWidthPoint(estado, 8) + 16;
-            drawRoundRect(cb, col2X, secY - 62, badgeW, 18, new Color(26, 42, 26));
-            drawText(cb, bfBold, 8, estado, col2X + 8, secY - 55, GREEN);
+            drawRoundRect(cb, col2X, secY - 62, badgeW, 18, GREEN_BG);
+            drawText(cb, bfBold, 8, estado, col2X + 8, secY - 55, GREEN_TEXT);
 
             // ── TABLA PRODUCTOS ──
             float tblTopY = secY - secH - gap;
@@ -155,7 +158,8 @@ public class PdfVentaBuilder {
             float wPU     = CW * 0.22f;
 
             // Cabecera tabla
-            drawRect(cb, 0, tblTopY - tblHdr, PW, tblHdr, SURFACE2);
+            drawRect(cb, 0, tblTopY - tblHdr, PW, tblHdr, BG_SURFACE);
+            drawLine(cb, 0, tblTopY,         PW, BORDER);
             drawLine(cb, 0, tblTopY - tblHdr, PW, BORDER);
             drawTableHeader(cb, bf, PAD,                               tblTopY - 13, "PRODUCTO",     TEXT_MUTED);
             drawTableHeaderCenter(cb, bf, PAD + wNom + wCant * 0.5f,  tblTopY - 13, "CANT.",        TEXT_MUTED);
@@ -165,11 +169,11 @@ public class PdfVentaBuilder {
             float rowY = tblTopY - tblHdr;
             boolean odd = true;
             for (DetalleVenta d : venta.getProductos()) {
-                Color rowBg = odd ? SURFACE : new Color(17, 17, 17);
+                Color rowBg = odd ? BG_WHITE : BG_SURFACE;
                 drawRect(cb, 0, rowY - rowH, PW, rowH, rowBg);
-                drawLine(cb, 0, rowY - rowH, PW, new Color(30, 30, 30));
+                drawLine(cb, 0, rowY - rowH, PW, BORDER_ROW);
 
-                drawText(cb, bf,     9, safe(d.getNombre()),                      PAD,                          rowY - 15, TEXT_MAIN);
+                drawText(cb, bf,     9, safe(d.getNombre()),                      PAD,                          rowY - 15, TEXT_BODY);
                 drawTextCenter(cb, bf, 9, String.valueOf(d.getCantidad()),         PAD + wNom + wCant * 0.5f,   rowY - 15, TEXT_MUTED);
                 drawTextRight(cb, bf,  9, fmt.format(d.getPrecioUnitario()),       PAD + wNom + wCant + wPU,    rowY - 15, TEXT_MUTED);
                 drawTextRight(cb, bfBold, 9, fmt.format(d.getSubtotal()),          PW - PAD,                   rowY - 15, ORANGE);
@@ -183,8 +187,8 @@ public class PdfVentaBuilder {
             float botY  = rowY - gap;
             float halfW = CW * 0.48f;
 
-            // Panel pagos izquierda
-            drawRect(cb, PAD, botY - botH, halfW, botH, SURFACE);
+            // Panel pagos — izquierda (fondo blanco con borde)
+            drawRect(cb, PAD, botY - botH, halfW, botH, BG_WHITE);
             drawBorder(cb, PAD, botY - botH, halfW, botH, BORDER);
             drawSmallLabel(cb, bf, "FORMA DE PAGO", PAD + 12, botY - 14, TEXT_MUTED);
 
@@ -192,32 +196,32 @@ public class PdfVentaBuilder {
             for (Pago p : venta.getPagos()) {
                 drawText(cb, bf, 9, safe(p.getMetodo()), PAD + 12, pagoY, TEXT_MUTED);
                 drawTextRight(cb, bfBold, 9, fmt.format(p.getMonto()),
-                        PAD + halfW - 10, pagoY, TEXT_MAIN);
+                        PAD + halfW - 10, pagoY, TEXT_DARK);
                 pagoY -= 18;
             }
 
-            // Panel totales derecha
+            // Panel totales — derecha (fondo gris claro + borde naranja izquierdo)
             float panX = PW - PAD - halfW;
-            drawRect(cb, panX, botY - botH, halfW, botH, SURFACE2);
+            drawRect(cb, panX, botY - botH, halfW, botH, BG_SURFACE);
             drawBorder(cb, panX, botY - botH, halfW, botH, BORDER);
             drawRect(cb, panX, botY - botH, 3, botH, ORANGE);
 
             float totY2 = botY - 18;
             drawText(cb, bf, 9, "Subtotal", panX + 12, totY2, TEXT_MUTED);
-            drawTextRight(cb, bf, 9, fmt.format(subtotalBruto), panX + halfW - 10, totY2, TEXT_MAIN);
+            drawTextRight(cb, bf, 9, fmt.format(subtotalBruto), panX + halfW - 10, totY2, TEXT_BODY);
             totY2 -= 18;
             drawText(cb, bf, 9, "IVA (" + ivaPct + "%)", panX + 12, totY2, TEXT_MUTED);
-            drawTextRight(cb, bf, 9, fmt.format(ivaValor), panX + halfW - 10, totY2, TEXT_MAIN);
+            drawTextRight(cb, bf, 9, fmt.format(ivaValor), panX + halfW - 10, totY2, TEXT_BODY);
             totY2 -= 8;
             drawLine(cb, panX + 10, totY2, halfW - 20, BORDER);
             totY2 -= 18;
-            drawText(cb, bfBold, 12, "Total", panX + 12, totY2, TEXT_MAIN);
+            drawText(cb, bfBold, 12, "Total", panX + 12, totY2, TEXT_DARK);
             drawTextRight(cb, bfBold, 14, fmt.format(venta.getTotal()),
                     panX + halfW - 10, totY2, ORANGE);
 
-            // ── FOOTER — pegado justo debajo de los paneles ──
+            // ── FOOTER ──
             float footY = botY - botH - gap;
-            drawRect(cb, 0, footY - footH, PW, footH, BG_DARK);
+            drawRect(cb, 0, footY - footH, PW, footH, BG_SURFACE);
             drawLine(cb, 0, footY, PW, BORDER);
 
             String footTxt = "Este documento es una confirmación electrónica de su compra en DriveMaster.";
@@ -233,7 +237,7 @@ public class PdfVentaBuilder {
             float lwCopy = bf.getWidthPoint(copy, 7);
             cb.beginText();
             cb.setFontAndSize(bf, 7);
-            cb.setColorFill(new Color(68, 68, 68));
+            cb.setColorFill(TEXT_LIGHT);
             cb.setTextMatrix((PW - lwCopy) / 2, footY - footH + 11);
             cb.showText(copy);
             cb.endText();

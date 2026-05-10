@@ -28,8 +28,8 @@
   top: calc(100% + 8px);
   right: 0;
   width: 292px;
-  background: #161616;
-  border: 1px solid #2e2e2e;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   z-index: 300;
   overflow: hidden;
@@ -47,13 +47,13 @@
   justify-content: space-between;
   align-items: center;
   padding: 13px 16px 11px;
-  border-bottom: 1px solid #242424;
+  border-bottom: 1px solid var(--border);
 }
 
 .cp-fp-title {
   font-size: 13px;
   font-weight: 600;
-  color: #d0d0d0;
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -62,7 +62,7 @@
 .cp-fp-close {
   background: none;
   border: none;
-  color: #555;
+  color: var(--text-muted);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -71,8 +71,8 @@
   transition: color 0.1s, background 0.1s;
 }
 .cp-fp-close:hover {
-  color: #fff;
-  background: #2a2a2a;
+  color: var(--text);
+  background: var(--surface2);
 }
 
 .cp-fp-body {
@@ -84,7 +84,7 @@
 
 .cp-fp-label {
   font-size: 10px;
-  color: #555;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -98,25 +98,25 @@
 }
 
 .cp-fp-chip {
-  background: #1e1e1e;
-  border: 1px solid #2a2a2a;
+  background: var(--surface2);
+  border: 1px solid var(--border);
   border-radius: 20px;
   padding: 5px 13px;
   font-size: 12px;
-  color: #777;
+  color: var(--text-muted);
   cursor: pointer;
   user-select: none;
   transition: border-color 0.12s, color 0.12s, background 0.12s;
 }
 .cp-fp-chip:hover {
-  border-color: #444;
-  color: #ccc;
+  border-color: var(--border2);
+  color: var(--text);
 }
 
-.cp-fp-chip--recibida.on  { background: #0b3326; border-color: #1a6e50; color: #4ade80; }
-.cp-fp-chip--pendiente.on { background: #261d00; border-color: #b07800; color: #f0a500; }
-.cp-fp-chip--cancelada.on { background: #330d0d; border-color: #b83333; color: #f87171; }
-.cp-fp-chip--pagada.on    { background: #0c1e38; border-color: #2a6fd6; color: #60a5fa; }
+.cp-fp-chip--recibida.on  { background: rgba(74, 222, 128, 0.12); border-color: #1a6e50; color: #4ade80; }
+.cp-fp-chip--pendiente.on { background: rgba(240, 165, 0, 0.12); border-color: #b07800; color: #f0a500; }
+.cp-fp-chip--cancelada.on { background: rgba(248, 113, 113, 0.12); border-color: #b83333; color: #f87171; }
+.cp-fp-chip--pagada.on    { background: rgba(96, 165, 250, 0.12); border-color: #2a6fd6; color: #60a5fa; }
 
 .cp-fp-range {
   display: flex;
@@ -125,18 +125,18 @@
 }
 
 .cp-fp-range-sep {
-  color: #444;
+  color: var(--text-muted);
   font-size: 14px;
   flex-shrink: 0;
 }
 
 .cp-fp-input {
-  background: #1e1e1e;
-  border: 1px solid #2a2a2a;
+  background: var(--surface2);
+  border: 1px solid var(--border);
   border-radius: 7px;
   padding: 7px 10px;
   font-size: 12px;
-  color: #ccc;
+  color: var(--text);
   width: 100%;
   outline: none;
   transition: border-color 0.12s;
@@ -146,22 +146,22 @@
   border-color: #ff4500;
 }
 .cp-fp-input::placeholder {
-  color: #444;
+  color: var(--text-muted);
 }
 
 .cp-fp-footer {
   display: flex;
   gap: 8px;
   padding: 10px 16px 14px;
-  border-top: 1px solid #1e1e1e;
+  border-top: 1px solid var(--border);
 }
 
 .cp-fp-btn-clear {
   flex: 1;
-  background: #1e1e1e;
-  border: 1px solid #2a2a2a;
+  background: var(--surface2);
+  border: 1px solid var(--border);
   border-radius: 7px;
-  color: #888;
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 500;
   padding: 8px;
@@ -169,8 +169,8 @@
   transition: border-color 0.1s, color 0.1s;
 }
 .cp-fp-btn-clear:hover {
-  border-color: #555;
-  color: #ccc;
+  border-color: var(--border2);
+  color: var(--text);
 }
 
 .cp-fp-btn-apply {
@@ -195,13 +195,13 @@
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px 20px;
-  background: rgba(255, 69, 0, 0.04);
-  border-bottom: 1px solid #1e1e1e;
+  background: var(--primary-soft);
+  border-bottom: 1px solid var(--border);
 }
 
 .cp-filter-tags-label {
   font-size: 11px;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .cp-filter-tag {
@@ -234,7 +234,7 @@
 .cp-filter-clear-all {
   background: none;
   border: none;
-  color: #555;
+  color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
   margin-left: 4px;
@@ -243,5 +243,5 @@
   transition: color 0.1s;
 }
 .cp-filter-clear-all:hover {
-  color: #ccc;
+  color: var(--text);
 }

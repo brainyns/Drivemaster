@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "../css/sidebar.css";
+import ThemeToggle from "./ThemeToggle";
 
 const Icons = {
   dashboard:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
@@ -37,7 +38,7 @@ const menu = [
   { key: "usuarios", label: "Usuarios", icon: "admin" },
 ];
 
-function Sidebar({ paginaActual, irA, userRole, onLogout }) {
+function Sidebar({ paginaActual, irA, userRole, onLogout, theme, onToggleTheme }) {
   const [abiertos, setAbiertos] = useState([]);
 
   const toggleAbierto = (key) => {
@@ -112,6 +113,7 @@ function Sidebar({ paginaActual, irA, userRole, onLogout }) {
             {userRole === "SUPERADMIN" ? "Superadmin" : userRole === "ADMIN" ? "Administrador" : "Vendedor"}
           </p>
         </div>
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         <button className="sidebar-logout" onClick={onLogout}>Salir</button>
       </div>
     </aside>
