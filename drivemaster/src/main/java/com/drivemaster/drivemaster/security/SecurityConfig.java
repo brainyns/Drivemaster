@@ -66,6 +66,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/movimientos", "/api/movimientos/").permitAll()
                         .requestMatchers("/api/movimientos/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/ajustes/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers("/api/reportes/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/home/**").authenticated()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
