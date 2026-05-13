@@ -24,6 +24,7 @@ import InventarioClientes    from "./pages/InventarioClientes";
 import ReportesClientes      from "./pages/ReportesClientes";
 import InventarioProductos   from "./pages/InventarioProductos";
 import ReportesProductos     from "./pages/ReportesProductos";
+import ChatWidget            from "./components/chat/ChatWidget";
 import { getUser, getToken, clearSession, refreshToken, logout } from "./services/authService";
 
 const storedUser  = getUser();
@@ -31,8 +32,8 @@ const storedToken = getToken();
 
 // Con sesión → dashboard principal. Sin sesión → catálogo público
 const initialPage = storedUser
-  ? "dashboard-main"   // ← nueva página de inicio
-  : "catalogo";
+    ? "dashboard-main"   // ← nueva página de inicio
+    : "catalogo";
 
 function App() {
   const [pagina,         setPagina]         = useState(initialPage);
@@ -118,16 +119,16 @@ function App() {
 
     // ── Sesión expirada ───────────────────────────────────────────
     if (sessionExpired) return (
-      <div style={{ padding: "40px", textAlign: "center" }}>
-        <h2>Sesión expirada</h2>
-        <p>Tu sesión ha expirado. Inicia sesión nuevamente.</p>
-        <button onClick={() => { clearSession(); setPagina("login"); }}>Volver al login</button>
-      </div>
+        <div style={{ padding: "40px", textAlign: "center" }}>
+          <h2>Sesión expirada</h2>
+          <p>Tu sesión ha expirado. Inicia sesión nuevamente.</p>
+          <button onClick={() => { clearSession(); setPagina("login"); }}>Volver al login</button>
+        </div>
     );
 
     // ── Control de acceso ─────────────────────────────────────────
     if (!allowedPages[user.rol]?.includes(pagina)) return (
-      <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
+        <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
     );
 
     // ── Páginas ───────────────────────────────────────────────────
@@ -173,21 +174,23 @@ function App() {
   const mostrarSidebar = !!user && pagina !== "catalogo";
 
   return (
-    <div className={mostrarSidebar ? "app-layout" : ""}>
-      {mostrarSidebar && (
-        <Sidebar
-          paginaActual={pagina}
-          irA={irA}
-          userRole={user.rol}
-          onLogout={handleLogout}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
-      )}
-      <main className={mostrarSidebar ? "app-content" : ""}>
-        {renderPagina()}
-      </main>
-    </div>
+      <div className={mostrarSidebar ? "app-layout" : ""}>
+        {mostrarSidebar && (
+            <Sidebar
+                paginaActual={pagina}
+                irA={irA}
+                userRole={user.rol}
+                onLogout={handleLogout}
+                theme={theme}
+                onToggleTheme={toggleTheme}
+            />
+        )}
+        <main className={mostrarSidebar ? "app-content" : ""}>
+          {renderPagina()}
+        </main>
+        {/* Chat Widget - siempre visible */}
+        <ChatWidget />
+      </div>
   );
 }
 

@@ -1,14 +1,13 @@
 package com.drivemaster.drivemaster.controller;
 
-import java.util.List;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import com.drivemaster.drivemaster.model.MovimientoInventario;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.service.MovimientoInventarioService;
 import com.drivemaster.drivemaster.service.ProductoService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
@@ -19,7 +18,7 @@ public class ProductoController {
     private final MovimientoInventarioService movimientoInventarioService;
 
     public ProductoController(ProductoService productoService,
-            MovimientoInventarioService movimientoInventarioService) {
+                              MovimientoInventarioService movimientoInventarioService) {
         this.productoService = productoService;
         this.movimientoInventarioService = movimientoInventarioService;
     }

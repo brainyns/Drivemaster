@@ -65,8 +65,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/proveedores/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/movimientos", "/api/movimientos/").permitAll()
                         .requestMatchers("/api/movimientos/**").hasAnyRole("SUPERADMIN", "ADMIN")
-                        .requestMatchers("/api/ajustes/**").hasAnyRole("SUPERADMIN", "ADMIN")
-                        .requestMatchers("/api/reportes/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers("/api/chat/**").permitAll()
                         .requestMatchers("/api/home/**").authenticated()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -81,8 +80,9 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "Cookie"));
         configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(List.of("X-Session-Expires-In", "Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

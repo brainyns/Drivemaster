@@ -30,6 +30,9 @@ import com.drivemaster.drivemaster.security.CustomUserDetailsService;
 import com.drivemaster.drivemaster.security.JwtUtil;
 import com.drivemaster.drivemaster.service.UsuarioService;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "http://localhost:5173")
@@ -44,6 +47,9 @@ public class AuthController {
 
     @Value("${security.jwt.refresh-expiration-ms:86400000}")
     private long refreshTokenExpirationMs;
+
+    @Value("${security.jwt.expiration-ms:1800000}")
+    private long expirationMs;
 
     @Value("${security.session.max-intentos:5}")
     private int maxIntentosFallidos;
@@ -66,7 +72,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
+    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request, HttpServletResponse response) {
         Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreo(request.getCorreo());
 
         if (usuarioOpt.isPresent()) {
@@ -103,6 +109,13 @@ public class AuthController {
 
         usuario.setUltimoLogin(Instant.now());
         usuarioRepository.save(usuario);
+
+        Cookie jwtCookie = new Cookie("jwt", accessToken);
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setSecure(false);
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge((int) (expirationMs / 1000));
+        response.addCookie(jwtCookie);
 
         return ResponseEntity.ok(new AuthResponse(accessToken, usuario.getId(), usuario.getNombre(), usuario.getCorreo(), usuario.getRol()));
     }
@@ -166,7 +179,13 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        Cookie jwtCookie = new Cookie("jwt", "");
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setSecure(false);
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge(0);
+        response.addCookie(jwtCookie);
         return ResponseEntity.ok().build();
     }
 

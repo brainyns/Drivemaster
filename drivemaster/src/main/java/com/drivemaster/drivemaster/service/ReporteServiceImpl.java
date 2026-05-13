@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import com.drivemaster.drivemaster.repository.ProductoRepository;
 import org.springframework.stereotype.Service;
 
 import com.drivemaster.drivemaster.dto.reporte.ClienteInactivoDTO;
@@ -29,7 +30,6 @@ import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Venta;
 import com.drivemaster.drivemaster.repository.ClienteRepository;
-import com.drivemaster.drivemaster.repository.ProductoRepository;
 import com.drivemaster.drivemaster.repository.VentaRepository;
  
 @Service
