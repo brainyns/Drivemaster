@@ -226,30 +226,7 @@ function Ventas({ onNueva, onDetalle, token }) {
   return (
     <div className="vt-root">
 
-      {/* Topbar */}
-      <header className="vt-top">
-        <div className="vt-top-left">
-          <span className="vt-brand">DriveMaster</span>
-          <span className="vt-div">|</span>
-          <span className="vt-breadcrumb">Ventas</span>
-        </div>
-        <div className="vt-tabs">
-          <button className="vt-tab" onClick={onNueva}>Registrar Venta</button>
-          <button className="vt-tab active">Ver Ventas</button>
-        </div>
-        <div className="vt-top-right">
-          <div className="vt-search">
-            <span className="vt-search-ico">🔍</span>
-            <input
-              placeholder="Buscar transacciones, clientes..."
-              value={busqueda}
-              onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
-            />
-          </div>
-          <button className="vt-ico-btn">🔔</button>
-          <div className="vt-avatar">A</div>
-        </div>
-      </header>
+     
 
       {/* Page header */}
       <div className="vt-page-header">

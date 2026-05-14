@@ -156,11 +156,11 @@ function ProductoForm({ id, onVolver, token }) {
     modelosCompatibles: [{ marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
   });
 
-  const [errores,            setErrores]            = useState({});
+  const [errores,             setErrores]            = useState({});
   const [productosExistentes, setProductosExistentes] = useState([]);
-  const [loading,            setLoading]            = useState(false);
-  const [serverError,        setServerError]        = useState(null);
-  const [submitted,          setSubmitted]          = useState(false);
+  const [loading,             setLoading]            = useState(false);
+  const [serverError,         setServerError]        = useState(null);
+  const [submitted,           setSubmitted]          = useState(false);
 
   useEffect(() => {
     listarProductos(token)
@@ -181,7 +181,6 @@ function ProductoForm({ id, onVolver, token }) {
     }
   }, [id, token]);
 
-  // Revalidar en tiempo real solo si ya se intentó enviar
   useEffect(() => {
     if (submitted) {
       const e = validarFormulario(form, productosExistentes, esEdicion, id);
@@ -264,22 +263,7 @@ function ProductoForm({ id, onVolver, token }) {
   return (
     <div className="pf-page">
 
-      <header className="pf-topbar">
-        <div className="pf-topbar-left">
-          <span className="pf-topbar-title">
-            {esEdicion ? "Editar Producto" : "Agregar Producto"}
-          </span>
-        </div>
-        <div className="pf-topbar-right">
-          <div className="pf-search-wrap">
-            <span className="pf-search-icon">&#128269;</span>
-            <input className="pf-topbar-search" placeholder="Buscar en catalogo..." />
-          </div>
-          <button type="button" className="pf-icon-btn">&#128276;</button>
-          <button type="button" className="pf-icon-btn">&#9881;</button>
-          <div className="pf-avatar-sm">A</div>
-        </div>
-      </header>
+      {/* ── El topbar fue eliminado: el TopBar global en App.jsx lo reemplaza ── */}
 
       <div className="pf-tabs">
         <button type="button" className="pf-tab pf-tab--active">

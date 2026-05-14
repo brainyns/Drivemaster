@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Sidebar               from "./components/Sidebar";
-import ThemeToggle           from "./components/ThemeToggle";
+import TopBar                from "./components/TopBar";
 import Productos             from "./pages/Productos";
 import ProductoForm          from "./pages/ProductoForm";
 import AjusteInventarioForm  from "./pages/AjusteInventarioForm";
@@ -30,10 +30,33 @@ import { getUser, getToken, clearSession, refreshToken, logout } from "./service
 const storedUser  = getUser();
 const storedToken = getToken();
 
-// Con sesión → dashboard principal. Sin sesión → catálogo público
-const initialPage = storedUser
-    ? "dashboard-main"   // ← nueva página de inicio
-    : "catalogo";
+const initialPage = storedUser ? "dashboard-main" : "catalogo";
+
+// ── Mapa de títulos por página ─────────────────────────────────────────────
+const TITULOS = {
+  "dashboard-main":  "Dashboard",
+  "productos":       "Gestión de Productos",
+  "productoNuevo":   "Nuevo Producto",
+  "productoEditar":  "Editar Producto",
+  "clientes":        "Gestión de Clientes",
+  "clienteNuevo":    "Nuevo Cliente",
+  "clienteEditar":   "Editar Cliente",
+  "ventas":          "Gestión de Ventas",
+  "ventaNueva":      "Nueva Venta",
+  "ventaDetalle":    "Detalle de Venta",
+  "compras":         "Gestión de Compras",
+  "compraNueva":     "Nueva Compra",
+  "compraDetalle":   "Detalle de Compra",
+  "proveedores":     "Proveedores",
+  "proveedorNuevo":  "Nuevo Proveedor",
+  "proveedorEditar": "Editar Proveedor",
+  "movimientos":     "Inventario",
+  "usuarios":        "Usuarios",
+  "inv-clientes":    "Inventario Clientes",
+  "rep-clientes":    "Reportes Clientes",
+  "inv-productos":   "Inventario Productos",
+  "rep-productos":   "Reportes Productos",
+};
 
 function App() {
   const [pagina,         setPagina]         = useState(initialPage);
@@ -41,6 +64,8 @@ function App() {
   const [token,          setToken]          = useState(storedToken);
   const [idSeleccionado, setIdSeleccionado] = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Tema oscuro / claro
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
 
   useEffect(() => {
@@ -50,6 +75,24 @@ function App() {
 
   const toggleTheme = () => setTheme(prev => prev === "dark" ? "light" : "dark");
 
+  // Color del tema — se persiste en localStorage
+  const [colorTema, setColorTema] = useState(
+    () => localStorage.getItem("colorTema") || "#FF3D00"
+  );
+
+  // Aplicar color guardado al arrancar
+  useEffect(() => {
+    document.documentElement.style.setProperty("--primary", colorTema);
+  }, []);
+
+  const handleColorChange = (c) => {
+    setColorTema(c.valor);
+    localStorage.setItem("colorTema", c.valor);
+    document.documentElement.style.setProperty("--primary",   c.valor);
+    document.documentElement.style.setProperty("--primary-h", c.hover);
+  };
+
+  // Refresh automático de token
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(async () => {
@@ -67,7 +110,7 @@ function App() {
     const newUser = { id: auth.id, nombre: auth.nombre, correo: auth.correo, rol: auth.rol };
     setUser(newUser);
     setToken(auth.token);
-    setPagina("dashboard-main");   // ← siempre al dashboard tras login
+    setPagina("dashboard-main");
     setSessionExpired(false);
   };
 
@@ -108,61 +151,62 @@ function App() {
   };
 
   const renderPagina = () => {
-    // ── Catálogo público ──────────────────────────────────────────
-    if (pagina === "catalogo") return <CatalogoPage onIrAdmin={() => setPagina("login")} theme={theme} onToggleTheme={toggleTheme} />;
+    // Catálogo público — ahora recibe theme y onToggleTheme
+    if (pagina === "catalogo") return (
+      <CatalogoPage
+        onIrAdmin={() => setPagina("login")}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+    );
 
-    // ── Auth ──────────────────────────────────────────────────────
+    // Auth
     if (!user) {
       if (pagina === "register") return <Register onRegister={handleLogin} onBack={() => setPagina("login")} />;
       return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
     }
 
-    // ── Sesión expirada ───────────────────────────────────────────
+    // Sesión expirada
     if (sessionExpired) return (
-        <div style={{ padding: "40px", textAlign: "center" }}>
-          <h2>Sesión expirada</h2>
-          <p>Tu sesión ha expirado. Inicia sesión nuevamente.</p>
-          <button onClick={() => { clearSession(); setPagina("login"); }}>Volver al login</button>
-        </div>
+      <div style={{ padding: "40px", textAlign: "center" }}>
+        <h2>Sesión expirada</h2>
+        <p>Tu sesión ha expirado. Inicia sesión nuevamente.</p>
+        <button onClick={() => { clearSession(); setPagina("login"); }}>Volver al login</button>
+      </div>
     );
 
-    // ── Control de acceso ─────────────────────────────────────────
+    // Control de acceso
     if (!allowedPages[user.rol]?.includes(pagina)) return (
-        <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
+      <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
     );
 
-    // ── Páginas ───────────────────────────────────────────────────
+    // Páginas
     if (pagina === "dashboard-main")   return <DashboardMain        token={token} />;
 
-    // Productos
     if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} />;
     if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} />;
     if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
     if (pagina === "inventarioAjuste") return <AjusteInventarioForm productoId={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
 
-    // Clientes
     if (pagina === "clientes")         return <Clientes             onNuevo={() => irA("clienteNuevo")} onEditar={id => irA("clienteEditar", id)} token={token} />;
     if (pagina === "clienteNuevo")     return <ClienteForm          onVolver={() => irA("clientes")} token={token} />;
     if (pagina === "clienteEditar")    return <ClienteForm          id={idSeleccionado} onVolver={() => irA("clientes")} token={token} />;
 
-    // Ventas
     if (pagina === "ventas")           return <Ventas               onNueva={() => irA("ventaNueva")} onDetalle={id => irA("ventaDetalle", id)} token={token} />;
     if (pagina === "ventaNueva")       return <VentaForm            onVolver={() => irA("ventas")} token={token} />;
     if (pagina === "ventaDetalle")     return <VentaDetalle         id={idSeleccionado} onVolver={() => irA("ventas")} token={token} />;
 
-    // Compras
     if (pagina === "compras")          return <Compras              onNueva={() => irA("compraNueva")} onDetalle={id => irA("compraDetalle", id)} token={token} />;
     if (pagina === "compraNueva")      return <CompraForm           onVolver={() => irA("compras")} token={token} />;
     if (pagina === "compraDetalle")    return <CompraDetalle        id={idSeleccionado} onVolver={() => irA("compras")} token={token} />;
 
-    // Otros
     if (pagina === "proveedores")      return <Proveedores          onNuevo={() => irA("proveedorNuevo")} onEditar={id => irA("proveedorEditar", id)} token={token} />;
     if (pagina === "proveedorNuevo")   return <ProveedorForm        onVolver={() => irA("proveedores")} token={token} />;
     if (pagina === "proveedorEditar")  return <ProveedorForm        id={idSeleccionado} onVolver={() => irA("proveedores")} token={token} />;
+
     if (pagina === "movimientos")      return <Movimientos          token={token} />;
     if (pagina === "usuarios")         return <Usuarios             token={token} />;
 
-    // Reportes individuales (ya sin ReportesPage wrapper)
     if (pagina === "inv-clientes")     return <InventarioClientes   token={token} />;
     if (pagina === "rep-clientes")     return <ReportesClientes     token={token} />;
     if (pagina === "inv-productos")    return <InventarioProductos  token={token} />;
@@ -171,26 +215,38 @@ function App() {
     return <div style={{ padding: "40px" }}>Seleccione una sección válida.</div>;
   };
 
-  const mostrarSidebar = !!user && pagina !== "catalogo";
+  const mostrarPanel = !!user && pagina !== "catalogo";
 
   return (
-      <div className={mostrarSidebar ? "app-layout" : ""}>
-        {mostrarSidebar && (
-            <Sidebar
-                paginaActual={pagina}
-                irA={irA}
-                userRole={user.rol}
-                onLogout={handleLogout}
-                theme={theme}
-                onToggleTheme={toggleTheme}
-            />
+    <div className={mostrarPanel ? "app-layout" : ""}>
+      {mostrarPanel && (
+        <Sidebar
+          paginaActual={pagina}
+          irA={irA}
+          userRole={user.rol}
+        />
+      )}
+
+      <main className={mostrarPanel ? "app-content" : ""}>
+        {/* TopBar global — visible en todas las páginas del panel */}
+        {mostrarPanel && (
+          <TopBar
+            titulo={TITULOS[pagina] ?? "DriveMaster"}
+            user={user}
+            onLogout={handleLogout}
+            colorTema={colorTema}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onColorChange={handleColorChange}
+          />
         )}
-        <main className={mostrarSidebar ? "app-content" : ""}>
-          {renderPagina()}
-        </main>
-        {/* Chat Widget - siempre visible */}
-        <ChatWidget />
-      </div>
+
+        {/* Contenido de la página */}
+        {renderPagina()}
+      </main>
+
+      <ChatWidget />
+    </div>
   );
 }
 

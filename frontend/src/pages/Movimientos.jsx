@@ -160,25 +160,7 @@ function Movimientos({ token }) {
 
   return (
     <div className="mv-page">
-      {/* Topbar */}
-      <header className="mv-topbar">
-        <div className="mv-topbar-left">
-          <span className="mv-topbar-brand">Movimiento de Inventario</span>
-          <span className="mv-topbar-div">|</span>
-          <span className="mv-topbar-sub">DriveMaster Terminal</span>
-        </div>
-        <div className="mv-topbar-right">
-          <button className="mv-icon-btn">🔔</button>
-          <button className="mv-icon-btn">⚙</button>
-          <div className="mv-user-pill">
-            <div className="mv-user-avatar">A</div>
-            <div>
-              <p className="mv-user-name">Admin</p>
-              <p className="mv-user-role">Administrador</p>
-            </div>
-          </div>
-        </div>
-      </header>
+     
 
       <div className="mv-content">
         {/* Stats */}

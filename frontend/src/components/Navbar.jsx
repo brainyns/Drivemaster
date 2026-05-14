@@ -24,7 +24,7 @@ const Navbar = ({ busqueda, onBusquedaChange, onIrAdmin, theme, onToggleTheme })
 
       <div className="navbar__actions">
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-        <button className="navbar__cart-btn" title="Carrito">🛒</button>
+       
         <button
           className="navbar__login-btn"
           onClick={onIrAdmin}

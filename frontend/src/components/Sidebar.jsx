@@ -1,6 +1,5 @@
 import { useState } from "react";
 import "../css/sidebar.css";
-import ThemeToggle from "./ThemeToggle";
 
 const Icons = {
   dashboard:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
@@ -38,7 +37,7 @@ const menu = [
   { key: "usuarios", label: "Usuarios", icon: "admin" },
 ];
 
-function Sidebar({ paginaActual, irA, userRole, onLogout, theme, onToggleTheme }) {
+function Sidebar({ paginaActual, irA, userRole }) {
   const [abiertos, setAbiertos] = useState([]);
 
   const toggleAbierto = (key) => {
@@ -49,12 +48,13 @@ function Sidebar({ paginaActual, irA, userRole, onLogout, theme, onToggleTheme }
 
   const visibleMenu = menu.filter(item => {
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
-    if (userRole === "VENDEDOR") return ["clientes", "ventas"].includes(item.key);
+    if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas"].includes(item.key);
     return true;
   });
 
   return (
     <aside className="sidebar">
+      {/* Marca */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">⚙</div>
         <div>
@@ -63,6 +63,7 @@ function Sidebar({ paginaActual, irA, userRole, onLogout, theme, onToggleTheme }
         </div>
       </div>
 
+      {/* Navegación */}
       <nav className="sidebar-nav">
         {visibleMenu.map(item => {
           const tieneSubItems = item.subItems?.length > 0;
@@ -105,17 +106,7 @@ function Sidebar({ paginaActual, irA, userRole, onLogout, theme, onToggleTheme }
         })}
       </nav>
 
-      <div className="sidebar-footer">
-        <div className="sidebar-avatar">A</div>
-        <div>
-          <p className="sidebar-user-name">{userRole || "Invitado"}</p>
-          <p className="sidebar-user-role">
-            {userRole === "SUPERADMIN" ? "Superadmin" : userRole === "ADMIN" ? "Administrador" : "Vendedor"}
-          </p>
-        </div>
-        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-        <button className="sidebar-logout" onClick={onLogout}>Salir</button>
-      </div>
+      {/* Sin footer — usuario/logout/theme movidos al TopBar */}
     </aside>
   );
 }

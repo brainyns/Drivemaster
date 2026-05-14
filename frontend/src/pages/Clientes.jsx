@@ -9,7 +9,6 @@ const getColor = (n) => n ? AVATARES[n.charCodeAt(0) % AVATARES.length] : AVATAR
 
 const POR_PAG = 10;
 
-// ─── Helpers de fecha ────────────────────────────────────────────────────────
 function esHoy(fechaStr) {
   if (!fechaStr) return false;
   const hoy = new Date();
@@ -37,7 +36,6 @@ function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
   }, [onCerrar, anchorRef]);
 
   const limpiar = () => onChange({ conCorreo: false, conTelefono: false, soloHoy: false, busqueda: filtros.busqueda });
-
   const hayFiltros = filtros.conCorreo || filtros.conTelefono || filtros.soloHoy;
 
   return (
@@ -48,39 +46,28 @@ function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
           <button className="km-filtros-clear" onClick={limpiar}>Limpiar todo</button>
         )}
       </div>
-
-      {/* Registros */}
       <div className="km-filtros-group">
         <p className="km-filtros-label">Período</p>
         <div className="km-filtros-chips">
           <button
             className={`km-chip${filtros.soloHoy ? " on" : ""}`}
             onClick={() => onChange({ ...filtros, soloHoy: !filtros.soloHoy })}
-          >
-            📅 Registrados hoy
-          </button>
+          >📅 Registrados hoy</button>
         </div>
       </div>
-
-      {/* Datos de contacto */}
       <div className="km-filtros-group">
         <p className="km-filtros-label">Datos de contacto</p>
         <div className="km-filtros-chips">
           <button
             className={`km-chip${filtros.conCorreo ? " on" : ""}`}
             onClick={() => onChange({ ...filtros, conCorreo: !filtros.conCorreo })}
-          >
-            ✉ Con correo
-          </button>
+          >✉ Con correo</button>
           <button
             className={`km-chip${filtros.conTelefono ? " on" : ""}`}
             onClick={() => onChange({ ...filtros, conTelefono: !filtros.conTelefono })}
-          >
-            📞 Con teléfono
-          </button>
+          >📞 Con teléfono</button>
         </div>
       </div>
-
       <button className="km-filtros-apply" onClick={onCerrar}>Aplicar filtros</button>
     </div>
   );
@@ -92,11 +79,8 @@ function Clientes({ onNuevo, onEditar, token }) {
   const [loading, setLoading]   = useState(true);
   const [pagina, setPagina]     = useState(1);
 
-  const [filtros, setFiltros]       = useState({
-    busqueda:    "",
-    conCorreo:   false,
-    conTelefono: false,
-    soloHoy:     false,
+  const [filtros, setFiltros] = useState({
+    busqueda: "", conCorreo: false, conTelefono: false, soloHoy: false,
   });
   const [filtrosOpen, setFiltrosOpen] = useState(false);
   const filtrosRef = useRef(null);
@@ -119,22 +103,13 @@ function Clientes({ onNuevo, onEditar, token }) {
     } catch(e) { alert(e.message); }
   };
 
-  // ── Filtrado ──────────────────────────────────────────────
   const filtrados = clientes.filter(c => {
-    // Búsqueda de texto
     const matchTexto = [c.nombre, c.identificacion, c.correo, c.telefono, c.direccion]
       .some(v => v?.toLowerCase().includes(filtros.busqueda.toLowerCase()));
     if (!matchTexto) return false;
-
-    // Solo hoy
-    if (filtros.soloHoy && !esHoy(c.fechaRegistro ?? c.createdAt ?? c.fecha)) return false;
-
-    // Con correo
-    if (filtros.conCorreo && !c.correo) return false;
-
-    // Con teléfono
+    if (filtros.soloHoy    && !esHoy(c.fechaRegistro ?? c.createdAt ?? c.fecha)) return false;
+    if (filtros.conCorreo   && !c.correo)   return false;
     if (filtros.conTelefono && !c.telefono) return false;
-
     return true;
   });
 
@@ -145,53 +120,39 @@ function Clientes({ onNuevo, onEditar, token }) {
   const conTelefono    = clientes.filter(c => c.telefono).length;
   const registradosHoy = clientes.filter(c => esHoy(c.fechaRegistro ?? c.createdAt ?? c.fecha)).length;
 
-  const hayFiltros = filtros.conCorreo || filtros.conTelefono || filtros.soloHoy;
+  const hayFiltros  = filtros.conCorreo || filtros.conTelefono || filtros.soloHoy;
   const contFiltros = [filtros.conCorreo, filtros.conTelefono, filtros.soloHoy].filter(Boolean).length;
 
   return (
     <div className="km-root km-page">
 
-      {/* Topbar */}
-      <header className="km-top">
-        <div className="km-top-left">
-          <span className="km-brand">DriveMaster</span>
-          <span className="km-divider">|</span>
-          <span className="km-breadcrumb">Gestión de Clientes</span>
-        </div>
-        <div className="km-top-tabs">
+      {/* ── Subheader: tabs + búsqueda en una sola barra horizontal ── */}
+      <div className="km-subheader">
+        <div className="km-subheader-tabs">
           <button className="km-tab active">Ver Clientes</button>
           <button className="km-tab" onClick={onNuevo}>
             Agregar Cliente <span className="km-tab-dot" />
           </button>
         </div>
-        <div className="km-top-right">
-          <div className="km-search">
-            <span className="km-search-ico">🔍</span>
-            <input
-              placeholder="Buscar cliente..."
-              value={filtros.busqueda}
-              onChange={e => { setFiltros(f => ({ ...f, busqueda: e.target.value })); setPagina(1); }}
-            />
-          </div>
-          <button className="km-ico-btn">🔔</button>
-          <button className="km-ico-btn">⚙</button>
-          <div className="km-avatar">A</div>
+        <div className="km-subheader-search">
+          <span className="km-search-ico">🔍</span>
+          <input
+            placeholder="Buscar cliente..."
+            value={filtros.busqueda}
+            onChange={e => { setFiltros(f => ({ ...f, busqueda: e.target.value })); setPagina(1); }}
+          />
         </div>
-      </header>
+      </div>
 
-      {/* Page header */}
+      {/* ── Page header — solo título, sin botones duplicados ── */}
       <div className="km-page-header">
         <div>
           <h1 className="km-page-h1">Directorio de Clientes</h1>
           <p className="km-page-sub">Administra la base de datos de tus clientes y sus datos de contacto.</p>
         </div>
-        <div className="km-btn-group">
-          <button className="km-btn-toggle active">Ver Clientes</button>
-          <button className="km-btn-toggle" onClick={onNuevo}>Agregar Cliente</button>
-        </div>
       </div>
 
-      {/* Stats */}
+      {/* ── Stats ── */}
       <div className="km-stats">
         <div className="km-stat">
           <p className="km-stat-label">Clientes Totales</p>
@@ -211,12 +172,10 @@ function Clientes({ onNuevo, onEditar, token }) {
         </div>
       </div>
 
-      {/* Table */}
+      {/* ── Tabla ── */}
       <div className="km-card">
         <div className="km-toolbar">
           <div className="km-toolbar-l">
-
-            {/* Botón Filtro con panel */}
             <div style={{ position: "relative" }}>
               <button
                 ref={filtrosRef}
@@ -225,7 +184,6 @@ function Clientes({ onNuevo, onEditar, token }) {
               >
                 ⚙ Filtro{hayFiltros ? ` (${contFiltros})` : ""}
               </button>
-
               {filtrosOpen && (
                 <FiltrosPanel
                   filtros={filtros}
@@ -235,7 +193,6 @@ function Clientes({ onNuevo, onEditar, token }) {
                 />
               )}
             </div>
-
             <button className="km-tool-btn">↓ Exportador</button>
           </div>
           <span className="km-count">
@@ -250,12 +207,9 @@ function Clientes({ onNuevo, onEditar, token }) {
             <table className="km-table">
               <thead>
                 <tr>
-                  <th>Nombre</th>
-                  <th>Identificación</th>
-                  <th>Teléfono</th>
-                  <th>Correo</th>
-                  <th>Dirección</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th>Nombre</th><th>Identificación</th><th>Teléfono</th>
+                  <th>Correo</th><th>Dirección</th>
+                  <th style={{ textAlign:"right" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -293,20 +247,20 @@ function Clientes({ onNuevo, onEditar, token }) {
 
         {totalPags > 1 && (
           <div className="km-pag">
-            <button className="km-pag-btn" onClick={() => setPagina(p => Math.max(1,p-1))} disabled={pagina===1}>‹ Anterior</button>
+            <button className="km-pag-btn" onClick={() => setPagina(p=>Math.max(1,p-1))} disabled={pagina===1}>‹ Anterior</button>
             <div className="km-pag-nums">
-              {Array.from({ length: Math.min(totalPags,5) }, (_,i) => i+1).map(n => (
-                <button key={n} className={`km-pag-num${pagina===n?" on":""}`} onClick={() => setPagina(n)}>{n}</button>
+              {Array.from({ length: Math.min(totalPags,5) }, (_,i)=>i+1).map(n => (
+                <button key={n} className={`km-pag-num${pagina===n?" on":""}`} onClick={()=>setPagina(n)}>{n}</button>
               ))}
-              {totalPags > 5 && <span className="km-muted" style={{ padding:"0 0.2rem" }}>...</span>}
-              {totalPags > 5 && <button className="km-pag-num" onClick={() => setPagina(totalPags)}>{totalPags}</button>}
+              {totalPags>5 && <span className="km-muted" style={{padding:"0 0.2rem"}}>...</span>}
+              {totalPags>5 && <button className="km-pag-num" onClick={()=>setPagina(totalPags)}>{totalPags}</button>}
             </div>
-            <button className="km-pag-btn" onClick={() => setPagina(p => Math.min(totalPags,p+1))} disabled={pagina===totalPags}>Siguiente ›</button>
+            <button className="km-pag-btn" onClick={() => setPagina(p=>Math.min(totalPags,p+1))} disabled={pagina===totalPags}>Siguiente ›</button>
           </div>
         )}
       </div>
 
-      {/* Bottom panels */}
+      {/* ── Bottom panels ── */}
       <div className="km-bottom-grid">
         <div className="km-panel">
           <div className="km-panel-header">
@@ -314,9 +268,9 @@ function Clientes({ onNuevo, onEditar, token }) {
             <h4 className="km-panel-title">Actividad Reciente</h4>
           </div>
           {[
-            { ico: "👤", title: "Nuevo Cliente Registrado", desc: "Se agregó un nuevo cliente a la base de datos", time: "HACE 15M" },
-            { ico: "✏", title: "Cliente Actualizado",       desc: "Se modificó la información de un cliente",   time: "HACE 1H"  },
-            { ico: "🗑", title: "Cliente Eliminado",         desc: "Se eliminó un registro de la base de datos", time: "HACE 3H"  },
+            { ico:"👤", title:"Nuevo Cliente Registrado", desc:"Se agregó un nuevo cliente a la base de datos", time:"HACE 15M" },
+            { ico:"✏",  title:"Cliente Actualizado",       desc:"Se modificó la información de un cliente",    time:"HACE 1H"  },
+            { ico:"🗑",  title:"Cliente Eliminado",         desc:"Se eliminó un registro de la base de datos",  time:"HACE 3H"  },
           ].map((a,i) => (
             <div key={i} className="km-activity-item">
               <div className="km-activity-ico">{a.ico}</div>
@@ -330,7 +284,7 @@ function Clientes({ onNuevo, onEditar, token }) {
         </div>
 
         <div className="km-panel">
-          <div className="km-panel-header" style={{ justifyContent: "space-between" }}>
+          <div className="km-panel-header" style={{ justifyContent:"space-between" }}>
             <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
               <span className="km-panel-ico">📊</span>
               <h4 className="km-panel-title">Resumen de Base de Datos</h4>
@@ -356,12 +310,12 @@ function Clientes({ onNuevo, onEditar, token }) {
           <div className="km-capacity">
             <div className="km-cap-label">
               <span>Completitud de datos</span>
-              <span>{clientes.length ? Math.round(((conCorreo + conTelefono) / (clientes.length * 2)) * 100) : 0}%</span>
+              <span>{clientes.length ? Math.round(((conCorreo+conTelefono)/(clientes.length*2))*100) : 0}%</span>
             </div>
             <div className="km-cap-bar">
               <div
                 className="km-cap-fill"
-                style={{ width: clientes.length ? `${Math.round(((conCorreo + conTelefono) / (clientes.length * 2)) * 100)}%` : "0%" }}
+                style={{ width: clientes.length ? `${Math.round(((conCorreo+conTelefono)/(clientes.length*2))*100)}%` : "0%" }}
               />
             </div>
           </div>

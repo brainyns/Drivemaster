@@ -34,25 +34,7 @@ function ClienteForm({ id, onVolver, token }) {
   return (
     <div className="km-root km-form-page">
 
-      {/* Topbar */}
-      <header className="km-top">
-        <div className="km-top-left">
-          <span className="km-brand">DriveMaster</span>
-          <span className="km-divider">|</span>
-          <span className="km-breadcrumb">Gestión de Clientes</span>
-        </div>
-        <div className="km-top-tabs">
-          <button className="km-tab" onClick={onVolver}>Ver Clientes</button>
-          <button className="km-tab active">
-            {esEdicion ? "Editar Cliente" : "Agregar Cliente"} <span className="km-tab-dot" />
-          </button>
-        </div>
-        <div className="km-top-right">
-          <button className="km-ico-btn">🔔</button>
-          <button className="km-ico-btn">⚙</button>
-          <div className="km-avatar">A</div>
-        </div>
-      </header>
+      {/* ── El km-top fue eliminado: el TopBar global en App.jsx lo reemplaza ── */}
 
       {/* Page header */}
       <div className="km-page-header">
