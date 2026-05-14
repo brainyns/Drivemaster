@@ -2,6 +2,42 @@ import { useEffect, useState } from "react";
 import { listarProductos, eliminarProducto } from "../services/productoService";
 import "../css/productos.css";
 
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+const IconBox = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+    <line x1="12" y1="22.08" x2="12" y2="12"/>
+  </svg>
+);
+
+const IconAlert = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <triangle points="10.29 3.86 1.82 18 22.18 18"/>
+    <path d="M10.29 3.86L1.82 18h20.36L10.29 3.86z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
+const IconTag = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+    <line x1="7" y1="7" x2="7.01" y2="7"/>
+  </svg>
+);
+
+const IconDollar = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="1" x2="12" y2="23"/>
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+  </svg>
+);
+
 function Productos({ onNuevo, onEditar, token }) {
   const [productos, setProductos] = useState([]);
   const [loading, setLoading]     = useState(true);
@@ -69,11 +105,13 @@ function Productos({ onNuevo, onEditar, token }) {
 
       <div className="kp-stats">
         <div className="kp-stat">
+          <div className="kp-stat-icon"><IconBox /></div>
           <p className="kp-stat-label">Total Refacciones</p>
           <p className="kp-stat-value">{productos.length}</p>
         </div>
 
         <div className={`kp-stat${stockCritico > 0 ? " kp-stat--critico" : ""}`}>
+          <div className="kp-stat-icon kp-stat-icon--alert"><IconAlert /></div>
           <p className="kp-stat-label">Stock Critico</p>
           <p className="kp-stat-value">
             {stockCritico}
@@ -82,11 +120,13 @@ function Productos({ onNuevo, onEditar, token }) {
         </div>
 
         <div className="kp-stat">
+          <div className="kp-stat-icon kp-stat-icon--tag"><IconTag /></div>
           <p className="kp-stat-label">Categorias</p>
           <p className="kp-stat-value">{categorias}</p>
         </div>
 
         <div className="kp-stat">
+          <div className="kp-stat-icon kp-stat-icon--dollar"><IconDollar /></div>
           <p className="kp-stat-label">Valor Inventario</p>
           <p className="kp-stat-value kp-stat-value--primary">
             ${valorTotal.toLocaleString("es-CO")}

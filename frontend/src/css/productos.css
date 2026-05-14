@@ -791,3 +791,28 @@
   opacity: .5;
   cursor: not-allowed;
 }
+.kp-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--primary-soft, rgba(255,61,0,0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.kp-stat-icon svg {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+
+.kp-stat-icon--alert svg { color: #ef4444; }
+.kp-stat-icon--alert     { background: rgba(239,68,68,0.08); }
+
+.kp-stat-icon--tag svg   { color: #8b5cf6; }
+.kp-stat-icon--tag       { background: rgba(139,92,246,0.08); }
+
+.kp-stat-icon--dollar svg { color: #22c55e; }
+.kp-stat-icon--dollar     { background: rgba(34,197,94,0.08); }
