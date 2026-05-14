@@ -80,12 +80,25 @@
   border-color: rgba(234, 88, 12, 0.3);
 }
 
+/* ── Icono SVG ── */
 .categoria-card__icon {
-  font-size: 22px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-  opacity: 0.85;
+  color: #ea580c;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.categoria-card__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Texto ── */
 .categoria-card__name {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 18px;
@@ -105,12 +118,23 @@
   letter-spacing: 0.05em;
 }
 
+/* ── Flecha SVG ── */
 .categoria-card__arrow {
   margin-left: auto;
-  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
   color: var(--text-muted);
   transition: color 0.2s, transform 0.2s;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.categoria-card__arrow svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .categoria-card:hover .categoria-card__arrow,
@@ -119,6 +143,7 @@
   transform: translateX(4px);
 }
 
+/* ── Responsive ── */
 @media (max-width: 768px) {
   .categorias {
     padding: 60px 24px;
