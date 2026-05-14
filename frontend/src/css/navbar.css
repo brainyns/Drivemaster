@@ -116,3 +116,24 @@
   font-size: 1.2rem;
   cursor: pointer;
 }
+.navbar__logo-icon svg {
+  width: 22px;
+  height: 22px;
+  color: var(--primary);
+}
+.navbar__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navbar__logo-text {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.navbar__logo-text span {
+  color: var(--primary);
+}
