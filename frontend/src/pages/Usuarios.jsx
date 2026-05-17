@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { crearUsuario, listarUsuarios } from "../services/authService";
+import { crearUsuario, listarUsuarios, eliminarUsuario, getUser, getToken } from "../services/authService";
 import "../css/Usuarios.css";
+
+const API_BASE = "http://localhost:8080/api";
 
 const ROL_CONFIG = {
   SUPERADMIN: { label: "SUPER ADMIN", className: "us-badge--superadmin" },
@@ -10,8 +12,8 @@ const ROL_CONFIG = {
 
 const AVATAR_COLORS = ["#E8450A", "#7C3AED", "#0EA5E9", "#10B981", "#F59E0B"];
 
-function getInitials(nombre = "") {
-  return nombre
+function getInitials(nombre) {
+  return (nombre || "")
     .split(" ")
     .map((p) => p[0])
     .join("")
@@ -31,6 +33,14 @@ export default function Usuarios({ token }) {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [filterRol, setFilterRol] = useState("TODOS");
+
+  const currentUser = getUser();
+  const isSuperadmin = currentUser?.rol === "SUPERADMIN";
+
+  const [editando, setEditando] = useState(null);
+  const [editForm, setEditForm] = useState({ nombre: "", rol: "", password: "" });
+  const [editError, setEditError] = useState(null);
+  const [editSuccess, setEditSuccess] = useState(null);
 
   useEffect(() => {
     if (!token) return;
@@ -55,6 +65,53 @@ export default function Usuarios({ token }) {
     }
   };
 
+  const handleEditClick = (u) => {
+    setEditando(u);
+    setEditForm({ nombre: u.nombre || "", rol: u.rol || "VENDEDOR", password: "" });
+    setEditError(null);
+    setEditSuccess(null);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditError(null);
+    setEditSuccess(null);
+    try {
+      const body = { nombre: editForm.nombre };
+      if (editForm.password) body.password = editForm.password;
+      if (editForm.rol && editForm.rol !== editando.rol) body.rol = editForm.rol;
+      const res = await fetch(`${API_BASE}/usuarios/${editando.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || data.message || "Error al actualizar");
+      }
+      setEditSuccess("Usuario actualizado correctamente");
+      const updated = await listarUsuarios(token);
+      setUsuarios(updated);
+      setTimeout(() => { setEditando(null); setEditSuccess(null); }, 1500);
+    } catch (err) {
+      setEditError(err.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Desactivar este usuario? Esta acción no se puede deshacer.")) return;
+    try {
+      await eliminarUsuario(id);
+      const updated = await listarUsuarios(token);
+      setUsuarios(updated);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const conteo = {
     SUPERADMIN: usuarios.filter((u) => u.rol === "SUPERADMIN").length,
     ADMIN: usuarios.filter((u) => u.rol === "ADMIN").length,
@@ -62,9 +119,11 @@ export default function Usuarios({ token }) {
   };
 
   const usuariosFiltrados =
-    filterRol === "TODOS" ? usuarios : usuarios.filter((u) => u.rol === filterRol);
+    (filterRol === "TODOS" ? usuarios : usuarios.filter((u) => u.rol === filterRol))
+      .filter((u) => u.rol !== "CLIENTE");
 
   return (
+    <>
     <div className="us-root">
       {/* ── Page header ── */}
       <div className="us-page-header">
@@ -129,15 +188,16 @@ export default function Usuarios({ token }) {
           {error && <p className="us-error">{error}</p>}
 
           <div className="us-table-wrap">
-            <table className="us-table">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Correo</th>
-                  <th>Rol</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
+              <table className="us-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    {isSuperadmin && <th>Acciones</th>}
+                  </tr>
+                </thead>
               <tbody>
                 {usuariosFiltrados.map((u, i) => {
                   const cfg = ROL_CONFIG[u.rol] || { label: u.rol, className: "" };
@@ -162,6 +222,23 @@ export default function Usuarios({ token }) {
                           {u.activo ? "Activo" : "Inactivo"}
                         </span>
                       </td>
+                      {isSuperadmin && (
+                        <td>
+                          <div className="us-actions">
+                            <button className="us-action-btn us-action-btn--edit" title="Editar" onClick={() => handleEditClick(u)}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                              </svg>
+                            </button>
+                            <button className="us-action-btn us-action-btn--delete" title="Desactivar" onClick={() => handleDelete(u.id)}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -259,5 +336,77 @@ export default function Usuarios({ token }) {
         </div>
       </div>
     </div>
+
+      {/* ── Edit Modal (SUPERADMIN only) ── */}
+      {editando && isSuperadmin && (
+        <div className="us-modal-overlay" onClick={() => setEditando(null)}>
+          <div className="us-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="us-modal-header">
+              <h3>Editar usuario</h3>
+              <button className="us-modal-close" onClick={() => setEditando(null)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="us-form">
+              <div className="us-field">
+                <label className="us-label">Nombre Completo</label>
+                <input
+                  className="us-input"
+                  type="text"
+                  value={editForm.nombre}
+                  onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="us-field">
+                <label className="us-label">Correo</label>
+                <input
+                  className="us-input"
+                  type="email"
+                  value={editando.correo}
+                  disabled
+                  style={{ opacity: 0.5 }}
+                />
+              </div>
+              <div className="us-field">
+                <label className="us-label">Nueva contraseña <span className="us-hint-inline">(dejar vacío para mantener)</span></label>
+                <input
+                  className="us-input"
+                  type="password"
+                  placeholder="••••••••"
+                  value={editForm.password}
+                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                />
+              </div>
+              <div className="us-field">
+                <label className="us-label">Rol del Sistema</label>
+                <div className="us-select-wrap">
+                  <select
+                    className="us-select"
+                    value={editForm.rol}
+                    onChange={(e) => setEditForm({ ...editForm, rol: e.target.value })}
+                  >
+                    <option value="VENDEDOR">Vendedor</option>
+                    <option value="ADMIN">Administrador</option>
+                    <option value="SUPERADMIN">Superadmin</option>
+                  </select>
+                  <svg className="us-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+                </div>
+              </div>
+
+              {editError && <div className="us-error">{editError}</div>}
+              {editSuccess && <div className="us-toast us-toast--success">{editSuccess}</div>}
+
+              <div className="us-modal-actions">
+                <button type="button" className="us-btn-cancel" onClick={() => setEditando(null)}>Cancelar</button>
+                <button type="submit" className="us-btn-submit">Guardar cambios</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

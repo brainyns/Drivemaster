@@ -2,6 +2,8 @@ package com.drivemaster.drivemaster.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.drivemaster.drivemaster.model.Proveedor;
 import com.drivemaster.drivemaster.service.ProveedorService;
+import com.drivemaster.drivemaster.util.PdfProveedorBuilder;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
@@ -52,5 +55,19 @@ public class ProveedorController {
     public ResponseEntity<Void> eliminar(@PathVariable String id) {
         proveedorService.eliminarProveedor(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/exportar")
+    public ResponseEntity<byte[]> exportar() {
+        try {
+            List<Proveedor> lista = proveedorService.listarTodos();
+            byte[] pdf = PdfProveedorBuilder.construir(lista);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Proveedores-DriveMaster.pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al exportar proveedores a PDF", e);
+        }
     }
 }

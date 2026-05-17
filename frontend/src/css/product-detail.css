@@ -265,13 +265,89 @@
   text-align: right;
 }
 
-/* ── WhatsApp button ── */
-.product-detail__wsp-btn {
+/* ── Tipo badge ── */
+.product-detail__tipo-badge {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 2px;
+  display: inline-block;
+  letter-spacing: 0.05em;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  width: fit-content;
+}
+
+/* ── Cantidad selector ── */
+.product-detail__cantidad {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.product-detail__cantidad label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.product-detail__cantidad-controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+.product-detail__cantidad-controls button {
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  background: #ea580c;
+  transition: background 0.15s;
+}
+
+.product-detail__cantidad-controls button:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.product-detail__cantidad-controls span {
+  min-width: 36px;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 0 8px;
+}
+
+/* ── Action buttons ── */
+.product-detail__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.product-detail__solicitud-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--primary, #ea580c);
   color: #fff;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
@@ -281,19 +357,70 @@
   padding: 15px 28px;
   border: none;
   border-radius: 2px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.product-detail__solicitud-btn:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.product-detail__wsp-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #25D366;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 2px;
   text-decoration: none;
   cursor: pointer;
   transition: background 0.2s, transform 0.15s;
-  margin-top: auto;
 }
 
 .product-detail__wsp-btn:hover {
-  background: #c2410c;
+  background: #1da851;
   transform: translateY(-1px);
 }
 
 .product-detail__wsp-icon {
   font-size: 16px;
+}
+
+.product-detail__mensaje {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 2px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  text-align: center;
+}
+
+.product-detail__ir-solicitud {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.6);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  padding: 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.product-detail__ir-solicitud:hover {
+  border-color: var(--primary, #ea580c);
+  color: var(--primary, #ea580c);
 }
 
 /* ── Responsive ── */

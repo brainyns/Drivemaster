@@ -17,4 +17,5 @@ public class ProductoDTO {
     private String marca;
     private Double precioVenta;
     private Integer stockActual;
+    private String imagenUrl;
 }

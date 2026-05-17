@@ -9,7 +9,13 @@ import Filtros from "../components/Filtros";
 import ProductList from "../components/ProductList";
 import ProductDetail from "../components/ProductDetail";
 
-const CatalogoPage = ({ onIrAdmin, theme, onToggleTheme }) => {
+const CatalogoPage = ({
+  onIrLogin, onIrAdmin, onIrSolicitud, onIrCheckout, onLogout,
+  solicitudItems, solicitudCount, solicitudSubtotal, solicitudIva, solicitudTotal,
+  solicitudAbierta, onToggleSolicitud,
+  onAddProduct, onUpdateQuantity, onRemoveProduct, onClearSolicitud,
+  theme, onToggleTheme
+}) => {
   const [busqueda,             setBusqueda]             = useState("");
   const [categoriaActiva,      setCategoriaActiva]      = useState("Todas");
   const [soloMasVendidos,      setSoloMasVendidos]      = useState(false);
@@ -23,13 +29,11 @@ const CatalogoPage = ({ onIrAdmin, theme, onToggleTheme }) => {
     const cargar = async () => {
       setCargando(true);
       try {
-        // Carga productos y movimientos en paralelo
         const [resultado, movimientos] = await Promise.all([
           buscarProductos({ nombre: busqueda, categoria: categoriaActiva }),
           listarMovimientos({}, null),
         ]);
 
-        // Construye el mapa de ventas
         const mapa = {};
         movimientos
           .filter((m) => m.tipo === "SALIDA")
@@ -76,7 +80,20 @@ const CatalogoPage = ({ onIrAdmin, theme, onToggleTheme }) => {
       <Navbar
         busqueda={busqueda}
         onBusquedaChange={setBusqueda}
+        onIrLogin={onIrLogin}
         onIrAdmin={onIrAdmin}
+        onIrSolicitud={onIrSolicitud}
+        onIrCatalogo={() => {}}
+        onLogout={onLogout}
+        solicitudItems={solicitudItems}
+        solicitudCount={solicitudCount}
+        solicitudSubtotal={solicitudSubtotal}
+        solicitudIva={solicitudIva}
+        solicitudTotal={solicitudTotal}
+        solicitudAbierta={solicitudAbierta}
+        onToggleSolicitud={onToggleSolicitud}
+        onUpdateQuantity={onUpdateQuantity}
+        onRemoveProduct={onRemoveProduct}
         theme={theme}
         onToggleTheme={onToggleTheme}
       />
@@ -109,6 +126,8 @@ const CatalogoPage = ({ onIrAdmin, theme, onToggleTheme }) => {
         <ProductDetail
           producto={productoSeleccionado}
           onClose={() => setProductoSeleccionado(null)}
+          onAddProduct={onAddProduct}
+          onIrSolicitud={onIrCheckout || onIrSolicitud}
         />
       )}
     </div>

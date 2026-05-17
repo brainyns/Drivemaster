@@ -27,5 +27,9 @@ public class Producto {
     private Double precioVenta;
     private Integer stockActual;
     private Integer stockMinimo;
+
+    private String tipo; // STOCK | ENCARGO
+    private Boolean activo;
+    private String imagenUrl;
 }
 

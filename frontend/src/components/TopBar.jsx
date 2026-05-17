@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import NotificationDropdown from "./NotificationDropdown";
 import "../css/topbar.css";
 
 const COLORES_TEMA = [
@@ -135,7 +136,7 @@ function DropdownConfig({ onClose, colorActual, onColorChange, theme, onToggleTh
 }
 
 // ── Dropdown Perfil ───────────────────────────────────────────────────────────
-function DropdownPerfil({ user, onClose, onLogout }) {
+function DropdownPerfil({ user, onClose, onLogout, onNavigate }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -158,7 +159,7 @@ function DropdownPerfil({ user, onClose, onLogout }) {
       <div className="tb-dropdown-divider" />
 
       <div className="tb-perfil-menu">
-        <button className="tb-perfil-item">
+        <button className="tb-perfil-item" onClick={() => { onClose(); onNavigate?.("mi-perfil"); }}>
           <span className="tb-perfil-item-ico"><IcoUser /></span>
           <span>Mi perfil</span>
         </button>
@@ -185,6 +186,7 @@ function TopBar({
   onBusqueda,
   user,
   onLogout,
+  onNavigate,
   colorTema,
   onColorChange,
   theme,
@@ -193,6 +195,27 @@ function TopBar({
 }) {
   const [configOpen, setConfigOpen] = useState(false);
   const [perfilOpen, setPerfilOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
+
+  useEffect(() => {
+    if (!notifOpen) return;
+    const fetchCount = async () => {
+      try {
+        const sols = await fetch("http://localhost:8080/api/solicitudes", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+          },
+        }).then(r => r.json());
+        const pending = (sols || []).filter(s => s.estado === "PENDIENTE_PAGO" || s.estado === "PAGO_VERIFICADO").length;
+        setNotifCount(pending);
+      } catch { /* ignore */ }
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, [notifOpen]);
 
   const handleColorChange = (c) => {
     document.documentElement.style.setProperty("--primary",   c.valor);
@@ -238,18 +261,31 @@ function TopBar({
           </div>
         )}
 
-        <button className="tb-ico-btn" title="Notificaciones">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 01-3.46 0"/>
-          </svg>
-        </button>
+        <div className="tb-ico-wrap tb-notif-wrap">
+          <button
+            className={`tb-ico-btn${notifOpen ? " tb-ico-btn--active" : ""}`}
+            title="Notificaciones"
+            onClick={() => { setNotifOpen(p => !p); setConfigOpen(false); setPerfilOpen(false); }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 01-3.46 0"/>
+            </svg>
+          </button>
+          {notifCount > 0 && <span className="tb-notif-badge">{notifCount}</span>}
+          {notifOpen && (
+            <NotificationDropdown
+              onClose={() => setNotifOpen(false)}
+              onNavigate={(page, id) => onNavigate?.(page, id)}
+            />
+          )}
+        </div>
 
         <div className="tb-ico-wrap">
           <button
             className={`tb-ico-btn${configOpen ? " tb-ico-btn--active" : ""}`}
             title="Configuración"
-            onClick={() => { setConfigOpen(p => !p); setPerfilOpen(false); }}
+            onClick={() => { setConfigOpen(p => !p); setNotifOpen(false); setPerfilOpen(false); }}
           >
             <IcoSettings />
           </button>
@@ -268,7 +304,7 @@ function TopBar({
           <button
             className={`tb-avatar${perfilOpen ? " tb-avatar--active" : ""}`}
             title="Perfil"
-            onClick={() => { setPerfilOpen(p => !p); setConfigOpen(false); }}
+            onClick={() => { setPerfilOpen(p => !p); setNotifOpen(false); setConfigOpen(false); }}
           >
             {getIniciales(user?.nombre)}
           </button>
@@ -277,6 +313,7 @@ function TopBar({
               user={user}
               onClose={() => setPerfilOpen(false)}
               onLogout={onLogout}
+              onNavigate={onNavigate}
             />
           )}
         </div>

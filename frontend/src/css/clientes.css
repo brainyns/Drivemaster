@@ -1584,3 +1584,38 @@ table.km-table tr:last-child td {
   .kf-header { flex-direction: column; align-items: flex-start; }
   .kf-header-badge { display: none; }
 }
+
+/* ── Export modal ── */
+.km-export-modal {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--surface, #111);
+  border: 1px solid var(--border, rgba(255,255,255,0.12));
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 100;
+  min-width: 140px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.km-export-modal button {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: var(--text, #f0f0f0);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.km-export-modal button:hover {
+  background: var(--primary-soft, rgba(255, 61, 0, 0.08));
+}
+html[data-theme="light"] .km-export-modal {
+  background: #fff;
+  border-color: #e0e0e0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}

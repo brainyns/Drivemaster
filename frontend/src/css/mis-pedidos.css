@@ -1,0 +1,164 @@
+/* ── Mis Pedidos ──────────────────────────────────────────────────── */
+
+.mis-pedidos-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.mis-pedidos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.mis-pedidos-header h1 {
+  font-family: 'Barlow', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.mis-pedidos-volver {
+  background: none;
+  border: 1px solid var(--border);
+  padding: 7px 16px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mis-pedidos-volver:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.mis-pedidos-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.mis-pedidos-tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mis-pedidos-tab:hover {
+  color: var(--text-secondary);
+}
+.mis-pedidos-tab.activo {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.mis-pedidos-count {
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 0 6px;
+}
+
+.mis-pedidos-loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.mis-pedidos-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.mis-pedidos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mis-pedidos-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.mis-pedidos-card:hover {
+  border-color: var(--text-muted);
+}
+
+.mis-pedidos-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border);
+}
+.mis-pedidos-card-id {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+.mis-pedidos-card-estado {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mis-pedidos-card-body {
+  padding: 12px 16px 16px;
+}
+
+.mis-pedidos-card-productos {
+  margin-bottom: 10px;
+}
+.mis-pedidos-card-producto {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 3px 0;
+}
+.mis-pedidos-card-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.mis-pedidos-card-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-muted);
+}

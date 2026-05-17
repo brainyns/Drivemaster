@@ -24,6 +24,17 @@ public class Usuario {
     @JsonIgnore
     private String password;
 
+    private String googleId;
+
+    private String proveedor;
+
+    private String identificacion;
+    private String telefono;
+    private String direccion;
+    private String ciudad;
+    private String referencia;
+    private Boolean datosCompletos;
+
     private String rol;
     private List<String> permisos;
     private Boolean activo;
@@ -35,10 +46,7 @@ public class Usuario {
     private Instant fechaBloqueo;
 
     public boolean tienePermiso(String permiso) {
-        if (permisos != null && permisos.contains(permiso)) {
-            return true;
-        }
-        return false;
+        return permisos != null && permisos.contains(permiso);
     }
 
     public boolean esRol(String rolBuscado) {

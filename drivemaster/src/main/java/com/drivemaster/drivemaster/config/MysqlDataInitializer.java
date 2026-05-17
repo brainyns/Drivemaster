@@ -50,10 +50,17 @@ public class MysqlDataInitializer implements CommandLineRunner {
 
     private void inicializarEstados() {
         List<Object[]> estados = List.of(
-            new Object[]{"PAGADA",    "Pagada"},
-            new Object[]{"ANULADA",   "Anulada"},
-            new Object[]{"PENDIENTE", "Pendiente"},
-            new Object[]{"CANCELADA", "Cancelada"}
+            new Object[]{"PAGADA",              "Pagada"},
+            new Object[]{"ANULADA",             "Anulada"},
+            new Object[]{"PENDIENTE",           "Pendiente"},
+            new Object[]{"CANCELADA",           "Cancelada"},
+            new Object[]{"PENDIENTE_PAGO",      "Pendiente de pago"},
+            new Object[]{"PAGO_VERIFICADO",     "Pago verificado"},
+            new Object[]{"PENDIENTE_APROBACION","Pendiente de aprobación"},
+            new Object[]{"APROBADO",            "Aprobado"},
+            new Object[]{"RECHAZADO",           "Rechazado"},
+            new Object[]{"EN_CAMINO",           "En camino"},
+            new Object[]{"ENTREGADO",           "Entregado"}
         );
 
         for (Object[] e : estados) {

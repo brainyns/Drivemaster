@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.service;
 
 import org.springframework.stereotype.Service;
 
+import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 import com.drivemaster.drivemaster.model.MovimientoInventario;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.repository.MovimientoInventarioRepository;
@@ -42,9 +43,9 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
             case "SALIDA":
                 stockNuevo = stockAnterior - cantidad;
-                if (stockNuevo < 0) {
-                    throw new RuntimeException("Stock insuficiente");
-                }
+        if (stockNuevo < 0) {
+            throw new StockInsuficienteException(producto.getNombre(), stockAnterior);
+        }
                 break;
 
             case "AJUSTE":

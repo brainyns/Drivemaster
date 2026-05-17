@@ -22,6 +22,7 @@ const menu = [
   { key: "productos",      label: "Productos",   icon: "productos"   },
   { key: "clientes",       label: "Clientes",    icon: "clientes"    },
   { key: "ventas",         label: "Ventas",      icon: "ventas"      },
+  { key: "solicitudes",    label: "Solicitudes", icon: "ventas"      },
   { key: "compras",        label: "Compras",     icon: "compras"     },
   { key: "proveedores",    label: "Proveedores", icon: "proveedores" },
   { key: "movimientos",    label: "Inventario",  icon: "movimientos" },
@@ -48,7 +49,8 @@ function Sidebar({ paginaActual, irA, userRole }) {
 
   const visibleMenu = menu.filter(item => {
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
-    if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas"].includes(item.key);
+    if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "ADMIN";
+    if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas", "solicitudes"].includes(item.key);
     return true;
   });
 
@@ -106,7 +108,12 @@ function Sidebar({ paginaActual, irA, userRole }) {
         })}
       </nav>
 
-      {/* Sin footer — usuario/logout/theme movidos al TopBar */}
+      {/* Volver al catálogo */}
+      <div className="sidebar-footer">
+        <button className="sidebar-catalogo-btn" onClick={() => irA("catalogo")}>
+          ← Volver al catálogo
+        </button>
+      </div>
     </aside>
   );
 }

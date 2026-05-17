@@ -4,16 +4,16 @@ import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-import com.drivemaster.drivemaster.model.Cliente;
 import com.drivemaster.drivemaster.model.DetalleVenta;
 import com.drivemaster.drivemaster.model.Pago;
+import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.Venta;
 
 public class EmailVentaBuilder {
 
     private static final Locale LOCALE_CO = new Locale("es", "CO");
 
-    public static String construir(Cliente cliente, Venta venta, double iva) {
+    public static String construir(Usuario usuario, Venta venta, double iva) {
 
         NumberFormat fmt = NumberFormat.getCurrencyInstance(LOCALE_CO);
         fmt.setMaximumFractionDigits(0);
@@ -61,11 +61,11 @@ public class EmailVentaBuilder {
                     """.formatted(p.getMetodo(), fmt.format(p.getMonto())));
         }
 
-        // ── Identificación del cliente (opcional) ─────
-        String identificacionCliente = (cliente.getIdentificacion() != null
-                && !cliente.getIdentificacion().isBlank())
+        // ── Identificación del usuario (opcional) ─────
+        String identificacionCliente = (usuario.getIdentificacion() != null
+                && !usuario.getIdentificacion().isBlank())
                         ? "<p style=\"margin:0;font-size:12px;color:#9ca3af;\">CC: "
-                                + cliente.getIdentificacion() + "</p>"
+                                + usuario.getIdentificacion() + "</p>"
                         : "";
 
         int ivaPct = (int) Math.round(iva * 100);
@@ -206,9 +206,9 @@ public class EmailVentaBuilder {
                 idCorto,
                 // header #ID
                 idCorto,
-                // cliente nombre, correo, identificacion
-                cliente.getNombre(),
-                cliente.getCorreo(),
+                // usuario nombre, correo, identificacion
+                usuario.getNombre(),
+                usuario.getCorreo(),
                 identificacionCliente,
                 // fecha, estado
                 fecha,

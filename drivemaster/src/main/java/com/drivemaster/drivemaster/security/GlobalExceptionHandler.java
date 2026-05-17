@@ -1,14 +1,17 @@
 package com.drivemaster.drivemaster.security;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -33,9 +36,19 @@ public class GlobalExceptionHandler {
                 .body(buildResponse("Credenciales incorrectas", HttpStatus.UNAUTHORIZED));
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGeneral(Exception ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(buildResponse("Error interno del servidor", HttpStatus.INTERNAL_SERVER_ERROR));
+    @ExceptionHandler(StockInsuficienteException.class)
+    public ResponseEntity<?> handleStockInsuficiente(StockInsuficienteException ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("error", "Stock insuficiente");
+        response.put("producto", ex.getProducto());
+        response.put("stockDisponible", ex.getStockDisponible());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<?> handleRuntime(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(buildResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
+    }
+
 }

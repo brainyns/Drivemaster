@@ -1,8 +1,8 @@
 package com.drivemaster.drivemaster.util;
 
-import com.drivemaster.drivemaster.model.Cliente;
 import com.drivemaster.drivemaster.model.DetalleVenta;
 import com.drivemaster.drivemaster.model.Pago;
+import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.Venta;
 import com.lowagie.text.Document;
 import com.lowagie.text.PageSize;
@@ -38,7 +38,7 @@ public class PdfVentaBuilder {
     private static final float  PW  = PageSize.A4.getWidth();
     private static final float  CW  = PW - PAD * 2;
 
-    public static byte[] construir(Cliente cliente, Venta venta, double iva) {
+    public static byte[] construir(Usuario usuario, Venta venta, double iva) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
@@ -76,8 +76,8 @@ public class PdfVentaBuilder {
                         "dd 'de' MMMM 'de' yyyy, HH:mm", new Locale("es", "CO")))
                     : "—";
 
-            double subtotalBruto = venta.getProductos().stream()
-                    .mapToDouble(d -> d.getSubtotal() != null ? d.getSubtotal() : 0).sum();
+            double subtotalBruto = venta.getProductos() != null ? venta.getProductos().stream()
+                    .mapToDouble(d -> d.getSubtotal() != null ? d.getSubtotal() : 0).sum() : 0;
             double ivaValor = subtotalBruto * iva;
             int    ivaPct   = (int) Math.round(iva * 100);
 
@@ -135,12 +135,12 @@ public class PdfVentaBuilder {
             drawLine(cb, 0, secY - secH, PW, BORDER);
 
             drawSmallLabel(cb, bf, "CLIENTE", PAD, secY - 14, TEXT_MUTED);
-            drawText(cb, bfBold, 11, cliente.getNombre() != null ? cliente.getNombre() : "—",
+            drawText(cb, bfBold, 11, usuario.getNombre() != null ? usuario.getNombre() : "—",
                     PAD, secY - 30, TEXT_DARK);
-            drawText(cb, bf, 8, cliente.getCorreo() != null ? cliente.getCorreo() : "",
+            drawText(cb, bf, 8, usuario.getCorreo() != null ? usuario.getCorreo() : "",
                     PAD, secY - 44, TEXT_MUTED);
-            if (cliente.getIdentificacion() != null && !cliente.getIdentificacion().isBlank())
-                drawText(cb, bf, 8, "CC: " + cliente.getIdentificacion(), PAD, secY - 57, TEXT_LIGHT);
+            if (usuario.getIdentificacion() != null && !usuario.getIdentificacion().isBlank())
+                drawText(cb, bf, 8, "CC: " + usuario.getIdentificacion(), PAD, secY - 57, TEXT_LIGHT);
 
             float col2X = PW * 0.55f;
             drawSmallLabel(cb, bf, "FECHA DE EMISIÓN", col2X, secY - 14, TEXT_MUTED);
@@ -168,18 +168,20 @@ public class PdfVentaBuilder {
 
             float rowY = tblTopY - tblHdr;
             boolean odd = true;
-            for (DetalleVenta d : venta.getProductos()) {
-                Color rowBg = odd ? BG_WHITE : BG_SURFACE;
-                drawRect(cb, 0, rowY - rowH, PW, rowH, rowBg);
-                drawLine(cb, 0, rowY - rowH, PW, BORDER_ROW);
+            if (venta.getProductos() != null) {
+                for (DetalleVenta d : venta.getProductos()) {
+                    Color rowBg = odd ? BG_WHITE : BG_SURFACE;
+                    drawRect(cb, 0, rowY - rowH, PW, rowH, rowBg);
+                    drawLine(cb, 0, rowY - rowH, PW, BORDER_ROW);
 
-                drawText(cb, bf,     9, safe(d.getNombre()),                      PAD,                          rowY - 15, TEXT_BODY);
-                drawTextCenter(cb, bf, 9, String.valueOf(d.getCantidad()),         PAD + wNom + wCant * 0.5f,   rowY - 15, TEXT_MUTED);
-                drawTextRight(cb, bf,  9, fmt.format(d.getPrecioUnitario()),       PAD + wNom + wCant + wPU,    rowY - 15, TEXT_MUTED);
-                drawTextRight(cb, bfBold, 9, fmt.format(d.getSubtotal()),          PW - PAD,                   rowY - 15, ORANGE);
+                    drawText(cb, bf,     9, safe(d.getNombre()),                      PAD,                          rowY - 15, TEXT_BODY);
+                    drawTextCenter(cb, bf, 9, String.valueOf(d.getCantidad()),         PAD + wNom + wCant * 0.5f,   rowY - 15, TEXT_MUTED);
+                    drawTextRight(cb, bf,  9, fmt.format(d.getPrecioUnitario()),       PAD + wNom + wCant + wPU,    rowY - 15, TEXT_MUTED);
+                    drawTextRight(cb, bfBold, 9, fmt.format(d.getSubtotal()),          PW - PAD,                   rowY - 15, ORANGE);
 
-                rowY -= rowH;
-                odd = !odd;
+                    rowY -= rowH;
+                    odd = !odd;
+                }
             }
             drawLine(cb, 0, rowY, PW, BORDER);
 
@@ -193,11 +195,13 @@ public class PdfVentaBuilder {
             drawSmallLabel(cb, bf, "FORMA DE PAGO", PAD + 12, botY - 14, TEXT_MUTED);
 
             float pagoY = botY - 32;
-            for (Pago p : venta.getPagos()) {
-                drawText(cb, bf, 9, safe(p.getMetodo()), PAD + 12, pagoY, TEXT_MUTED);
-                drawTextRight(cb, bfBold, 9, fmt.format(p.getMonto()),
-                        PAD + halfW - 10, pagoY, TEXT_DARK);
-                pagoY -= 18;
+            if (venta.getPagos() != null) {
+                for (Pago p : venta.getPagos()) {
+                    drawText(cb, bf, 9, safe(p.getMetodo()), PAD + 12, pagoY, TEXT_MUTED);
+                    drawTextRight(cb, bfBold, 9, fmt.format(p.getMonto()),
+                            PAD + halfW - 10, pagoY, TEXT_DARK);
+                    pagoY -= 18;
+                }
             }
 
             // Panel totales — derecha (fondo gris claro + borde naranja izquierdo)

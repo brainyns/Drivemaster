@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.controller;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,9 +22,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-
+import com.drivemaster.drivemaster.service.GoogleAuthService;
 import com.drivemaster.drivemaster.dto.AuthRequest;
 import com.drivemaster.drivemaster.dto.AuthResponse;
+import com.drivemaster.drivemaster.dto.GoogleLoginRequest;
 import com.drivemaster.drivemaster.dto.RegisterRequest;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
@@ -44,6 +47,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
+    private final GoogleAuthService googleAuthService;
 
     @Value("${security.jwt.refresh-expiration-ms:86400000}")
     private long refreshTokenExpirationMs;
@@ -62,13 +66,15 @@ public class AuthController {
                           UsuarioRepository usuarioRepository,
                           PasswordEncoder passwordEncoder,
                           CustomUserDetailsService userDetailsService,
-                          JwtUtil jwtUtil) {
+                          JwtUtil jwtUtil,
+                          GoogleAuthService googleAuthService) {
         this.authenticationManager = authenticationManager;
         this.usuarioService = usuarioService;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.userDetailsService = userDetailsService;
         this.jwtUtil = jwtUtil;
+        this.googleAuthService = googleAuthService;
     }
 
     @PostMapping("/login")
@@ -117,7 +123,85 @@ public class AuthController {
         jwtCookie.setMaxAge((int) (expirationMs / 1000));
         response.addCookie(jwtCookie);
 
-        return ResponseEntity.ok(new AuthResponse(accessToken, usuario.getId(), usuario.getNombre(), usuario.getCorreo(), usuario.getRol()));
+        return ResponseEntity.ok(new AuthResponse(
+                accessToken, usuario.getId(), usuario.getNombre(),
+                usuario.getCorreo(), usuario.getRol(),
+                usuario.getProveedor(), usuario.getDatosCompletos()));
+    }
+
+    @PostMapping("/login-interno")
+    public ResponseEntity<?> loginInterno(@RequestBody AuthRequest request, HttpServletResponse response) {
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreo(request.getCorreo());
+
+        if (usuarioOpt.isPresent()) {
+            Usuario usuario = usuarioOpt.get();
+
+            if ("CLIENTE".equals(usuario.getRol())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Acceso solo para personal interno"));
+            }
+
+            if (usuario.getBloqueado() != null && usuario.getBloqueado()) {
+                if (usuario.getFechaBloqueo() != null) {
+                    Instant tiempoDesbloqueo = usuario.getFechaBloqueo().plusSeconds(tiempoBloqueoMinutos * 60L);
+                    if (Instant.now().isBefore(tiempoDesbloqueo)) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of("error", "Cuenta bloqueada. Intente más tarde."));
+                    } else {
+                        usuario.setBloqueado(false);
+                        usuario.setIntentosFallidos(0);
+                        usuario.setFechaBloqueo(null);
+                        usuarioRepository.save(usuario);
+                    }
+                }
+            }
+        }
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getCorreo(), request.getPassword()));
+        } catch (Exception e) {
+            handleFailedLogin(usuarioOpt.orElse(null));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Credenciales inválidas"));
+        }
+
+        Usuario usuario = usuarioService.obtenerPorCorreo(request.getCorreo());
+        resetFailedLogin(usuario);
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getCorreo());
+        String accessToken = jwtUtil.generateToken(userDetails);
+
+        usuario.setUltimoLogin(Instant.now());
+        usuarioRepository.save(usuario);
+
+        Cookie jwtCookie = new Cookie("jwt", accessToken);
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setSecure(false);
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge((int) (expirationMs / 1000));
+        response.addCookie(jwtCookie);
+
+        return ResponseEntity.ok(new AuthResponse(
+                accessToken, usuario.getId(), usuario.getNombre(),
+                usuario.getCorreo(), usuario.getRol(),
+                usuario.getProveedor(), usuario.getDatosCompletos()));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleLogin(@RequestBody GoogleLoginRequest request) {
+        Usuario usuario = googleAuthService.autenticarConGoogle(request.getIdToken());
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getCorreo());
+        String accessToken = jwtUtil.generateToken(userDetails);
+
+        usuario.setUltimoLogin(Instant.now());
+        usuarioRepository.save(usuario);
+
+        return ResponseEntity.ok(new AuthResponse(
+                accessToken, usuario.getId(), usuario.getNombre(),
+                usuario.getCorreo(), usuario.getRol(),
+                usuario.getProveedor(), usuario.getDatosCompletos()));
     }
 
     @PostMapping("/register")
@@ -131,20 +215,19 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Correo ya registrado");
         }
 
-        String rol = determineRole(request.getRol());
-        if (usuarioRepository.count() == 0) {
-            rol = "SUPERADMIN";
-        }
-
+        String rol = "CLIENTE";
         List<String> permisos = getPermisosPorRol(rol);
 
         Usuario usuario = Usuario.builder()
                 .nombre(request.getNombre())
                 .correo(request.getCorreo())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .identificacion(request.getIdentificacion())
+                .proveedor("LOCAL")
                 .rol(rol)
                 .permisos(permisos)
                 .activo(true)
+                .datosCompletos(false)
                 .fechaCreacion(Instant.now())
                 .intentosFallidos(0)
                 .bloqueado(false)
@@ -155,7 +238,9 @@ public class AuthController {
         String token = jwtUtil.generateToken(userDetails);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new AuthResponse(token, usuario.getId(), usuario.getNombre(), usuario.getCorreo(), usuario.getRol()));
+                .body(new AuthResponse(token, usuario.getId(), usuario.getNombre(),
+                        usuario.getCorreo(), usuario.getRol(),
+                        usuario.getProveedor(), usuario.getDatosCompletos()));
     }
 
     @PostMapping("/refresh")
@@ -175,7 +260,41 @@ public class AuthController {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         String newToken = jwtUtil.generateToken(userDetails);
 
-        return ResponseEntity.ok(new AuthResponse(newToken, usuario.getId(), usuario.getNombre(), usuario.getCorreo(), usuario.getRol()));
+        return ResponseEntity.ok(new AuthResponse(
+                newToken, usuario.getId(), usuario.getNombre(),
+                usuario.getCorreo(), usuario.getRol(),
+                usuario.getProveedor(), usuario.getDatosCompletos()));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @RequestBody Map<String, String> body,
+            Authentication auth) {
+        String passwordActual = body.get("passwordActual");
+        String nuevaPassword = body.get("nuevaPassword");
+
+        if (passwordActual == null || passwordActual.isBlank() ||
+            nuevaPassword == null || nuevaPassword.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Ambas contraseñas son obligatorias"));
+        }
+
+        if (nuevaPassword.length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "La nueva contraseña debe tener al menos 6 caracteres"));
+        }
+
+        Usuario usuario = usuarioService.obtenerPorCorreo(auth.getName());
+
+        if (!passwordEncoder.matches(passwordActual, usuario.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "La contraseña actual no es correcta"));
+        }
+
+        usuario.setPassword(passwordEncoder.encode(nuevaPassword));
+        usuarioRepository.save(usuario);
+
+        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
     }
 
     @PostMapping("/logout")
@@ -252,6 +371,7 @@ public class AuthController {
                     "CLIENTES_READ", "CLIENTES_WRITE",
                     "VENTAS_READ", "VENTAS_WRITE"
             );
+            case "CLIENTE" -> List.of("ROLE_CLIENTE", "PRODUCTOS_READ");
             default -> List.of();
         };
     }

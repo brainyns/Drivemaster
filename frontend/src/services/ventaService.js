@@ -53,7 +53,7 @@ export async function descargarPdfVenta(id, token) {
 }
 
 export async function exportarVentasExcel(token) {
-  const res = await fetch(`${BASE}/ventas/exportar`, {
+  const res = await fetch(`${BASE}/ventas/exportar?formato=excel`, {
     headers: headers(token),
   });
   if (!res.ok) throw new Error("Error al exportar");
@@ -62,6 +62,24 @@ export async function exportarVentasExcel(token) {
   const a    = document.createElement("a");
   a.href     = url;
   a.download = `Ventas-DriveMaster.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function exportarVentasPdf(token) {
+  const res = await fetch(`${BASE}/ventas/exportar?formato=pdf`, {
+    headers: headers(token),
+  });
+  if (!res.ok) {
+    let msg = "Error al exportar PDF";
+    try { const data = await res.json(); msg = data.message || data.error || msg; } catch {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `Ventas-DriveMaster.pdf`;
   a.click();
   URL.revokeObjectURL(url);
 }

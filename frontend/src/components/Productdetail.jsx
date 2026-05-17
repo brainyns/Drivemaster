@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { getToken, getUser } from "../services/authService";
 import "../css/product-detail.css";
 
 const formatPrecio = (precio) => {
@@ -9,10 +11,14 @@ const formatPrecio = (precio) => {
   }).format(precio);
 };
 
-const ProductDetail = ({ producto, onClose }) => {
+const ProductDetail = ({ producto, onClose, onAddProduct, onIrSolicitud }) => {
+  const [cantidad, setCantidad] = useState(1);
+  const [mensaje, setMensaje] = useState(null);
+  const user = getUser();
+  const token = getToken();
+
   if (!producto) return null;
 
-  // Campos reales del backend
   const nombre      = producto.nombre      || "Sin nombre";
   const categoria   = producto.categoria   || "Sin categoría";
   const marca       = producto.marca       || null;
@@ -21,13 +27,34 @@ const ProductDetail = ({ producto, onClose }) => {
   const stockMinimo = producto.stockMinimo ?? 0;
   const imagen      = producto.imagenUrl   || producto.imagen || null;
   const masVendido  = producto.masVendido  || false;
+  const tipo        = producto.tipo        || "STOCK";
   const stockBajo   = stock <= stockMinimo && stock > 0;
   const sinStock    = stock === 0;
 
-  const whatsappUrl = `https://wa.me/573015335263?text=Hola,%20buenas%20tardes,%20estoy%20interesado%20en%20el%20producto%20${encodeURIComponent(nombre)}`;
+  const ref = producto.codigo || producto.id || "";
+  const whatsappUrl = `https://wa.me/573015335263?text=${encodeURIComponent(
+    `Hola, estoy interesado en el producto: ${nombre}${ref ? ` (Ref: ${ref})` : ""}. ¿Podrían brindarme información sobre disponibilidad, precio y tiempo de entrega? Quedo atento. Saludos.`
+  )}`;
 
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) onClose();
+  };
+
+  const stockAgotado = tipo === "STOCK" && sinStock;
+  const sinStockSuficiente = tipo === "STOCK" && cantidad > stock;
+
+  const handleAgregar = () => {
+    if (!token) {
+      setMensaje("Debes iniciar sesión primero");
+      return;
+    }
+    if (sinStockSuficiente) {
+      setMensaje(`Solo quedan ${stock} unidades disponibles`);
+      return;
+    }
+    onAddProduct(producto, cantidad);
+    setMensaje("¡Agregado a la solicitud!");
+    setTimeout(() => setMensaje(null), 2000);
   };
 
   return (
@@ -38,7 +65,6 @@ const ProductDetail = ({ producto, onClose }) => {
         </button>
 
         <div className="product-detail__grid">
-          {/* Imagen */}
           <div className="product-detail__image-col">
             {imagen ? (
               <img className="product-detail__image" src={imagen} alt={nombre} />
@@ -55,7 +81,6 @@ const ProductDetail = ({ producto, onClose }) => {
             )}
           </div>
 
-          {/* Info */}
           <div className="product-detail__info">
             <span className="product-detail__categoria">{categoria}</span>
 
@@ -69,6 +94,10 @@ const ProductDetail = ({ producto, onClose }) => {
               <div className="product-detail__codigo">Código: {producto.codigo}</div>
             )}
 
+            <div className="product-detail__tipo-badge">
+              {tipo === "ENCARGO" ? "📦 Producto por encargo" : "📦 En stock"}
+            </div>
+
             <div className="product-detail__precio-row">
               <div className="product-detail__precio">{formatPrecio(precio)}</div>
               <div className="product-detail__precio-label">
@@ -76,7 +105,6 @@ const ProductDetail = ({ producto, onClose }) => {
               </div>
             </div>
 
-            {/* Stock */}
             <div className={`product-detail__stock ${sinStock ? "out" : stockBajo ? "low" : ""}`}>
               <span className="product-detail__stock-dot" />
               {sinStock
@@ -86,7 +114,6 @@ const ProductDetail = ({ producto, onClose }) => {
                 : `En stock — ${stock} unidades disponibles`}
             </div>
 
-            {/* Modelos compatibles */}
             {producto.modelosCompatibles?.length > 0 && (
               <div className="product-detail__specs">
                 <div className="product-detail__specs-title">Modelos compatibles</div>
@@ -99,7 +126,6 @@ const ProductDetail = ({ producto, onClose }) => {
               </div>
             )}
 
-            {/* Especificaciones extras si las hay */}
             {producto.especificaciones && Object.keys(producto.especificaciones).length > 0 && (
               <div className="product-detail__specs">
                 <div className="product-detail__specs-title">Especificaciones técnicas</div>
@@ -112,16 +138,37 @@ const ProductDetail = ({ producto, onClose }) => {
               </div>
             )}
 
-            {/* Botón WhatsApp */}
-            <a
-              className="product-detail__wsp-btn"
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span className="product-detail__wsp-icon">📱</span>
-              Comprar por WhatsApp
-            </a>
+            <div className="product-detail__cantidad">
+              <label>Cantidad:</label>
+              <div className="product-detail__cantidad-controls">
+                <button onClick={() => setCantidad(Math.max(1, cantidad - 1))} disabled={cantidad <= 1}>-</button>
+                <span>{cantidad}</span>
+                <button onClick={() => setCantidad(cantidad + 1)} disabled={tipo === "STOCK" && cantidad >= stock}>+</button>
+              </div>
+            </div>
+
+            <div className="product-detail__actions">
+              <button className="product-detail__solicitud-btn" onClick={handleAgregar} disabled={stockAgotado || sinStockSuficiente}>
+                Agregar a solicitud
+              </button>
+              <a
+                className="product-detail__wsp-btn"
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className="product-detail__wsp-icon">📱</span>
+                Cotizar por WhatsApp
+              </a>
+            </div>
+
+            {mensaje && <div className="product-detail__mensaje">{mensaje}</div>}
+
+            {token && onIrSolicitud && (
+              <button className="product-detail__ir-solicitud" onClick={onIrSolicitud}>
+                Ir a la solicitud →
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -24,26 +24,26 @@ import com.drivemaster.drivemaster.dto.reporte.ProductoReporteDTO;
 import com.drivemaster.drivemaster.dto.reporte.ReporteClientesDTO;
 import com.drivemaster.drivemaster.dto.reporte.ReporteProductosDTO;
 import com.drivemaster.drivemaster.dto.reporte.VentaResumenDTO;
-import com.drivemaster.drivemaster.model.Cliente;
+import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.DetalleVenta;
 import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Venta;
-import com.drivemaster.drivemaster.repository.ClienteRepository;
+import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.repository.VentaRepository;
  
 @Service
 public class ReporteServiceImpl implements ReporteService {
  
-    private final VentaRepository    ventaRepository;
-    private final ClienteRepository  clienteRepository;
-    private final ProductoRepository productoRepository;
- 
+    private final VentaRepository     ventaRepository;
+    private final UsuarioRepository   usuarioRepository;
+    private final ProductoRepository  productoRepository;
+
     public ReporteServiceImpl(VentaRepository ventaRepository,
-                               ClienteRepository clienteRepository,
+                               UsuarioRepository usuarioRepository,
                                ProductoRepository productoRepository) {
         this.ventaRepository    = ventaRepository;
-        this.clienteRepository  = clienteRepository;
+        this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
     }
  
@@ -115,7 +115,7 @@ public class ReporteServiceImpl implements ReporteService {
                 .max(Map.Entry.comparingByValue())
                 .map(Map.Entry::getKey).orElse(null);
         if (topClienteId != null) {
-            clienteRepository.findById(topClienteId)
+            usuarioRepository.findById(topClienteId)
                     .ifPresent(c -> dto.setClienteMasImportante(c.getNombre()));
         } else {
             dto.setClienteMasImportante("—");
@@ -155,7 +155,7 @@ public class ReporteServiceImpl implements ReporteService {
     @Override
     public InventarioClientesDTO getInventarioClientes() {
         InventarioClientesDTO dto = new InventarioClientesDTO();
-        List<Cliente> clientes = clienteRepository.findAll();
+        List<Usuario> clientes = usuarioRepository.findByRol("CLIENTE");
         List<Venta>   activas  = ventasActivas();
  
         List<ClienteReporteDTO> lista = clientes.stream()
@@ -171,7 +171,7 @@ public class ReporteServiceImpl implements ReporteService {
         return dto;
     }
  
-    private ClienteReporteDTO buildClienteReporteDTO(Cliente c, List<Venta> activas) {
+    private ClienteReporteDTO buildClienteReporteDTO(Usuario c, List<Venta> activas) {
         ClienteReporteDTO dto = new ClienteReporteDTO();
         dto.setId(c.getId());
         dto.setNombre(c.getNombre());
@@ -220,7 +220,7 @@ public class ReporteServiceImpl implements ReporteService {
         ReporteClientesDTO dto = new ReporteClientesDTO();
         dto.setPeriodo(periodo);
         List<Venta> activas = ventasActivas();
-        List<Cliente> clientes = clienteRepository.findAll();
+        List<Usuario> clientes = usuarioRepository.findByRol("CLIENTE");
  
         LocalDateTime inicio = inicioPeriodo(periodo);
         List<Venta> enPeriodo = activas.stream()
@@ -236,7 +236,7 @@ public class ReporteServiceImpl implements ReporteService {
                 .forEach(v -> gastoDia.merge(v.getClienteId(), v.getTotal() == null ? 0.0 : v.getTotal(), Double::sum));
         String topHoyId = gastoDia.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
         dto.setClienteMasComproHoy(topHoyId != null ?
-                clienteRepository.findById(topHoyId).map(Cliente::getNombre).orElse("—") : "—");
+                usuarioRepository.findById(topHoyId).map(Usuario::getNombre).orElse("—") : "—");
  
         // Cliente más compró semana
         Map<String, Double> gastoSemana = new HashMap<>();
@@ -244,7 +244,7 @@ public class ReporteServiceImpl implements ReporteService {
                 .forEach(v -> gastoSemana.merge(v.getClienteId(), v.getTotal() == null ? 0.0 : v.getTotal(), Double::sum));
         String topSemanaId = gastoSemana.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
         dto.setClienteMasComproSemana(topSemanaId != null ?
-                clienteRepository.findById(topSemanaId).map(Cliente::getNombre).orElse("—") : "—");
+                usuarioRepository.findById(topSemanaId).map(Usuario::getNombre).orElse("—") : "—");
  
         // Ranking top 10
         dto.setRankingClientes(clientes.stream()
@@ -295,7 +295,7 @@ public class ReporteServiceImpl implements ReporteService {
     public HistorialClienteDTO getHistorialCliente(String clienteId) {
         HistorialClienteDTO dto = new HistorialClienteDTO();
         dto.setClienteId(clienteId);
-        clienteRepository.findById(clienteId).ifPresent(c -> dto.setNombre(c.getNombre()));
+        usuarioRepository.findById(clienteId).ifPresent(c -> dto.setNombre(c.getNombre()));
  
         List<VentaResumenDTO> compras = ventaRepository.findByClienteId(clienteId).stream()
                 .filter(v -> !"ANULADA".equals(v.getEstado()))

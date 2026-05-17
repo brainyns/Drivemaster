@@ -109,12 +109,176 @@
   cursor: pointer;
 }
 
+.navbar__user-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+.navbar__user-btn:hover {
+  border-color: var(--text-muted);
+}
 
-.navbar__cart-btn {
+.navbar__user-menu {
+  position: relative;
+}
+
+.navbar__user-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-width: 200px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.navbar__dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.navbar__dropdown-item:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+.navbar__dropdown-item.danger:hover {
+  color: var(--accent);
+}
+
+.navbar__dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ── Navbar Modal (edit name) ──────────────────────────────────────── */
+.navbar-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.navbar-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px 24px;
+  max-width: 360px;
+  width: 100%;
+}
+.navbar-modal h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 16px;
+}
+
+.navbar-modal-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.navbar-modal-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.navbar-modal-mensaje {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.navbar-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.navbar-modal-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+.navbar-modal-btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.navbar-modal-btn.primary:hover {
+  background: var(--accent-hover);
+}
+.navbar-modal-btn.secondary {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.navbar-modal-btn.secondary:hover {
+  color: var(--text-primary);
+}
+
+
+.navbar__solicitud-btn {
+  position: relative;
   background: transparent;
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
+  color: var(--text-primary);
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.navbar__solicitud-btn:hover {
+  background: var(--bg-input);
+}
+
+.navbar__solicitud-badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  padding: 0 4px;
+  box-shadow: 0 2px 6px rgba(224,90,43,0.4);
 }
 .navbar__logo-icon svg {
   width: 22px;

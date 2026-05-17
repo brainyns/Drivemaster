@@ -19,5 +19,8 @@ public interface VentaRepository extends MongoRepository<Venta, String> {
     List<Venta> findByUsuarioId(String usuarioId);
 
     List<Venta> findByClienteId(String clienteId);
-}
 
+    List<Venta> findByTipoVenta(String tipoVenta);
+
+    List<Venta> findByEstado(String estado);
+}

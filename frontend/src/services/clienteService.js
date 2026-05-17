@@ -49,3 +49,21 @@ export async function eliminarCliente(id, token) {
   });
   if (!res.ok) throw new Error("Error al eliminar cliente");
 }
+
+export async function exportarClientes(token, formato = "pdf") {
+  const res = await fetch(`${BASE_URL}/exportar?formato=${formato}`, {
+    headers: buildHeaders(token),
+  });
+  if (!res.ok) {
+    let msg = "Error al exportar";
+    try { const data = await res.json(); msg = data.message || data.error || msg; } catch {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Clientes-DriveMaster.${formato === "pdf" ? "pdf" : "xlsx"}`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

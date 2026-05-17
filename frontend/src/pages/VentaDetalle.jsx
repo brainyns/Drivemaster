@@ -43,10 +43,27 @@ function VentaDetalle({ id, onVolver, token }) {
   const handleImprimir = async () => {
     setDescargando(true);
     try {
-      await descargarPdfVenta(id, token);
-      setTimeout(() => window.print(), 800);
+      const res = await fetch(`http://localhost:8080/api/ventas/${id}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Error al generar PDF");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
       alert("Error al imprimir: " + e.message);
+    } finally {
+      setDescargando(false);
+    }
+  };
+
+  const handleExportarFactura = async () => {
+    setDescargando(true);
+    try {
+      await descargarPdfVenta(id, token);
+    } catch (e) {
+      alert("Error al exportar: " + e.message);
     } finally {
       setDescargando(false);
     }
@@ -74,24 +91,7 @@ function VentaDetalle({ id, onVolver, token }) {
   return (
     <div className="vd-page">
 
-      {/* Topbar */}
-      <header className="vt-top">
-        <div className="vt-top-left">
-          <span className="vt-brand">DriveMaster</span>
-          <span className="vt-div">|</span>
-          <span className="vt-breadcrumb">Ventas</span>
-        </div>
-        <div className="vt-tabs">
-          <button className="vt-tab" onClick={onVolver}>Historial</button>
-          <button className="vt-tab active">Detalle de Venta</button>
-        </div>
-        <div className="vt-top-right">
-          <button className="vt-ico-btn">🔔</button>
-          <button className="vt-ico-btn">⚙</button>
-          <div className="vt-avatar">A</div>
-        </div>
-      </header>
-
+  
       {/* Sub-header */}
       <div className="vd-subheader">
         <button className="vd-back" onClick={onVolver}>← Volver al historial</button>
@@ -105,10 +105,10 @@ function VentaDetalle({ id, onVolver, token }) {
           </button>
           <button
             className="vt-btn-primary"
-            onClick={handleDescargarPdf}
+            onClick={handleExportarFactura}
             disabled={descargando}
           >
-            {descargando ? "Generando..." : "↓ Descargar PDF"}
+            {descargando ? "Generando..." : "↓ Exportar factura"}
           </button>
         </div>
       </div>

@@ -26,6 +26,8 @@ public class Venta {
     private List<Pago> pagos = new ArrayList<>();
 
     private Double total;
-    private String estado; // PAGADA, ANULADA
+    private String estado; // PAGADA, ANULADA, PENDIENTE_PAGO, PAGO_VERIFICADO, PENDIENTE_APROBACION, APROBADO, RECHAZADO, EN_CAMINO, ENTREGADO
+    private String tipoVenta; // WEB | FISICA | WHATSAPP
+    private String solicitudId;
 }
 

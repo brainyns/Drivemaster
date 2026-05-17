@@ -153,6 +153,7 @@ function ProductoForm({ id, onVolver, token }) {
     codigo: "", nombre: "", categoria: "", marca: "",
     precioCompra: "", precioVenta: "",
     stockActual: "", stockMinimo: "",
+    tipo: "STOCK",
     modelosCompatibles: [{ marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
   });
 
@@ -234,6 +235,7 @@ function ProductoForm({ id, onVolver, token }) {
         precioCompra: Number(form.precioCompra),
         precioVenta:  Number(form.precioVenta),
         stockActual:  Number(form.stockActual),
+        tipo:         form.tipo,
         stockMinimo:  Number(form.stockMinimo),
         modelosCompatibles: form.modelosCompatibles.map(c => ({
           ...c,
@@ -340,6 +342,16 @@ function ProductoForm({ id, onVolver, token }) {
               </select>
               <FieldError msg={errores.marca} />
             </div>
+          </div>
+
+          {/* Tipo de producto */}
+          <div className="pf-field pf-field--full">
+            <label>Tipo de Producto</label>
+            <select name="tipo" value={form.tipo} onChange={handleChange}>
+              <option value="STOCK">Stock (compra inmediata)</option>
+              <option value="ENCARGO">Encargo (requiere validación)</option>
+            </select>
+            <FieldError msg={errores.tipo} />
           </div>
 
           {/* Modelos Compatibles */}

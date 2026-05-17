@@ -1,6 +1,11 @@
 /* ── Drivemaster – Login styles ───────────────────────────────────── */
-
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap');
+
+/* ── Logo only ──────────────────────────────────────────────────────── */
+.auth-page--client .auth-card {
+  max-width: 380px;
+  padding: 32px 28px 28px;
+}
 
 /* ── Reset ──────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -350,6 +355,32 @@ html[data-theme="light"] {
   margin-top: -4px;
 }
 
+/* ── Google Divider ────────────────────────────────────────────────── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 14px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-google-btn {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+
 /* ── Security badges ────────────────────────────────────────────────── */
 .auth-badges {
   margin-top: 22px;
@@ -431,4 +462,129 @@ html[data-theme="light"] {
   color: var(--accent);
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 600;
+}
+
+/* ── Interno button ──────────────────────────────────────────────────── */
+.auth-interno-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 16px auto 0;
+  padding: 8px 16px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: 'Barlow', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.auth-interno-btn:hover {
+  color: var(--text-secondary);
+  border-color: var(--text-muted);
+}
+
+/* ── Warning overlay ─────────────────────────────────────────────────── */
+.auth-warning-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.auth-warning-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 32px 28px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  animation: cardIn 0.3s ease both;
+}
+
+.auth-warning-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  background: rgba(224,90,43,0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+.auth-warning-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  fill: none;
+}
+
+.auth-warning-modal h3 {
+  font-family: 'Barlow', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.auth-warning-modal p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 22px;
+}
+
+.auth-warning-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.auth-warning-btn {
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.auth-warning-btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.auth-warning-btn.primary:hover {
+  background: var(--accent-hover);
+}
+.auth-warning-btn.secondary {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.auth-warning-btn.secondary:hover {
+  color: var(--text-primary);
+}
+
+/* ── Interno login styles override ─────────────────────────────────── */
+
+.auth-page--client .auth-subtitle {
+  margin-bottom: 20px;
+}
+
+.auth-page--client .auth-google-btn {
+  margin-bottom: 4px;
+}
+
+.auth-page--client .auth-error {
+  margin-top: 12px;
+  margin-bottom: 0;
 }

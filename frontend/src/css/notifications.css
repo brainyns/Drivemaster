@@ -1,0 +1,181 @@
+/* ── Notification Dropdown ── */
+.nt-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 360px;
+  max-height: 480px;
+  background: var(--card-bg, #1e1e1e);
+  border: 1px solid var(--border, #2a2a2a);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.nt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border, #2a2a2a);
+}
+
+.nt-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+}
+
+.nt-count {
+  background: var(--primary, #FF3D00);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 0 6px;
+}
+
+.nt-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.nt-scroll::-webkit-scrollbar { width: 4px; }
+.nt-scroll::-webkit-scrollbar-track { background: transparent; }
+.nt-scroll::-webkit-scrollbar-thumb { background: var(--border, #333); border-radius: 4px; }
+
+.nt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-tertiary, #666);
+  font-size: 13px;
+  gap: 8px;
+}
+
+.nt-empty svg { opacity: 0.3; }
+.nt-empty p { margin: 0; }
+
+/* ── Groups ── */
+.nt-group {
+  padding: 0;
+}
+
+.nt-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-tertiary, #888);
+  padding: 10px 18px 6px;
+}
+
+/* ── Item ── */
+.nt-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.nt-item:hover { background: rgba(255, 255, 255, 0.04); }
+
+.nt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.nt-item--red .nt-dot { background: #f87171; }
+.nt-item--orange .nt-dot { background: #fb923c; }
+.nt-item--green .nt-dot { background: #34d399; }
+.nt-item--blue .nt-dot { background: #38bdf8; }
+
+.nt-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nt-item-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.nt-item-detail {
+  font-size: 11px;
+  color: var(--text-tertiary, #999);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nt-time {
+  font-size: 10px;
+  color: var(--text-tertiary, #666);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.nt-footer {
+  padding: 10px 18px;
+  border-top: 1px solid var(--border, #2a2a2a);
+  text-align: center;
+}
+
+.nt-update {
+  font-size: 11px;
+  color: var(--primary, #FF3D00);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.nt-update:hover { opacity: 0.8; }
+
+/* ── Badge counter on bell icon ── */
+.tb-notif-wrap {
+  position: relative;
+}
+
+.tb-notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--primary, #FF3D00);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 0 4px;
+  pointer-events: none;
+  border: 2px solid var(--card-bg, #1e1e1e);
+  line-height: 1;
+}

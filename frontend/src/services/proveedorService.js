@@ -46,3 +46,17 @@ export async function eliminarProveedor(id, token) {
   });
   if (!res.ok) throw new Error("Error al eliminar proveedor");
 }
+
+export async function exportarProveedores(token) {
+  const res = await fetch(`${BASE_URL}/exportar`, {
+    headers: buildHeaders(token),
+  });
+  if (!res.ok) throw new Error("Error al exportar proveedores");
+  const blob = await res.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = "Proveedores-DriveMaster.pdf";
+  a.click();
+  URL.revokeObjectURL(url);
+}

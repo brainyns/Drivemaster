@@ -534,6 +534,118 @@ html[data-theme="light"] {
   margin-bottom: 16px;
 }
 
+/* ── Action Buttons ── */
+.us-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.us-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--us-border);
+  background: var(--us-surface-2);
+  color: var(--us-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.us-action-btn--edit:hover {
+  background: rgba(14, 165, 233, 0.12);
+  color: #38bdf8;
+  border-color: rgba(14, 165, 233, 0.3);
+}
+
+.us-action-btn--delete:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* ── Modal ── */
+.us-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.us-modal {
+  background: var(--us-surface);
+  border: 1px solid var(--us-border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 440px;
+  padding: 24px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+.us-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.us-modal-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--us-text);
+}
+
+.us-modal-close {
+  background: none;
+  border: none;
+  color: var(--us-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.us-modal-close:hover {
+  color: var(--us-text);
+}
+
+.us-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.us-btn-cancel {
+  flex: 1;
+  padding: 12px;
+  background: var(--us-surface-2);
+  color: var(--us-text);
+  border: 1px solid var(--us-border);
+  border-radius: var(--us-radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.us-btn-cancel:hover {
+  background: var(--us-surface-3);
+}
+
+.us-hint-inline {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--us-muted);
+}
+
 /* ── Responsive ── */
 @media (max-width: 960px) {
   .us-main {

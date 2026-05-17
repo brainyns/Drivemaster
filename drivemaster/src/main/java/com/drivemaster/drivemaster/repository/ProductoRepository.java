@@ -40,6 +40,12 @@ public interface ProductoRepository extends MongoRepository<Producto, String> {
            "{ 'marca': { '$regex': ?0, '$options': 'i' } } " +
            "] }")
     List<Producto> searchByTerm(String term);
+
+    List<Producto> findByTipo(String tipo);
+
+    List<Producto> findByTipoAndActivo(String tipo, Boolean activo);
+
+    List<Producto> findByActivoTrue();
     
     default List<Producto> searchByTerms(List<String> terms) {
         return terms.stream()

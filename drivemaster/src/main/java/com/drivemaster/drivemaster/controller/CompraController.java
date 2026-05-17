@@ -38,13 +38,17 @@ public class CompraController {
 
     @GetMapping("/{id}/pdf")
     public ResponseEntity<byte[]> descargarPdf(@PathVariable String id) {
-        byte[] pdf  = compraService.generarPdf(id);
-        String poId = "PO-" + id.substring(Math.max(0, id.length() - 5)).toUpperCase();
+        try {
+            byte[] pdf  = compraService.generarPdf(id);
+            String poId = "PO-" + id.substring(Math.max(0, id.length() - 5)).toUpperCase();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"Factura-Compra-" + poId + ".pdf\"")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdf);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"Factura-Compra-" + poId + ".pdf\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al generar PDF de compra", e);
+        }
     }
 }

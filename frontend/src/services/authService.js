@@ -38,6 +38,19 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY);
 }
 
+function guardarSesion(data) {
+  if (data && data.token) {
+    setSession(data.token, {
+      id: data.id,
+      nombre: data.nombre,
+      correo: data.correo,
+      rol: data.rol,
+      proveedor: data.proveedor,
+      datosCompletos: data.datosCompletos
+    });
+  }
+}
+
 export async function login(correo, password) {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
@@ -45,14 +58,29 @@ export async function login(correo, password) {
     body: JSON.stringify({ correo, password }),
   });
   const data = await handleResponse(res);
-  if (data && data.token) {
-    setSession(data.token, {
-      id: data.id,
-      nombre: data.nombre,
-      correo: data.correo,
-      rol: data.rol
-    });
-  }
+  guardarSesion(data);
+  return data;
+}
+
+export async function loginInterno(correo, password) {
+  const res = await fetch(`${API_BASE}/auth/login-interno`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo, password }),
+  });
+  const data = await handleResponse(res);
+  guardarSesion(data);
+  return data;
+}
+
+export async function googleLogin(idToken) {
+  const res = await fetch(`${API_BASE}/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  const data = await handleResponse(res);
+  guardarSesion(data);
   return data;
 }
 
@@ -63,14 +91,7 @@ export async function register(data) {
     body: JSON.stringify(data),
   });
   const response = await handleResponse(res);
-  if (response && response.token) {
-    setSession(response.token, {
-      id: response.id,
-      nombre: response.nombre,
-      correo: response.correo,
-      rol: response.rol
-    });
-  }
+  guardarSesion(response);
   return response;
 }
 
@@ -91,7 +112,10 @@ export async function refreshToken() {
   const data = await handleResponse(res);
   if (data && data.token) {
     const user = getUser();
-    setSession(data.token, user);
+    setSession(data.token, {
+      ...user,
+      datosCompletos: data.datosCompletos
+    });
   }
   return data;
 }
@@ -146,9 +170,28 @@ export async function eliminarUsuario(id) {
   return handleResponse(res);
 }
 
+export async function actualizarMiNombre(nombre) {
+  const res = await fetch(`${API_BASE}/clientes/mi-perfil/nombre`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`
+    },
+    body: JSON.stringify({ nombre }),
+  });
+  const data = await handleResponse(res);
+  const user = getUser();
+  if (user) {
+    user.nombre = data.nombre;
+    setSession(getToken(), user);
+  }
+  return data;
+}
+
 export function hasPermission(permission) {
   const user = getUser();
   const rolePermissions = {
+    CLIENTE: ["PRODUCTOS_READ"],
     SUPERADMIN: ["USUARIOS_READ", "USUARIOS_WRITE", "USUARIOS_DELETE", "PRODUCTOS_READ", "PRODUCTOS_WRITE", "PRODUCTOS_DELETE", "CLIENTES_READ", "CLIENTES_WRITE", "CLIENTES_DELETE", "VENTAS_READ", "VENTAS_WRITE", "VENTAS_DELETE", "COMPRAS_READ", "COMPRAS_WRITE", "COMPRAS_DELETE", "PROVEEDORES_READ", "PROVEEDORES_WRITE", "PROVEEDORES_DELETE", "MOVIMIENTOS_READ", "MOVIMIENTOS_WRITE", "AJUSTES_READ", "AJUSTES_WRITE"],
     ADMIN: ["USUARIOS_READ", "USUARIOS_WRITE", "PRODUCTOS_READ", "PRODUCTOS_WRITE", "CLIENTES_READ", "CLIENTES_WRITE", "VENTAS_READ", "VENTAS_WRITE", "COMPRAS_READ", "COMPRAS_WRITE", "PROVEEDORES_READ", "PROVEEDORES_WRITE", "MOVIMIENTOS_READ", "MOVIMIENTOS_WRITE", "AJUSTES_READ", "AJUSTES_WRITE"],
     VENDEDOR: ["PRODUCTOS_READ", "CLIENTES_READ", "CLIENTES_WRITE", "VENTAS_READ", "VENTAS_WRITE"]

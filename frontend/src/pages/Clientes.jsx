@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { listarClientes, eliminarCliente } from "../services/clienteService";
+import { listarClientes, eliminarCliente, exportarClientes } from "../services/clienteService";
 import "../css/clientes.css";
 import "../css/clientes-filtros.css";
 
@@ -120,6 +120,21 @@ function Clientes({ onNuevo, onEditar, token }) {
   const conTelefono    = clientes.filter(c => c.telefono).length;
   const registradosHoy = clientes.filter(c => esHoy(c.fechaRegistro ?? c.createdAt ?? c.fecha)).length;
 
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportando, setExportando] = useState(false);
+
+  const handleExportar = async (formato) => {
+    setExportando(true);
+    setExportOpen(false);
+    try {
+      await exportarClientes(token, formato);
+    } catch (e) {
+      alert("Error al exportar: " + e.message);
+    } finally {
+      setExportando(false);
+    }
+  };
+
   const hayFiltros  = filtros.conCorreo || filtros.conTelefono || filtros.soloHoy;
   const contFiltros = [filtros.conCorreo, filtros.conTelefono, filtros.soloHoy].filter(Boolean).length;
 
@@ -193,7 +208,17 @@ function Clientes({ onNuevo, onEditar, token }) {
                 />
               )}
             </div>
-            <button className="km-tool-btn">↓ Exportador</button>
+            <div style={{ position: "relative" }}>
+              <button className="km-tool-btn" onClick={() => setExportOpen(p => !p)} disabled={exportando}>
+                {exportando ? "Exportando..." : "↓ Exportador"}
+              </button>
+              {exportOpen && (
+                <div className="km-export-modal">
+                  <button onClick={() => handleExportar("pdf")}>📄 PDF</button>
+                  <button onClick={() => handleExportar("excel")}>📊 Excel</button>
+                </div>
+              )}
+            </div>
           </div>
           <span className="km-count">
             Mostrando {filtrados.length === 0 ? 0 : (pagina-1)*POR_PAG+1}–{Math.min(pagina*POR_PAG, filtrados.length)} de {filtrados.length} clientes

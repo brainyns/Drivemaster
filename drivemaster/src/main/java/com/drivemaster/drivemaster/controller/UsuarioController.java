@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -73,7 +74,7 @@ public class UsuarioController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> actualizarUsuario(@PathVariable String id, @RequestBody RegisterRequest request) {
+    public ResponseEntity<Usuario> actualizarUsuario(@PathVariable String id, @RequestBody RegisterRequest request, Authentication auth) {
         Usuario usuario = usuarioService.obtenerPorId(id);
         if (usuario == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
@@ -88,12 +89,22 @@ public class UsuarioController {
         }
 
         if (request.getRol() != null) {
+            String authRol = usuarioRepository.findByCorreo(auth.getName())
+                    .map(Usuario::getRol).orElse("");
+            if (!"SUPERADMIN".equals(authRol)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo SUPERADMIN puede cambiar roles");
+            }
             String rol = request.getRol().trim().toUpperCase();
             usuario.setRol(rol);
             usuario.setPermisos(getPermisosPorRol(rol));
         }
 
         if (request.getActivo() != null) {
+            String authRol = usuarioRepository.findByCorreo(auth.getName())
+                    .map(Usuario::getRol).orElse("");
+            if (!"SUPERADMIN".equals(authRol)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo SUPERADMIN puede activar/desactivar usuarios");
+            }
             usuario.setActivo(request.getActivo());
         }
 
@@ -101,7 +112,13 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarUsuario(@PathVariable String id) {
+    public ResponseEntity<Void> eliminarUsuario(@PathVariable String id, Authentication auth) {
+        String authRol = usuarioRepository.findByCorreo(auth.getName())
+                .map(Usuario::getRol).orElse("");
+        if (!"SUPERADMIN".equals(authRol)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo SUPERADMIN puede eliminar usuarios");
+        }
+
         Usuario usuario = usuarioService.obtenerPorId(id);
         if (usuario == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");

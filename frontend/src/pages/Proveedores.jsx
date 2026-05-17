@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listarProveedores, eliminarProveedor } from "../services/proveedorService";
+import { listarProveedores, eliminarProveedor, exportarProveedores } from "../services/proveedorService";
 import "../css/proveedores.css";
 
 // ── Iconos SVG inline ──────────────────────────────────────────────────────────
@@ -64,8 +64,8 @@ const IconChevronRight = () => (
 );
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-function getInitials(nombre = "") {
-  return nombre.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+function getInitials(nombre) {
+  return (nombre || "").split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 function getCategoryColor(nombre = "") {
   const colors = ["#e85d2f", "#7c6af7", "#2fb8e8", "#2fe875", "#e8c12f", "#e82fa8"];
@@ -83,6 +83,7 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const [confirmId, setConfirmId] = useState(null);
+  const [exportando, setExportando] = useState(false);
 
   useEffect(() => {
     listarProveedores(token)
@@ -109,6 +110,17 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
     }
   };
 
+  const handleExportar = async () => {
+    setExportando(true);
+    try {
+      await exportarProveedores(token);
+    } catch (e) {
+      alert("Error al exportar: " + e.message);
+    } finally {
+      setExportando(false);
+    }
+  };
+
   const gastoMensual = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(12450);
 
   return (
@@ -121,7 +133,9 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
             <div className="kp-prov-subtitle">Gestiona y monitorea el rendimiento de tus socios comerciales</div>
           </div>
           <div className="kp-prov-actions">
-            <button className="kp-btn-report"><IconDownload /> Descargar Reporte</button>
+            <button className="kp-btn-report" onClick={handleExportar} disabled={exportando}>
+              <IconDownload /> {exportando ? "Generando..." : "Descargar Reporte"}
+            </button>
             <button className="kp-btn-nuevo" onClick={onNuevo}><IconPlus /> Nuevo Proveedor</button>
           </div>
         </div>

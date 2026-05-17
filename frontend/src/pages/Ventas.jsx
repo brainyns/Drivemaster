@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { listarVentas, anularVenta, exportarVentasExcel } from "../services/ventaService";
+import { listarVentas, anularVenta, exportarVentasExcel, exportarVentasPdf } from "../services/ventaService";
 import "../css/venta.css";
 import "../css/filtros-panel.css";
 
@@ -143,6 +143,7 @@ function Ventas({ onNueva, onDetalle, token }) {
   const [ultimos30, setUltimos30]     = useState(false);
   const [filtrosOpen, setFiltrosOpen] = useState(false);
   const [exportando, setExportando]   = useState(false);
+  const [exportOpen, setExportOpen]   = useState(false);
   const [filtros, setFiltros]         = useState({
     estados: [], metodos: [], montoMin: "", montoMax: "",
   });
@@ -172,10 +173,15 @@ function Ventas({ onNueva, onDetalle, token }) {
     }
   };
 
-  const handleExportar = async () => {
+  const handleExportar = async (formato) => {
     setExportando(true);
+    setExportOpen(false);
     try {
-      await exportarVentasExcel(token);
+      if (formato === "pdf") {
+        await exportarVentasPdf(token);
+      } else {
+        await exportarVentasExcel(token);
+      }
     } catch (e) {
       alert("Error al exportar: " + e.message);
     } finally {
@@ -267,13 +273,21 @@ function Ventas({ onNueva, onDetalle, token }) {
             )}
           </div>
 
-          <button
-            className="vt-btn-primary"
-            onClick={handleExportar}
-            disabled={exportando}
-          >
-            {exportando ? "Exportando..." : "↓ Exportar"}
-          </button>
+          <div style={{ position: "relative" }}>
+            <button
+              className="vt-btn-primary"
+              onClick={() => setExportOpen(p => !p)}
+              disabled={exportando}
+            >
+              {exportando ? "Exportando..." : "↓ Exportar"}
+            </button>
+            {exportOpen && (
+              <div className="km-export-modal">
+                <button onClick={() => handleExportar("pdf")}>📄 PDF</button>
+                <button onClick={() => handleExportar("excel")}>📊 Excel</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
