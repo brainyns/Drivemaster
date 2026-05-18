@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { getToken } from "../services/authService";
 import "../css/notifications.css";
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = "http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api";
 
 function timeAgo(iso) {
   if (!iso) return "";

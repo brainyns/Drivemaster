@@ -7,7 +7,7 @@ import "../css/clientes.css";
 const formatPrecio = (p) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(p || 0);
 
-const API = "http://localhost:8080/api";
+const API = "http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api";
 
 function headers(token) {
   return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
