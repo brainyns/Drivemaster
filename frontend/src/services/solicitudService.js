@@ -1,5 +1,4 @@
-const BASE = "http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/solicitudes";
-
+const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`;
 function headers(token) {
   return {
     "Content-Type": "application/json",
@@ -40,7 +39,7 @@ export async function aprobarSolicitud(token, id) {
 }
 
 export async function comprarInmediata(token, productos, metodoPago) {
-  const res = await fetch("http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/ventas/compra-inmediata", {
+  const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ventas/compra-inmediata`, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({ productos, metodoPago }),

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getToken } from "../services/authService";
 import "../css/mis-pedidos.css";
 
-const API = "http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api";
+const API = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
 
 const formatPrecio = (p) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(p || 0);

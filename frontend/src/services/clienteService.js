@@ -1,4 +1,4 @@
-const BASE_URL = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/clientes`;
+const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/clientes`;
 
 const buildHeaders = (token) => {
   const headers = { "Content-Type": "application/json" };

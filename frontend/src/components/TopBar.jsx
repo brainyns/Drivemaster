@@ -202,7 +202,7 @@ function TopBar({
     if (!notifOpen) return;
     const fetchCount = async () => {
       try {
-        const sols = await fetch("http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/solicitudes", {
+        const sols = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("auth_token")}`,

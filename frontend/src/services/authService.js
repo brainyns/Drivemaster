@@ -1,4 +1,4 @@
-const API_BASE = "http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api";
+const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "auth_user";

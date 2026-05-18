@@ -263,7 +263,7 @@ function DashboardMain({ token }) {
         setData(dash);
 
         // Últimas ventas
-        const rv = await fetch("http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/ventas", {
+        const rv = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ventas`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (rv.ok) {
@@ -277,7 +277,7 @@ function DashboardMain({ token }) {
         }
 
         // Productos (para top vendidos)
-        const rp = await fetch("http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/productos", {
+       const rp = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/productos`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (rp.ok) setProds(await rp.json());

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { crearUsuario, listarUsuarios, eliminarUsuario, getUser, getToken } from "../services/authService";
 import "../css/Usuarios.css";
 
-const API_BASE = "http://${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api";
+const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
 
 const ROL_CONFIG = {
   SUPERADMIN: { label: "SUPER ADMIN", className: "us-badge--superadmin" },
