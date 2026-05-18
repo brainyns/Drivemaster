@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { crearProducto, actualizarProducto, obtenerProducto, listarProductos } from "../services/productoService";
+import { useEffect, useState, useRef } from "react";
+import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, subirImagenProducto } from "../services/productoService";
 import "../css/producto-form.css";
 
 const CATEGORIAS = [
@@ -73,7 +73,7 @@ const MARCAS_VEHICULO = {
 const MARCAS_REPUESTO = [
   "AC Delco","Aisin","Akebono","Behr","Bilstein","Bosch","Brembo","Continental",
   "Dayco","Denso","Delphi","Exide","Fag","Ferodo","Fram","Gates","Hella","KYB",
-  "LUK","Mahle","Mann Filter","Moog","Monroe","Motul","Moog","NGK","NTN",
+  "LUK","Mahle","Mann Filter","Moog","Monroe","Motul","NGK","NTN",
   "Pentosin","Sachs","Schaeffler","Shell","SKF","Textar","TRW","Valeo","VDO",
   "Victor Reinz","ZF",
   "Toyota","Chevrolet","Ford","Renault","Kia","Hyundai","Nissan","Honda",
@@ -162,6 +162,10 @@ function ProductoForm({ id, onVolver, token }) {
   const [loading,             setLoading]            = useState(false);
   const [serverError,         setServerError]        = useState(null);
   const [submitted,           setSubmitted]          = useState(false);
+  const [imagenFile,          setImagenFile]         = useState(null);
+  const [imagenPreview,       setImagenPreview]      = useState(null);
+  const [subiendoImagen,      setSubiendoImagen]     = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     listarProductos(token)
@@ -172,12 +176,15 @@ function ProductoForm({ id, onVolver, token }) {
   useEffect(() => {
     if (esEdicion) {
       obtenerProducto(id, token)
-        .then(data => setForm({
-          ...data,
-          modelosCompatibles: data.modelosCompatibles?.length
-            ? data.modelosCompatibles
-            : [{ marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
-        }))
+        .then(data => {
+          setForm({
+            ...data,
+            modelosCompatibles: data.modelosCompatibles?.length
+              ? data.modelosCompatibles
+              : [{ marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
+          });
+          if (data.imagenUrl) setImagenPreview(data.imagenUrl);
+        })
         .catch(e => setServerError(e.message));
     }
   }, [id, token]);
@@ -192,6 +199,19 @@ function ProductoForm({ id, onVolver, token }) {
   const handleChange = e => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImagenChange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImagenFile(file);
+    setImagenPreview(URL.createObjectURL(file));
+  };
+
+  const eliminarImagenSeleccionada = () => {
+    setImagenFile(null);
+    setImagenPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleCompatibilidadChange = (index, e) => {
@@ -243,13 +263,22 @@ function ProductoForm({ id, onVolver, token }) {
           anoHasta: Number(c.anoHasta),
         })),
       };
-      esEdicion
-        ? await actualizarProducto(id, payload, token)
-        : await crearProducto(payload, token);
+      let productoId = id;
+      if (esEdicion) {
+        await actualizarProducto(id, payload, token);
+      } else {
+        const mov = await crearProducto(payload, token);
+        productoId = mov.productoId;
+      }
+      if (imagenFile) {
+        setSubiendoImagen(true);
+        await subirImagenProducto(productoId, imagenFile, token);
+      }
       onVolver();
     } catch (err) {
       setServerError(err.message);
     } finally {
+      setSubiendoImagen(false);
       setLoading(false);
     }
   };
@@ -536,6 +565,49 @@ function ProductoForm({ id, onVolver, token }) {
                 </div>
                 <FieldError msg={errores.stockMinimo} />
               </div>
+            </div>
+          </div>
+
+          {/* ─── IMAGEN ─── */}
+          <div className="pf-section">
+            <div className="pf-section-header">
+              <h3>Imagen del Producto</h3>
+            </div>
+            <div className="pf-imagen-upload">
+              {imagenPreview ? (
+                <div className="pf-imagen-preview">
+                  <img src={imagenPreview} alt="Preview" />
+                  <button
+                    type="button"
+                    className="pf-imagen-remove"
+                    onClick={eliminarImagenSeleccionada}
+                  >
+                    Eliminar imagen
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="pf-imagen-placeholder"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  <span>Haz clic para subir imagen</span>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImagenChange}
+                style={{ display: "none" }}
+              />
+              {subiendoImagen && (
+                <p className="pf-imagen-uploading">Subiendo imagen...</p>
+              )}
             </div>
           </div>
 

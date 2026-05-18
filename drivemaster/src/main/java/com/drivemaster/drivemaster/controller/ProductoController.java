@@ -6,8 +6,11 @@ import com.drivemaster.drivemaster.service.MovimientoInventarioService;
 import com.drivemaster.drivemaster.service.ProductoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173")
@@ -52,6 +55,15 @@ public class ProductoController {
     public ResponseEntity<Void> eliminar(@PathVariable String id) {
         productoService.eliminarProducto(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // SUBIR IMAGEN
+    @PostMapping("/{id}/imagen")
+    public ResponseEntity<Map<String, String>> subirImagen(
+            @PathVariable String id,
+            @RequestParam("archivo") MultipartFile archivo) throws IOException {
+        String url = productoService.subirImagen(id, archivo);
+        return ResponseEntity.ok(Map.of("url", url));
     }
 
 }

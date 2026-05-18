@@ -43,6 +43,18 @@ export async function actualizarProducto(id, producto, token) {
   return res.json();
 }
 
+export async function subirImagenProducto(id, archivo, token) {
+  const formData = new FormData();
+  formData.append("archivo", archivo);
+  const res = await fetch(`${BASE_URL}/${id}/imagen`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) throw new Error("Error al subir imagen");
+  return res.json();
+}
+
 export async function eliminarProducto(id, token) {
   const res = await fetch(`${BASE_URL}/${id}`, {
     method: "DELETE",

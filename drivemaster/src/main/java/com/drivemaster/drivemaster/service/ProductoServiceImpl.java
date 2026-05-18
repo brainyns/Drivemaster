@@ -1,19 +1,24 @@
 package com.drivemaster.drivemaster.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
 public class ProductoServiceImpl implements ProductoService {
 
     private final ProductoRepository productoRepository;
+    private final CloudinaryService cloudinaryService;
 
-    public ProductoServiceImpl(ProductoRepository productoRepository) {
+    public ProductoServiceImpl(ProductoRepository productoRepository,
+                               CloudinaryService cloudinaryService) {
         this.productoRepository = productoRepository;
+        this.cloudinaryService = cloudinaryService;
     }
 
     @Override
@@ -41,6 +46,7 @@ public class ProductoServiceImpl implements ProductoService {
         existente.setPrecioCompra(producto.getPrecioCompra());
         existente.setPrecioVenta(producto.getPrecioVenta());
         existente.setStockMinimo(producto.getStockMinimo());
+        existente.setImagenUrl(producto.getImagenUrl());
 
         return productoRepository.save(existente);
     }
@@ -104,6 +110,15 @@ public class ProductoServiceImpl implements ProductoService {
     @Override
     public List<Producto> obtenerConStockBajo() {
         return productoRepository.findProductosConStockBajo();
+    }
+
+    @Override
+    public String subirImagen(String id, MultipartFile archivo) throws IOException {
+        Producto producto = obtenerPorId(id);
+        String url = cloudinaryService.subirImagen(archivo);
+        producto.setImagenUrl(url);
+        productoRepository.save(producto);
+        return url;
     }
 
 }

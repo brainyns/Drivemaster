@@ -221,6 +221,47 @@
 }
 .pf-info-text { font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; }
 
+/* ── IMAGEN UPLOAD ── */
+.pf-imagen-upload {
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+.pf-imagen-placeholder {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 2rem 1rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  cursor: pointer; transition: all 0.2s;
+  color: var(--text-muted);
+}
+.pf-imagen-placeholder:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(255,61,0,0.04);
+}
+.pf-imagen-placeholder span {
+  font-size: 0.82rem; font-weight: 600;
+}
+.pf-imagen-preview {
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.pf-imagen-preview img {
+  width: 100%; max-height: 200px; object-fit: cover;
+  border-radius: 10px; border: 1px solid var(--border);
+}
+.pf-imagen-remove {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: var(--error); border-radius: 8px;
+  padding: 0.4rem 0.8rem; cursor: pointer;
+  font-size: 0.78rem; font-family: 'Inter',sans-serif;
+  font-weight: 600; transition: all 0.15s;
+}
+.pf-imagen-remove:hover { background: rgba(239,68,68,0.2); }
+.pf-imagen-uploading {
+  font-size: 0.78rem; color: var(--text-muted);
+  text-align: center;
+}
+
 /* ── QUITAR FLECHAS NUMBER ── */
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button {

@@ -152,6 +152,13 @@
             <version>3.2.0</version>
         </dependency>
 
+        <!-- CLOUDINARY -->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http45</artifactId>
+            <version>1.39.0</version>
+        </dependency>
+
         <!-- SPRING AI -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
