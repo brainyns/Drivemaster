@@ -41,7 +41,6 @@
   object-fit: cover;
   display: block;
   transition: transform 0.4s ease;
-  filter: brightness(0.9);
 }
 
 .product-card:hover .product-card__image {

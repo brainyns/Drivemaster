@@ -254,6 +254,7 @@ function DashboardMain({ token }) {
   const [prods, setProds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [powerBiOpen, setPowerBiOpen] = useState(false);
 
   useEffect(() => {
     const cargar = async () => {
@@ -458,6 +459,7 @@ function DashboardMain({ token }) {
   };
 
   return (
+    <>
     <div className="db-root">
       {/* Header */}
       <div className="db-header">
@@ -465,13 +467,18 @@ function DashboardMain({ token }) {
           <h1 className="db-h1">Dashboard</h1>
           <p className="db-sub">Resumen general del negocio en tiempo real</p>
         </div>
-        <span className="db-date">
-          {new Date().toLocaleDateString("es-CO", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          })}
-        </span>
+        <div className="db-header-right">
+          <button className="db-powerbi-btn" onClick={() => setPowerBiOpen(true)}>
+            Análisis General
+          </button>
+          <span className="db-date">
+            {new Date().toLocaleDateString("es-CO", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </span>
+        </div>
       </div>
 
       {/* Alertas inteligentes */}
@@ -638,6 +645,29 @@ function DashboardMain({ token }) {
         </div>
       </div>
     </div>
+
+      {/* ─── Modal Power BI ─── */}
+      {powerBiOpen && (
+        <div className="db-pbi-overlay" onClick={() => setPowerBiOpen(false)}>
+          <div className="db-pbi-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="db-pbi-header">
+              <h2>Análisis General</h2>
+              <button className="db-pbi-close" onClick={() => setPowerBiOpen(false)}>✕</button>
+            </div>
+            <div className="db-pbi-body">
+              <iframe
+                src="https://app.powerbi.com/view?r=eyJrIjoiMGZiYjk0OWMtMWEzOC00YmJlLWJmY2UtZGJkYjhmOGI5ZTE0IiwidCI6IjlkMTJiZjNmLWU0ZjYtNDdhYi05MTJmLTFhMmYwZmM0OGFhNCIsImMiOjR9"
+                title="Power BI - Análisis General"
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -584,3 +584,79 @@
   background: rgba(107, 114, 128, .12);
   color: var(--muted);
 }
+
+/* ── Power BI Modal ─────────────────────────────── */
+.db-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.db-powerbi-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.db-powerbi-btn:hover { opacity: 0.85; }
+
+.db-pbi-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+.db-pbi-modal {
+  width: 100%;
+  max-width: 1300px;
+  height: 90vh;
+  background: var(--surface);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.db-pbi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.db-pbi-header h2 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+}
+.db-pbi-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.db-pbi-close:hover { color: var(--text); }
+.db-pbi-body {
+  flex: 1;
+  min-height: 0;
+}
+.db-pbi-body iframe {
+  display: block;
+  border: none;
+  width: 100%;
+  height: 100%;
+}

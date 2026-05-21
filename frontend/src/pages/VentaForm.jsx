@@ -169,23 +169,7 @@ function VentaForm({ onVolver, token }) {
 
   return (
     <div className="vt-root">
-      {/* ── Topbar igual que antes ── */}
-      <header className="vt-top">
-        <div className="vt-top-left">
-          <span className="vt-brand">DriveMaster</span>
-          <span className="vt-div">|</span>
-          <span className="vt-breadcrumb">Ventas</span>
-        </div>
-        <div className="vt-tabs">
-          <button className="vt-tab active">Nueva Venta</button>
-          <button className="vt-tab" onClick={onVolver}>Historial</button>
-        </div>
-        <div className="vt-top-right">
-          <button className="vt-ico-btn">🔔</button>
-          <button className="vt-ico-btn">⚙</button>
-          <div className="vt-avatar">A</div>
-        </div>
-      </header>
+
 
       <div className="vt-page-header" style={{ paddingBottom: ".75rem" }}>
         <div>

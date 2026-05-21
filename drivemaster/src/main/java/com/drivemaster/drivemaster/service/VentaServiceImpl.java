@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.drivemaster.drivemaster.dto.CartItemRequest;
@@ -266,7 +267,7 @@ public class VentaServiceImpl implements VentaService {
 
     @Override
     public List<Venta> listarTodas() {
-        return ventaRepository.findAll();
+        return ventaRepository.findAll(Sort.by(Sort.Direction.DESC, "fecha"));
     }
 
     @Override

@@ -171,3 +171,26 @@ h1, h2, h3, .brand-name {
 .sidebar-subitem:hover::before { background: var(--primary); }
 .sidebar-subitem.activo { color: var(--primary); font-weight: 600; }
 .sidebar-subitem.activo::before { background: var(--primary); }
+
+/* ── FOOTER ── */
+.sidebar-footer {
+  padding: 0.6rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-catalogo-btn {
+  width: 100%;
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; text-align: left;
+}
+.sidebar-catalogo-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--primary);
+}
