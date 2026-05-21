@@ -631,6 +631,38 @@
 .sq-modal::-webkit-scrollbar-track { background: transparent; }
 .sq-modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+/* ── PAGINACIÓN ── */
+.sq-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem 0 0.5rem;
+}
+.sq-page-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sq-page-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.sq-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.sq-page-info {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
 /* ── DARK THEME OVERRIDE ── */
 [data-theme="dark"] .sq-counter,
 [data-theme="dark"] .sq-table-wrap,

@@ -48,6 +48,8 @@ export default function SolicitudesAdmin({ token }) {
   const [accionId, setAccionId] = useState(null);
   const [accionTipo, setAccionTipo] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const porPagina = 15;
 
   const cargar = async () => {
     setCargando(true);
@@ -83,6 +85,8 @@ export default function SolicitudesAdmin({ token }) {
     }
   };
 
+  useEffect(() => { setPagina(1); }, [filtro, busqueda]);
+
   const filtradas = solicitudes
     .filter(s => filtro === "TODAS" || s.estado === filtro)
     .filter(s => {
@@ -92,6 +96,9 @@ export default function SolicitudesAdmin({ token }) {
               s.clienteCorreo?.toLowerCase().includes(q) ||
               s.id?.toLowerCase().includes(q));
     });
+
+  const totalPaginas = Math.ceil(filtradas.length / porPagina);
+  const paginadas = filtradas.slice((pagina - 1) * porPagina, pagina * porPagina);
 
   const conteo = {
     PENDIENTE: solicitudes.filter(s => s.estado === "PENDIENTE").length,
@@ -165,7 +172,7 @@ export default function SolicitudesAdmin({ token }) {
               <p>No hay solicitudes</p>
             </div>
           ) : (
-            filtradas.map(s => (
+            paginadas.map(s => (
               <div key={s.id} className={`sq-row ${detalleId === s.id ? "sq-row--active" : ""}`}>
                 <div className="sq-cell-client">
                   <div className="sq-avatar" style={{ background: s.estado === "APROBADO" ? "#10b981" : s.estado === "RECHAZADO" ? "#ef4444" : "#f59e0b" }}>
@@ -240,6 +247,14 @@ export default function SolicitudesAdmin({ token }) {
           )}
         </div>
       </div>
+
+      {totalPaginas > 1 && (
+        <div className="sq-paginacion">
+          <button className="sq-page-btn" disabled={pagina <= 1} onClick={() => setPagina(p => p - 1)}>← Anterior</button>
+          <span className="sq-page-info">Página {pagina} de {totalPaginas} ({filtradas.length} resultados)</span>
+          <button className="sq-page-btn" disabled={pagina >= totalPaginas} onClick={() => setPagina(p => p + 1)}>Siguiente →</button>
+        </div>
+      )}
 
       {detalleId && detalle && (
         <div className="sq-modal-overlay" onClick={() => { setDetalleId(null); setDetalle(null); }}>
