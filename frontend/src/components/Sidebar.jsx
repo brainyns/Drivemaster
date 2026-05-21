@@ -49,7 +49,7 @@ function Sidebar({ paginaActual, irA, userRole }) {
 
   const visibleMenu = menu.filter(item => {
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
-    if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "ADMIN";
+    if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "ADMIN" || userRole === "VENDEDOR";
     if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas", "solicitudes"].includes(item.key);
     return true;
   });

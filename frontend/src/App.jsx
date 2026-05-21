@@ -338,7 +338,7 @@ function App() {
     if (pagina === "ventaNueva")       return <VentaForm            onVolver={() => irA("ventas")} token={token} />;
     if (pagina === "ventaDetalle")     return <VentaDetalle         id={idSeleccionado} onVolver={() => irA("ventas")} token={token} />;
 
-    if (pagina === "solicitudes")      return <SolicitudesAdmin     />;
+    if (pagina === "solicitudes")      return <SolicitudesAdmin     token={token} />;
 
     if (pagina === "compras")          return <Compras              onNueva={() => irA("compraNueva")} onDetalle={id => irA("compraDetalle", id)} token={token} />;
     if (pagina === "compraNueva")      return <CompraForm           onVolver={() => irA("compras")} token={token} />;

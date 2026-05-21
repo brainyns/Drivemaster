@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { getToken } from "../services/authService";
 import { listarSolicitudes, aprobarSolicitud, rechazarSolicitud, obtenerSolicitud } from "../services/solicitudService";
 import "../css/solicitudes.css";
 
@@ -37,8 +36,7 @@ function SkeletonRow() {
   );
 }
 
-export default function SolicitudesAdmin() {
-  const token = getToken();
+export default function SolicitudesAdmin({ token }) {
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");

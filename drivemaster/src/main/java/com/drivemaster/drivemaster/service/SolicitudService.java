@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -112,8 +113,16 @@ public class SolicitudService {
     // ─── LISTAR ──────────────────────────────────────────────
 
     public List<SolicitudDTO> listarTodas() {
-        return solicitudRepository.findAllByOrderByFechaCreacionDesc().stream()
-                .map(this::toDTO)
+        List<Solicitud> lista = solicitudRepository.findAllByOrderByFechaCreacionDesc();
+        List<String> ids = lista.stream()
+                .map(Solicitud::getClienteId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, Usuario> usuariosMap = usuarioRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Usuario::getId, u -> u));
+        return lista.stream()
+                .map(s -> toDTO(s, usuariosMap.get(s.getClienteId())))
                 .collect(Collectors.toList());
     }
 
@@ -204,6 +213,10 @@ public class SolicitudService {
     // ─── DTO ─────────────────────────────────────────────────
 
     private SolicitudDTO toDTO(Solicitud s) {
+        return toDTO(s, null);
+    }
+
+    private SolicitudDTO toDTO(Solicitud s, Usuario usuario) {
         SolicitudDTO dto = new SolicitudDTO();
         dto.setId(s.getId());
         dto.setClienteId(s.getClienteId());
@@ -218,13 +231,21 @@ public class SolicitudService {
         dto.setFechaActualizacion(s.getFechaActualizacion());
         dto.setVentaId(s.getVentaId());
 
-        usuarioRepository.findById(s.getClienteId()).ifPresent(usuario -> {
+        if (usuario != null) {
             dto.setClienteNombre(usuario.getNombre());
             dto.setClienteCorreo(usuario.getCorreo());
             dto.setClienteTelefono(usuario.getTelefono());
             dto.setClienteCiudad(usuario.getCiudad());
             dto.setClienteIdentificacion(usuario.getIdentificacion());
-        });
+        } else if (s.getClienteId() != null) {
+            usuarioRepository.findById(s.getClienteId()).ifPresent(u -> {
+                dto.setClienteNombre(u.getNombre());
+                dto.setClienteCorreo(u.getCorreo());
+                dto.setClienteTelefono(u.getTelefono());
+                dto.setClienteCiudad(u.getCiudad());
+                dto.setClienteIdentificacion(u.getIdentificacion());
+            });
+        }
 
         return dto;
     }
