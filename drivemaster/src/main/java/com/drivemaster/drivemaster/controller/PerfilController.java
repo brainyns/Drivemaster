@@ -6,7 +6,6 @@ import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -36,9 +35,9 @@ public class PerfilController {
     private final ProductoRepository productoRepository;
 
     public PerfilController(UsuarioRepository usuarioRepository,
-                            VentaRepository ventaRepository,
-                            SolicitudRepository solicitudRepository,
-                            ProductoRepository productoRepository) {
+            VentaRepository ventaRepository,
+            SolicitudRepository solicitudRepository,
+            ProductoRepository productoRepository) {
         this.usuarioRepository = usuarioRepository;
         this.ventaRepository = ventaRepository;
         this.solicitudRepository = solicitudRepository;
