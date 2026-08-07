@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getToken, getUser } from "../services/authService";
-import { crearSolicitud, comprarInmediata } from "../services/solicitudService";
+import { crearSolicitud, crearPago, getWompiRedirectUrl } from "../services/solicitudService";
 import "../css/checkout.css";
 import "../css/clientes.css";
 
@@ -136,12 +136,12 @@ export default function CheckoutPage({
   const token = getToken();
   const [cliente, setCliente] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [metodoPago, setMetodoPago] = useState("TRANSFERENCIA");
+  const [metodoPago, setMetodoPago] = useState("WOMPI");
   const [procesando, setProcesando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
 
   const [formData, setFormData] = useState({
-    identificacion: "", telefono: "", direccion: "", ciudad: "", referencia: ""
+    identificacion: "", telefono: "", direccion: "", ciudad: "", region: "", referencia: ""
   });
 
   useEffect(() => {
@@ -157,6 +157,7 @@ export default function CheckoutPage({
               telefono: perfil.telefono || "",
               direccion: perfil.direccion || "",
               ciudad: perfil.ciudad || "",
+              region: perfil.region || "",
               referencia: perfil.referencia || ""
             });
           }
@@ -196,16 +197,25 @@ export default function CheckoutPage({
     try {
       await guardarPerfil();
       const productos = stockItems.map(i => ({ productoId: i.productoId, cantidad: i.cantidad }));
-      const venta = await comprarInmediata(token, productos, metodoPago);
+      const solicitud = await crearSolicitud(token, productos, metodoPago);
+
+      if (metodoPago === "WOMPI") {
+        const redirectUrl = getWompiRedirectUrl();
+        const pagoData = await crearPago(token, solicitud.id, redirectUrl);
+        console.log("checkoutUrl:", pagoData.checkoutUrl);
+        window.location.href = pagoData.checkoutUrl;
+        return;
+      }
+
       const ids = stockItems.map(i => i.productoId);
       onRemoveProductList && onRemoveProductList(ids);
-      setMensaje({ tipo: "exito", texto: "Compra realizada. Revisa tu correo con la factura." });
+      setMensaje({ tipo: "exito", texto: "Solicitud enviada. Te contactaremos para coordinar el pago." });
       if (encargoItems.length === 0) {
         setTimeout(() => onCompraExitosa && onCompraExitosa(), 3000);
       }
+      setProcesando(false);
     } catch (e) {
       setMensaje({ tipo: "error", texto: e.message });
-    } finally {
       setProcesando(false);
     }
   };
@@ -232,7 +242,7 @@ export default function CheckoutPage({
 
   if (cargando) return <div className="checkout-loading">Cargando...</div>;
 
-  const necesitaDatos = !cliente?.telefono || !cliente?.direccion || !cliente?.ciudad;
+  const necesitaDatos = !cliente?.telefono || !cliente?.direccion || !cliente?.ciudad || !cliente?.region;
 
   return (
     <div className="checkout-page">
@@ -270,6 +280,10 @@ export default function CheckoutPage({
           <div className="checkout-field">
             <label>Ciudad</label>
             <input name="ciudad" value={formData.ciudad} onChange={handleChange} placeholder="Bogotá" disabled={procesando} />
+          </div>
+          <div className="checkout-field">
+            <label>Región / Departamento</label>
+            <input name="region" value={formData.region} onChange={handleChange} placeholder="Cundinamarca" disabled={procesando} />
           </div>
           <div className="checkout-field">
             <label>Referencia de entrega</label>
@@ -323,6 +337,7 @@ export default function CheckoutPage({
 
           <h2 style={{ marginTop: "24px" }}>Método de pago</h2>
           <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} className="checkout-select" disabled={procesando}>
+            <option value="WOMPI">Pago en línea (Wompi)</option>
             <option value="TRANSFERENCIA">Transferencia bancaria</option>
             <option value="EFECTIVO">Efectivo</option>
           </select>

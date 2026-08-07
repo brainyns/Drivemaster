@@ -30,7 +30,8 @@ public class MysqlDataInitializer implements CommandLineRunner {
         List<Object[]> metodos = List.of(
             new Object[]{"EFECTIVO",      "Efectivo",      "💵", false},
             new Object[]{"TARJETA",       "Tarjeta",       "💳", true},
-            new Object[]{"TRANSFERENCIA", "Transferencia", "🏦", true}
+            new Object[]{"TRANSFERENCIA", "Transferencia", "🏦", true},
+            new Object[]{"WOMPI",         "Pago en línea (Wompi)", "🟢", false}
         );
 
         for (Object[] m : metodos) {

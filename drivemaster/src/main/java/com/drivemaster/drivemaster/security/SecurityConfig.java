@@ -78,6 +78,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes/mis-solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/solicitudes/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
+                        .requestMatchers("/api/pagos/webhook").permitAll()
                         .requestMatchers("/api/perfil/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/chat/**").permitAll()
                         .requestMatchers("/api/home/**").authenticated()

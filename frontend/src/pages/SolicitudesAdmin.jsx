@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { listarSolicitudes, aprobarSolicitud, rechazarSolicitud, obtenerSolicitud } from "../services/solicitudService";
+import { listarSolicitudes, aprobarSolicitud, rechazarSolicitud, obtenerSolicitud, crearPago, getWompiRedirectUrl } from "../services/solicitudService";
 import "../css/solicitudes.css";
 
 const ESTADOS = {
@@ -7,6 +7,7 @@ const ESTADOS = {
   APROBADO: "Aprobado",
   RECHAZADO: "Rechazado",
   COMPLETADA: "Completada",
+  PAGADO: "Pagado",
 };
 
 const ESTADOS_CLASS = {
@@ -14,6 +15,7 @@ const ESTADOS_CLASS = {
   APROBADO: "sq-approved",
   RECHAZADO: "sq-rejected",
   COMPLETADA: "sq-verified",
+  PAGADO: "sq-approved",
 };
 
 const formatPrecio = (p) =>
@@ -48,6 +50,7 @@ export default function SolicitudesAdmin({ token }) {
   const [accionId, setAccionId] = useState(null);
   const [accionTipo, setAccionTipo] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [linkPago, setLinkPago] = useState(null);
   const [pagina, setPagina] = useState(1);
   const porPagina = 15;
 
@@ -67,12 +70,34 @@ export default function SolicitudesAdmin({ token }) {
 
   const handleAprobar = async () => {
     if (!accionId) return;
-    try { await aprobarSolicitud(token, accionId); setConfirmOpen(false); setAccionId(null); cargar(); } catch (e) { console.error(e); }
+    try { await aprobarSolicitud(token, accionId); setConfirmOpen(false); setAccionId(null); cargar(); } catch (e) { console.error(e); alert("Error al aprobar: " + e.message); }
   };
 
   const handleRechazar = async () => {
     if (!rechazarId || !motivoRechazo.trim()) return;
     try { await rechazarSolicitud(token, rechazarId, motivoRechazo); setRechazarId(null); setMotivoRechazo(""); cargar(); } catch (e) { console.error(e); }
+  };
+
+  const generarLink = async (solicitudId) => {
+    try {
+      const redirectUrl = getWompiRedirectUrl();
+      const data = await crearPago(token, solicitudId, redirectUrl);
+      setLinkPago({ solicitudId, url: data.checkoutUrl, copiado: false });
+    } catch (e) {
+      console.error(e);
+      alert("Error al generar link: " + e.message);
+    }
+  };
+
+  const copiarLink = async () => {
+    if (!linkPago) return;
+    try {
+      await navigator.clipboard.writeText(linkPago.url);
+      setLinkPago({ ...linkPago, copiado: true });
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo copiar: " + e.message);
+    }
   };
 
   const abrirDetalle = async (id) => {
@@ -103,6 +128,7 @@ export default function SolicitudesAdmin({ token }) {
   const conteo = {
     PENDIENTE: solicitudes.filter(s => s.estado === "PENDIENTE").length,
     APROBADO: solicitudes.filter(s => s.estado === "APROBADO").length,
+    PAGADO: solicitudes.filter(s => s.estado === "PAGADO").length,
     RECHAZADO: solicitudes.filter(s => s.estado === "RECHAZADO").length,
   };
 
@@ -123,6 +149,10 @@ export default function SolicitudesAdmin({ token }) {
         <div className="sq-counter sq-counter--approved">
           <span className="sq-counter-num">{conteo.APROBADO}</span>
           <span className="sq-counter-label">Aprobadas</span>
+        </div>
+        <div className="sq-counter sq-counter--paid">
+          <span className="sq-counter-num">{conteo.PAGADO}</span>
+          <span className="sq-counter-label">Pagadas</span>
         </div>
         <div className="sq-counter sq-counter--rejected">
           <span className="sq-counter-num">{conteo.RECHAZADO}</span>
@@ -146,6 +176,7 @@ export default function SolicitudesAdmin({ token }) {
           <option value="TODAS">Todas</option>
           <option value="PENDIENTE">Pendientes</option>
           <option value="APROBADO">Aprobadas</option>
+          <option value="PAGADO">Pagadas</option>
           <option value="RECHAZADO">Rechazadas</option>
         </select>
       </div>
@@ -219,6 +250,11 @@ export default function SolicitudesAdmin({ token }) {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                       </button>
                     </>
+                  )}
+                  {s.estado === "APROBADO" && s.metodoPago === "WOMPI" && !s.ventaId && (
+                    <button className="sq-btn sq-btn-link" title="Generar link de pago" onClick={() => generarLink(s.id)}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                    </button>
                   )}
                   <button className="sq-btn sq-btn-view" title="Ver detalles" onClick={() => abrirDetalle(s.id)}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -329,13 +365,40 @@ export default function SolicitudesAdmin({ token }) {
         <div className="sq-modal-overlay" onClick={() => setConfirmOpen(false)}>
           <div className="sq-modal sq-modal--small" onClick={e => e.stopPropagation()}>
             <h2 className="sq-modal-title">Confirmar acción</h2>
-            <p className="sq-modal-desc">¿Estás seguro de {accionTipo === "aprobar" ? "aprobar" : "rechazar"} esta solicitud? {accionTipo === "aprobar" ? "Se generará una venta automáticamente." : ""}</p>
+            <p className="sq-modal-desc">
+              ¿Estás seguro de {accionTipo === "aprobar" ? "aprobar" : "rechazar"} esta solicitud?{" "}
+              {accionTipo === "aprobar"
+                ? solicitudes.find(s => s.id === accionId)?.metodoPago === "WOMPI"
+                  ? "Se generará el link de pago para el cliente."
+                  : "Se generará una venta automáticamente."
+                : ""}
+            </p>
             <div className="sq-modal-actions">
               <button className="sq-btn sq-btn-approve sq-btn--md" onClick={handleAprobar}>
                 {accionTipo === "aprobar" ? "Sí, aprobar" : "Sí, rechazar"}
               </button>
               <button className="sq-btn sq-btn-cancel sq-btn--md" onClick={() => setConfirmOpen(false)}>
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {linkPago && (
+        <div className="sq-modal-overlay" onClick={() => setLinkPago(null)}>
+          <div className="sq-modal sq-modal--small" onClick={e => e.stopPropagation()}>
+            <h2 className="sq-modal-title">Link de pago generado</h2>
+            <p className="sq-modal-desc">Envía este enlace al cliente para que complete el pago:</p>
+            <div className="sq-link-box">
+              <span className="sq-link-url">{linkPago.url}</span>
+            </div>
+            <div className="sq-modal-actions">
+              <button className="sq-btn sq-btn-approve sq-btn--md" onClick={copiarLink}>
+                {linkPago.copiado ? "Copiado ✓" : "Copiar enlace"}
+              </button>
+              <button className="sq-btn sq-btn-cancel sq-btn--md" onClick={() => setLinkPago(null)}>
+                Cerrar
               </button>
             </div>
           </div>

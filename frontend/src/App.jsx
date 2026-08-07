@@ -26,6 +26,8 @@ import ReportesClientes      from "./pages/ReportesClientes";
 import InventarioProductos   from "./pages/InventarioProductos";
 import ReportesProductos     from "./pages/ReportesProductos";
 import MisPedidos            from "./pages/MisPedidos";
+import MisSolicitudes        from "./pages/MisSolicitudes";
+import PagoResultado         from "./pages/PagoResultado";
 import CheckoutPage          from "./pages/CheckoutPage";
 import SolicitudesAdmin      from "./pages/SolicitudesAdmin";
 import PerfilAdmin           from "./pages/PerfilAdmin";
@@ -35,7 +37,9 @@ import { getUser, getToken, clearSession, refreshToken, logout } from "./service
 const storedUser  = getUser();
 const storedToken = getToken();
 
-const initialPage = storedUser ? "dashboard-main" : "catalogo";
+const initialPage = window.location.pathname.startsWith("/pago-resultado")
+  ? "pago-resultado"
+  : storedUser ? "dashboard-main" : "catalogo";
 
 const TITULOS = {
   "dashboard-main":  "Dashboard",
@@ -61,6 +65,8 @@ const TITULOS = {
   "rep-clientes":    "Reportes Clientes",
   "inv-productos":   "Inventario Productos",
   "rep-productos":   "Reportes Productos",
+  "mis-solicitudes": "Mis Solicitudes",
+  "pago-resultado":  "Resultado del pago",
   "mis-pedidos":     "Historial de compras",
   "checkout":        "Enviar solicitud",
   "mi-perfil":       "Mi Perfil",
@@ -236,7 +242,7 @@ function App() {
       "usuarios",
       "mi-perfil",
     ],
-    CLIENTE: ["catalogo", "mis-pedidos", "checkout"],
+    CLIENTE: ["catalogo", "mis-pedidos", "mis-solicitudes", "checkout"],
   };
 
   const renderPagina = () => {
@@ -296,6 +302,15 @@ function App() {
         </div>
       );
     }
+
+    if (pagina === "mis-solicitudes") return <MisSolicitudes />;
+
+    if (pagina === "pago-resultado") return (
+      <PagoResultado
+        onPagoExitoso={() => setSolicitudItems([])}
+        onIrSolicitudes={() => setPagina("mis-solicitudes")}
+      />
+    );
 
     if (pagina === "mis-pedidos") {
       if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;

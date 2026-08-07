@@ -76,6 +76,7 @@ public class ClienteController {
         if (usuario.getTelefono() != null) existente.setTelefono(usuario.getTelefono());
         if (usuario.getDireccion() != null) existente.setDireccion(usuario.getDireccion());
         if (usuario.getCiudad() != null) existente.setCiudad(usuario.getCiudad());
+        if (usuario.getRegion() != null) existente.setRegion(usuario.getRegion());
         if (usuario.getReferencia() != null) existente.setReferencia(usuario.getReferencia());
         return ResponseEntity.ok(usuarioRepository.save(existente));
     }
@@ -102,6 +103,7 @@ public class ClienteController {
         if (request.getTelefono() != null) usuario.setTelefono(request.getTelefono());
         if (request.getDireccion() != null) usuario.setDireccion(request.getDireccion());
         if (request.getCiudad() != null) usuario.setCiudad(request.getCiudad());
+        if (request.getRegion() != null) usuario.setRegion(request.getRegion());
         if (request.getReferencia() != null) usuario.setReferencia(request.getReferencia());
 
         usuario.setDatosCompletos(true);

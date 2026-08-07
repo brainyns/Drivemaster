@@ -70,6 +70,8 @@
 
 .sq-counter--pending { border-left: 4px solid #f59e0b; }
 .sq-counter--approved { border-left: 4px solid #10b981; }
+.sq-counter--paid { border-left: 4px solid #8b5cf6; }
+.sq-counter--paid .sq-counter-num { color: #8b5cf6; }
 .sq-counter--rejected { border-left: 4px solid #ef4444; }
 
 /* ── TOOLBAR ── */
@@ -377,8 +379,14 @@
 .sq-btn-approve { color: #10b981; background: rgba(16,185,129,.1); }
 .sq-btn-approve:hover { background: rgba(16,185,129,.2); box-shadow: 0 2px 12px rgba(16,185,129,.25); }
 
+.sq-btn-cobrar { color: #8b5cf6; background: rgba(139,92,246,.1); }
+.sq-btn-cobrar:hover { background: rgba(139,92,246,.2); box-shadow: 0 2px 12px rgba(139,92,246,.25); }
+
 .sq-btn-reject { color: #ef4444; background: rgba(239,68,68,.1); }
 .sq-btn-reject:hover { background: rgba(239,68,68,.2); box-shadow: 0 2px 12px rgba(239,68,68,.25); }
+
+.sq-btn-link { color: #3b82f6; background: rgba(59,130,246,.1); }
+.sq-btn-link:hover { background: rgba(59,130,246,.2); box-shadow: 0 2px 12px rgba(59,130,246,.25); }
 
 .sq-btn-view { color: var(--text-muted); }
 .sq-btn-view:hover { color: var(--text-secondary); background: var(--border); }
@@ -624,6 +632,20 @@
   gap: 10px;
   justify-content: flex-end;
   margin-top: 4px;
+}
+
+.sq-link-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0 16px;
+}
+.sq-link-url {
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-all;
+  font-family: 'Consolas', 'Menlo', monospace;
 }
 
 /* ── SCROLLBAR ── */

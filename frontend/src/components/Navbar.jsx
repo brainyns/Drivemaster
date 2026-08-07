@@ -113,6 +113,9 @@ const Navbar = ({
                       <button className="navbar__dropdown-item" onClick={() => { setMenuAbierto(false); onIrSolicitud("mis-pedidos"); }}>
                         Historial de compras
                       </button>
+                      <button className="navbar__dropdown-item" onClick={() => { setMenuAbierto(false); onIrSolicitud("mis-solicitudes"); }}>
+                        Mis Solicitudes
+                      </button>
                       <button className="navbar__dropdown-item" onClick={() => { setMenuAbierto(false); setEditandoNombre(true); setNuevoNombre(user.nombre); }}>
                         Editar nombre de usuario
                       </button>

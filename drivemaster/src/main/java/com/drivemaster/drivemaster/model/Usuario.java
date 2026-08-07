@@ -32,6 +32,7 @@ public class Usuario {
     private String telefono;
     private String direccion;
     private String ciudad;
+    private String region;
     private String referencia;
     private Boolean datosCompletos;
 

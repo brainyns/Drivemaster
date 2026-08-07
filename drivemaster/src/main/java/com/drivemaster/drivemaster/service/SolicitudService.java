@@ -30,19 +30,22 @@ public class SolicitudService {
     private final VentaService ventaService;
     private final EmailsService emailsService;
     private final ParametroRepository parametroRepo;
+    private final PagoService pagoService;
 
     public SolicitudService(SolicitudRepository solicitudRepository,
                             UsuarioRepository usuarioRepository,
                             ProductoRepository productoRepository,
                             VentaService ventaService,
                             EmailsService emailsService,
-                            ParametroRepository parametroRepo) {
+                            ParametroRepository parametroRepo,
+                            PagoService pagoService) {
         this.solicitudRepository = solicitudRepository;
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
         this.ventaService = ventaService;
         this.emailsService = emailsService;
         this.parametroRepo = parametroRepo;
+        this.pagoService = pagoService;
     }
 
     private Usuario resolverUsuario(String email) {
@@ -148,23 +151,39 @@ public class SolicitudService {
         solicitud.setEstado("APROBADO");
         solicitud.setFechaActualizacion(LocalDateTime.now());
 
-        Venta venta = new Venta();
-        venta.setClienteId(solicitud.getClienteId());
-        venta.setUsuarioId(solicitud.getUsuarioId());
-        venta.setFecha(LocalDateTime.now());
-        venta.setEstado("APROBADO");
-        venta.setTipoVenta("WEB");
-        venta.setProductos(solicitud.getProductos());
-        venta.setTotal(solicitud.getTotal());
-        venta.setSolicitudId(solicitud.getId());
+        // Si el método de pago es WOMPI, la venta se genera cuando el cliente paga
+        // (webhook de Wompi) y el link de pago se envía por correo al cliente.
+        // Para los demás métodos se conserva el comportamiento anterior.
+        if ("WOMPI".equals(solicitud.getMetodoPago())) {
+            Map<String, Object> link = pagoService.crearPago(solicitud.getId(), null);
+            String checkoutUrl = link != null ? (String) link.get("checkoutUrl") : null;
+            if (checkoutUrl != null) {
+                final String urlPago = checkoutUrl;
+                final double total = solicitud.getTotal();
+                usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
+                        emailsService.enviarEmail(usuario.getCorreo(),
+                                "Link de pago para tu pedido en DriveMaster",
+                                construirHtmlLinkPago(usuario, total, urlPago)));
+            }
+        } else {
+            Venta venta = new Venta();
+            venta.setClienteId(solicitud.getClienteId());
+            venta.setUsuarioId(solicitud.getUsuarioId());
+            venta.setFecha(LocalDateTime.now());
+            venta.setEstado("APROBADO");
+            venta.setTipoVenta("WEB");
+            venta.setProductos(solicitud.getProductos());
+            venta.setTotal(solicitud.getTotal());
+            venta.setSolicitudId(solicitud.getId());
 
-        Pago pago = new Pago(solicitud.getMetodoPago(), solicitud.getTotal(),
-                LocalDateTime.now(), "SOL_" + solicitud.getId());
-        venta.setPagos(List.of(pago));
+            Pago pago = new Pago(solicitud.getMetodoPago(), solicitud.getTotal(),
+                    LocalDateTime.now(), "SOL_" + solicitud.getId());
+            venta.setPagos(List.of(pago));
 
-        Venta ventaGuardada = ventaService.registrarVenta(venta);
+            Venta ventaGuardada = ventaService.registrarVenta(venta);
+            solicitud.setVentaId(ventaGuardada.getId());
+        }
 
-        solicitud.setVentaId(ventaGuardada.getId());
         return toDTO(solicitudRepository.save(solicitud));
     }
 
@@ -208,6 +227,43 @@ public class SolicitudService {
         });
 
         return dto;
+    }
+
+    // ─── EMAIL: LINK DE PAGO ──────────────────────────────
+
+    private String construirHtmlLinkPago(Usuario usuario, double total, String urlPago) {
+        String totalFmt = String.format("%,.0f", total);
+        return "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"
+                + "body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}"
+                + ".container{max-width:600px;margin:20px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)}"
+                + ".header{background:#e05a2b;padding:24px;text-align:center}"
+                + ".header h1{color:#fff;margin:0;font-size:22px;letter-spacing:2px;text-transform:uppercase}"
+                + ".body{padding:32px 24px;color:#333}"
+                + ".body h2{color:#e05a2b;font-size:18px;margin:0 0 16px}"
+                + ".body p{font-size:14px;line-height:1.6;color:#555;margin:0 0 12px}"
+                + ".total{background:#fff7f0;border:1px solid #f5d9c8;border-radius:6px;padding:16px;margin:16px 0;text-align:center;font-size:20px;color:#e05a2b;font-weight:700}"
+                + ".boton{display:block;width:100%;max-width:320px;margin:24px auto;text-align:center}"
+                + ".boton a{display:block;background:#e05a2b;color:#fff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 24px;border-radius:6px;letter-spacing:.5px}"
+                + ".nota{font-size:12px;color:#999;text-align:center;word-break:break-all}"
+                + ".footer{background:#fafafa;padding:20px 24px;text-align:center;border-top:1px solid #eee}"
+                + ".footer p{font-size:12px;color:#999;margin:0}"
+                + ".footer .brand{color:#e05a2b;font-weight:700;letter-spacing:1px}"
+                + "</style></head><body>"
+                + "<div class='container'>"
+                + "<div class='header'><h1>DriveMaster</h1></div>"
+                + "<div class='body'>"
+                + "<h2>Tu pedido fue aprobado</h2>"
+                + "<p>Hola <strong>" + usuario.getNombre() + "</strong>,</p>"
+                + "<p>Tu pedido ha sido aprobado. Para completar tu compra por un total de:</p>"
+                + "<div class='total'>$" + totalFmt + "</div>"
+                + "<p>Haz clic en el siguiente botón para realizar el pago de forma segura:</p>"
+                + "<div class='boton'><a href='" + urlPago + "'>Pagar ahora</a></div>"
+                + "<p class='nota'>Si el botón no funciona, copia y pega este enlace en tu navegador:<br/>" + urlPago + "</p>"
+                + "</div>"
+                + "<div class='footer'>"
+                + "<p class='brand'>DriveMaster — Automotive Engine</p>"
+                + "<p>© 2025 DriveMaster. Todos los derechos reservados.</p>"
+                + "</div></div></body></html>";
     }
 
     // ─── DTO ─────────────────────────────────────────────────

@@ -6,6 +6,16 @@ function headers(token) {
   };
 }
 
+// Wompi (CloudFront) bloquea redirect-url que no sean HTTPS válidos.
+// En producción se usa el origen actual; en desarrollo se usa VITE_WOMPI_REDIRECT_URL.
+export function getWompiRedirectUrl() {
+  const configurada = import.meta.env.VITE_WOMPI_REDIRECT_URL;
+  if (configurada) return configurada;
+  const origin = window.location.origin;
+  if (origin.startsWith("https://")) return origin + "/pago-resultado";
+  return "https://drivemaster-1.onrender.com/pago-resultado";
+}
+
 export async function crearSolicitud(token, productos, metodoPago) {
   const res = await fetch(BASE, {
     method: "POST",
@@ -50,6 +60,39 @@ export async function comprarInmediata(token, productos, metodoPago) {
     throw new Error(msg);
   }
   return res.json();
+}
+
+const PAGOS_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/pagos`;
+
+export async function crearPago(token, solicitudId, redirectUrl) {
+  const res = await fetch(`${PAGOS_BASE}/crear`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify({ solicitudId, redirectUrl }),
+  });
+  if (!res.ok) {
+    let msg = "Error al crear pago";
+    try { const data = await res.json(); msg = data.error || data.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+export async function verificarPago(token, transactionId) {
+  const res = await fetch(`${PAGOS_BASE}/verificar/${transactionId}`, {
+    headers: headers(token),
+  });
+  if (!res.ok) throw new Error("Error al verificar pago");
+  return res.json();
+}
+
+export async function confirmarPago(token, solicitudId, transactionId, referencia) {
+  const res = await fetch(`${PAGOS_BASE}/confirmar`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify({ solicitudId, transactionId, referencia }),
+  });
+  if (!res.ok) throw new Error("Error al confirmar pago");
 }
 
 export async function rechazarSolicitud(token, id, motivo) {

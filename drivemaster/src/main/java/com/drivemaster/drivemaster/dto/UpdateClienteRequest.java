@@ -12,5 +12,6 @@ public class UpdateClienteRequest {
     private String telefono;
     private String direccion;
     private String ciudad;
+    private String region;
     private String referencia;
 }

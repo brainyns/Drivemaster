@@ -124,7 +124,7 @@ function ClienteForm({ id, onVolver, token }) {
   const esEdicion = Boolean(id);
 
   const [form, setForm] = useState({
-    nombre: "", identificacion: "", telefono: "", correo: "", direccion: "",
+    nombre: "", identificacion: "", telefono: "", correo: "", direccion: "", ciudad: "", region: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState(null);
@@ -258,6 +258,28 @@ function ClienteForm({ id, onVolver, token }) {
                     name="direccion" value={form.direccion} onChange={handle}
                     placeholder="Calle 123 #45-67, Barrio, Ciudad"
                     {...fp("direccion")}
+                  />
+                </div>
+              </div>
+
+              <div className="kf-field kf-half">
+                <label className="kf-label">🏙 Ciudad</label>
+                <div className={`kf-input-wrap ${focused === "ciudad" ? "focused" : ""}`}>
+                  <input
+                    name="ciudad" value={form.ciudad} onChange={handle}
+                    placeholder="Bogotá"
+                    {...fp("ciudad")}
+                  />
+                </div>
+              </div>
+
+              <div className="kf-field kf-half">
+                <label className="kf-label">🗺 Región / Departamento</label>
+                <div className={`kf-input-wrap ${focused === "region" ? "focused" : ""}`}>
+                  <input
+                    name="region" value={form.region} onChange={handle}
+                    placeholder="Cundinamarca"
+                    {...fp("region")}
                   />
                 </div>
               </div>
