@@ -122,11 +122,18 @@ public class VentaServiceImpl implements VentaService {
                     "Venta", ventaGuardada.getId(), ventaGuardada.getUsuarioId());
         }
 
-        Usuario usuario = usuarioRepository.findById(ventaGuardada.getClienteId())
+        enviarFactura(ventaGuardada);
+
+        return ventaGuardada;
+    }
+
+    private void enviarFactura(Venta venta) {
+        Usuario usuario = usuarioRepository.findById(venta.getClienteId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        String idCorto = idCorto(ventaGuardada.getId());
-        String htmlFactura = EmailVentaBuilder.construir(usuario, ventaGuardada, iva);
-        byte[] pdfFactura = PdfVentaBuilder.construir(usuario, ventaGuardada, iva);
+        double iva = resolverIva();
+        String idCorto = idCorto(venta.getId());
+        String htmlFactura = EmailVentaBuilder.construir(usuario, venta, iva);
+        byte[] pdfFactura = PdfVentaBuilder.construir(usuario, venta, iva);
 
         emailService.enviarEmailConAdjunto(
                 usuario.getCorreo(),
@@ -135,8 +142,6 @@ public class VentaServiceImpl implements VentaService {
                 pdfFactura,
                 "Factura-DriveMaster-" + idCorto + ".pdf"
         );
-
-        return ventaGuardada;
     }
 
     @Override
@@ -248,7 +253,6 @@ public class VentaServiceImpl implements VentaService {
         Venta venta = new Venta();
         venta.setClienteId(usuario.getId());
         venta.setUsuarioId(usuario.getId());
-        venta.setEstado("APROBADO");
         venta.setTipoVenta("WEB");
         venta.setProductos(detalles);
         venta.setTotal(total);
@@ -256,7 +260,51 @@ public class VentaServiceImpl implements VentaService {
         Pago pago = new Pago(metodoPago, total, LocalDateTime.now(), null);
         venta.setPagos(List.of(pago));
 
+        if ("WOMPI".equalsIgnoreCase(metodoPago)) {
+            venta.setEstado("PENDIENTE_PAGO");
+            return registrarVentaPendiente(venta);
+        }
+
+        venta.setEstado("APROBADO");
         return this.registrarVenta(venta);
+    }
+
+    @Override
+    public Venta confirmarPagoVenta(String ventaId, String referencia) {
+        Venta venta = obtenerPorId(ventaId);
+
+        if ("PAGADA".equals(venta.getEstado())) {
+            return venta;
+        }
+
+        venta.setEstado("PAGADA");
+        venta.setFecha(LocalDateTime.now().withNano(0));
+
+        if (venta.getPagos() != null && !venta.getPagos().isEmpty()) {
+            Pago pago = venta.getPagos().get(0);
+            if (referencia != null && !referencia.isBlank()) {
+                pago.setReferencia(referencia);
+            }
+            pago.setFecha(LocalDateTime.now().withNano(0));
+        }
+
+        Venta ventaGuardada = ventaRepository.save(venta);
+        enviarFactura(ventaGuardada);
+        return ventaGuardada;
+    }
+
+    private Venta registrarVentaPendiente(Venta venta) {
+        venta.setFecha(LocalDateTime.now().withNano(0));
+
+        Venta ventaGuardada = ventaRepository.save(venta);
+
+        for (DetalleVenta detalle : ventaGuardada.getProductos()) {
+            movimientoService.registrarMovimiento(
+                    detalle.getProductoId(), "SALIDA", detalle.getCantidad(),
+                    "Venta", ventaGuardada.getId(), ventaGuardada.getUsuarioId());
+        }
+
+        return ventaGuardada;
     }
 
     @Override

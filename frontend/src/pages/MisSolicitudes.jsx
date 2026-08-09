@@ -24,7 +24,7 @@ const formatPrecio = (p) =>
 
 const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`;
 
-export default function MisSolicitudes() {
+export default function MisSolicitudes({ onVolver }) {
   const token = getToken();
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -80,8 +80,15 @@ export default function MisSolicitudes() {
   return (
     <div className="sq-root">
       <div className="sq-header">
-        <h1 className="sq-title">Mis Solicitudes</h1>
-        <p className="sq-subtitle">Consulta el estado de tus solicitudes de compra.</p>
+        <div className="sq-header-top">
+          <div>
+            <h1 className="sq-title">Mis Solicitudes</h1>
+            <p className="sq-subtitle">Consulta el estado de tus solicitudes de compra.</p>
+          </div>
+          {onVolver && (
+            <button className="sq-volver" onClick={onVolver}>← Volver al catálogo</button>
+          )}
+        </div>
       </div>
 
       <div className="sq-table-wrap">
@@ -115,16 +122,16 @@ export default function MisSolicitudes() {
                   {s.fechaCreacion ? new Date(s.fechaCreacion).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </div>
                 <div className="sq-cell-acciones">
-                  {s.metodoPago === "WOMPI" && (s.estado === "PENDIENTE" || s.estado === "APROBADO") && (
+                  {s.metodoPago === "WOMPI" && s.estado === "APROBADO" && (
                     <button
                       className="sq-btn sq-btn-cobrar"
                       onClick={() => handlePagar(s.id)}
                       disabled={pagando === s.id}
                     >
-                      {pagando === s.id ? "Generando..." : s.estado === "APROBADO" ? "Pagar encargo" : "Pagar ahora"}
+                      {pagando === s.id ? "Generando..." : "Pagar encargo"}
                     </button>
                   )}
-                  {(s.estado === "PENDIENTE" || s.estado === "APROBADO") && s.metodoPago !== "WOMPI" && (
+                  {(s.estado === "PENDIENTE" || (s.estado === "APROBADO" && s.metodoPago !== "WOMPI")) && (
                     <span className="sq-badge sq-pending">En espera</span>
                   )}
                   {s.estado === "PAGADO" && (

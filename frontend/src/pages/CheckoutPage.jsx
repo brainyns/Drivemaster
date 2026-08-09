@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getToken, getUser } from "../services/authService";
-import { crearSolicitud, crearPago, getWompiRedirectUrl } from "../services/solicitudService";
+import { crearSolicitud, comprarInmediata, crearPagoVenta, getWompiRedirectUrl } from "../services/solicitudService";
 import "../css/checkout.css";
 import "../css/clientes.css";
 
@@ -197,15 +197,17 @@ export default function CheckoutPage({
     try {
       await guardarPerfil();
       const productos = stockItems.map(i => ({ productoId: i.productoId, cantidad: i.cantidad }));
-      const solicitud = await crearSolicitud(token, productos, metodoPago);
 
       if (metodoPago === "WOMPI") {
+        const venta = await comprarInmediata(token, productos, metodoPago);
         const redirectUrl = getWompiRedirectUrl();
-        const pagoData = await crearPago(token, solicitud.id, redirectUrl);
+        const pagoData = await crearPagoVenta(token, venta.id, redirectUrl);
         console.log("checkoutUrl:", pagoData.checkoutUrl);
         window.location.href = pagoData.checkoutUrl;
         return;
       }
+
+      const solicitud = await crearSolicitud(token, productos, metodoPago);
 
       const ids = stockItems.map(i => i.productoId);
       onRemoveProductList && onRemoveProductList(ids);

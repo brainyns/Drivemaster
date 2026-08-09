@@ -7,6 +7,7 @@ const METODO_ICO = {
   EFECTIVO:      "💵",
   TRANSFERENCIA: "🏦",
   NEQUI:         "💰",
+  WOMPI:         "🟢",
 };
 
 const ESTADO_CLASS = {
@@ -43,7 +44,7 @@ function VentaDetalle({ id, onVolver, token }) {
   const handleImprimir = async () => {
     setDescargando(true);
     try {
-      const res = await fetch(`http://${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ventas/${id}/pdf`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ventas/${id}/pdf`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Error al generar PDF");

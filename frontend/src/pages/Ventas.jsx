@@ -10,6 +10,7 @@ const METODO_ICO = {
   EFECTIVO:      { ico: "💵", label: "Efectivo" },
   TRANSFERENCIA: { ico: "🏦", label: "Transferencia" },
   NEQUI:         { ico: "💰", label: "Nequi" },
+  WOMPI:         { ico: "🟢", label: "Wompi" },
 };
 
 const ESTADO_CLASS = {
@@ -45,7 +46,7 @@ function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
   }, [onCerrar, anchorRef]);
 
   const ESTADOS = ["COMPLETADA", "PAGADA", "PENDIENTE", "CANCELADA", "ANULADA"];
-  const METODOS = ["TARJETA", "EFECTIVO", "TRANSFERENCIA", "NEQUI"];
+  const METODOS = ["TARJETA", "EFECTIVO", "TRANSFERENCIA", "NEQUI", "WOMPI"];
 
   const toggleEstado = (est) => {
     const set = new Set(filtros.estados);

@@ -25,6 +25,29 @@
   margin: 0;
 }
 
+.sq-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sq-volver {
+  background: none;
+  border: 1px solid var(--border);
+  padding: 7px 16px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sq-volver:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
 /* ── COUNTERS ── */
 .sq-counters {
   display: flex;

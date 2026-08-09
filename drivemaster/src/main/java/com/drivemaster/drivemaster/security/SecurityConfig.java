@@ -79,6 +79,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/solicitudes/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/pagos/webhook").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/pagos/verificar/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/pagos/confirmar-redirect").permitAll()
                         .requestMatchers("/api/perfil/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/chat/**").permitAll()
                         .requestMatchers("/api/home/**").authenticated()
@@ -93,7 +95,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174","https://drivemaster-1.onrender.com"));
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://localhost:5174", "https://drivemaster-1.onrender.com", "https://*.trycloudflare.com"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "Cookie"));
         configuration.setAllowCredentials(true);

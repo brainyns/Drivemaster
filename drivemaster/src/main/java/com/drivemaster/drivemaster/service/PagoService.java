@@ -77,6 +77,63 @@ public class PagoService {
 
         String referencia = generarReferencia(solicitudId);
         long montoCentavos = Math.round(solicitud.getTotal() * 100);
+
+        String checkoutUrlFinal = construirUrlCheckout(
+                solicitud.getClienteId(), referencia, montoCentavos, redirectUrl);
+
+        PagoEntity pago = new PagoEntity();
+        pago.setSolicitudId(solicitudId);
+        pago.setReferencia(referencia);
+        pago.setMonto(solicitud.getTotal());
+        pago.setMetodo("WOMPI");
+        pago.setEstado("PENDIENTE");
+        pago.setFechaCreacion(LocalDateTime.now());
+        pagoRepository.save(pago);
+
+        log.info("Link de pago generado para solicitud {} (ref {})", solicitudId, referencia);
+
+        return Map.of(
+                "checkoutUrl", checkoutUrlFinal,
+                "referencia", referencia,
+                "monto", montoCentavos,
+                "firma", generarFirma(referencia, montoCentavos)
+        );
+    }
+
+    public Map<String, Object> crearPagoVenta(String ventaId, String redirectUrl) {
+        Venta venta = ventaService.obtenerPorId(ventaId);
+
+        String estado = venta.getEstado();
+        if (!("PENDIENTE".equals(estado) || "PENDIENTE_PAGO".equals(estado) || "APROBADO".equals(estado))) {
+            throw new RuntimeException("La venta no está disponible para pago (estado: " + estado + ")");
+        }
+
+        String referencia = generarReferencia(ventaId);
+        long montoCentavos = Math.round(venta.getTotal() * 100);
+
+        String checkoutUrlFinal = construirUrlCheckout(
+                venta.getClienteId(), referencia, montoCentavos, redirectUrl);
+
+        PagoEntity pago = new PagoEntity();
+        pago.setVentaId(ventaId);
+        pago.setReferencia(referencia);
+        pago.setMonto(venta.getTotal());
+        pago.setMetodo("WOMPI");
+        pago.setEstado("PENDIENTE");
+        pago.setFechaCreacion(LocalDateTime.now());
+        pagoRepository.save(pago);
+
+        log.info("Link de pago generado para venta {} (ref {})", ventaId, referencia);
+
+        return Map.of(
+                "checkoutUrl", checkoutUrlFinal,
+                "referencia", referencia,
+                "monto", montoCentavos,
+                "firma", generarFirma(referencia, montoCentavos)
+        );
+    }
+
+    private String construirUrlCheckout(String clienteId, String referencia, long montoCentavos, String redirectUrl) {
         String firma = generarFirma(referencia, montoCentavos);
 
         StringBuilder url = new StringBuilder(checkoutUrl)
@@ -93,7 +150,7 @@ public class PagoService {
             url.append("&redirect-url=").append(enc(urlRedirect));
         }
 
-        usuarioRepository.findById(solicitud.getClienteId()).ifPresent(u -> {
+        usuarioRepository.findById(clienteId).ifPresent(u -> {
             if (u.getRegion() == null || u.getRegion().isBlank()) {
                 throw new RuntimeException("Complete su región o departamento de envío en sus datos de envío.");
             }
@@ -109,23 +166,7 @@ public class PagoService {
             url.append("&shipping-address:country=CO");
         });
 
-        PagoEntity pago = new PagoEntity();
-        pago.setSolicitudId(solicitudId);
-        pago.setReferencia(referencia);
-        pago.setMonto(solicitud.getTotal());
-        pago.setMetodo("WOMPI");
-        pago.setEstado("PENDIENTE");
-        pago.setFechaCreacion(LocalDateTime.now());
-        pagoRepository.save(pago);
-
-        log.info("Link de pago generado para solicitud {} (ref {})", solicitudId, referencia);
-
-        return Map.of(
-                "checkoutUrl", url.toString(),
-                "referencia", referencia,
-                "monto", montoCentavos,
-                "firma", firma
-        );
+        return url.toString();
     }
 
     // ─── VERIFICAR TRANSACCIÓN (cuando el cliente vuelve del checkout) ──
@@ -178,7 +219,18 @@ public class PagoService {
             return null;
         }
         if ("PAGADO".equals(pagoEntity.getEstado())) {
-            return pagoEntity.getSolicitudId();
+            return pagoEntity.getVentaId() != null ? pagoEntity.getVentaId() : pagoEntity.getSolicitudId();
+        }
+
+        String ventaId = pagoEntity.getVentaId();
+        if (ventaId != null) {
+            Venta venta = ventaService.confirmarPagoVenta(ventaId, referencia);
+            pagoEntity.setEstado("PAGADO");
+            pagoEntity.setTransactionId(transactionId);
+            pagoEntity.setFechaPago(LocalDateTime.now());
+            pagoRepository.save(pagoEntity);
+            log.info("Venta {} marcada PAGADA (txn {})", ventaId, transactionId);
+            return ventaId;
         }
 
         String solicitudId = pagoEntity.getSolicitudId();

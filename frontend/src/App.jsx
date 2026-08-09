@@ -39,7 +39,7 @@ const storedToken = getToken();
 
 const initialPage = window.location.pathname.startsWith("/pago-resultado")
   ? "pago-resultado"
-  : storedUser ? "dashboard-main" : "catalogo";
+  : "catalogo";
 
 const TITULOS = {
   "dashboard-main":  "Dashboard",
@@ -303,7 +303,7 @@ function App() {
       );
     }
 
-    if (pagina === "mis-solicitudes") return <MisSolicitudes />;
+    if (pagina === "mis-solicitudes") return <MisSolicitudes onVolver={() => setPagina("catalogo")} />;
 
     if (pagina === "pago-resultado") return (
       <PagoResultado
@@ -376,7 +376,7 @@ function App() {
   };
 
   const esCliente = user?.rol === "CLIENTE";
-  const usarPanel = pagina === "catalogo" || (esCliente && ["checkout", "mis-pedidos"].includes(pagina)) ? false
+  const usarPanel = pagina === "catalogo" || (esCliente && ["checkout", "mis-pedidos", "mis-solicitudes"].includes(pagina)) ? false
     : !!user && pagina !== "catalogo";
 
   return (

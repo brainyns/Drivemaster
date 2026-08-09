@@ -25,6 +25,10 @@ function getInitials(nombre) {
   return (nombre || "").split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
 }
 
+function esEncargo(s) {
+  return Array.isArray(s.productos) && s.productos.some(p => p.tipo === "ENCARGO");
+}
+
 function SkeletonRow() {
   return (
     <div className="sq-row sq-skeleton">
@@ -243,15 +247,17 @@ export default function SolicitudesAdmin({ token }) {
                 <div className="sq-cell-acciones">
                   {s.estado === "PENDIENTE" && (
                     <>
-                      <button className="sq-btn sq-btn-approve" title="Aprobar" onClick={() => { setAccionId(s.id); setAccionTipo("aprobar"); setConfirmOpen(true); }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-                      </button>
+                      {(esEncargo(s) || s.metodoPago !== "WOMPI") && (
+                        <button className="sq-btn sq-btn-approve" title="Aprobar" onClick={() => { setAccionId(s.id); setAccionTipo("aprobar"); setConfirmOpen(true); }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+                        </button>
+                      )}
                       <button className="sq-btn sq-btn-reject" title="Rechazar" onClick={() => setRechazarId(s.id)}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                       </button>
                     </>
                   )}
-                  {s.estado === "APROBADO" && s.metodoPago === "WOMPI" && !s.ventaId && (
+                  {s.estado === "APROBADO" && s.metodoPago === "WOMPI" && !s.ventaId && esEncargo(s) && (
                     <button className="sq-btn sq-btn-link" title="Generar link de pago" onClick={() => generarLink(s.id)}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
                     </button>

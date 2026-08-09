@@ -10,6 +10,8 @@ public interface VentaService {
 
     Venta compraInmediata(String email, List<CartItemRequest> productos, String metodoPago);
 
+    Venta confirmarPagoVenta(String ventaId, String referencia);
+
     Venta obtenerPorId(String id);
 
     List<Venta> listarTodas();

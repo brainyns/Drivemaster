@@ -78,6 +78,20 @@ export async function crearPago(token, solicitudId, redirectUrl) {
   return res.json();
 }
 
+export async function crearPagoVenta(token, ventaId, redirectUrl) {
+  const res = await fetch(`${PAGOS_BASE}/crear`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify({ ventaId, redirectUrl }),
+  });
+  if (!res.ok) {
+    let msg = "Error al crear pago";
+    try { const data = await res.json(); msg = data.error || data.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 export async function verificarPago(token, transactionId) {
   const res = await fetch(`${PAGOS_BASE}/verificar/${transactionId}`, {
     headers: headers(token),

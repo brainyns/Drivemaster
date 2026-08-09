@@ -151,19 +151,27 @@ public class SolicitudService {
         solicitud.setEstado("APROBADO");
         solicitud.setFechaActualizacion(LocalDateTime.now());
 
-        // Si el método de pago es WOMPI, la venta se genera cuando el cliente paga
-        // (webhook de Wompi) y el link de pago se envía por correo al cliente.
+        // El link de pago por correo es exclusivo de los encargos:
+        // - WOMPI + ENCARGO: se envía el link al cliente para que pague.
+        // - WOMPI + STOCK: la venta se genera cuando el cliente paga (webhook/redirect),
+        //   aprobar no debe crear venta ni enviar link por correo.
         // Para los demás métodos se conserva el comportamiento anterior.
         if ("WOMPI".equals(solicitud.getMetodoPago())) {
-            Map<String, Object> link = pagoService.crearPago(solicitud.getId(), null);
-            String checkoutUrl = link != null ? (String) link.get("checkoutUrl") : null;
-            if (checkoutUrl != null) {
-                final String urlPago = checkoutUrl;
-                final double total = solicitud.getTotal();
-                usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
-                        emailsService.enviarEmail(usuario.getCorreo(),
-                                "Link de pago para tu pedido en DriveMaster",
-                                construirHtmlLinkPago(usuario, total, urlPago)));
+            boolean esEncargo = solicitud.getProductos() != null
+                    && solicitud.getProductos().stream()
+                            .anyMatch(d -> "ENCARGO".equals(d.getTipo()));
+
+            if (esEncargo) {
+                Map<String, Object> link = pagoService.crearPago(solicitud.getId(), null);
+                String checkoutUrl = link != null ? (String) link.get("checkoutUrl") : null;
+                if (checkoutUrl != null) {
+                    final String urlPago = checkoutUrl;
+                    final double total = solicitud.getTotal();
+                    usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
+                            emailsService.enviarEmail(usuario.getCorreo(),
+                                    "Link de pago para tu pedido en DriveMaster",
+                                    construirHtmlLinkPago(usuario, total, urlPago)));
+                }
             }
         } else {
             Venta venta = new Venta();
@@ -220,7 +228,7 @@ public class SolicitudService {
                     + "</div>"
                     + "<div class='footer'>"
                     + "<p class='brand'>DriveMaster — Automotive Engine</p>"
-                    + "<p>© 2025 DriveMaster. Todos los derechos reservados.</p>"
+                    + "<p>© 2026 DriveMaster. Todos los derechos reservados.</p>"
                     + "</div></div></body></html>";
             emailsService.enviarEmail(usuario.getCorreo(),
                     "Actualización de tu pedido en DriveMaster", html);
