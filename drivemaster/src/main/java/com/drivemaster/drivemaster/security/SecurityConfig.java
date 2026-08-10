@@ -97,7 +97,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://localhost:5174", "https://drivemaster-1.onrender.com", "https://*.trycloudflare.com", "https://drivemaster-orcin.vercel.app");
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://localhost:5174", "https://drivermaster.onrender.com", "https://drivemaster-orcin.vercel.app"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "Cookie"));
         configuration.setAllowCredentials(true);

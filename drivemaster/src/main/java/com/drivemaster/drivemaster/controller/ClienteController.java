@@ -21,7 +21,6 @@ import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.util.PdfClienteBuilder;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/clientes")
 public class ClienteController {
 

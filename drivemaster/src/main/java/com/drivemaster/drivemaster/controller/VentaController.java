@@ -19,7 +19,6 @@ import com.drivemaster.drivemaster.service.VentaService;
 import com.drivemaster.drivemaster.util.PdfVentaListBuilder;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/ventas")
 public class VentaController {
 

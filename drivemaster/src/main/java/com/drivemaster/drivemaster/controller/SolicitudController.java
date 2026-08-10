@@ -13,7 +13,6 @@ import com.drivemaster.drivemaster.service.SolicitudService;
 
 @RestController
 @RequestMapping("/api/solicitudes")
-@CrossOrigin(origins = "http://localhost:5173")
 public class SolicitudController {
 
     private final SolicitudService solicitudService;

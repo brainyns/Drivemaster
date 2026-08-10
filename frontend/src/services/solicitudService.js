@@ -13,7 +13,7 @@ export function getWompiRedirectUrl() {
   if (configurada) return configurada;
   const origin = window.location.origin;
   if (origin.startsWith("https://")) return origin + "/pago-resultado";
-  return "https://drivemaster-1.onrender.com/pago-resultado";
+  return "https://drivemaster-orcin.vercel.app/pago-resultado";
 }
 
 export async function crearSolicitud(token, productos, metodoPago) {

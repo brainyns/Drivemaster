@@ -9,7 +9,6 @@ import com.drivemaster.drivemaster.service.MovimientoInventarioService;
 
 @RestController
 @RequestMapping("/inventario")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AjusteInventarioController {
 
     private final MovimientoInventarioService movimientoService;

@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.service.PagoService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -8,10 +9,12 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/pagos")
-@CrossOrigin(origins = "http://localhost:5173")
 public class PagoController {
 
     private final PagoService pagoService;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     public PagoController(PagoService pagoService) {
         this.pagoService = pagoService;
@@ -38,7 +41,7 @@ public class PagoController {
         if (transactionId != null && !transactionId.isBlank()) {
             pagoService.verificarTransaccion(transactionId);
         }
-        String destino = "http://localhost:5173/pago-resultado" + (transactionId != null ? "?id=" + transactionId : "");
+        String destino = frontendUrl + "/pago-resultado" + (transactionId != null ? "?id=" + transactionId : "");
         return ResponseEntity.status(302).location(java.net.URI.create(destino)).build();
     }
 

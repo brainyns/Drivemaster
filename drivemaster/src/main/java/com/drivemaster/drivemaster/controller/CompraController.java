@@ -11,7 +11,6 @@ import com.drivemaster.drivemaster.model.Compra;
 import com.drivemaster.drivemaster.service.CompraService;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/compras")
 public class CompraController {
 
