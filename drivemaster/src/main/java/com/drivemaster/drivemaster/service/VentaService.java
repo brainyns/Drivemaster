@@ -20,6 +20,8 @@ public interface VentaService {
 
     void anularVenta(String ventaId);
 
+    Venta cambiarEstado(String ventaId, String nuevoEstado);
+
     byte[] generarPdf(String id);
 
     byte[] exportarExcel();

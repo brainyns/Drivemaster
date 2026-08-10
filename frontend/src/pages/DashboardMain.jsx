@@ -1,4 +1,17 @@
 import { useEffect, useState } from "react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { getDashboard } from "../services/reporteService";
 import "../css/dashboard.css";
 
@@ -137,115 +150,23 @@ const Ic = {
   ),
 };
 
-/* ─── Gráfica de barras verticales (ventas por día) ────────────────── */
-function BarChart({ data, color = "var(--primary)" }) {
-  if (!data || !Object.keys(data).length)
-    return <div className="db-chart-empty">Sin datos en este período</div>;
-  const vals = Object.values(data);
-  const max = Math.max(...vals, 1);
-  return (
-    <div className="db-barchart">
-      {Object.entries(data).map(([dia, val]) => (
-        <div key={dia} className="db-barchart-col">
-          <div className="db-barchart-tooltip">
-            ${(val || 0).toLocaleString("es-CO", { minimumFractionDigits: 0 })}
-          </div>
-          <div className="db-barchart-bar-wrap">
-            <div
-              className="db-barchart-bar"
-              style={{
-                height: `${Math.round((val / max) * 100)}%`,
-                background: color,
-              }}
-            />
-          </div>
-          <span className="db-barchart-label">{dia}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
+/* ─── Colores y estilos compartidos para recharts ─────────────────── */
+const CHART_COLORS = [
+  "var(--primary)",
+  "var(--blue)",
+  "var(--purple)",
+  "var(--green)",
+  "var(--amber)",
+  "var(--red)",
+];
 
-/* ─── Pie chart SVG ────────────────────────────────────────────────── */
-function PieChart({ items }) {
-  if (!items?.length || items.every((i) => i.val === 0))
-    return <div className="db-chart-empty">Sin datos</div>;
-
-  const total = items.reduce((s, i) => s + i.val, 0);
-  const COLORS = [
-    "var(--primary)",
-    "var(--blue)",
-    "var(--purple)",
-    "var(--green)",
-    "var(--amber)",
-  ];
-  const R = 60,
-    CX = 70,
-    CY = 70;
-
-  let angle = -Math.PI / 2;
-  const slices = items.map((item, idx) => {
-    const pct = item.val / total;
-    const start = angle;
-    angle += pct * 2 * Math.PI;
-    const x1 = CX + R * Math.cos(start);
-    const y1 = CY + R * Math.sin(start);
-    const x2 = CX + R * Math.cos(angle);
-    const y2 = CY + R * Math.sin(angle);
-    const large = pct > 0.5 ? 1 : 0;
-    return {
-      ...item,
-      path: `M${CX},${CY} L${x1},${y1} A${R},${R} 0 ${large} 1 ${x2},${y2} Z`,
-      color: COLORS[idx % COLORS.length],
-      pct,
-    };
-  });
-
-  return (
-    <div className="db-pie-wrap">
-      <svg viewBox="0 0 140 140" width="140" height="140">
-        {slices.map((s, i) => (
-          <path key={i} d={s.path} fill={s.color} opacity=".9" />
-        ))}
-        <circle cx={CX} cy={CY} r="35" fill="var(--surface)" />
-      </svg>
-      <div className="db-pie-legend">
-        {slices.map((s, i) => (
-          <div key={i} className="db-pie-legend-item">
-            <span className="db-pie-dot" style={{ background: s.color }} />
-            <span className="db-pie-lbl">{s.label}</span>
-            <span className="db-pie-pct">{Math.round(s.pct * 100)}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Barra horizontal (top productos) ────────────────────────────── */
-function HBarChart({ items }) {
-  if (!items?.length)
-    return <div className="db-chart-empty">Sin ventas registradas</div>;
-  const max = Math.max(...items.map((i) => i.val), 1);
-  return (
-    <div className="db-hbar">
-      {items.slice(0, 6).map((item, i) => (
-        <div key={i} className="db-hbar-row">
-          <span className="db-hbar-label" title={item.label}>
-            {item.label}
-          </span>
-          <div className="db-hbar-bg">
-            <div
-              className="db-hbar-fill"
-              style={{ width: `${Math.round((item.val / max) * 100)}%` }}
-            />
-          </div>
-          <span className="db-hbar-val">{item.val}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
+const tooltipStyle = {
+  background: "var(--surface, #1c1c1e)",
+  border: "1px solid var(--border, #333)",
+  borderRadius: 8,
+  fontSize: 12,
+  color: "var(--text, #e5e5e5)",
+};
 
 /* ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────── */
 function DashboardMain({ token }) {
@@ -372,12 +293,37 @@ function DashboardMain({ token }) {
     }
   });
 
+  // ── Datos listos para recharts ──
+  const ventasPorDiaArr = Object.entries(ventasPorDia).map(([dia, total]) => ({
+    dia,
+    total,
+  }));
+  const metodoPagoArr = metodoPagoData.map((i) => ({ name: i.label, value: i.val }));
+  const topProdsArr = topProds.map((i) => ({ name: i.label, value: i.val }));
+
   // Alertas
   const stockCritico = prods.filter(
     (p) => (p.stockActual || 0) <= (p.stockMinimo || 0) && p.stockActual > 0,
   ).length;
   const agotados = prods.filter((p) => (p.stockActual || 0) === 0).length;
   const variacion = data?.variacionSemana || 0;
+
+  const inventarioArr = [
+    {
+      name: "Normal",
+      value: prods.filter((p) => (p.stockActual || 0) > (p.stockMinimo || 0) * 2).length,
+    },
+    {
+      name: "Bajo",
+      value: prods.filter(
+        (p) =>
+          (p.stockActual || 0) <= (p.stockMinimo || 0) * 2 &&
+          (p.stockActual || 0) > (p.stockMinimo || 0),
+      ).length,
+    },
+    { name: "Crítico", value: stockCritico },
+    { name: "Agotado", value: agotados },
+  ].filter((i) => i.value > 0);
 
   const alertas = [];
   if (agotados > 0)
@@ -536,7 +482,23 @@ function DashboardMain({ token }) {
           <div className="db-card-header">
             <span className="db-card-title">Ventas últimos 7 días</span>
           </div>
-          <BarChart data={ventasPorDia} />
+          {ventasPorDiaArr.length === 0 || ventasPorDiaArr.every((d) => !d.total) ? (
+            <div className="db-chart-empty">Sin datos en este período</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={230}>
+              <BarChart data={ventasPorDiaArr} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="dia" stroke="var(--muted)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="var(--muted)" fontSize={11} tickLine={false} axisLine={false} width={62} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(v) => [`$${(v || 0).toLocaleString("es-CO", { minimumFractionDigits: 0 })}`, "Ventas"]}
+                  cursor={{ fill: "var(--border)", opacity: 0.35 }}
+                />
+                <Bar dataKey="total" name="Ventas" fill="var(--primary)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Métodos de pago */}
@@ -544,7 +506,34 @@ function DashboardMain({ token }) {
           <div className="db-card-header">
             <span className="db-card-title">Métodos de pago</span>
           </div>
-          <PieChart items={metodoPagoData} />
+          {metodoPagoArr.length === 0 ? (
+            <div className="db-chart-empty">Sin datos</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={230}>
+              <PieChart>
+                <Pie
+                  data={metodoPagoArr}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={80}
+                  paddingAngle={2}
+                >
+                  {metodoPagoArr.map((entry, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [`${v} ventas`, n]} />
+                <Legend
+                  formatter={(value) => (
+                    <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{value}</span>
+                  )}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -555,7 +544,35 @@ function DashboardMain({ token }) {
           <div className="db-card-header">
             <span className="db-card-title">Top productos vendidos</span>
           </div>
-          <HBarChart items={topProds} />
+          {topProdsArr.length === 0 ? (
+            <div className="db-chart-empty">Sin ventas registradas</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={230}>
+              <BarChart
+                data={topProdsArr}
+                layout="vertical"
+                margin={{ top: 4, right: 16, left: 4, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                <XAxis type="number" stroke="var(--muted)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={100}
+                  stroke="var(--muted)"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(v, n) => [v, "Unidades"]}
+                  cursor={{ fill: "var(--border)", opacity: 0.35 }}
+                />
+                <Bar dataKey="value" name="Unidades" fill="var(--blue)" radius={[0, 6, 6, 0]} barSize={14} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Estado inventario */}
@@ -563,26 +580,34 @@ function DashboardMain({ token }) {
           <div className="db-card-header">
             <span className="db-card-title">Estado del inventario</span>
           </div>
-          <PieChart
-            items={[
-              {
-                label: "Normal",
-                val: prods.filter(
-                  (p) => (p.stockActual || 0) > (p.stockMinimo || 0) * 2,
-                ).length,
-              },
-              {
-                label: "Bajo",
-                val: prods.filter(
-                  (p) =>
-                    (p.stockActual || 0) <= (p.stockMinimo || 0) * 2 &&
-                    (p.stockActual || 0) > (p.stockMinimo || 0),
-                ).length,
-              },
-              { label: "Crítico", val: stockCritico },
-              { label: "Agotado", val: agotados },
-            ].filter((i) => i.val > 0)}
-          />
+          {inventarioArr.length === 0 ? (
+            <div className="db-chart-empty">Sin datos</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={230}>
+              <PieChart>
+                <Pie
+                  data={inventarioArr}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={80}
+                  paddingAngle={2}
+                >
+                  {inventarioArr.map((entry, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={tooltipStyle} formatter={(v, n) => [`${v} producto${v === 1 ? "" : "s"}`, n]} />
+                <Legend
+                  formatter={(value) => (
+                    <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{value}</span>
+                  )}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

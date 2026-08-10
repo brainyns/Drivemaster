@@ -500,6 +500,26 @@ table.vt-table tr:last-child td {
   background: var(--red);
 }
 
+.vt-badge.en-camino {
+  background: rgba(245, 158, 11, .1);
+  color: var(--amber);
+  border: 1px solid rgba(245, 158, 11, .2);
+}
+
+.vt-badge.en-camino::before {
+  background: var(--amber);
+}
+
+.vt-badge.entregado {
+  background: rgba(59, 130, 246, .1);
+  color: var(--blue);
+  border: 1px solid rgba(59, 130, 246, .2);
+}
+
+.vt-badge.entregado::before {
+  background: var(--blue);
+}
+
 /* Total */
 .vt-total {
   font-weight: 700;
@@ -559,6 +579,24 @@ table.vt-table tr:last-child td {
 .vt-action-btn.anular:hover {
   background: rgba(239, 68, 68, .1);
   color: var(--red);
+}
+
+.vt-action-btn.enviar {
+  color: var(--amber);
+}
+
+.vt-action-btn.enviar:hover {
+  background: rgba(245, 158, 11, .12);
+  color: var(--amber);
+}
+
+.vt-action-btn.entregar {
+  color: var(--green);
+}
+
+.vt-action-btn.entregar:hover {
+  background: rgba(34, 197, 94, .1);
+  color: var(--green);
 }
 
 /* ── PAGINATION ── */

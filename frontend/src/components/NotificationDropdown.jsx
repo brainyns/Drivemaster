@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getToken } from "../services/authService";
+import { subscribeNotifications } from "../services/websocketService";
 import "../css/notifications.css";
 
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
@@ -38,7 +39,7 @@ export default function NotificationDropdown({ onClose, onNavigate }) {
       // Pending solicitudes
       try {
         const sols = await fetch(`${API_BASE}/solicitudes`, { headers: authHeaders(token) }).then(r => r.json());
-        const pending = (sols || []).filter(s => s.estado === "PENDIENTE_PAGO" || s.estado === "PAGO_VERIFICADO");
+        const pending = (sols || []).filter(s => s.estado === "PENDIENTE" || s.estado === "PENDIENTE_PAGO" || s.estado === "PAGO_VERIFICADO");
         pending.forEach(s => {
           items.push({
             id: `sol-${s.id}`,
@@ -109,7 +110,10 @@ export default function NotificationDropdown({ onClose, onNavigate }) {
   useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    const unsub = subscribeNotifications((msg) => {
+      if (msg?.type === "solicitud" || msg?.type === "venta_estado") fetchNotifications();
+    });
+    return () => { clearInterval(interval); unsub(); };
   }, [fetchNotifications]);
 
   useEffect(() => {

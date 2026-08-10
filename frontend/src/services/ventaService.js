@@ -38,6 +38,19 @@ export async function anularVenta(id, token) {
   if (!res.ok) throw new Error("Error al anular venta");
 }
 
+export async function cambiarEstadoVenta(id, estado, token) {
+  const res = await fetch(`${BASE}/ventas/${id}/estado`, {
+    method: "PATCH",
+    headers: headers(token),
+    body: JSON.stringify({ estado }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err || "Error al cambiar el estado");
+  }
+  return res.json();
+}
+
 export async function descargarPdfVenta(id, token) {
   const res = await fetch(`${BASE}/ventas/${id}/pdf`, {
     headers: headers(token),

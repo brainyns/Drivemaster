@@ -136,6 +136,64 @@
   padding: 12px 16px 16px;
 }
 
+.mis-pedidos-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+
+.mis-pedidos-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.mis-pedidos-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: calc(50% + 8px);
+  width: calc(100% - 16px);
+  height: 2px;
+  background: var(--border);
+  z-index: 0;
+}
+
+.mis-pedidos-step.on:not(:last-child)::after {
+  background: var(--accent);
+}
+
+.mis-pedidos-step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 2px solid var(--bg-card);
+  z-index: 1;
+}
+
+.mis-pedidos-step.on .mis-pedidos-step-dot {
+  background: var(--accent);
+}
+
+.mis-pedidos-step-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.mis-pedidos-step.on .mis-pedidos-step-label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 .mis-pedidos-card-productos {
   margin-bottom: 10px;
 }

@@ -31,6 +31,7 @@ public class SolicitudService {
     private final EmailsService emailsService;
     private final ParametroRepository parametroRepo;
     private final PagoService pagoService;
+    private final NotificationService notificationService;
 
     public SolicitudService(SolicitudRepository solicitudRepository,
                             UsuarioRepository usuarioRepository,
@@ -38,7 +39,8 @@ public class SolicitudService {
                             VentaService ventaService,
                             EmailsService emailsService,
                             ParametroRepository parametroRepo,
-                            PagoService pagoService) {
+                            PagoService pagoService,
+                            NotificationService notificationService) {
         this.solicitudRepository = solicitudRepository;
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
@@ -46,6 +48,7 @@ public class SolicitudService {
         this.emailsService = emailsService;
         this.parametroRepo = parametroRepo;
         this.pagoService = pagoService;
+        this.notificationService = notificationService;
     }
 
     private Usuario resolverUsuario(String email) {
@@ -110,7 +113,13 @@ public class SolicitudService {
         solicitud.setFechaCreacion(LocalDateTime.now());
         solicitud.setFechaActualizacion(LocalDateTime.now());
 
-        return toDTO(solicitudRepository.save(solicitud));
+        SolicitudDTO dto = toDTO(solicitudRepository.save(solicitud));
+
+        notificationService.notificar("solicitud", Map.of(
+                "id", dto.getId(),
+                "clienteNombre", usuario.getNombre() != null ? usuario.getNombre() : ""));
+
+        return dto;
     }
 
     // ─── LISTAR ──────────────────────────────────────────────

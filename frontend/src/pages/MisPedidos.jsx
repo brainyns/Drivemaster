@@ -13,10 +13,27 @@ function headers(token) {
 
 const COLORES = {
   PAGADA: "#3b82f6",
-  ENTREGADO: "#22c55e",
-  ANULADA: "#6b7280",
   APROBADO: "#22c55e",
+  COMPLETADA: "#22c55e",
+  ENTREGADO: "#22c55e",
+  EN_CAMINO: "#f59e0b",
+  ANULADA: "#6b7280",
+  CANCELADA: "#ef4444",
+  PENDIENTE_PAGO: "#f59e0b",
 };
+
+const PASOS_SEGUIMIENTO = [
+  { key: "CONFIRMADO", label: "Confirmado", estado: ["PAGADA", "APROBADO", "COMPLETADA"] },
+  { key: "EN_CAMINO", label: "En camino", estado: ["EN_CAMINO"] },
+  { key: "ENTREGADO", label: "Entregado", estado: ["ENTREGADO"] },
+];
+
+function pasoSeguimiento(estado) {
+  const e = (estado || "").toUpperCase();
+  if (["ANULADA", "CANCELADA"].includes(e)) return -1;
+  const idx = PASOS_SEGUIMIENTO.findIndex(p => p.estado.includes(e));
+  return idx >= 0 ? idx : 0;
+}
 
 export default function MisPedidos({ onVolver }) {
   const token = getToken();
@@ -50,7 +67,9 @@ export default function MisPedidos({ onVolver }) {
         <div className="mis-pedidos-empty">No tienes compras realizadas</div>
       ) : (
         <div className="mis-pedidos-lista">
-          {ventas.map((v) => (
+          {ventas.map((v) => {
+            const paso = pasoSeguimiento(v.estado);
+            return (
             <div key={v.id} className="mis-pedidos-card">
               <div className="mis-pedidos-card-top">
                 <span className="mis-pedidos-card-id">#{v.id?.slice(-8).toUpperCase() || "N/A"}</span>
@@ -60,6 +79,16 @@ export default function MisPedidos({ onVolver }) {
                   {v.estado || "Pendiente"}
                 </span>
               </div>
+              {paso >= 0 && (
+                <div className="mis-pedidos-track">
+                  {PASOS_SEGUIMIENTO.map((p, i) => (
+                    <div key={p.key} className={`mis-pedidos-step${i <= paso ? " on" : ""}`}>
+                      <span className="mis-pedidos-step-dot" />
+                      <span className="mis-pedidos-step-label">{p.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="mis-pedidos-card-body">
                 <div className="mis-pedidos-card-productos">
                   {v.productos?.map((p, i) => (
@@ -75,11 +104,14 @@ export default function MisPedidos({ onVolver }) {
                 </div>
                 <div className="mis-pedidos-card-info">
                   <span>Método: {v.pagos?.[0]?.metodo || "—"}</span>
+                  {v.fechaEnvio && <span>Enviado: {new Date(v.fechaEnvio).toLocaleDateString("es-CO", { day: "2-digit", month: "short" })}</span>}
+                  {v.fechaEntrega && <span>Entregado: {new Date(v.fechaEntrega).toLocaleDateString("es-CO", { day: "2-digit", month: "short" })}</span>}
                   <span>{v.fecha ? new Date(v.fecha).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</span>
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

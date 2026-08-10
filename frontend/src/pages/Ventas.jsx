@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { listarVentas, anularVenta, exportarVentasExcel, exportarVentasPdf } from "../services/ventaService";
+import { listarVentas, anularVenta, cambiarEstadoVenta, exportarVentasExcel, exportarVentasPdf } from "../services/ventaService";
 import "../css/venta.css";
 import "../css/filtros-panel.css";
 
@@ -19,6 +19,8 @@ const ESTADO_CLASS = {
   PENDIENTE:  "pendiente",
   CANCELADA:  "cancelada",
   ANULADA:    "anulada",
+  EN_CAMINO:  "en-camino",
+  ENTREGADO:  "entregado",
 };
 
 function formatFecha(f) {
@@ -45,7 +47,7 @@ function FiltrosPanel({ filtros, onChange, onCerrar, anchorRef }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [onCerrar, anchorRef]);
 
-  const ESTADOS = ["COMPLETADA", "PAGADA", "PENDIENTE", "CANCELADA", "ANULADA"];
+  const ESTADOS = ["COMPLETADA", "PAGADA", "PENDIENTE", "EN_CAMINO", "ENTREGADO", "CANCELADA", "ANULADA"];
   const METODOS = ["TARJETA", "EFECTIVO", "TRANSFERENCIA", "NEQUI", "WOMPI"];
 
   const toggleEstado = (est) => {
@@ -168,6 +170,17 @@ function Ventas({ onNueva, onDetalle, token }) {
     if (!confirm("¿Anular esta venta?")) return;
     try {
       await anularVenta(id, token);
+      cargar();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  const handleCambiarEstado = async (id, estado) => {
+    const etiqueta = estado === "EN_CAMINO" ? "marcar como EN CAMINO" : "marcar como ENTREGADO";
+    if (!confirm(`¿Deseas ${etiqueta} esta venta?`)) return;
+    try {
+      await cambiarEstadoVenta(id, estado, token);
       cargar();
     } catch (e) {
       alert(e.message);
@@ -354,6 +367,12 @@ function Ventas({ onNueva, onDetalle, token }) {
                       <td>
                         <div className="vt-row-actions">
                           <button className="vt-action-btn ver" onClick={() => onDetalle(v.id)}>Ver detalle</button>
+                          {estadoKey === "EN_CAMINO" && (
+                            <button className="vt-action-btn entregar" onClick={() => handleCambiarEstado(v.id, "ENTREGADO")}>Entregado</button>
+                          )}
+                          {["PAGADA", "APROBADO", "COMPLETADA"].includes(estadoKey) && (
+                            <button className="vt-action-btn enviar" onClick={() => handleCambiarEstado(v.id, "EN_CAMINO")}>En camino</button>
+                          )}
                           {!["CANCELADA", "ANULADA"].includes(estadoKey) && (
                             <button className="vt-action-btn anular" onClick={() => handleAnular(v.id)}>Anular</button>
                           )}

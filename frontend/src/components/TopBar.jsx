@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import NotificationDropdown from "./NotificationDropdown";
+import { getToken } from "../services/authService";
+import { connectNotifications, disconnectNotifications, subscribeNotifications } from "../services/websocketService";
 import "../css/topbar.css";
 
 const COLORES_TEMA = [
@@ -198,24 +200,37 @@ function TopBar({
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
 
+  const refreshCount = useCallback(async () => {
+    try {
+      const sols = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+      }).then(r => r.json());
+      const pending = (sols || []).filter(s => s.estado === "PENDIENTE" || s.estado === "PENDIENTE_PAGO" || s.estado === "PAGO_VERIFICADO").length;
+      setNotifCount(pending);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (!user || user.rol === "CLIENTE") return;
+    const tok = getToken();
+    if (!tok) return;
+    connectNotifications(tok);
+    refreshCount();
+    const unsub = subscribeNotifications((msg) => {
+      if (msg?.type === "solicitud" || msg?.type === "venta_estado") refreshCount();
+    });
+    return () => { unsub(); disconnectNotifications(); };
+  }, [user, refreshCount]);
+
   useEffect(() => {
     if (!notifOpen) return;
-    const fetchCount = async () => {
-      try {
-        const sols = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-          },
-        }).then(r => r.json());
-        const pending = (sols || []).filter(s => s.estado === "PENDIENTE_PAGO" || s.estado === "PAGO_VERIFICADO").length;
-        setNotifCount(pending);
-      } catch { /* ignore */ }
-    };
-    fetchCount();
-    const interval = setInterval(fetchCount, 30000);
+    refreshCount();
+    const interval = setInterval(refreshCount, 30000);
     return () => clearInterval(interval);
-  }, [notifOpen]);
+  }, [notifOpen, refreshCount]);
 
   const handleColorChange = (c) => {
     document.documentElement.style.setProperty("--primary",   c.valor);

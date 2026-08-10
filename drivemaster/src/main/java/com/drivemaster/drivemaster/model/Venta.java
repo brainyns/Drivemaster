@@ -29,5 +29,8 @@ public class Venta {
     private String estado; // PAGADA, ANULADA, PENDIENTE_PAGO, PAGO_VERIFICADO, PENDIENTE_APROBACION, APROBADO, RECHAZADO, EN_CAMINO, ENTREGADO
     private String tipoVenta; // WEB | FISICA | WHATSAPP
     private String solicitudId;
+
+    private LocalDateTime fechaEnvio;
+    private LocalDateTime fechaEntrega;
 }
 

@@ -72,7 +72,7 @@ const TITULOS = {
   "mi-perfil":       "Mi Perfil",
 };
 
-const IVA_RATE = 0.19;
+const DEFAULT_IVA = 0.16;
 
 function calcularSubtotal(items) {
   return items.reduce((s, i) => s + (i.precioUnitario * i.cantidad), 0);
@@ -95,6 +95,22 @@ function App() {
   const [solicitudAbierta, setSolicitudAbierta] = useState(false);
 
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+
+  const [ivaRate, setIvaRate] = useState(DEFAULT_IVA);
+
+  useEffect(() => {
+    const cargarIva = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/config/parametros/IVA`);
+        if (res.ok) {
+          const p = await res.json();
+          const v = parseFloat(p.valor);
+          if (!isNaN(v)) setIvaRate(v / 100);
+        }
+      } catch { /* fallback 16% */ }
+    };
+    cargarIva();
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -206,7 +222,7 @@ function App() {
 
   const solicitudCount = solicitudItems.reduce((s, i) => s + i.cantidad, 0);
   const solicitudSubtotal = calcularSubtotal(solicitudItems);
-  const solicitudIva = solicitudSubtotal * IVA_RATE;
+  const solicitudIva = solicitudSubtotal * ivaRate;
   const solicitudTotal = solicitudSubtotal + solicitudIva;
 
   const allowedPages = {

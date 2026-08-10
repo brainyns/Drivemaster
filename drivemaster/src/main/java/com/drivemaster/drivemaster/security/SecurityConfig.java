@@ -83,6 +83,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/pagos/confirmar-redirect").permitAll()
                         .requestMatchers("/api/perfil/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/chat/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/config/parametros/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/home/**").authenticated()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

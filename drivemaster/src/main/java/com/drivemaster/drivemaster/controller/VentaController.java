@@ -3,6 +3,7 @@ package com.drivemaster.drivemaster.controller;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -64,6 +65,12 @@ public class VentaController {
     public ResponseEntity<Void> anular(@PathVariable String id) {
         ventaService.anularVenta(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Venta> cambiarEstado(@PathVariable String id,
+                                               @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(ventaService.cambiarEstado(id, body.get("estado")));
     }
 
     @GetMapping("/{id}/pdf")

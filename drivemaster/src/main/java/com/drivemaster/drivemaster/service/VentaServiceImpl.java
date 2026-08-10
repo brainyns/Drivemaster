@@ -35,6 +35,7 @@ public class VentaServiceImpl implements VentaService {
     private final ParametroRepository          parametroRepo;
     private final EmailsService emailService;
     private final UsuarioRepository usuarioRepository;
+    private final NotificationService notificationService;
 
     public VentaServiceImpl(
             VentaRepository ventaRepository,
@@ -43,7 +44,8 @@ public class VentaServiceImpl implements VentaService {
             MetodoPagoRepository metodoPagoRepo,
             ParametroRepository parametroRepo,
             EmailsService emailService,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            NotificationService notificationService) {
         this.ventaRepository  = ventaRepository;
         this.productoService  = productoService;
         this.movimientoService = movimientoService;
@@ -51,6 +53,7 @@ public class VentaServiceImpl implements VentaService {
         this.parametroRepo    = parametroRepo;
         this.emailService     = emailService;
         this.usuarioRepository = usuarioRepository;
+        this.notificationService = notificationService;
     }
 
     private double resolverIva() {
@@ -339,5 +342,40 @@ public class VentaServiceImpl implements VentaService {
 
         venta.setEstado("ANULADA");
         ventaRepository.save(venta);
+    }
+
+    @Override
+    public Venta cambiarEstado(String ventaId, String nuevoEstado) {
+        if (nuevoEstado == null || nuevoEstado.isBlank()) {
+            throw new RuntimeException("El estado es obligatorio");
+        }
+
+        Venta venta = obtenerPorId(ventaId);
+        String estado = nuevoEstado.toUpperCase();
+        String actual = venta.getEstado() == null ? "" : venta.getEstado().toUpperCase();
+
+        if ("ANULADA".equals(actual) || "CANCELADA".equals(actual)) {
+            throw new RuntimeException("No se puede cambiar el estado de una venta " + actual.toLowerCase());
+        }
+        if ("ANULADA".equals(estado) || "CANCELADA".equals(estado)) {
+            throw new RuntimeException("Use la anulación para ese estado");
+        }
+
+        if ("EN_CAMINO".equals(estado)) {
+            venta.setFechaEnvio(LocalDateTime.now().withNano(0));
+        } else if ("ENTREGADO".equals(estado)) {
+            venta.setFechaEntrega(LocalDateTime.now().withNano(0));
+        }
+
+        venta.setEstado(estado);
+        Venta ventaGuardada = ventaRepository.save(venta);
+
+        notificationService.notificar("venta_estado", java.util.Map.of(
+                "id", ventaGuardada.getId(),
+                "estado", estado,
+                "fechaEnvio", ventaGuardada.getFechaEnvio() != null ? ventaGuardada.getFechaEnvio().toString() : "",
+                "fechaEntrega", ventaGuardada.getFechaEntrega() != null ? ventaGuardada.getFechaEntrega().toString() : ""));
+
+        return ventaGuardada;
     }
 }
