@@ -1,19 +1,20 @@
 const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`;
 function headers(token) {
-  return {
+  const h = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
   };
+  if (token) h.Authorization = `Bearer ${token}`;
+  return h;
 }
 
-// Wompi (CloudFront) bloquea redirect-url que no sean HTTPS válidos.
-// En producción se usa el origen actual; en desarrollo se usa VITE_WOMPI_REDIRECT_URL.
+// El redirect pasa por el backend (confirmar-redirect) para que la verificación
+// del pago y el envío de la factura se hagan del lado del servidor, sin depender
+// de que la página /pago-resultado del frontend cargue correctamente.
 export function getWompiRedirectUrl() {
   const configurada = import.meta.env.VITE_WOMPI_REDIRECT_URL;
   if (configurada) return configurada;
-  const origin = window.location.origin;
-  if (origin.startsWith("https://")) return origin + "/pago-resultado";
-  return "https://drivemaster-orcin.vercel.app/pago-resultado";
+  const api = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  return `${api}/api/pagos/confirmar-redirect`;
 }
 
 export async function crearSolicitud(token, productos, metodoPago) {

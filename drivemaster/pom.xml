@@ -111,12 +111,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- MAIL -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-        
         <!-- postgresql -->
         <dependency>
          <groupId>org.postgresql</groupId>

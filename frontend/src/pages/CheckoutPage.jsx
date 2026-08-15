@@ -198,8 +198,9 @@ export default function CheckoutPage({
       await guardarPerfil();
       const productos = stockItems.map(i => ({ productoId: i.productoId, cantidad: i.cantidad }));
 
+      const venta = await comprarInmediata(token, productos, metodoPago);
+
       if (metodoPago === "WOMPI") {
-        const venta = await comprarInmediata(token, productos, metodoPago);
         const redirectUrl = getWompiRedirectUrl();
         const pagoData = await crearPagoVenta(token, venta.id, redirectUrl);
         console.log("checkoutUrl:", pagoData.checkoutUrl);
@@ -207,11 +208,9 @@ export default function CheckoutPage({
         return;
       }
 
-      const solicitud = await crearSolicitud(token, productos, metodoPago);
-
       const ids = stockItems.map(i => i.productoId);
       onRemoveProductList && onRemoveProductList(ids);
-      setMensaje({ tipo: "exito", texto: "Solicitud enviada. Te contactaremos para coordinar el pago." });
+      setMensaje({ tipo: "exito", texto: "Compra registrada correctamente. Te llegará la factura por correo." });
       if (encargoItems.length === 0) {
         setTimeout(() => onCompraExitosa && onCompraExitosa(), 3000);
       }

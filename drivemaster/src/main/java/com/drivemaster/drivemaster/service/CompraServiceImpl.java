@@ -3,6 +3,8 @@ package com.drivemaster.drivemaster.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.drivemaster.drivemaster.model.Compra;
@@ -14,6 +16,8 @@ import com.drivemaster.drivemaster.util.PdfCompraBuilder;
 
 @Service
 public class CompraServiceImpl implements CompraService {
+
+    private static final Logger log = LoggerFactory.getLogger(CompraServiceImpl.class);
 
     private final CompraRepository            compraRepository;
     private final ProductoService             productoService;
@@ -85,7 +89,7 @@ public class CompraServiceImpl implements CompraService {
                 );
             }
         } catch (Exception e) {
-            System.err.println("Error enviando correo de compra: " + e.getMessage());
+            log.error("Error enviando correo de compra para compra {}: {}", compraGuardada.getId(), e.getMessage(), e);
         }
 
         return compraGuardada;

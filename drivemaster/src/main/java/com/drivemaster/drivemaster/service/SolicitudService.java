@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.drivemaster.drivemaster.dto.CartItemRequest;
@@ -32,6 +33,9 @@ public class SolicitudService {
     private final ParametroRepository parametroRepo;
     private final PagoService pagoService;
     private final NotificationService notificationService;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     public SolicitudService(SolicitudRepository solicitudRepository,
                             UsuarioRepository usuarioRepository,
@@ -171,7 +175,8 @@ public class SolicitudService {
                             .anyMatch(d -> "ENCARGO".equals(d.getTipo()));
 
             if (esEncargo) {
-                Map<String, Object> link = pagoService.crearPago(solicitud.getId(), null);
+                Map<String, Object> link = pagoService.crearPago(solicitud.getId(),
+                        frontendUrl + "/pago-resultado");
                 String checkoutUrl = link != null ? (String) link.get("checkoutUrl") : null;
                 if (checkoutUrl != null) {
                     final String urlPago = checkoutUrl;
