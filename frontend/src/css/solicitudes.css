@@ -95,6 +95,10 @@
 .sq-counter--approved { border-left: 4px solid #10b981; }
 .sq-counter--paid { border-left: 4px solid #8b5cf6; }
 .sq-counter--paid .sq-counter-num { color: #8b5cf6; }
+.sq-counter--shipping { border-left: 4px solid #3b82f6; }
+.sq-counter--shipping .sq-counter-num { color: #3b82f6; }
+.sq-counter--delivered { border-left: 4px solid #10b981; }
+.sq-counter--delivered .sq-counter-num { color: #10b981; }
 .sq-counter--rejected { border-left: 4px solid #ef4444; }
 
 /* ── TOOLBAR ── */
@@ -350,6 +354,12 @@
 .sq-badge.sq-rejected { background: rgba(239,68,68,.12); color: #ef4444; }
 .sq-badge.sq-rejected .sq-badge-dot { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
 
+.sq-badge.sq-shipping { background: rgba(59,130,246,.12); color: #3b82f6; }
+.sq-badge.sq-shipping .sq-badge-dot { background: #3b82f6; box-shadow: 0 0 6px #3b82f6; }
+
+.sq-badge.sq-delivered { background: rgba(139,92,246,.12); color: #8b5cf6; }
+.sq-badge.sq-delivered .sq-badge-dot { background: #8b5cf6; box-shadow: 0 0 6px #8b5cf6; }
+
 .sq-badge-venta {
   display: block;
   font-size: 9px;
@@ -410,6 +420,12 @@
 
 .sq-btn-link { color: #3b82f6; background: rgba(59,130,246,.1); }
 .sq-btn-link:hover { background: rgba(59,130,246,.2); box-shadow: 0 2px 12px rgba(59,130,246,.25); }
+
+.sq-btn-ship { color: #3b82f6; background: rgba(59,130,246,.1); }
+.sq-btn-ship:hover { background: rgba(59,130,246,.2); box-shadow: 0 2px 12px rgba(59,130,246,.25); }
+
+.sq-btn-deliver { color: #8b5cf6; background: rgba(139,92,246,.1); }
+.sq-btn-deliver:hover { background: rgba(139,92,246,.2); box-shadow: 0 2px 12px rgba(139,92,246,.25); }
 
 .sq-btn-view { color: var(--text-muted); }
 .sq-btn-view:hover { color: var(--text-secondary); background: var(--border); }

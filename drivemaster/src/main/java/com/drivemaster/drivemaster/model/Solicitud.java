@@ -27,7 +27,7 @@ public class Solicitud {
     private String comprobanteUrl;
     private String observaciones;
 
-    // PENDIENTE, APROBADO, RECHAZADO, COMPLETADA
+    // PENDIENTE, APROBADO, RECHAZADO, PAGADO, EN_CAMINO, ENTREGADO, COMPLETADA
     private String estado;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;

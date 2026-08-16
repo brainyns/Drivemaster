@@ -8,6 +8,7 @@ import com.drivemaster.drivemaster.model.mysql.PagoEntity;
 import com.drivemaster.drivemaster.repository.SolicitudRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
+import com.drivemaster.drivemaster.util.EmailSolicitudBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,7 @@ public class PagoService {
     private final PagoRepository pagoRepository;
     private final VentaService ventaService;
     private final UsuarioRepository usuarioRepository;
+    private final EmailsService emailsService;
     private final RestTemplate restTemplate;
 
     @Value("${wompi.public_key}")
@@ -56,11 +58,13 @@ public class PagoService {
                        PagoRepository pagoRepository,
                        VentaService ventaService,
                        UsuarioRepository usuarioRepository,
+                       EmailsService emailsService,
                        RestTemplate restTemplate) {
         this.solicitudRepository = solicitudRepository;
         this.pagoRepository = pagoRepository;
         this.ventaService = ventaService;
         this.usuarioRepository = usuarioRepository;
+        this.emailsService = emailsService;
         this.restTemplate = restTemplate;
     }
 
@@ -260,6 +264,11 @@ public class PagoService {
         solicitud.setVentaId(ventaGuardada.getId());
         solicitud.setFechaActualizacion(LocalDateTime.now());
         solicitudRepository.save(solicitud);
+
+        usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
+                emailsService.enviarEmail(usuario.getCorreo(),
+                        "Hemos recibido tu pago en DriveMaster",
+                        EmailSolicitudBuilder.pagoRecibido(usuario, solicitud.getTotal())));
 
         pagoEntity.setEstado("PAGADO");
         pagoEntity.setTransactionId(transactionId);

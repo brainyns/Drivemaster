@@ -49,6 +49,18 @@ export async function aprobarSolicitud(token, id) {
   return res.json();
 }
 
+export async function marcarEnCamino(token, id) {
+  const res = await fetch(`${BASE}/${id}/en-camino`, { method: "PATCH", headers: headers(token) });
+  if (!res.ok) throw new Error("Error al marcar solicitud en camino");
+  return res.json();
+}
+
+export async function marcarEntregado(token, id) {
+  const res = await fetch(`${BASE}/${id}/entregado`, { method: "PATCH", headers: headers(token) });
+  if (!res.ok) throw new Error("Error al marcar solicitud entregada");
+  return res.json();
+}
+
 export async function comprarInmediata(token, productos, metodoPago) {
   const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ventas/compra-inmediata`, {
     method: "POST",

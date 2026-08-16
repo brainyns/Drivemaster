@@ -47,6 +47,16 @@ public class SolicitudController {
         return ResponseEntity.ok(solicitudService.aprobar(id));
     }
 
+    @PatchMapping("/{id}/en-camino")
+    public ResponseEntity<SolicitudDTO> marcarEnCamino(@PathVariable String id) {
+        return ResponseEntity.ok(solicitudService.marcarEnCamino(id));
+    }
+
+    @PatchMapping("/{id}/entregado")
+    public ResponseEntity<SolicitudDTO> marcarEntregado(@PathVariable String id) {
+        return ResponseEntity.ok(solicitudService.marcarEntregado(id));
+    }
+
     @PatchMapping("/{id}/rechazar")
     public ResponseEntity<SolicitudDTO> rechazar(@PathVariable String id, @RequestBody Map<String, String> body) {
         String motivo = body.getOrDefault("motivo", "Solicitud rechazada");

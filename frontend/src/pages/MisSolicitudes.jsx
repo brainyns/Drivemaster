@@ -9,6 +9,8 @@ const ESTADOS = {
   RECHAZADO: "Rechazado",
   COMPLETADA: "Completada",
   PAGADO: "Pagado",
+  EN_CAMINO: "En camino",
+  ENTREGADO: "Entregado",
 };
 
 const ESTADOS_CLASS = {
@@ -17,6 +19,8 @@ const ESTADOS_CLASS = {
   RECHAZADO: "sq-rejected",
   COMPLETADA: "sq-verified",
   PAGADO: "sq-approved",
+  EN_CAMINO: "sq-shipping",
+  ENTREGADO: "sq-delivered",
 };
 
 const formatPrecio = (p) =>
@@ -136,6 +140,12 @@ export default function MisSolicitudes({ onVolver }) {
                   )}
                   {s.estado === "PAGADO" && (
                     <span className="sq-badge sq-badge-venta">Pagado</span>
+                  )}
+                  {s.estado === "EN_CAMINO" && (
+                    <span className="sq-badge sq-badge-venta">En camino</span>
+                  )}
+                  {s.estado === "ENTREGADO" && (
+                    <span className="sq-badge sq-badge-venta">Entregado</span>
                   )}
                 </div>
               </div>

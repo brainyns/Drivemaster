@@ -37,9 +37,11 @@ import { getUser, getToken, clearSession, refreshToken, logout } from "./service
 const storedUser  = getUser();
 const storedToken = getToken();
 
-const initialPage = window.location.pathname.startsWith("/pago-resultado")
-  ? "pago-resultado"
-  : "catalogo";
+const initialPage =
+  window.location.pathname.startsWith("/pago-resultado") ||
+  new URLSearchParams(window.location.search).get("pago") === "resultado"
+    ? "pago-resultado"
+    : "catalogo";
 
 const TITULOS = {
   "dashboard-main":  "Dashboard",

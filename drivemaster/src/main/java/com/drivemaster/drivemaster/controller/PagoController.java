@@ -41,7 +41,7 @@ public class PagoController {
         if (transactionId != null && !transactionId.isBlank()) {
             pagoService.verificarTransaccion(transactionId);
         }
-        String destino = frontendUrl + "/pago-resultado" + (transactionId != null ? "?id=" + transactionId : "");
+        String destino = frontendUrl + "/?pago=resultado" + (transactionId != null ? "&id=" + transactionId : "");
         return ResponseEntity.status(302).location(java.net.URI.create(destino)).build();
     }
 

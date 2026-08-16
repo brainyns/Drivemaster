@@ -21,6 +21,7 @@ import com.drivemaster.drivemaster.repository.ProductoRepository;
 import com.drivemaster.drivemaster.repository.SolicitudRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.repository.mysql.ParametroRepository;
+import com.drivemaster.drivemaster.util.EmailSolicitudBuilder;
 
 @Service
 public class SolicitudService {
@@ -158,15 +159,17 @@ public class SolicitudService {
     public SolicitudDTO aprobar(String id) {
         Solicitud solicitud = solicitudRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
-        solicitud.setEstado("APROBADO");
-        solicitud.setFechaActualizacion(LocalDateTime.now());
 
         // El link de pago por correo es exclusivo de los encargos:
         // - WOMPI + ENCARGO: se envía el link al cliente para que pague.
         // - WOMPI + STOCK: la venta se genera cuando el cliente paga (webhook/redirect),
         //   aprobar no debe crear venta ni enviar link por correo.
-        // Para los demás métodos se conserva el comportamiento anterior.
+        // Para los demás métodos (efectivo/transferencia) la aprobación confirma el pago
+        // recibido: la solicitud queda PAGADO y se crea la venta.
         if ("WOMPI".equals(solicitud.getMetodoPago())) {
+            solicitud.setEstado("APROBADO");
+            solicitud.setFechaActualizacion(LocalDateTime.now());
+
             boolean esEncargo = solicitud.getProductos() != null
                     && solicitud.getProductos().stream()
                             .anyMatch(d -> "ENCARGO".equals(d.getTipo()));
@@ -186,11 +189,14 @@ public class SolicitudService {
                 }
             }
         } else {
+            solicitud.setEstado("PAGADO");
+            solicitud.setFechaActualizacion(LocalDateTime.now());
+
             Venta venta = new Venta();
             venta.setClienteId(solicitud.getClienteId());
             venta.setUsuarioId(solicitud.getUsuarioId());
             venta.setFecha(LocalDateTime.now());
-            venta.setEstado("APROBADO");
+            venta.setEstado("PAGADA");
             venta.setTipoVenta("WEB");
             venta.setProductos(solicitud.getProductos());
             venta.setTotal(solicitud.getTotal());
@@ -202,7 +208,48 @@ public class SolicitudService {
 
             Venta ventaGuardada = ventaService.registrarVenta(venta);
             solicitud.setVentaId(ventaGuardada.getId());
+
+            usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
+                    emailsService.enviarEmail(usuario.getCorreo(),
+                            "Hemos recibido tu pago en DriveMaster",
+                            EmailSolicitudBuilder.pagoRecibido(usuario, solicitud.getTotal())));
         }
+
+        return toDTO(solicitudRepository.save(solicitud));
+    }
+
+    // ─── ADMIN: EN CAMINO / ENTREGADO ──────────────────────
+
+    public SolicitudDTO marcarEnCamino(String id) {
+        Solicitud solicitud = solicitudRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+        if (!"PAGADO".equals(solicitud.getEstado())) {
+            throw new RuntimeException("Solo las solicitudes pagadas pueden marcarse como en camino");
+        }
+        solicitud.setEstado("EN_CAMINO");
+        solicitud.setFechaActualizacion(LocalDateTime.now());
+        if (solicitud.getVentaId() != null) {
+            ventaService.cambiarEstado(solicitud.getVentaId(), "EN_CAMINO");
+        }
+        return toDTO(solicitudRepository.save(solicitud));
+    }
+
+    public SolicitudDTO marcarEntregado(String id) {
+        Solicitud solicitud = solicitudRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+        if (!"EN_CAMINO".equals(solicitud.getEstado())) {
+            throw new RuntimeException("Solo las solicitudes en camino pueden marcarse como entregadas");
+        }
+        solicitud.setEstado("ENTREGADO");
+        solicitud.setFechaActualizacion(LocalDateTime.now());
+        if (solicitud.getVentaId() != null) {
+            ventaService.cambiarEstado(solicitud.getVentaId(), "ENTREGADO");
+        }
+
+        usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
+                emailsService.enviarEmail(usuario.getCorreo(),
+                        "Tu pedido fue entregado",
+                        EmailSolicitudBuilder.entregado(usuario)));
 
         return toDTO(solicitudRepository.save(solicitud));
     }

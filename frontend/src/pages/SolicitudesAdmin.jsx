@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { listarSolicitudes, aprobarSolicitud, rechazarSolicitud, obtenerSolicitud, crearPago, getWompiRedirectUrl } from "../services/solicitudService";
+import { listarSolicitudes, aprobarSolicitud, rechazarSolicitud, obtenerSolicitud, crearPago, getWompiRedirectUrl, marcarEnCamino, marcarEntregado } from "../services/solicitudService";
 import "../css/solicitudes.css";
 
 const ESTADOS = {
@@ -8,6 +8,8 @@ const ESTADOS = {
   RECHAZADO: "Rechazado",
   COMPLETADA: "Completada",
   PAGADO: "Pagado",
+  EN_CAMINO: "En camino",
+  ENTREGADO: "Entregado",
 };
 
 const ESTADOS_CLASS = {
@@ -16,6 +18,8 @@ const ESTADOS_CLASS = {
   RECHAZADO: "sq-rejected",
   COMPLETADA: "sq-verified",
   PAGADO: "sq-approved",
+  EN_CAMINO: "sq-shipping",
+  ENTREGADO: "sq-delivered",
 };
 
 const formatPrecio = (p) =>
@@ -23,6 +27,13 @@ const formatPrecio = (p) =>
 
 function getInitials(nombre) {
   return (nombre || "").split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function colorAvatar(estado) {
+  if (estado === "RECHAZADO") return "#ef4444";
+  if (estado === "EN_CAMINO") return "#3b82f6";
+  if (estado === "APROBADO" || estado === "PAGADO" || estado === "ENTREGADO" || estado === "COMPLETADA") return "#10b981";
+  return "#f59e0b";
 }
 
 function esEncargo(s) {
@@ -72,9 +83,14 @@ export default function SolicitudesAdmin({ token }) {
 
   useEffect(() => { cargar(); }, []);
 
-  const handleAprobar = async () => {
+  const ejecutarAccion = async () => {
     if (!accionId) return;
-    try { await aprobarSolicitud(token, accionId); setConfirmOpen(false); setAccionId(null); cargar(); } catch (e) { console.error(e); alert("Error al aprobar: " + e.message); }
+    try {
+      if (accionTipo === "aprobar") await aprobarSolicitud(token, accionId);
+      else if (accionTipo === "en_camino") await marcarEnCamino(token, accionId);
+      else if (accionTipo === "entregado") await marcarEntregado(token, accionId);
+      setConfirmOpen(false); setAccionId(null); setAccionTipo(null); cargar();
+    } catch (e) { console.error(e); alert("Error: " + e.message); }
   };
 
   const handleRechazar = async () => {
@@ -133,6 +149,8 @@ export default function SolicitudesAdmin({ token }) {
     PENDIENTE: solicitudes.filter(s => s.estado === "PENDIENTE").length,
     APROBADO: solicitudes.filter(s => s.estado === "APROBADO").length,
     PAGADO: solicitudes.filter(s => s.estado === "PAGADO").length,
+    EN_CAMINO: solicitudes.filter(s => s.estado === "EN_CAMINO").length,
+    ENTREGADO: solicitudes.filter(s => s.estado === "ENTREGADO").length,
     RECHAZADO: solicitudes.filter(s => s.estado === "RECHAZADO").length,
   };
 
@@ -158,6 +176,14 @@ export default function SolicitudesAdmin({ token }) {
           <span className="sq-counter-num">{conteo.PAGADO}</span>
           <span className="sq-counter-label">Pagadas</span>
         </div>
+        <div className="sq-counter sq-counter--shipping">
+          <span className="sq-counter-num">{conteo.EN_CAMINO}</span>
+          <span className="sq-counter-label">En camino</span>
+        </div>
+        <div className="sq-counter sq-counter--delivered">
+          <span className="sq-counter-num">{conteo.ENTREGADO}</span>
+          <span className="sq-counter-label">Entregadas</span>
+        </div>
         <div className="sq-counter sq-counter--rejected">
           <span className="sq-counter-num">{conteo.RECHAZADO}</span>
           <span className="sq-counter-label">Rechazadas</span>
@@ -181,6 +207,8 @@ export default function SolicitudesAdmin({ token }) {
           <option value="PENDIENTE">Pendientes</option>
           <option value="APROBADO">Aprobadas</option>
           <option value="PAGADO">Pagadas</option>
+          <option value="EN_CAMINO">En camino</option>
+          <option value="ENTREGADO">Entregadas</option>
           <option value="RECHAZADO">Rechazadas</option>
         </select>
       </div>
@@ -210,7 +238,7 @@ export default function SolicitudesAdmin({ token }) {
             paginadas.map(s => (
               <div key={s.id} className={`sq-row ${detalleId === s.id ? "sq-row--active" : ""}`}>
                 <div className="sq-cell-client">
-                  <div className="sq-avatar" style={{ background: s.estado === "APROBADO" ? "#10b981" : s.estado === "RECHAZADO" ? "#ef4444" : "#f59e0b" }}>
+                  <div className="sq-avatar" style={{ background: colorAvatar(s.estado) }}>
                     {getInitials(s.clienteNombre)}
                   </div>
                   <div className="sq-client-info">
@@ -262,6 +290,16 @@ export default function SolicitudesAdmin({ token }) {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
                     </button>
                   )}
+                  {s.estado === "PAGADO" && (
+                    <button className="sq-btn sq-btn-ship" title="Marcar en camino" onClick={() => { setAccionId(s.id); setAccionTipo("en_camino"); setConfirmOpen(true); }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    </button>
+                  )}
+                  {s.estado === "EN_CAMINO" && (
+                    <button className="sq-btn sq-btn-deliver" title="Marcar como entregado" onClick={() => { setAccionId(s.id); setAccionTipo("entregado"); setConfirmOpen(true); }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </button>
+                  )}
                   <button className="sq-btn sq-btn-view" title="Ver detalles" onClick={() => abrirDetalle(s.id)}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button>
@@ -306,7 +344,7 @@ export default function SolicitudesAdmin({ token }) {
             </button>
 
             <div className="sq-modal-header">
-              <div className="sq-modal-avatar" style={{ background: detalle.estado === "APROBADO" ? "#10b981" : detalle.estado === "RECHAZADO" ? "#ef4444" : "#f59e0b" }}>
+              <div className="sq-modal-avatar" style={{ background: colorAvatar(detalle.estado) }}>
                 {getInitials(detalle.clienteNombre)}
               </div>
               <div>
@@ -372,16 +410,19 @@ export default function SolicitudesAdmin({ token }) {
           <div className="sq-modal sq-modal--small" onClick={e => e.stopPropagation()}>
             <h2 className="sq-modal-title">Confirmar acción</h2>
             <p className="sq-modal-desc">
-              ¿Estás seguro de {accionTipo === "aprobar" ? "aprobar" : "rechazar"} esta solicitud?{" "}
+              ¿Estás seguro de{" "}
+              {accionTipo === "aprobar" ? "aprobar" : accionTipo === "en_camino" ? "marcar esta solicitud como en camino" : "marcar esta solicitud como entregada"}?{" "}
               {accionTipo === "aprobar"
                 ? solicitudes.find(s => s.id === accionId)?.metodoPago === "WOMPI"
                   ? "Se generará el link de pago para el cliente."
-                  : "Se generará una venta automáticamente."
-                : ""}
+                  : "Se generará una venta automáticamente y la solicitud quedará pagada."
+                : accionTipo === "en_camino"
+                  ? "El cliente podrá ver el avance en sus pedidos."
+                  : "Se enviará un correo de confirmación de entrega al cliente."}
             </p>
             <div className="sq-modal-actions">
-              <button className="sq-btn sq-btn-approve sq-btn--md" onClick={handleAprobar}>
-                {accionTipo === "aprobar" ? "Sí, aprobar" : "Sí, rechazar"}
+              <button className="sq-btn sq-btn-approve sq-btn--md" onClick={ejecutarAccion}>
+                {accionTipo === "aprobar" ? "Sí, aprobar" : accionTipo === "en_camino" ? "Sí, marcar en camino" : "Sí, marcar entregado"}
               </button>
               <button className="sq-btn sq-btn-cancel sq-btn--md" onClick={() => setConfirmOpen(false)}>
                 Cancelar
