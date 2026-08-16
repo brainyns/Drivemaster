@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.drivemaster.drivemaster.dto.CartItemRequest;
 import com.drivemaster.drivemaster.dto.SolicitudDTO;
@@ -33,9 +33,6 @@ public class SolicitudService {
     private final ParametroRepository parametroRepo;
     private final PagoService pagoService;
     private final NotificationService notificationService;
-
-    @Value("${frontend.url}")
-    private String frontendUrl;
 
     public SolicitudService(SolicitudRepository solicitudRepository,
                             UsuarioRepository usuarioRepository,
@@ -175,8 +172,9 @@ public class SolicitudService {
                             .anyMatch(d -> "ENCARGO".equals(d.getTipo()));
 
             if (esEncargo) {
+                String backendBase = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
                 Map<String, Object> link = pagoService.crearPago(solicitud.getId(),
-                        frontendUrl + "/pago-resultado");
+                        backendBase + "/api/pagos/confirmar-redirect");
                 String checkoutUrl = link != null ? (String) link.get("checkoutUrl") : null;
                 if (checkoutUrl != null) {
                     final String urlPago = checkoutUrl;
