@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { obtenerVenta, descargarPdfVenta, cambiarEstadoVenta } from "../services/ventaService";
+import { obtenerVenta, descargarPdfVenta } from "../services/ventaService";
 import "../css/venta.css";
 
 const METODO_ICO = {
@@ -24,7 +24,6 @@ function VentaDetalle({ id, onVolver, token }) {
   const [venta, setVenta]       = useState(null);
   const [loading, setLoading]   = useState(true);
   const [descargando, setDescargando] = useState(false);
-  const [cambiando, setCambiando] = useState(false);
 
   useEffect(() => {
     obtenerVenta(id, token)
@@ -32,20 +31,6 @@ function VentaDetalle({ id, onVolver, token }) {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id, token]);
-
-  const handleCambiarEstado = async (estado) => {
-    const etiqueta = estado === "EN_CAMINO" ? "marcar como EN CAMINO" : "marcar como ENTREGADO";
-    if (!confirm(`¿Deseas ${etiqueta} esta venta?`)) return;
-    setCambiando(true);
-    try {
-      const actualizada = await cambiarEstadoVenta(id, estado, token);
-      setVenta(actualizada);
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setCambiando(false);
-    }
-  };
 
   const handleDescargarPdf = async () => {
     setDescargando(true);
@@ -114,24 +99,6 @@ function VentaDetalle({ id, onVolver, token }) {
       <div className="vd-subheader">
         <button className="vd-back" onClick={onVolver}>← Volver al historial</button>
         <div className="vd-subheader-actions">
-          {estadoKey === "EN_CAMINO" && (
-            <button
-              className="vt-btn-outline"
-              onClick={() => handleCambiarEstado("ENTREGADO")}
-              disabled={cambiando}
-            >
-              {cambiando ? "Actualizando..." : "✓ Marcar ENTREGADO"}
-            </button>
-          )}
-          {["PAGADA", "APROBADO", "COMPLETADA"].includes(estadoKey) && (
-            <button
-              className="vt-btn-outline"
-              onClick={() => handleCambiarEstado("EN_CAMINO")}
-              disabled={cambiando}
-            >
-              {cambiando ? "Actualizando..." : "🚚 Marcar EN CAMINO"}
-            </button>
-          )}
           <button
             className="vt-btn-outline"
             onClick={handleImprimir}
