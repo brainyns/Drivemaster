@@ -1,8 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
   --primary:   #FF3D00;
   --primary-h: #e63600;
+  --primary-rgb: 255, 61, 0;
   --secondary: #1A237E;
   --tertiary:  #9F5BBB;
   --neutral:   #121212;
@@ -14,6 +15,9 @@
   --border2:   rgba(255, 255, 255, 0.12);
   --text:      #F1F5F9;
   --text-muted:#6b7280;
+  --text-primary: #F1F5F9;
+  --text-secondary: #6b7280;
+  --accent-hover: #ff7043;
   --muted:     #6b7280;
   --muted2:    #4a4a55;
   --success:   #22C55E;
@@ -27,11 +31,32 @@
   --accent:    #ff7043;
   --primary-glow: rgba(255, 61, 0, 0.15);
   --primary-soft: rgba(255, 61, 0, 0.08);
+  --primary-glow-strong: rgba(255, 61, 0, 0.4);
+  --grid-line: rgba(255,255,255,0.03);
+
+  /* Border radius */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-full: 9999px;
+
+  /* Spacing */
+  --sp-xs: 0.25rem;
+  --sp-sm: 0.5rem;
+  --sp-md: 1rem;
+  --sp-lg: 1.5rem;
+  --sp-xl: 2rem;
+  
+  /* Animation */
+  --dur-fast: 0.15s;
+  --dur-med: 0.25s;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html[data-theme="light"] {
   --primary:   #FF3D00;
   --primary-h: #e63600;
+  --primary-rgb: 255, 61, 0;
   --secondary: #1A237E;
   --tertiary:  #9F5BBB;
   --neutral:   #e5e5e5;
@@ -43,6 +68,9 @@ html[data-theme="light"] {
   --border2:   #b8b8b8;
   --text:      #1a1a1a;
   --text-muted:#8a8a9a;
+  --text-primary: #1a1a1a;
+  --text-secondary: #8a8a9a;
+  --accent-hover: #ff7043;
   --muted:     #8a8a9a;
   --muted2:    #b0b0ba;
   --success:   #22C55E;
@@ -56,6 +84,8 @@ html[data-theme="light"] {
   --accent:    #ff7043;
   --primary-glow: rgba(255, 61, 0, 0.10);
   --primary-soft: rgba(255, 61, 0, 0.05);
+  --primary-glow-strong: rgba(255, 61, 0, 0.30);
+  --grid-line: rgba(0,0,0,0.05);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -67,7 +97,9 @@ body {
   min-height: 100vh;
 }
 
-h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+h1, h2, h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; }
+
+code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
 
 .theme-toggle {
   width: 32px;

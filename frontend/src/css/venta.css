@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@700&display=swap');
-
+﻿
 :root {
   --bg: #0a0a0a;
   --surface: #111111;
@@ -51,7 +50,7 @@ html[data-theme="light"] {
 
 /* ── ROOT ── */
 .vt-root {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -119,7 +118,7 @@ html[data-theme="light"] {
   background: none;
   border: none;
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: .82rem;
   font-weight: 600;
   padding: .35rem .85rem;
@@ -165,7 +164,7 @@ html[data-theme="light"] {
   padding: .35rem .8rem .35rem 2rem;
   color: var(--text);
   font-size: .8rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   width: 240px;
   outline: none;
   transition: border .15s;
@@ -250,7 +249,7 @@ html[data-theme="light"] {
   border: 1px solid var(--border2);
   border-radius: 9px;
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: .8rem;
   font-weight: 600;
   padding: .5rem 1rem;
@@ -296,7 +295,7 @@ html[data-theme="light"] {
   background: none;
   border: none;
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: .8rem;
   font-weight: 600;
   padding: .4rem 1rem;
@@ -341,7 +340,7 @@ html[data-theme="light"] {
   border: 1px solid var(--border2);
   border-radius: 8px;
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: .76rem;
   font-weight: 600;
   padding: .38rem .85rem;
@@ -564,7 +563,7 @@ table.vt-table tr:last-child td {
   border-radius: 7px;
   font-size: .76rem;
   font-weight: 600;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   transition: all .15s;
 }
 
@@ -623,7 +622,7 @@ table.vt-table tr:last-child td {
   background: none;
   border: none;
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: .78rem;
   font-weight: 700;
   cursor: pointer;
@@ -651,7 +650,7 @@ table.vt-table tr:last-child td {
   color: var(--muted);
   font-size: .76rem;
   font-weight: 700;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all .15s;
   display: flex;
@@ -758,7 +757,7 @@ table.vt-table tr:last-child td {
    DETALLE DE VENTA
 ══════════════════════════════════════════ */
 .vd-page {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -782,7 +781,7 @@ table.vt-table tr:last-child td {
   background: none;
   border: none;
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: .82rem;
   font-weight: 600;
   cursor: pointer;
@@ -1195,7 +1194,7 @@ table.vd-table tr:last-child td {
   padding: .65rem .9rem;
   border-radius: 10px;
   font-size: .84rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   outline: none;
   transition: border .2s;
   width: 100%;
@@ -1282,7 +1281,7 @@ table.vd-table tr:last-child td {
   border: 1px dashed var(--border2);
   border-radius: 10px;
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: .82rem;
   font-weight: 600;
   cursor: pointer;
@@ -1329,7 +1328,7 @@ table.vd-table tr:last-child td {
   padding: .65rem .7rem;
   border-radius: 10px;
   font-size: .84rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   outline: none;
 }
 
@@ -1342,7 +1341,7 @@ table.vd-table tr:last-child td {
   border: 1px solid var(--border2);
   border-radius: 10px;
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 700;
   font-size: .8rem;
   padding: .65rem .9rem;
@@ -1374,7 +1373,7 @@ table.vd-table tr:last-child td {
   background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: .68rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -1468,7 +1467,7 @@ table.vd-table tr:last-child td {
   padding: .6rem .9rem;
   border-radius: 9px;
   font-size: .83rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   outline: none;
   transition: border .2s;
 }
@@ -1591,7 +1590,7 @@ table.vd-table tr:last-child td {
   padding: .5rem .6rem;
   border-radius: 8px;
   font-size: .84rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   outline: none;
   text-align: center;
 }
@@ -1697,7 +1696,7 @@ table.vd-table tr:last-child td {
   font-size: .7rem;
   cursor: pointer;
   margin-left: .5rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 700;
   transition: opacity .15s;
 }
@@ -1901,7 +1900,7 @@ table.vd-table tr:last-child td {
   background: none;
   border: 1px solid var(--border2);
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   font-size: .86rem;
   padding: .75rem;

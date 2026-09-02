@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════
+﻿/* ══════════════════════════════════════════════════════
    TopBar — Panel Admin DriveMaster
    Archivo: src/css/topbar.css
    ══════════════════════════════════════════════════════ */
@@ -27,7 +27,7 @@
 }
 
 .tb-brand {
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Barlow Condensed', sans-serif;
   font-size: 0.85rem;
   font-weight: 800;
   color: var(--primary);
@@ -166,7 +166,7 @@
   background: linear-gradient(135deg, var(--primary), #ff6b35);
   border: none;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Barlow Condensed', sans-serif;
   font-size: 0.75rem;
   font-weight: 800;
   color: #fff;
@@ -210,7 +210,7 @@
 
 .tb-dropdown-title {
   display: block;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Barlow Condensed', sans-serif;
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--text);
@@ -382,7 +382,7 @@
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary), #ff6b35);
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Barlow Condensed', sans-serif;
   font-size: 0.82rem;
   font-weight: 800;
   color: #fff;
@@ -394,7 +394,7 @@
   font-weight: 700;
   color: var(--text);
   line-height: 1.2;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Barlow Condensed', sans-serif;
 }
 
 .tb-perfil-rol {

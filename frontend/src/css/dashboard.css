@@ -1,4 +1,4 @@
-/* ─────────────────────────────────────────────────────────────
+﻿/* ─────────────────────────────────────────────────────────────
    DASHBOARD.CSS — DriveMaster Main Dashboard
    Paleta dark: #0a0a0a / #ff3d00 / #111 / #181818
 ───────────────────────────────────────────────────────────── */
@@ -7,7 +7,7 @@
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: 'Inter', sans-serif;
   padding: 1.5rem 1.75rem 2.5rem;
 }
 
@@ -597,7 +597,7 @@
   border: none;
   padding: 0.45rem 1rem;
   border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
@@ -634,7 +634,7 @@
   border-bottom: 1px solid var(--border);
 }
 .db-pbi-header h2 {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
   margin: 0;

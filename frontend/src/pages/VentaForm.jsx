@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { crearVenta, listarMetodosPago, obtenerParametro } from "../services/ventaService";
 import { listarClientes } from "../services/clienteService";
 import { listarProductos } from "../services/productoService";
@@ -203,7 +203,7 @@ function VentaForm({ onVolver, token }) {
                   style={clienteError ? { borderColor: "var(--red)" } : {}}
                 />
               </div>
-              <button onClick={buscarCliente} style={{ background:"var(--surface2)", border:"1px solid var(--border2)", borderRadius:"10px", color:"var(--text)", fontFamily:"'DM Sans',sans-serif", fontWeight:700, fontSize:".8rem", padding:".65rem 1rem", cursor:"pointer", whiteSpace:"nowrap" }}>
+              <button onClick={buscarCliente} style={{ background:"var(--surface2)", border:"1px solid var(--border2)", borderRadius:"10px", color:"var(--text)", fontFamily:"'Inter',sans-serif", fontWeight:700, fontSize:".8rem", padding:".65rem 1rem", cursor:"pointer", whiteSpace:"nowrap" }}>
                 Buscar ✓
               </button>
             </div>

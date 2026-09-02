@@ -1,4 +1,4 @@
-/* ─────────────────────────────────────────────────────────────────────────────
+﻿/* ─────────────────────────────────────────────────────────────────────────────
    COMPRAS.CSS — DriveMaster Purchase Module
    Paleta: --bg #0a0a0a | --primary #ff3d00 | dark industrial
 ───────────────────────────────────────────────────────────────────────────── */
@@ -8,7 +8,7 @@
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: 'Inter', sans-serif;
   padding: 1.5rem 1.75rem 2.5rem;
 }
 
@@ -38,7 +38,7 @@
   display: inline-flex; align-items: center; gap: .45rem;
   background: var(--primary); color: #fff;
   border: none; border-radius: 10px;
-  font-family: 'DM Sans', sans-serif; font-size: .82rem; font-weight: 700;
+  font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 700;
   padding: .6rem 1.15rem; cursor: pointer;
   transition: background .15s, transform .1s;
 }
@@ -48,7 +48,7 @@
   display: inline-flex; align-items: center; gap: .4rem;
   background: var(--surface2); border: 1px solid var(--border2);
   border-radius: 8px; color: var(--text);
-  font-family: 'DM Sans', sans-serif; font-size: .78rem; font-weight: 600;
+  font-family: 'Inter', sans-serif; font-size: .78rem; font-weight: 600;
   padding: .45rem .9rem; cursor: pointer; transition: border-color .15s;
 }
 .cp-btn-outline:hover { border-color: var(--border2); }
@@ -57,7 +57,7 @@
   display: flex; align-items: center; justify-content: center; gap: .45rem;
   width: 100%; background: var(--primary); color: #fff;
   border: none; border-radius: 10px;
-  font-family: 'DM Sans', sans-serif; font-size: .85rem; font-weight: 800;
+  font-family: 'Inter', sans-serif; font-size: .85rem; font-weight: 800;
   letter-spacing: .04em; text-transform: uppercase;
   padding: .85rem; cursor: pointer;
   transition: background .15s; margin-top: .75rem;
@@ -123,7 +123,7 @@
 }
 .cp-search {
   background: none; border: none; color: var(--text);
-  font-family: 'DM Sans', sans-serif; font-size: .8rem;
+  font-family: 'Inter', sans-serif; font-size: .8rem;
   outline: none; width: 200px;
 }
 .cp-search::placeholder { color: var(--muted); }
@@ -212,7 +212,7 @@
 }
 .cp-prov-search-wrap:hover { border-color: var(--primary); }
 .cp-prov-search-ico { color: var(--muted); display: flex; }
-.cp-prov-search-input { background: none; border: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: .85rem; outline: none; flex: 1; }
+.cp-prov-search-input { background: none; border: none; color: var(--text); font-family: 'Inter', sans-serif; font-size: .85rem; outline: none; flex: 1; }
 .cp-prov-chevron { color: var(--muted); font-size: .75rem; }
 
 .cp-prov-info { margin-top: 1rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: .9rem 1rem; }
@@ -242,7 +242,7 @@
 .cp-field label { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; display: block; margin-bottom: .4rem; }
 .cp-input {
   width: 100%; background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif;
+  border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif;
   font-size: .85rem; padding: .6rem .85rem; outline: none; box-sizing: border-box;
   transition: border-color .15s;
 }
@@ -255,7 +255,7 @@
   transition: border-color .15s;
 }
 .cp-prod-search-wrap:focus-within { border-color: var(--primary); }
-.cp-prod-search-input { background: none; border: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: .85rem; outline: none; flex: 1; min-width: 0; }
+.cp-prod-search-input { background: none; border: none; color: var(--text); font-family: 'Inter', sans-serif; font-size: .85rem; outline: none; flex: 1; min-width: 0; }
 .cp-prod-thumb {
   width: 26px; height: 26px; border-radius: 6px;
   background: var(--surface3); display: grid; place-items: center;
@@ -267,7 +267,7 @@
   width: 100%; padding: .7rem;
   background: none; border: 1.5px dashed var(--border2);
   border-radius: 10px; color: var(--muted); cursor: pointer;
-  font-family: 'DM Sans', sans-serif; font-size: .82rem; font-weight: 600;
+  font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 600;
   transition: border-color .15s, color .15s, background .15s;
 }
 .cp-btn-add-item:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
@@ -446,7 +446,7 @@
   display: flex; align-items: center; gap: .65rem;
   width: 100%; padding: .65rem .75rem; border-radius: 9px;
   background: none; border: 1px solid var(--border); cursor: pointer;
-  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: .82rem;
+  color: var(--text); font-family: 'Inter', sans-serif; font-size: .82rem;
   font-weight: 500; text-align: left; margin-bottom: .4rem;
   transition: border-color .15s, background .15s;
 }

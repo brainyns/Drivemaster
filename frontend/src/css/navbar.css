@@ -1,4 +1,4 @@
-.navbar {
+﻿.navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -44,7 +44,7 @@
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 500;
   transition: all 0.18s;
   display: flex;
@@ -278,7 +278,7 @@
   justify-content: center;
   border-radius: 50%;
   padding: 0 4px;
-  box-shadow: 0 2px 6px rgba(224,90,43,0.4);
+  box-shadow: 0 2px 6px var(--primary-glow-strong);
 }
 .navbar__logo-icon svg {
   width: 22px;

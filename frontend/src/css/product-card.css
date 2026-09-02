@@ -1,4 +1,4 @@
-/* ─── PRODUCT CARD ────────────────────────────────────────────── */
+﻿/* ─── PRODUCT CARD ────────────────────────────────────────────── */
 .product-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -23,7 +23,7 @@
 }
 
 .product-card:hover {
-  border-color: rgba(234, 88, 12, 0.35);
+  border-color: var(--primary-glow);
   transform: translateY(-2px);
 }
 
@@ -62,9 +62,9 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  background: #ea580c;
+  background: var(--primary);
   color: #fff;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -81,7 +81,7 @@
   backdrop-filter: blur(6px);
   border: 1px solid rgba(34,197,94,0.3);
   color: #22c55e;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -110,12 +110,12 @@
 }
 
 .product-card__categoria {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #ea580c;
+  color: var(--primary);
 }
 
 .product-card__nombre {
@@ -130,7 +130,7 @@
 }
 
 .product-card__marca {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 11px;
   font-weight: 400;
   color: var(--text-muted);
@@ -156,7 +156,7 @@
 }
 
 .product-card__precio-label {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 9px;
   font-weight: 400;
   color: var(--text-muted);
@@ -179,7 +179,7 @@
 }
 
 .product-card:hover .product-card__arrow {
-  border-color: #ea580c;
-  color: #ea580c;
-  background: rgba(234, 88, 12, 0.08);
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
 }

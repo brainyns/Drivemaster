@@ -1,4 +1,4 @@
-/* ─────────────────────────────────────────────────────────────
+﻿/* ─────────────────────────────────────────────────────────────
    PRODUCTOS.CSS — DriveMaster
    Sistema unificado con dashboard.css
 ───────────────────────────────────────────────────────────── */
@@ -8,7 +8,7 @@
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: 'Inter', sans-serif;
   padding: 1.5rem 1.75rem 2.5rem;
   animation: kpFadeIn 0.3s ease;
 }

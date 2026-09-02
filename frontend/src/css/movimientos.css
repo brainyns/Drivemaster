@@ -1,4 +1,4 @@
-/* ── TOPBAR ── */
+﻿/* ── TOPBAR ── */
 .mv-topbar {
   display: flex; justify-content: space-between; align-items: center;
   padding: 0 2rem; height: 56px;
@@ -6,7 +6,7 @@
   position: sticky; top: 0; z-index: 30;
 }
 .mv-topbar-left { display: flex; align-items: center; gap: 0.75rem; }
-.mv-topbar-brand { color: var(--primary); font-family: 'Manrope',sans-serif; font-weight: 800; font-size: 1rem; }
+.mv-topbar-brand { color: var(--primary); font-family: 'Barlow Condensed',sans-serif; font-weight: 800; font-size: 1rem; }
 .mv-topbar-div   { color: var(--text-muted); }
 .mv-topbar-sub   { color: var(--text-muted); font-size: 0.85rem; }
 .mv-topbar-right { display: flex; align-items: center; gap: 0.75rem; }
@@ -49,7 +49,7 @@
 .mv-stat-pct--adj { background: rgba(255,61,0,0.1);   color: var(--primary); }
 
 .mv-stat-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
-.mv-stat-val   { font-family: 'Manrope',sans-serif; font-size: 2rem; font-weight: 800; color: var(--text); line-height: 1; }
+.mv-stat-val   { font-family: 'Barlow Condensed',sans-serif; font-size: 2rem; font-weight: 800; color: var(--text); line-height: 1; }
 
 /* ── FILTERS ── */
 .mv-filters {
@@ -93,7 +93,7 @@
 .mv-btn-ajuste {
   background: var(--primary); border: none;
   color: black; padding: 0.65rem 1.3rem;
-  border-radius: 9px; font-family: 'Manrope',sans-serif;
+  border-radius: 9px; font-family: 'Barlow Condensed',sans-serif;
   font-size: 0.85rem; font-weight: 700; cursor: pointer;
   transition: all 0.15s; white-space: nowrap;
   box-shadow: 0 0 14px rgba(255,61,0,0.3);
@@ -130,7 +130,7 @@
 .mv-product-avatar {
   width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Manrope',sans-serif; font-weight: 800;
+  font-family: 'Barlow Condensed',sans-serif; font-weight: 800;
   font-size: 0.85rem; color: white;
 }
 .mv-product-name { font-weight: 600; font-size: 0.85rem; color: var(--text); }
@@ -145,13 +145,13 @@
 .mv-badge--salida  { background: rgba(239,68,68,0.12);  color: var(--error);   border: 1px solid rgba(239,68,68,0.2); }
 .mv-badge--ajuste  { background: rgba(255,61,0,0.12);   color: var(--primary); border: 1px solid rgba(255,61,0,0.2); }
 
-.mv-cantidad { font-family: 'Manrope',sans-serif; font-size: 1rem; font-weight: 800; }
+.mv-cantidad { font-family: 'Barlow Condensed',sans-serif; font-size: 1rem; font-weight: 800; }
 .mv-cantidad--pos { color: var(--success); }
 .mv-cantidad--neg { color: var(--error); }
 .mv-cantidad--adj { color: var(--primary); }
 
 .mv-muted { color: var(--text-muted); }
-.mv-stock-nuevo { color: var(--text); font-family: 'Manrope',sans-serif; font-size: 0.95rem; }
+.mv-stock-nuevo { color: var(--text); font-family: 'Barlow Condensed',sans-serif; font-size: 0.95rem; }
 
 .mv-motivo {
   background: var(--surface); border: 1px solid var(--border);
@@ -205,7 +205,7 @@
   box-shadow: 0 24px 64px rgba(0,0,0,0.6);
   animation: mvFade 0.2s ease;
 }
-.mv-modal h2 { font-family: 'Manrope',sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text); }
+.mv-modal h2 { font-family: 'Barlow Condensed',sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text); }
 .mv-modal-sub { font-size: 0.82rem; color: var(--text-muted); margin-top: -0.5rem; }
 .mv-modal-field { display: flex; flex-direction: column; gap: 0.4rem; }
 .mv-modal-field label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
@@ -226,7 +226,7 @@
 .mv-modal-save {
   background: var(--primary); border: none; color: black;
   padding: 0.6rem 1.5rem; border-radius: 9px; cursor: pointer;
-  font-family: 'Manrope',sans-serif; font-weight: 800; font-size: 0.88rem;
+  font-family: 'Barlow Condensed',sans-serif; font-weight: 800; font-size: 0.88rem;
   transition: all 0.15s; box-shadow: 0 0 14px rgba(255,61,0,0.3);
 }
 .mv-modal-save:hover { background: var(--primary-h); }

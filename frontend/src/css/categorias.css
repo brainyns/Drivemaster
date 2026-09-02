@@ -1,4 +1,4 @@
-/* ─── CATEGORIAS ─────────────────────────────────────────────── */
+﻿/* ─── CATEGORIAS ─────────────────────────────────────────────── */
 .categorias {
   background: var(--bg);
   padding: 80px 48px;
@@ -11,12 +11,12 @@
 }
 
 .categorias__title {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #ea580c;
+  color: var(--primary);
   margin: 0 0 8px;
 }
 
@@ -60,7 +60,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: #ea580c;
+  background: var(--primary);
   transform: scaleX(0);
   transition: transform 0.25s ease;
 }
@@ -72,12 +72,12 @@
 
 .categoria-card:hover {
   background: var(--surface2);
-  border-color: rgba(234, 88, 12, 0.2);
+  border-color: var(--primary-glow);
 }
 
 .categoria-card.active {
-  background: rgba(234, 88, 12, 0.08);
-  border-color: rgba(234, 88, 12, 0.3);
+  background: var(--primary-soft);
+  border-color: var(--primary-glow);
 }
 
 /* ── Icono SVG ── */
@@ -85,7 +85,7 @@
   width: 24px;
   height: 24px;
   flex-shrink: 0;
-  color: #ea580c;
+  color: var(--primary);
   opacity: 0.9;
   display: flex;
   align-items: center;
@@ -110,7 +110,7 @@
 }
 
 .categoria-card__count {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 11px;
   font-weight: 400;
   color: var(--text-muted);
@@ -139,7 +139,7 @@
 
 .categoria-card:hover .categoria-card__arrow,
 .categoria-card.active .categoria-card__arrow {
-  color: #ea580c;
+  color: var(--primary);
   transform: translateX(4px);
 }
 

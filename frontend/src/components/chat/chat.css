@@ -4,8 +4,8 @@
 :root {
     --dm-bg: #1a1a1a;
     --dm-surface: #2a2a2a;
-    --dm-primary: #e63946;
-    --dm-primary-dark: #b02632;
+    --dm-primary: var(--primary, #FF3D00);
+    --dm-primary-dark: var(--primary-h, #e63600);
     --dm-text: #f1f1f1;
     --dm-text-secondary: #aaaaaa;
     --dm-border: #3a3a3a;

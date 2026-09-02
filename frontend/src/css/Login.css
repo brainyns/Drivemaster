@@ -1,5 +1,4 @@
 /* ── Drivemaster – Login styles ───────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap');
 
 /* ── Logo only ──────────────────────────────────────────────────────── */
 .auth-page--client .auth-card {
@@ -7,23 +6,11 @@
   padding: 32px 28px 28px;
 }
 
-/* ── Reset ──────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 /* ── CSS Variables ──────────────────────────────────────────────────── */
 :root {
   --bg-deep:        #0c0c0c;
   --bg-card:        #161616;
   --bg-input:       #1c1c1c;
-  --border:         #2b2b2b;
-  --border-focus:   #e05a2b;
-  --accent:         #e05a2b;
-  --accent-hover:   #c94d22;
-  --accent-glow:    rgba(224, 90, 43, 0.25);
-  --text-primary:   #f0f0f0;
-  --text-secondary: #888888;
-  --text-muted:     #555555;
-  --error:          #e05a2b;
   --watermark:      rgba(255,255,255,0.025);
   --card-shine:     rgba(255,255,255,0.03);
   --radius-card:    10px;
@@ -34,15 +21,6 @@ html[data-theme="light"] {
   --bg-deep:        #f0f0f0;
   --bg-card:        #ffffff;
   --bg-input:       #f5f5f5;
-  --border:         #d4d4d4;
-  --border-focus:   #e05a2b;
-  --accent:         #e05a2b;
-  --accent-hover:   #c94d22;
-  --accent-glow:    rgba(224, 90, 43, 0.25);
-  --text-primary:   #1a1a1a;
-  --text-secondary: #666666;
-  --text-muted:     #999999;
-  --error:          #e05a2b;
   --watermark:      rgba(0,0,0,0.04);
   --card-shine:     rgba(0,0,0,0.03);
   --radius-card:    10px;
@@ -57,9 +35,9 @@ html[data-theme="light"] {
   justify-content: center;
   background-color: var(--bg-deep);
   background-image:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(224,90,43,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 60% at 50% 0%, var(--primary-soft) 0%, transparent 70%),
     url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.015'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Inter', sans-serif;
   padding: 24px;
   position: relative;
   overflow: hidden;
@@ -94,7 +72,7 @@ html[data-theme="light"] {
   box-shadow:
     0 0 0 1px var(--card-shine),
     0 20px 60px rgba(0,0,0,0.6),
-    0 0 40px rgba(224,90,43,0.04);
+    0 0 40px var(--primary-glow);
   animation: cardIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
 }
 
@@ -121,13 +99,13 @@ html[data-theme="light"] {
 .auth-brand-icon {
   width: 36px;
   height: 36px;
-  background: var(--accent);
+  background: var(--primary);
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(224,90,43,0.45);
+  box-shadow: 0 4px 14px var(--primary-glow-strong);
 }
 
 .auth-brand-icon svg {
@@ -141,7 +119,7 @@ html[data-theme="light"] {
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 2px;
-  color: var(--text-primary);
+  color: var(--text);
   text-transform: uppercase;
 }
 
@@ -156,16 +134,16 @@ html[data-theme="light"] {
 
 /* ── Heading ────────────────────────────────────────────────────────── */
 .auth-card h2 {
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text);
   margin-bottom: 6px;
 }
 
 .auth-subtitle {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--muted);
   margin-bottom: 26px;
   line-height: 1.55;
 }
@@ -186,7 +164,7 @@ html[data-theme="light"] {
   font-weight: 600;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--muted);
 }
 
 .password-header {
@@ -198,14 +176,14 @@ html[data-theme="light"] {
 .forgot-link {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--primary);
   background: none;
   border: none;
   cursor: pointer;
   padding: 0;
   letter-spacing: 0;
   text-transform: none;
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Inter', sans-serif;
   transition: opacity 0.2s;
 }
 .forgot-link:hover { opacity: 0.7; }
@@ -242,8 +220,8 @@ html[data-theme="light"] {
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius-input);
-  color: var(--text-primary);
-  font-family: 'Barlow', sans-serif;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   padding: 11px 42px 11px 38px;
   outline: none;
@@ -257,8 +235,8 @@ html[data-theme="light"] {
 }
 
 .auth-card input:focus {
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 /* password eye toggle */
@@ -274,7 +252,7 @@ html[data-theme="light"] {
   align-items: center;
   transition: color 0.2s;
 }
-.input-toggle:hover { color: var(--text-secondary); }
+.input-toggle:hover { color: var(--muted); }
 
 .input-toggle svg {
   width: 16px;
@@ -292,7 +270,7 @@ html[data-theme="light"] {
   cursor: pointer;
   font-size: 13px;
   font-weight: 400;
-  color: var(--text-secondary);
+  color: var(--muted);
   text-transform: none;
   letter-spacing: 0;
   margin-top: -2px;
@@ -301,7 +279,7 @@ html[data-theme="light"] {
 .remember-row input[type="checkbox"] {
   width: 15px;
   height: 15px;
-  accent-color: var(--accent);
+  accent-color: var(--primary);
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
@@ -310,7 +288,7 @@ html[data-theme="light"] {
 /* ── Submit button ──────────────────────────────────────────────────── */
 .auth-card button[type="submit"] {
   width: 100%;
-  background: var(--accent);
+  background: var(--primary);
   color: #fff;
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 15px;
@@ -327,12 +305,12 @@ html[data-theme="light"] {
   gap: 8px;
   margin-top: 4px;
   transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-  box-shadow: 0 4px 20px rgba(224,90,43,0.35);
+  box-shadow: 0 4px 20px var(--primary-glow-strong);
 }
 
 .auth-card button[type="submit"]:hover {
-  background: var(--accent-hover);
-  box-shadow: 0 6px 28px rgba(224,90,43,0.5);
+  background: var(--primary-h);
+  box-shadow: 0 6px 28px var(--primary-glow-strong);
 }
 
 .auth-card button[type="submit"]:active {
@@ -348,8 +326,8 @@ html[data-theme="light"] {
 .auth-error {
   font-size: 12px;
   color: var(--error);
-  background: rgba(224,90,43,0.08);
-  border: 1px solid rgba(224,90,43,0.2);
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-glow);
   border-radius: 4px;
   padding: 8px 12px;
   margin-top: -4px;
@@ -439,10 +417,10 @@ html[data-theme="light"] {
 .link-button {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--primary);
   cursor: pointer;
   font-size: 13px;
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   padding: 0;
   transition: opacity 0.2s;
@@ -459,7 +437,7 @@ html[data-theme="light"] {
 }
 
 .auth-version span {
-  color: var(--accent);
+  color: var(--primary);
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 600;
 }
@@ -477,12 +455,12 @@ html[data-theme="light"] {
   border-radius: 6px;
   color: var(--text-muted);
   font-size: 12px;
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.2s;
 }
 .auth-interno-btn:hover {
-  color: var(--text-secondary);
+  color: var(--muted);
   border-color: var(--text-muted);
 }
 
@@ -513,12 +491,12 @@ html[data-theme="light"] {
   width: 48px;
   height: 48px;
   margin: 0 auto 16px;
-  background: rgba(224,90,43,0.1);
+  background: var(--primary-soft);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent);
+  color: var(--primary);
 }
 .auth-warning-icon svg {
   width: 24px;
@@ -528,16 +506,16 @@ html[data-theme="light"] {
 }
 
 .auth-warning-modal h3 {
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 17px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text);
   margin-bottom: 10px;
 }
 
 .auth-warning-modal p {
   font-size: 13px;
-  color: var(--text-secondary);
+  color: var(--muted);
   line-height: 1.5;
   margin-bottom: 22px;
 }
@@ -551,7 +529,7 @@ html[data-theme="light"] {
 .auth-warning-btn {
   padding: 10px 22px;
   border-radius: 6px;
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -559,19 +537,19 @@ html[data-theme="light"] {
   transition: all 0.2s;
 }
 .auth-warning-btn.primary {
-  background: var(--accent);
+  background: var(--primary);
   color: #fff;
 }
 .auth-warning-btn.primary:hover {
-  background: var(--accent-hover);
+  background: var(--primary-h);
 }
 .auth-warning-btn.secondary {
   background: var(--bg-input);
-  color: var(--text-secondary);
+  color: var(--muted);
   border: 1px solid var(--border);
 }
 .auth-warning-btn.secondary:hover {
-  color: var(--text-primary);
+  color: var(--text);
 }
 
 /* ── Interno login styles override ─────────────────────────────────── */

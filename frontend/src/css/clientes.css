@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@700&display=swap');
-
+﻿
 :root {
   --bg: #0a0a0a;
   --surface: #111111;
@@ -52,7 +51,7 @@ html[data-theme="light"] {
 }
 
 .km-root {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -101,7 +100,7 @@ html[data-theme="light"] {
   padding: 0.32rem 0.8rem 0.32rem 2rem;
   color: var(--text);
   font-size: 0.8rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   width: 220px;
   outline: none;
   transition: border 0.15s;
@@ -120,7 +119,7 @@ html[data-theme="light"] {
   background: none;
   border: none;
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.82rem;
   font-weight: 600;
   padding: 0 0.85rem;
@@ -245,7 +244,7 @@ html[data-theme="light"] {
   border: 1px solid var(--border2);
   border-radius: 8px;
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.76rem;
   font-weight: 600;
   padding: 0.4rem 0.85rem;
@@ -393,7 +392,7 @@ table.km-table tr:last-child td {
   background: none;
   border: none;
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
@@ -421,7 +420,7 @@ table.km-table tr:last-child td {
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 700;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.15s;
   display: flex;
@@ -679,7 +678,7 @@ table.km-table tr:last-child td {
   padding: 0.75rem 1rem;
   border-radius: 11px;
   font-size: 0.86rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   outline: none;
   transition: border 0.2s;
 }
@@ -717,7 +716,7 @@ table.km-table tr:last-child td {
   background: none;
   border: 1px solid var(--border2);
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   font-size: 0.86rem;
   padding: 0.75rem 1.5rem;
@@ -942,7 +941,7 @@ table.km-table tr:last-child td {
 }
 
 .kf-page-title {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Barlow Condensed', sans-serif;
   font-size: 1.7rem;
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -1122,7 +1121,7 @@ table.km-table tr:last-child td {
   color: var(--text);
   padding: 0.78rem 2.2rem 0.78rem 1rem;
   font-size: 0.86rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   transition: none;
 }
 
@@ -1209,7 +1208,7 @@ table.km-table tr:last-child td {
   color: var(--text);
   padding: 0.78rem 1rem;
   font-size: 0.86rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   min-width: 0;
 }
 
@@ -1256,7 +1255,7 @@ table.km-table tr:last-child td {
   border-radius: 9px;
   padding: 0.45rem 0.75rem 0.45rem 2rem;
   font-size: 0.8rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--text);
   outline: none;
   transition: border-color 0.15s;
@@ -1343,7 +1342,7 @@ table.km-table tr:last-child td {
   background: transparent;
   border: 1px solid var(--border2);
   color: var(--muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   font-size: 0.85rem;
   padding: 0.72rem 1.4rem;
@@ -1365,7 +1364,7 @@ table.km-table tr:last-child td {
   background: linear-gradient(135deg, #ff3d00 0%, #ff7043 100%);
   color: white;
   border: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 700;
   font-size: 0.88rem;
   padding: 0.72rem 1.6rem;
@@ -1463,7 +1462,7 @@ table.km-table tr:last-child td {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Barlow Condensed', sans-serif;
   font-weight: 800;
   font-size: 1.3rem;
   color: var(--muted);
@@ -1472,7 +1471,7 @@ table.km-table tr:last-child td {
 }
 
 .kf-preview-name {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Barlow Condensed', sans-serif;
   font-size: 0.98rem;
   font-weight: 800;
   color: var(--text);

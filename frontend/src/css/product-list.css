@@ -1,4 +1,4 @@
-/* ─── PRODUCT LIST ────────────────────────────────────────────── */
+﻿/* ─── PRODUCT LIST ────────────────────────────────────────────── */
 .product-list {
   background: var(--bg);
   padding: 56px 48px 80px;
@@ -26,7 +26,7 @@
 }
 
 .product-list__subtitle {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 400;
   color: var(--text-muted);
@@ -68,7 +68,7 @@
 }
 
 .product-list__empty-text {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 13px;
   color: var(--text-muted);
   max-width: 280px;
