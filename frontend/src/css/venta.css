@@ -1947,3 +1947,73 @@ table.vd-table tr:last-child td {
   padding: .7rem 1rem;
   font-size: .83rem;
 }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .vt-stats { grid-template-columns: repeat(2, 1fr); }
+  .vf-productos-grid { grid-template-columns: 1fr; }
+  .vf-productos-divider { display: none; }
+}
+
+@media (max-width: 768px) {
+  /* Topbar */
+  .vt-top { padding: 0 0.75rem; }
+  .vt-breadcrumb { display: none; }
+  .vt-search input { width: 150px; }
+
+  /* Page header */
+  .vt-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.2rem 1rem 1rem;
+    gap: 0.75rem;
+  }
+  .vt-header-actions { flex-wrap: wrap; gap: 0.5rem; }
+
+  /* Cards y márgenes */
+  .vt-card { margin: 0 0.75rem 1rem; }
+  .vt-toolbar { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+  .vt-toolbar-l { flex-wrap: wrap; }
+  .vt-stats { margin: 0 0.75rem 1rem; }
+
+  /* Tabla: scroll horizontal */
+  .vt-card { overflow-x: auto; }
+  .vt-card table { min-width: 640px; }
+
+  /* Paginación */
+  .vt-pag { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+
+  /* Detalle de venta */
+  .vd-subheader { padding: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+  .vd-page-title { padding: 1rem; }
+  .vd-body {
+    grid-template-columns: 1fr;
+    padding: 0 0.75rem 1.5rem;
+  }
+
+  /* Form */
+  .vf-body {
+    grid-template-columns: 1fr;
+    padding: 0 0.75rem 1.5rem;
+  }
+  .vf-resumen { position: static; }
+
+  /* Modales */
+  .vf-catalog-modal { width: 100%; max-width: 100%; height: 90vh; max-height: 90vh; border-radius: 14px 14px 0 0; }
+  .vf-catalog-overlay { align-items: flex-end; }
+  .vf-modal { width: calc(100vw - 32px); padding: 1.5rem; }
+  .vf-catalog-modal-footer { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+  .vt-stats { grid-template-columns: 1fr; }
+  .vt-stat-val { font-size: 1.4rem; }
+  .vf-metodos { flex-direction: column; }
+  .vf-scan-row { flex-wrap: wrap; }
+  .vf-total-val { font-size: 1.6rem; }
+  .vd-table-wrap { overflow-x: auto; }
+  .vd-table { min-width: 520px; }
+  .vt-h1 { font-size: 1.4rem; }
+}

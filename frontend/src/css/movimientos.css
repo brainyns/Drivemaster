@@ -231,3 +231,19 @@
 }
 .mv-modal-save:hover { background: var(--primary-h); }
 .mv-modal-save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .mv-stats { grid-template-columns: repeat(2,1fr); }
+}
+
+@media (max-width: 768px) {
+  .mv-content { padding: 1rem; gap: 1rem; }
+  .mv-topbar { padding: 0 1rem; }
+  .mv-topbar-sub { display: none; }
+  .mv-modal { width: calc(100vw - 32px); padding: 1.5rem; }
+}
+
+@media (max-width: 480px) {
+  .mv-stats { grid-template-columns: 1fr; }
+}

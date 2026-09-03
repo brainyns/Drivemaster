@@ -194,6 +194,7 @@ function TopBar({
   theme,
   onToggleTheme,
   children,
+  onMenuClick,
 }) {
   const [configOpen, setConfigOpen] = useState(false);
   const [perfilOpen, setPerfilOpen] = useState(false);
@@ -241,6 +242,20 @@ function TopBar({
   return (
     <header className="tb-root">
       <div className="tb-left">
+        {onMenuClick && (
+          <button
+            className="tb-menu-btn"
+            onClick={onMenuClick}
+            title="Abrir menú"
+            aria-label="Abrir menú"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        )}
         <span className="tb-brand">DriveMaster</span>
         <span className="tb-divider">|</span>
         <span className="tb-breadcrumb">{titulo}</span>

@@ -544,3 +544,15 @@
   min-height: 100vh;
   background: var(--bg);
 }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .rp-subpage { padding: 1rem; }
+  .rp-search { width: 140px; }
+  .rp-toolbar { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+  .rp-table { min-width: 620px; }
+}
+
+@media (max-width: 480px) {
+  .rp-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+}

@@ -660,3 +660,19 @@
   width: 100%;
   height: 100%;
 }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .db-root { padding: 1rem; }
+  .db-header { flex-direction: column; align-items: flex-start; }
+  .db-charts-row { flex-direction: column; }
+  .db-charts-row .db-card { min-width: 0; width: 100%; }
+  .db-pbi-overlay { padding: 1rem; }
+  .db-pbi-modal { height: 95vh; }
+  .db-hbar-label { width: 70px; font-size: 0.68rem; }
+}
+
+@media (max-width: 480px) {
+  .db-kpi-grid { grid-template-columns: 1fr 1fr; }
+  .db-kpi-val { font-size: 1.2rem; }
+}

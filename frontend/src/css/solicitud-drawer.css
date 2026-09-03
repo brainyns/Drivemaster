@@ -90,3 +90,12 @@
   text-transform: uppercase; letter-spacing: 1px;
 }
 .sd-submit-btn:hover { opacity: .9; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .sd-drawer {
+    width: 100%;
+    max-width: 100%;
+    right: -100%;
+  }
+}

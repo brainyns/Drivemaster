@@ -467,3 +467,23 @@
 .cp-info-row  { display: flex; justify-content: space-between; align-items: center; font-size: .79rem; }
 .cp-info-label { color: var(--muted); }
 .cp-info-val   { font-weight: 700; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .cp-root { padding: 1rem; }
+  .cp-line-grid { grid-template-columns: 1fr 1fr; }
+  .cp-search { width: 140px; }
+  .cp-invoice-parties { grid-template-columns: 1fr; gap: 0.75rem; }
+  .cp-invoice-head { flex-direction: column; gap: 0.75rem; padding: 1.25rem; }
+  .cp-invoice-section { padding: 1rem; }
+  .cp-card-toolbar { flex-direction: column; align-items: stretch; }
+  .cp-toolbar-right { flex-wrap: wrap; }
+  .cp-prov-info-row { flex-direction: column; gap: 0.5rem; }
+  .cp-modal-body { padding: 1rem; }
+  .cp-invoice-table { min-width: 600px; }
+}
+
+@media (max-width: 480px) {
+  .cp-line-grid { grid-template-columns: 1fr; }
+  .cp-cart-grid { grid-template-columns: 1fr; }
+}

@@ -731,3 +731,11 @@
   --border: #2a2a2a;
   --bg: #111;
 }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .sq-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .sq-modal-grid { grid-template-columns: 1fr; }
+  .sq-toolbar { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+  .sq-header { flex-direction: column; align-items: flex-start; }
+}

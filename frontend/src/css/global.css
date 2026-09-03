@@ -95,6 +95,12 @@ body {
   color: var(--text);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+img, video, iframe, table, canvas {
+  max-width: 100%;
 }
 
 h1, h2, h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; }

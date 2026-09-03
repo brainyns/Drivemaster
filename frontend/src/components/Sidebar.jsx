@@ -38,13 +38,18 @@ const menu = [
   { key: "usuarios", label: "Usuarios", icon: "admin" },
 ];
 
-function Sidebar({ paginaActual, irA, userRole }) {
+function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
   const [abiertos, setAbiertos] = useState([]);
 
   const toggleAbierto = (key) => {
     setAbiertos(prev =>
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
+  };
+
+  const handleNav = (key) => {
+    irA(key);
+    if (onCerrar) onCerrar();
   };
 
   const visibleMenu = menu.filter(item => {
@@ -55,7 +60,9 @@ function Sidebar({ paginaActual, irA, userRole }) {
   });
 
   return (
-    <aside className="sidebar">
+    <>
+      <div className={`sidebar-overlay${abierto ? " visible" : ""}`} onClick={onCerrar} />
+      <aside className={`sidebar${abierto ? " sidebar--open" : ""}`}>
       {/* Marca */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">⚙</div>
@@ -78,7 +85,7 @@ function Sidebar({ paginaActual, irA, userRole }) {
             <div key={item.key}>
               <button
                 className={`sidebar-item${activo ? " activo" : ""}`}
-                onClick={() => tieneSubItems ? toggleAbierto(item.key) : irA(item.key)}
+                onClick={() => tieneSubItems ? toggleAbierto(item.key) : handleNav(item.key)}
               >
                 <span className="sidebar-item-icon">{Icons[item.icon]}</span>
                 <span>{item.label}</span>
@@ -93,7 +100,7 @@ function Sidebar({ paginaActual, irA, userRole }) {
                     <button
                       key={sub.key}
                       className={`sidebar-subitem${paginaActual === sub.key ? " activo" : ""}`}
-                      onClick={() => irA(sub.key)}
+                      onClick={() => handleNav(sub.key)}
                     >
                       {sub.icon && (
                         <span className="sidebar-subitem-icon">{Icons[sub.icon]}</span>
@@ -110,11 +117,12 @@ function Sidebar({ paginaActual, irA, userRole }) {
 
       {/* Volver al catálogo */}
       <div className="sidebar-footer">
-        <button className="sidebar-catalogo-btn" onClick={() => irA("catalogo")}>
+        <button className="sidebar-catalogo-btn" onClick={() => handleNav("catalogo")}>
           ← Volver al catálogo
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 

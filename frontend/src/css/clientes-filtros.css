@@ -112,3 +112,14 @@
   border-color: #E8450A;
   color: #E8450A;
 }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .km-filtros-panel {
+    position: fixed;
+    top: 56px;
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+  }
+}

@@ -1618,3 +1618,25 @@ html[data-theme="light"] .km-export-modal {
   border-color: #e0e0e0;
   box-shadow: 0 4px 16px rgba(0,0,0,0.1);
 }
+
+/* ── RESPONSIVE EXTRA (forms / listas) ── */
+@media (max-width: 860px) {
+  .km-bento {
+    grid-template-columns: 1fr;
+    padding: 0 1rem 1.5rem;
+    gap: 1rem;
+  }
+  .km-form-card { padding: 1.25rem; }
+}
+
+@media (max-width: 600px) {
+  .km-form-grid,
+  .km-compat-grid {
+    grid-template-columns: 1fr;
+  }
+  .km-fg-full,
+  .km-fg-half {
+    grid-column: span 1;
+  }
+  .km-page-header { flex-direction: column; align-items: flex-start; }
+}

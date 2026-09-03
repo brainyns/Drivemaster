@@ -763,3 +763,13 @@
 }
 
 .kpf-loading { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 860px) {
+  .kpf-layout { grid-template-columns: 1fr; gap: 16px; }
+  .kpf-card { padding: 20px; }
+}
+
+@media (max-width: 600px) {
+  .kpf-grid { grid-template-columns: 1fr; }
+}

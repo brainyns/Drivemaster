@@ -95,6 +95,7 @@ function App() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [solicitudItems, setSolicitudItems] = useState(loadSolicitud);
   const [solicitudAbierta, setSolicitudAbierta] = useState(false);
+  const [sidebarAbierto, setSidebarAbierto] = useState(false);
 
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
 
@@ -303,10 +304,12 @@ function App() {
       }
       return (
         <div className="app-layout">
-          <Sidebar paginaActual={pagina} irA={irA} userRole={user.rol} />
+          <Sidebar paginaActual={pagina} irA={irA} userRole={user.rol}
+            abierto={sidebarAbierto} onCerrar={() => setSidebarAbierto(false)} />
           <main className="app-content">
             <TopBar titulo="Enviar solicitud" user={user} onLogout={handleLogout}
-              colorTema={colorTema} theme={theme} onToggleTheme={toggleTheme} onColorChange={handleColorChange} />
+              colorTema={colorTema} theme={theme} onToggleTheme={toggleTheme} onColorChange={handleColorChange}
+              onMenuClick={() => setSidebarAbierto(true)} />
             <CheckoutPage
               onCompraExitosa={handleCompraExitosa}
               solicitudItems={solicitudItems}
@@ -404,6 +407,8 @@ function App() {
           paginaActual={pagina}
           irA={irA}
           userRole={user?.rol}
+          abierto={sidebarAbierto}
+          onCerrar={() => setSidebarAbierto(false)}
         />
       )}
 
@@ -418,6 +423,7 @@ function App() {
             theme={theme}
             onToggleTheme={toggleTheme}
             onColorChange={handleColorChange}
+            onMenuClick={() => setSidebarAbierto(true)}
           />
         )}
 
