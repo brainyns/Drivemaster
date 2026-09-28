@@ -25,12 +25,17 @@ import InventarioClientes    from "./pages/InventarioClientes";
 import ReportesClientes      from "./pages/ReportesClientes";
 import InventarioProductos   from "./pages/InventarioProductos";
 import ReportesProductos     from "./pages/ReportesProductos";
+import ReportesServicios     from "./pages/ReportesServicios";
 import MisPedidos            from "./pages/MisPedidos";
 import MisSolicitudes        from "./pages/MisSolicitudes";
 import PagoResultado         from "./pages/PagoResultado";
 import CheckoutPage          from "./pages/CheckoutPage";
 import SolicitudesAdmin      from "./pages/SolicitudesAdmin";
 import PerfilAdmin           from "./pages/PerfilAdmin";
+import PanelTaller           from "./pages/PanelTaller";
+import AdminTalleres         from "./pages/AdminTalleres";
+import MisVehiculos          from "./pages/MisVehiculos";
+import VehiculoServicio      from "./pages/VehiculoServicio";
 import ChatWidget            from "./components/chat/ChatWidget";
 import { getUser, getToken, clearSession, refreshToken, logout } from "./services/authService";
 
@@ -67,11 +72,14 @@ const TITULOS = {
   "rep-clientes":    "Reportes Clientes",
   "inv-productos":   "Inventario Productos",
   "rep-productos":   "Reportes Productos",
+  "rep-servicios":   "Reporte de Servicios",
   "mis-solicitudes": "Mis Solicitudes",
   "pago-resultado":  "Resultado del pago",
   "mis-pedidos":     "Historial de compras",
   "checkout":        "Enviar solicitud",
   "mi-perfil":       "Mi Perfil",
+  "taller-panel":    "Panel de taller",
+  "admin-talleres":  "Servicios",
 };
 
 const DEFAULT_IVA = 0.16;
@@ -145,12 +153,19 @@ function App() {
     if (!user) return;
     const interval = setInterval(async () => {
       try { await refreshToken(); }
-      catch { setSessionExpired(true); }
+      catch {
+        // Sesión expirada: limpiamos localmente pero conservamos el flag
+        // para poder mostrar la pantalla de "sesión expirada".
+        clearSession();
+        setUser(null);
+        setToken(null);
+        setSolicitudItems([]);
+        setPagina("catalogo");
+        setSessionExpired(true);
+      }
     }, 25 * 60 * 1000);
     return () => clearInterval(interval);
   }, [user]);
-
-  useEffect(() => { if (sessionExpired) handleLogout(); }, [sessionExpired]);
 
   const irA = (p, id = null) => { setIdSeleccionado(id); setPagina(p); };
 
@@ -169,6 +184,8 @@ function App() {
 
     if (auth.rol === "CLIENTE") {
       setPagina("catalogo");
+    } else if (auth.rol === "TALLER") {
+      setPagina("taller-panel");
     } else {
       setPagina("dashboard-main");
     }
@@ -245,7 +262,8 @@ function App() {
       "compras", "compraNueva", "compraDetalle",
       "proveedores", "proveedorNuevo", "proveedorEditar",
       "movimientos",
-      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos",
+      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
+      "admin-talleres",
       "mi-perfil",
     ],
     SUPERADMIN: [
@@ -257,18 +275,20 @@ function App() {
       "compras", "compraNueva", "compraDetalle",
       "proveedores", "proveedorNuevo", "proveedorEditar",
       "movimientos",
-      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos",
+      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
       "usuarios",
+      "admin-talleres",
       "mi-perfil",
     ],
-    CLIENTE: ["catalogo", "mis-pedidos", "mis-solicitudes", "checkout"],
+    CLIENTE: ["catalogo", "mis-pedidos", "mis-solicitudes", "checkout", "mis-vehiculos", "servicio-vehiculo"],
+    TALLER: ["taller-panel"],
   };
 
   const renderPagina = () => {
     if (pagina === "catalogo") return (
       <CatalogoPage
         onIrLogin={() => setPagina("login")}
-        onIrAdmin={() => setPagina("dashboard-main")}
+        onIrAdmin={() => setPagina(user?.rol === "TALLER" ? "taller-panel" : "dashboard-main")}
         onIrSolicitud={(p) => setPagina(p || "checkout")}
         onIrCheckout={() => setPagina("checkout")}
         onLogout={handleLogout}
@@ -338,22 +358,42 @@ function App() {
       return <MisPedidos onVolver={() => setPagina("catalogo")} />;
     }
 
-    if (pagina === "admin-login") {
-      return <AdminLogin onLogin={handleLogin} onVolver={() => setPagina("catalogo")} />;
+    if (pagina === "mis-vehiculos") {
+      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
+      return (
+        <MisVehiculos
+          onVolver={() => setPagina("catalogo")}
+          onVerServicio={(id) => irA("servicio-vehiculo", id)}
+        />
+      );
     }
 
-    if (!user) {
-      if (pagina === "register") return <Register onRegister={handleLogin} onBack={() => setPagina("login")} />;
-      return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} onGoAdminLogin={() => setPagina("admin-login")} />;
+    if (pagina === "servicio-vehiculo") {
+      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
+      return (
+        <VehiculoServicio
+          vehiculoId={idSeleccionado}
+          onVolver={() => setPagina("mis-vehiculos")}
+        />
+      );
+    }
+
+    if (pagina === "admin-login") {
+      return <AdminLogin onLogin={handleLogin} onVolver={() => setPagina("catalogo")} />;
     }
 
     if (sessionExpired) return (
       <div style={{ padding: "40px", textAlign: "center" }}>
         <h2>Sesión expirada</h2>
         <p>Tu sesión ha expirado. Inicia sesión nuevamente.</p>
-        <button onClick={() => { clearSession(); setPagina("login"); }}>Volver al login</button>
+        <button onClick={() => { clearSession(); setSessionExpired(false); setPagina("login"); }}>Volver al login</button>
       </div>
     );
+
+    if (!user) {
+      if (pagina === "register") return <Register onRegister={handleLogin} onBack={() => setPagina("login")} />;
+      return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} onGoAdminLogin={() => setPagina("admin-login")} />;
+    }
 
     if (!allowedPages[user.rol]?.includes(pagina)) return (
       <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
@@ -387,17 +427,20 @@ function App() {
     if (pagina === "movimientos")      return <Movimientos          token={token} />;
     if (pagina === "usuarios")         return <Usuarios             token={token} />;
     if (pagina === "mi-perfil")        return <PerfilAdmin          />;
+    if (pagina === "taller-panel")     return <PanelTaller          />;
+    if (pagina === "admin-talleres")   return <AdminTalleres        />;
 
     if (pagina === "inv-clientes")     return <InventarioClientes   token={token} />;
     if (pagina === "rep-clientes")     return <ReportesClientes     token={token} />;
     if (pagina === "inv-productos")    return <InventarioProductos  token={token} />;
     if (pagina === "rep-productos")    return <ReportesProductos    token={token} />;
+  if (pagina === "rep-servicios")     return <ReportesServicios    token={token} />;
 
     return <div style={{ padding: "40px" }}>Seleccione una sección válida.</div>;
   };
 
   const esCliente = user?.rol === "CLIENTE";
-  const usarPanel = pagina === "catalogo" || (esCliente && ["checkout", "mis-pedidos", "mis-solicitudes"].includes(pagina)) ? false
+  const usarPanel = pagina === "catalogo" || (esCliente && ["checkout", "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo"].includes(pagina)) ? false
     : !!user && pagina !== "catalogo";
 
   return (

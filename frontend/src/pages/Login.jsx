@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { login, googleLogin } from "../services/authService";
 import "../css/Login.css";
 
-export default function Login({ onLogin, onGoRegister, onVolver, onGoAdminLogin }) {
+export default function Login({ onLogin, onGoRegister, onGoAdminLogin }) {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -36,7 +36,7 @@ export default function Login({ onLogin, onGoRegister, onVolver, onGoAdminLogin 
     };
     document.body.appendChild(script);
     return () => {
-      try { google.accounts.id.cancel(); } catch {}
+      try { window.google?.accounts?.id?.cancel(); } catch { /* ignore */ }
       if (script.parentNode) script.parentNode.removeChild(script);
     };
   }, []);

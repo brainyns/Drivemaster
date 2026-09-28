@@ -15,6 +15,8 @@ const Icons = {
   repClientes: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
   invProductos:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>,
   repProductos:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>,
+  taller:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>,
+  repServicios:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>,
 };
 
 const menu = [
@@ -33,9 +35,12 @@ const menu = [
       { key: "rep-clientes",  label: "Reportes Clientes",    icon: "repClientes"  },
       { key: "inv-productos", label: "Inventario Productos", icon: "invProductos" },
       { key: "rep-productos", label: "Reportes Productos",   icon: "repProductos" },
+      { key: "rep-servicios", label: "Reporte Servicios",    icon: "repServicios" },
     ],
   },
   { key: "usuarios", label: "Usuarios", icon: "admin" },
+  { key: "admin-talleres", label: "Servicios", icon: "taller" },
+  { key: "taller-panel", label: "Panel de taller", icon: "taller" },
 ];
 
 function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
@@ -53,6 +58,9 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
   };
 
   const visibleMenu = menu.filter(item => {
+    if (userRole === "TALLER") return item.key === "taller-panel";
+    if (item.key === "taller-panel") return false;
+    if (item.key === "admin-talleres") return userRole === "SUPERADMIN" || userRole === "ADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
     if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "ADMIN" || userRole === "VENDEDOR";
     if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas", "solicitudes"].includes(item.key);

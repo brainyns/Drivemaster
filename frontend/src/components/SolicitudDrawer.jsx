@@ -108,5 +108,3 @@ export default function SolicitudDrawer({
     </>
   );
 }
-
-export { formatPrecio };

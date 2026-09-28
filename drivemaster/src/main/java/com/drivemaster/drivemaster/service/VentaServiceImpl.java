@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -27,6 +28,13 @@ import com.drivemaster.drivemaster.util.PdfVentaBuilder;
 
 @Service
 public class VentaServiceImpl implements VentaService {
+
+    /**
+     * El cobro de servicios de taller se hace en el local del taller, así que solo
+     * admite efectivo y transferencia. La tarjeta se procesa en línea con la pasarela.
+     */
+    private static final Set<String> METODOS_PAGO_TALLER =
+            Set.of("EFECTIVO", "TRANSFERENCIA");
 
     private final VentaRepository              ventaRepository;
     private final ProductoService              productoService;
@@ -130,10 +138,84 @@ public class VentaServiceImpl implements VentaService {
         return ventaGuardada;
     }
 
+    /**
+     * Registra la venta generada por una orden de taller.
+     *
+     * A diferencia de registrarVenta, aquí el total NO se recalcula: el importe de la orden
+     * (repuesto + mano de obra) ya fue pactado con el cliente al cotizar, y recalcularlo
+     * desde los productos descartaría la mano de obra. Por la misma razón la factura se
+     * emite con IVA 0, para que subtotal + IVA coincidan con el total cobrado.
+     */
+    @Override
+    public Venta registrarVentaTaller(Venta venta) {
+
+        LocalDateTime ahora = LocalDateTime.now().withNano(0);
+        venta.setFecha(ahora);
+
+        if (venta.getEstado() == null) {
+            venta.setEstado("PAGADA");
+        }
+
+        for (Pago pago : venta.getPagos()) {
+            if (!METODOS_PAGO_TALLER.contains(pago.getMetodo())) {
+                throw new RuntimeException(
+                        "Los servicios de taller solo se pagan con efectivo o transferencia. Recibido: "
+                                + pago.getMetodo());
+            }
+            metodoPagoRepo.findByCodigo(pago.getMetodo())
+                    .filter(mp -> mp.getActivo())
+                    .orElseThrow(() -> new RuntimeException(
+                            "Método de pago inválido o inactivo: " + pago.getMetodo()));
+        }
+
+        double totalOrden = venta.getTotal();
+        double totalPagos = venta.getPagos().stream().mapToDouble(Pago::getMonto).sum();
+        if (Double.compare(
+                Math.round(totalPagos * 100.0) / 100.0,
+                Math.round(totalOrden * 100.0) / 100.0) != 0) {
+            throw new RuntimeException("El total de pagos no coincide con el total de la orden");
+        }
+        // Valida existencias antes de guardar, para no dejar una venta huérfana si
+        // el movimiento de inventario falla después.
+        for (DetalleVenta detalle : venta.getProductos()) {
+            if (!"STOCK".equals(detalle.getTipo())) continue;
+            Producto producto = productoService.obtenerPorId(detalle.getProductoId());
+            int stock = producto.getStockActual() != null ? producto.getStockActual() : 0;
+            if (detalle.getCantidad() > stock) {
+                throw new StockInsuficienteException(producto.getNombre(), stock);
+            }
+        }
+
+        // Solo se genera referencia automática si el pago no trae una real
+        // (por ejemplo, el comprobante de una transferencia).
+        String refBase = ahora.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        for (Pago pago : venta.getPagos()) {
+            pago.setFecha(ahora);
+            if (pago.getReferencia() == null || pago.getReferencia().isBlank()) {
+                pago.setReferencia("RFF_" + refBase);
+            }
+        }
+
+        Venta ventaGuardada = ventaRepository.save(venta);
+
+        for (DetalleVenta detalle : ventaGuardada.getProductos()) {
+            if (!"STOCK".equals(detalle.getTipo())) continue;
+            movimientoService.registrarMovimiento(
+                    detalle.getProductoId(), "SALIDA", detalle.getCantidad(),
+                    "Orden de servicio", ventaGuardada.getId(), ventaGuardada.getUsuarioId());
+        }
+
+        enviarFactura(ventaGuardada, 0.0);
+
+        return ventaGuardada;
+    }
+
     private void enviarFactura(Venta venta) {
+        enviarFactura(venta, resolverIva());
+    }
+    private void enviarFactura(Venta venta, double iva) {
         Usuario usuario = usuarioRepository.findById(venta.getClienteId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        double iva = resolverIva();
         String idCorto = idCorto(venta.getId());
         String htmlFactura = EmailVentaBuilder.construir(usuario, venta, iva);
         byte[] pdfFactura = PdfVentaBuilder.construir(usuario, venta, iva);

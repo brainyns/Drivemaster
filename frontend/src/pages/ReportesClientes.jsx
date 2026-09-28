@@ -41,7 +41,7 @@ function RankingChart({ clientes }) {
   const max = Math.max(...clientes.map(c => c.totalGastado), 1);
   return (
     <div className="rp-chart">
-      {clientes.slice(0, 8).map((c, i) => (
+      {clientes.slice(0, 8).map((c) => (
         <div key={c.id} className="rp-chart-row">
           <span className="rp-chart-label" title={c.nombre}>{c.nombre}</span>
           <div className="rp-chart-bar-bg">
@@ -63,18 +63,18 @@ function RankingChart({ clientes }) {
 function ReportesClientes({ token }) {
   const [periodo,  setPeriodo]  = useState("mes");
   const [data,     setData]     = useState(null);
-  const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
 
-  const cargar = (p) => {
-    setLoading(true); setError(null);
-    getReportesClientes(token, p)
-      .then(setData)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
-  };
+  useEffect(() => {
+    let cancelado = false;
+    getReportesClientes(token, periodo)
+      .then(d => { if (!cancelado) setData(d); })
+      .catch(e => { if (!cancelado) setError(e.message); });
+    return () => { cancelado = true; };
+  }, [periodo, token]);
 
-  useEffect(() => { cargar(periodo); }, [periodo]);
+  const cambiarPeriodo = (p) => { setPeriodo(p); setData(null); setError(null); };
+  const loading = error === null && data === null;
 
   if (loading) return <div className="rp-loading"><div className="rp-spinner" />Cargando reportes...</div>;
   if (error)   return <p className="rp-error">⚠ {error}</p>;
@@ -92,7 +92,7 @@ function ReportesClientes({ token }) {
             <button
               key={p.k}
               className={`rp-period-tab${periodo === p.k ? " active" : ""}`}
-              onClick={() => setPeriodo(p.k)}
+              onClick={() => cambiarPeriodo(p.k)}
             >{p.l}</button>
           ))}
         </div>

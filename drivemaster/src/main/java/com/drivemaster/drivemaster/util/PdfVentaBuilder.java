@@ -33,7 +33,7 @@ public class PdfVentaBuilder {
     private static final Color BORDER      = new Color(229, 231, 235);  // bordes suaves
     private static final Color BORDER_ROW  = new Color(243, 244, 246);  // separador filas
 
-    private static final Locale LOCALE_CO = new Locale("es", "CO");
+    private static final Locale LOCALE_CO = Locale.forLanguageTag("es-CO");
     private static final float  PAD = 32f;
     private static final float  PW  = PageSize.A4.getWidth();
     private static final float  CW  = PW - PAD * 2;
@@ -73,7 +73,7 @@ public class PdfVentaBuilder {
                     : "XXXXXXXX";
             String fecha = venta.getFecha() != null
                     ? venta.getFecha().format(DateTimeFormatter.ofPattern(
-                        "dd 'de' MMMM 'de' yyyy, HH:mm", new Locale("es", "CO")))
+                        "dd 'de' MMMM 'de' yyyy, HH:mm", Locale.forLanguageTag("es-CO")))
                     : "—";
 
             double subtotalBruto = venta.getProductos() != null ? venta.getProductos().stream()

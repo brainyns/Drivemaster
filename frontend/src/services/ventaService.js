@@ -85,7 +85,7 @@ export async function exportarVentasPdf(token) {
   });
   if (!res.ok) {
     let msg = "Error al exportar PDF";
-    try { const data = await res.json(); msg = data.message || data.error || msg; } catch {}
+    try { const data = await res.json(); msg = data.message || data.error || msg; } catch { /* ignore */ }
     throw new Error(msg);
   }
   const blob = await res.blob();

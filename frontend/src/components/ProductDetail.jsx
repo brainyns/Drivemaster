@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getToken, getUser } from "../services/authService";
+import { getToken } from "../services/authService";
 import "../css/product-detail.css";
 
 const formatPrecio = (precio) => {
@@ -14,7 +14,6 @@ const formatPrecio = (precio) => {
 const ProductDetail = ({ producto, onClose, onAddProduct, onIrSolicitud }) => {
   const [cantidad, setCantidad] = useState(1);
   const [mensaje, setMensaje] = useState(null);
-  const user = getUser();
   const token = getToken();
 
   if (!producto) return null;

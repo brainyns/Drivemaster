@@ -1,0 +1,638 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------< com.drivemaster:drivemaster >---------------------
+[INFO] Building drivemaster 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.4.1:clean (default-clean) @ drivemaster ---
+[INFO] Deleting C:\Users\Brainy Blanco\Downloads\drivemaster (1)\drivemaster\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ drivemaster ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ drivemaster ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 132 source files with javac [debug parameters release 21] to target\classes
+[INFO] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/util/EmailSolicitudBuilder.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/util/EmailSolicitudBuilder.java: Recompile with -Xlint:deprecation for details.
+[INFO] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/security/JwtUtil.java: Some input files use unchecked or unsafe operations.
+[INFO] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/security/JwtUtil.java: Recompile with -Xlint:unchecked for details.
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/service/VehiculoServiceImpl.java:[128,25] method toDTO(com.drivemaster.drivemaster.model.Vehiculo) is already defined in class com.drivemaster.drivemaster.service.VehiculoServiceImpl
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/VehiculoController.java:[53,23] cannot find symbol
+  symbol:   class Map
+  location: class com.drivemaster.drivemaster.controller.VehiculoController
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/VehiculoController.java:[56,37] cannot find symbol
+  symbol:   class IOException
+  location: class com.drivemaster.drivemaster.controller.VehiculoController
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/service/VehiculoService.java:[24,95] cannot find symbol
+  symbol:   class IOException
+  location: interface com.drivemaster.drivemaster.service.VehiculoService
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[26,9] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.MysqlDataInitializer
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[41,19] cannot find symbol
+  symbol:   method setCodigo(java.lang.String)
+  location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[42,19] cannot find symbol
+  symbol:   method setNombre(java.lang.String)
+  location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[43,19] cannot find symbol
+  symbol:   method setIcono(java.lang.String)
+  location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[44,19] cannot find symbol
+  symbol:   method setActivo(boolean)
+  location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[45,19] cannot find symbol
+  symbol:   method setRequiereReferencia(java.lang.Boolean)
+  location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[47,17] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.MysqlDataInitializer
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[71,19] cannot find symbol
+  symbol:   method setCodigo(java.lang.String)
+  location: variable ev of type com.drivemaster.drivemaster.model.mysql.EstadoVenta
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[72,19] cannot find symbol
+  symbol:   method setNombre(java.lang.String)
+  location: variable ev of type com.drivemaster.drivemaster.model.mysql.EstadoVenta
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[73,19] cannot find symbol
+  symbol:   method setActivo(boolean)
+  location: variable ev of type com.drivemaster.drivemaster.model.mysql.EstadoVenta
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[75,17] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.MysqlDataInitializer
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[91,22] cannot find symbol
+  symbol:   method setClave(java.lang.String)
+  location: variable param of type com.drivemaster.drivemaster.model.mysql.Parametro
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[92,22] cannot find symbol
+  symbol:   method setValor(java.lang.String)
+  location: variable param of type com.drivemaster.drivemaster.model.mysql.Parametro
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[93,22] cannot find symbol
+  symbol:   method setDescripcion(java.lang.String)
+  location: variable param of type com.drivemaster.drivemaster.model.mysql.Parametro
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[95,17] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.MysqlDataInitializer
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[51,9] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[56,38] cannot find symbol
+  symbol:   method builder()
+  location: class com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[71,13] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[77,60] cannot find symbol
+  symbol:   method getId()
+  location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[82,25] cannot find symbol
+  symbol:   method builder()
+  location: class com.drivemaster.drivemaster.model.Vehiculo
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[82,57] cannot find symbol
+  symbol:   method getId()
+  location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[86,25] cannot find symbol
+  symbol:   method builder()
+  location: class com.drivemaster.drivemaster.model.Vehiculo
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[86,57] cannot find symbol
+  symbol:   method getId()
+  location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[90,25] cannot find symbol
+  symbol:   method builder()
+  location: class com.drivemaster.drivemaster.model.Vehiculo
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[90,57] cannot find symbol
+  symbol:   method getId()
+  location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[94,25] cannot find symbol
+  symbol:   method builder()
+  location: class com.drivemaster.drivemaster.model.Vehiculo
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[94,57] cannot find symbol
+  symbol:   method getId()
+  location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[101,9] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[122,32] cannot find symbol
+  symbol:   method builder()
+  location: class com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[137,13] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[141,53] cannot find symbol
+  symbol:   method getId()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[145,31] cannot find symbol
+  symbol:   method builder()
+  location: class com.drivemaster.drivemaster.model.Taller
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[146,35] cannot find symbol
+  symbol:   method getId()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[158,9] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[163,40] constructor Compatibilidad in class com.drivemaster.drivemaster.model.Compatibilidad cannot be applied to given types;
+  required: no arguments
+  found:    java.lang.String,java.lang.String,int,int
+  reason: actual and formal argument lists differ in length
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[181,17] cannot find symbol
+  symbol:   method setCodigo(java.lang.String)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[182,17] cannot find symbol
+  symbol:   method setNombre(java.lang.String)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[183,17] cannot find symbol
+  symbol:   method setCategoria(java.lang.String)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[184,17] cannot find symbol
+  symbol:   method setMarca(java.lang.String)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[185,17] cannot find symbol
+  symbol:   method setModelosCompatibles(java.util.ArrayList<com.drivemaster.drivemaster.model.Compatibilidad>)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[186,17] cannot find symbol
+  symbol:   method setPrecioCompra(double)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[187,17] cannot find symbol
+  symbol:   method setPrecioVenta(double)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[188,17] cannot find symbol
+  symbol:   method setStockActual(int)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[189,17] cannot find symbol
+  symbol:   method setStockMinimo(int)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[190,17] cannot find symbol
+  symbol:   method setTipo(java.lang.String)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[191,17] cannot find symbol
+  symbol:   method setActivo(boolean)
+  location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[194,9] cannot find symbol
+  symbol:   variable log
+  location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[80,78] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[85,24] cannot find symbol
+  symbol:   method getBloqueado()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[85,58] cannot find symbol
+  symbol:   method getBloqueado()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[86,28] cannot find symbol
+  symbol:   method getFechaBloqueo()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[87,55] cannot find symbol
+  symbol:   method getFechaBloqueo()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[91,32] cannot find symbol
+  symbol:   method setBloqueado(boolean)
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[92,32] cannot find symbol
+  symbol:   method setIntentosFallidos(int)
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[93,32] cannot find symbol
+  symbol:   method setFechaBloqueo(<nulltype>)
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[102,68] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[102,89] cannot find symbol
+  symbol:   method getPassword()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[108,66] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[111,80] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[114,16] cannot find symbol
+  symbol:   method setUltimoLogin(java.time.Instant)
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[127,48] cannot find symbol
+  symbol:   method getDatosCompletos()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[127,24] cannot find symbol
+  symbol:   method getProveedor()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[126,45] cannot find symbol
+  symbol:   method getRol()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[126,24] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[125,54] cannot find symbol
+  symbol:   method getNombre()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[125,37] cannot find symbol
+  symbol:   method getId()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[132,78] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[137,41] cannot find symbol
+  symbol:   method getRol()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[142,24] cannot find symbol
+  symbol:   method getBloqueado()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[142,58] cannot find symbol
+  symbol:   method getBloqueado()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[143,28] cannot find symbol
+  symbol:   method getFechaBloqueo()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[144,55] cannot find symbol
+  symbol:   method getFechaBloqueo()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[149,32] cannot find symbol
+  symbol:   method setBloqueado(boolean)
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[150,32] cannot find symbol
+  symbol:   method setIntentosFallidos(int)
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[151,32] cannot find symbol
+  symbol:   method setFechaBloqueo(<nulltype>)
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[160,68] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[160,89] cannot find symbol
+  symbol:   method getPassword()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[167,66] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[170,80] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[173,16] cannot find symbol
+  symbol:   method setUltimoLogin(java.time.Instant)
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[186,48] cannot find symbol
+  symbol:   method getDatosCompletos()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[186,24] cannot find symbol
+  symbol:   method getProveedor()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[185,45] cannot find symbol
+  symbol:   method getRol()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[185,24] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[184,54] cannot find symbol
+  symbol:   method getNombre()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[184,37] cannot find symbol
+  symbol:   method getId()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[191,72] cannot find symbol
+  symbol:   method getIdToken()
+  location: variable request of type com.drivemaster.drivemaster.dto.GoogleLoginRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[193,80] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[196,16] cannot find symbol
+  symbol:   method setUltimoLogin(java.time.Instant)
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[202,48] cannot find symbol
+  symbol:   method getDatosCompletos()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[202,24] cannot find symbol
+  symbol:   method getProveedor()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[201,45] cannot find symbol
+  symbol:   method getRol()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[201,24] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[200,54] cannot find symbol
+  symbol:   method getNombre()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[200,37] cannot find symbol
+  symbol:   method getId()
+  location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[207,20] cannot find symbol
+  symbol:   method getCorreo()
+  location: variable request of type com.drivemaster.drivemaster.dto.RegisterRequest
+[INFO] 100 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  17.922 s
+[INFO] Finished at: 2026-09-27T14:35:36-05:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.13.0:compile (default-compile) on project drivemaster: Compilation failure: Compilation failure: 
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/service/VehiculoServiceImpl.java:[128,25] method toDTO(com.drivemaster.drivemaster.model.Vehiculo) is already defined in class com.drivemaster.drivemaster.service.VehiculoServiceImpl
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/VehiculoController.java:[53,23] cannot find symbol
+[ERROR]   symbol:   class Map
+[ERROR]   location: class com.drivemaster.drivemaster.controller.VehiculoController
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/VehiculoController.java:[56,37] cannot find symbol
+[ERROR]   symbol:   class IOException
+[ERROR]   location: class com.drivemaster.drivemaster.controller.VehiculoController
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/service/VehiculoService.java:[24,95] cannot find symbol
+[ERROR]   symbol:   class IOException
+[ERROR]   location: interface com.drivemaster.drivemaster.service.VehiculoService
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[26,9] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.MysqlDataInitializer
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[41,19] cannot find symbol
+[ERROR]   symbol:   method setCodigo(java.lang.String)
+[ERROR]   location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[42,19] cannot find symbol
+[ERROR]   symbol:   method setNombre(java.lang.String)
+[ERROR]   location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[43,19] cannot find symbol
+[ERROR]   symbol:   method setIcono(java.lang.String)
+[ERROR]   location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[44,19] cannot find symbol
+[ERROR]   symbol:   method setActivo(boolean)
+[ERROR]   location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[45,19] cannot find symbol
+[ERROR]   symbol:   method setRequiereReferencia(java.lang.Boolean)
+[ERROR]   location: variable mp of type com.drivemaster.drivemaster.model.mysql.MetodoPago
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[47,17] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.MysqlDataInitializer
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[71,19] cannot find symbol
+[ERROR]   symbol:   method setCodigo(java.lang.String)
+[ERROR]   location: variable ev of type com.drivemaster.drivemaster.model.mysql.EstadoVenta
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[72,19] cannot find symbol
+[ERROR]   symbol:   method setNombre(java.lang.String)
+[ERROR]   location: variable ev of type com.drivemaster.drivemaster.model.mysql.EstadoVenta
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[73,19] cannot find symbol
+[ERROR]   symbol:   method setActivo(boolean)
+[ERROR]   location: variable ev of type com.drivemaster.drivemaster.model.mysql.EstadoVenta
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[75,17] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.MysqlDataInitializer
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[91,22] cannot find symbol
+[ERROR]   symbol:   method setClave(java.lang.String)
+[ERROR]   location: variable param of type com.drivemaster.drivemaster.model.mysql.Parametro
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[92,22] cannot find symbol
+[ERROR]   symbol:   method setValor(java.lang.String)
+[ERROR]   location: variable param of type com.drivemaster.drivemaster.model.mysql.Parametro
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[93,22] cannot find symbol
+[ERROR]   symbol:   method setDescripcion(java.lang.String)
+[ERROR]   location: variable param of type com.drivemaster.drivemaster.model.mysql.Parametro
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/MysqlDataInitializer.java:[95,17] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.MysqlDataInitializer
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[51,9] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[56,38] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[71,13] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[77,60] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[82,25] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.drivemaster.drivemaster.model.Vehiculo
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[82,57] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[86,25] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.drivemaster.drivemaster.model.Vehiculo
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[86,57] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[90,25] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.drivemaster.drivemaster.model.Vehiculo
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[90,57] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[94,25] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.drivemaster.drivemaster.model.Vehiculo
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[94,57] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable clienteDemo of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[101,9] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[122,32] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[137,13] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[141,53] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[145,31] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.drivemaster.drivemaster.model.Taller
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[146,35] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[158,9] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[163,40] constructor Compatibilidad in class com.drivemaster.drivemaster.model.Compatibilidad cannot be applied to given types;
+[ERROR]   required: no arguments
+[ERROR]   found:    java.lang.String,java.lang.String,int,int
+[ERROR]   reason: actual and formal argument lists differ in length
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[181,17] cannot find symbol
+[ERROR]   symbol:   method setCodigo(java.lang.String)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[182,17] cannot find symbol
+[ERROR]   symbol:   method setNombre(java.lang.String)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[183,17] cannot find symbol
+[ERROR]   symbol:   method setCategoria(java.lang.String)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[184,17] cannot find symbol
+[ERROR]   symbol:   method setMarca(java.lang.String)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[185,17] cannot find symbol
+[ERROR]   symbol:   method setModelosCompatibles(java.util.ArrayList<com.drivemaster.drivemaster.model.Compatibilidad>)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[186,17] cannot find symbol
+[ERROR]   symbol:   method setPrecioCompra(double)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[187,17] cannot find symbol
+[ERROR]   symbol:   method setPrecioVenta(double)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[188,17] cannot find symbol
+[ERROR]   symbol:   method setStockActual(int)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[189,17] cannot find symbol
+[ERROR]   symbol:   method setStockMinimo(int)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[190,17] cannot find symbol
+[ERROR]   symbol:   method setTipo(java.lang.String)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[191,17] cannot find symbol
+[ERROR]   symbol:   method setActivo(boolean)
+[ERROR]   location: variable producto of type com.drivemaster.drivemaster.model.Producto
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/config/ServicioTallerSeeder.java:[194,9] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.drivemaster.drivemaster.config.ServicioTallerSeeder
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[80,78] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[85,24] cannot find symbol
+[ERROR]   symbol:   method getBloqueado()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[85,58] cannot find symbol
+[ERROR]   symbol:   method getBloqueado()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[86,28] cannot find symbol
+[ERROR]   symbol:   method getFechaBloqueo()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[87,55] cannot find symbol
+[ERROR]   symbol:   method getFechaBloqueo()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[91,32] cannot find symbol
+[ERROR]   symbol:   method setBloqueado(boolean)
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[92,32] cannot find symbol
+[ERROR]   symbol:   method setIntentosFallidos(int)
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[93,32] cannot find symbol
+[ERROR]   symbol:   method setFechaBloqueo(<nulltype>)
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[102,68] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[102,89] cannot find symbol
+[ERROR]   symbol:   method getPassword()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[108,66] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[111,80] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[114,16] cannot find symbol
+[ERROR]   symbol:   method setUltimoLogin(java.time.Instant)
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[127,48] cannot find symbol
+[ERROR]   symbol:   method getDatosCompletos()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[127,24] cannot find symbol
+[ERROR]   symbol:   method getProveedor()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[126,45] cannot find symbol
+[ERROR]   symbol:   method getRol()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[126,24] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[125,54] cannot find symbol
+[ERROR]   symbol:   method getNombre()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[125,37] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[132,78] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[137,41] cannot find symbol
+[ERROR]   symbol:   method getRol()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[142,24] cannot find symbol
+[ERROR]   symbol:   method getBloqueado()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[142,58] cannot find symbol
+[ERROR]   symbol:   method getBloqueado()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[143,28] cannot find symbol
+[ERROR]   symbol:   method getFechaBloqueo()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[144,55] cannot find symbol
+[ERROR]   symbol:   method getFechaBloqueo()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[149,32] cannot find symbol
+[ERROR]   symbol:   method setBloqueado(boolean)
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[150,32] cannot find symbol
+[ERROR]   symbol:   method setIntentosFallidos(int)
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[151,32] cannot find symbol
+[ERROR]   symbol:   method setFechaBloqueo(<nulltype>)
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[160,68] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[160,89] cannot find symbol
+[ERROR]   symbol:   method getPassword()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[167,66] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[170,80] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.AuthRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[173,16] cannot find symbol
+[ERROR]   symbol:   method setUltimoLogin(java.time.Instant)
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[186,48] cannot find symbol
+[ERROR]   symbol:   method getDatosCompletos()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[186,24] cannot find symbol
+[ERROR]   symbol:   method getProveedor()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[185,45] cannot find symbol
+[ERROR]   symbol:   method getRol()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[185,24] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[184,54] cannot find symbol
+[ERROR]   symbol:   method getNombre()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[184,37] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[191,72] cannot find symbol
+[ERROR]   symbol:   method getIdToken()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.GoogleLoginRequest
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[193,80] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[196,16] cannot find symbol
+[ERROR]   symbol:   method setUltimoLogin(java.time.Instant)
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[202,48] cannot find symbol
+[ERROR]   symbol:   method getDatosCompletos()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[202,24] cannot find symbol
+[ERROR]   symbol:   method getProveedor()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[201,45] cannot find symbol
+[ERROR]   symbol:   method getRol()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[201,24] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[200,54] cannot find symbol
+[ERROR]   symbol:   method getNombre()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[200,37] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable usuario of type com.drivemaster.drivemaster.model.Usuario
+[ERROR] /C:/Users/Brainy Blanco/Downloads/drivemaster (1)/drivemaster/src/main/java/com/drivemaster/drivemaster/controller/AuthController.java:[207,20] cannot find symbol
+[ERROR]   symbol:   method getCorreo()
+[ERROR]   location: variable request of type com.drivemaster.drivemaster.dto.RegisterRequest
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

@@ -370,6 +370,7 @@ public class AuthController {
                     "VENTAS_READ", "VENTAS_WRITE"
             );
             case "CLIENTE" -> List.of("ROLE_CLIENTE", "PRODUCTOS_READ");
+            case "TALLER" -> List.of("TALLER_ORDENES_READ", "TALLER_ORDENES_WRITE");
             default -> List.of();
         };
     }

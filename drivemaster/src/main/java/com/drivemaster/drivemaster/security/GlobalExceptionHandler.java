@@ -36,6 +36,12 @@ public class GlobalExceptionHandler {
                 .body(buildResponse("Credenciales incorrectas", HttpStatus.UNAUTHORIZED));
     }
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<?> handleResponseStatus(org.springframework.web.server.ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        return ResponseEntity.status(status).body(buildResponse(ex.getReason(), status));
+    }
+
     @ExceptionHandler(StockInsuficienteException.class)
     public ResponseEntity<?> handleStockInsuficiente(StockInsuficienteException ex) {
         Map<String, Object> response = new HashMap<>();

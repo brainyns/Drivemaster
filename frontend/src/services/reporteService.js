@@ -44,3 +44,9 @@ export async function getReportesProductos(token, periodo = "mes") {
   if (!res.ok) throw new Error("Error al obtener reportes de productos");
   return res.json();
 }
+
+export async function getReportesServicios(token, periodo = "mes") {
+  const res = await fetch(`${BASE_URL}/servicios/reportes?periodo=${periodo}`, { headers: buildHeaders(token) });
+  if (!res.ok) throw new Error("Error al obtener el reporte de servicios");
+  return res.json();
+}

@@ -3,9 +3,12 @@ package com.drivemaster.drivemaster.service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Set;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -14,6 +17,7 @@ import java.util.stream.Collectors;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
 import org.springframework.stereotype.Service;
 
+import com.drivemaster.drivemaster.dto.OrdenServicioDTO;
 import com.drivemaster.drivemaster.dto.reporte.ClienteInactivoDTO;
 import com.drivemaster.drivemaster.dto.reporte.ClienteReporteDTO;
 import com.drivemaster.drivemaster.dto.reporte.DashboardDTO;
@@ -23,31 +27,41 @@ import com.drivemaster.drivemaster.dto.reporte.InventarioProductosDTO;
 import com.drivemaster.drivemaster.dto.reporte.ProductoReporteDTO;
 import com.drivemaster.drivemaster.dto.reporte.ReporteClientesDTO;
 import com.drivemaster.drivemaster.dto.reporte.ReporteProductosDTO;
+import com.drivemaster.drivemaster.dto.reporte.ReporteServiciosDTO;
 import com.drivemaster.drivemaster.dto.reporte.VentaResumenDTO;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.DetalleVenta;
 import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Venta;
+import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.repository.VentaRepository;
+import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
  
 @Service
 public class ReporteServiceImpl implements ReporteService {
- 
+
+    /** Estados en los que una orden de taller ya está cobrada. */
+    private static final Set<String> ESTADOS_COBRADOS =
+            Set.of("PAGADA", "EN_PROCESO", "FINALIZADA");
+
     private final VentaRepository     ventaRepository;
     private final UsuarioRepository   usuarioRepository;
     private final ProductoRepository  productoRepository;
+    private final OrdenServicioRepository ordenServicioRepository;
 
     public ReporteServiceImpl(VentaRepository ventaRepository,
                                UsuarioRepository usuarioRepository,
-                               ProductoRepository productoRepository) {
+                               ProductoRepository productoRepository,
+                               OrdenServicioRepository ordenServicioRepository) {
         this.ventaRepository    = ventaRepository;
         this.usuarioRepository = usuarioRepository;
         this.productoRepository = productoRepository;
+        this.ordenServicioRepository = ordenServicioRepository;
     }
  
-    // ── Utilidades de fecha ───────────────────────────────────────────────────
+    // â”€â”€ Utilidades de fecha â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private LocalDateTime inicioDia()   { return LocalDateTime.now().toLocalDate().atStartOfDay(); }
     private LocalDateTime inicioSemana(){ return inicioDia().minusDays(7); }
     private LocalDateTime inicioMes()   { return inicioDia().minusDays(30); }
@@ -60,19 +74,27 @@ public class ReporteServiceImpl implements ReporteService {
         };
     }
  
+    /**
+     * Ventas que alimentan los reportes agregados del negocio.
+     *
+     * <p>Excluye las ventas de tipo TALLER porque sus órdenes se reportan aparte en
+     * {@link #getReportesServicios(String)}; sumarlas aquí también duplicaría los ingresos
+     * y el historial de cada taller. El historial personal del cliente sí las muestra.
+     */
     private List<Venta> ventasActivas() {
         return ventaRepository.findAll().stream()
                 .filter(v -> !"ANULADA".equals(v.getEstado()) && !"CANCELADA".equals(v.getEstado()))
+                .filter(v -> !"TALLER".equals(v.getTipoVenta()))
                 .collect(Collectors.toList());
     }
  
-    // ── DASHBOARD ─────────────────────────────────────────────────────────────
+    // â”€â”€ DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @Override
     public DashboardDTO getDashboard() {
         DashboardDTO dto = new DashboardDTO();
         List<Venta> activas = ventasActivas();
  
-        // Total ventas día
+        // Total ventas dÃ­a
         dto.setTotalVentasDia(activas.stream()
                 .filter(v -> v.getFecha() != null && v.getFecha().isAfter(inicioDia()))
                 .mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0)
@@ -91,7 +113,7 @@ public class ReporteServiceImpl implements ReporteService {
         dto.setPromedioTicket(activas.isEmpty() ? 0 :
                 activas.stream().mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0).average().orElse(0));
  
-        // Producto más vendido
+        // Producto mÃ¡s vendido
         Map<String, Long> conteoProductos = new HashMap<>();
         for (Venta v : activas) {
             if (v.getProductos() != null) {
@@ -102,9 +124,9 @@ public class ReporteServiceImpl implements ReporteService {
         }
         dto.setProductoMasVendido(conteoProductos.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey).orElse("—"));
+                .map(Map.Entry::getKey).orElse("â€”"));
  
-        // Cliente más importante (por total gastado)
+        // Cliente mÃ¡s importante (por total gastado)
         Map<String, Double> gastoCliente = new HashMap<>();
         for (Venta v : activas) {
             if (v.getClienteId() != null) {
@@ -118,10 +140,10 @@ public class ReporteServiceImpl implements ReporteService {
             usuarioRepository.findById(topClienteId)
                     .ifPresent(c -> dto.setClienteMasImportante(c.getNombre()));
         } else {
-            dto.setClienteMasImportante("—");
+            dto.setClienteMasImportante("â€”");
         }
  
-        // Método de pago más usado
+        // MÃ©todo de pago mÃ¡s usado
         Map<String, Long> conteoMetodos = new HashMap<>();
         for (Venta v : activas) {
             if (v.getPagos() != null) {
@@ -134,9 +156,9 @@ public class ReporteServiceImpl implements ReporteService {
         }
         dto.setMetodoPagoMasUsado(conteoMetodos.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey).orElse("—"));
+                .map(Map.Entry::getKey).orElse("â€”"));
  
-        // Variación semana
+        // VariaciÃ³n semana
         double ventasSemanaActual = activas.stream()
                 .filter(v -> v.getFecha() != null && v.getFecha().isAfter(inicioSemana()))
                 .mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0).sum();
@@ -151,7 +173,7 @@ public class ReporteServiceImpl implements ReporteService {
         return dto;
     }
  
-    // ── INVENTARIO CLIENTES ───────────────────────────────────────────────────
+    // â”€â”€ INVENTARIO CLIENTES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @Override
     public InventarioClientesDTO getInventarioClientes() {
         InventarioClientesDTO dto = new InventarioClientesDTO();
@@ -191,10 +213,10 @@ public class ReporteServiceImpl implements ReporteService {
             dto.setUltimaCompra(compras.get(0).getFecha()
                     .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
         } else {
-            dto.setUltimaCompra("—");
+            dto.setUltimaCompra("â€”");
         }
  
-        // Método de pago más usado
+        // MÃ©todo de pago mÃ¡s usado
         Map<String, Long> metodos = new HashMap<>();
         for (Venta v : compras) {
             if (v.getPagos() != null) {
@@ -205,16 +227,16 @@ public class ReporteServiceImpl implements ReporteService {
         }
         dto.setMetodoPagoMasUsado(metodos.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey).orElse("—"));
+                .map(Map.Entry::getKey).orElse("â€”"));
  
-        // Clasificación
+        // ClasificaciÃ³n
         long n = dto.getTotalCompras();
         dto.setClasificacion(n == 0 ? "NUEVO" : n >= 10 ? "FRECUENTE" : "OCASIONAL");
  
         return dto;
     }
  
-    // ── REPORTES CLIENTES ─────────────────────────────────────────────────────
+    // â”€â”€ REPORTES CLIENTES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @Override
     public ReporteClientesDTO getReportesClientes(String periodo) {
         ReporteClientesDTO dto = new ReporteClientesDTO();
@@ -230,21 +252,21 @@ public class ReporteServiceImpl implements ReporteService {
         dto.setTotalRecaudado(enPeriodo.stream()
                 .mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0).sum());
  
-        // Cliente más compró hoy
+        // Cliente mÃ¡s comprÃ³ hoy
         Map<String, Double> gastoDia = new HashMap<>();
         activas.stream().filter(v -> v.getFecha() != null && v.getFecha().isAfter(inicioDia()))
                 .forEach(v -> gastoDia.merge(v.getClienteId(), v.getTotal() == null ? 0.0 : v.getTotal(), Double::sum));
         String topHoyId = gastoDia.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
         dto.setClienteMasComproHoy(topHoyId != null ?
-                usuarioRepository.findById(topHoyId).map(Usuario::getNombre).orElse("—") : "—");
+                usuarioRepository.findById(topHoyId).map(Usuario::getNombre).orElse("â€”") : "â€”");
  
-        // Cliente más compró semana
+        // Cliente mÃ¡s comprÃ³ semana
         Map<String, Double> gastoSemana = new HashMap<>();
         activas.stream().filter(v -> v.getFecha() != null && v.getFecha().isAfter(inicioSemana()))
                 .forEach(v -> gastoSemana.merge(v.getClienteId(), v.getTotal() == null ? 0.0 : v.getTotal(), Double::sum));
         String topSemanaId = gastoSemana.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
         dto.setClienteMasComproSemana(topSemanaId != null ?
-                usuarioRepository.findById(topSemanaId).map(Usuario::getNombre).orElse("—") : "—");
+                usuarioRepository.findById(topSemanaId).map(Usuario::getNombre).orElse("â€”") : "â€”");
  
         // Ranking top 10
         dto.setRankingClientes(clientes.stream()
@@ -253,7 +275,7 @@ public class ReporteServiceImpl implements ReporteService {
                 .limit(10)
                 .collect(Collectors.toList()));
  
-        // Clientes inactivos (sin comprar en 30 días)
+        // Clientes inactivos (sin comprar en 30 dÃ­as)
         dto.setClientesInactivos(clientes.stream().map(c -> {
             List<Venta> compras = activas.stream()
                     .filter(v -> c.getId().equals(v.getClienteId()) && v.getFecha() != null)
@@ -273,7 +295,7 @@ public class ReporteServiceImpl implements ReporteService {
           .sorted(Comparator.comparingLong(ClienteInactivoDTO::getDiasSinComprar).reversed())
           .collect(Collectors.toList()));
  
-        // Ventas por día (últimos 7 días) para gráfica
+        // Ventas por dÃ­a (Ãºltimos 7 dÃ­as) para grÃ¡fica
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
         Map<String, Double> ventasPorDia = new LinkedHashMap<>();
         for (int i = 6; i >= 0; i--) {
@@ -290,7 +312,7 @@ public class ReporteServiceImpl implements ReporteService {
         return dto;
     }
  
-    // ── HISTORIAL CLIENTE ─────────────────────────────────────────────────────
+    // â”€â”€ HISTORIAL CLIENTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @Override
     public HistorialClienteDTO getHistorialCliente(String clienteId) {
         HistorialClienteDTO dto = new HistorialClienteDTO();
@@ -304,7 +326,7 @@ public class ReporteServiceImpl implements ReporteService {
                     VentaResumenDTO r = new VentaResumenDTO();
                     r.setId(v.getId());
                     r.setFecha(v.getFecha() != null ?
-                            v.getFecha().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "—");
+                            v.getFecha().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "â€”");
                     r.setTotal(v.getTotal());
                     r.setEstado(v.getEstado());
                     r.setCantidadProductos(v.getProductos() != null ? v.getProductos().size() : 0);
@@ -318,7 +340,7 @@ public class ReporteServiceImpl implements ReporteService {
         return dto;
     }
  
-    // ── INVENTARIO PRODUCTOS ──────────────────────────────────────────────────
+    // â”€â”€ INVENTARIO PRODUCTOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @Override
     public InventarioProductosDTO getInventarioProductos() {
         InventarioProductosDTO dto = new InventarioProductosDTO();
@@ -377,7 +399,7 @@ public class ReporteServiceImpl implements ReporteService {
         return dto;
     }
  
-    // ── REPORTES PRODUCTOS ────────────────────────────────────────────────────
+    // â”€â”€ REPORTES PRODUCTOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @Override
     public ReporteProductosDTO getReportesProductos(String periodo) {
         ReporteProductosDTO dto = new ReporteProductosDTO();
@@ -393,7 +415,7 @@ public class ReporteServiceImpl implements ReporteService {
                 .map(p -> buildProductoReporteDTO(p, enPeriodo))
                 .collect(Collectors.toList());
  
-        // Más vendidos
+        // MÃ¡s vendidos
         dto.setMasVendidos(lista.stream()
                 .filter(p -> p.getUnidadesVendidas() > 0)
                 .sorted(Comparator.comparingLong(ProductoReporteDTO::getUnidadesVendidas).reversed())
@@ -410,7 +432,7 @@ public class ReporteServiceImpl implements ReporteService {
                 .filter(p -> p.getUnidadesVendidas() == 0)
                 .collect(Collectors.toList()));
  
-        // Ventas por día (últimos 7 días)
+        // Ventas por dÃ­a (Ãºltimos 7 dÃ­as)
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
         Map<String, Double> ventasPorDia = new LinkedHashMap<>();
         List<Venta> todasActivas = ventasActivas();
@@ -424,7 +446,7 @@ public class ReporteServiceImpl implements ReporteService {
         }
         dto.setVentasPorDia(ventasPorDia);
  
-        // Unidades por categoría
+        // Unidades por categorÃ­a
         Map<String, Long> porCategoria = new LinkedHashMap<>();
         for (ProductoReporteDTO p : lista) {
             if (p.getCategoria() != null) {
@@ -434,5 +456,124 @@ public class ReporteServiceImpl implements ReporteService {
         dto.setUnidadesPorCategoria(porCategoria);
  
         return dto;
+    }
+ 
+    // ─── SERVICIOS DE TALLER ──────────────────────────────────────────────────
+    /**
+     * Seguimiento de los servicios de taller: en qué estado están las órdenes, cuánto
+     * entra por ellos, qué talleres prefieren los clientes y qué repuestos llevan más.
+     *
+     * <p>Se trabaja sobre OrdenServicio y no sobre Venta porque el estado real de la
+     * orden vive ahí; la venta queda en PAGADA desde el momento del cobro y no refleja
+     * el avance del trabajo. Las ventas tipo TALLER se excluyen de los reportes de
+     * producto y de clientes para no sumar dos veces los mismos ingresos.
+     */
+    @Override
+    public ReporteServiciosDTO getReportesServicios(String periodo) {
+        LocalDateTime desde = inicioPeriodo(periodo);
+
+        List<OrdenServicio> ordenes = ordenServicioRepository.findAll().stream()
+                .filter(o -> o.getFechaCreacion() != null && !o.getFechaCreacion().isBefore(desde))
+                .collect(Collectors.toList());
+
+        long canceladas = ordenes.stream().filter(o -> "CANCELADA".equals(o.getEstado())).count();
+        List<OrdenServicio> vigentes = ordenes.stream()
+                .filter(o -> !"CANCELADA".equals(o.getEstado()))
+                .collect(Collectors.toList());
+
+        long finalizadas = vigentes.stream().filter(o -> "FINALIZADA".equals(o.getEstado())).count();
+        long enProceso = vigentes.stream().filter(o -> "EN_PROCESO".equals(o.getEstado())).count();
+
+        // Una orden cuenta como facturada desde que se cobra, sin importar si el
+        // taller ya terminó el trabajo.
+        List<OrdenServicio> facturadas = vigentes.stream()
+                .filter(o -> ESTADOS_COBRADOS.contains(o.getEstado()))
+                .collect(Collectors.toList());
+        double ingresos = facturadas.stream()
+                .mapToDouble(o -> o.getTotal() != null ? o.getTotal() : 0.0)
+                .sum();
+
+        ReporteServiciosDTO dto = new ReporteServiciosDTO();
+        dto.setTotalOrdenes(ordenes.size());
+        dto.setOrdenesFinalizadas(finalizadas);
+        dto.setOrdenesEnProceso(enProceso);
+        dto.setOrdenesCanceladas(canceladas);
+        dto.setIngresosTotales(redondear(ingresos));
+        dto.setOrdenesFacturadas(facturadas.size());
+        // El ticket se calcula sobre las órdenes cobradas: dividir entre todas las
+        // vigentes arrastraría cotizaciones que nunca se facturaron.
+        dto.setTicketPromedio(facturadas.isEmpty() ? 0 : redondear(ingresos / facturadas.size()));
+
+        dto.setTalleresPreferidos(rankingTalleres(vigentes, vigentes.size()));
+        dto.setProductosMasSolicitados(rankingProductos(vigentes));
+
+        LocalDateTime ahora = LocalDateTime.now();
+        dto.setCitasAgendadas(ordenes.stream()
+                .filter(o -> o.getFechaProgramada() != null && o.getFechaProgramada().isAfter(ahora))
+                .count());
+        dto.setCitasPendientes(vigentes.stream()
+                .filter(o -> ESTADOS_COBRADOS.contains(o.getEstado())
+                        && !"EN_PROCESO".equals(o.getEstado())
+                        && !"FINALIZADA".equals(o.getEstado()))
+                .count());
+        dto.setOrdenesRetrasadas(vigentes.stream()
+                .filter(o -> OrdenServicioDTO.estaRetrasada(
+                        o.getEstado(), o.getFechaCreacion(), o.getFechaPago(), o.getFechaInicio()))
+                .count());
+
+        return dto;
+    }
+
+    private List<ReporteServiciosDTO.TallerRankingDTO> rankingTalleres(
+            List<OrdenServicio> ordenes, long totalVigentes) {
+
+        Map<String, ReporteServiciosDTO.TallerRankingDTO> porTaller = new LinkedHashMap<>();
+        Map<String, Long> finalizadasPorTaller = new HashMap<>();
+
+        for (OrdenServicio o : ordenes) {
+            if (o.getTallerId() == null) continue;
+            ReporteServiciosDTO.TallerRankingDTO r = porTaller.computeIfAbsent(o.getTallerId(), id ->
+                    new ReporteServiciosDTO.TallerRankingDTO(id, o.getTallerNombre(), 0, 0, 0));
+            // El nombre se denormaliza en la orden; si cambia en el taller, se actualiza.
+            if (o.getTallerNombre() != null) {
+                r.setNombre(o.getTallerNombre());
+            }
+            r.setOrdenes(r.getOrdenes() + 1);
+            if ("FINALIZADA".equals(o.getEstado())) {
+                finalizadasPorTaller.merge(o.getTallerId(), 1L, Long::sum);
+            }
+        }
+
+        List<ReporteServiciosDTO.TallerRankingDTO> lista = new ArrayList<>(porTaller.values());
+        for (ReporteServiciosDTO.TallerRankingDTO r : lista) {
+            r.setFinalizadas(finalizadasPorTaller.getOrDefault(r.getTallerId(), 0L));
+            r.setParticipacion(totalVigentes == 0 ? 0
+                    : redondear((r.getOrdenes() * 100.0) / totalVigentes));
+        }
+        lista.sort(Comparator.comparingLong(ReporteServiciosDTO.TallerRankingDTO::getOrdenes).reversed());
+        return lista;
+    }
+
+    private List<ReporteServiciosDTO.ProductoRankingDTO> rankingProductos(List<OrdenServicio> ordenes) {
+        Map<String, ReporteServiciosDTO.ProductoRankingDTO> porProducto = new LinkedHashMap<>();
+
+        for (OrdenServicio o : ordenes) {
+            if (o.getProductoId() == null) continue;
+            ReporteServiciosDTO.ProductoRankingDTO r = porProducto.computeIfAbsent(o.getProductoId(), id ->
+                    new ReporteServiciosDTO.ProductoRankingDTO(id, o.getProductoNombre(), 0, 0));
+            if (o.getProductoNombre() != null) {
+                r.setNombre(o.getProductoNombre());
+            }
+            r.setUnidades(r.getUnidades() + 1);
+            r.setOrdenes(r.getOrdenes() + 1);
+        }
+
+        List<ReporteServiciosDTO.ProductoRankingDTO> lista = new ArrayList<>(porProducto.values());
+        lista.sort(Comparator.comparingLong(ReporteServiciosDTO.ProductoRankingDTO::getUnidades).reversed());
+        return lista;
+    }
+ 
+    private double redondear(double valor) {
+        return Math.round(valor * 100.0) / 100.0;
     }
 }

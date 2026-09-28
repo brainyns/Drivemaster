@@ -8,6 +8,8 @@ public interface VentaService {
 
     Venta registrarVenta(Venta venta);
 
+    Venta registrarVentaTaller(Venta venta);
+
     Venta compraInmediata(String email, List<CartItemRequest> productos, String metodoPago);
 
     Venta confirmarPagoVenta(String ventaId, String referencia);

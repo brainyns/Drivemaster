@@ -13,7 +13,7 @@ const CatalogoPage = ({
   onIrLogin, onIrAdmin, onIrSolicitud, onIrCheckout, onLogout,
   solicitudItems, solicitudCount, solicitudSubtotal, solicitudIva, solicitudTotal,
   solicitudAbierta, onToggleSolicitud,
-  onAddProduct, onUpdateQuantity, onRemoveProduct, onClearSolicitud,
+  onAddProduct, onUpdateQuantity, onRemoveProduct,
   theme, onToggleTheme
 }) => {
   const [busqueda,             setBusqueda]             = useState("");

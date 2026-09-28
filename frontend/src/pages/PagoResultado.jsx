@@ -5,30 +5,28 @@ import "../css/solicitudes.css";
 
 export default function PagoResultado({ onIrSolicitudes, onPagoExitoso }) {
   const token = getToken();
-  const [estado, setEstado] = useState("VERIFICANDO"); // VERIFICANDO | APPROVED | DECLINED | ERROR
-  const [transaccionId, setTransaccionId] = useState("");
+  const [transaccionId] = useState(() => new URLSearchParams(window.location.search).get("id") || "");
+  const [estado, setEstado] = useState(transaccionId ? "VERIFICANDO" : "ERROR"); // VERIFICANDO | APPROVED | DECLINED | ERROR
 
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("id");
-    if (!id) {
-      setEstado("ERROR");
-      return;
-    }
-    setTransaccionId(id);
+    if (!transaccionId) return;
+    let cancelado = false;
     const verificar = async () => {
       try {
-        const res = await verificarPago(token, id);
+        const res = await verificarPago(token, transaccionId);
+        if (cancelado) return;
         setEstado(res.estado || "ERROR");
         if (res.estado === "APPROVED") {
           onPagoExitoso && onPagoExitoso();
         }
       } catch (e) {
         console.error(e);
-        setEstado("ERROR");
+        if (!cancelado) setEstado("ERROR");
       }
     };
     verificar();
-  }, []);
+    return () => { cancelado = true; };
+  }, [transaccionId, token]);
 
   const irAMisSolicitudes = () => {
     if (window.history?.replaceState) {

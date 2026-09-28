@@ -64,7 +64,13 @@ public class JwtUtil {
     }
 
     public List<String> extractRoles(String token) {
-        return extractClaim(token, claims -> claims.get("roles", List.class));
+        return extractClaim(token, claims -> {
+            Object roles = claims.get("roles");
+            if (roles instanceof List<?> lista) {
+                return lista.stream().map(String::valueOf).collect(Collectors.toList());
+            }
+            return java.util.Collections.emptyList();
+        });
     }
 
     public boolean isTokenExpired(String token) {

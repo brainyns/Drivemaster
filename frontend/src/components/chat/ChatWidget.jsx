@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState } from 'react';
 import ChatWindow from './ChatWindow';
 import './chat.css';
 

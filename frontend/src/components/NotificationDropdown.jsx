@@ -28,11 +28,11 @@ export default function NotificationDropdown({ onClose, onNavigate }) {
   const ref = useRef(null);
   const token = getToken();
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [cargado, setCargado] = useState(false);
+  const loading = !cargado && !!token;
 
   const fetchNotifications = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
     try {
       const items = [];
 
@@ -104,16 +104,16 @@ export default function NotificationDropdown({ onClose, onNavigate }) {
 
       setNotifications(items.slice(0, 20));
     } catch { /* ignore */ }
-    setLoading(false);
+    setCargado(true);
   }, [token]);
 
   useEffect(() => {
-    fetchNotifications();
+    const initial = setTimeout(fetchNotifications, 0);
     const interval = setInterval(fetchNotifications, 30000);
     const unsub = subscribeNotifications((msg) => {
       if (msg?.type === "solicitud" || msg?.type === "venta_estado") fetchNotifications();
     });
-    return () => { clearInterval(interval); unsub(); };
+    return () => { clearTimeout(initial); clearInterval(interval); unsub(); };
   }, [fetchNotifications]);
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import com.drivemaster.drivemaster.util.EmailSolicitudBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -19,10 +20,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -193,10 +196,8 @@ public class PagoService {
     public void procesarWebhook(Map<String, Object> body) {
         log.info("Webhook Wompi recibido: {}", body != null ? body.get("event") : "null");
         try {
-            Map<String, Object> data = (Map<String, Object>) body.get("data");
-            if (data == null) return;
-            Map<String, Object> transaction = (Map<String, Object>) data.get("transaction");
-            if (transaction == null) return;
+            if (!(body.get("data") instanceof Map<?, ?> data)) return;
+            if (!(data.get("transaction") instanceof Map<?, ?> transaction)) return;
 
             String transactionId = str(transaction.get("id"));
             String status = str(transaction.get("status"));
@@ -285,20 +286,32 @@ public class PagoService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(publicKey);
-            ResponseEntity<Map> resp = restTemplate.exchange(
+            ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
                     apiUrl + "/transactions/" + transactionId,
                     HttpMethod.GET,
                     new HttpEntity<>(headers),
-                    Map.class);
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
             if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
                 log.warn("Wompi API respondió {} al consultar {}", resp.getStatusCode(), transactionId);
                 return null;
             }
-            return (Map<String, Object>) resp.getBody().get("data");
+            return toCadenaObjetoMap(resp.getBody().get("data"));
         } catch (Exception e) {
             log.error("Error consultando transacción {} en Wompi", transactionId, e);
             return null;
         }
+    }
+
+    /** Convierte un objeto deserializado (Map anidado) a un Map<String, Object> sin casts unchecked. */
+    private static Map<String, Object> toCadenaObjetoMap(Object valor) {
+        if (!(valor instanceof Map<?, ?> mapa)) return null;
+        Map<String, Object> resultado = new HashMap<>();
+        for (Map.Entry<?, ?> entrada : mapa.entrySet()) {
+            if (entrada.getKey() instanceof String clave) {
+                resultado.put(clave, entrada.getValue());
+            }
+        }
+        return resultado;
     }
 
     private String consultarEstadoTransaccion(String transactionId) {

@@ -56,7 +56,7 @@ export async function exportarClientes(token, formato = "pdf") {
   });
   if (!res.ok) {
     let msg = "Error al exportar";
-    try { const data = await res.json(); msg = data.message || data.error || msg; } catch {}
+    try { const data = await res.json(); msg = data.message || data.error || msg; } catch { /* ignore */ }
     throw new Error(msg);
   }
   const blob = await res.blob();

@@ -32,17 +32,6 @@ function VentaDetalle({ id, onVolver, token }) {
       .finally(() => setLoading(false));
   }, [id, token]);
 
-  const handleDescargarPdf = async () => {
-    setDescargando(true);
-    try {
-      await descargarPdfVenta(id, token);
-    } catch (e) {
-      alert("Error al generar PDF: " + e.message);
-    } finally {
-      setDescargando(false);
-    }
-  };
-
   const handleImprimir = async () => {
     setDescargando(true);
     try {

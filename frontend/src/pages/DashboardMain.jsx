@@ -566,7 +566,7 @@ function DashboardMain({ token }) {
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
-                  formatter={(v, n) => [v, "Unidades"]}
+                  formatter={(v) => [v, "Unidades"]}
                   cursor={{ fill: "var(--border)", opacity: 0.35 }}
                 />
                 <Bar dataKey="value" name="Unidades" fill="var(--blue)" radius={[0, 6, 6, 0]} barSize={14} />

@@ -219,18 +219,18 @@ function TopBar({
     const tok = getToken();
     if (!tok) return;
     connectNotifications(tok);
-    refreshCount();
+    const initial = setTimeout(refreshCount, 0);
     const unsub = subscribeNotifications((msg) => {
       if (msg?.type === "solicitud" || msg?.type === "venta_estado") refreshCount();
     });
-    return () => { unsub(); disconnectNotifications(); };
+    return () => { clearTimeout(initial); unsub(); disconnectNotifications(); };
   }, [user, refreshCount]);
 
   useEffect(() => {
     if (!notifOpen) return;
-    refreshCount();
+    const initial = setTimeout(refreshCount, 0);
     const interval = setInterval(refreshCount, 30000);
-    return () => clearInterval(interval);
+    return () => { clearTimeout(initial); clearInterval(interval); };
   }, [notifOpen, refreshCount]);
 
   const handleColorChange = (c) => {

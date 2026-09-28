@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getToken, getUser } from "../services/authService";
+import { getToken } from "../services/authService";
 import { crearSolicitud, comprarInmediata, crearPagoVenta, getWompiRedirectUrl } from "../services/solicitudService";
 import "../css/checkout.css";
 import "../css/clientes.css";
@@ -42,8 +42,11 @@ const COUNTRIES = [
 function PhoneSelector({ value, onChange }) {
   const [open, setOpen]       = useState(false);
   const [query, setQuery]     = useState("");
-  const [country, setCountry] = useState(COUNTRIES[0]);
-  const [number, setNumber]   = useState("");
+  const [country, setCountry] = useState(() => COUNTRIES.find(c => value?.startsWith(c.dial)) || COUNTRIES[0]);
+  const [number, setNumber]   = useState(() => {
+    const found = value ? COUNTRIES.find(c => value.startsWith(c.dial)) : null;
+    return found ? value.replace(found.dial, "").trim() : "";
+  });
   const ref = useRef(null);
 
   useEffect(() => {
@@ -57,16 +60,6 @@ function PhoneSelector({ value, onChange }) {
   useEffect(() => {
     onChange(number ? `${country.dial} ${number}` : "");
   }, [country, number]);
-
-  useEffect(() => {
-    if (value && !number) {
-      const found = COUNTRIES.find(c => value.startsWith(c.dial));
-      if (found) {
-        setCountry(found);
-        setNumber(value.replace(found.dial, "").trim());
-      }
-    }
-  }, []);
 
   const filtered = COUNTRIES.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) || c.dial.includes(query)
@@ -91,7 +84,7 @@ function PhoneSelector({ value, onChange }) {
         type="tel"
         placeholder="300 000 0000"
         value={number}
-        onChange={e => setNumber(e.target.value.replace(/[^0-9\s\-]/g, ""))}
+        onChange={e => setNumber(e.target.value.replace(/[^0-9\s-]/g, ""))}
       />
 
       {open && (
@@ -130,9 +123,8 @@ function PhoneSelector({ value, onChange }) {
 
 export default function CheckoutPage({
   onCompraExitosa, onVolver,
-  solicitudItems, solicitudSubtotal, solicitudIva, solicitudTotal, onClearSolicitud, onRemoveProductList
+  solicitudItems, solicitudSubtotal, solicitudIva, solicitudTotal, onRemoveProductList
 }) {
-  const user = getUser();
   const token = getToken();
   const [cliente, setCliente] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -187,9 +179,6 @@ export default function CheckoutPage({
 
   const stockItems = solicitudItems.filter(i => i.tipo === "STOCK" || !i.tipo);
   const encargoItems = solicitudItems.filter(i => i.tipo === "ENCARGO");
-
-  const stockSubtotal = stockItems.reduce((s, i) => s + (i.precioUnitario * i.cantidad), 0);
-  const encargoSubtotal = encargoItems.reduce((s, i) => s + (i.precioUnitario * i.cantidad), 0);
 
   const ejecutarCompra = async () => {
     setProcesando(true);

@@ -44,7 +44,7 @@ public class PdfVentaListBuilder {
             BaseFont bfBold = BaseFont.createFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, false);
             PdfContentByte cb = writer.getDirectContent();
 
-            NumberFormat fmt = NumberFormat.getCurrencyInstance(new Locale("es", "CO"));
+            NumberFormat fmt = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-CO"));
             fmt.setMaximumFractionDigits(0);
 
             drawRect(cb, 0, 0, PW, pageH, BG_PAGE);

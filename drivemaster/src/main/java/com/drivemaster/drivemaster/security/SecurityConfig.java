@@ -73,7 +73,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/compras/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
                         .requestMatchers("/api/proveedores/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/movimientos", "/api/movimientos/").permitAll()
-                        .requestMatchers("/api/movimientos/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers("/api/reportes/**").hasAnyRole("SUPERADMIN", "ADMIN")
+            .requestMatchers("/api/movimientos/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes/mis-solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
@@ -82,6 +83,21 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/pagos/verificar/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pagos/confirmar-redirect").permitAll()
                         .requestMatchers("/api/perfil/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
+
+                        // Módulo de servicios (Taller)
+                        .requestMatchers(HttpMethod.GET, "/api/talleres/activos").authenticated()
+                        .requestMatchers("/api/talleres/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers("/api/talleres").hasAnyRole("SUPERADMIN", "ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/api/vehiculos/mantenimiento/enviar-recordatorios").hasRole("SUPERADMIN")
+            .requestMatchers("/api/vehiculos/**").authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/ordenes-servicio/taller").hasRole("TALLER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/ordenes-servicio/*/iniciar").hasRole("TALLER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/ordenes-servicio/*/finalizar").hasRole("TALLER")
+            .requestMatchers(HttpMethod.PATCH, "/api/ordenes-servicio/*/programar").hasRole("TALLER")
+                        .requestMatchers("/api/ordenes-servicio/**").authenticated()
+
                         .requestMatchers("/api/chat/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/config/parametros/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()

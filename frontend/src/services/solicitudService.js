@@ -25,7 +25,7 @@ export async function crearSolicitud(token, productos, metodoPago) {
   });
   if (!res.ok) {
     let msg = "Error al crear solicitud";
-    try { const data = await res.json(); msg = data.error || data.message || msg; } catch {}
+    try { const data = await res.json(); msg = data.error || data.message || msg; } catch { /* ignore */ }
     throw new Error(msg);
   }
   return res.json();
@@ -69,7 +69,7 @@ export async function comprarInmediata(token, productos, metodoPago) {
   });
   if (!res.ok) {
     let msg = "Error al procesar compra";
-    try { const data = await res.json(); msg = data.error || data.message || msg; } catch {}
+    try { const data = await res.json(); msg = data.error || data.message || msg; } catch { /* ignore */ }
     throw new Error(msg);
   }
   return res.json();
@@ -85,7 +85,7 @@ export async function crearPago(token, solicitudId, redirectUrl) {
   });
   if (!res.ok) {
     let msg = "Error al crear pago";
-    try { const data = await res.json(); msg = data.error || data.message || msg; } catch {}
+    try { const data = await res.json(); msg = data.error || data.message || msg; } catch { /* ignore */ }
     throw new Error(msg);
   }
   return res.json();
@@ -99,7 +99,7 @@ export async function crearPagoVenta(token, ventaId, redirectUrl) {
   });
   if (!res.ok) {
     let msg = "Error al crear pago";
-    try { const data = await res.json(); msg = data.error || data.message || msg; } catch {}
+    try { const data = await res.json(); msg = data.error || data.message || msg; } catch { /* ignore */ }
     throw new Error(msg);
   }
   return res.json();

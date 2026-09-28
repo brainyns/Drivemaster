@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import "../css/navbar.css";
 import ThemeToggle from "./ThemeToggle";
 import SolicitudDrawer from "./SolicitudDrawer";
-import { getUser, getToken, actualizarMiNombre } from "../services/authService";
+import { getUser, actualizarMiNombre } from "../services/authService";
 
 const Navbar = ({
   busqueda, onBusquedaChange, onIrLogin, onIrAdmin, onIrSolicitud, onIrCatalogo, onLogout,
@@ -116,6 +116,9 @@ const Navbar = ({
                       <button className="navbar__dropdown-item" onClick={() => { setMenuAbierto(false); onIrSolicitud("mis-solicitudes"); }}>
                         Mis Solicitudes
                       </button>
+                      <button className="navbar__dropdown-item" onClick={() => { setMenuAbierto(false); onIrSolicitud("mis-vehiculos"); }}>
+                        Mis vehículos
+                      </button>
                       <button className="navbar__dropdown-item" onClick={() => { setMenuAbierto(false); setEditandoNombre(true); setNuevoNombre(user.nombre); }}>
                         Editar nombre de usuario
                       </button>
@@ -123,7 +126,7 @@ const Navbar = ({
                   )}
                   {user.rol !== "CLIENTE" && (
                     <button className="navbar__dropdown-item" onClick={() => { setMenuAbierto(false); onIrAdmin && onIrAdmin(); }}>
-                      Panel de administración
+                      {user.rol === "TALLER" ? "Panel de taller" : "Panel de administración"}
                     </button>
                   )}
                   <div className="navbar__dropdown-divider" />

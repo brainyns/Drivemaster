@@ -27,8 +27,12 @@ public class Venta {
 
     private Double total;
     private String estado; // PAGADA, ANULADA, PENDIENTE_PAGO, PAGO_VERIFICADO, PENDIENTE_APROBACION, APROBADO, RECHAZADO, EN_CAMINO, ENTREGADO
-    private String tipoVenta; // WEB | FISICA | WHATSAPP
+    private String tipoVenta; // WEB | FISICA | WHATSAPP | TALLER
     private String solicitudId;
+
+    // Trazabilidad cuando la venta proviene de una orden de servicio
+    private String ordenServicioId;
+    private String tallerId;
 
     private LocalDateTime fechaEnvio;
     private LocalDateTime fechaEntrega;
