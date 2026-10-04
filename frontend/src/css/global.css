@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
   --primary:   #FF3D00;
@@ -33,6 +33,38 @@
   --primary-soft: rgba(255, 61, 0, 0.08);
   --primary-glow-strong: rgba(255, 61, 0, 0.4);
   --grid-line: rgba(255,255,255,0.03);
+
+  /* ── Design system del sitio público (mockup Figma) ─────────────────────
+     Prefijado con --dm- para no chocar con los tokens del panel admin.
+     Los valores de superficie/texto se redefinen en data-theme="light". */
+  --dm-orange:      #F28C28;
+  --dm-orange-hover:#E27C18;
+  --dm-orange-soft: rgba(242, 140, 40, 0.12);
+  --dm-red:         #C92F2F;
+  --dm-green:       #457659;
+  --dm-graphite:    #17191C;
+
+  /* Escala cálida derivada de la paleta del mockup (#17191c · #f5f5f3).
+     El tema oscuro invierte la relación, no la temperatura: nada de grises
+     azulados, que es lo que hacía que los tonos se vieran ajenos. */
+  --dm-bg:          #141517;
+  --dm-surface:     #1E2023;
+  --dm-surface-2:   #282B2E;
+  --dm-line:        #34383C;
+  --dm-line-soft:   #26292C;
+  --dm-text:        #F5F5F3;
+  --dm-muted:       #9B9E9C;
+  --dm-muted-2:     #7C807E;
+
+  /* Texto sobre naranja: siempre oscuro, en ambos temas. */
+  --dm-on-accent:   #17191C;
+  /* Superficie inversa (botón oscuro, footer, banner de cierre). */
+  --dm-ink:         #F0EFEA;
+  --dm-ink-fg:      #141517;
+  --dm-deep:        #0D0E10;
+
+  --dm-font:        'DM Sans', sans-serif;
+  --dm-display:     'DM Sans', sans-serif;
 
   /* Border radius */
   --r-sm: 6px;
@@ -86,6 +118,20 @@ html[data-theme="light"] {
   --primary-soft: rgba(255, 61, 0, 0.05);
   --primary-glow-strong: rgba(255, 61, 0, 0.30);
   --grid-line: rgba(0,0,0,0.05);
+
+  /* overriding del sitio público en tema claro */
+  --dm-bg:        #FFFFFF;
+  --dm-surface:   #F5F5F3;
+  --dm-surface-2: #FAFAF7;
+  --dm-line:      #E5E5E1;
+  --dm-line-soft: #EEEEEA;
+  --dm-text:      #17191C;
+  --dm-muted:     #73767A;
+  --dm-muted-2:   #9A9C98;
+  --dm-on-accent: #17191C;
+  --dm-ink:       #17191C;
+  --dm-ink-fg:    #FFFFFF;
+  --dm-deep:      #17191C;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

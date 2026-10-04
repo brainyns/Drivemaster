@@ -32,9 +32,10 @@ const ChatWidget = () => {
         return (
             <div className="chat-widget-container">
                 <div className="chat-toggle-button" onClick={handleToggle} title="Abrir chat">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                        <path d="M12 2a8 8 0 00-8 8v8a4 4 0 004 4h8a4 4 0 004-4v-8a8 8 0 00-8-8z"/>
-                        <path d="M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M7 8a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v2a3 3 0 0 1-1.5 2.6l-3 1.8a1 1 0 0 0-.5.9v1.2a1 1 0 0 1-2 0v-1.2a1 1 0 0 0-.5-.9l-3-1.8A3 3 0 0 1 7 10Z" />
+                        <path d="M12 6v2" />
+                        <circle cx="12" cy="15" r="1.25" fill="white" stroke="none" />
                     </svg>
                 </div>
             </div>
@@ -46,8 +47,10 @@ const ChatWidget = () => {
         return (
             <div className="chat-widget-container">
                 <div className="chat-minimized-bar" onClick={handleExpandFromMinimized}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                        <path d="M12 2a8 8 0 00-8 8v8a4 4 0 004 4h8a4 4 0 004-4v-8a8 8 0 00-8-8z"/>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M7 8a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v2a3 3 0 0 1-1.5 2.6l-3 1.8a1 1 0 0 0-.5.9v1.2a1 1 0 0 1-2 0v-1.2a1 1 0 0 0-.5-.9l-3-1.8A3 3 0 0 1 7 10Z" />
+                        <path d="M12 6v2" />
+                        <circle cx="12" cy="15" r="1.25" fill="white" stroke="none" />
                     </svg>
                     <span>Chat Drivemaster</span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style={{marginLeft: 'auto'}}>
