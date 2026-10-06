@@ -1,0 +1,352 @@
+/* ── Aprobaciones de talleres y tiendas (panel ADMIN) ───────────────────── */
+
+.ap-page {
+  --ap-navy:  #0C2240;
+  --ap-steel: #18487A;
+  padding: var(--sp-xl);
+  max-width: 1180px;
+  margin: 0 auto;
+  color: var(--text);
+}
+
+/* ── Encabezado ── */
+.ap-header {
+  margin-bottom: var(--sp-lg);
+}
+
+.ap-eyebrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: var(--sp-xs);
+}
+
+.ap-title {
+  font-size: 2.2rem;
+  line-height: 1.05;
+  margin-bottom: var(--sp-sm);
+}
+
+.ap-sub {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  max-width: 62ch;
+  line-height: 1.6;
+}
+
+/* ── Barra de filtros ── */
+.ap-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-lg);
+}
+
+.ap-tabs {
+  display: flex;
+  gap: var(--sp-xs);
+  flex-wrap: wrap;
+}
+
+.ap-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: 0.7rem 1rem;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.ap-tab:hover {
+  color: var(--text);
+}
+
+.ap-tab--activo {
+  color: var(--text);
+  border-bottom-color: var(--primary);
+}
+
+.ap-tab__conteo {
+  min-width: 1.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: var(--r-full);
+  background: var(--surface2);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.ap-tab--activo .ap-tab__conteo {
+  background: var(--primary);
+  color: #fff;
+}
+
+.ap-tipo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding-bottom: var(--sp-sm);
+}
+
+.ap-tipo select,
+.ap-campo select {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+/* ── Alertas ── */
+.ap-alerta {
+  padding: 0.75rem 1rem;
+  border-radius: var(--r-md);
+  font-size: 0.875rem;
+  margin-bottom: var(--sp-md);
+}
+
+.ap-alerta--error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--error);
+}
+
+.ap-alerta--ok {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: var(--success);
+}
+
+/* ── Lista ── */
+.ap-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+}
+
+.ap-vacio {
+  padding: var(--sp-xl);
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
+}
+
+.ap-skel {
+  height: 150px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(90deg, var(--surface) 0%, var(--surface2) 50%, var(--surface) 100%);
+  background-size: 200% 100%;
+  animation: apSkel 1.4s ease-in-out infinite;
+}
+
+@keyframes apSkel {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+/* ── Tarjeta de negocio ── */
+.ap-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: var(--sp-lg);
+  padding: var(--sp-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--ap-steel);
+  border-radius: var(--r-lg);
+}
+
+.ap-card--aprobado  { border-left-color: var(--success); }
+.ap-card--rechazado { border-left-color: var(--error); }
+
+.ap-card__chips {
+  display: flex;
+  gap: var(--sp-xs);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-sm);
+}
+
+.ap-chip {
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ap-chip--taller    { background: var(--ap-navy); border-color: var(--ap-navy); color: #fff; }
+.ap-chip--tienda    { background: var(--ap-steel); border-color: var(--ap-steel); color: #fff; }
+.ap-chip--pendiente { color: var(--warning); border-color: rgba(245, 158, 11, 0.4); }
+.ap-chip--aprobado  { color: var(--success); border-color: rgba(34, 197, 94, 0.4); }
+.ap-chip--rechazado { color: var(--error); border-color: rgba(239, 68, 68, 0.4); }
+
+.ap-card__nombre {
+  font-size: 1.5rem;
+  line-height: 1.15;
+  margin-bottom: var(--sp-xs);
+}
+
+.ap-card__linea {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: var(--sp-xs);
+}
+
+.ap-card__motivo {
+  margin-top: var(--sp-sm);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.ap-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sp-sm) var(--sp-md);
+  margin-top: var(--sp-md);
+}
+
+.ap-datos dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.ap-datos dd {
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+/* ── Acciones ── */
+.ap-card__acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  padding-left: var(--sp-lg);
+  border-left: 1px solid var(--border);
+}
+
+.ap-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-xs);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ap-nota {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ap-btn {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast), border-color var(--dur-fast), opacity var(--dur-fast);
+}
+
+.ap-btn:hover:not(:disabled) {
+  background: var(--surface2);
+  border-color: var(--border2);
+}
+
+.ap-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ap-btn--primario {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.ap-btn--primario:hover:not(:disabled) {
+  background: var(--primary-h);
+  border-color: var(--primary-h);
+}
+
+.ap-btn--peligro {
+  background: var(--error);
+  border-color: var(--error);
+  color: #fff;
+}
+
+.ap-btn--peligro:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.ap-rechazo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.ap-textarea {
+  min-height: 80px;
+  resize: vertical;
+  padding: 0.6rem;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.ap-textarea:focus,
+.ap-tipo select:focus,
+.ap-campo select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.ap-rechazo__botones {
+  display: flex;
+  gap: var(--sp-sm);
+}
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .ap-page {
+    padding: var(--sp-md);
+  }
+
+  .ap-card {
+    grid-template-columns: 1fr;
+  }
+
+  .ap-card__acciones {
+    padding-left: 0;
+    padding-top: var(--sp-md);
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}

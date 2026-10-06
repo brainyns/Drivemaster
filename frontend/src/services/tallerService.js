@@ -28,9 +28,35 @@ export async function talleresActivos(token, { ciudad, lat, lng } = {}) {
   return handle(res, "Error al listar los talleres");
 }
 
-export async function listarTalleres(token) {
-  const res = await apiFetch(BASE, { headers: headers(token) });
+/** Todos los talleres, o solo los de un estado de revisión (PENDIENTE, APROBADO, RECHAZADO). */
+export async function listarTalleres(token, estado) {
+  const res = await apiFetch(`${BASE}${estado ? `?estado=${encodeURIComponent(estado)}` : ""}`, { headers: headers(token) });
   return handle(res, "Error al listar los talleres");
+}
+
+/** Registro público de un taller. Queda pendiente hasta que DriveMaster lo apruebe. */
+export async function registrarTaller(datos) {
+  const res = await fetch(`${BASE}/registro`, {
+    method: "POST",
+    headers: headers(null),
+    body: JSON.stringify(datos),
+  });
+  return handle(res, "No se pudo registrar el taller");
+}
+
+export async function miTaller(token) {
+  const res = await apiFetch(`${BASE}/mi-taller`, { headers: headers(token) });
+  return handle(res, "Error al cargar los datos del taller");
+}
+
+/** Body: { aprobado, motivo?, planCodigo? } */
+export async function resolverAprobacionTaller(token, id, decision) {
+  const res = await apiFetch(`${BASE}/${id}/aprobacion`, {
+    method: "PATCH",
+    headers: headers(token),
+    body: JSON.stringify(decision),
+  });
+  return handle(res, "Error al registrar la decisión");
 }
 
 export async function crearTaller(token, taller) {
