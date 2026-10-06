@@ -3,10 +3,11 @@ import {
   listarMovimientos,
   registrarMovimiento,
 } from "../services/movimientoService";
-import { listarProductos } from "../services/productoService";
+import { listarProductos, listarProductosMiTienda } from "../services/productoService";
 import "../css/movimientos.css";
 
-function Movimientos({ token }) {
+// esTienda: la tienda solo ve y ajusta su propio inventario (el backend ya filtra los movimientos).
+function Movimientos({ token, esTienda = false }) {
   const [movimientos, setMovimientos] = useState([]);
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,11 +38,11 @@ function Movimientos({ token }) {
   const [loadingAjuste, setLoadingAjuste] = useState(false);
 
   useEffect(() => {
-    listarProductos(token)
+    (esTienda ? listarProductosMiTienda(token) : listarProductos(token))
       .then(setProductos)
       .catch(() => {});
     cargar();
-  }, [token]);
+  }, [token, esTienda]);
 
   const cargar = async () => {
     setLoading(true);

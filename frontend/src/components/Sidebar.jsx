@@ -17,6 +17,7 @@ const Icons = {
   repProductos:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>,
   taller:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>,
   repServicios:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>,
+  aprobaciones:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>,
 };
 
 const menu = [
@@ -40,8 +41,12 @@ const menu = [
   },
   { key: "usuarios", label: "Usuarios", icon: "admin" },
   { key: "admin-talleres", label: "Servicios", icon: "taller" },
+  { key: "aprobaciones", label: "Aprobaciones", icon: "aprobaciones" },
   { key: "taller-panel", label: "Panel de taller", icon: "taller" },
 ];
+
+// Tienda del marketplace: su catálogo y los movimientos de su inventario.
+const MENU_TIENDA = ["productos", "movimientos"];
 
 function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
   const [abiertos, setAbiertos] = useState([]);
@@ -59,8 +64,9 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
 
   const visibleMenu = menu.filter(item => {
     if (userRole === "TALLER") return item.key === "taller-panel";
+    if (userRole === "TIENDA") return MENU_TIENDA.includes(item.key);
     if (item.key === "taller-panel") return false;
-    if (item.key === "admin-talleres") return userRole === "SUPERADMIN" || userRole === "ADMIN";
+    if (item.key === "admin-talleres" || item.key === "aprobaciones") return userRole === "SUPERADMIN" || userRole === "ADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
     if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "ADMIN" || userRole === "VENDEDOR";
     if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas", "solicitudes"].includes(item.key);

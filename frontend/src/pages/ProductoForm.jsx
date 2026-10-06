@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, subirImagenProducto } from "../services/productoService";
+import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, listarProductosMiTienda, subirImagenProducto } from "../services/productoService";
 import "../css/producto-form.css";
 
 const CATEGORIAS = [
@@ -146,15 +146,18 @@ function FieldError({ msg }) {
   return <span className="pf-field-error">{msg}</span>;
 }
 
-function ProductoForm({ id, onVolver, token }) {
+const COMPAT_VACIA = { marca: "", modelo: "", anoDesde: "", anoHasta: "", motor: "" };
+
+function ProductoForm({ id, onVolver, token, esTienda = false }) {
   const esEdicion = Boolean(id);
 
   const [form, setForm] = useState({
     codigo: "", nombre: "", categoria: "", marca: "",
+    referencia: "", ubicacion: "",
     precioCompra: "", precioVenta: "",
     stockActual: "", stockMinimo: "",
     tipo: "STOCK",
-    modelosCompatibles: [{ marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
+    modelosCompatibles: [COMPAT_VACIA],
   });
 
   const [errores,             setErrores]            = useState({});
@@ -167,11 +170,12 @@ function ProductoForm({ id, onVolver, token }) {
   const [subiendoImagen,      setSubiendoImagen]     = useState(false);
   const fileInputRef = useRef(null);
 
+  // El código SKU es único dentro de cada tienda: una tienda valida contra su propio catálogo.
   useEffect(() => {
-    listarProductos(token)
+    (esTienda ? listarProductosMiTienda(token) : listarProductos(token))
       .then(setProductosExistentes)
       .catch(() => {});
-  }, [token]);
+  }, [token, esTienda]);
 
   useEffect(() => {
     if (esEdicion) {
@@ -179,9 +183,11 @@ function ProductoForm({ id, onVolver, token }) {
         .then(data => {
           setForm({
             ...data,
+            referencia: data.referencia || "",
+            ubicacion: data.ubicacion || "",
             modelosCompatibles: data.modelosCompatibles?.length
-              ? data.modelosCompatibles
-              : [{ marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
+              ? data.modelosCompatibles.map(c => ({ ...c, motor: c.motor || "" }))
+              : [COMPAT_VACIA],
           });
           if (data.imagenUrl) setImagenPreview(data.imagenUrl);
         })
@@ -227,7 +233,7 @@ function ProductoForm({ id, onVolver, token }) {
   const agregarCompatibilidad = () => {
     setForm(prev => ({
       ...prev,
-      modelosCompatibles: [...prev.modelosCompatibles, { marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
+      modelosCompatibles: [...prev.modelosCompatibles, COMPAT_VACIA],
     }));
   };
 
@@ -252,6 +258,8 @@ function ProductoForm({ id, onVolver, token }) {
         ...form,
         nombre:       form.nombre.trim(),
         codigo:       form.codigo.trim().toUpperCase(),
+        referencia:   form.referencia.trim() || null,
+        ubicacion:    form.ubicacion.trim() || null,
         precioCompra: Number(form.precioCompra),
         precioVenta:  Number(form.precioVenta),
         stockActual:  Number(form.stockActual),
@@ -261,6 +269,7 @@ function ProductoForm({ id, onVolver, token }) {
           ...c,
           anoDesde: Number(c.anoDesde),
           anoHasta: Number(c.anoHasta),
+          motor:    c.motor?.trim() || null,
         })),
       };
       let productoId = id;
@@ -371,6 +380,28 @@ function ProductoForm({ id, onVolver, token }) {
               </select>
               <FieldError msg={errores.marca} />
             </div>
+
+            <div className="pf-row">
+              <div className="pf-field">
+                <label>Referencia del fabricante</label>
+                <input
+                  name="referencia"
+                  value={form.referencia}
+                  onChange={handleChange}
+                  placeholder="Ej. P 85 020 (opcional)"
+                />
+              </div>
+
+              <div className="pf-field">
+                <label>Ubicación en bodega</label>
+                <input
+                  name="ubicacion"
+                  value={form.ubicacion}
+                  onChange={handleChange}
+                  placeholder="Ej. Estante B-3 (opcional)"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Tipo de producto */}
@@ -471,6 +502,16 @@ function ProductoForm({ id, onVolver, token }) {
                         className={ce.anoHasta ? "pf-input--error" : ""}
                       />
                       <FieldError msg={ce.anoHasta} />
+                    </div>
+
+                    <div className="pf-field pf-field--full">
+                      <label>Motor</label>
+                      <input
+                        name="motor"
+                        value={comp.motor || ""}
+                        onChange={e => handleCompatibilidadChange(index, e)}
+                        placeholder="Ej. 1.6 (opcional; vacío = cualquier motor)"
+                      />
                     </div>
                   </div>
                 </div>

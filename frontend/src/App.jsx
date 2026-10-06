@@ -36,6 +36,8 @@ import PanelTaller           from "./pages/PanelTaller";
 import AdminTalleres         from "./pages/AdminTalleres";
 import MisVehiculos          from "./pages/MisVehiculos";
 import VehiculoServicio      from "./pages/VehiculoServicio";
+import Aprobaciones          from "./pages/Aprobaciones";
+import RegistroNegocio       from "./pages/RegistroNegocio";
 import ChatWidget            from "./components/chat/ChatWidget";
 import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
 
@@ -80,6 +82,14 @@ const TITULOS = {
   "mi-perfil":       "Mi Perfil",
   "taller-panel":    "Panel de taller",
   "admin-talleres":  "Servicios",
+  "aprobaciones":    "Aprobaciones",
+};
+
+// Página inicial de cada rol después de iniciar sesión.
+const INICIO_POR_ROL = {
+  CLIENTE: "catalogo",
+  TALLER:  "taller-panel",
+  TIENDA:  "productos",
 };
 
 const DEFAULT_IVA = 0.19;
@@ -204,13 +214,7 @@ function App() {
     setToken(auth.token);
     setSessionExpired(false);
 
-    if (auth.rol === "CLIENTE") {
-      setPagina("catalogo");
-    } else if (auth.rol === "TALLER") {
-      setPagina("taller-panel");
-    } else {
-      setPagina("dashboard-main");
-    }
+    setPagina(INICIO_POR_ROL[auth.rol] || "dashboard-main");
   };
 
   const handleLogout = async () => {
@@ -285,7 +289,7 @@ function App() {
       "proveedores", "proveedorNuevo", "proveedorEditar",
       "movimientos",
       "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
-      "admin-talleres",
+      "admin-talleres", "aprobaciones",
       "mi-perfil",
     ],
     SUPERADMIN: [
@@ -299,18 +303,20 @@ function App() {
       "movimientos",
       "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
       "usuarios",
-      "admin-talleres",
+      "admin-talleres", "aprobaciones",
       "mi-perfil",
     ],
     CLIENTE: ["catalogo", "mis-pedidos", "mis-solicitudes", "checkout", "mis-vehiculos", "servicio-vehiculo"],
     TALLER: ["taller-panel"],
+    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos"],
   };
+  const esTienda = user?.rol === "TIENDA";
 
   const renderPagina = () => {
     if (pagina === "catalogo") return (
       <CatalogoPage
         onIrLogin={() => setPagina("login")}
-        onIrAdmin={() => setPagina(user?.rol === "TALLER" ? "taller-panel" : "dashboard-main")}
+        onIrAdmin={() => setPagina(user?.rol === "TALLER" || user?.rol === "TIENDA" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
         onIrSolicitud={(p) => setPagina(p || "checkout")}
         onIrCheckout={() => setPagina("checkout")}
         onLogout={handleLogout}
@@ -404,6 +410,10 @@ function App() {
       return <AdminLogin onLogin={handleLogin} onVolver={() => setPagina("catalogo")} />;
     }
 
+    if (pagina === "registro-negocio") {
+      return <RegistroNegocio onIrLogin={() => setPagina("login")} onVolver={() => setPagina("catalogo")} />;
+    }
+
     if (sessionExpired) return (
       <div style={{ padding: "40px", textAlign: "center" }}>
         <h2>Sesión expirada</h2>
@@ -414,7 +424,7 @@ function App() {
 
     if (!user) {
       if (pagina === "register") return <Register onRegister={handleLogin} onBack={() => setPagina("login")} />;
-      return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} onGoAdminLogin={() => setPagina("admin-login")} />;
+      return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onGoRegistroNegocio={() => setPagina("registro-negocio")} onVolver={() => setPagina("catalogo")} onGoAdminLogin={() => setPagina("admin-login")} />;
     }
 
     if (!allowedPages[user.rol]?.includes(pagina)) return (
@@ -423,9 +433,9 @@ function App() {
 
     if (pagina === "dashboard-main")   return <DashboardMain        token={token} />;
 
-    if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} />;
-    if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} />;
-    if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
+    if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} esTienda={esTienda} />;
+    if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
+    if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
     if (pagina === "inventarioAjuste") return <AjusteInventarioForm productoId={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
 
     if (pagina === "clientes")         return <Clientes             onNuevo={() => irA("clienteNuevo")} onEditar={id => irA("clienteEditar", id)} token={token} />;
@@ -446,11 +456,12 @@ function App() {
     if (pagina === "proveedorNuevo")   return <ProveedorForm        onVolver={() => irA("proveedores")} token={token} />;
     if (pagina === "proveedorEditar")  return <ProveedorForm        id={idSeleccionado} onVolver={() => irA("proveedores")} token={token} />;
 
-    if (pagina === "movimientos")      return <Movimientos          token={token} />;
+    if (pagina === "movimientos")      return <Movimientos          token={token} esTienda={esTienda} />;
     if (pagina === "usuarios")         return <Usuarios             token={token} />;
     if (pagina === "mi-perfil")        return <PerfilAdmin          />;
     if (pagina === "taller-panel")     return <PanelTaller          />;
     if (pagina === "admin-talleres")   return <AdminTalleres        />;
+    if (pagina === "aprobaciones")     return <Aprobaciones         token={token} />;
 
     if (pagina === "inv-clientes")     return <InventarioClientes   token={token} />;
     if (pagina === "rep-clientes")     return <ReportesClientes     token={token} />;

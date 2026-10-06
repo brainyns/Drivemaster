@@ -33,6 +33,7 @@ const Icono = ({ d, size = 15 }) => (
 export default function Login({
   onLogin,
   onGoRegister,
+  onGoRegistroNegocio,
   onGoAdminLogin,
   onVolver,
 }) {
@@ -265,6 +266,15 @@ export default function Login({
               Regístrate
             </button>
           </p>
+
+          {onGoRegistroNegocio && (
+            <p className="auth-footer auth-footer--negocio">
+              ¿Tienes un taller o una tienda de autopartes?{" "}
+              <button type="button" className="link-button" onClick={onGoRegistroNegocio}>
+                Registra tu negocio
+              </button>
+            </p>
+          )}
 
           {onGoAdminLogin && (
             <button

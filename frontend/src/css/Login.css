@@ -514,6 +514,10 @@
   margin-top: 20px;
 }
 
+.auth-footer--negocio {
+  margin-top: 6px;
+}
+
 .link-button {
   background: none;
   border: 0;

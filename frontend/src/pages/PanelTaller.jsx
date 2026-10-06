@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { getToken } from "../services/authService";
+import { miTaller } from "../services/tallerService";
+import EstadoNegocio from "../components/EstadoNegocio";
 import { ordenesDelTaller, iniciarServicio, finalizarServicio, programarCita, confirmarPagoOrden } from "../services/ordenServicioService";
 import "../css/servicios.css";
 import "../css/panel-taller.css";
@@ -60,6 +62,7 @@ function Badge({ estado }) {
 
 export default function PanelTaller() {
   const [ordenes, setOrdenes] = useState([]);
+  const [taller, setTaller] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState("resumen");
@@ -83,6 +86,11 @@ export default function PanelTaller() {
   };
 
   useEffect(() => { cargar(); }, []);
+
+  // Estado de revisión del taller (pendiente, rechazado...). Si falla, el panel sigue igual.
+  useEffect(() => {
+    miTaller(token).then(setTaller).catch(() => {});
+  }, [token]);
 
   // El cliente reportó el pago y el taller debe confirmar que lo recibió.
   const porConfirmar = useMemo(
@@ -204,6 +212,7 @@ export default function PanelTaller() {
   const canceladas = ordenes.length - totalFlujo;
 
   return (
+    <EstadoNegocio negocio={taller} tipo="taller">
     <div className="pt-root">
       <header className="pt-header">
         <div>
@@ -551,5 +560,6 @@ export default function PanelTaller() {
         </>
       )}
     </div>
+    </EstadoNegocio>
   );
 }

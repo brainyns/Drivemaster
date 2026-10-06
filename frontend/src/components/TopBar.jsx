@@ -60,6 +60,8 @@ const IcoMoon = () => (
 const getRolLabel = (rol) => {
   if (rol === "SUPERADMIN") return "Superadmin";
   if (rol === "ADMIN")      return "Administrador";
+  if (rol === "TALLER")     return "Taller";
+  if (rol === "TIENDA")     return "Tienda";
   return "Vendedor";
 };
 
@@ -216,7 +218,8 @@ function TopBar({
   }, []);
 
   useEffect(() => {
-    if (!user || user.rol === "CLIENTE") return;
+    // Las solicitudes pendientes son del personal interno; talleres y tiendas no tienen acceso.
+    if (!user || !["SUPERADMIN", "ADMIN", "VENDEDOR"].includes(user.rol)) return;
     const tok = getToken();
     if (!tok) return;
     connectNotifications(tok);

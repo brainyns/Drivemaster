@@ -18,6 +18,17 @@ export async function listarProductos(token) {
   return res.json();
 }
 
+/** Productos de la tienda del usuario TIENDA. */
+export async function listarProductosMiTienda(token) {
+  const res = await apiFetch(`${BASE_URL}/mi-tienda`, { headers: buildHeaders(token) });
+  if (!res.ok) {
+    let msg = "Error al obtener los productos de tu tienda";
+    try { const data = await res.json(); msg = data.error || msg; } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 export async function obtenerProducto(id, token) {
   const res = await apiFetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Producto no encontrado");
