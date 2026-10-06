@@ -1,3 +1,4 @@
+import { apiFetch } from "./http";
 const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`;
 function headers(token) {
   const h = {
@@ -18,7 +19,7 @@ export function getWompiRedirectUrl() {
 }
 
 export async function crearSolicitud(token, productos, metodoPago) {
-  const res = await fetch(BASE, {
+  const res = await apiFetch(BASE, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({ productos, metodoPago }),
@@ -32,37 +33,37 @@ export async function crearSolicitud(token, productos, metodoPago) {
 }
 
 export async function listarSolicitudes(token) {
-  const res = await fetch(BASE, { headers: headers(token) });
+  const res = await apiFetch(BASE, { headers: headers(token) });
   if (!res.ok) throw new Error("Error al listar solicitudes");
   return res.json();
 }
 
 export async function obtenerSolicitud(token, id) {
-  const res = await fetch(`${BASE}/${id}`, { headers: headers(token) });
+  const res = await apiFetch(`${BASE}/${id}`, { headers: headers(token) });
   if (!res.ok) throw new Error("Solicitud no encontrada");
   return res.json();
 }
 
 export async function aprobarSolicitud(token, id) {
-  const res = await fetch(`${BASE}/${id}/aprobar`, { method: "PATCH", headers: headers(token) });
+  const res = await apiFetch(`${BASE}/${id}/aprobar`, { method: "PATCH", headers: headers(token) });
   if (!res.ok) throw new Error("Error al aprobar solicitud");
   return res.json();
 }
 
 export async function marcarEnCamino(token, id) {
-  const res = await fetch(`${BASE}/${id}/en-camino`, { method: "PATCH", headers: headers(token) });
+  const res = await apiFetch(`${BASE}/${id}/en-camino`, { method: "PATCH", headers: headers(token) });
   if (!res.ok) throw new Error("Error al marcar solicitud en camino");
   return res.json();
 }
 
 export async function marcarEntregado(token, id) {
-  const res = await fetch(`${BASE}/${id}/entregado`, { method: "PATCH", headers: headers(token) });
+  const res = await apiFetch(`${BASE}/${id}/entregado`, { method: "PATCH", headers: headers(token) });
   if (!res.ok) throw new Error("Error al marcar solicitud entregada");
   return res.json();
 }
 
 export async function comprarInmediata(token, productos, metodoPago) {
-  const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ventas/compra-inmediata`, {
+  const res = await apiFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ventas/compra-inmediata`, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({ productos, metodoPago }),
@@ -78,7 +79,7 @@ export async function comprarInmediata(token, productos, metodoPago) {
 const PAGOS_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/pagos`;
 
 export async function crearPago(token, solicitudId, redirectUrl) {
-  const res = await fetch(`${PAGOS_BASE}/crear`, {
+  const res = await apiFetch(`${PAGOS_BASE}/crear`, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({ solicitudId, redirectUrl }),
@@ -92,7 +93,7 @@ export async function crearPago(token, solicitudId, redirectUrl) {
 }
 
 export async function crearPagoVenta(token, ventaId, redirectUrl) {
-  const res = await fetch(`${PAGOS_BASE}/crear`, {
+  const res = await apiFetch(`${PAGOS_BASE}/crear`, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({ ventaId, redirectUrl }),
@@ -106,7 +107,7 @@ export async function crearPagoVenta(token, ventaId, redirectUrl) {
 }
 
 export async function verificarPago(token, transactionId) {
-  const res = await fetch(`${PAGOS_BASE}/verificar/${transactionId}`, {
+  const res = await apiFetch(`${PAGOS_BASE}/verificar/${transactionId}`, {
     headers: headers(token),
   });
   if (!res.ok) throw new Error("Error al verificar pago");
@@ -114,7 +115,7 @@ export async function verificarPago(token, transactionId) {
 }
 
 export async function confirmarPago(token, solicitudId, transactionId, referencia) {
-  const res = await fetch(`${PAGOS_BASE}/confirmar`, {
+  const res = await apiFetch(`${PAGOS_BASE}/confirmar`, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({ solicitudId, transactionId, referencia }),
@@ -123,7 +124,7 @@ export async function confirmarPago(token, solicitudId, transactionId, referenci
 }
 
 export async function rechazarSolicitud(token, id, motivo) {
-  const res = await fetch(`${BASE}/${id}/rechazar`, {
+  const res = await apiFetch(`${BASE}/${id}/rechazar`, {
     method: "PATCH",
     headers: headers(token),
     body: JSON.stringify({ motivo }),

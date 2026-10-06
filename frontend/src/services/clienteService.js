@@ -1,3 +1,4 @@
+import { apiFetch } from "./http";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/clientes`;
 
 const buildHeaders = (token) => {
@@ -7,7 +8,7 @@ const buildHeaders = (token) => {
 };
 
 export async function listarClientes(token) {
-  const res = await fetch(BASE_URL, {
+  const res = await apiFetch(BASE_URL, {
     headers: buildHeaders(token),
   });
   if (!res.ok) throw new Error("Error al obtener clientes");
@@ -15,7 +16,7 @@ export async function listarClientes(token) {
 }
 
 export async function obtenerCliente(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await apiFetch(`${BASE_URL}/${id}`, {
     headers: buildHeaders(token),
   });
   if (!res.ok) throw new Error("Cliente no encontrado");
@@ -23,7 +24,7 @@ export async function obtenerCliente(id, token) {
 }
 
 export async function crearCliente(cliente, token) {
-  const res = await fetch(`${BASE_URL}/guardar`, {
+  const res = await apiFetch(`${BASE_URL}/guardar`, {
     method: "POST",
     headers: buildHeaders(token),
     body: JSON.stringify(cliente),
@@ -33,7 +34,7 @@ export async function crearCliente(cliente, token) {
 }
 
 export async function actualizarCliente(id, cliente, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await apiFetch(`${BASE_URL}/${id}`, {
     method: "PUT",
     headers: buildHeaders(token),
     body: JSON.stringify(cliente),
@@ -43,7 +44,7 @@ export async function actualizarCliente(id, cliente, token) {
 }
 
 export async function eliminarCliente(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await apiFetch(`${BASE_URL}/${id}`, {
     method: "DELETE",
     headers: buildHeaders(token),
   });
@@ -51,7 +52,7 @@ export async function eliminarCliente(id, token) {
 }
 
 export async function exportarClientes(token, formato = "pdf") {
-  const res = await fetch(`${BASE_URL}/exportar?formato=${formato}`, {
+  const res = await apiFetch(`${BASE_URL}/exportar?formato=${formato}`, {
     headers: buildHeaders(token),
   });
   if (!res.ok) {

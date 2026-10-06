@@ -44,6 +44,12 @@ public class OrdenServicio {
     // Venta generada al pagar la orden (inversa de Venta.ordenServicioId)
     private String ventaId;
 
+    // Pago reportado por el cliente (EFECTIVO / TRANSFERENCIA). La orden sigue
+    // COTIZADA hasta que el taller confirma que recibió el dinero.
+    private String metodoPago;
+    private String referenciaPago;
+    private LocalDateTime fechaPagoReportado;
+
     // SOLICITADA, COTIZADA, PAGADA, EN_PROCESO, FINALIZADA, CANCELADA, REASIGNADA
     private String estado;
 

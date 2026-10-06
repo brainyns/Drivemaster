@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { useState, useEffect, useRef } from "react";
 import { getToken } from "../services/authService";
 import { crearSolicitud, comprarInmediata, crearPagoVenta, getWompiRedirectUrl } from "../services/solicitudService";
@@ -139,7 +140,7 @@ export default function CheckoutPage({
   useEffect(() => {
     const cargar = async () => {
       try {
-        const perfilRes = await fetch(`${API}/clientes/mi-perfil`, { headers: headers(token) });
+        const perfilRes = await apiFetch(`${API}/clientes/mi-perfil`, { headers: headers(token) });
         if (perfilRes.ok) {
           const perfil = await perfilRes.json();
           if (perfil.id) {
@@ -168,7 +169,7 @@ export default function CheckoutPage({
   };
 
   const guardarPerfil = async () => {
-    const res = await fetch(`${API}/clientes/mi-perfil`, {
+    const res = await apiFetch(`${API}/clientes/mi-perfil`, {
       method: "PUT",
       headers: headers(token),
       body: JSON.stringify(formData)

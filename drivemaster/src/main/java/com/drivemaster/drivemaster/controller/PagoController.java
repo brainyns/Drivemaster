@@ -3,6 +3,7 @@ package com.drivemaster.drivemaster.controller;
 import com.drivemaster.drivemaster.service.PagoService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -21,14 +22,14 @@ public class PagoController {
     }
 
     @PostMapping("/crear")
-    public ResponseEntity<Map<String, Object>> crear(@RequestBody Map<String, String> body) {
+    public ResponseEntity<Map<String, Object>> crear(@RequestBody Map<String, String> body, Authentication auth) {
         String solicitudId = body.get("solicitudId");
         String ventaId = body.get("ventaId");
         String redirectUrl = body.get("redirectUrl");
         if (ventaId != null && !ventaId.isBlank()) {
-            return ResponseEntity.ok(pagoService.crearPagoVenta(ventaId, redirectUrl));
+            return ResponseEntity.ok(pagoService.crearPagoVenta(ventaId, redirectUrl, auth.getName()));
         }
-        return ResponseEntity.ok(pagoService.crearPago(solicitudId, redirectUrl));
+        return ResponseEntity.ok(pagoService.crearPago(solicitudId, redirectUrl, auth.getName()));
     }
 
     @GetMapping("/verificar/{transactionId}")

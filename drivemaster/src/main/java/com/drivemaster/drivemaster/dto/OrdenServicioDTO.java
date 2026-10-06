@@ -47,6 +47,11 @@ public class OrdenServicioDTO {
      */
     private boolean retrasada;
 
+    // Pago reportado por el cliente y pendiente de confirmación del taller.
+    private String metodoPago;
+    private String referenciaPago;
+    private LocalDateTime fechaPagoReportado;
+
     /**
      * Umbrales (en días) para considerar que una orden se quedó quieta.
      * El taller y el reporte la marcan como retrasada para darle prioridad.

@@ -15,4 +15,6 @@ public class AuthResponse {
     private String rol;
     private String proveedor;
     private Boolean datosCompletos;
+    // Permite renovar el token de acceso sin volver a iniciar sesión.
+    private String refreshToken;
 }

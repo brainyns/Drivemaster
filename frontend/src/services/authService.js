@@ -1,6 +1,9 @@
+import { apiFetch } from "./http";
+
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
 
 const TOKEN_KEY = "auth_token";
+const REFRESH_KEY = "auth_refresh";
 const USER_KEY = "auth_user";
 
 function handleResponse(response) {
@@ -28,14 +31,32 @@ export function getUser() {
   return user ? JSON.parse(user) : null;
 }
 
-export function setSession(token, user) {
+export function getRefreshToken() {
+  return localStorage.getItem(REFRESH_KEY);
+}
+
+export function setSession(token, user, refresh) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (refresh) localStorage.setItem(REFRESH_KEY, refresh);
 }
 
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
   localStorage.removeItem(USER_KEY);
+}
+
+/** Momento (ms) en que vence un JWT, leído de su claim "exp". null si no se puede leer. */
+export function getTokenExpiracion(token) {
+  if (!token) return null;
+  try {
+    const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const { exp } = JSON.parse(atob(payload));
+    return typeof exp === "number" ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
 }
 
 function guardarSesion(data) {
@@ -47,7 +68,7 @@ function guardarSesion(data) {
       rol: data.rol,
       proveedor: data.proveedor,
       datosCompletos: data.datosCompletos
-    });
+    }, data.refreshToken);
   }
 }
 
@@ -95,18 +116,24 @@ export async function register(data) {
   return response;
 }
 
+/**
+ * Renueva la sesión con el refresh token. Las sesiones abiertas antes de que
+ * existiera el refresh token usan el token de acceso, si todavía está vigente.
+ * Emite "auth:renovada" con el nuevo token para que App actualice su estado.
+ */
 export async function refreshToken() {
   const token = getToken();
-  if (!token) {
+  const refresh = getRefreshToken();
+  if (!token && !refresh) {
     throw new Error("No hay sesión");
   }
 
   const res = await fetch(`${API_BASE}/auth/refresh`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    }
+    headers: refresh
+      ? { "Content-Type": "application/json" }
+      : { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: refresh ? JSON.stringify({ refreshToken: refresh }) : undefined,
   });
 
   const data = await handleResponse(res);
@@ -115,7 +142,8 @@ export async function refreshToken() {
     setSession(data.token, {
       ...user,
       datosCompletos: data.datosCompletos
-    });
+    }, data.refreshToken);
+    window.dispatchEvent(new CustomEvent("auth:renovada", { detail: data.token }));
   }
   return data;
 }
@@ -138,7 +166,7 @@ export async function logout() {
 }
 
 export async function listarUsuarios() {
-  const res = await fetch(`${API_BASE}/usuarios`, {
+  const res = await apiFetch(`${API_BASE}/usuarios`, {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${getToken()}`
@@ -148,7 +176,7 @@ export async function listarUsuarios() {
 }
 
 export async function crearUsuario(data) {
-  const res = await fetch(`${API_BASE}/usuarios`, {
+  const res = await apiFetch(`${API_BASE}/usuarios`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -160,7 +188,7 @@ export async function crearUsuario(data) {
 }
 
 export async function eliminarUsuario(id) {
-  const res = await fetch(`${API_BASE}/usuarios/${id}`, {
+  const res = await apiFetch(`${API_BASE}/usuarios/${id}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -171,7 +199,7 @@ export async function eliminarUsuario(id) {
 }
 
 export async function actualizarMiNombre(nombre) {
-  const res = await fetch(`${API_BASE}/clientes/mi-perfil/nombre`, {
+  const res = await apiFetch(`${API_BASE}/clientes/mi-perfil/nombre`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
