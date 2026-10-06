@@ -29,13 +29,14 @@ public class OrdenServicioController {
         return ResponseEntity.ok(ordenServicioService.cotizar(auth.getName(), request));
     }
 
+    // El cliente reporta el pago; la orden pasa a PAGADA cuando el taller lo confirma.
     @PostMapping("/{id}/pagar")
     public ResponseEntity<OrdenServicioDTO> pagar(@PathVariable String id,
                                                   @RequestBody(required = false) PagarOrdenRequest request,
                                                   Authentication auth) {
         String metodo = request != null ? request.getMetodo() : null;
         String referencia = request != null ? request.getReferencia() : null;
-        return ResponseEntity.ok(ordenServicioService.pagar(auth.getName(), id, metodo, referencia));
+        return ResponseEntity.ok(ordenServicioService.reportarPago(auth.getName(), id, metodo, referencia));
     }
 
     @PatchMapping("/{id}/cancelar")
@@ -53,6 +54,11 @@ public class OrdenServicioController {
     @GetMapping("/taller")
     public ResponseEntity<List<OrdenServicioDTO>> ordenesDelTaller(Authentication auth) {
         return ResponseEntity.ok(ordenServicioService.listarPorTaller(auth.getName()));
+    }
+
+    @PatchMapping("/{id}/confirmar-pago")
+    public ResponseEntity<OrdenServicioDTO> confirmarPago(@PathVariable String id, Authentication auth) {
+        return ResponseEntity.ok(ordenServicioService.confirmarPago(auth.getName(), id));
     }
 
     @PatchMapping("/{id}/iniciar")

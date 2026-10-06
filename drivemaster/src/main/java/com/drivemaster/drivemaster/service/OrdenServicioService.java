@@ -10,7 +10,9 @@ public interface OrdenServicioService {
 
     OrdenServicioDTO cotizar(String correoUsuario, CrearOrdenServicioRequest request);
 
-    OrdenServicioDTO pagar(String correoUsuario, String ordenId, String metodoPago, String referencia);
+    OrdenServicioDTO reportarPago(String correoUsuario, String ordenId, String metodoPago, String referencia);
+
+    OrdenServicioDTO confirmarPago(String correoTaller, String ordenId);
 
     OrdenServicioDTO cancelar(String correoUsuario, String ordenId);
 

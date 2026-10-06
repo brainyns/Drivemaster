@@ -1,3 +1,4 @@
+import { apiFetch } from "./http";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/proveedores`;
 
 const buildHeaders = (token, contentType = "application/json") => {
@@ -8,19 +9,19 @@ const buildHeaders = (token, contentType = "application/json") => {
 };
 
 export async function listarProveedores(token) {
-  const res = await fetch(BASE_URL, { headers: buildHeaders(token) });
+  const res = await apiFetch(BASE_URL, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Error al obtener proveedores");
   return res.json();
 }
 
 export async function obtenerProveedor(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
+  const res = await apiFetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Proveedor no encontrado");
   return res.json();
 }
 
 export async function crearProveedor(proveedor, token) {
-  const res = await fetch(`${BASE_URL}/guardar`, {
+  const res = await apiFetch(`${BASE_URL}/guardar`, {
     method: "POST",
     headers: buildHeaders(token),
     body: JSON.stringify(proveedor),
@@ -30,7 +31,7 @@ export async function crearProveedor(proveedor, token) {
 }
 
 export async function actualizarProveedor(id, proveedor, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await apiFetch(`${BASE_URL}/${id}`, {
     method: "PUT",
     headers: buildHeaders(token),
     body: JSON.stringify(proveedor),
@@ -40,7 +41,7 @@ export async function actualizarProveedor(id, proveedor, token) {
 }
 
 export async function eliminarProveedor(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await apiFetch(`${BASE_URL}/${id}`, {
     method: "DELETE",
     headers: buildHeaders(token),
   });
@@ -48,7 +49,7 @@ export async function eliminarProveedor(id, token) {
 }
 
 export async function exportarProveedores(token) {
-  const res = await fetch(`${BASE_URL}/exportar`, {
+  const res = await apiFetch(`${BASE_URL}/exportar`, {
     headers: buildHeaders(token),
   });
   if (!res.ok) throw new Error("Error al exportar proveedores");

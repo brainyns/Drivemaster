@@ -65,7 +65,7 @@ public class VentaServiceImpl implements VentaService {
     }
 
     private double resolverIva() {
-        double iva = 0.16;
+        double iva = 0.19;
         var ivaParam = parametroRepo.findByClave("IVA");
         if (ivaParam.isPresent()) {
             iva = Double.parseDouble(ivaParam.get().getValor()) / 100.0;

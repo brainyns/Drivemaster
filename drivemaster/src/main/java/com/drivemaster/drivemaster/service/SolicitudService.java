@@ -61,7 +61,7 @@ public class SolicitudService {
     private double resolverIva() {
         return parametroRepo.findByClave("IVA")
                 .map(p -> Double.parseDouble(p.getValor()) / 100.0)
-                .orElse(0.16);
+                .orElse(0.19);
     }
 
     // ─── CREAR ──────────────────────────────────────────────

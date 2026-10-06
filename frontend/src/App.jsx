@@ -37,7 +37,7 @@ import AdminTalleres         from "./pages/AdminTalleres";
 import MisVehiculos          from "./pages/MisVehiculos";
 import VehiculoServicio      from "./pages/VehiculoServicio";
 import ChatWidget            from "./components/chat/ChatWidget";
-import { getUser, getToken, clearSession, refreshToken, logout } from "./services/authService";
+import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
 
 const storedUser  = getUser();
 const storedToken = getToken();
@@ -82,7 +82,12 @@ const TITULOS = {
   "admin-talleres":  "Servicios",
 };
 
-const DEFAULT_IVA = 0.16;
+const DEFAULT_IVA = 0.19;
+
+// El token se renueva un minuto antes de vencer. La espera mínima evita un ciclo
+// de renovaciones seguidas si el token dura menos que el margen.
+const MARGEN_RENOVACION_MS = 60 * 1000;
+const ESPERA_MINIMA_MS = 5 * 1000;
 
 function calcularSubtotal(items) {
   return items.reduce((s, i) => s + (i.precioUnitario * i.cantidad), 0);
@@ -118,7 +123,7 @@ function App() {
           const v = parseFloat(p.valor);
           if (!isNaN(v)) setIvaRate(v / 100);
         }
-      } catch { /* fallback 16% */ }
+      } catch { /* fallback 19% */ }
     };
     cargarIva();
   }, []);
@@ -149,23 +154,40 @@ function App() {
     localStorage.setItem("solicitudItems", JSON.stringify(solicitudItems));
   }, [solicitudItems]);
 
+  // Sesión expirada: limpiamos localmente pero conservamos el flag
+  // para poder mostrar la pantalla de "sesión expirada".
+  const expirarSesion = useCallback(() => {
+    clearSession();
+    setUser(null);
+    setToken(null);
+    setSolicitudItems([]);
+    setPagina("catalogo");
+    setSessionExpired(true);
+  }, []);
+
+  // Renueva el token según su vencimiento real. Antes era un intervalo fijo de
+  // 25 min que se reiniciaba al recargar la página, y el token vencía antes de
+  // renovarse (401 en el pago). Si al cargar ya está vencido, se renueva enseguida.
   useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(async () => {
-      try { await refreshToken(); }
-      catch {
-        // Sesión expirada: limpiamos localmente pero conservamos el flag
-        // para poder mostrar la pantalla de "sesión expirada".
-        clearSession();
-        setUser(null);
-        setToken(null);
-        setSolicitudItems([]);
-        setPagina("catalogo");
-        setSessionExpired(true);
-      }
-    }, 25 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [user]);
+    if (!user || !token) return;
+    const exp = getTokenExpiracion(token);
+    const espera = exp ? Math.max(exp - Date.now() - MARGEN_RENOVACION_MS, ESPERA_MINIMA_MS) : ESPERA_MINIMA_MS;
+    const timer = setTimeout(() => {
+      refreshToken().catch(expirarSesion);
+    }, espera);
+    return () => clearTimeout(timer);
+  }, [user, token, expirarSesion]);
+
+  // apiFetch avisa cuando renovó el token o cuando la sesión ya no se pudo recuperar.
+  useEffect(() => {
+    const onRenovada = (e) => setToken(e.detail);
+    window.addEventListener("auth:renovada", onRenovada);
+    window.addEventListener("auth:expirada", expirarSesion);
+    return () => {
+      window.removeEventListener("auth:renovada", onRenovada);
+      window.removeEventListener("auth:expirada", expirarSesion);
+    };
+  }, [expirarSesion]);
 
   const irA = (p, id = null) => { setIdSeleccionado(id); setPagina(p); };
 

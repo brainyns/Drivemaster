@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { useEffect, useState } from "react";
 import { crearUsuario, listarUsuarios, eliminarUsuario, getUser } from "../services/authService";
 import "../css/Usuarios.css";
@@ -80,7 +81,7 @@ export default function Usuarios({ token }) {
       const body = { nombre: editForm.nombre };
       if (editForm.password) body.password = editForm.password;
       if (editForm.rol && editForm.rol !== editando.rol) body.rol = editForm.rol;
-      const res = await fetch(`${API_BASE}/usuarios/${editando.id}`, {
+      const res = await apiFetch(`${API_BASE}/usuarios/${editando.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

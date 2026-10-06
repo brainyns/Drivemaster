@@ -16,9 +16,11 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -29,11 +31,14 @@ import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class PagoService {
 
     private static final Logger log = LoggerFactory.getLogger(PagoService.class);
+
+    private static final Set<String> ROLES_INTERNOS = Set.of("SUPERADMIN", "ADMIN", "VENDEDOR");
 
     private final SolicitudRepository solicitudRepository;
     private final PagoRepository pagoRepository;
@@ -73,6 +78,15 @@ public class PagoService {
 
     // ─── CREAR LINK DE PAGO (Web Checkout de Wompi) ────────
 
+    /** Link de pago pedido por un usuario: valida que la solicitud sea suya. */
+    public Map<String, Object> crearPago(String solicitudId, String redirectUrl, String correoUsuario) {
+        Solicitud solicitud = solicitudRepository.findById(solicitudId)
+                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+        validarPropietario(solicitud.getClienteId(), correoUsuario);
+        return crearPago(solicitudId, redirectUrl);
+    }
+
+    /** Link de pago generado por el sistema (al aprobar un encargo), sin usuario en sesión. */
     public Map<String, Object> crearPago(String solicitudId, String redirectUrl) {
         Solicitud solicitud = solicitudRepository.findById(solicitudId)
                 .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
@@ -107,8 +121,9 @@ public class PagoService {
         );
     }
 
-    public Map<String, Object> crearPagoVenta(String ventaId, String redirectUrl) {
+    public Map<String, Object> crearPagoVenta(String ventaId, String redirectUrl, String correoUsuario) {
         Venta venta = ventaService.obtenerPorId(ventaId);
+        validarPropietario(venta.getClienteId(), correoUsuario);
 
         String estado = venta.getEstado();
         if (!("PENDIENTE".equals(estado) || "PENDIENTE_PAGO".equals(estado) || "APROBADO".equals(estado))) {
@@ -138,6 +153,19 @@ public class PagoService {
                 "monto", montoCentavos,
                 "firma", generarFirma(referencia, montoCentavos)
         );
+    }
+
+    /**
+     * Solo el cliente dueño puede generar el link de pago. El personal interno
+     * también puede (desde Solicitudes se genera el link para el cliente).
+     */
+    private void validarPropietario(String clienteId, String correoUsuario) {
+        Usuario usuario = usuarioRepository.findByCorreo(correoUsuario)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no encontrado"));
+        if (ROLES_INTERNOS.contains(usuario.getRol())) return;
+        if (clienteId == null || !clienteId.equals(usuario.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Este pago no le pertenece");
+        }
     }
 
     private String construirUrlCheckout(String clienteId, String referencia, long montoCentavos, String redirectUrl) {
@@ -186,27 +214,38 @@ public class PagoService {
         String status = str(txn.get("status"));
         String solicitudId = "";
         if ("APPROVED".equals(status)) {
-            solicitudId = confirmarPagoPorReferencia(str(txn.get("reference")), transactionId);
+            solicitudId = confirmarPagoAprobado(txn);
         }
         return Map.of("estado", status, "solicitudId", solicitudId != null ? solicitudId : "");
     }
 
     // ─── WEBHOOK (Wompi notifica el evento) ─────────────────
 
+    /**
+     * El body del webhook solo se usa para saber QUÉ transacción revisar. El estado,
+     * la referencia y el monto se toman siempre de la API de Wompi: un webhook
+     * falsificado con status APPROVED ya no puede marcar un pago como pagado.
+     */
     public void procesarWebhook(Map<String, Object> body) {
         log.info("Webhook Wompi recibido: {}", body != null ? body.get("event") : "null");
         try {
-            if (!(body.get("data") instanceof Map<?, ?> data)) return;
+            if (body == null || !(body.get("data") instanceof Map<?, ?> data)) return;
             if (!(data.get("transaction") instanceof Map<?, ?> transaction)) return;
 
             String transactionId = str(transaction.get("id"));
-            String status = str(transaction.get("status"));
-            String reference = str(transaction.get("reference"));
+            if (transactionId == null || transactionId.isBlank()) return;
 
-            log.info("Evento {} -> txn {} status {}", body.get("event"), transactionId, status);
+            Map<String, Object> txn = consultarTransaccion(transactionId);
+            if (txn == null) {
+                log.warn("Webhook: no se pudo consultar la transacción {} en Wompi", transactionId);
+                return;
+            }
 
-            if ("APPROVED".equals(status) || "APPROVED".equals(consultarEstadoTransaccion(transactionId))) {
-                confirmarPagoPorReferencia(reference, transactionId);
+            String status = str(txn.get("status"));
+            log.info("Evento {} -> txn {} status {} (verificado con la API)", body.get("event"), transactionId, status);
+
+            if ("APPROVED".equals(status)) {
+                confirmarPagoAprobado(txn);
             }
         } catch (Exception e) {
             log.error("Error procesando webhook de Wompi", e);
@@ -215,7 +254,15 @@ public class PagoService {
 
     // ─── CONFIRMAR PAGO (idempotente) ───────────────────────
 
-    private String confirmarPagoPorReferencia(String referencia, String transactionId) {
+    /**
+     * Confirma un pago a partir de la transacción consultada en la API de Wompi.
+     * Antes de dar el pago por bueno verifica que monto y moneda coincidan con lo
+     * que se cobró al generar el link.
+     */
+    private String confirmarPagoAprobado(Map<String, Object> txn) {
+        String referencia = str(txn.get("reference"));
+        String transactionId = str(txn.get("id"));
+
         PagoEntity pagoEntity = referencia != null
                 ? pagoRepository.findByReferencia(referencia).orElse(null)
                 : null;
@@ -225,6 +272,18 @@ public class PagoService {
         }
         if ("PAGADO".equals(pagoEntity.getEstado())) {
             return pagoEntity.getVentaId() != null ? pagoEntity.getVentaId() : pagoEntity.getSolicitudId();
+        }
+
+        long esperadoCentavos = Math.round(pagoEntity.getMonto() * 100);
+        Long recibidoCentavos = txn.get("amount_in_cents") instanceof Number n ? n.longValue() : null;
+        String moneda = str(txn.get("currency"));
+        if (recibidoCentavos == null || recibidoCentavos != esperadoCentavos || !"COP".equals(moneda)) {
+            log.error("Pago {} rechazado: Wompi reporta {} {} y se esperaban {} COP (txn {})",
+                    referencia, recibidoCentavos, moneda, esperadoCentavos, transactionId);
+            pagoEntity.setEstado("MONTO_INVALIDO");
+            pagoEntity.setTransactionId(transactionId);
+            pagoRepository.save(pagoEntity);
+            return null;
         }
 
         String ventaId = pagoEntity.getVentaId();
@@ -312,11 +371,6 @@ public class PagoService {
             }
         }
         return resultado;
-    }
-
-    private String consultarEstadoTransaccion(String transactionId) {
-        Map<String, Object> txn = consultarTransaccion(transactionId);
-        return txn != null ? str(txn.get("status")) : null;
     }
 
     // ─── FIRMA / REFERENCIA ─────────────────────────────────

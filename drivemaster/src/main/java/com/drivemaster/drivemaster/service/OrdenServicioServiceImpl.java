@@ -30,6 +30,9 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
 
     private static final Set<String> ESTADOS_CANCELABLES = Set.of("SOLICITADA", "COTIZADA");
 
+    // Mismos métodos que acepta VentaServiceImpl.registrarVentaTaller.
+    private static final Set<String> METODOS_PAGO_TALLER = Set.of("EFECTIVO", "TRANSFERENCIA");
+
     private final OrdenServicioRepository ordenServicioRepository;
     private final VehiculoService vehiculoService;
     private final TallerService tallerService;
@@ -102,26 +105,41 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
         return toDTO(orden);
     }
 
+    /**
+     * El cliente informa cómo va a pagar (o que ya transfirió). No mueve la orden
+     * ni genera venta: antes el cliente podía marcar su propia orden como PAGADA
+     * sin haber pagado. Ahora el pago lo confirma el taller.
+     */
     @Override
-    public OrdenServicioDTO pagar(String correoUsuario, String ordenId, String metodoPago, String referencia) {
+    public OrdenServicioDTO reportarPago(String correoUsuario, String ordenId, String metodoPago, String referencia) {
         OrdenServicio orden = obtenerYValidarPropietario(correoUsuario, ordenId);
+        validarCotizadaConStock(orden);
 
-        if (!"COTIZADA".equals(orden.getEstado())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "La orden no está en estado COTIZADA (estado actual: " + orden.getEstado() + ")");
+        String metodo = (metodoPago == null || metodoPago.isBlank()) ? "EFECTIVO" : metodoPago.trim().toUpperCase();
+        if (!METODOS_PAGO_TALLER.contains(metodo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Los servicios de taller solo se pagan con efectivo o transferencia");
         }
 
-        Producto producto = productoService.obtenerPorId(orden.getProductoId());
-        if ("ENCARGO".equals(producto.getTipo())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El repuesto es por encargo y no se puede cobrar como venta de taller");
-        }
-        if (producto.getStockActual() == null || producto.getStockActual() <= 0) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "El repuesto ya no tiene stock disponible");
-        }
+        orden.setMetodoPago(metodo);
+        orden.setReferenciaPago(referencia != null && !referencia.isBlank() ? referencia.trim() : null);
+        orden.setFechaPagoReportado(LocalDateTime.now());
+        orden = ordenServicioRepository.save(orden);
+        return toDTO(orden);
+    }
 
-        Usuario cliente = usuarioService.obtenerPorCorreo(correoUsuario);
-        String metodo = (metodoPago == null || metodoPago.isBlank()) ? "EFECTIVO" : metodoPago;
+    /** El taller confirma que recibió el pago: se registra la venta y la orden pasa a PAGADA. */
+    @Override
+    public OrdenServicioDTO confirmarPago(String correoTaller, String ordenId) {
+        Taller taller = tallerService.obtenerPorUsuario(correoTaller);
+        OrdenServicio orden = obtenerOrden(ordenId);
+        validarPropiedadTaller(taller, orden);
+        Producto producto = validarCotizadaConStock(orden);
+
+        Usuario cliente = usuarioService.obtenerPorId(orden.getUsuarioId());
+        // Si el cliente no lo reportó en la app, se asume pago en efectivo en el taller.
+        String metodo = orden.getMetodoPago() != null ? orden.getMetodoPago() : "EFECTIVO";
+        String referencia = orden.getReferenciaPago();
         double total = orden.getTotal() != null ? orden.getTotal() : 0.0;
 
         // El repuesto se factura como STOCK (genera salida de inventario) y la mano de obra
@@ -318,6 +336,23 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Orden de servicio no encontrada"));
     }
 
+    private Producto validarCotizadaConStock(OrdenServicio orden) {
+        if (!"COTIZADA".equals(orden.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La orden no está en estado COTIZADA (estado actual: " + orden.getEstado() + ")");
+        }
+
+        Producto producto = productoService.obtenerPorId(orden.getProductoId());
+        if ("ENCARGO".equals(producto.getTipo())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El repuesto es por encargo y no se puede cobrar como venta de taller");
+        }
+        if (producto.getStockActual() == null || producto.getStockActual() <= 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El repuesto ya no tiene stock disponible");
+        }
+        return producto;
+    }
+
     private OrdenServicio obtenerYValidarPropietario(String correoUsuario, String ordenId) {
         Usuario usuario = usuarioService.obtenerPorCorreo(correoUsuario);
         OrdenServicio orden = obtenerOrden(ordenId);
@@ -343,7 +378,8 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
                 o.getFechaFinalizacion(), o.getObservaciones(),
                 o.getFechaProgramada(), o.getCitaNotificada(),
                 OrdenServicioDTO.estaRetrasada(
-                        o.getEstado(), o.getFechaCreacion(), o.getFechaPago(), o.getFechaInicio()));
+                        o.getEstado(), o.getFechaCreacion(), o.getFechaPago(), o.getFechaInicio()),
+                o.getMetodoPago(), o.getReferenciaPago(), o.getFechaPagoReportado());
     }
 
     @Override

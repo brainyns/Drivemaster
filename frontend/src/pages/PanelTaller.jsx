@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { getToken } from "../services/authService";
-import { ordenesDelTaller, iniciarServicio, finalizarServicio, programarCita } from "../services/ordenServicioService";
+import { ordenesDelTaller, iniciarServicio, finalizarServicio, programarCita, confirmarPagoOrden } from "../services/ordenServicioService";
 import "../css/servicios.css";
 import "../css/panel-taller.css";
 
@@ -84,6 +84,11 @@ export default function PanelTaller() {
 
   useEffect(() => { cargar(); }, []);
 
+  // El cliente reportó el pago y el taller debe confirmar que lo recibió.
+  const porConfirmar = useMemo(
+    () => ordenes.filter(o => o.estado === "COTIZADA" && o.fechaPagoReportado),
+    [ordenes]
+  );
   const pagadas     = useMemo(() => ordenes.filter(o => o.estado === "PAGADA"), [ordenes]);
   const enProceso   = useMemo(() => ordenes.filter(o => o.estado === "EN_PROCESO"), [ordenes]);
   const finalizadas = useMemo(() => ordenes.filter(o => o.estado === "FINALIZADA"), [ordenes]);
@@ -138,6 +143,19 @@ export default function PanelTaller() {
     () => ordenes.filter(o => o.fechaProgramada).length,
     [ordenes]
   );
+
+  const handleConfirmarPago = async (id) => {
+    setProcesando(id);
+    setError(null);
+    try {
+      await confirmarPagoOrden(token, id);
+      await cargar();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setProcesando(null);
+    }
+  };
 
   const handleIniciar = async (id) => {
     setProcesando(id);
@@ -217,7 +235,7 @@ export default function PanelTaller() {
 
       <nav className="pt-tabs" aria-label="Secciones del panel">
         {TABS.map(t => {
-          const n = t.key === "ordenes" ? pagadas.length
+          const n = t.key === "ordenes" ? pagadas.length + porConfirmar.length
             : t.key === "proceso" ? enProceso.length
             : t.key === "finalizadas" ? finalizadas.length
             : 0;
@@ -335,8 +353,36 @@ export default function PanelTaller() {
 
           {tab === "ordenes" && (
             <div className="pt-list">
+              {porConfirmar.map(o => (
+                <article className="pt-card" key={o.id}>
+                  <div className="pt-card-media">
+                    <FotoVehiculo o={o} />
+                  </div>
+                  <div className="pt-card-body">
+                    <div className="pt-card-head">
+                      <span className="pt-card-ref">#{refOrden(o.id)}</span>
+                      <ChipEstado o={o} />
+                    </div>
+                    <h3 className="pt-card-title">{o.vehiculoDescripcion || "Vehículo por identificar"}</h3>
+                    <p className="pt-card-meta">
+                      Pago reportado: {o.metodoPago === "TRANSFERENCIA" ? "Transferencia" : "Efectivo"}
+                      {o.referenciaPago ? ` · Comprobante ${o.referenciaPago}` : ""}
+                    </p>
+                    <p className="pt-card-total">{formatPrecio(o.total)}</p>
+                  </div>
+                  <div className="pt-card-actions">
+                    <button
+                      className="sv-btn pt-btn-block"
+                      disabled={procesando === o.id}
+                      onClick={() => handleConfirmarPago(o.id)}
+                    >
+                      {procesando === o.id ? "Procesando…" : "Confirmar pago recibido"}
+                    </button>
+                  </div>
+                </article>
+              ))}
               {pagadas.length === 0 ? (
-                <p className="sv-empty">No tienes servicios pagados esperando inicio.</p>
+                porConfirmar.length === 0 && <p className="sv-empty">No tienes servicios pagados esperando inicio.</p>
               ) : pagadas.map(o => (
                 <article className="pt-card" key={o.id}>
                   <div className="pt-card-media">

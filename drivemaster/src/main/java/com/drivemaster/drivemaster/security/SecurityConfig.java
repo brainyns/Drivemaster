@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.security;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,8 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -19,6 +22,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableMethodSecurity
@@ -54,6 +60,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                        // El reenvío interno a /error no lleva el JWT: sin esto un 500
+                        // no manejado llegaba al cliente disfrazado de 401/403.
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
                         .requestMatchers("/api/auth/google").permitAll()
                         .requestMatchers("/api/auth/login-interno").permitAll()
@@ -93,6 +102,9 @@ public class SecurityConfig {
             .requestMatchers("/api/vehiculos/**").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/api/ordenes-servicio/taller").hasRole("TALLER")
+                        // Órdenes de un taller cualquiera: solo administración
+                        .requestMatchers(HttpMethod.GET, "/api/ordenes-servicio/taller/*").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/ordenes-servicio/*/confirmar-pago").hasRole("TALLER")
                         .requestMatchers(HttpMethod.PATCH, "/api/ordenes-servicio/*/iniciar").hasRole("TALLER")
                         .requestMatchers(HttpMethod.PATCH, "/api/ordenes-servicio/*/finalizar").hasRole("TALLER")
             .requestMatchers(HttpMethod.PATCH, "/api/ordenes-servicio/*/programar").hasRole("TALLER")
@@ -103,11 +115,38 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/home/**").authenticated()
                         .anyRequest().authenticated())
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(this::responderNoAutenticado)
+                        .accessDeniedHandler(this::responderAccesoDenegado))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
 
+    }
+
+    /**
+     * 401 en JSON. El código permite al frontend distinguir una sesión vencida
+     * (intenta renovar el token) de un 401 de negocio, como una contraseña incorrecta.
+     */
+    private void responderNoAutenticado(HttpServletRequest request, HttpServletResponse response,
+                                        AuthenticationException ex) throws IOException {
+        boolean tokenInvalido = Boolean.TRUE.equals(request.getAttribute(JwtAuthenticationFilter.ATTR_TOKEN_INVALIDO));
+        String code = tokenInvalido ? "SESSION_EXPIRED" : "UNAUTHENTICATED";
+        String mensaje = tokenInvalido ? "Token inválido o sesión expirada" : "Debe iniciar sesión";
+        escribirJson(response, HttpServletResponse.SC_UNAUTHORIZED, mensaje, code);
+    }
+
+    private void responderAccesoDenegado(HttpServletRequest request, HttpServletResponse response,
+                                         AccessDeniedException ex) throws IOException {
+        escribirJson(response, HttpServletResponse.SC_FORBIDDEN, "No tiene permisos para esta acción", "FORBIDDEN");
+    }
+
+    private void escribirJson(HttpServletResponse response, int status, String mensaje, String code) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("{\"error\": \"" + mensaje + "\", \"code\": \"" + code + "\"}");
     }
 
     @Bean

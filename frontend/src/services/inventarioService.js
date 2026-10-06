@@ -1,3 +1,4 @@
+import { apiFetch } from "./http";
 const API = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/inventario`;
 
 const buildHeaders = (token, contentType) => {
@@ -9,7 +10,7 @@ const buildHeaders = (token, contentType) => {
 
 export const ajustarStock = async (productoId, nuevoStock, motivo, token) => {
 
-    const response = await fetch(
+    const response = await apiFetch(
         `${API}/ajuste/${productoId}/${nuevoStock}?motivo=${motivo}`,
         {
             method: "PUT",

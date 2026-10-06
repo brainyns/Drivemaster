@@ -1,3 +1,4 @@
+import { apiFetch } from "./http";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/compras`;
 
 const buildHeaders = (token, contentType = "application/json") => {
@@ -8,19 +9,19 @@ const buildHeaders = (token, contentType = "application/json") => {
 };
 
 export async function listarCompras(token) {
-  const res = await fetch(BASE_URL, { headers: buildHeaders(token) });
+  const res = await apiFetch(BASE_URL, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Error al obtener compras");
   return res.json();
 }
 
 export async function obtenerCompra(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
+  const res = await apiFetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Compra no encontrada");
   return res.json();
 }
 
 export async function crearCompra(compra, token) {
-  const res = await fetch(`${BASE_URL}/guardar`, {
+  const res = await apiFetch(`${BASE_URL}/guardar`, {
     method: "POST",
     headers: buildHeaders(token),
     body: JSON.stringify(compra),
@@ -33,7 +34,7 @@ export async function crearCompra(compra, token) {
 }
 
 export async function descargarPdfCompra(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}/pdf`, {
+  const res = await apiFetch(`${BASE_URL}/${id}/pdf`, {
     headers: buildHeaders(token),
   });
   if (!res.ok) throw new Error("Error al generar el PDF de la compra");

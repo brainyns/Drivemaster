@@ -1,3 +1,4 @@
+import { apiFetch } from "./http";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/productos`;
 
 const buildHeaders = (token, contentType = "application/json") => {
@@ -12,19 +13,19 @@ const buildHeaders = (token, contentType = "application/json") => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function listarProductos(token) {
-  const res = await fetch(BASE_URL, { headers: buildHeaders(token) });
+  const res = await apiFetch(BASE_URL, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Error al obtener productos");
   return res.json();
 }
 
 export async function obtenerProducto(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
+  const res = await apiFetch(`${BASE_URL}/${id}`, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Producto no encontrado");
   return res.json();
 }
 
 export async function crearProducto(producto, token) {
-  const res = await fetch(`${BASE_URL}/guardar`, {
+  const res = await apiFetch(`${BASE_URL}/guardar`, {
     method: "POST",
     headers: buildHeaders(token),
     body: JSON.stringify(producto),
@@ -34,7 +35,7 @@ export async function crearProducto(producto, token) {
 }
 
 export async function actualizarProducto(id, producto, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await apiFetch(`${BASE_URL}/${id}`, {
     method: "PUT",
     headers: buildHeaders(token),
     body: JSON.stringify(producto),
@@ -46,7 +47,7 @@ export async function actualizarProducto(id, producto, token) {
 export async function subirImagenProducto(id, archivo, token) {
   const formData = new FormData();
   formData.append("archivo", archivo);
-  const res = await fetch(`${BASE_URL}/${id}/imagen`, {
+  const res = await apiFetch(`${BASE_URL}/${id}/imagen`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
@@ -56,7 +57,7 @@ export async function subirImagenProducto(id, archivo, token) {
 }
 
 export async function eliminarProducto(id, token) {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await apiFetch(`${BASE_URL}/${id}`, {
     method: "DELETE",
     headers: buildHeaders(token),
   });
@@ -64,7 +65,7 @@ export async function eliminarProducto(id, token) {
 }
 
 export async function actualizarStock(id, nuevoStock, token) {
-  const res = await fetch(`${BASE_URL}/${id}/stock`, {
+  const res = await apiFetch(`${BASE_URL}/${id}/stock`, {
     method: "PATCH",
     headers: buildHeaders(token),
     body: JSON.stringify({ stock: nuevoStock }),
@@ -79,14 +80,14 @@ export async function actualizarStock(id, nuevoStock, token) {
 
 // Todos los productos (catálogo público)
 export async function obtenerProductos() {
-  const res = await fetch(BASE_URL);
+  const res = await apiFetch(BASE_URL);
   if (!res.ok) throw new Error("Error al obtener productos");
   return res.json();
 }
 
 // Un producto por ID (catálogo público)
 export async function obtenerProductoCatalogo(id) {
-  const res = await fetch(`${BASE_URL}/${id}`);
+  const res = await apiFetch(`${BASE_URL}/${id}`);
   if (!res.ok) throw new Error("Producto no encontrado");
   return res.json();
 }
@@ -94,7 +95,7 @@ export async function obtenerProductoCatalogo(id) {
 // Búsqueda + filtros para el catálogo público
 // El filtrado se hace en frontend sobre la lista completa
 export async function buscarProductos(filtros = {}) {
-  const res = await fetch(BASE_URL);
+  const res = await apiFetch(BASE_URL);
   if (!res.ok) throw new Error("Error al obtener productos");
   let resultado = await res.json();
 
@@ -120,7 +121,7 @@ export async function buscarProductos(filtros = {}) {
 
 // Categorías únicas extraídas de los productos del backend
 export async function obtenerCategorias() {
-  const res = await fetch(BASE_URL);
+  const res = await apiFetch(BASE_URL);
   if (!res.ok) throw new Error("Error al obtener categorías");
   const productos = await res.json();
   const unicas = [...new Set(productos.map((p) => p.categoria).filter(Boolean))];

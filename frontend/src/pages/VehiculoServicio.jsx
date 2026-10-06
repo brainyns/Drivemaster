@@ -206,7 +206,15 @@ const [referenciaPago, setReferenciaPago] = useState("");
           <div className="sv-quote-line"><span>Mano de obra ({cotizacion.tallerNombre})</span><span>{formatPrecio(cotizacion.precioManoObra)}</span></div>
           <div className="sv-quote-line sv-quote-total"><span>Total</span><span>{formatPrecio(cotizacion.total)}</span></div>
 
-          {cotizacion.estado === "COTIZADA" && (
+          {cotizacion.estado === "COTIZADA" && cotizacion.fechaPagoReportado && (
+            <p style={{ marginTop: "var(--sp-md)" }}>
+              Reportaste el pago por <strong>{cotizacion.metodoPago === "TRANSFERENCIA" ? "transferencia" : "efectivo"}</strong>
+              {cotizacion.referenciaPago ? ` (comprobante ${cotizacion.referenciaPago})` : ""}. El taller{" "}
+              <strong>{cotizacion.tallerNombre}</strong> lo confirmará cuando lo reciba y te enviaremos la factura por correo.
+            </p>
+          )}
+
+          {cotizacion.estado === "COTIZADA" && !cotizacion.fechaPagoReportado && (
             <>
               <div className="sv-pay-methods">
                 {["EFECTIVO", "TRANSFERENCIA"].map((m) => (
@@ -236,7 +244,7 @@ const [referenciaPago, setReferenciaPago] = useState("");
 
               <div style={{ display: "flex", gap: "var(--sp-md)", marginTop: "var(--sp-md)" }}>
                 <button className="sv-btn" onClick={handlePagar} disabled={procesando}>
-                  {procesando ? "Procesando..." : `Pagar ${formatPrecio(cotizacion.total)}`}
+                  {procesando ? "Procesando..." : `Reportar pago de ${formatPrecio(cotizacion.total)}`}
                 </button>
                 <button className="sv-btn-outline" onClick={handleCancelar} disabled={procesando}>
                   Cancelar
@@ -252,7 +260,7 @@ const [referenciaPago, setReferenciaPago] = useState("");
             </p>
           )}
 
-          {cotizacion.estado !== "PAGADA" && cotizacion.estado === "COTIZADA" ? null : (
+          {cotizacion.estado === "COTIZADA" && !cotizacion.fechaPagoReportado ? null : (
             <button className="sv-btn-outline" style={{ marginTop: "var(--sp-md)" }}
               onClick={() => { setCotizacion(null); setProductoSeleccionado(null); cargarTodo(); }}>
               Volver a repuestos compatibles

@@ -79,7 +79,7 @@ public class MysqlDataInitializer implements CommandLineRunner {
 
     private void inicializarParametros() {
         List<Object[]> params = List.of(
-    new Object[]{"IVA",                  "16",     "Porcentaje de impuesto (%)"},
+    new Object[]{"IVA",                  "19",     "Porcentaje de impuesto (%)"},
     new Object[]{"TERMINAL_DEFAULT",     "POS-01", "Terminal por defecto"},
     new Object[]{"ESTADO_VENTA_DEFAULT", "PAGADA", "Estado por defecto al registrar venta"}
 );

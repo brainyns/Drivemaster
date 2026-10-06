@@ -1,3 +1,4 @@
+import { apiFetch } from "./http";
 const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ordenes-servicio`;
 
 function headers(token) {
@@ -16,7 +17,7 @@ async function handle(res, msgDefault) {
 }
 
 export async function cotizarOrden(token, { vehiculoId, productoId, tallerId }) {
-  const res = await fetch(BASE, {
+  const res = await apiFetch(BASE, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({ vehiculoId, productoId, tallerId }),
@@ -25,7 +26,7 @@ export async function cotizarOrden(token, { vehiculoId, productoId, tallerId }) 
 }
 
 export async function pagarOrden(token, id, metodo = "EFECTIVO", referencia = null) {
-  const res = await fetch(`${BASE}/${id}/pagar`, {
+  const res = await apiFetch(`${BASE}/${id}/pagar`, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({ metodo, referencia }),
@@ -35,7 +36,7 @@ export async function pagarOrden(token, id, metodo = "EFECTIVO", referencia = nu
 
 /** Programa la fecha y hora de ingreso al taller. El taller debe enviar la orden. */
 export async function programarCita(token, id, fechaProgramada) {
-  const res = await fetch(`${BASE}/${id}/programar`, {
+  const res = await apiFetch(`${BASE}/${id}/programar`, {
     method: "PATCH",
     headers: headers(token),
     body: JSON.stringify({ fechaProgramada }),
@@ -43,34 +44,40 @@ export async function programarCita(token, id, fechaProgramada) {
   return handle(res, "Error al programar la cita");
 }
 
+/** El taller confirma que recibió el pago reportado por el cliente. */
+export async function confirmarPagoOrden(token, id) {
+  const res = await apiFetch(`${BASE}/${id}/confirmar-pago`, { method: "PATCH", headers: headers(token) });
+  return handle(res, "Error al confirmar el pago");
+}
+
 export async function cancelarOrden(token, id) {
-  const res = await fetch(`${BASE}/${id}/cancelar`, { method: "PATCH", headers: headers(token) });
+  const res = await apiFetch(`${BASE}/${id}/cancelar`, { method: "PATCH", headers: headers(token) });
   return handle(res, "Error al cancelar la orden");
 }
 
 export async function misOrdenes(token) {
-  const res = await fetch(`${BASE}/mis-ordenes`, { headers: headers(token) });
+  const res = await apiFetch(`${BASE}/mis-ordenes`, { headers: headers(token) });
   return handle(res, "Error al listar tus órdenes");
 }
 
 
 export async function ordenesDelTaller(token) {
-  const res = await fetch(`${BASE}/taller`, { headers: headers(token) });
+  const res = await apiFetch(`${BASE}/taller`, { headers: headers(token) });
   return handle(res, "Error al listar las órdenes del taller");
 }
 
 export async function ordenesPorTallerAdmin(token, tallerId) {
-  const res = await fetch(`${BASE}/taller/${tallerId}`, { headers: headers(token) });
+  const res = await apiFetch(`${BASE}/taller/${tallerId}`, { headers: headers(token) });
   return handle(res, "Error al listar las órdenes del taller");
 }
 
 export async function iniciarServicio(token, id) {
-  const res = await fetch(`${BASE}/${id}/iniciar`, { method: "PATCH", headers: headers(token) });
+  const res = await apiFetch(`${BASE}/${id}/iniciar`, { method: "PATCH", headers: headers(token) });
   return handle(res, "Error al iniciar el servicio");
 }
 
 export async function finalizarServicio(token, id, observaciones) {
-  const res = await fetch(`${BASE}/${id}/finalizar`, {
+  const res = await apiFetch(`${BASE}/${id}/finalizar`, {
     method: "PATCH",
     headers: headers(token),
     body: JSON.stringify({ observaciones }),

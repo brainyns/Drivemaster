@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.drivemaster.drivemaster.dto.RegisterRequest;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
+import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.service.UsuarioService;
 
 @RestController
@@ -128,33 +129,6 @@ public class UsuarioController {
     }
 
     private List<String> getPermisosPorRol(String rol) {
-        return switch (rol) {
-            case "SUPERADMIN" -> List.of(
-                    "USUARIOS_READ", "USUARIOS_WRITE", "USUARIOS_DELETE",
-                    "PRODUCTOS_READ", "PRODUCTOS_WRITE", "PRODUCTOS_DELETE",
-                    "CLIENTES_READ", "CLIENTES_WRITE", "CLIENTES_DELETE",
-                    "VENTAS_READ", "VENTAS_WRITE", "VENTAS_DELETE",
-                    "COMPRAS_READ", "COMPRAS_WRITE", "COMPRAS_DELETE",
-                    "PROVEEDORES_READ", "PROVEEDORES_WRITE", "PROVEEDORES_DELETE",
-                    "MOVIMIENTOS_READ", "MOVIMIENTOS_WRITE",
-                    "AJUSTES_READ", "AJUSTES_WRITE"
-            );
-            case "ADMIN" -> List.of(
-                    "USUARIOS_READ", "USUARIOS_WRITE",
-                    "PRODUCTOS_READ", "PRODUCTOS_WRITE",
-                    "CLIENTES_READ", "CLIENTES_WRITE",
-                    "VENTAS_READ", "VENTAS_WRITE",
-                    "COMPRAS_READ", "COMPRAS_WRITE",
-                    "PROVEEDORES_READ", "PROVEEDORES_WRITE",
-                    "MOVIMIENTOS_READ", "MOVIMIENTOS_WRITE",
-                    "AJUSTES_READ", "AJUSTES_WRITE"
-            );
-            case "VENDEDOR" -> List.of(
-                    "PRODUCTOS_READ",
-                    "CLIENTES_READ", "CLIENTES_WRITE",
-                    "VENTAS_READ", "VENTAS_WRITE"
-            );
-            default -> List.of();
-        };
+        return RolPermisos.de(rol);
     }
 }

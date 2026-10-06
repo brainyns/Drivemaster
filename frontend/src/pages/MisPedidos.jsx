@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { useState, useEffect, useMemo } from "react";
 import { getToken } from "../services/authService";
 import { misOrdenes } from "../services/ordenServicioService";
@@ -125,7 +126,7 @@ export default function MisPedidos({ onVolver }) {
       setCargando(true);
       try {
         const [resVentas, resOrdenes] = await Promise.allSettled([
-          fetch(`${API}/ventas/mis-ventas`, { headers: headers(token) }),
+          apiFetch(`${API}/ventas/mis-ventas`, { headers: headers(token) }),
           misOrdenes(token),
         ]);
         if (resVentas.status === "fulfilled" && resVentas.value.ok) {

@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { useState, useEffect, useRef, useCallback } from "react";
 import NotificationDropdown from "./NotificationDropdown";
 import { getToken } from "../services/authService";
@@ -203,7 +204,7 @@ function TopBar({
 
   const refreshCount = useCallback(async () => {
     try {
-      const sols = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`, {
+      const sols = await apiFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${getToken()}`,

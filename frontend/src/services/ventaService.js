@@ -1,3 +1,4 @@
+import { apiFetch } from "./http";
 const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
 
 const headers = (token) => ({
@@ -6,19 +7,19 @@ const headers = (token) => ({
 });
 
 export async function listarVentas(token) {
-  const res = await fetch(`${BASE}/ventas`, { headers: headers(token) });
+  const res = await apiFetch(`${BASE}/ventas`, { headers: headers(token) });
   if (!res.ok) throw new Error("Error al listar ventas");
   return res.json();
 }
 
 export async function obtenerVenta(id, token) {
-  const res = await fetch(`${BASE}/ventas/${id}`, { headers: headers(token) });
+  const res = await apiFetch(`${BASE}/ventas/${id}`, { headers: headers(token) });
   if (!res.ok) throw new Error("Venta no encontrada");
   return res.json();
 }
 
 export async function crearVenta(data, token) {
-  const res = await fetch(`${BASE}/ventas/guardar`, {
+  const res = await apiFetch(`${BASE}/ventas/guardar`, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify(data),
@@ -31,7 +32,7 @@ export async function crearVenta(data, token) {
 }
 
 export async function anularVenta(id, token) {
-  const res = await fetch(`${BASE}/ventas/${id}/anular`, {
+  const res = await apiFetch(`${BASE}/ventas/${id}/anular`, {
     method: "PATCH",
     headers: headers(token),
   });
@@ -39,7 +40,7 @@ export async function anularVenta(id, token) {
 }
 
 export async function cambiarEstadoVenta(id, estado, token) {
-  const res = await fetch(`${BASE}/ventas/${id}/estado`, {
+  const res = await apiFetch(`${BASE}/ventas/${id}/estado`, {
     method: "PATCH",
     headers: headers(token),
     body: JSON.stringify({ estado }),
@@ -52,7 +53,7 @@ export async function cambiarEstadoVenta(id, estado, token) {
 }
 
 export async function descargarPdfVenta(id, token) {
-  const res = await fetch(`${BASE}/ventas/${id}/pdf`, {
+  const res = await apiFetch(`${BASE}/ventas/${id}/pdf`, {
     headers: headers(token),
   });
   if (!res.ok) throw new Error("Error al generar el PDF");
@@ -66,7 +67,7 @@ export async function descargarPdfVenta(id, token) {
 }
 
 export async function exportarVentasExcel(token) {
-  const res = await fetch(`${BASE}/ventas/exportar?formato=excel`, {
+  const res = await apiFetch(`${BASE}/ventas/exportar?formato=excel`, {
     headers: headers(token),
   });
   if (!res.ok) throw new Error("Error al exportar");
@@ -80,7 +81,7 @@ export async function exportarVentasExcel(token) {
 }
 
 export async function exportarVentasPdf(token) {
-  const res = await fetch(`${BASE}/ventas/exportar?formato=pdf`, {
+  const res = await apiFetch(`${BASE}/ventas/exportar?formato=pdf`, {
     headers: headers(token),
   });
   if (!res.ok) {
@@ -98,7 +99,7 @@ export async function exportarVentasPdf(token) {
 }
 
 export async function listarMetodosPago(token) {
-  const res = await fetch(`${BASE}/config/metodos-pago`, {
+  const res = await apiFetch(`${BASE}/config/metodos-pago`, {
     headers: headers(token),
   });
   if (!res.ok) throw new Error("Error al cargar métodos de pago");
@@ -106,7 +107,7 @@ export async function listarMetodosPago(token) {
 }
 
 export async function obtenerParametro(clave, token) {
-  const res = await fetch(`${BASE}/config/parametros/${clave}`, {
+  const res = await apiFetch(`${BASE}/config/parametros/${clave}`, {
     headers: headers(token),
   });
   if (!res.ok) throw new Error(`Parámetro ${clave} no encontrado`);
