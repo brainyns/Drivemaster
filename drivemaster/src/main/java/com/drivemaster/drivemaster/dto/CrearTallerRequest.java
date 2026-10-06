@@ -19,6 +19,10 @@ public class CrearTallerRequest {
     private List<String> especialidades;
     private Double rating;
     private Double precioManoObra;
+    private String barrio;
+    private String telefono;
+    private Double tarifaHora;
+    private String horario;
 
     // Datos del usuario asociado (rol TALLER). Si el taller ya tiene
     // usuarioId (edición), estos campos pueden omitirse.

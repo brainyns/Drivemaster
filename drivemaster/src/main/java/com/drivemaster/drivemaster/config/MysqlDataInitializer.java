@@ -5,25 +5,58 @@ import com.drivemaster.drivemaster.repository.mysql.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+// Corre antes que los seeders de Mongo y la migración del marketplace, que usan sus planes.
 @Slf4j
 @Component
+@Order(5)
 @RequiredArgsConstructor
 public class MysqlDataInitializer implements CommandLineRunner {
 
     private final MetodoPagoRepository metodoPagoRepo;
     private final EstadoVentaRepository estadoVentaRepo;
     private final ParametroRepository parametroRepo;
+    private final PlanSuscripcionRepository planRepo;
 
     @Override
     public void run(String... args) {
         inicializarMetodosPago();
         inicializarEstados();
         inicializarParametros();
+        inicializarPlanes();
         log.info("✅ MySQL inicializado correctamente");
+    }
+
+    /**
+     * Planes de suscripción. Los precios arrancan en 0 (en v1 no hay cobro): el ADMIN
+     * los define en PUT /api/suscripciones/planes/{codigo}. Solo se insertan si no existen.
+     */
+    private void inicializarPlanes() {
+        List<Object[]> planes = List.of(
+            new Object[]{PlanSuscripcion.PRUEBA,  "Prueba",  "Periodo de prueba para empezar a operar en DriveMaster", 30},
+            new Object[]{PlanSuscripcion.BASICO,  "Básico",  "Operación estándar en el marketplace",                     null},
+            new Object[]{PlanSuscripcion.PREMIUM, "Premium", "Beneficios adicionales; no altera el ranking de tiendas", null}
+        );
+
+        for (Object[] p : planes) {
+            String codigo = (String) p[0];
+            if (!planRepo.existsById(codigo)) {
+                PlanSuscripcion plan = new PlanSuscripcion();
+                plan.setCodigo(codigo);
+                plan.setNombre((String) p[1]);
+                plan.setDescripcion((String) p[2]);
+                plan.setPrecioMensualTaller(0.0);
+                plan.setPrecioMensualTienda(0.0);
+                plan.setDuracionDias((Integer) p[3]);
+                plan.setActivo(true);
+                planRepo.save(plan);
+                log.info("➕ Plan de suscripción insertado: {}", codigo);
+            }
+        }
     }
 
     private void inicializarMetodosPago() {
@@ -81,7 +114,12 @@ public class MysqlDataInitializer implements CommandLineRunner {
         List<Object[]> params = List.of(
     new Object[]{"IVA",                  "19",     "Porcentaje de impuesto (%)"},
     new Object[]{"TERMINAL_DEFAULT",     "POS-01", "Terminal por defecto"},
-    new Object[]{"ESTADO_VENTA_DEFAULT", "PAGADA", "Estado por defecto al registrar venta"}
+    new Object[]{"ESTADO_VENTA_DEFAULT", "PAGADA", "Estado por defecto al registrar venta"},
+    // ─── Marketplace (valores iniciales; los ajusta el ADMIN) ───
+    new Object[]{"TARIFA_DIAGNOSTICO",       "50000", "Tarifa fija de diagnóstico en COP (ingreso del taller, descontable de la reparación)"},
+    new Object[]{"COMISION_PCT",             "10",    "Comisión de la plataforma (%) sobre el subtotal antes de IVA; en v1 solo se registra"},
+    new Object[]{"TIMEOUT_TALLER_MIN",       "120",   "Minutos que tiene un taller para aceptar una solicitud antes de reasignarla"},
+    new Object[]{"VIGENCIA_COTIZACION_DIAS", "7",     "Días de vigencia de una cotización"}
 );
 
         for (Object[] p : params) {

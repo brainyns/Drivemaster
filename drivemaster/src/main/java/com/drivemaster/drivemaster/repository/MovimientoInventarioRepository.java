@@ -23,4 +23,6 @@ public interface MovimientoInventarioRepository extends MongoRepository<Movimien
 
     List<MovimientoInventario> findByProductoIdAndTipo(String productoId, String tipo);
 
+    List<MovimientoInventario> findByTiendaIdOrderByFechaDesc(String tiendaId);
+
 }

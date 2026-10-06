@@ -104,6 +104,8 @@ public class PagoService {
 
         PagoEntity pago = new PagoEntity();
         pago.setSolicitudId(solicitudId);
+        pago.setConcepto("SOLICITUD");
+        pago.setUsuarioId(solicitud.getClienteId());
         pago.setReferencia(referencia);
         pago.setMonto(solicitud.getTotal());
         pago.setMetodo("WOMPI");
@@ -138,6 +140,8 @@ public class PagoService {
 
         PagoEntity pago = new PagoEntity();
         pago.setVentaId(ventaId);
+        pago.setConcepto("VENTA");
+        pago.setUsuarioId(venta.getClienteId());
         pago.setReferencia(referencia);
         pago.setMonto(venta.getTotal());
         pago.setMetodo("WOMPI");

@@ -1,8 +1,9 @@
 package com.drivemaster.drivemaster.service;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
-import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 import com.drivemaster.drivemaster.model.MovimientoInventario;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.repository.MovimientoInventarioRepository;
@@ -31,37 +32,45 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
             String referencia,
             String usuarioId) {
 
-        Producto producto = productoService.obtenerPorId(productoId);
+        if (cantidad == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cantidad es obligatoria");
+        }
 
-        int stockAnterior = producto.getStockActual();
+        Producto producto;
+        int stockAnterior;
         int stockNuevo;
 
+        // ENTRADA y SALIDA se aplican con un $inc atómico en Mongo: el stock se lee y
+        // se escribe en la misma operación, sin la carrera leer→restar→guardar de antes.
         switch (tipo) {
             case "ENTRADA":
-                stockNuevo = stockAnterior + cantidad;
+                producto = productoService.incrementarStock(productoId, cantidad);
+                stockNuevo = producto.getStockActual();
+                stockAnterior = stockNuevo - cantidad;
                 break;
 
             case "SALIDA":
-                stockNuevo = stockAnterior - cantidad;
-        if (stockNuevo < 0) {
-            throw new StockInsuficienteException(producto.getNombre(), stockAnterior);
-        }
+                producto = productoService.descontarStock(productoId, cantidad);
+                stockNuevo = producto.getStockActual();
+                stockAnterior = stockNuevo + cantidad;
                 break;
 
             case "AJUSTE":
+                // Conteo físico: fija el valor absoluto.
+                producto = productoService.obtenerPorId(productoId);
+                stockAnterior = producto.getStockActual() != null ? producto.getStockActual() : 0;
                 stockNuevo = cantidad;
+                productoService.actualizarStock(productoId, stockNuevo);
                 break;
 
             default:
                 throw new RuntimeException("Tipo de movimiento inválido");
         }
 
-        // Actualizar stock del producto
-        productoService.actualizarStock(productoId, stockNuevo);
-
         // Crear movimiento
         MovimientoInventario movimiento = new MovimientoInventario();
         movimiento.setProductoId(productoId);
+        movimiento.setTiendaId(producto.getTiendaId());
         movimiento.setTipo(tipo);
         movimiento.setCantidad(cantidad);
         movimiento.setStockAnterior(stockAnterior);
@@ -88,11 +97,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     @Override
     public List<MovimientoInventario> buscarConFiltros(String productoId, String tipo, LocalDateTime fechaInicio,
-            LocalDateTime fechaFin) {
+            LocalDateTime fechaFin, String tiendaId) {
         List<MovimientoInventario> movimientos;
 
-        // Caso 1: todos sin filtros
-        movimientos = movimientoRepository.findAllByOrderByFechaDesc();
+        // Caso 1: todos sin filtros (o los de una tienda)
+        movimientos = tiendaId != null
+                ? movimientoRepository.findByTiendaIdOrderByFechaDesc(tiendaId)
+                : movimientoRepository.findAllByOrderByFechaDesc();
 
         // Filtro por producto
         if (productoId != null && !productoId.isBlank()) {
@@ -124,6 +135,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         productoService.crearProducto(producto);
         MovimientoInventario movimiento = new MovimientoInventario();
         movimiento.setProductoId(producto.getId());
+        movimiento.setTiendaId(producto.getTiendaId());
         movimiento.setTipo("ENTRADA");
         movimiento.setCantidad(producto.getStockActual());
         movimiento.setStockAnterior(0);
