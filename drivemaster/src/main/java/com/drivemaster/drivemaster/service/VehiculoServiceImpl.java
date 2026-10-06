@@ -27,17 +27,20 @@ public class VehiculoServiceImpl implements VehiculoService {
     private final UsuarioService usuarioService;
     private final CloudinaryService cloudinaryService;
     private final MantenimientoService mantenimientoService;
+    private final TiendaService tiendaService;
 
  public VehiculoServiceImpl(VehiculoRepository vehiculoRepository,
                             ProductoRepository productoRepository,
                             UsuarioService usuarioService,
                             CloudinaryService cloudinaryService,
-                            MantenimientoService mantenimientoService) {
+                            MantenimientoService mantenimientoService,
+                            TiendaService tiendaService) {
     this.vehiculoRepository = vehiculoRepository;
     this.productoRepository = productoRepository;
     this.usuarioService = usuarioService;
     this.cloudinaryService = cloudinaryService;
     this.mantenimientoService = mantenimientoService;
+    this.tiendaService = tiendaService;
 }
 
     @Override
@@ -87,7 +90,12 @@ public class VehiculoServiceImpl implements VehiculoService {
 
         List<Producto> candidatos = productoRepository.findByModeloCompatible(vehiculo.getModelo());
 
+        // Flujo de servicio V1: DriveMaster vende el repuesto, así que solo se ofrecen
+        // productos de su propia tienda. Las demás tiendas entran por el flujo marketplace.
+        String tiendaPlataformaId = tiendaService.obtenerPlataforma().getId();
+
         return candidatos.stream()
+                .filter(p -> p.getTiendaId() == null || tiendaPlataformaId.equals(p.getTiendaId()))
                 .filter(p -> Boolean.TRUE.equals(p.getActivo()))
                 .filter(p -> p.getStockActual() != null && p.getStockActual() > 0)
                 .filter(p -> esCompatible(p, vehiculo))
@@ -107,7 +115,11 @@ public class VehiculoServiceImpl implements VehiculoService {
             Integer anioVehiculo = vehiculo.getAnio();
             boolean anioOk = (desde == null || anioVehiculo == null || anioVehiculo >= desde)
                     && (hasta == null || anioVehiculo == null || anioVehiculo <= hasta);
-            if (anioOk) return true;
+            // El motor solo restringe si ambos lo indican.
+            boolean motorOk = c.getMotor() == null || c.getMotor().isBlank()
+                    || vehiculo.getMotor() == null || vehiculo.getMotor().isBlank()
+                    || c.getMotor().trim().equalsIgnoreCase(vehiculo.getMotor().trim());
+            if (anioOk && motorOk) return true;
         }
         return false;
     }

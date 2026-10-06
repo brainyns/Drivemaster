@@ -13,4 +13,6 @@ public interface TallerRepository extends MongoRepository<Taller, String> {
     List<Taller> findByActivoTrue();
 
     List<Taller> findByCiudadIgnoreCaseAndActivoTrue(String ciudad);
+
+    List<Taller> findByEstadoAprobacion(String estadoAprobacion);
 }

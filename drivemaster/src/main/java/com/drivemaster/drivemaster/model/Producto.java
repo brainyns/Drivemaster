@@ -31,5 +31,19 @@ public class Producto {
     private String tipo; // STOCK | ENCARGO
     private Boolean activo;
     private String imagenUrl;
+
+    // ─── Marketplace ───
+    // Tienda que vende el producto. Cada documento es la oferta de una tienda: el
+    // stock y el precio son de esa tienda.
+    private String tiendaId;
+
+    // Referencia / número de parte del fabricante. Agrupa la misma pieza entre tiendas.
+    private String referencia;
+
+    // Ubicación física en la tienda (bodega, estante...).
+    private String ubicacion;
+
+    // Proveedor del que la tienda obtiene el producto (opcional).
+    private String proveedorId;
 }
 

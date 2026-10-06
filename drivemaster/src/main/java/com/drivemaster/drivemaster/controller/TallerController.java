@@ -1,9 +1,14 @@
 package com.drivemaster.drivemaster.controller;
 
+import com.drivemaster.drivemaster.dto.AprobacionRequest;
 import com.drivemaster.drivemaster.dto.CrearTallerRequest;
+import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
 import com.drivemaster.drivemaster.dto.TallerDTO;
+import com.drivemaster.drivemaster.model.Mecanico;
 import com.drivemaster.drivemaster.service.TallerService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,10 +34,49 @@ public class TallerController {
         return ResponseEntity.ok(tallerService.listarActivos(ciudad, lat, lng));
     }
 
-    // Administración de talleres (rol ADMIN/SUPERADMIN)
+    // Registro público de un taller; queda PENDIENTE de aprobación.
+    @PostMapping("/registro")
+    public ResponseEntity<TallerDTO> registrar(@RequestBody RegistroNegocioRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(tallerService.registrar(request));
+    }
+
+    // ─── Taller autenticado ──────────────────────────────────
+
+    @GetMapping("/mi-taller")
+    public ResponseEntity<TallerDTO> miTaller(Authentication auth) {
+        return ResponseEntity.ok(tallerService.miTaller(auth.getName()));
+    }
+
+    @GetMapping("/mi-taller/mecanicos")
+    public ResponseEntity<List<Mecanico>> listarMecanicos(Authentication auth) {
+        return ResponseEntity.ok(tallerService.listarMecanicos(auth.getName()));
+    }
+
+    @PostMapping("/mi-taller/mecanicos")
+    public ResponseEntity<Mecanico> agregarMecanico(@RequestBody Mecanico mecanico, Authentication auth) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(tallerService.agregarMecanico(auth.getName(), mecanico));
+    }
+
+    @PutMapping("/mi-taller/mecanicos/{mecanicoId}")
+    public ResponseEntity<Mecanico> actualizarMecanico(@PathVariable String mecanicoId,
+                                                       @RequestBody Mecanico mecanico,
+                                                       Authentication auth) {
+        return ResponseEntity.ok(tallerService.actualizarMecanico(auth.getName(), mecanicoId, mecanico));
+    }
+
+    @PatchMapping("/mi-taller/mecanicos/{mecanicoId}/activo")
+    public ResponseEntity<Mecanico> cambiarEstadoMecanico(@PathVariable String mecanicoId,
+                                                          @RequestBody Map<String, Boolean> body,
+                                                          Authentication auth) {
+        boolean activo = Boolean.TRUE.equals(body.get("activo"));
+        return ResponseEntity.ok(tallerService.cambiarEstadoMecanico(auth.getName(), mecanicoId, activo));
+    }
+
+    // ─── Administración de talleres (rol ADMIN/SUPERADMIN) ───
+
     @GetMapping
-    public ResponseEntity<List<TallerDTO>> listarTodos() {
-        return ResponseEntity.ok(tallerService.listarTodos());
+    public ResponseEntity<List<TallerDTO>> listarTodos(@RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(tallerService.listarTodos(estado));
     }
 
     @PostMapping
@@ -49,5 +93,12 @@ public class TallerController {
     public ResponseEntity<TallerDTO> activarDesactivar(@PathVariable String id, @RequestBody Map<String, Boolean> body) {
         boolean activo = Boolean.TRUE.equals(body.get("activo"));
         return ResponseEntity.ok(tallerService.activarDesactivar(id, activo));
+    }
+
+    @PatchMapping("/{id}/aprobacion")
+    public ResponseEntity<TallerDTO> resolverAprobacion(@PathVariable String id,
+                                                        @RequestBody AprobacionRequest request,
+                                                        Authentication auth) {
+        return ResponseEntity.ok(tallerService.resolverAprobacion(id, request, auth.getName()));
     }
 }
