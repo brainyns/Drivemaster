@@ -55,3 +55,17 @@ export async function activarDesactivarTienda(token, id, activo) {
   });
   return handle(res, "Error al cambiar el estado de la tienda");
 }
+
+/**
+ * ADMIN: completa los datos de la tienda propia de DriveMaster (ciudad, dirección, horario, envío).
+ * Mientras le falten, sus productos no se muestran en el catálogo.
+ * datos: { ciudad, barrio, direccion, horario, telefono, ofreceEnvio, costoEnvio }
+ */
+export async function actualizarTiendaPropia(token, datos) {
+  const res = await apiFetch(`${BASE}/plataforma/datos`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(datos),
+  });
+  return handle(res, "No se pudieron guardar los datos de la tienda");
+}

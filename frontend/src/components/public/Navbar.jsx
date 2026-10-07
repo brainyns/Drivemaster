@@ -22,6 +22,7 @@ export default function Navbar({
   onSolicitarDiagnostico,
   onIrMisServicios,
   onIrMarketplace,
+  onIrMisCompras,
   solicitudItems,
   solicitudCount,
   solicitudSubtotal,
@@ -138,6 +139,7 @@ export default function Navbar({
                     {user.rol === "CLIENTE" && (
                       <>
                         <button onClick={cerrarY(onIrMisServicios)}>Mis servicios</button>
+                        <button onClick={cerrarY(onIrMisCompras)}>Mis compras en tiendas</button>
                         <button onClick={() => irA("mis-pedidos")}>Historial de compras</button>
                         <button onClick={() => irA("mis-solicitudes")}>Mis solicitudes</button>
                         <button onClick={() => irA("mis-vehiculos")}>Mis vehículos</button>

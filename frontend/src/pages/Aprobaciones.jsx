@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarTalleres, resolverAprobacionTaller, activarDesactivarTaller } from "../services/tallerService";
 import { listarTiendas, resolverAprobacionTienda, activarDesactivarTienda } from "../services/tiendaService";
 import { listarPlanes, activarPlan } from "../services/suscripcionService";
+import DatosTiendaPropia from "../components/DatosTiendaPropia";
 import "../css/aprobaciones.css";
 
 const FILTROS = [
@@ -23,6 +24,7 @@ const estadoDe = (n) => n.estadoAprobacion || "APROBADO";
 /** Panel del ADMIN para validar y activar talleres y tiendas, y asignarles un plan. */
 export default function Aprobaciones({ token }) {
   const [negocios, setNegocios] = useState([]);
+  const [tiendaPropia, setTiendaPropia] = useState(null);
   const [planes, setPlanes] = useState([]);
   const [filtro, setFiltro] = useState("PENDIENTE");
   const [tipo, setTipo] = useState("TODOS");
@@ -42,6 +44,7 @@ export default function Aprobaciones({ token }) {
         listarTiendas(token),
         listarPlanes(token),
       ]);
+      setTiendaPropia(tiendas.find((t) => t.plataforma) || null);
       setNegocios([
         ...talleres.map((t) => ({ ...t, tipo: "TALLER" })),
         // La tienda propia de DriveMaster no pasa por aprobación.
@@ -151,6 +154,8 @@ export default function Aprobaciones({ token }) {
           </select>
         </label>
       </div>
+
+      {tiendaPropia && <DatosTiendaPropia key={tiendaPropia.id + (tiendaPropia.datosCompletos ? "-ok" : "-falta")} token={token} tienda={tiendaPropia} onGuardado={cargar} />}
 
       {error && <p className="ap-alerta ap-alerta--error" role="alert">{error}</p>}
       {aviso && <p className="ap-alerta ap-alerta--ok" role="status">{aviso}</p>}

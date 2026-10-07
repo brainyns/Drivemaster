@@ -34,3 +34,49 @@ export async function filtrosCatalogo() {
   const res = await apiFetch(`${BASE}/filtros`);
   return handle(res, "No se pudieron cargar los filtros");
 }
+
+// ─── Compra directa (CLIENTE) ────────────────────────────────────────────────
+// El navegador manda solo producto, cantidad, método de entrega y dirección: los precios, el IVA y el
+// envío los calcula siempre el backend.
+
+function headers(token) {
+  const h = { "Content-Type": "application/json" };
+  if (token) h.Authorization = `Bearer ${token}`;
+  return h;
+}
+
+function post(token, ruta, body, msg) {
+  return apiFetch(`${BASE}${ruta}`, { method: "POST", headers: headers(token), body: JSON.stringify(body ?? {}) })
+    .then((res) => handle(res, msg));
+}
+
+/**
+ * solicitud: { items: [{productoId, cantidad}], entregas: [{tiendaId, tipo: "ENVIO"|"RETIRO"}],
+ *              envio?: {receptor, telefono, direccion, ciudad, indicaciones}, vehiculoId? }
+ */
+export function cotizarCompra(token, solicitud) {
+  return post(token, "/compras/cotizar", solicitud, "No se pudo calcular la compra");
+}
+
+/** Revisa el stock de todas las tiendas y devuelve el link de pago de Wompi (más compraId y verificacionManual). */
+export function iniciarPagoCompra(token, solicitud) {
+  return post(token, "/compras", solicitud, "No se pudo iniciar el pago");
+}
+
+export async function misCompras(token) {
+  const res = await apiFetch(`${BASE}/compras/mias`, { headers: headers(token) });
+  return handle(res, "No se pudieron cargar tus compras");
+}
+
+/** Pide un código de retiro nuevo: llega por correo, nunca en la respuesta. */
+export function pedirCodigoRetiro(token, pedidoId) {
+  return post(token, `/pedidos/${encodeURIComponent(pedidoId)}/codigo-retiro`, {}, "No se pudo generar el código");
+}
+
+export function confirmarRecepcion(token, pedidoId) {
+  return post(token, `/pedidos/${encodeURIComponent(pedidoId)}/recibido`, {}, "No se pudo confirmar la recepción");
+}
+
+export function reportarProblema(token, pedidoId, detalle) {
+  return post(token, `/pedidos/${encodeURIComponent(pedidoId)}/problema`, { detalle }, "No se pudo enviar el reporte");
+}
