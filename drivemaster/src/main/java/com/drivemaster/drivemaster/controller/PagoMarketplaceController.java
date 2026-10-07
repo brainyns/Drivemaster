@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.service.PagoMarketplaceService;
+import com.drivemaster.drivemaster.service.PagoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,9 +21,11 @@ import java.util.Map;
 public class PagoMarketplaceController {
 
     private final PagoMarketplaceService service;
+    private final PagoService pagoService;
 
-    public PagoMarketplaceController(PagoMarketplaceService service) {
+    public PagoMarketplaceController(PagoMarketplaceService service, PagoService pagoService) {
         this.service = service;
+        this.pagoService = pagoService;
     }
 
     @PostMapping("/diagnostico/{ordenId}")
@@ -33,5 +36,11 @@ public class PagoMarketplaceController {
     @PostMapping("/cotizacion/{ordenId}")
     public ResponseEntity<Map<String, Object>> pagarCotizacion(@PathVariable String ordenId, Authentication auth) {
         return ResponseEntity.ok(service.iniciarPagoCotizacion(auth.getName(), ordenId));
+    }
+
+    /** Solo desarrollo (PAGO_SIMULADO_ENABLED + llaves pub_test_); si no, 404. */
+    @PostMapping("/simular/{referencia}")
+    public ResponseEntity<Map<String, Object>> simular(@PathVariable String referencia, Authentication auth) {
+        return ResponseEntity.ok(pagoService.simularPagoAprobado(referencia, auth.getName()));
     }
 }

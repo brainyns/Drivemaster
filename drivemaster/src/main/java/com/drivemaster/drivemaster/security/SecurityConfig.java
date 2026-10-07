@@ -133,7 +133,7 @@ public class SecurityConfig {
 
                         // Marketplace: pagos (links), pedidos a tiendas y liquidaciones
                         .requestMatchers(HttpMethod.POST, "/api/pagos-marketplace/diagnostico/*",
-                                "/api/pagos-marketplace/cotizacion/*").hasRole("CLIENTE")
+                                "/api/pagos-marketplace/cotizacion/*", "/api/pagos-marketplace/simular/*").hasRole("CLIENTE")
                         .requestMatchers("/api/pagos-marketplace/**").denyAll()
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/mios").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.PATCH, "/api/pedidos-tienda/*/despachar",

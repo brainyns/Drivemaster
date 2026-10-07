@@ -12,6 +12,7 @@ import com.drivemaster.drivemaster.util.EmailSolicitudBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -64,6 +65,10 @@ public class PagoService {
 
     @Value("${wompi.redirect_url}")
     private String redirectUrlDefault;
+
+    // Solo desarrollo (PAGO_SIMULADO_ENABLED); además exige llaves pub_test_
+    @Value("${drivemaster.pago-simulado.enabled:false}")
+    private boolean pagoSimuladoHabilitado;
 
     public PagoService(SolicitudRepository solicitudRepository,
                        PagoRepository pagoRepository,
@@ -188,7 +193,85 @@ public class PagoService {
         pagoRepository.save(pago);
 
         log.info("Link de pago {} generado para la orden {} (ref {})", concepto, ordenId, referencia);
-        return Map.of("checkoutUrl", checkoutUrlFinal, "referencia", referencia, "monto", montoCentavos);
+        return Map.of(
+                "checkoutUrl", checkoutUrlFinal,
+                "referencia", referencia,
+                "monto", montoCentavos,
+                // Sin redirect-url (desarrollo local): el cliente verifica el pago a mano
+                "verificacionManual", redirectEfectivo(null) == null,
+                "pagoSimulado", pagoSimuladoDisponible());
+    }
+
+    // ─── Redirección y pago simulado (desarrollo) ─────────
+
+    /**
+     * URL a la que Wompi devuelve al cliente, o null si no se debe enviar. El
+     * checkout de Wompi responde 403 cuando redirect-url apunta a localhost, así que
+     * en desarrollo local se omite y el cliente verifica su pago desde la app.
+     */
+    private String redirectEfectivo(String redirectUrl) {
+        String url = (redirectUrl != null && !redirectUrl.isBlank()) ? redirectUrl : redirectUrlDefault;
+        if (url == null || url.isBlank() || esUrlLocal(url)) return null;
+        return url;
+    }
+
+    static boolean esUrlLocal(String url) {
+        try {
+            String host = URI.create(url.trim()).getHost();
+            if (host == null) return false;
+            host = host.toLowerCase();
+            return host.equals("localhost") || host.equals("127.0.0.1") || host.equals("[::1]") || host.equals("::1");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Solo con PAGO_SIMULADO_ENABLED=true y llaves de pruebas de Wompi (pub_test_…). */
+    public boolean pagoSimuladoDisponible() {
+        return pagoSimuladoHabilitado && publicKey != null && publicKey.startsWith("pub_test_");
+    }
+
+    @PostConstruct
+    void avisarPagoSimulado() {
+        if (!pagoSimuladoHabilitado) return;
+        if (pagoSimuladoDisponible()) {
+            log.warn("PAGO SIMULADO ACTIVO: solo para desarrollo. Nunca activar PAGO_SIMULADO_ENABLED en producción.");
+        } else {
+            log.warn("PAGO_SIMULADO_ENABLED se ignora: requiere llaves de pruebas de Wompi (pub_test_)");
+        }
+    }
+
+    /**
+     * Desarrollo: da por aprobado un pago del marketplace sin pasar por Wompi. Usa
+     * el mismo código de confirmación (monto, idempotencia, efectos) que un pago
+     * real. Solo el cliente dueño del pago.
+     */
+    public Map<String, Object> simularPagoAprobado(String referencia, String correoUsuario) {
+        if (!pagoSimuladoDisponible()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No disponible");
+        }
+        PagoEntity pago = pagoRepository.findByReferencia(referencia)
+                .filter(p -> PagoMarketplaceService.esMarketplace(p.getConcepto()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pago no encontrado"));
+        Usuario usuario = usuarioRepository.findByCorreo(correoUsuario)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no encontrado"));
+        if (!usuario.getId().equals(pago.getUsuarioId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Este pago no le pertenece");
+        }
+        Map<String, Object> txn = new HashMap<>();
+        txn.put("id", "SIMULADO-" + referencia);
+        txn.put("reference", referencia);
+        txn.put("amount_in_cents", Math.round(pago.getMonto() * 100));
+        txn.put("currency", "COP");
+        txn.put("status", "APPROVED");
+        log.warn("Pago simulado (desarrollo) para la referencia {}", referencia);
+        confirmarPagoAprobado(txn);
+
+        Map<String, Object> resultado = new HashMap<>();
+        resultado.put("estado", "APPROVED");
+        resultado.put("concepto", pago.getConcepto());
+        resultado.put("ordenId", pago.getOrdenServicioId());
+        return resultado;
     }
 
     /**
@@ -215,10 +298,8 @@ public class PagoService {
                 .append("&reference=").append(enc(referencia))
                 .append("&signature:integrity=").append(firma);
 
-        String urlRedirect = (redirectUrl != null && !redirectUrl.isBlank())
-                ? redirectUrl
-                : redirectUrlDefault;
-        if (urlRedirect != null && !urlRedirect.isBlank()) {
+        String urlRedirect = redirectEfectivo(redirectUrl);
+        if (urlRedirect != null) {
             url.append("&redirect-url=").append(enc(urlRedirect));
         }
 
