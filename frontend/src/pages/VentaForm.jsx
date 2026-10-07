@@ -169,7 +169,6 @@ function VentaForm({ onVolver, token }) {
 
   return (
     <div className="vt-root">
-git checkout backend
 
       <div className="vt-page-header" style={{ paddingBottom: ".75rem" }}>
         <div>
