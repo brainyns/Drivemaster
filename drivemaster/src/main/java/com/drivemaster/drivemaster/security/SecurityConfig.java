@@ -121,6 +121,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/*").authenticated()
                         .requestMatchers("/api/solicitudes-servicio/**").denyAll()
 
+                        // Marketplace: cotizaciones. Las públicas validan el token del correo (en el cuerpo)
+                        // y tienen límite de intentos por IP.
+                        .requestMatchers(HttpMethod.POST, "/api/cotizaciones/publica/consultar",
+                                "/api/cotizaciones/publica/responder").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/cotizaciones/orden/*/previsualizar",
+                                "/api/cotizaciones/orden/*").hasRole("TALLER")
+                        .requestMatchers(HttpMethod.POST, "/api/cotizaciones/*/responder").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/cotizaciones/orden/*").authenticated()
+                        .requestMatchers("/api/cotizaciones/**").denyAll()
+
                         // Marketplace: tiendas y suscripciones
                         .requestMatchers(HttpMethod.POST, "/api/tiendas/registro").permitAll()
                         .requestMatchers("/api/tiendas/mi-tienda").hasRole("TIENDA")

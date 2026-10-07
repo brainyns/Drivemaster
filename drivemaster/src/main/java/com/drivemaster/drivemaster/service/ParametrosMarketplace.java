@@ -45,6 +45,20 @@ public class ParametrosMarketplace {
         return decimal("TARIFA_DIAGNOSTICO", 50000);
     }
 
+    /** Porcentaje de IVA (parámetro IVA existente, editable por el ADMIN). */
+    public double ivaPct() {
+        return decimal("IVA", 19);
+    }
+
+    /** Comisión de la plataforma (%) sobre el subtotal antes de IVA; informativa en v1. */
+    public double comisionPct() {
+        return decimal("COMISION_PCT", 10);
+    }
+
+    public int vigenciaCotizacionDias() {
+        return entero("VIGENCIA_COTIZACION_DIAS", 7);
+    }
+
     /** Horario de atención (hora de Colombia) en el que corre el plazo del taller. */
     public int horaInicioAtencion() {
         return entero("HORA_INICIO_ATENCION", 7);

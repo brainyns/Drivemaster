@@ -607,6 +607,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 .motivoCierre(o.getMotivoCierre())
                 .diagnostico(o.getDiagnostico())
                 .repuestos(o.getRepuestos())
+                .cotizacionId(o.getCotizacionId())
                 .eventos(o.getEventos());
 
         try {

@@ -4,6 +4,7 @@ import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.service.AsignacionTallerService;
 import com.drivemaster.drivemaster.service.AvisosSolicitudServicio;
+import com.drivemaster.drivemaster.service.CotizacionService;
 import com.drivemaster.drivemaster.service.TransicionOrdenService;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
 import org.slf4j.Logger;
@@ -28,6 +29,8 @@ import java.util.function.Consumer;
  *  2. Clientes que no pagaron el diagnóstico a tiempo → la solicitud se cancela.
  *  3. Solicitudes que quedaron sin asignar (ENVIADA/REASIGNADA, por un fallo a
  *     mitad de camino) → se reintenta la asignación.
+ *  4. Cotizaciones emitidas sin respuesta pasada su vigencia → vencen y la
+ *     solicitud vuelve a DIAGNOSTICADA.
  *
  * No hay doble procesamiento: fixedDelay evita ejecuciones solapadas y cada cambio
  * es una escritura condicional (TransicionOrdenService). Si otra acción ganó la
@@ -46,15 +49,18 @@ public class ReasignacionScheduler {
     private final AsignacionTallerService asignacion;
     private final TransicionOrdenService transiciones;
     private final AvisosSolicitudServicio avisos;
+    private final CotizacionService cotizaciones;
 
     public ReasignacionScheduler(MongoTemplate mongoTemplate,
                                  AsignacionTallerService asignacion,
                                  TransicionOrdenService transiciones,
-                                 AvisosSolicitudServicio avisos) {
+                                 AvisosSolicitudServicio avisos,
+                                 CotizacionService cotizaciones) {
         this.mongoTemplate = mongoTemplate;
         this.asignacion = asignacion;
         this.transiciones = transiciones;
         this.avisos = avisos;
+        this.cotizaciones = cotizaciones;
     }
 
     @Scheduled(fixedDelayString = "${marketplace.vencimientos.delay-ms:300000}",
@@ -79,6 +85,13 @@ public class ReasignacionScheduler {
                         .and("estado").in(EstadoOrden.ENVIADA, EstadoOrden.REASIGNADA)
                         .and("fechaCreacion").lt(ahora.minusMinutes(MINUTOS_GRACIA_SIN_ASIGNAR))),
                 asignacion::asignarSiguiente);
+
+        try {
+            int vencidas = cotizaciones.vencerCotizaciones();
+            if (vencidas > 0) log.info("Vencimientos (cotizaciones): {} vencida(s)", vencidas);
+        } catch (Exception e) {
+            log.error("Vencimientos (cotizaciones): no se pudo procesar", e);
+        }
     }
 
     private void cancelarPorPagoVencido(OrdenServicio orden) {

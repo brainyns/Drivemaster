@@ -12,6 +12,7 @@ import com.drivemaster.drivemaster.repository.VehiculoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,9 @@ import java.util.List;
  * y repuestos compatibles con stock para el vehículo principal de la demo
  * (Chevrolet Spark GT 2018).
  */
+// Solo en desarrollo: crea usuarios con contraseñas conocidas. Se activa con
+// DEMO_SEED_ENABLED=true; en producción la variable no existe y no se ejecuta.
+@ConditionalOnProperty(name = "drivemaster.demo-seed.enabled", havingValue = "true")
 @Slf4j
 @Component
 @Order(10)
