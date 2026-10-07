@@ -768,4 +768,41 @@ class CompraCatalogoServiceTest {
         PedidoTienda envio = pedidos.values().stream().filter(p -> PedidoTienda.ENVIO.equals(p.getEntrega())).findFirst().orElseThrow();
         assertEstado(HttpStatus.CONFLICT, () -> service.nuevoCodigoRetiro(CORREO, envio.getId()));
     }
+
+    // ─── Envío solo a la misma ciudad de la tienda ───────────────────────────
+
+    @Test
+    void laTiendaSoloEnviaDentroDeSuCiudad() {
+        CompraRequest.Envio otraCiudad = new CompraRequest.Envio("Ana", "3001234567", "Cra 1 # 2-3", "Bogotá", null);
+        ResponseStatusException e = assertEstado(HttpStatus.BAD_REQUEST, () -> service.cotizar(CORREO, new CompraRequest(
+                List.of(item("pastilla", 1)), List.of(entrega("s2", "ENVIO")), otraCiudad, null)));
+        assertTrue(e.getReason().contains("solo envía dentro de Medellín"), e.getReason());
+        assertTrue(e.getReason().contains("retiro"));
+        // Y no se genera link ni se guarda la compra
+        assertEstado(HttpStatus.BAD_REQUEST, () -> service.iniciarPago(CORREO, new CompraRequest(
+                List.of(item("pastilla", 1)), List.of(entrega("s2", "ENVIO")), otraCiudad, null)));
+        verify(pagoService, never()).crearPagoCatalogo(anyString(), anyDouble(), anyString());
+        assertTrue(compras.isEmpty());
+    }
+
+    @Test
+    void laCiudadSeComparaSinTildesNiMayusculas() {
+        CompraRequest.Envio mismaCiudad = new CompraRequest.Envio("Ana", "3001234567", "Cra 1 # 2-3", "  MEDELLIN ", null);
+        CompraCotizadaDTO c = service.cotizar(CORREO, new CompraRequest(
+                List.of(item("pastilla", 1)), List.of(entrega("s2", "ENVIO")), mismaCiudad, null));
+        assertEquals(8_000.0, c.costoEnvio());
+    }
+
+    @Test
+    void elRetiroNoDependeDeLaCiudadDelCliente() {
+        // Retirar en la tienda no exige que el cliente viva en la misma ciudad
+        assertDoesNotThrow(() -> service.cotizar(CORREO, new CompraRequest(
+                List.of(item("pastilla", 1)), List.of(entrega("s2", "RETIRO")), null, null)));
+    }
+
+    @Test
+    void unCarritoMixtoValidaLaCiudadSoloDeLasTiendasConEnvio() {
+        // s1 (Bogotá) por retiro y s2 (Medellín) por envío a Medellín: válido aunque el cliente no viva en Bogotá
+        assertDoesNotThrow(() -> service.cotizar(CORREO, carritoMixto()));
+    }
 }

@@ -297,6 +297,36 @@ public final class EmailServicioBuilder {
                         + "la tienda lo pedirá al entregarte el pedido y solo sirve una vez."));
     }
 
+    public static String clienteEnvioEnCamino(String cliente, PedidoTienda p, int diasAutoconfirmacion) {
+        return plantilla("Envío", "Tu pedido va en camino",
+                saludo(cliente)
+                + parrafo("<strong>" + e(p.getTiendaNombre()) + "</strong> despachó tu pedido a "
+                        + e(unir(p.getEnvioDireccion(), p.getEnvioCiudad())) + ".")
+                + (p.getNotaDespacho() != null ? recuadro("Información del envío: " + e(p.getNotaDespacho())) : "")
+                + parrafo("Cuando lo recibas, entra a <strong>Mis compras</strong> y pulsa <strong>\"Ya lo recibí\"</strong>. "
+                        + "Si no respondes en " + diasAutoconfirmacion + " días hábiles lo damos por recibido.")
+                + parrafo("¿No llegó o llegó con un problema? Pulsa <strong>\"Reportar un problema\"</strong> en Mis compras "
+                        + "y pausamos el pago a la tienda mientras lo revisamos."));
+    }
+
+    public static String tiendaProblemaEnvio(String tienda, PedidoTienda p, String detalle) {
+        return plantilla("Envío", "El cliente reportó un problema",
+                saludo(tienda)
+                + parrafo("El cliente reportó un problema con el pedido que enviaste a "
+                        + e(unir(p.getEnvioDireccion(), p.getEnvioCiudad())) + ":")
+                + recuadro(e(detalle))
+                + parrafo("DriveMaster lo está revisando. Mientras tanto el pago de este pedido queda en pausa."));
+    }
+
+    public static String clienteProblemaEnvioResuelto(String cliente, String tienda, boolean reembolsa, double monto) {
+        return plantilla("Envío", "Resolvimos el problema con tu pedido",
+                saludo(cliente)
+                + parrafo(reembolsa
+                        ? "Revisamos el problema con el pedido de <strong>" + e(tienda) + "</strong> y te devolveremos <strong>"
+                          + moneda(monto) + "</strong> al mismo medio de pago. Te avisaremos cuando esté hecho."
+                        : "Revisamos el problema con el pedido de <strong>" + e(tienda) + "</strong> y quedó registrado como entregado."));
+    }
+
     public static String clienteCompraNoAplicada(String cliente, double monto, String motivo) {
         return plantilla("Reembolso", "Te devolveremos tu pago",
                 saludo(cliente)

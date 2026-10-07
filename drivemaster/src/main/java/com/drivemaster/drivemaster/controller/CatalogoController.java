@@ -8,6 +8,7 @@ import com.drivemaster.drivemaster.dto.catalogo.PaginaCatalogoDTO;
 import com.drivemaster.drivemaster.dto.catalogo.ProductoCatalogoDTO;
 import com.drivemaster.drivemaster.service.CatalogoService;
 import com.drivemaster.drivemaster.service.CompraCatalogoService;
+import com.drivemaster.drivemaster.service.RecepcionEnvioService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,10 +34,12 @@ public class CatalogoController {
 
     private final CatalogoService catalogo;
     private final CompraCatalogoService compras;
+    private final RecepcionEnvioService recepcion;
 
-    public CatalogoController(CatalogoService catalogo, CompraCatalogoService compras) {
+    public CatalogoController(CatalogoService catalogo, CompraCatalogoService compras, RecepcionEnvioService recepcion) {
         this.catalogo = catalogo;
         this.compras = compras;
+        this.recepcion = recepcion;
     }
 
     @GetMapping("/productos")
@@ -87,6 +90,20 @@ public class CatalogoController {
     @PostMapping("/pedidos/{pedidoId}/codigo-retiro")
     public ResponseEntity<Map<String, Object>> nuevoCodigo(@PathVariable String pedidoId, Authentication auth) {
         return ResponseEntity.ok(compras.nuevoCodigoRetiro(auth.getName(), pedidoId));
+    }
+
+    /** "Ya lo recibí": el cliente confirma la recepción de un envío. */
+    @PostMapping("/pedidos/{pedidoId}/recibido")
+    public ResponseEntity<CompraDTO.PedidoCompraDTO> recibido(@PathVariable String pedidoId, Authentication auth) {
+        return ResponseEntity.ok(CompraDTO.PedidoCompraDTO.de(recepcion.confirmarRecepcion(auth.getName(), pedidoId)));
+    }
+
+    /** "Reportar un problema": pausa la autoconfirmación y la liquidación y alerta al ADMIN. */
+    @PostMapping("/pedidos/{pedidoId}/problema")
+    public ResponseEntity<CompraDTO.PedidoCompraDTO> problema(@PathVariable String pedidoId,
+                                                              @RequestBody Map<String, String> body, Authentication auth) {
+        return ResponseEntity.ok(CompraDTO.PedidoCompraDTO.de(
+                recepcion.reportarProblema(auth.getName(), pedidoId, body != null ? body.get("detalle") : null)));
     }
 
     /** Correo de la sesión, o null si la petición es anónima. */

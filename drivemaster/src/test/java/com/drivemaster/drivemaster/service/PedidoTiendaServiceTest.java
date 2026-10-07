@@ -45,6 +45,7 @@ class PedidoTiendaServiceTest {
     private AvisosSolicitudServicio avisos;
     private LiquidacionService liquidacion;
     private OrdenServicioRepository ordenRepository;
+    private ParametrosMarketplace parametros;
     private TallerService tallerService;
     private PedidoTiendaService service;
 
@@ -61,6 +62,8 @@ class PedidoTiendaServiceTest {
         pagoMarketplace = mock(PagoMarketplaceService.class);
         avisos = mock(AvisosSolicitudServicio.class);
         liquidacion = mock(LiquidacionService.class);
+        parametros = mock(ParametrosMarketplace.class);
+        when(parametros.plazoAutoconfirmacionDiasHabiles()).thenReturn(5);
         tallerService = mock(TallerService.class);
         TiendaRepository tiendaRepository = mock(TiendaRepository.class);
         ordenRepository = mock(OrdenServicioRepository.class);
@@ -69,7 +72,7 @@ class PedidoTiendaServiceTest {
 
         service = new PedidoTiendaService(pedidoRepository, tiendaRepository, ordenRepository, pagoRepository,
                 repartoRepository, mongoTemplate, usuarioService, tallerService, transiciones, pagoMarketplace, avisos,
-                liquidacion);
+                liquidacion, parametros);
 
         when(usuarioService.obtenerPorCorreo(CORREO_TIENDA)).thenReturn(Usuario.builder().id("ut").rol("TIENDA").build());
         when(tiendaRepository.findByUsuarioId("ut")).thenReturn(Optional.of(Tienda.builder().id("s1").nombre("Tienda Norte").build()));
@@ -491,5 +494,117 @@ class PedidoTiendaServiceTest {
         verify(avisos).pedidoCatalogoNoDespachado(p);
         verify(avisos, never()).pedidoNoDespachado(any(), any());
         verify(ordenRepository, never()).findById(isNull());
+    }
+
+    // ─── 4-A: confirmación de recepción de envíos y problemas ────────────────
+
+    @Test
+    void alDespacharUnEnvioDelCatalogoSeProgramaLaAutoconfirmacionYSeAvisaAlCliente() {
+        PedidoTienda envio = catalogo(PedidoTienda.ENVIO, PedidoTienda.PENDIENTE, null);
+        ArgumentCaptor<Update> cambios = ArgumentCaptor.forClass(Update.class);
+        when(mongoTemplate.findAndModify(any(Query.class), cambios.capture(), any(FindAndModifyOptions.class), eq(PedidoTienda.class)))
+                .thenReturn(envio);
+
+        service.despachar(CORREO_TIENDA, "ped1", "Guía 123");
+
+        Document set = (Document) cambios.getValue().getUpdateObject().get("$set");
+        java.time.LocalDateTime limite = (java.time.LocalDateTime) set.get("autoconfirmaDespuesDe");
+        assertNotNull(limite);
+        // 5 días hábiles: al menos 5 días corridos
+        assertTrue(limite.isAfter(java.time.LocalDateTime.now().plusDays(5).minusMinutes(1)));
+        verify(avisos).pedidoEnviado(envio, 5);
+    }
+
+    @Test
+    void despacharUnPedidoDelTallerNoProgramaAutoconfirmacion() {
+        // pedido de cotización (origen TALLER): lo confirma el taller, no el cliente
+        ArgumentCaptor<Update> cambios = ArgumentCaptor.forClass(Update.class);
+        when(mongoTemplate.findAndModify(any(Query.class), cambios.capture(), any(FindAndModifyOptions.class), eq(PedidoTienda.class)))
+                .thenReturn(pedido);
+        when(transiciones.registrar(any(), any(), anyString(), any(), any())).thenReturn(orden);
+
+        service.despachar(CORREO_TIENDA, "ped1", null);
+
+        Document set = (Document) cambios.getValue().getUpdateObject().get("$set");
+        assertFalse(set.containsKey("autoconfirmaDespuesDe"));
+        verify(avisos, never()).pedidoEnviado(any(), anyInt());
+    }
+
+    private PedidoTienda conProblema() {
+        PedidoTienda p = catalogo(PedidoTienda.ENVIO, PedidoTienda.DESPACHADO, null);
+        p.setProblemaReportado(true);
+        p.setProblemaDetalle("No llegó");
+        when(mongoTemplate.findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class)))
+                .thenAnswer(i -> {
+                    Document set = (Document) ((Update) i.getArgument(1)).getUpdateObject().get("$set");
+                    if (p.getResolucionProblema() != null) return null; // otro ADMIN ya lo resolvió
+                    p.setEstado((String) set.get("estado"));
+                    p.setResolucionProblema((String) set.get("resolucionProblema"));
+                    return p;
+                });
+        return p;
+    }
+
+    @Test
+    void elAdminConfirmaLaEntregaYSeHabilitaLaLiquidacionDeLaTienda() {
+        PedidoTienda p = conProblema();
+
+        PedidoTienda r = service.resolverProblema("admin@demo.com", "ped1", "CONFIRMAR_ENTREGA");
+
+        assertEquals(PedidoTienda.ENTREGADO, r.getEstado());
+        assertEquals("ENTREGA_CONFIRMADA_POR_ADMIN", p.getResolucionProblema());
+        verify(liquidacion).pedidoRecibido("ped1", "ENTREGA_CONFIRMADA_POR_ADMIN");
+        verify(avisos).problemaEnvioResuelto(p, false);
+        verify(pagoMarketplace, never()).registrarReembolso(any(), any(), anyDouble(), anyString());
+    }
+
+    @Test
+    void elAdminReembolsaYSeAnulaLaLineaDeLaTiendaSinLiquidar() {
+        PedidoTienda p = conProblema();
+        RepartoPago linea = RepartoPago.builder().id(1L).pedidoTiendaId("ped1").estado(RepartoPago.PENDIENTE).monto(47_600.0).build();
+        when(repartoRepository.findByPedidoTiendaId("ped1")).thenReturn(List.of(linea));
+
+        PedidoTienda r = service.resolverProblema("admin@demo.com", "ped1", "reembolsar");
+
+        assertEquals(PedidoTienda.NO_ENTREGADO, r.getEstado());
+        assertEquals(RepartoPago.ANULADO, linea.getEstado());
+        verify(pagoMarketplace).registrarReembolso(eq(pago), eq("ped1"), eq(47_600.0), contains("no llegó"));
+        verify(liquidacion, never()).pedidoRecibido(anyString(), anyString());
+        verify(avisos).problemaEnvioResuelto(p, true);
+    }
+
+    @Test
+    void soloSeResuelveUnProblemaAbiertoYUnaVez() {
+        // Sin problema reportado
+        PedidoTienda sinProblema = catalogo(PedidoTienda.ENVIO, PedidoTienda.DESPACHADO, null);
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> service.resolverProblema("admin@demo.com", "ped1", "REEMBOLSAR")).getStatusCode());
+        assertEquals(PedidoTienda.DESPACHADO, sinProblema.getEstado());
+
+        // Con problema: el primero gana, el segundo recibe 409 y no se duplica nada
+        conProblema();
+        service.resolverProblema("admin@demo.com", "ped1", "CONFIRMAR_ENTREGA");
+        when(pedidoRepository.findById("ped1")).thenReturn(Optional.of(PedidoTienda.builder().id("ped1")
+                .origen(PedidoTienda.ORIGEN_CATALOGO).estado(PedidoTienda.DESPACHADO).problemaReportado(true)
+                .resolucionProblema("ENTREGA_CONFIRMADA_POR_ADMIN").build()));
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> service.resolverProblema("otro@demo.com", "ped1", "CONFIRMAR_ENTREGA")).getStatusCode());
+        verify(liquidacion, times(1)).pedidoRecibido(anyString(), anyString());
+    }
+
+    @Test
+    void laResolucionDebeSerUnaDeLasDosOpciones() {
+        conProblema();
+        for (String mala : new String[]{null, "", "ARCHIVAR"}) {
+            assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
+                    () -> service.resolverProblema("admin@demo.com", "ped1", mala)).getStatusCode());
+        }
+        verifyNoInteractions(liquidacion);
+    }
+
+    @Test
+    void unPedidoDelTallerNoTieneProblemaDeEnvioQueResolver() {
+        assertEquals(HttpStatus.NOT_FOUND, assertThrows(ResponseStatusException.class,
+                () -> service.resolverProblema("admin@demo.com", "ped1", "REEMBOLSAR")).getStatusCode());
     }
 }

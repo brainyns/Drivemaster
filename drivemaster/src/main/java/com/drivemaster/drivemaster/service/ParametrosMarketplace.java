@@ -73,6 +73,11 @@ public class ParametrosMarketplace {
         return entero("PLAZO_DESPACHO_DIAS_HABILES", 2);
     }
 
+    /** Días hábiles tras el despacho de un envío para que el cliente confirme; si no responde se confirma sola. */
+    public int plazoAutoconfirmacionDiasHabiles() {
+        return entero("PLAZO_AUTOCONFIRMACION_DIAS_HABILES", 5);
+    }
+
     /** Días hábiles que se suman a los días estimados de un encargo. */
     public int plazoEncargoDiasExtra() {
         return entero("PLAZO_ENCARGO_DIAS_EXTRA", 2);

@@ -33,6 +33,10 @@ public class PedidoTienda {
     // Compra directa con retiro en la tienda (4-A): pagado = PENDIENTE; luego estos dos
     public static final String LISTO_PARA_RETIRAR = "LISTO_PARA_RETIRAR";
     public static final String RETIRADO = "RETIRADO";
+    // Compra directa con envío: tras DESPACHADO el cliente confirma (o se autoconfirma) y queda ENTREGADO.
+    // Si reportó un problema y el ADMIN decide reembolsar, queda NO_ENTREGADO.
+    public static final String ENTREGADO = "ENTREGADO";
+    public static final String NO_ENTREGADO = "NO_ENTREGADO";
 
     // De dónde viene el pedido: del taller (cotización) o de una compra directa del catálogo. null = TALLER.
     public static final String ORIGEN_TALLER = "TALLER";
@@ -113,6 +117,20 @@ public class PedidoTienda {
     private LocalDateTime codigoRetiroBloqueadoHasta;
     private LocalDateTime fechaListoRetiro;
     private LocalDateTime fechaRetirado;
+
+    // Envío: confirmación de recepción por el cliente
+    private LocalDateTime fechaRecibidoCliente;
+    // true si nadie respondió y se confirmó sola al vencer el plazo
+    private Boolean recepcionAutomatica;
+    // Desde el despacho + N días hábiles (PLAZO_AUTOCONFIRMACION_DIAS_HABILES); null en retiros y pedidos del taller
+    private LocalDateTime autoconfirmaDespuesDe;
+    // "Reportar un problema": pausa la autoconfirmación y la liquidación hasta que el ADMIN resuelva
+    private Boolean problemaReportado;
+    private String problemaDetalle;
+    private LocalDateTime fechaProblema;
+    // ENTREGA_CONFIRMADA_POR_ADMIN o REEMBOLSO
+    private String resolucionProblema;
+    private LocalDateTime fechaResolucionProblema;
 
     @com.fasterxml.jackson.annotation.JsonIgnore
     public boolean esCatalogo() {
