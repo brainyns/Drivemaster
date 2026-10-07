@@ -37,6 +37,7 @@ class EtapasFinalesTest {
     private MongoTemplate mongoTemplate;
     private TallerService tallerService;
     private AvisosSolicitudServicio avisos;
+    private LiquidacionService liquidacion;
     private SolicitudServicioServiceImpl service;
     private OrdenServicio orden;
 
@@ -45,6 +46,7 @@ class EtapasFinalesTest {
         mongoTemplate = mock(MongoTemplate.class);
         tallerService = mock(TallerService.class);
         avisos = mock(AvisosSolicitudServicio.class);
+        liquidacion = mock(LiquidacionService.class);
         OrdenServicioRepository ordenRepository = mock(OrdenServicioRepository.class);
         UsuarioService usuarioService = mock(UsuarioService.class);
         VehiculoService vehiculoService = mock(VehiculoService.class);
@@ -52,7 +54,7 @@ class EtapasFinalesTest {
         service = new SolicitudServicioServiceImpl(ordenRepository, mock(TallerRepository.class), vehiculoService,
                 usuarioService, tallerService, mock(CloudinaryService.class), new TransicionOrdenService(mongoTemplate),
                 mock(AsignacionTallerService.class), mock(ParametrosMarketplace.class), avisos,
-                mock(ProductoService.class), mock(BuscadorRepuestosService.class));
+                mock(ProductoService.class), mock(BuscadorRepuestosService.class), liquidacion);
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).tallerId("t1").usuarioId("u1")
                 .vehiculoId("v1").mecanicoNombre("Carlos").eventos(new ArrayList<>()).build();
@@ -89,7 +91,10 @@ class EtapasFinalesTest {
 
         assertEquals(EstadoOrden.LISTA, service.marcarLista(CORREO_TALLER, "o1").getEstado());
         verify(avisos).vehiculoListo(orden);
+        verify(liquidacion, never()).ordenEntregada(anyString());
         assertEquals(EstadoOrden.ENTREGADA, service.marcarEntregada(CORREO_TALLER, "o1").getEstado());
+        // Al quedar ENTREGADA, la línea del taller queda lista para liquidar
+        verify(liquidacion).ordenEntregada("o1");
     }
 
     @Test
@@ -101,6 +106,8 @@ class EtapasFinalesTest {
 
         orden.setEstado(EstadoOrden.EN_INSTALACION);
         assertThrows(ResponseStatusException.class, () -> service.marcarEntregada(CORREO_TALLER, "o1"));
+        // Una entrega rechazada no habilita ninguna liquidación
+        verifyNoInteractions(liquidacion);
         verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class));
     }
 

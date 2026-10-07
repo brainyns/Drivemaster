@@ -27,6 +27,12 @@ public class LiquidacionController {
         this.service = service;
     }
 
+    /** Modo de dispersión (SIMULADO / MANUAL), para mostrarlo en la pantalla. */
+    @GetMapping("/modo")
+    public ResponseEntity<Map<String, Object>> modo() {
+        return ResponseEntity.ok(service.modo());
+    }
+
     @GetMapping("/repartos")
     public ResponseEntity<List<RepartoPago>> repartos(@RequestParam(required = false) String estado) {
         return ResponseEntity.ok(service.repartos(estado));
@@ -36,7 +42,8 @@ public class LiquidacionController {
     public ResponseEntity<RepartoPago> liquidar(@PathVariable Long id,
                                                 @RequestBody(required = false) Map<String, String> body,
                                                 Authentication auth) {
-        return ResponseEntity.ok(service.liquidar(id, auth.getName(), body != null ? body.get("nota") : null));
+        return ResponseEntity.ok(service.liquidar(id, auth.getName(),
+                body != null ? body.get("numeroTransferencia") : null, body != null ? body.get("nota") : null));
     }
 
     @GetMapping("/reembolsos")

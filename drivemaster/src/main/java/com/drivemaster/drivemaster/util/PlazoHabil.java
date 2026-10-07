@@ -44,6 +44,27 @@ public final class PlazoHabil {
         }
     }
 
+    /**
+     * Suma días hábiles: de lunes a viernes, sin festivos de Colombia. El día de
+     * partida no cuenta; conserva la hora. Con 0 días devuelve la misma fecha.
+     */
+    public static LocalDateTime sumarDiasHabiles(LocalDateTime desdeServidor, int dias) {
+        if (dias <= 0) return desdeServidor;
+        ZoneId zonaServidor = ZoneId.systemDefault();
+        ZonedDateTime t = desdeServidor.atZone(zonaServidor).withZoneSameInstant(ZONA_COLOMBIA);
+        int restantes = dias;
+        while (restantes > 0) {
+            t = t.plusDays(1);
+            if (esDiaHabil(t.toLocalDate())) restantes--;
+        }
+        return t.withZoneSameInstant(zonaServidor).toLocalDateTime();
+    }
+
+    public static boolean esDiaHabil(java.time.LocalDate dia) {
+        DayOfWeek d = dia.getDayOfWeek();
+        return d != DayOfWeek.SATURDAY && d != DayOfWeek.SUNDAY && !FestivosColombia.esFestivo(dia);
+    }
+
     /** Si t cae fuera del horario, lo mueve a la próxima apertura. */
     private static ZonedDateTime ajustarAlHorario(ZonedDateTime t, int horaInicio, int horaFin) {
         ZonedDateTime dia = t.truncatedTo(ChronoUnit.DAYS);

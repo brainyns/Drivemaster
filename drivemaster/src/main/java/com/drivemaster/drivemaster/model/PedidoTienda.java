@@ -25,6 +25,8 @@ import java.util.List;
 public class PedidoTienda {
 
     public static final String PENDIENTE = "PENDIENTE";
+    // Solo encargos: la tienda ya está consiguiendo el repuesto
+    public static final String EN_PREPARACION = "EN_PREPARACION";
     public static final String DESPACHADO = "DESPACHADO";
     public static final String NO_DESPACHADO = "NO_DESPACHADO";
     public static final String RECIBIDO = "RECIBIDO";
@@ -67,4 +69,9 @@ public class PedidoTienda {
     private String tipoMotivoNoDespacho;
     private String motivoNoDespacho;
     private LocalDateTime fechaRecibido;
+
+    // Despacho: plazo máximo (días hábiles desde el pago) y alerta al ADMIN si se pasa
+    private LocalDateTime fechaPreparacion;
+    private LocalDateTime plazoDespachoHasta;
+    private Boolean alertaAtrasoEnviada;
 }

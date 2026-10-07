@@ -76,7 +76,8 @@ class PagoMarketplaceServiceTest {
 
         service = new PagoMarketplaceService(pagoService, pagoRepository, ordenRepository, cotizacionRepository,
                 pedidoRepository, repartoRepository, reembolsoRepository, tallerRepository, productoService,
-                movimientoService, mock(com.drivemaster.drivemaster.repository.MovimientoInventarioRepository.class), usuarioService, transiciones, cotizacionService, avisos);
+                movimientoService, mock(com.drivemaster.drivemaster.repository.MovimientoInventarioRepository.class), usuarioService, transiciones, cotizacionService, avisos,
+                mock(ParametrosMarketplace.class));
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).estado(EstadoOrden.APROBADA)
                 .tallerId("t1").usuarioId("u1").cotizacionId("c1").vehiculoDescripcion("Spark")

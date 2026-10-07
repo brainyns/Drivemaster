@@ -16,6 +16,11 @@ const ESTADO_WOMPI = {
  * pago se abre en otra pestaña y luego se verifica aquí con el ID de la
  * transacción. El backend consulta la API de Wompi; el frontend no marca nada
  * como pagado.
+ *
+ * Este componente solo se monta si el backend respondió verificacionManual = true, y
+ * eso solo ocurre con PAGO_VERIFICACION_MANUAL_ENABLED, llaves pub_test_ y sin
+ * redirect-url. En producción el backend nunca lo ofrece; aquí además se descarta
+ * cualquier respuesta que no lo traiga explícito.
  */
 export default function PagoLocal({ token, pago, onVerificado, onCerrar }) {
   const [transaccion, setTransaccion] = useState("");
@@ -51,6 +56,9 @@ export default function PagoLocal({ token, pago, onVerificado, onCerrar }) {
     if (!id) return setError("Pega el ID de la transacción que muestra Wompi al terminar.");
     ejecutar(() => verificarPago(token, id));
   };
+
+  // Sin verificacion manual explicita del backend no se muestra nada (defensa en profundidad)
+  if (!pago?.verificacionManual) return null;
 
   return (
     <div className="ss-aviso ct-pago-local" role="region" aria-label="Pago en modo desarrollo">

@@ -119,7 +119,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
 }
 
 /** Solicitudes de diagnóstico del cliente y el avance de cada una. */
-export default function MisServicios({ onVolver, onSolicitar }) {
+export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso }) {
   const token = getToken();
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -347,6 +347,18 @@ export default function MisServicios({ onVolver, onSolicitar }) {
       </div>
 
       {error && <p className="ss-alerta" role="alert">{error}</p>}
+
+      {/* Llegó desde el enlace de la cotización: si ninguna solicitud espera su pago, esta cuenta no es la que la recibió */}
+      {avisoCotizacion && !solicitudes.some((s) => s.estado === "COTIZADA" || s.estado === "APROBADA") && (
+        <div className="ss-aviso" role="status">
+          <p>
+            Iniciaste sesión como <strong>{avisoCotizacion}</strong> y no encontramos una cotización esperando tu respuesta o pago.
+            Si abriste el enlace del correo, es probable que la cotización se haya enviado a otra cuenta: cierra sesión e
+            ingresa con el correo que la recibió.
+          </p>
+          {onCerrarAviso && <button className="sv-btn-outline" onClick={onCerrarAviso}>Entendido</button>}
+        </div>
+      )}
 
       {solicitudes.length === 0 ? (
         <div className="ss-vacio">

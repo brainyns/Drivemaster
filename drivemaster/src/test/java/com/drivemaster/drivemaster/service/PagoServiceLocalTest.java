@@ -66,9 +66,35 @@ class PagoServiceLocalTest {
 
     @Test
     void enLocalElEnlaceNoLlevaRedirectUrl() {
+        ReflectionTestUtils.setField(service, "verificacionManualHabilitada", true);
         Map<String, Object> r = service.crearPagoMarketplace(PagoMarketplaceService.DIAGNOSTICO, "u1", 50_000, "o1", null);
         assertFalse(r.get("checkoutUrl").toString().contains("redirect-url"));
         assertEquals(true, r.get("verificacionManual"));
+    }
+
+    @Test
+    void sinElFlagNoSeOfreceLaVerificacionManualAunqueSeaLocal() {
+        // Apagado por defecto: aunque la redirección sea localhost, el botón no se ofrece
+        Map<String, Object> r = service.crearPagoMarketplace(PagoMarketplaceService.DIAGNOSTICO, "u1", 50_000, "o1", null);
+        assertFalse(r.get("checkoutUrl").toString().contains("redirect-url"));
+        assertEquals(false, r.get("verificacionManual"));
+        assertFalse(service.verificacionManualDisponible());
+    }
+
+    @Test
+    void laVerificacionManualExigeLlavesDePrueba() {
+        ReflectionTestUtils.setField(service, "verificacionManualHabilitada", true);
+        ReflectionTestUtils.setField(service, "publicKey", "pub_prod_abc");
+        assertFalse(service.verificacionManualDisponible());
+        Map<String, Object> r = service.crearPagoMarketplace(PagoMarketplaceService.DIAGNOSTICO, "u1", 50_000, "o1", null);
+        assertEquals(false, r.get("verificacionManual"));
+    }
+
+    @Test
+    void desplegadoLaVerificacionManualNuncaSeOfreceAunConElFlag() {
+        ReflectionTestUtils.setField(service, "verificacionManualHabilitada", true);
+        ReflectionTestUtils.setField(service, "redirectUrlDefault", "https://api.drivemaster.co/api/pagos/confirmar-redirect");
+        assertFalse(service.verificacionManualDisponible());
     }
 
     @Test

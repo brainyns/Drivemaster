@@ -28,6 +28,11 @@ export async function misPedidosTienda(token) {
   return handle(res, "No se pudieron cargar los pedidos");
 }
 
+/** Solo encargos: la tienda ya está consiguiendo el repuesto (PENDIENTE → EN_PREPARACION). */
+export function prepararPedido(token, id) {
+  return enviar(token, "PATCH", `${BASE}/${id}/preparar`, null, "No se pudo iniciar la preparación");
+}
+
 export function despacharPedido(token, id, nota) {
   return enviar(token, "PATCH", `${BASE}/${id}/despachar`, { nota }, "No se pudo marcar el despacho");
 }

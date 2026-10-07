@@ -50,6 +50,7 @@ export const ESTADOS_COTIZACION = {
 
 export const ESTADOS_PEDIDO = {
   PENDIENTE:     { label: "Por despachar",     tono: "aviso" },
+  EN_PREPARACION: { label: "En preparación",   tono: "proceso" },
   DESPACHADO:    { label: "Despachado",        tono: "proceso" },
   NO_DESPACHADO: { label: "No se despachó",    tono: "error" },
   RECIBIDO:      { label: "Recibido en taller", tono: "ok" },

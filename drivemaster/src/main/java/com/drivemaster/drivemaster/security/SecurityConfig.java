@@ -141,7 +141,7 @@ public class SecurityConfig {
                                 "/api/pagos-marketplace/cotizacion/*", "/api/pagos-marketplace/simular/*").hasRole("CLIENTE")
                         .requestMatchers("/api/pagos-marketplace/**").denyAll()
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/mios").hasRole("TIENDA")
-                        .requestMatchers(HttpMethod.PATCH, "/api/pedidos-tienda/*/despachar",
+                        .requestMatchers(HttpMethod.PATCH, "/api/pedidos-tienda/*/preparar", "/api/pedidos-tienda/*/despachar",
                                 "/api/pedidos-tienda/*/no-despachar").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/orden/*/recibidos").hasRole("TALLER")
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/orden/*").authenticated()

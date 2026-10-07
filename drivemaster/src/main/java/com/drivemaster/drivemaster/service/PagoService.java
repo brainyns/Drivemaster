@@ -70,6 +70,10 @@ public class PagoService {
     @Value("${drivemaster.pago-simulado.enabled:false}")
     private boolean pagoSimuladoHabilitado;
 
+    // Solo desarrollo (PAGO_VERIFICACION_MANUAL_ENABLED): ofrece "Ya pagué, verificar mi pago"; exige pub_test_
+    @Value("${drivemaster.pago-verificacion-manual.enabled:false}")
+    private boolean verificacionManualHabilitada;
+
     public PagoService(SolicitudRepository solicitudRepository,
                        PagoRepository pagoRepository,
                        VentaService ventaService,
@@ -198,7 +202,7 @@ public class PagoService {
                 "referencia", referencia,
                 "monto", montoCentavos,
                 // Sin redirect-url (desarrollo local): el cliente verifica el pago a mano
-                "verificacionManual", redirectEfectivo(null) == null,
+                "verificacionManual", verificacionManualDisponible(),
                 "pagoSimulado", pagoSimuladoDisponible());
     }
 
@@ -226,6 +230,16 @@ public class PagoService {
         }
     }
 
+    /**
+     * "Ya pagué, verificar mi pago": solo con PAGO_VERIFICACION_MANUAL_ENABLED=true, llaves
+     * de pruebas de Wompi (pub_test_) y sin redirect-url (localhost). En producción nunca
+     * es true: el flag va apagado por defecto y las llaves y la URL son reales.
+     */
+    public boolean verificacionManualDisponible() {
+        return verificacionManualHabilitada && publicKey != null && publicKey.startsWith("pub_test_")
+                && redirectEfectivo(null) == null;
+    }
+
     /** Solo con PAGO_SIMULADO_ENABLED=true y llaves de pruebas de Wompi (pub_test_…). */
     public boolean pagoSimuladoDisponible() {
         return pagoSimuladoHabilitado && publicKey != null && publicKey.startsWith("pub_test_");
@@ -233,6 +247,9 @@ public class PagoService {
 
     @PostConstruct
     void avisarPagoSimulado() {
+        if (verificacionManualHabilitada && !verificacionManualDisponible()) {
+            log.warn("PAGO_VERIFICACION_MANUAL_ENABLED se ignora: requiere llaves de pruebas de Wompi (pub_test_) y redirect-url local");
+        }
         if (!pagoSimuladoHabilitado) return;
         if (pagoSimuladoDisponible()) {
             log.warn("PAGO SIMULADO ACTIVO: solo para desarrollo. Nunca activar PAGO_SIMULADO_ENABLED en producción.");
