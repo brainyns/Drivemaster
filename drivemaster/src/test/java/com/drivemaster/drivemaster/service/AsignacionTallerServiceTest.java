@@ -29,7 +29,7 @@ class AsignacionTallerServiceTest {
         tallerRepository = mock(TallerRepository.class);
         parametros = mock(ParametrosMarketplace.class);
         when(parametros.radioMaxKm()).thenReturn(30.0);
-        service = new AsignacionTallerService(tallerRepository, null, parametros, null);
+        service = new AsignacionTallerService(tallerRepository, null, parametros, null, null);
     }
 
     private static Taller taller(String id, String ciudad, Double lat, Double lng, String estado, double rating) {

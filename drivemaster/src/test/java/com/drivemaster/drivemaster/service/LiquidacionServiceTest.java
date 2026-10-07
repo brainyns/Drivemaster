@@ -1,6 +1,12 @@
 package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
+import com.drivemaster.drivemaster.model.EstadoOrden;
+import com.drivemaster.drivemaster.model.OrdenServicio;
+import com.drivemaster.drivemaster.model.mysql.PagoEntity;
+import com.drivemaster.drivemaster.model.mysql.Reembolso;
+import com.drivemaster.drivemaster.repository.TallerRepository;
+import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import com.drivemaster.drivemaster.service.dispersion.DispersionException;
@@ -46,6 +52,8 @@ class LiquidacionServiceTest {
 
     private RepartoPagoRepository repartoRepository;
     private ReembolsoRepository reembolsoRepository;
+    private PagoRepository pagoRepository;
+    private final List<Reembolso> reembolsosCreados = new ArrayList<>();
     private AvisosSolicitudServicio avisos;
     private final AtomicInteger dispersiones = new AtomicInteger();
 
@@ -53,6 +61,21 @@ class LiquidacionServiceTest {
     void setUp() {
         avisos = mock(AvisosSolicitudServicio.class);
         reembolsoRepository = mock(ReembolsoRepository.class);
+        when(reembolsoRepository.save(any(Reembolso.class))).thenAnswer(i -> {
+            reembolsosCreados.add(i.getArgument(0));
+            return i.getArgument(0);
+        });
+        when(reembolsoRepository.existsByPagoId(anyLong())).thenAnswer(i ->
+                reembolsosCreados.stream().anyMatch(r -> r.getPagoId().equals(i.getArgument(0))));
+        pagoRepository = mock(PagoRepository.class);
+        PagoEntity pago = new PagoEntity();
+        pago.setId(10L);
+        pago.setReferencia("DRV-DIAG");
+        pago.setOrdenServicioId("o1");
+        pago.setUsuarioId("u1");
+        pago.setTransactionId("txn-1");
+        pago.setMonto(50_000.0);
+        when(pagoRepository.findById(10L)).thenReturn(Optional.of(pago));
         when(reembolsoRepository.hayPendienteQueAfecta(anyLong(), any())).thenAnswer(i -> {
             Long pagoId = i.getArgument(0);
             String pedido = i.getArgument(1);
@@ -66,6 +89,15 @@ class LiquidacionServiceTest {
         when(repartoRepository.findByOrdenServicioIdAndBeneficiarioTipo(anyString(), anyString())).thenAnswer(i -> repartos.values().stream()
                 .filter(r -> i.getArgument(0).equals(r.getOrdenServicioId()) && i.getArgument(1).equals(r.getBeneficiarioTipo())).toList());
 
+        when(repartoRepository.anularPendiente(anyLong(), anyString())).thenAnswer(i -> {
+            synchronized (repartos) {
+                RepartoPago r = repartos.get((Long) i.getArgument(0));
+                if (!RepartoPago.PENDIENTE.equals(r.getEstado())) return 0;
+                r.setEstado(RepartoPago.ANULADO);
+                r.setNota(i.getArgument(1));
+                return 1;
+            }
+        });
         when(repartoRepository.marcarPorLiquidar(anyLong(), any(), anyString())).thenAnswer(i -> {
             synchronized (repartos) {
                 RepartoPago r = repartos.get((Long) i.getArgument(0));
@@ -124,7 +156,7 @@ class LiquidacionServiceTest {
                 return dispersion.liquidar(r, s);
             }
         };
-        return new LiquidacionService(repartoRepository, reembolsoRepository, contada, avisos);
+        return new LiquidacionService(repartoRepository, reembolsoRepository, pagoRepository, contada, avisos);
     }
 
     private RepartoPago linea(long id, String tipo, String pedidoId, boolean porEvento) {
@@ -445,5 +477,128 @@ class LiquidacionServiceTest {
     void elModoSeExponeParaLaPantalla() {
         assertEquals(Map.of("modo", "SIMULADO", "automatica", true), servicio(simulada()).modo());
         assertEquals(Map.of("modo", "MANUAL", "automatica", false), servicio(manual()).modo());
+    }
+
+    // ─── Ajuste: liquidación del diagnóstico según cómo termina la orden ─────
+
+    private RepartoPago lineaDiagnostico(long id) {
+        RepartoPago r = linea(id, RepartoPago.TALLER, null, true);
+        r.setConcepto("DIAGNOSTICO");
+        r.setMonto(50_000.0);
+        return r;
+    }
+
+    private RepartoPago lineaCotizacionDelTaller(long id) {
+        RepartoPago r = linea(id, RepartoPago.TALLER, null, true);
+        r.setConcepto("COTIZACION");
+        return r;
+    }
+
+    @Test
+    void siElClienteRechazaLaCotizacionLaLineaDelDiagnosticoQuedaHabilitada() {
+        RepartoPago diagnostico = lineaDiagnostico(1);
+        RepartoPago tienda = linea(2, RepartoPago.TIENDA, "ped1", true);
+
+        servicio(manual()).ordenCanceladaPorRechazoDeCotizacion("o1");
+
+        assertEquals(RepartoPago.POR_LIQUIDAR, diagnostico.getEstado());
+        assertEquals("COTIZACION_RECHAZADA_POR_CLIENTE", diagnostico.getEventoListo());
+        assertNotNull(diagnostico.getFechaListo());
+        assertEquals(RepartoPago.PENDIENTE, tienda.getEstado(), "no toca otras líneas");
+        assertTrue(reembolsosCreados.isEmpty(), "el taller sí trabajó: no hay reembolso");
+        assertEquals(0, dispersiones.get(), "en manual la paga el ADMIN");
+    }
+
+    @Test
+    void enSimuladoElRechazoDeLaCotizacionLiquidaElDiagnosticoDelTaller() {
+        RepartoPago diagnostico = lineaDiagnostico(1);
+        servicio(simulada()).ordenCanceladaPorRechazoDeCotizacion("o1");
+        assertEquals(RepartoPago.LIQUIDADO, diagnostico.getEstado());
+        assertEquals("COTIZACION_RECHAZADA_POR_CLIENTE", diagnostico.getEventoListo());
+    }
+
+    @Test
+    void elRechazoSoloHabilitaElDiagnosticoNoLaLineaDeCotizacionDelTaller() {
+        RepartoPago cotizacion = lineaCotizacionDelTaller(1);
+        servicio(simulada()).ordenCanceladaPorRechazoDeCotizacion("o1");
+        assertEquals(RepartoPago.PENDIENTE, cotizacion.getEstado());
+        assertEquals(0, dispersiones.get());
+    }
+
+    @Test
+    void elDiagnosticoHabilitadoPorElRechazoRespetaUnReembolsoPendiente() {
+        RepartoPago diagnostico = lineaDiagnostico(1);
+        reembolsosPendientes.add(new Object[]{10L, null});
+        servicio(simulada()).ordenCanceladaPorRechazoDeCotizacion("o1");
+        assertEquals(RepartoPago.POR_LIQUIDAR, diagnostico.getEstado());
+        assertEquals(0, dispersiones.get());
+    }
+
+    @Test
+    void sinTallerLaLineaDelDiagnosticoSeAnulaYSeReembolsa() {
+        RepartoPago diagnostico = lineaDiagnostico(1);
+
+        servicio(simulada()).ordenRechazadaSinTaller("o1");
+
+        assertEquals(RepartoPago.ANULADO, diagnostico.getEstado());
+        assertTrue(diagnostico.getNota().contains("Ningún taller"));
+        assertEquals(0, dispersiones.get(), "no se liquida");
+        assertEquals(1, reembolsosCreados.size());
+        Reembolso r = reembolsosCreados.get(0);
+        assertEquals(10L, r.getPagoId());
+        assertEquals(50_000.0, r.getMonto());
+        assertEquals(Reembolso.PENDIENTE, r.getEstado());
+        assertEquals("DRV-DIAG", r.getReferenciaPago());
+        assertEquals("u1", r.getUsuarioId());
+        verify(avisos).alertaAdmin(eq("Reembolso pendiente"), contains("50000"));
+    }
+
+    @Test
+    void sinTallerNoSeDuplicaUnReembolsoYaRegistrado() {
+        lineaDiagnostico(1);
+        reembolsosCreados.add(Reembolso.builder().pagoId(10L).monto(50_000.0).estado(Reembolso.PENDIENTE).build());
+        servicio(manual()).ordenRechazadaSinTaller("o1");
+        assertEquals(1, reembolsosCreados.size());
+        assertEquals(RepartoPago.ANULADO, repartos.get(1L).getEstado());
+    }
+
+    @Test
+    void sinTallerNoTocaUnaLineaYaHabilitadaOLiquidada() {
+        RepartoPago habilitada = lineaDiagnostico(1);
+        habilitada.setEstado(RepartoPago.POR_LIQUIDAR);
+        RepartoPago liquidada = lineaDiagnostico(2);
+        liquidada.setEstado(RepartoPago.LIQUIDADO);
+
+        servicio(manual()).ordenRechazadaSinTaller("o1");
+
+        assertEquals(RepartoPago.POR_LIQUIDAR, habilitada.getEstado());
+        assertEquals(RepartoPago.LIQUIDADO, liquidada.getEstado());
+        assertTrue(reembolsosCreados.isEmpty());
+    }
+
+    @Test
+    void laSolicitudRechazadaPorFaltaDeTalleresAnulaElDiagnosticoYReembolsa() {
+        // De punta a punta con la asignación real: no hay talleres -> RECHAZADA
+        RepartoPago diagnostico = lineaDiagnostico(1);
+        TallerRepository tallerRepository = mock(TallerRepository.class);
+        when(tallerRepository.findByActivoTrue()).thenReturn(List.of());
+        ParametrosMarketplace parametros = mock(ParametrosMarketplace.class);
+        TransicionOrdenService transiciones = mock(TransicionOrdenService.class);
+        OrdenServicio orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE)
+                .estado(EstadoOrden.REASIGNADA).ciudad("Bogotá").build();
+        when(transiciones.transicionar(any(), eq(EstadoOrden.RECHAZADA), any(), anyString(), any(), any())).thenAnswer(i -> {
+            orden.setEstado(EstadoOrden.RECHAZADA);
+            return orden;
+        });
+        AsignacionTallerService asignacion = new AsignacionTallerService(tallerRepository, transiciones, parametros,
+                avisos, servicio(simulada()));
+
+        OrdenServicio resultado = asignacion.asignarSiguiente(orden);
+
+        assertEquals(EstadoOrden.RECHAZADA, resultado.getEstado());
+        assertEquals(RepartoPago.ANULADO, diagnostico.getEstado());
+        assertEquals(0, dispersiones.get());
+        assertEquals(1, reembolsosCreados.size());
+        verify(avisos).sinTallerDisponible(orden);
     }
 }

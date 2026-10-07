@@ -57,4 +57,14 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> 
     @Query("update RepartoPago r set r.estado = 'FALLIDO', r.motivoFallo = :motivo, r.modoLiquidacion = :modo "
             + "where r.id = :id and r.estado = 'PROCESANDO'")
     int marcarFallido(@Param("id") Long id, @Param("motivo") String motivo, @Param("modo") String modo);
+
+    /**
+     * La línea ya no se debe pagar (ej. la solicitud se rechazó sin taller): PENDIENTE → ANULADO.
+     * Solo si sigue PENDIENTE; una ya habilitada o liquidada no se toca. Devuelve 1 si la anuló.
+     */
+    @Modifying
+    @Transactional
+    @Query("update RepartoPago r set r.estado = 'ANULADO', r.nota = :nota "
+            + "where r.id = :id and r.estado = 'PENDIENTE'")
+    int anularPendiente(@Param("id") Long id, @Param("nota") String nota);
 }

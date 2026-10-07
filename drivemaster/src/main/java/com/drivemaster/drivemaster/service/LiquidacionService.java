@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.model.mysql.Reembolso;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
+import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import com.drivemaster.drivemaster.service.dispersion.DispersionException;
@@ -42,15 +43,18 @@ public class LiquidacionService {
 
     private final RepartoPagoRepository repartoRepository;
     private final ReembolsoRepository reembolsoRepository;
+    private final PagoRepository pagoRepository;
     private final DispersionService dispersion;
     private final AvisosSolicitudServicio avisos;
 
     public LiquidacionService(RepartoPagoRepository repartoRepository,
                               ReembolsoRepository reembolsoRepository,
+                              PagoRepository pagoRepository,
                               DispersionService dispersion,
                               AvisosSolicitudServicio avisos) {
         this.repartoRepository = repartoRepository;
         this.reembolsoRepository = reembolsoRepository;
+        this.pagoRepository = pagoRepository;
         this.dispersion = dispersion;
         this.avisos = avisos;
     }
@@ -80,6 +84,61 @@ public class LiquidacionService {
         for (RepartoPago r : repartoRepository.findByOrdenServicioIdAndBeneficiarioTipo(ordenId, RepartoPago.TALLER)) {
             lineaLista(r, "ORDEN_ENTREGADA");
         }
+    }
+
+    /**
+     * El cliente rechazó la cotización después del diagnóstico y la orden quedó CANCELADA: el
+     * taller sí hizo el diagnóstico, así que su línea del diagnóstico queda habilitada para
+     * liquidar (decisión 17). Nunca lanza.
+     */
+    public void ordenCanceladaPorRechazoDeCotizacion(String ordenId) {
+        try {
+            for (RepartoPago r : lineasDiagnosticoDelTaller(ordenId)) {
+                lineaLista(r, "COTIZACION_RECHAZADA_POR_CLIENTE");
+            }
+        } catch (Exception e) {
+            log.error("No se pudo habilitar la liquidación del diagnóstico de la orden {}", ordenId, e);
+        }
+    }
+
+    /**
+     * La solicitud quedó RECHAZADA porque ningún taller la atendió: el diagnóstico no se
+     * prestó, así que la línea del taller no se liquida (se anula) y el cliente recibe un
+     * reembolso pendiente por lo que pagó. Nunca lanza.
+     */
+    public void ordenRechazadaSinTaller(String ordenId) {
+        try {
+            for (RepartoPago r : lineasDiagnosticoDelTaller(ordenId)) {
+                if (!RepartoPago.PENDIENTE.equals(r.getEstado())) continue;
+                if (repartoRepository.anularPendiente(r.getId(),
+                        "Ningún taller atendió la solicitud: el diagnóstico no se prestó") == 0) continue;
+                pagoRepository.findById(r.getPagoId()).ifPresent(pago -> {
+                    // Si el pago ya tiene un reembolso registrado (ej. por no aplicarse) no se duplica
+                    if (reembolsoRepository.existsByPagoId(pago.getId())) return;
+                    reembolsoRepository.save(Reembolso.builder()
+                            .pagoId(pago.getId())
+                            .ordenServicioId(pago.getOrdenServicioId())
+                            .usuarioId(pago.getUsuarioId())
+                            .referenciaPago(pago.getReferencia())
+                            .transactionId(pago.getTransactionId())
+                            .monto(pago.getMonto())
+                            .motivo("Ningún taller atendió la solicitud: se reembolsa el diagnóstico")
+                            .estado(Reembolso.PENDIENTE)
+                            .fechaCreacion(LocalDateTime.now())
+                            .build());
+                    avisos.alertaAdmin("Reembolso pendiente", "La solicitud " + ordenId
+                            + " quedó sin taller. Reembolsar " + Math.round(pago.getMonto())
+                            + " COP del diagnóstico (pago " + pago.getReferencia() + ").");
+                });
+            }
+        } catch (Exception e) {
+            log.error("No se pudo anular la liquidación del diagnóstico de la orden {}", ordenId, e);
+        }
+    }
+
+    private List<RepartoPago> lineasDiagnosticoDelTaller(String ordenId) {
+        return repartoRepository.findByOrdenServicioIdAndBeneficiarioTipo(ordenId, RepartoPago.TALLER).stream()
+                .filter(r -> "DIAGNOSTICO".equals(r.getConcepto())).toList();
     }
 
     /**
