@@ -3,6 +3,7 @@ package com.drivemaster.drivemaster.service;
 import com.drivemaster.drivemaster.dto.CrearOrdenServicioRequest;
 import com.drivemaster.drivemaster.dto.OrdenServicioDTO;
 import com.drivemaster.drivemaster.model.DetalleVenta;
+import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Producto;
@@ -311,14 +312,14 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
     public List<OrdenServicioDTO> listarPorUsuario(String correoUsuario) {
         Usuario usuario = usuarioService.obtenerPorCorreo(correoUsuario);
         return ordenServicioRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuario.getId())
-                .stream().map(this::toDTO).collect(Collectors.toList());
+                .stream().filter(this::esFlujoV1).map(this::toDTO).collect(Collectors.toList());
     }
 
     @Override
     public List<OrdenServicioDTO> listarPorTaller(String correoTaller) {
         Taller taller = tallerService.obtenerPorUsuario(correoTaller);
         return ordenServicioRepository.findByTallerIdOrderByFechaCreacionDesc(taller.getId())
-                .stream().map(this::toDTO).collect(Collectors.toList());
+                .stream().filter(this::esFlujoV1).map(this::toDTO).collect(Collectors.toList());
     }
 
     @Override
@@ -332,8 +333,15 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
     // ─── Helpers ─────────────────────────────────────────────
 
     private OrdenServicio obtenerOrden(String ordenId) {
+        // Las órdenes del marketplace tienen su propio flujo (SolicitudServicioService):
+        // los endpoints V1 no las ven ni las operan.
         return ordenServicioRepository.findById(ordenId)
+                .filter(this::esFlujoV1)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Orden de servicio no encontrada"));
+    }
+
+    private boolean esFlujoV1(OrdenServicio orden) {
+        return !EstadoOrden.FLUJO_MARKETPLACE.equals(orden.getFlujo());
     }
 
     private Producto validarCotizadaConStock(OrdenServicio orden) {
@@ -386,6 +394,6 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
 public List<OrdenServicioDTO> listarPorTallerAdmin(String tallerId) {
     tallerService.obtenerEntidad(tallerId); // valida que el taller exista (404 si no)
     return ordenServicioRepository.findByTallerIdOrderByFechaCreacionDesc(tallerId)
-            .stream().map(this::toDTO).collect(Collectors.toList());
+            .stream().filter(this::esFlujoV1).map(this::toDTO).collect(Collectors.toList());
 }
 }

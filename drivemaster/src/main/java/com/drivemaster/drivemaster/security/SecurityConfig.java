@@ -104,6 +104,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/talleres/**").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/talleres").hasAnyRole("SUPERADMIN", "ADMIN")
 
+                        // Marketplace: solicitudes de diagnóstico (el acceso a cada solicitud lo valida el servicio)
+                        .requestMatchers(HttpMethod.POST, "/api/solicitudes-servicio", "/api/solicitudes-servicio/fotos").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/mias").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/cancelar").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/taller").hasRole("TALLER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/aceptar",
+                                "/api/solicitudes-servicio/*/rechazar", "/api/solicitudes-servicio/*/mecanico").hasRole("TALLER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/reasignar").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/*").authenticated()
+                        .requestMatchers("/api/solicitudes-servicio/**").denyAll()
+
                         // Marketplace: tiendas y suscripciones
                         .requestMatchers(HttpMethod.POST, "/api/tiendas/registro").permitAll()
                         .requestMatchers("/api/tiendas/mi-tienda").hasRole("TIENDA")

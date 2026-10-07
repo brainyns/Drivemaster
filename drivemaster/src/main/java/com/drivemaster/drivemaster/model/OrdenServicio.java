@@ -5,6 +5,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Orden que conecta Cliente + Vehiculo + Repuesto (Producto) + Taller.
@@ -66,4 +68,45 @@ public class OrdenServicio {
 
     // Evita reenviar el aviso de cita al cliente.
     private Boolean citaNotificada;
+
+    // ─── Marketplace ───────────────────────────────────────────────────────
+    // Las órdenes del marketplace empiezan como solicitud de diagnóstico. Null = flujo
+    // anterior (V1), que conserva sus estados. En MARKETPLACE, fechaProgramada es la
+    // cita de revisión.
+    private String flujo;
+
+    // Solicitud del cliente
+    private String sintomas;
+    @Builder.Default
+    private List<String> fotos = new ArrayList<>();
+    private String ciudad;
+    private String barrio;
+    private Double latitud;
+    private Double longitud;
+    private String preferenciaHorario;
+
+    // Asignación al taller más cercano
+    @Builder.Default
+    private List<String> talleresDescartados = new ArrayList<>();
+    private LocalDateTime fechaAsignacion;
+    private LocalDateTime fechaLimiteRespuesta;
+    private Double distanciaTallerKm;
+
+    // Aceptación del taller y cita de revisión
+    private Boolean aceptadaPorTaller;
+    private LocalDateTime fechaAceptacion;
+    private String mecanicoId;
+    private String mecanicoNombre;
+
+    // Tarifa de diagnóstico, congelada al aceptar (ingreso del taller)
+    private Double tarifaDiagnostico;
+    // NO_REQUERIDO, PENDIENTE, PAGADO, VENCIDO (ver EstadoOrden)
+    private String pagoDiagnosticoEstado;
+    private LocalDateTime fechaLimitePagoDiagnostico;
+
+    // Motivo al cancelarse o rechazarse
+    private String motivoCierre;
+
+    @Builder.Default
+    private List<EventoOrden> eventos = new ArrayList<>();
 }
