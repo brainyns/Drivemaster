@@ -78,7 +78,7 @@ export default function MisCompras({ header, onVolver, onIrCatalogo }) {
   };
 
   return (
-    <div className="mk-pagina">
+    <div className="dm-page mk-pagina">
       {header}
       <main className="dm-container mk-contenido">
         <div className="mk-titulo">

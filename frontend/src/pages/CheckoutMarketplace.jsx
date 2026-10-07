@@ -121,7 +121,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
 
   if (grupos.length === 0) {
     return (
-      <div className="mk-pagina">{header}
+      <div className="dm-page mk-pagina">{header}
         <main className="dm-container mk-contenido">
           <div className="mk-vacio">
             <p>No hay productos de tiendas en tu carrito.</p>
@@ -135,7 +135,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
   const bloqueado = !cotizacion || pagando || !!pagoLocal;
 
   return (
-    <div className="mk-pagina">
+    <div className="dm-page mk-pagina">
       {header}
       <main className="dm-container mk-contenido">
         <button className="mk-enlace mk-volver" onClick={onVolverCarrito}>← Volver al carrito</button>
