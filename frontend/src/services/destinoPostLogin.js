@@ -5,7 +5,7 @@
 
 const CLAVE = "dm.destinoPostLogin";
 // Lista cerrada: nada que venga de fuera puede mandar al usuario a otra página
-const DESTINOS_VALIDOS = ["mis-servicios"];
+const DESTINOS_VALIDOS = ["mis-servicios", "carrito-marketplace", "checkout-marketplace"];
 
 export function guardarDestinoPostLogin(destino) {
   if (!DESTINOS_VALIDOS.includes(destino)) return;

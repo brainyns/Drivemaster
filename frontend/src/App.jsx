@@ -45,6 +45,11 @@ import PedidosTienda         from "./pages/PedidosTienda";
 import Liquidaciones         from "./pages/Liquidaciones";
 import ChatWidget            from "./components/chat/ChatWidget";
 import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
+import { useCarrito } from "./hooks/useCarrito";
+import MarketHeader from "./components/marketplace/MarketHeader";
+import CatalogoMarketplace from "./pages/CatalogoMarketplace";
+import DetalleProductoMarketplace from "./pages/DetalleProductoMarketplace";
+import CarritoMarketplace from "./pages/CarritoMarketplace";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
 
 const storedUser  = getUser();
@@ -104,6 +109,9 @@ const PAGINAS_CLIENTE = [
   "solicitar-diagnostico", "mis-servicios",
 ];
 
+// Catálogo marketplace: se consulta sin sesión y no usa el panel lateral aunque haya una.
+const PAGINAS_MARKETPLACE = ["marketplace", "producto-marketplace", "carrito-marketplace"];
+
 // Página inicial de cada rol después de iniciar sesión.
 const INICIO_POR_ROL = {
   CLIENTE: "catalogo",
@@ -140,6 +148,7 @@ function App() {
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   // true cuando el cliente llegó a "Mis servicios" iniciando sesión desde el enlace de la cotización
   const [vieneDeCotizacion, setVieneDeCotizacion] = useState(false);
+  const carrito = useCarrito();
 
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
 
@@ -243,6 +252,11 @@ function App() {
       setVieneDeCotizacion(true);
       return;
     }
+    // Quien inició sesión desde el carrito del catálogo vuelve a él (el carrito sigue guardado)
+    if ((destino === "carrito-marketplace" || destino === "checkout-marketplace") && auth.rol === "CLIENTE") {
+      setPagina(destino);
+      return;
+    }
 
     // Un cliente que inicia sesión desde una página de cliente (ej. Solicitar
     // diagnóstico) se queda en ella en lugar de volver al catálogo.
@@ -284,6 +298,26 @@ function App() {
         tipo: producto.tipo || "STOCK",
         stockActual: producto.stockActual ?? 0,
       }];
+    });
+  }, []);
+
+  // Fija (no suma) la cantidad de un producto en la compra normal: así pagar dos veces no duplica unidades
+  const fijarProducto = useCallback((producto, cantidad) => {
+    setSolicitudItems(prev => {
+      const item = {
+        productoId: producto.id,
+        nombre: producto.nombre,
+        imagenUrl: producto.imagenUrl || "",
+        precioUnitario: producto.precio,
+        cantidad,
+        tipo: producto.tipo || "STOCK",
+        stockActual: producto.stock ?? 0,
+      };
+      const idx = prev.findIndex(i => i.productoId === producto.id);
+      if (idx < 0) return [...prev, item];
+      const next = [...prev];
+      next[idx] = item;
+      return next;
     });
   }, []);
 
@@ -347,7 +381,57 @@ function App() {
   };
   const esTienda = user?.rol === "TIENDA";
 
+  const cabeceraMarketplace = (activo) => (
+    <MarketHeader
+      activo={activo}
+      cantidadCarrito={carrito.cantidad}
+      onIrInicio={() => setPagina("catalogo")}
+      onIrCatalogo={() => setPagina("marketplace")}
+      onIrCarrito={() => setPagina("carrito-marketplace")}
+      onIrMisCompras={() => setPagina("mis-compras")}
+      onIrLogin={() => setPagina("login")}
+      onLogout={handleLogout}
+      onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
+      theme={theme}
+      onToggleTheme={toggleTheme}
+    />
+  );
+
   const renderPagina = () => {
+    // Catálogo marketplace: público
+    if (pagina === "marketplace") return (
+      <CatalogoMarketplace
+        header={cabeceraMarketplace("catalogo")}
+        onVerProducto={(p) => irA("producto-marketplace", p.id)}
+        onAgregar={(p) => carrito.agregar(p, 1)}
+      />
+    );
+    if (pagina === "producto-marketplace") return (
+      <DetalleProductoMarketplace
+        key={idSeleccionado}
+        header={cabeceraMarketplace("catalogo")}
+        productoId={idSeleccionado}
+        onVolver={() => setPagina("marketplace")}
+        onVerProducto={(p) => irA("producto-marketplace", p.id)}
+        onAgregar={(p, cantidad) => carrito.agregar(p, cantidad)}
+        onIrCarrito={() => setPagina("carrito-marketplace")}
+      />
+    );
+    if (pagina === "carrito-marketplace") return (
+      <CarritoMarketplace
+        header={cabeceraMarketplace("carrito")}
+        carrito={carrito}
+        onVolver={() => setPagina("marketplace")}
+        onVerProducto={(p) => irA("producto-marketplace", p.id)}
+        onIrLogin={() => { guardarDestinoPostLogin("carrito-marketplace"); setPagina("login"); }}
+        // Los productos de DriveMaster se pagan por la compra normal, sin perder el resto del carrito
+        onPagarPlataforma={(items) => {
+          items.forEach((x) => fijarProducto(x.producto, x.cantidad));
+          setPagina("checkout");
+        }}
+      />
+    );
+
     if (pagina === "catalogo") return (
       <CatalogoPage
         onIrLogin={() => setPagina("login")}
@@ -356,6 +440,7 @@ function App() {
         onIrCheckout={() => setPagina("checkout")}
         onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         onRegistroNegocio={() => setPagina("registro-negocio")}
+        onIrMarketplace={() => setPagina("marketplace")}
         onLogout={handleLogout}
         solicitudItems={solicitudItems}
         solicitudCount={solicitudCount}
@@ -501,7 +586,7 @@ function App() {
 
     if (!user) {
       if (pagina === "register") return <Register onRegister={handleLogin} onBack={() => setPagina("login")} />;
-      return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onGoRegistroNegocio={() => setPagina("registro-negocio")} onVolver={() => setPagina("catalogo")} onGoAdminLogin={() => setPagina("admin-login")} />;
+      return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onGoRegistroNegocio={() => setPagina("registro-negocio")} onVolver={() => { limpiarDestinoPostLogin(); setPagina("catalogo"); }} onGoAdminLogin={() => setPagina("admin-login")} />;
     }
 
     if (!allowedPages[user.rol]?.includes(pagina)) return (
@@ -553,7 +638,7 @@ function App() {
 
   const esCliente = user?.rol === "CLIENTE";
   // El registro de negocios es público: nunca va dentro del panel, aunque haya sesión.
-  const usarPanel = pagina === "catalogo" || pagina === "registro-negocio" || (esCliente && PAGINAS_CLIENTE.includes(pagina)) ? false
+  const usarPanel = pagina === "catalogo" || pagina === "registro-negocio" || PAGINAS_MARKETPLACE.includes(pagina) || (esCliente && PAGINAS_CLIENTE.includes(pagina)) ? false
     : !!user && pagina !== "catalogo";
 
   return (
