@@ -180,7 +180,17 @@ public class PagoService {
      */
     public Map<String, Object> crearPagoMarketplace(String concepto, String usuarioId, double monto,
                                                     String ordenId, String cotizacionId) {
-        String referencia = generarReferencia(ordenId);
+        return crearPagoMarketplace(concepto, usuarioId, monto, ordenId, cotizacionId, null);
+    }
+
+    /** Pago de una compra directa del catálogo (concepto CATALOGO): un solo pago de Wompi para varias tiendas. */
+    public Map<String, Object> crearPagoCatalogo(String usuarioId, double monto, String compraId) {
+        return crearPagoMarketplace("CATALOGO", usuarioId, monto, null, null, compraId);
+    }
+
+    private Map<String, Object> crearPagoMarketplace(String concepto, String usuarioId, double monto,
+                                                     String ordenId, String cotizacionId, String compraId) {
+        String referencia = generarReferencia(compraId != null ? compraId : ordenId);
         long montoCentavos = Math.round(monto * 100);
         String checkoutUrlFinal = construirUrlCheckout(usuarioId, referencia, montoCentavos, null, false);
 
@@ -188,6 +198,7 @@ public class PagoService {
         pago.setConcepto(concepto);
         pago.setOrdenServicioId(ordenId);
         pago.setCotizacionId(cotizacionId);
+        pago.setCompraCatalogoId(compraId);
         pago.setUsuarioId(usuarioId);
         pago.setReferencia(referencia);
         pago.setMonto(montoCentavos / 100.0);
@@ -196,7 +207,7 @@ public class PagoService {
         pago.setFechaCreacion(LocalDateTime.now());
         pagoRepository.save(pago);
 
-        log.info("Link de pago {} generado para la orden {} (ref {})", concepto, ordenId, referencia);
+        log.info("Link de pago {} generado para {} (ref {})", concepto, compraId != null ? "la compra " + compraId : "la orden " + ordenId, referencia);
         return Map.of(
                 "checkoutUrl", checkoutUrlFinal,
                 "referencia", referencia,

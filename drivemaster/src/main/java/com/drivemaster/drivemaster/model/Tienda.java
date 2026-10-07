@@ -35,6 +35,11 @@ public class Tienda {
     private Double latitud;
     private Double longitud;
 
+    // Horario de atención al público (retiro de compras del catálogo). Obligatorio junto con dirección y ciudad.
+    private String horario;
+    // Costo fijo de envío de la tienda, en pesos. null = la tienda no hace envíos (solo retiro).
+    private Double costoEnvio;
+
     // Datos administrativos (privados)
     private String nit;
     private String telefono;
@@ -50,4 +55,18 @@ public class Tienda {
 
     private LocalDateTime fechaRegistro;
     private LocalDateTime fechaAprobacion;
+
+    /**
+     * Dirección, ciudad y horario son obligatorios para vender en el catálogo. Las tiendas
+     * anteriores a la 4-A que no los tengan siguen aprobadas, pero sus productos no se
+     * muestran hasta que los completen. No se persiste: se calcula con los datos reales.
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean tieneDatosCompletos() {
+        return noVacio(direccion) && noVacio(ciudad) && noVacio(horario);
+    }
+
+    private static boolean noVacio(String s) {
+        return s != null && !s.isBlank();
+    }
 }

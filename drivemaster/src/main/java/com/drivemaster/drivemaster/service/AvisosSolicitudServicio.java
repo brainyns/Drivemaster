@@ -164,6 +164,48 @@ public class AvisosSolicitudServicio {
                 + (pedido.getMotivoNoDespacho() != null ? pedido.getMotivoNoDespacho() : "sin motivo"));
     }
 
+    // ─── Compras directas del catálogo ───────────────────────────────────────
+
+    /** Comprobante al cliente (con sus códigos de retiro) y aviso a cada tienda. */
+    public void compraPagada(com.drivemaster.drivemaster.model.CompraCatalogo compra, List<PedidoTienda> pedidos,
+                             Map<String, String> codigos, PagoEntity pago) {
+        usuarioRepository.findById(compra.getClienteId()).ifPresent(c -> enviar(c.getCorreo(), "Comprobante de tu compra - DriveMaster",
+                EmailServicioBuilder.clienteCompraPagada(c.getNombre(), compra, pedidos, codigos, pago.getReferencia(),
+                        pago.getTransactionId(), pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now())));
+        for (PedidoTienda p : pedidos) {
+            tiendaRepository.findById(p.getTiendaId()).ifPresent(tienda -> correoTienda(tienda).ifPresent(correo ->
+                    enviar(correo, "Nueva compra pagada - " + (PedidoTienda.ENVIO.equals(p.getEntrega()) ? "envío" : "retiro"),
+                            EmailServicioBuilder.tiendaNuevaCompra(tienda.getNombre(), p))));
+        }
+    }
+
+    /** El pago llegó pero la compra no se pudo completar: aviso al cliente y alerta al ADMIN (reembolso completo). */
+    public void compraNoAplicada(com.drivemaster.drivemaster.model.CompraCatalogo compra, double monto, String motivo) {
+        usuarioRepository.findById(compra.getClienteId()).ifPresent(c -> enviar(c.getCorreo(), "Te devolveremos tu pago",
+                EmailServicioBuilder.clienteCompraNoAplicada(c.getNombre(), monto, motivo)));
+        alertaAdmin("Reembolso pendiente", "Compra del catálogo " + compra.getId() + " sin aplicar. Reembolsar "
+                + Math.round(monto) + " COP: " + motivo);
+    }
+
+    /** La tienda no pudo despachar una compra directa: aviso al cliente (reembolso de esa tienda) y alerta al ADMIN. */
+    public void pedidoCatalogoNoDespachado(PedidoTienda pedido) {
+        double monto = pedido.getTotal() != null ? pedido.getTotal() : 0;
+        usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(),
+                "Una tienda no pudo despachar tu pedido",
+                EmailServicioBuilder.clientePedidoNoDespachado(c.getNombre(), "compra del catálogo",
+                        pedido.getTiendaNombre(), monto)));
+        alertaAdmin("Tienda sin despacho", pedido.getTiendaNombre() + " no puede despachar el pedido " + pedido.getId()
+                + " de una compra del catálogo. Reembolso pendiente: " + Math.round(monto) + " COP. Motivo: "
+                + (pedido.getMotivoNoDespacho() != null ? pedido.getMotivoNoDespacho() : "sin motivo"));
+    }
+
+    /** El pedido de retiro está listo: el cliente ya puede pasar por la tienda con su código. */
+    public void pedidoListoParaRetirar(PedidoTienda pedido) {
+        usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(),
+                "Tu pedido está listo para retirar",
+                EmailServicioBuilder.clientePedidoListoParaRetirar(c.getNombre(), pedido)));
+    }
+
     public void despachoAtrasado(PedidoTienda pedido) {
         alertaAdmin("Pedido sin despachar a tiempo", pedido.getTiendaNombre() + " no ha despachado el pedido "
                 + pedido.getId() + " para " + pedido.getTallerNombre() + " (solicitud " + pedido.getOrdenId() + "). "

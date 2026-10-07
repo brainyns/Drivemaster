@@ -61,7 +61,9 @@ public class PagoMarketplaceService {
 
     public static final String DIAGNOSTICO = "DIAGNOSTICO";
     public static final String COTIZACION = "COTIZACION";
-    private static final Set<String> CONCEPTOS = Set.of(DIAGNOSTICO, COTIZACION);
+    // Compra directa del catálogo (sin taller): la aplica CompraCatalogoService
+    public static final String CATALOGO = "CATALOGO";
+    private static final Set<String> CONCEPTOS = Set.of(DIAGNOSTICO, COTIZACION, CATALOGO);
     private static final String SALIDA = "SALIDA";
     private static final String ENTRADA = "ENTRADA";
 
@@ -81,6 +83,8 @@ public class PagoMarketplaceService {
     private final CotizacionService cotizacionService;
     private final AvisosSolicitudServicio avisos;
     private final ParametrosMarketplace parametros;
+    // Inyección por setter y perezosa: CompraCatalogoService depende de PagoService, que depende de esta clase
+    private CompraCatalogoService catalogo;
 
     public PagoMarketplaceService(PagoService pagoService,
                                   PagoRepository pagoRepository,
@@ -116,6 +120,11 @@ public class PagoMarketplaceService {
         this.avisos = avisos;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setCatalogo(@org.springframework.context.annotation.Lazy CompraCatalogoService catalogo) {
+        this.catalogo = catalogo;
+    }
+
     public static boolean esMarketplace(String concepto) {
         return concepto != null && CONCEPTOS.contains(concepto);
     }
@@ -134,6 +143,7 @@ public class PagoMarketplaceService {
         boolean reembolso = pago.getId() != null && reembolsoRepository.existsByPagoId(pago.getId());
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("estadoPago", pago.getEstado());
+        if (pago.getCompraCatalogoId() != null) r.put("compraId", pago.getCompraCatalogoId());
         r.put("reembolsoPendiente", reembolso);
         r.put("aplicado", "PAGADO".equals(pago.getEstado()) && !reembolso);
         return r;
@@ -202,6 +212,8 @@ public class PagoMarketplaceService {
         try {
             if (DIAGNOSTICO.equals(pago.getConcepto())) {
                 aplicarDiagnostico(pago);
+            } else if (CATALOGO.equals(pago.getConcepto())) {
+                catalogo.aplicar(pago);
             } else {
                 aplicarCotizacion(pago);
             }
@@ -405,6 +417,7 @@ public class PagoMarketplaceService {
         return reembolsoRepository.save(Reembolso.builder()
                 .pagoId(pago.getId())
                 .ordenServicioId(pago.getOrdenServicioId())
+                .compraCatalogoId(pago.getCompraCatalogoId())
                 .pedidoTiendaId(pedidoTiendaId)
                 .usuarioId(pago.getUsuarioId())
                 .referenciaPago(pago.getReferencia())

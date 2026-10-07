@@ -30,6 +30,8 @@ public class Reembolso {
 
     private String ordenServicioId;
     private String pedidoTiendaId;
+    // Compra directa del catálogo (concepto CATALOGO)
+    private String compraCatalogoId;
     private String usuarioId;
     // Para ubicar la transacción en el panel de Wompi
     private String referenciaPago;

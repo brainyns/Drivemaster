@@ -136,13 +136,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/cotizaciones/orden/*").authenticated()
                         .requestMatchers("/api/cotizaciones/**").denyAll()
 
+                        // Catálogo marketplace: la consulta es pública; la compra y sus códigos son del CLIENTE
+                        .requestMatchers(HttpMethod.GET, "/api/catalogo/productos", "/api/catalogo/productos/*",
+                                "/api/catalogo/filtros").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/catalogo/compras/cotizar", "/api/catalogo/compras",
+                                "/api/catalogo/pedidos/*/codigo-retiro").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/catalogo/compras/mias").hasRole("CLIENTE")
+                        .requestMatchers("/api/catalogo/**").denyAll()
+
                         // Marketplace: pagos (links), pedidos a tiendas y liquidaciones
                         .requestMatchers(HttpMethod.POST, "/api/pagos-marketplace/diagnostico/*",
                                 "/api/pagos-marketplace/cotizacion/*", "/api/pagos-marketplace/simular/*").hasRole("CLIENTE")
                         .requestMatchers("/api/pagos-marketplace/**").denyAll()
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/mios").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.PATCH, "/api/pedidos-tienda/*/preparar", "/api/pedidos-tienda/*/despachar",
-                                "/api/pedidos-tienda/*/no-despachar").hasRole("TIENDA")
+                                "/api/pedidos-tienda/*/no-despachar", "/api/pedidos-tienda/*/listo-retiro").hasRole("TIENDA")
+                        .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/*/retiro/validar").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/orden/*/recibidos").hasRole("TALLER")
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/orden/*").authenticated()
                         .requestMatchers("/api/pedidos-tienda/**").denyAll()

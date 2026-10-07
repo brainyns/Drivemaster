@@ -38,7 +38,7 @@ public class PagoEntity {
     private LocalDateTime fechaPago;
 
     // ─── Marketplace ───
-    // Qué se cobra: VENTA, SOLICITUD, DIAGNOSTICO o COTIZACION.
+    // Qué se cobra: VENTA, SOLICITUD, DIAGNOSTICO, COTIZACION o CATALOGO.
     // Null en los pagos anteriores al marketplace.
     @Column(length = 20)
     private String concepto;
@@ -46,6 +46,9 @@ public class PagoEntity {
     private String ordenServicioId;
 
     private String cotizacionId;
+
+    // Compra directa del catálogo (concepto CATALOGO); ordenServicioId queda null
+    private String compraCatalogoId;
 
     // Usuario (cliente) que realiza el pago.
     private String usuarioId;
