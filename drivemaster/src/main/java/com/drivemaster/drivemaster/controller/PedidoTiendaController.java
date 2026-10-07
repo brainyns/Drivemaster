@@ -32,6 +32,11 @@ public class PedidoTiendaController {
         return ResponseEntity.ok(service.misPedidos(auth.getName()));
     }
 
+    @PatchMapping("/{id}/preparar")
+    public ResponseEntity<PedidoTienda> preparar(@PathVariable String id, Authentication auth) {
+        return ResponseEntity.ok(service.iniciarPreparacion(auth.getName(), id));
+    }
+
     @PatchMapping("/{id}/despachar")
     public ResponseEntity<PedidoTienda> despachar(@PathVariable String id,
                                                   @RequestBody(required = false) Map<String, String> body,

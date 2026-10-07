@@ -138,6 +138,9 @@ class PagoRechazadoLuegoAprobadoTest {
                         && m.getTipo().equals(i.getArgument(1)) && i.getArgument(2).equals(m.getReferencia())));
         MovimientoInventarioService movimientoService = new MovimientoInventarioServiceImpl(movimientoRepository, productoService);
 
+        ParametrosMarketplace parametros = mock(ParametrosMarketplace.class);
+        when(parametros.plazoDespachoDiasHabiles()).thenReturn(2);
+        when(parametros.plazoEncargoDiasExtra()).thenReturn(2);
         pagoRepository = mock(PagoRepository.class);
         when(pagoRepository.findByReferencia(anyString()))
                 .thenAnswer(i -> i.getArgument(0).equals(fila.getReferencia()) ? Optional.of(copia(fila)) : Optional.empty());
@@ -186,7 +189,7 @@ class PagoRechazadoLuegoAprobadoTest {
         service = new PagoMarketplaceService(mock(PagoService.class), pagoRepository, ordenRepository, cotizacionRepository,
                 pedidoRepository, repartoRepository, mock(ReembolsoRepository.class), tallerRepository,
                 productoService, movimientoService, movimientoRepository, mock(UsuarioService.class), transiciones,
-                mock(CotizacionService.class), mock(AvisosSolicitudServicio.class));
+                mock(CotizacionService.class), mock(AvisosSolicitudServicio.class), parametros);
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).estado(EstadoOrden.APROBADA)
                 .tallerId("t1").usuarioId("u1").cotizacionId("c1").build();
@@ -243,6 +246,22 @@ class PagoRechazadoLuegoAprobadoTest {
         assertEquals(2, repartos.stream().filter(r -> RepartoPago.TIENDA.equals(r.getBeneficiarioTipo())).count());
         assertEquals(1, repartos.stream().filter(r -> RepartoPago.TALLER.equals(r.getBeneficiarioTipo())).count());
         assertEquals(EstadoOrden.REPUESTOS_PEDIDOS, orden.getEstado());
+        // Plazo de despacho (stock: 2 días hábiles desde el pago) y repartos con la regla por evento
+        assertTrue(pedidos.stream().allMatch(p -> p.getPlazoDespachoHasta() != null
+                && p.getPlazoDespachoHasta().isAfter(p.getFechaCreacion())));
+        assertTrue(repartos.stream().allMatch(r -> Boolean.TRUE.equals(r.getLiquidacionPorEvento())
+                && RepartoPago.PENDIENTE.equals(r.getEstado())));
+        // En pesos enteros y sin perder ni inventar un peso: lo repartido es exactamente lo pagado
+        assertEquals(100_000.0, repartos.stream().mapToDouble(RepartoPago::getMonto).sum());
+        assertTrue(repartos.stream().allMatch(r -> r.getMonto() == Math.rint(r.getMonto())));
+        // Plazo de despacho (stock: 2 días hábiles desde el pago) y repartos con la regla por evento
+        assertTrue(pedidos.stream().allMatch(p -> p.getPlazoDespachoHasta() != null
+                && p.getPlazoDespachoHasta().isAfter(p.getFechaCreacion())));
+        assertTrue(repartos.stream().allMatch(r -> Boolean.TRUE.equals(r.getLiquidacionPorEvento())
+                && RepartoPago.PENDIENTE.equals(r.getEstado())));
+        // En pesos enteros y sin perder ni inventar un peso: lo repartido es exactamente lo pagado
+        assertEquals(100_000.0, repartos.stream().mapToDouble(RepartoPago::getMonto).sum());
+        assertTrue(repartos.stream().allMatch(r -> r.getMonto() == Math.rint(r.getMonto())));
         assertEquals("PAGADO", fila.getEstado());
         assertEquals("txn-aprobada", fila.getTransactionId());
     }

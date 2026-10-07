@@ -61,7 +61,7 @@ class SeleccionRepuestosConfirmacionTest {
         service = new SolicitudServicioServiceImpl(ordenRepository, mock(TallerRepository.class), vehiculoService,
                 mock(UsuarioService.class), tallerService, mock(CloudinaryService.class), transiciones,
                 mock(AsignacionTallerService.class), mock(ParametrosMarketplace.class),
-                mock(AvisosSolicitudServicio.class), productoService, buscador);
+                mock(AvisosSolicitudServicio.class), productoService, buscador, mock(LiquidacionService.class));
 
         taller = Taller.builder().id("t1").nombre("AutoMax").activo(true)
                 .estadoAprobacion(EstadoAprobacion.APROBADO).build();

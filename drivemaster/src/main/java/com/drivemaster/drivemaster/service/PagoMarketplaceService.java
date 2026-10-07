@@ -21,6 +21,8 @@ import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
+import com.drivemaster.drivemaster.util.Dinero;
+import com.drivemaster.drivemaster.util.PlazoHabil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -29,6 +31,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -77,6 +80,7 @@ public class PagoMarketplaceService {
     private final TransicionOrdenService transiciones;
     private final CotizacionService cotizacionService;
     private final AvisosSolicitudServicio avisos;
+    private final ParametrosMarketplace parametros;
 
     public PagoMarketplaceService(PagoService pagoService,
                                   PagoRepository pagoRepository,
@@ -92,7 +96,9 @@ public class PagoMarketplaceService {
                                   UsuarioService usuarioService,
                                   TransicionOrdenService transiciones,
                                   CotizacionService cotizacionService,
-                                  AvisosSolicitudServicio avisos) {
+                                  AvisosSolicitudServicio avisos,
+                                  ParametrosMarketplace parametros) {
+        this.parametros = parametros;
         this.pagoService = pagoService;
         this.pagoRepository = pagoRepository;
         this.ordenRepository = ordenRepository;
@@ -309,15 +315,18 @@ public class PagoMarketplaceService {
         // 3. Pedidos por tienda y reparto
         Taller taller = tallerRepository.findById(orden.getTallerId()).orElse(null);
         List<PedidoTienda> pedidos = crearPedidos(pago, pagada, cotizacion, taller);
-        double paraTiendas = 0;
+        // Montos en pesos enteros y con BigDecimal: lo del taller es el resto exacto del pago
+        BigDecimal paraTiendas = BigDecimal.ZERO;
         for (PedidoTienda p : pedidos) {
-            repartoRepository.save(reparto(pago, RepartoPago.TIENDA, p.getTiendaId(), p.getTiendaNombre(), p.getTotal(), p.getId()));
-            paraTiendas += p.getTotal();
+            BigDecimal montoTienda = Dinero.pesos(p.getTotal());
+            repartoRepository.save(reparto(pago, RepartoPago.TIENDA, p.getTiendaId(), p.getTiendaNombre(),
+                    Dinero.aDouble(montoTienda), p.getId()));
+            paraTiendas = paraTiendas.add(montoTienda);
         }
-        double paraTaller = Math.max(0, pago.getMonto() - paraTiendas);
-        if (paraTaller > 0) {
+        BigDecimal paraTaller = Dinero.pesos(pago.getMonto()).subtract(paraTiendas).max(BigDecimal.ZERO);
+        if (paraTaller.signum() > 0) {
             repartoRepository.save(reparto(pago, RepartoPago.TALLER, orden.getTallerId(),
-                    taller != null ? taller.getNombre() : cotizacion.getTallerNombre(), paraTaller, null));
+                    taller != null ? taller.getNombre() : cotizacion.getTallerNombre(), Dinero.aDouble(paraTaller), null));
         }
 
         // 4. Siguiente estado: con repuestos se esperan los pedidos; sin ellos, listo para trabajar
@@ -340,6 +349,7 @@ public class PagoMarketplaceService {
         }
         double ivaPct = cotizacion.getIvaPct() != null ? cotizacion.getIvaPct() : 0;
         List<PedidoTienda> pedidos = new ArrayList<>();
+        LocalDateTime ahora = LocalDateTime.now();
         for (List<CotizacionItem> items : porTienda.values()) {
             double subtotal = items.stream().mapToDouble(i -> i.getSubtotal() != null ? i.getSubtotal() : 0).sum();
             double iva = Math.round(subtotal * ivaPct / 100.0);
@@ -363,11 +373,29 @@ public class PagoMarketplaceService {
                     .iva(iva)
                     .total(subtotal + iva)
                     .diasEntrega(dias)
+                    .plazoDespachoHasta(plazoDespacho(items, ahora, parametros.plazoDespachoDiasHabiles(), parametros.plazoEncargoDiasExtra()))
                     .estado(PedidoTienda.PENDIENTE)
-                    .fechaCreacion(LocalDateTime.now())
+                    .fechaCreacion(ahora)
                     .build()));
         }
         return pedidos;
+    }
+
+    /**
+     * Plazo máximo de despacho, en días hábiles desde el pago: con todo en stock,
+     * diasStock; si el pedido trae encargos, los días estimados del encargo más
+     * tardío (sin estimado cuenta 0) más diasExtraEncargo.
+     */
+    static LocalDateTime plazoDespacho(List<CotizacionItem> items, LocalDateTime pagoEn, int diasStock, int diasExtraEncargo) {
+        boolean hayEncargo = false;
+        int maxEstimado = 0;
+        for (CotizacionItem i : items) {
+            if ("ENCARGO".equals(i.getDisponibilidad())) {
+                hayEncargo = true;
+                if (i.getDiasEntrega() != null) maxEstimado = Math.max(maxEstimado, i.getDiasEntrega());
+            }
+        }
+        return PlazoHabil.sumarDiasHabiles(pagoEn, hayEncargo ? maxEstimado + diasExtraEncargo : diasStock);
     }
 
     // ─── Reembolsos ──────────────────────────────────────────────────────────
@@ -457,6 +485,7 @@ public class PagoMarketplaceService {
                 .beneficiarioNombre(nombre)
                 .monto(monto)
                 .estado(RepartoPago.PENDIENTE)
+                .liquidacionPorEvento(true)
                 .fechaCreacion(LocalDateTime.now())
                 .build();
     }

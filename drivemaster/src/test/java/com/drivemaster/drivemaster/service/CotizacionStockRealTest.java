@@ -111,7 +111,7 @@ class CotizacionStockRealTest {
         service = new PagoMarketplaceService(mock(PagoService.class), pagoRepository, ordenRepository, cotizacionRepository,
                 pedidoRepository, mock(RepartoPagoRepository.class), mock(ReembolsoRepository.class), tallerRepository,
                 productoService, movimientoService, movimientoRepository, mock(UsuarioService.class), transiciones,
-                mock(CotizacionService.class), mock(AvisosSolicitudServicio.class));
+                mock(CotizacionService.class), mock(AvisosSolicitudServicio.class), mock(ParametrosMarketplace.class));
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).estado(EstadoOrden.APROBADA)
                 .tallerId("t1").usuarioId("u1").cotizacionId("c1").build();

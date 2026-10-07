@@ -68,6 +68,16 @@ public class ParametrosMarketplace {
         return entero("HORA_FIN_ATENCION", 19);
     }
 
+    /** Días hábiles para despachar un pedido con repuestos en stock (cuenta desde el pago). */
+    public int plazoDespachoDiasHabiles() {
+        return entero("PLAZO_DESPACHO_DIAS_HABILES", 2);
+    }
+
+    /** Días hábiles que se suman a los días estimados de un encargo. */
+    public int plazoEncargoDiasExtra() {
+        return entero("PLAZO_ENCARGO_DIAS_EXTRA", 2);
+    }
+
     private String valor(String clave) {
         return parametroRepository.findByClave(clave).map(p -> p.getValor()).orElse(null);
     }

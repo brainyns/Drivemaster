@@ -164,6 +164,14 @@ public class AvisosSolicitudServicio {
                 + (pedido.getMotivoNoDespacho() != null ? pedido.getMotivoNoDespacho() : "sin motivo"));
     }
 
+    public void despachoAtrasado(PedidoTienda pedido) {
+        alertaAdmin("Pedido sin despachar a tiempo", pedido.getTiendaNombre() + " no ha despachado el pedido "
+                + pedido.getId() + " para " + pedido.getTallerNombre() + " (solicitud " + pedido.getOrdenId() + "). "
+                + "Estado: " + pedido.getEstado() + ". Plazo vencido: "
+                + (pedido.getPlazoDespachoHasta() != null ? pedido.getPlazoDespachoHasta().toLocalDate() : "sin plazo")
+                + ". Total del pedido: " + Math.round(pedido.getTotal() != null ? pedido.getTotal() : 0) + " COP.");
+    }
+
     public void vehiculoListo(OrdenServicio orden) {
         Taller t = taller(orden).orElse(null);
         cliente(orden).ifPresent(c -> enviar(c.getCorreo(), "Tu vehículo está listo",

@@ -23,7 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Pedidos de repuestos a las tiendas (uno por tienda y cotización pagada).
@@ -49,6 +51,7 @@ public class PedidoTiendaService {
     private final TransicionOrdenService transiciones;
     private final PagoMarketplaceService pagoMarketplace;
     private final AvisosSolicitudServicio avisos;
+    private final LiquidacionService liquidacion;
 
     public PedidoTiendaService(PedidoTiendaRepository pedidoRepository,
                                TiendaRepository tiendaRepository,
@@ -60,7 +63,9 @@ public class PedidoTiendaService {
                                TallerService tallerService,
                                TransicionOrdenService transiciones,
                                PagoMarketplaceService pagoMarketplace,
-                               AvisosSolicitudServicio avisos) {
+                               AvisosSolicitudServicio avisos,
+                               LiquidacionService liquidacion) {
+        this.liquidacion = liquidacion;
         this.pedidoRepository = pedidoRepository;
         this.tiendaRepository = tiendaRepository;
         this.ordenRepository = ordenRepository;
@@ -78,6 +83,41 @@ public class PedidoTiendaService {
 
     public List<PedidoTienda> misPedidos(String correoTienda) {
         return pedidoRepository.findByTiendaIdOrderByFechaCreacionDesc(tiendaDe(correoTienda).getId());
+    }
+
+    /**
+     * La tienda empieza a conseguir un repuesto por encargo: PENDIENTE → EN_PREPARACION.
+     * Solo pedidos con al menos un ítem por encargo; los de stock se despachan directo.
+     * El plazo de despacho no cambia (corre desde el pago).
+     */
+    public PedidoTienda iniciarPreparacion(String correoTienda, String pedidoId) {
+        Tienda tienda = tiendaDe(correoTienda);
+        PedidoTienda actual = pedidoRepository.findById(pedidoId)
+                .filter(p -> tienda.getId().equals(p.getTiendaId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+        boolean hayEncargo = actual.getItems() != null
+                && actual.getItems().stream().anyMatch(i -> "ENCARGO".equals(i.getDisponibilidad()));
+        if (!hayEncargo) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Solo los pedidos con repuestos por encargo pasan por preparación: despáchalo directamente");
+        }
+        PedidoTienda pedido = mongoTemplate.findAndModify(
+                Query.query(Criteria.where("id").is(pedidoId).and("tiendaId").is(tienda.getId())
+                        .and("estado").is(PedidoTienda.PENDIENTE)),
+                new Update().set("estado", PedidoTienda.EN_PREPARACION).set("fechaPreparacion", LocalDateTime.now()),
+                FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
+        if (pedido == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El pedido ya no está pendiente");
+        }
+        ordenRepository.findById(pedido.getOrdenId()).ifPresent(o -> {
+            try {
+                transiciones.registrar(o, new Actor("TIENDA", tienda.getId(), tienda.getNombre()),
+                        tienda.getNombre() + " está preparando el encargo", null, null);
+            } catch (ResponseStatusException ignored) {
+                // Informativo
+            }
+        });
+        return pedido;
     }
 
     public PedidoTienda despachar(String correoTienda, String pedidoId, String nota) {
@@ -162,11 +202,24 @@ public class PedidoTiendaService {
         transiciones.transicionar(orden, EstadoOrden.REPUESTOS_RECIBIDOS,
                 new Actor(EstadoOrden.TALLER, taller.getId(), taller.getNombre()), "Repuestos recibidos en el taller",
                 Criteria.where("tallerId").is(taller.getId()), null);
+        Map<String, String> estadoPrevio = new HashMap<>();
+        for (PedidoTienda p : pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId())) {
+            estadoPrevio.put(p.getId(), p.getEstado());
+        }
         mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())
-                        .and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.DESPACHADO)),
+                        .and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION, PedidoTienda.DESPACHADO)),
                 new Update().set("estado", PedidoTienda.RECIBIDO).set("fechaRecibido", LocalDateTime.now()),
                 PedidoTienda.class);
-        return pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
+        List<PedidoTienda> pedidos = pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
+        // Recepción confirmada: la línea de cada tienda queda lista para liquidar (también si no marcó despacho)
+        for (PedidoTienda p : pedidos) {
+            if (!PedidoTienda.RECIBIDO.equals(p.getEstado())) continue;
+            String previo = estadoPrevio.get(p.getId());
+            String evento = "RECEPCION_CONFIRMADA_TALLER" + (PedidoTienda.PENDIENTE.equals(previo)
+                    ? " (la tienda no había marcado el despacho)" : "");
+            liquidacion.pedidoRecibido(p.getId(), evento);
+        }
+        return pedidos;
     }
 
     // ─── Consulta por orden ──────────────────────────────────────────────────
@@ -191,7 +244,7 @@ public class PedidoTiendaService {
     private PedidoTienda cambiarPendiente(Tienda tienda, String pedidoId, Update cambios) {
         PedidoTienda pedido = mongoTemplate.findAndModify(
                 Query.query(Criteria.where("id").is(pedidoId).and("tiendaId").is(tienda.getId())
-                        .and("estado").is(PedidoTienda.PENDIENTE)),
+                        .and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)),
                 cambios, FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
         if (pedido == null) {
             boolean existe = pedidoRepository.findById(pedidoId).filter(p -> tienda.getId().equals(p.getTiendaId())).isPresent();

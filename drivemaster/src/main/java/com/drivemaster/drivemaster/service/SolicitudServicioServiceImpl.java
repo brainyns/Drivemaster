@@ -65,6 +65,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private final AvisosSolicitudServicio avisos;
     private final ProductoService productoService;
     private final BuscadorRepuestosService buscador;
+    private final LiquidacionService liquidacion;
 
     public SolicitudServicioServiceImpl(OrdenServicioRepository ordenRepository,
                                         TallerRepository tallerRepository,
@@ -77,7 +78,9 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                                         ParametrosMarketplace parametros,
                                         AvisosSolicitudServicio avisos,
                                         ProductoService productoService,
-                                        BuscadorRepuestosService buscador) {
+                                        BuscadorRepuestosService buscador,
+                                        LiquidacionService liquidacion) {
+        this.liquidacion = liquidacion;
         this.productoService = productoService;
         this.buscador = buscador;
         this.ordenRepository = ordenRepository;
@@ -546,8 +549,11 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
 
     @Override
     public SolicitudServicioDTO marcarEntregada(String correoTaller, String id) {
-        return avanzar(correoTaller, id, EstadoOrden.ENTREGADA, "Vehículo entregado al cliente",
+        SolicitudServicioDTO entregada = avanzar(correoTaller, id, EstadoOrden.ENTREGADA, "Vehículo entregado al cliente",
                 new Update().set("fechaEntrega", LocalDateTime.now()));
+        // La línea del taller queda lista para liquidar (SIMULADO: se paga sola; MANUAL: la paga el ADMIN)
+        liquidacion.ordenEntregada(id);
+        return entregada;
     }
 
     /**

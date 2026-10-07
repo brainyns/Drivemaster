@@ -124,7 +124,9 @@ public class MysqlDataInitializer implements CommandLineRunner {
     new Object[]{"TIMEOUT_PAGO_DIAGNOSTICO_MIN", "1440",  "Minutos para pagar el diagnóstico tras la propuesta de cita (sin pasar la cita); si vence, se cancela"},
     new Object[]{"RADIO_MAX_KM",                 "30",    "Radio máximo (km) para asignar un taller fuera de la ciudad del cliente"},
     new Object[]{"HORA_INICIO_ATENCION",         "7",     "Hora (Colombia) en que empieza a correr el plazo de respuesta del taller (L-S)"},
-    new Object[]{"HORA_FIN_ATENCION",            "19",    "Hora (Colombia) en que se detiene el plazo de respuesta del taller"}
+    new Object[]{"HORA_FIN_ATENCION",            "19",    "Hora (Colombia) en que se detiene el plazo de respuesta del taller"},
+    new Object[]{"PLAZO_DESPACHO_DIAS_HABILES",  "2",     "Días hábiles que tiene una tienda para despachar un pedido (desde el pago)"},
+    new Object[]{"PLAZO_ENCARGO_DIAS_EXTRA",     "2",     "Días hábiles extra sobre los días estimados de un encargo antes de alertar al ADMIN"}
 );
 
         for (Object[] p : params) {

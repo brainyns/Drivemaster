@@ -45,6 +45,7 @@ import PedidosTienda         from "./pages/PedidosTienda";
 import Liquidaciones         from "./pages/Liquidaciones";
 import ChatWidget            from "./components/chat/ChatWidget";
 import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
+import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
 
 const storedUser  = getUser();
 const storedToken = getToken();
@@ -137,6 +138,8 @@ function App() {
   const [solicitudItems, setSolicitudItems] = useState(loadSolicitud);
   const [solicitudAbierta, setSolicitudAbierta] = useState(false);
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
+  // true cuando el cliente llegó a "Mis servicios" iniciando sesión desde el enlace de la cotización
+  const [vieneDeCotizacion, setVieneDeCotizacion] = useState(false);
 
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
 
@@ -232,6 +235,15 @@ function App() {
     setToken(auth.token);
     setSessionExpired(false);
 
+    // Desde el enlace de la cotización: el cliente vuelve a "Mis servicios". El destino se
+    // consume siempre (no queda guardado para otro inicio de sesión) y solo vale si el login
+    // se hizo desde esa pantalla; otros roles van a su inicio normal.
+    const destino = consumirDestinoPostLogin();
+    if (destino === "mis-servicios" && pagina === "mis-servicios" && auth.rol === "CLIENTE") {
+      setVieneDeCotizacion(true);
+      return;
+    }
+
     // Un cliente que inicia sesión desde una página de cliente (ej. Solicitar
     // diagnóstico) se queda en ella en lugar de volver al catálogo.
     if (auth.rol === "CLIENTE" && PAGINAS_CLIENTE.includes(pagina)) return;
@@ -240,6 +252,8 @@ function App() {
 
   const handleLogout = async () => {
     await logout();
+    limpiarDestinoPostLogin();
+    setVieneDeCotizacion(false);
     setUser(null); setToken(null);
     setPagina("catalogo");
     setSolicitudItems([]);
@@ -408,7 +422,12 @@ function App() {
     // Pública: responder la cotización desde el correo sin iniciar sesión
     if (pagina === "cotizacion-publica") return (
       <CotizacionPublica
-        onIrServicios={() => { window.history.replaceState(null, "", "/"); setPagina("mis-servicios"); }}
+        onIrServicios={() => {
+          window.history.replaceState(null, "", "/");
+          // Sin sesión, "Mis servicios" pide iniciar sesión: al terminar se vuelve aquí
+          if (!user) guardarDestinoPostLogin("mis-servicios");
+          setPagina("mis-servicios");
+        }}
         onIrInicio={() => { window.history.replaceState(null, "", "/"); setPagina("catalogo"); }}
       />
     );
@@ -440,14 +459,17 @@ function App() {
     }
 
     if (pagina === "solicitar-diagnostico" || pagina === "mis-servicios") {
-      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
+      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")}
+        onVolver={() => { limpiarDestinoPostLogin(); setPagina("catalogo"); }} />;
       if (user.rol !== "CLIENTE") return (
         <div style={{ padding: "40px" }}>Esta sección es para clientes. Ingresa con una cuenta de cliente para solicitar un diagnóstico.</div>
       );
       if (pagina === "mis-servicios") return (
         <MisServicios
-          onVolver={() => setPagina("catalogo")}
+          onVolver={() => { setVieneDeCotizacion(false); setPagina("catalogo"); }}
           onSolicitar={() => irA("solicitar-diagnostico")}
+          avisoCotizacion={vieneDeCotizacion ? user.correo : null}
+          onCerrarAviso={() => setVieneDeCotizacion(false)}
         />
       );
       return (

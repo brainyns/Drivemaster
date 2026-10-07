@@ -19,11 +19,18 @@ export async function listarRepartos(token, estado) {
   return handle(res, "No se pudieron cargar las liquidaciones");
 }
 
-export async function liquidarReparto(token, id, nota) {
+/** Modo de dispersión del backend: { modo: "SIMULADO" | "MANUAL", automatica } */
+export async function obtenerModo(token) {
+  const res = await apiFetch(`${BASE}/modo`, { headers: headers(token) });
+  return handle(res, "No se pudo consultar el modo de liquidación");
+}
+
+/** En modo MANUAL el número de transferencia es obligatorio; en SIMULADO el backend lo ignora. */
+export async function liquidarReparto(token, id, { numeroTransferencia, nota } = {}) {
   const res = await apiFetch(`${BASE}/repartos/${id}/liquidar`, {
-    method: "PATCH", headers: headers(token), body: JSON.stringify({ nota }),
+    method: "PATCH", headers: headers(token), body: JSON.stringify({ numeroTransferencia, nota }),
   });
-  return handle(res, "No se pudo marcar como liquidado");
+  return handle(res, "No se pudo liquidar");
 }
 
 export async function listarReembolsos(token, estado) {

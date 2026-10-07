@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { getToken } from "../services/authService";
-import { misPedidosTienda, despacharPedido, noPuedoDespachar } from "../services/pedidoTiendaService";
+import { misPedidosTienda, prepararPedido, despacharPedido, noPuedoDespachar } from "../services/pedidoTiendaService";
 import Etiqueta from "../components/servicio/Etiqueta";
 import { ESTADOS_PEDIDO, MOTIVOS_NO_DESPACHO, formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
 
+// Por despachar = recién pagados + los encargos que la tienda ya está preparando
 const FILTROS = [
-  { key: "PENDIENTE", label: "Por despachar" },
-  { key: "DESPACHADO", label: "Despachados" },
-  { key: "TODOS", label: "Todos" },
+  { key: "POR_DESPACHAR", label: "Por despachar", estados: ["PENDIENTE", "EN_PREPARACION"] },
+  { key: "DESPACHADO", label: "Despachados", estados: ["DESPACHADO"] },
+  { key: "TODOS", label: "Todos", estados: null },
 ];
+
+const porDespachar = (p) => p.estado === "PENDIENTE" || p.estado === "EN_PREPARACION";
+const tieneEncargo = (p) => (p.items || []).some((i) => i.disponibilidad === "ENCARGO");
+const plazoVencido = (p) => porDespachar(p) && p.plazoDespachoHasta && new Date(p.plazoDespachoHasta) < new Date();
 
 /**
  * Pedidos pagados que la tienda debe llevar al taller. "No puedo despachar" exige
@@ -23,7 +28,7 @@ export default function PedidosTienda() {
   const [pedidos, setPedidos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [filtro, setFiltro] = useState("PENDIENTE");
+  const [filtro, setFiltro] = useState("POR_DESPACHAR");
   const [abiertoId, setAbiertoId] = useState(null);
   const [modo, setModo] = useState(null); // null | DESPACHAR | NO_DESPACHAR
   const [nota, setNota] = useState("");
@@ -51,6 +56,19 @@ export default function PedidosTienda() {
     setError(null);
   };
 
+  const iniciarPreparacion = async (pedido) => {
+    setProcesando(true);
+    setError(null);
+    try {
+      await prepararPedido(token, pedido.id);
+      await cargar();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setProcesando(false);
+    }
+  };
+
   const confirmar = async (pedido) => {
     if (modo === "NO_DESPACHAR") {
       if (!tipoMotivo) return setError("Elige el motivo.");
@@ -73,8 +91,13 @@ export default function PedidosTienda() {
 
   if (cargando) return <p className="sv-empty">Cargando pedidos...</p>;
 
-  const visibles = filtro === "TODOS" ? pedidos : pedidos.filter((p) => p.estado === filtro);
-  const conteo = (key) => (key === "TODOS" ? pedidos.length : pedidos.filter((p) => p.estado === key).length);
+  const estadosDe = (key) => FILTROS.find((f) => f.key === key)?.estados;
+  const enFiltro = (key) => {
+    const estados = estadosDe(key);
+    return estados ? pedidos.filter((p) => estados.includes(p.estado)) : pedidos;
+  };
+  const visibles = enFiltro(filtro);
+  const conteo = (key) => enFiltro(key).length;
 
   return (
     <div className="ss-panel">
@@ -92,12 +115,12 @@ export default function PedidosTienda() {
 
       {visibles.length === 0 ? (
         <p className="sv-empty">
-          {filtro === "PENDIENTE" ? "No tienes pedidos por despachar. Te avisaremos por correo cuando llegue uno." : "No hay pedidos en esta lista."}
+          {filtro === "POR_DESPACHAR" ? "No tienes pedidos por despachar. Te avisaremos por correo cuando llegue uno." : "No hay pedidos en esta lista."}
         </p>
       ) : (
         <div className="sv-list">
           {visibles.map((p) => (
-            <section key={p.id} className={`ss-bloque${p.estado === "PENDIENTE" ? " ss-bloque--destacado" : ""}`}>
+            <section key={p.id} className={`ss-bloque${porDespachar(p) ? " ss-bloque--destacado" : ""}`}>
               <div className="ct-detalle__cabecera">
                 <span className="ss-eyebrow">Pedido #{refSolicitud(p.id)} · {formatFechaHora(p.fechaCreacion)}</span>
                 <Etiqueta estado={p.estado} catalogo={ESTADOS_PEDIDO} />
@@ -129,6 +152,16 @@ export default function PedidosTienda() {
                 <br />Vehículo: {p.vehiculoDescripcion}
               </div>
 
+              {porDespachar(p) && p.plazoDespachoHasta && (
+                <p className={plazoVencido(p) ? "ss-error" : "ss-meta"} role={plazoVencido(p) ? "alert" : undefined}>
+                  {plazoVencido(p)
+                    ? `Plazo de despacho vencido el ${formatFechaHora(p.plazoDespachoHasta)}. DriveMaster ya fue alertado.`
+                    : `Despáchalo antes del ${formatFechaHora(p.plazoDespachoHasta)}.`}
+                </p>
+              )}
+              {p.estado === "EN_PREPARACION" && p.fechaPreparacion && (
+                <p className="ss-meta">En preparación desde el {formatFechaHora(p.fechaPreparacion)}</p>
+              )}
               {p.estado === "DESPACHADO" && (
                 <p className="ss-meta">Despachado el {formatFechaHora(p.fechaDespacho)}{p.notaDespacho ? ` · ${p.notaDespacho}` : ""}</p>
               )}
@@ -136,8 +169,13 @@ export default function PedidosTienda() {
                 <p className="ss-meta">No despachado: {p.motivoNoDespacho}</p>
               )}
 
-              {p.estado === "PENDIENTE" && (abiertoId !== p.id ? (
+              {porDespachar(p) && (abiertoId !== p.id ? (
                 <div className="ss-acciones">
+                  {p.estado === "PENDIENTE" && tieneEncargo(p) && (
+                    <button className="sv-btn-outline" onClick={() => iniciarPreparacion(p)} disabled={procesando}>
+                      Iniciar preparación
+                    </button>
+                  )}
                   <button className="sv-btn" onClick={() => { abrir(p.id); setModo("DESPACHAR"); }}>Marcar despachado</button>
                   <button className="sv-btn-outline" onClick={() => { abrir(p.id); setModo("NO_DESPACHAR"); }}>No puedo despachar</button>
                 </div>

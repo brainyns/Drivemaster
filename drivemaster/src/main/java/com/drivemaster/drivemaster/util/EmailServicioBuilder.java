@@ -197,6 +197,9 @@ public final class EmailServicioBuilder {
                         + e(unir(p.getTallerDireccion(), p.getTallerCiudad()))
                         + (p.getTallerTelefono() != null ? "<br/>Tel. " + e(p.getTallerTelefono()) : "")
                         + "<br/>Vehículo: " + e(p.getVehiculoDescripcion()))
+                + (p.getPlazoDespachoHasta() != null
+                        ? parrafo("<strong>Plazo máximo para despachar: " + e(FECHA_HORA.format(p.getPlazoDespachoHasta())) + "</strong>")
+                        : "")
                 + parrafo("Marca el pedido como despachado en tu panel, o \"No puedo despachar\" si no lo puedes surtir."));
     }
 
