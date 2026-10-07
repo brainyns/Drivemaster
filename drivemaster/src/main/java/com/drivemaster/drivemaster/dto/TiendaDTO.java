@@ -20,6 +20,11 @@ public class TiendaDTO {
     private String direccion;
     private Double latitud;
     private Double longitud;
+    private String horario;
+    // null = no hace envíos (solo retiro)
+    private Double costoEnvio;
+    // false = "completar datos": sus productos no se muestran en el catálogo
+    private Boolean datosCompletos;
 
     private String nit;
     private String telefono;

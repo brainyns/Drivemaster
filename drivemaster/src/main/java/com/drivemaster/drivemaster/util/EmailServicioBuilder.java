@@ -203,6 +203,109 @@ public final class EmailServicioBuilder {
                 + parrafo("Marca el pedido como despachado en tu panel, o \"No puedo despachar\" si no lo puedes surtir."));
     }
 
+    // ─── Compras directas del catálogo ───────────────────────────────────────
+
+    /**
+     * Comprobante de una compra del catálogo. Lleva el código de retiro en claro (es la única
+     * vez que sale del sistema junto con el botón "Ver código" de Mis compras; en la base solo
+     * queda su hash). codigos: pedidoId → código, solo para los pedidos con retiro.
+     */
+    public static String clienteCompraPagada(String cliente, com.drivemaster.drivemaster.model.CompraCatalogo compra,
+                                             java.util.List<PedidoTienda> pedidos, java.util.Map<String, String> codigos,
+                                             String referencia, String transaccion, LocalDateTime fecha) {
+        StringBuilder detalle = new StringBuilder();
+        for (PedidoTienda p : pedidos) {
+            detalle.append("<p style=\"margin:14px 0 4px;font-size:14px;font-weight:700;color:#0C2240;\">")
+                    .append(e(p.getTiendaNombre())).append(" · ").append(moneda(p.getTotal())).append("</p>");
+            if (p.getItems() != null) {
+                for (CotizacionItem i : p.getItems()) {
+                    detalle.append("<p style=\"margin:0;font-size:13px;color:#374151;\">")
+                            .append(i.getCantidad()).append(" × ").append(e(i.getProductoNombre()))
+                            .append("ENCARGO".equals(i.getDisponibilidad()) ? " · por encargo" : "").append("</p>");
+                }
+            }
+            if (PedidoTienda.RETIRO.equals(p.getEntrega())) {
+                String codigo = codigos != null ? codigos.get(p.getId()) : null;
+                detalle.append(recuadro("<strong>Retiro en la tienda</strong><br/>"
+                        + e(unir(p.getTiendaDireccion(), p.getTiendaCiudad())) + "<br/>Horario: " + e(p.getTiendaHorario())
+                        + (codigo != null ? "<br/>Código de retiro: <strong style=\"font-size:18px;letter-spacing:2px;\">"
+                        + e(codigo) + "</strong>" : "")
+                        + "<br/>Te avisaremos cuando esté listo para retirar."));
+            } else {
+                detalle.append(recuadro("<strong>Envío a domicilio</strong> (" + moneda(p.getCostoEnvio()) + ")<br/>"
+                        + e(unir(p.getEnvioDireccion(), p.getEnvioCiudad()))));
+            }
+        }
+        return plantilla("Compra", "Comprobante de tu compra",
+                saludo(cliente)
+                + parrafo("Recibimos tu pago y avisamos a cada tienda. Esto es lo que compraste:")
+                + detalle
+                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:8px 0 16px;\">"
+                + linea("Repuestos", compra.getSubtotal()) + linea("IVA", compra.getIva())
+                + linea("Envío", compra.getCostoEnvio())
+                + "<tr><td style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">Total pagado</td>"
+                + "<td align=\"right\" style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">"
+                + moneda(compra.getTotal()) + "</td></tr></table>"
+                + recuadro("Referencia: <strong>" + e(referencia) + "</strong><br/>"
+                        + (transaccion != null ? "Transacción Wompi: " + e(transaccion) + "<br/>" : "")
+                        + "Fecha: " + e(formatoFecha(fecha)))
+                + parrafo("Guarda el código de retiro: la tienda lo pedirá al entregarte el pedido. "
+                        + "Si lo pierdes, puedes generar uno nuevo desde Mis compras.")
+                + parrafo("<span style=\"font-size:12px;color:#9ca3af;\">Este comprobante no es una factura. "
+                        + "Cada tienda expide la suya por sus productos.</span>"));
+    }
+
+    /** Pedido nuevo de una compra directa: la tienda ve QUÉ entregar y CÓMO (retiro o envío), no el código. */
+    public static String tiendaNuevaCompra(String tienda, PedidoTienda p) {
+        StringBuilder filas = new StringBuilder();
+        for (CotizacionItem i : p.getItems()) {
+            filas.append("<tr><td style=\"padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;\">")
+                    .append(i.getCantidad()).append(" × ").append(e(i.getProductoNombre()))
+                    .append(i.getReferencia() != null ? " <span style=\"color:#9ca3af;\">(" + e(i.getReferencia()) + ")</span>" : "")
+                    .append("ENCARGO".equals(i.getDisponibilidad()) ? " · encargo" : "")
+                    .append("</td><td align=\"right\" style=\"padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;\">")
+                    .append(moneda(i.getSubtotal())).append("</td></tr>");
+        }
+        boolean envio = PedidoTienda.ENVIO.equals(p.getEntrega());
+        return plantilla("Nuevo pedido", "Tienes una compra pagada",
+                saludo(tienda)
+                + parrafo("Un cliente compró en tu tienda y ya pagó:")
+                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 16px;\">" + filas
+                + linea("IVA", p.getIva())
+                + (envio ? linea("Envío", p.getCostoEnvio()) : "")
+                + linea("Total del pedido", p.getTotal()) + "</table>"
+                + recuadro(envio
+                        ? "<strong>Enviar a</strong> " + e(p.getEnvioReceptor()) + "<br/>"
+                          + e(unir(p.getEnvioDireccion(), p.getEnvioCiudad()))
+                          + "<br/>Tel. " + e(p.getEnvioTelefono())
+                          + (p.getEnvioIndicaciones() != null ? "<br/>" + e(p.getEnvioIndicaciones()) : "")
+                        : "<strong>Retiro en tu tienda</strong> por " + e(p.getClienteNombre())
+                          + ". Cuando el pedido esté listo márcalo como \"Listo para retirar\"; "
+                          + "al entregarlo, pide al cliente su código de retiro y valídalo en tu panel.")
+                + (p.getPlazoDespachoHasta() != null
+                        ? parrafo("<strong>Plazo máximo: " + e(FECHA_HORA.format(p.getPlazoDespachoHasta())) + "</strong>")
+                        : ""));
+    }
+
+    public static String clientePedidoListoParaRetirar(String cliente, PedidoTienda p) {
+        return plantilla("Retiro", "Tu pedido está listo para retirar",
+                saludo(cliente)
+                + parrafo("<strong>" + e(p.getTiendaNombre()) + "</strong> ya tiene listo tu pedido.")
+                + recuadro("Retíralo en: <strong>" + e(unir(p.getTiendaDireccion(), p.getTiendaCiudad())) + "</strong><br/>"
+                        + "Horario: " + e(p.getTiendaHorario()))
+                + parrafo("Lleva tu <strong>código de retiro</strong> (el del correo de tu compra o uno nuevo desde Mis compras): "
+                        + "la tienda lo pedirá al entregarte el pedido y solo sirve una vez."));
+    }
+
+    public static String clienteCompraNoAplicada(String cliente, double monto, String motivo) {
+        return plantilla("Reembolso", "Te devolveremos tu pago",
+                saludo(cliente)
+                + parrafo("Recibimos tu pago de <strong>" + moneda(monto) + "</strong>, pero no pudimos completar tu compra.")
+                + recuadro("Motivo: " + e(motivo))
+                + parrafo("No se envió ningún pedido. DriveMaster gestionará el reembolso completo al mismo medio de pago "
+                        + "y te avisaremos cuando esté hecho."));
+    }
+
     // ─── ADMIN ───────────────────────────────────────────────────────────────
 
     public static String adminAlerta(String titulo, String detalle) {

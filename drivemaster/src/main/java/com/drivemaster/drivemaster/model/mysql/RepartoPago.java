@@ -41,7 +41,10 @@ public class RepartoPago {
 
     private String ordenServicioId;
     private String cotizacionId;
+    // Pedido a la tienda (PedidoTienda): del taller o de una compra directa del catálogo
     private String pedidoTiendaId;
+    // Compra directa del catálogo (concepto CATALOGO)
+    private String compraCatalogoId;
 
     // DIAGNOSTICO o COTIZACION
     @Column(length = 20)

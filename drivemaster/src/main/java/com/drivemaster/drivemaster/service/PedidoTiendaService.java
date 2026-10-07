@@ -13,6 +13,7 @@ import com.drivemaster.drivemaster.repository.TiendaRepository;
 import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
+import com.drivemaster.drivemaster.util.CodigoRetiro;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -109,7 +110,7 @@ public class PedidoTiendaService {
         if (pedido == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El pedido ya no está pendiente");
         }
-        ordenRepository.findById(pedido.getOrdenId()).ifPresent(o -> {
+        ordenDe(pedido).ifPresent(o -> {
             try {
                 transiciones.registrar(o, new Actor("TIENDA", tienda.getId(), tienda.getNombre()),
                         tienda.getNombre() + " está preparando el encargo", null, null);
@@ -122,11 +123,17 @@ public class PedidoTiendaService {
 
     public PedidoTienda despachar(String correoTienda, String pedidoId, String nota) {
         Tienda tienda = tiendaDe(correoTienda);
+        pedidoRepository.findById(pedidoId).filter(p -> tienda.getId().equals(p.getTiendaId())).ifPresent(p -> {
+            if (PedidoTienda.RETIRO.equals(p.getEntrega())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Este pedido es para retirar en tu tienda: márcalo como \"Listo para retirar\"");
+            }
+        });
         PedidoTienda pedido = cambiarPendiente(tienda, pedidoId, new Update()
                 .set("estado", PedidoTienda.DESPACHADO)
                 .set("fechaDespacho", LocalDateTime.now())
                 .set("notaDespacho", recortar(nota)));
-        ordenRepository.findById(pedido.getOrdenId()).ifPresent(o -> {
+        ordenDe(pedido).ifPresent(o -> {
             try {
                 transiciones.registrar(o, new Actor("TIENDA", tienda.getId(), tienda.getNombre()),
                         tienda.getNombre() + " despachó los repuestos", null, null);
@@ -170,7 +177,12 @@ public class PedidoTiendaService {
         pagoRepository.findById(pedido.getPagoId()).ifPresent(pago -> pagoMarketplace.registrarReembolso(pago,
                 pedido.getId(), pedido.getTotal(), tienda.getNombre() + " no pudo despachar: " + texto));
 
-        OrdenServicio orden = ordenRepository.findById(pedido.getOrdenId()).orElse(null);
+        if (pedido.esCatalogo()) {
+            // Compra directa: no hay orden ni taller. Se avisa al cliente (reembolso de esta tienda) y al ADMIN.
+            avisos.pedidoCatalogoNoDespachado(pedido);
+            return pedido;
+        }
+        OrdenServicio orden = ordenDe(pedido).orElse(null);
         if (orden != null) {
             try {
                 orden = transiciones.registrar(orden, new Actor("TIENDA", tienda.getId(), tienda.getNombre()),
@@ -181,6 +193,86 @@ public class PedidoTiendaService {
             avisos.pedidoNoDespachado(orden, pedido);
         }
         return pedido;
+    }
+
+    // ─── Compras del catálogo con retiro en la tienda ────────────────────────
+
+    static final int MAX_INTENTOS_CODIGO = 5;
+    static final int BLOQUEO_CODIGO_MINUTOS = 15;
+
+    /** El pedido está preparado y el cliente ya puede pasar por él: PENDIENTE / EN_PREPARACION → LISTO_PARA_RETIRAR. */
+    public PedidoTienda listoParaRetirar(String correoTienda, String pedidoId) {
+        Tienda tienda = tiendaDe(correoTienda);
+        PedidoTienda actual = pedidoRepository.findById(pedidoId)
+                .filter(p -> p.esCatalogo() && tienda.getId().equals(p.getTiendaId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+        if (!PedidoTienda.RETIRO.equals(actual.getEntrega())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este pedido es con envío: márcalo como despachado");
+        }
+        PedidoTienda pedido = cambiarPendiente(tienda, pedidoId, new Update()
+                .set("estado", PedidoTienda.LISTO_PARA_RETIRAR)
+                .set("fechaListoRetiro", LocalDateTime.now()));
+        avisos.pedidoListoParaRetirar(pedido);
+        return pedido;
+    }
+
+    /**
+     * La tienda valida el código que le muestra el cliente al retirar. Un solo uso: el pedido pasa
+     * a RETIRADO con una escritura condicional que además exige que el código siga siendo el
+     * vigente, y la línea de la tienda queda habilitada para liquidar. Solo la tienda dueña del
+     * pedido puede validar. Con {@value #MAX_INTENTOS_CODIGO} códigos erróneos seguidos el pedido
+     * se bloquea {@value #BLOQUEO_CODIGO_MINUTOS} minutos (el código es corto: se limita el adivinar).
+     */
+    public PedidoTienda validarRetiro(String correoTienda, String pedidoId, String codigo) {
+        Tienda tienda = tiendaDe(correoTienda);
+        PedidoTienda p = pedidoRepository.findById(pedidoId)
+                .filter(x -> x.esCatalogo() && tienda.getId().equals(x.getTiendaId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+        if (!PedidoTienda.RETIRO.equals(p.getEntrega())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este pedido es con envío: no se retira con código");
+        }
+        if (PedidoTienda.RETIRADO.equals(p.getEstado()) || Boolean.TRUE.equals(p.getCodigoRetiroUsado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este pedido ya fue retirado");
+        }
+        if (!PedidoTienda.LISTO_PARA_RETIRAR.equals(p.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Primero marca el pedido como listo para retirar");
+        }
+        LocalDateTime ahora = LocalDateTime.now();
+        if (p.getCodigoRetiroBloqueadoHasta() != null && ahora.isBefore(p.getCodigoRetiroBloqueadoHasta())) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Demasiados intentos con un código incorrecto. Vuelve a intentar en unos minutos.");
+        }
+        if (!CodigoRetiro.coincide(p.getCodigoRetiroHash(), pedidoId, codigo)) {
+            PedidoTienda t = mongoTemplate.findAndModify(
+                    Query.query(Criteria.where("id").is(pedidoId)),
+                    new Update().inc("codigoRetiroIntentos", 1),
+                    FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
+            int intentos = t != null && t.getCodigoRetiroIntentos() != null ? t.getCodigoRetiroIntentos() : 1;
+            if (intentos >= MAX_INTENTOS_CODIGO) {
+                mongoTemplate.updateFirst(Query.query(Criteria.where("id").is(pedidoId)),
+                        new Update().set("codigoRetiroIntentos", 0)
+                                .set("codigoRetiroBloqueadoHasta", ahora.plusMinutes(BLOQUEO_CODIGO_MINUTOS)),
+                        PedidoTienda.class);
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                        "Código incorrecto. Por seguridad el pedido se bloquea " + BLOQUEO_CODIGO_MINUTOS + " minutos.");
+            }
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código no es correcto");
+        }
+        PedidoTienda retirado = mongoTemplate.findAndModify(
+                Query.query(Criteria.where("id").is(pedidoId).and("tiendaId").is(tienda.getId())
+                        .and("estado").is(PedidoTienda.LISTO_PARA_RETIRAR)
+                        .and("codigoRetiroUsado").ne(true)
+                        .and("codigoRetiroHash").is(p.getCodigoRetiroHash())),
+                new Update().set("estado", PedidoTienda.RETIRADO).set("codigoRetiroUsado", true)
+                        .set("fechaRetirado", ahora).set("codigoRetiroIntentos", 0),
+                FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
+        if (retirado == null) {
+            // Otro clic ganó, o el cliente generó un código nuevo mientras tanto
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El pedido cambió: revisa su estado y vuelve a intentar");
+        }
+        // La tienda ya entregó: su línea del reparto queda habilitada para liquidar
+        liquidacion.pedidoRecibido(pedidoId, "RETIRO_VALIDADO_POR_TIENDA");
+        return retirado;
     }
 
     // ─── Taller ──────────────────────────────────────────────────────────────
@@ -252,6 +344,11 @@ public class PedidoTiendaService {
                     : new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado");
         }
         return pedido;
+    }
+
+    /** Los pedidos de una compra directa no tienen orden de servicio. */
+    private java.util.Optional<OrdenServicio> ordenDe(PedidoTienda pedido) {
+        return pedido.getOrdenId() == null ? java.util.Optional.empty() : ordenRepository.findById(pedido.getOrdenId());
     }
 
     private Tienda tiendaDe(String correo) {
