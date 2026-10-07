@@ -12,5 +12,7 @@ public interface ReporteService {
  
     InventarioProductosDTO  getInventarioProductos();
     ReporteProductosDTO     getReportesProductos(String periodo);
+
+    ReporteServiciosDTO      getReportesServicios(String periodo);
 }
  

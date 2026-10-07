@@ -12,12 +12,13 @@ function PieChart({ items, title }) {
   );
   const total  = validos.reduce((s,i)=>s+i.val,0);
   const COLORS = ["var(--primary)","var(--blue)","var(--purple)","var(--green)","var(--amber)"];
-  const R=55, CX=65, CY=65;
-  let angle = -Math.PI/2;
+  const R=55, CX=65, CY=65, TAU=2*Math.PI;
   const slices = validos.map((item,idx)=>{
-    const pct=item.val/total; const start=angle; angle+=pct*2*Math.PI;
+    const pct=item.val/total;
+    const p0=validos.slice(0,idx).reduce((s,i)=>s+i.val,0);
+    const start=-Math.PI/2+(p0/total)*TAU, end=-Math.PI/2+((p0+item.val)/total)*TAU;
     const x1=CX+R*Math.cos(start), y1=CY+R*Math.sin(start);
-    const x2=CX+R*Math.cos(angle), y2=CY+R*Math.sin(angle);
+    const x2=CX+R*Math.cos(end),   y2=CY+R*Math.sin(end);
     return { ...item, path:`M${CX},${CY} L${x1},${y1} A${R},${R} 0 ${pct>.5?1:0} 1 ${x2},${y2} Z`, color:COLORS[idx%COLORS.length], pct };
   });
   return (
@@ -83,16 +84,20 @@ function DiasChart({ data }) {
 function ReportesProductos({ token }) {
   const [periodo,  setPeriodo]  = useState("mes");
   const [data,     setData]     = useState(null);
-  const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
   const [tabMas,   setTabMas]   = useState("unidades");
   const [tabGraf,  setTabGraf]  = useState("barras"); // "barras" | "pastel"
 
-  useEffect(()=>{
-    setLoading(true); setError(null);
+  useEffect(() => {
+    let cancelado = false;
     getReportesProductos(token, periodo)
-      .then(setData).catch(e=>setError(e.message)).finally(()=>setLoading(false));
-  }, [periodo]);
+      .then(d => { if (!cancelado) setData(d); })
+      .catch(e => { if (!cancelado) setError(e.message); });
+    return () => { cancelado = true; };
+  }, [periodo, token]);
+
+  const cambiarPeriodo = (k) => { setPeriodo(k); setData(null); setError(null); };
+  const loading = error === null && data === null;
 
   if (loading) return <div className="rp-loading"><div className="rp-spinner"/>Cargando...</div>;
   if (error)   return <p className="rp-error">{error}</p>;
@@ -123,7 +128,7 @@ function ReportesProductos({ token }) {
         <span style={{ fontSize:".78rem",color:"var(--muted)",fontWeight:600 }}>Período:</span>
         <div className="rp-period-tabs">
           {PERIODOS.map(p=>(
-            <button key={p.k} className={`rp-period-tab${periodo===p.k?" active":""}`} onClick={()=>setPeriodo(p.k)}>{p.l}</button>
+            <button key={p.k} className={`rp-period-tab${periodo===p.k?" active":""}`} onClick={()=>cambiarPeriodo(p.k)}>{p.l}</button>
           ))}
         </div>
       </div>

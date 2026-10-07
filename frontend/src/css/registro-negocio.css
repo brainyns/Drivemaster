@@ -1,0 +1,270 @@
+/* ── Registro de negocio (talleres y tiendas) ─────────────────────────────
+   Comparte la página .auth-page y los tokens --dm-* del login, con una
+   tarjeta más ancha para el formulario de dos columnas. */
+
+.rn-card {
+  width: 100%;
+  max-width: 760px;
+  background: var(--dm-bg);
+  border: 1px solid var(--dm-line);
+  border-top: 4px solid #18487A;
+  border-radius: 12px;
+  padding: 40px 40px 32px;
+  display: flex;
+  flex-direction: column;
+  animation: authIn 0.45s var(--ease-out) both;
+}
+
+.rn-card--exito {
+  max-width: 520px;
+  border-top-color: var(--dm-green);
+}
+
+.rn-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--dm-muted);
+  margin-bottom: 10px;
+}
+
+.rn-titulo {
+  font-family: var(--dm-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--dm-text);
+  margin-bottom: 10px;
+}
+
+.rn-texto {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--dm-muted);
+  margin-bottom: 14px;
+}
+
+.rn-texto strong {
+  color: var(--dm-text);
+}
+
+/* ── Formulario ─────────────────────────────────────────────────────────── */
+.rn-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.rn-seccion {
+  font-family: var(--dm-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--dm-text);
+  padding-top: 14px;
+  border-top: 1px solid var(--dm-line-soft);
+  margin-top: 6px;
+}
+
+.rn-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.rn-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.rn-campo--ancho {
+  grid-column: 1 / -1;
+}
+
+.rn-campo__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--dm-text);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.rn-campo__opcional {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--dm-muted-2);
+}
+
+.rn-input {
+  width: 100%;
+  background: var(--dm-surface);
+  border: 1px solid var(--dm-line);
+  border-radius: 5px;
+  color: var(--dm-text);
+  font-family: var(--dm-font);
+  font-size: 13px;
+  padding: 12px 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.rn-input::placeholder {
+  color: var(--dm-muted);
+  opacity: 0.72;
+  font-size: 12px;
+}
+
+.rn-input:focus {
+  border-color: var(--dm-orange);
+  box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.16);
+}
+
+.rn-campo__error {
+  font-size: 11px;
+  color: var(--dm-red);
+}
+
+/* ── Selector de tipo de negocio ────────────────────────────────────────── */
+.rn-tipos {
+  border: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rn-tipos .rn-seccion {
+  grid-column: 1 / -1;
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+  margin-bottom: 2px;
+}
+
+.rn-tipo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--dm-surface);
+  border: 1px solid var(--dm-line);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.rn-tipo input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rn-tipo:hover {
+  border-color: var(--dm-muted-2);
+}
+
+.rn-tipo--activo {
+  border-color: var(--dm-orange);
+  background: var(--dm-orange-soft);
+}
+
+.rn-tipo:focus-within {
+  box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.16);
+}
+
+.rn-tipo__titulo {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dm-text);
+}
+
+.rn-tipo__detalle {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dm-muted);
+}
+
+/* ── Ubicación ──────────────────────────────────────────────────────────── */
+.rn-ubicacion {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.rn-ubicacion__texto {
+  font-size: 11px;
+  color: var(--dm-muted);
+}
+
+/* ── Botones ────────────────────────────────────────────────────────────── */
+.rn-boton {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 48px;
+  padding: 13px 20px;
+  background: var(--dm-orange);
+  color: var(--dm-on-accent);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-family: var(--dm-font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, opacity 0.2s;
+}
+
+.rn-boton:hover:not(:disabled) {
+  background: var(--dm-orange-hover);
+  transform: translateY(-2px);
+}
+
+.rn-boton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rn-boton-secundario {
+  padding: 9px 14px;
+  background: transparent;
+  color: var(--dm-text);
+  border: 1px solid var(--dm-line);
+  border-radius: 5px;
+  font-family: var(--dm-font);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.rn-boton-secundario:hover:not(:disabled) {
+  border-color: var(--dm-muted-2);
+  background: var(--dm-surface-2);
+}
+
+.rn-boton-secundario:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .rn-card {
+    padding: 28px 20px 24px;
+  }
+
+  .rn-grid,
+  .rn-tipos {
+    grid-template-columns: 1fr;
+  }
+
+  .rn-titulo {
+    font-size: 25px;
+  }
+}

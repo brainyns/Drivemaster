@@ -1,4 +1,4 @@
-/* ── Mis Pedidos ──────────────────────────────────────────────────── */
+﻿/* ── Mis Pedidos ──────────────────────────────────────────────────── */
 
 .mis-pedidos-page {
   max-width: 720px;
@@ -13,7 +13,7 @@
   margin-bottom: 20px;
 }
 .mis-pedidos-header h1 {
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
@@ -91,10 +91,87 @@
 }
 
 .mis-pedidos-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    }
+
+.mis-pedidos-seccion {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 8px 0 0;
+    }
+
+/* ─── Citas agendadas ─── */
+.mis-citas {
+    background: var(--surface2, #161b22);
+    border: 1px solid var(--border2, #30363d);
+    border-left: 3px solid #f97316;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 8px;
 }
+
+.mis-citas-titulo {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    }
+
+.mis-citas-sub {
+    font-size: 12px;
+    color: var(--muted, #8b949e);
+    margin: 0 0 14px;
+    }
+
+.mis-citas-lista { display: flex; flex-direction: column; gap: 10px; }
+
+.mis-citas-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 12px;
+    background: var(--surface, #0d1117);
+    border: 1px solid var(--border2, #30363d);
+    border-radius: 8px;
+}
+
+.mis-citas-when { display: flex; flex-direction: column; min-width: 92px; }
+.mis-citas-fecha { font-size: 13px; font-weight: 600; }
+.mis-citas-hora { font-size: 18px; font-weight: 700; color: #f97316; }
+
+.mis-citas-detalle { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 180px; font-size: 13px; }
+.mis-citas-detalle strong { font-size: 14px; }
+
+.mis-citas-estado {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 11px;
+    }
+
+.mis-citas-cancelar {
+    background: none;
+    border: 1px solid var(--border2, #30363d);
+    border-radius: 6px;
+    color: var(--muted, #8b949e);
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    }
+
+.mis-citas-cancelar:hover:not(:disabled) { color: #f97316; border-color: #f97316; }
+.mis-citas-cancelar:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+    .mis-citas-card { flex-direction: column; align-items: flex-start; }
+    }
 
 .mis-pedidos-card {
   background: var(--bg-card);
@@ -219,4 +296,13 @@
   justify-content: space-between;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 480px) {
+  .mis-pedidos-page { padding: 16px 12px 40px; }
+  .mis-pedidos-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .mis-pedidos-tabs { overflow-x: auto; }
+  .mis-pedidos-tab { white-space: nowrap; padding: 10px 14px; }
+  .mis-pedidos-track { overflow-x: auto; }
 }

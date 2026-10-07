@@ -52,4 +52,10 @@ public class ReporteController {
             @RequestParam(defaultValue = "mes") String periodo) {
         return ResponseEntity.ok(reporteService.getReportesProductos(periodo));
     }
+
+    @GetMapping("/servicios/reportes")
+    public ResponseEntity<ReporteServiciosDTO> getReportesServicios(
+            @RequestParam(defaultValue = "mes") String periodo) {
+        return ResponseEntity.ok(reporteService.getReportesServicios(periodo));
+    }
 }

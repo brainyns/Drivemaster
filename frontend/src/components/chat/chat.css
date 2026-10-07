@@ -4,8 +4,8 @@
 :root {
     --dm-bg: #1a1a1a;
     --dm-surface: #2a2a2a;
-    --dm-primary: #e63946;
-    --dm-primary-dark: #b02632;
+    --dm-primary: var(--primary, #FF3D00);
+    --dm-primary-dark: var(--primary-h, #e63600);
     --dm-text: #f1f1f1;
     --dm-text-secondary: #aaaaaa;
     --dm-border: #3a3a3a;
@@ -25,12 +25,12 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: var(--dm-primary);
+    background: var(--dm-orange);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: var(--dm-shadow);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
     transition: all 0.3s ease;
     border: none;
     outline: none;
@@ -39,7 +39,7 @@
 
 .chat-toggle-button:hover {
     transform: scale(1.1);
-    background: var(--dm-primary-dark);
+    background: var(--dm-orange-hover);
 }
 
 .chat-toggle-button svg {
@@ -49,11 +49,11 @@
 
 /* Minimized bar */
 .chat-minimized-bar {
-    background: var(--dm-primary);
+    background: var(--dm-orange);
     color: white;
     padding: 12px 20px;
     border-radius: 20px;
-    box-shadow: var(--dm-shadow);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -65,7 +65,7 @@
 }
 
 .chat-minimized-bar:hover {
-    background: var(--dm-primary-dark);
+    background: var(--dm-orange-hover);
     transform: scale(1.02);
 }
 
@@ -80,7 +80,7 @@
     height: 500px;
     background: var(--dm-bg);
     border-radius: 20px;
-    box-shadow: var(--dm-shadow);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -95,7 +95,7 @@
 
 /* Chat Header */
 .chat-header {
-    background: linear-gradient(135deg, var(--dm-primary), var(--dm-primary-dark));
+    background: linear-gradient(135deg, var(--dm-orange), var(--dm-orange-hover));
     color: white;
     padding: 14px 16px;
     display: flex;
@@ -188,7 +188,7 @@
 }
 
 .user-message .message-content p {
-    background: var(--dm-primary);
+    background: var(--dm-orange);
     color: white;
     border-bottom-right-radius: 4px;
 }
@@ -264,7 +264,7 @@
 }
 
 .chat-input:focus {
-    border-color: var(--dm-primary);
+    border-color: var(--dm-orange);
 }
 
 .chat-input::placeholder {
@@ -275,7 +275,7 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: var(--dm-primary);
+    background: var(--dm-orange);
     border: none;
     color: white;
     display: flex;
@@ -287,7 +287,7 @@
 }
 
 .send-button:not(:disabled):hover {
-    background: var(--dm-primary-dark);
+    background: var(--dm-orange-hover);
     opacity: 1;
     transform: scale(1.05);
 }

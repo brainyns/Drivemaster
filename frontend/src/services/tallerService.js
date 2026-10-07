@@ -1,0 +1,122 @@
+import { apiFetch } from "./http";
+const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/talleres`;
+
+function headers(token) {
+  const h = { "Content-Type": "application/json" };
+  if (token) h.Authorization = `Bearer ${token}`;
+  return h;
+}
+
+async function handle(res, msgDefault) {
+  if (!res.ok) {
+    let msg = msgDefault;
+    try { const data = await res.json(); msg = data.error || data.message || msg; } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+export async function talleresActivos(token, { ciudad, lat, lng } = {}) {
+  const params = new URLSearchParams();
+  if (ciudad) params.set("ciudad", ciudad);
+  if (lat != null && lng != null) {
+    params.set("lat", lat);
+    params.set("lng", lng);
+  }
+  const qs = params.toString();
+  const res = await apiFetch(`${BASE}/activos${qs ? `?${qs}` : ""}`, { headers: headers(token) });
+  return handle(res, "Error al listar los talleres");
+}
+
+/** Todos los talleres, o solo los de un estado de revisión (PENDIENTE, APROBADO, RECHAZADO). */
+export async function listarTalleres(token, estado) {
+  const res = await apiFetch(`${BASE}${estado ? `?estado=${encodeURIComponent(estado)}` : ""}`, { headers: headers(token) });
+  return handle(res, "Error al listar los talleres");
+}
+
+/** Registro público de un taller. Queda pendiente hasta que DriveMaster lo apruebe. */
+export async function registrarTaller(datos) {
+  const res = await fetch(`${BASE}/registro`, {
+    method: "POST",
+    headers: headers(null),
+    body: JSON.stringify(datos),
+  });
+  return handle(res, "No se pudo registrar el taller");
+}
+
+export async function miTaller(token) {
+  const res = await apiFetch(`${BASE}/mi-taller`, { headers: headers(token) });
+  return handle(res, "Error al cargar los datos del taller");
+}
+
+// ─── Mecánicos del taller autenticado ───
+
+export async function listarMecanicos(token) {
+  const res = await apiFetch(`${BASE}/mi-taller/mecanicos`, { headers: headers(token) });
+  return handle(res, "Error al cargar los mecánicos");
+}
+
+/** mecanico: { nombre, especialidad?, telefono? } */
+export async function agregarMecanico(token, mecanico) {
+  const res = await apiFetch(`${BASE}/mi-taller/mecanicos`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify(mecanico),
+  });
+  return handle(res, "No se pudo agregar el mecánico");
+}
+
+export async function actualizarMecanico(token, id, mecanico) {
+  const res = await apiFetch(`${BASE}/mi-taller/mecanicos/${id}`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(mecanico),
+  });
+  return handle(res, "No se pudo actualizar el mecánico");
+}
+
+export async function cambiarEstadoMecanico(token, id, activo) {
+  const res = await apiFetch(`${BASE}/mi-taller/mecanicos/${id}/activo`, {
+    method: "PATCH",
+    headers: headers(token),
+    body: JSON.stringify({ activo }),
+  });
+  return handle(res, "No se pudo cambiar el estado del mecánico");
+}
+
+/** Body: { aprobado, motivo?, planCodigo? } */
+export async function resolverAprobacionTaller(token, id, decision) {
+  const res = await apiFetch(`${BASE}/${id}/aprobacion`, {
+    method: "PATCH",
+    headers: headers(token),
+    body: JSON.stringify(decision),
+  });
+  return handle(res, "Error al registrar la decisión");
+}
+
+export async function crearTaller(token, taller) {
+  const res = await apiFetch(BASE, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify(taller),
+  });
+  return handle(res, "Error al crear el taller");
+}
+
+export async function actualizarTaller(token, id, taller) {
+  const res = await apiFetch(`${BASE}/${id}`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(taller),
+  });
+  return handle(res, "Error al actualizar el taller");
+}
+
+export async function activarDesactivarTaller(token, id, activo) {
+  const res = await apiFetch(`${BASE}/${id}/activo`, {
+    method: "PATCH",
+    headers: headers(token),
+    body: JSON.stringify({ activo }),
+  });
+  return handle(res, "Error al cambiar el estado del taller");
+}

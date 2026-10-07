@@ -245,3 +245,14 @@
 .cp-filter-clear-all:hover {
   color: var(--text);
 }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .cp-fp-panel {
+    position: fixed;
+    top: 56px;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+  }
+}

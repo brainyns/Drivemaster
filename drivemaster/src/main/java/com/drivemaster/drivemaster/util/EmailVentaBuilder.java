@@ -11,7 +11,7 @@ import com.drivemaster.drivemaster.model.Venta;
 
 public class EmailVentaBuilder {
 
-    private static final Locale LOCALE_CO = new Locale("es", "CO");
+    private static final Locale LOCALE_CO = Locale.forLanguageTag("es-CO");
 
     public static String construir(Usuario usuario, Venta venta, double iva) {
 
@@ -20,7 +20,7 @@ public class EmailVentaBuilder {
 
         String fecha = venta.getFecha() != null
                 ? venta.getFecha().format(
-                        DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy, HH:mm", new Locale("es")))
+                        DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy, HH:mm", Locale.forLanguageTag("es")))
                 : "—";
 
         String idCorto = venta.getId() != null

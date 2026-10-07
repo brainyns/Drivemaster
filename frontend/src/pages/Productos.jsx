@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { listarProductos, eliminarProducto } from "../services/productoService";
+import { listarProductos, listarProductosMiTienda, eliminarProducto } from "../services/productoService";
+import { miTienda } from "../services/tiendaService";
+import EstadoNegocio from "../components/EstadoNegocio";
 import "../css/productos.css";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -38,17 +40,30 @@ const IconDollar = () => (
   </svg>
 );
 
-function Productos({ onNuevo, onEditar, token }) {
+// esTienda: el usuario es una tienda del marketplace y solo ve su propio catálogo.
+function Productos({ onNuevo, onEditar, token, esTienda = false }) {
   const [productos, setProductos] = useState([]);
+  const [tienda, setTienda]       = useState(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
 
-  useEffect(() => { cargarProductos(); }, [token]);
+  useEffect(() => { cargarProductos(); }, [token, esTienda]);
 
   const cargarProductos = async () => {
-    try { const d = await listarProductos(token); setProductos(d); }
+    try {
+      if (esTienda) {
+        // Si la tienda aún no está aprobada, sus productos responden 403 y se muestra
+        // el aviso de estado en lugar del error.
+        const [t, p] = await Promise.allSettled([miTienda(token), listarProductosMiTienda(token)]);
+        if (t.status === "fulfilled") setTienda(t.value);
+        if (p.status === "fulfilled") setProductos(p.value);
+        else setError(p.reason.message);
+      } else {
+        setProductos(await listarProductos(token));
+      }
+    }
     catch (e) { setError(e.message); }
     finally { setLoading(false); }
   };
@@ -87,15 +102,20 @@ function Productos({ onNuevo, onEditar, token }) {
   };
 
   if (loading) return <div className="page-loading">Cargando productos...</div>;
-  if (error)   return <div className="page-loading error">{error}</div>;
 
   return (
+    <EstadoNegocio negocio={tienda} tipo="tienda">
+    {error ? <div className="page-loading error">{error}</div> : (
     <div className="kp-page">
 
       <div className="kp-page-header">
         <div>
-          <h1 className="kp-page-title">Gestion de Productos</h1>
-          <p className="kp-page-sub">Inventario centralizado de refacciones y consumibles automotrices.</p>
+          <h1 className="kp-page-title">{tienda ? `Productos de ${tienda.nombre}` : "Gestion de Productos"}</h1>
+          <p className="kp-page-sub">
+            {tienda
+              ? "Catálogo e inventario de tu tienda. Los talleres ven tu precio, disponibilidad y ubicación."
+              : "Inventario centralizado de refacciones y consumibles automotrices."}
+          </p>
         </div>
         <div className="kp-page-actions">
           <button className="kp-btn kp-btn--outline" onClick={onNuevo}>Ver Productos</button>
@@ -228,6 +248,8 @@ function Productos({ onNuevo, onEditar, token }) {
         </div>
       </div>
     </div>
+    )}
+    </EstadoNegocio>
   );
 }
 

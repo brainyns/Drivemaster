@@ -1,3 +1,4 @@
+import { apiFetch } from "./http";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/movimientos`;
 
 const buildHeaders = (token, contentType) => {
@@ -14,14 +15,14 @@ export async function listarMovimientos({ productoId, tipo, fechaInicio, fechaFi
   if (fechaInicio) params.append("fechaInicio", fechaInicio);
   if (fechaFin)    params.append("fechaFin", fechaFin);
 
-  const res = await fetch(`${BASE_URL}?${params}`, { headers: buildHeaders(token) });
+  const res = await apiFetch(`${BASE_URL}?${params}`, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Error al obtener movimientos");
   return res.json();
 }
 
 export async function registrarMovimiento({ productoId, tipo, cantidad, motivo }, token) {
   const params = new URLSearchParams({ productoId, tipo, cantidad, motivo });
-  const res = await fetch(`${BASE_URL}/registrar?${params}`, {
+  const res = await apiFetch(`${BASE_URL}/registrar?${params}`, {
     method: "POST",
     headers: buildHeaders(token),
   });

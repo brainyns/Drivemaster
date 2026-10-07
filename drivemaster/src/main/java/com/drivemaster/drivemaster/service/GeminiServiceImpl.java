@@ -8,6 +8,7 @@ import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -346,7 +347,9 @@ public class GeminiServiceImpl implements GeminiService {
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.POST, request,
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
             return extraerTextoDeRespuesta(response.getBody());
         } catch (Exception e) {
             log.error("Error llamando a Gemini: {}", e.getMessage());
@@ -364,16 +367,21 @@ public class GeminiServiceImpl implements GeminiService {
                 """, mensaje);
     }
 
-    @SuppressWarnings("unchecked")
-    private String extraerTextoDeRespuesta(Map responseBody) {
+    /**
+ * Convierte la respuesta de la API de Gemini (un JSON anidado sin tipo) en texto,
+ * sin casts unchecked ni tipos crudos.
+ */
+private String extraerTextoDeRespuesta(Map<String, Object> responseBody) {
         try {
             if (responseBody == null) return "No se recibió respuesta del modelo.";
-            List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
-            if (candidates == null || candidates.isEmpty()) return "No se recibió respuesta.";
-            Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
-            if (content == null) return "No se recibió contenido.";
-            List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-            return (String) parts.get(0).get("text");
+            if (!(responseBody.get("candidates") instanceof List<?> candidates)
+                    || candidates.isEmpty()) return "No se recibió respuesta.";
+            Object contentObj = ((Map<?, ?>) candidates.get(0)).get("content");
+            if (!(contentObj instanceof Map<?, ?> content)) return "No se recibió contenido.";
+            if (!(content.get("parts") instanceof List<?> parts)
+                    || parts.isEmpty()) return "No se recibió contenido.";
+            Object texto = ((Map<?, ?>) parts.get(0)).get("text");
+            return texto != null ? texto.toString() : "No se recibió texto.";
         } catch (Exception e) {
             log.error("Error extrayendo respuesta de Gemini: {}", e.getMessage());
             return "Lo siento, ocurrió un error al procesar la respuesta.";

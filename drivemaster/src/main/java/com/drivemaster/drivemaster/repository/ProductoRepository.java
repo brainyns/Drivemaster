@@ -14,6 +14,16 @@ public interface ProductoRepository extends MongoRepository<Producto, String> {
 
     boolean existsByCodigo(String codigo);
 
+    // El código es único dentro de cada tienda, no en todo el marketplace.
+    boolean existsByTiendaIdAndCodigo(String tiendaId, String codigo);
+
+    List<Producto> findByTiendaId(String tiendaId);
+
+    // Catálogo de compra directa: productos de la tienda de la plataforma.
+    // Incluye los que aún no tienen tienda (antes de que corra la migración).
+    @Query("{ '$or': [ { 'tiendaId': ?0 }, { 'tiendaId': null } ] }")
+    List<Producto> findCatalogoPlataforma(String tiendaPlataformaId);
+
     List<Producto> findByCategoria(String categoria);
     
     List<Producto> findByCategoriaContainingIgnoreCase(String categoria);

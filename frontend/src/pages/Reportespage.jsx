@@ -4,6 +4,7 @@ import InventarioClientes  from "./InventarioClientes";
 import ReportesClientes    from "./ReportesClientes";
 import InventarioProductos from "./InventarioProductos";
 import ReportesProductos   from "./ReportesProductos";
+import ReportesServicios   from "./ReportesServicios";
 import DashboardGeneral    from "./DashboardGeneral";
 import { getDashboard }    from "../services/reporteService";
 
@@ -17,6 +18,7 @@ const MENU = [
       { key: "inv-productos", label: "Inventario de Productos",  ico: "🔧" },
       { key: "rep-clientes",  label: "Reportes de Clientes",     ico: "📊" },
       { key: "rep-productos", label: "Reportes de Productos",    ico: "📈" },
+      { key: "rep-servicios", label: "Reporte de Servicios",     ico: "🔧" },
     ],
   },
   { key: "dashboard", label: "Dashboard General", ico: "🏠" },
@@ -26,7 +28,6 @@ function ReportesPage({ token }) {
   const [vista,          setVista]          = useState("dashboard");
   const [openMenu,       setOpenMenu]       = useState(null);   // key del menú abierto
   const [dashData,       setDashData]       = useState(null);
-  const [loadingDash,    setLoadingDash]    = useState(true);
   const [errorDash,      setErrorDash]      = useState(null);
   const menuRef = useRef(null);
 
@@ -42,14 +43,16 @@ function ReportesPage({ token }) {
   }, []);
 
   useEffect(() => {
-    if (vista === "dashboard") {
-      setLoadingDash(true);
-      getDashboard(token)
-        .then(setDashData)
-        .catch(e => setErrorDash(e.message))
-        .finally(() => setLoadingDash(false));
-    }
+    if (vista !== "dashboard") return;
+    let cancelado = false;
+    getDashboard(token)
+      .then(d => { if (!cancelado) setDashData(d); })
+      .catch(e => { if (!cancelado) setErrorDash(e.message); });
+    return () => { cancelado = true; };
   }, [vista, token]);
+
+  const irAVista = (k) => { setVista(k); if (k === "dashboard") { setDashData(null); setErrorDash(null); } };
+  const loadingDash = vista === "dashboard" && errorDash === null && dashData === null;
 
   const renderVista = () => {
     switch (vista) {
@@ -57,6 +60,7 @@ function ReportesPage({ token }) {
       case "rep-clientes":  return <ReportesClientes    token={token} />;
       case "inv-productos": return <InventarioProductos token={token} />;
       case "rep-productos": return <ReportesProductos   token={token} />;
+      case "rep-servicios": return <ReportesServicios   token={token} />;
       default:
         return <DashboardGeneral data={dashData} loading={loadingDash} error={errorDash} />;
     }
@@ -117,7 +121,7 @@ function ReportesPage({ token }) {
                       <button
                         key={s.key}
                         className={`rp-dropdown-item${vista === s.key ? " active" : ""}`}
-                        onClick={() => { setVista(s.key); setOpenMenu(null); }}
+                        onClick={() => { irAVista(s.key); setOpenMenu(null); }}
                       >
                         <span className="ico">{s.ico}</span>
                         {s.label}
@@ -129,7 +133,7 @@ function ReportesPage({ token }) {
             ) : (
               <button
                 className={`rp-nav-btn${vista === m.key ? " active" : ""}`}
-                onClick={() => { setVista(m.key); setOpenMenu(null); }}
+                onClick={() => { irAVista(m.key); setOpenMenu(null); }}
               >
                 <span>{m.ico}</span>
                 {m.label}

@@ -18,6 +18,20 @@ public interface ProductoService {
 
     List<Producto> listarTodos();
 
+    /** Catálogo de compra directa: solo productos de la tienda de DriveMaster. */
+    List<Producto> listarCatalogoPublico();
+
+    List<Producto> listarPorTienda(String tiendaId);
+
+    /**
+     * Descuenta stock de forma atómica: solo se aplica si hay existencias suficientes
+     * en el mismo instante de la escritura. Lanza StockInsuficienteException si no.
+     */
+    Producto descontarStock(String productoId, int cantidad);
+
+    /** Suma stock de forma atómica. */
+    Producto incrementarStock(String productoId, int cantidad);
+
     void eliminarProducto(String id);
 
     Producto actualizarStock(String productoId, Integer nuevoStock);

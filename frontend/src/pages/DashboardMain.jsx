@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { useEffect, useState } from "react";
 import {
   ResponsiveContainer,
@@ -185,7 +186,7 @@ function DashboardMain({ token }) {
         setData(dash);
 
         // Últimas ventas
-        const rv = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ventas`, {
+        const rv = await apiFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/ventas`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (rv.ok) {
@@ -199,7 +200,7 @@ function DashboardMain({ token }) {
         }
 
         // Productos (para top vendidos)
-       const rp = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/productos`, {
+       const rp = await apiFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/productos`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (rp.ok) setProds(await rp.json());
@@ -566,7 +567,7 @@ function DashboardMain({ token }) {
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
-                  formatter={(v, n) => [v, "Unidades"]}
+                  formatter={(v) => [v, "Unidades"]}
                   cursor={{ fill: "var(--border)", opacity: 0.35 }}
                 />
                 <Bar dataKey="value" name="Unidades" fill="var(--blue)" radius={[0, 6, 6, 0]} barSize={14} />

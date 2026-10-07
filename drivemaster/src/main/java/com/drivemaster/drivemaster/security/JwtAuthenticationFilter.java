@@ -19,6 +19,9 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    /** Marca la petición cuando trajo un token que no se pudo validar (vencido, alterado...). */
+    public static final String ATTR_TOKEN_INVALIDO = "drivemaster.tokenInvalido";
+
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
@@ -36,59 +39,66 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        try {
+        String jwt = null;
 
-            String jwt = null;
+        String authHeader = request.getHeader("Authorization");
 
-            String authHeader = request.getHeader("Authorization");
-
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                jwt = authHeader.substring(7);
-            }
-
-            if (jwt == null) {
-                jwt = getTokenFromCookie(request);
-            }
-
-            if (jwt != null) {
-
-                String correo = jwtUtil.extractUsername(jwt);
-
-                if (correo != null &&
-                        SecurityContextHolder.getContext().getAuthentication() == null) {
-
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
-
-                    if (jwtUtil.validateToken(jwt, userDetails)) {
-
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities());
-
-                        authToken.setDetails(
-                                new WebAuthenticationDetailsSource()
-                                        .buildDetails(request));
-
-                        SecurityContextHolder
-                                .getContext()
-                                .setAuthentication(authToken);
-
-                        response.setHeader("X-Session-Expires-In", String.valueOf(maxInactiveMinutes * 60));
-                    }
-                }
-            }
-
-            filterChain.doFilter(request, response);
-
-        } catch (Exception ex) {
-
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-
-            response.getWriter().write(
-                    "{\"error\": \"Token inválido o sesión expirada\", \"code\": \"SESSION_EXPIRED\"}");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
         }
+
+        if (jwt == null) {
+            jwt = getTokenFromCookie(request);
+        }
+
+        if (jwt != null) {
+            try {
+                autenticar(jwt, request, response);
+            } catch (Exception ex) {
+                // Un token vencido o inválido no corta la petición: se sigue sin
+                // autenticar y la autorización decide. Las rutas públicas (catálogo,
+                // webhook, redirect de Wompi) funcionan aunque el navegador guarde un
+                // token viejo; las protegidas responden 401 desde el entry point.
+                SecurityContextHolder.clearContext();
+                request.setAttribute(ATTR_TOKEN_INVALIDO, Boolean.TRUE);
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+
+    private void autenticar(String jwt, HttpServletRequest request, HttpServletResponse response) {
+        // El refresh token solo es válido en /api/auth/refresh, nunca como token de acceso.
+        if (jwtUtil.isRefreshToken(jwt)) {
+            throw new IllegalArgumentException("Refresh token usado como token de acceso");
+        }
+
+        String correo = jwtUtil.extractUsername(jwt);
+
+        if (correo == null || SecurityContextHolder.getContext().getAuthentication() != null) {
+            return;
+        }
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
+
+        if (!userDetails.isEnabled() || !jwtUtil.validateToken(jwt, userDetails)) {
+            throw new IllegalArgumentException("Token no válido para el usuario");
+        }
+
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.getAuthorities());
+
+        authToken.setDetails(
+                new WebAuthenticationDetailsSource()
+                        .buildDetails(request));
+
+        SecurityContextHolder
+                .getContext()
+                .setAuthentication(authToken);
+
+        response.setHeader("X-Session-Expires-In", String.valueOf(maxInactiveMinutes * 60));
     }
 
     private String getTokenFromCookie(HttpServletRequest request) {

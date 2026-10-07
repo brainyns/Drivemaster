@@ -1,0 +1,840 @@
+/* ── Solicitudes de diagnóstico (cliente y taller) ────────────────────────
+   Complementa servicios.css (sv-*). Prefijo ss-, BEM. */
+
+.ss-panel,
+.ss-detalle,
+.ss-form,
+.ss-modal {
+  --ss-navy:  #0C2240;
+  --ss-steel: #18487A;
+}
+
+.ss-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.ss-meta {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.ss-texto {
+  line-height: 1.6;
+  white-space: pre-line;
+  margin: 0 0 var(--sp-sm);
+}
+
+.ss-ayuda {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.ss-error {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--error);
+  margin-top: 4px;
+}
+
+.ss-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+.ss-alerta,
+.ss-aviso,
+.ss-exito {
+  padding: 0.75rem 1rem;
+  border-radius: var(--r-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 var(--sp-md);
+}
+
+.ss-alerta { background: rgba(239, 68, 68, 0.1);  border: 1px solid rgba(239, 68, 68, 0.3);  color: var(--error); }
+.ss-aviso  { background: rgba(24, 72, 122, 0.12); border: 1px solid rgba(24, 72, 122, 0.4); color: var(--text); }
+.ss-exito  { background: rgba(34, 197, 94, 0.1);  border: 1px solid rgba(34, 197, 94, 0.3);  color: var(--success); }
+
+.ss-btn-peligro { background: var(--error); }
+.ss-btn-peligro:hover { background: #dc2626; }
+
+.ss-textarea,
+.ss-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.ss-textarea:focus,
+.ss-input:focus,
+.sv-field input:focus,
+.sv-field select:focus,
+.sv-field textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.ss-input--cantidad { width: 70px; }
+
+/* ── Bloques ── */
+.ss-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-lg);
+}
+
+.ss-bloque {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.ss-bloque--destacado {
+  border-left: 4px solid var(--ss-steel, #18487A);
+}
+
+.ss-bloque__titulo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.ss-vacio {
+  text-align: center;
+  padding: var(--sp-xl) var(--sp-lg);
+  border: 1px dashed var(--border2);
+  border-radius: var(--r-lg);
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+.ss-lista {
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.7;
+}
+
+.ss-confirmacion {
+  max-width: 640px;
+  margin: var(--sp-xl) auto;
+  padding: var(--sp-xl);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 4px solid #18487A;
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+  line-height: 1.6;
+}
+
+/* ── Selección de vehículo ── */
+.ss-vehiculos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--sp-md);
+}
+
+.ss-vehiculo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--sp-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.ss-vehiculo input { position: absolute; opacity: 0; pointer-events: none; }
+.ss-vehiculo:hover { border-color: var(--border2); }
+.ss-vehiculo:focus-within { box-shadow: 0 0 0 3px var(--primary-glow); }
+
+.ss-vehiculo--activo {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.ss-vehiculo img,
+.ss-vehiculo__sinfoto {
+  width: 100%;
+  height: 96px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  background: var(--surface3);
+}
+
+.ss-vehiculo__sinfoto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.ss-vehiculo__nombre { font-weight: 600; }
+.ss-vehiculo__meta { font-size: 0.8rem; color: var(--text-muted); }
+
+.ss-ubicacion {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+}
+
+/* ── Fotos ── */
+.ss-fotos { display: flex; flex-direction: column; gap: 6px; }
+
+.ss-fotos__lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+}
+
+.ss-fotos__item,
+.ss-fotos__agregar {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.ss-fotos__item img { width: 100%; height: 100%; object-fit: cover; }
+
+.ss-fotos__item--cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+
+.ss-fotos__quitar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ss-fotos__agregar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--surface2);
+  border-style: dashed;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.ss-fotos__agregar span { font-size: 1.5rem; line-height: 1; }
+.ss-fotos__agregar:hover { border-color: var(--primary); color: var(--primary); }
+
+.ss-galeria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+}
+
+.ss-galeria img {
+  width: 110px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Estado ── */
+.ss-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ss-estado__punto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.ss-estado--info    { background: rgba(24, 72, 122, 0.18); color: #6ea8e0; }
+.ss-estado--aviso   { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.ss-estado--proceso { background: rgba(139, 92, 246, 0.15); color: var(--purple); }
+.ss-estado--ok      { background: rgba(34, 197, 94, 0.15);  color: var(--success); }
+.ss-estado--error   { background: rgba(239, 68, 68, 0.15);  color: var(--error); }
+
+html[data-theme="light"] .ss-estado--info { color: #18487A; }
+
+/* ── Tarjetas de lista ── */
+.ss-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--dur-fast), transform var(--dur-fast);
+}
+
+.ss-tarjeta:hover { border-color: var(--border2); transform: translateY(-1px); }
+.ss-tarjeta:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.ss-tarjeta__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-sm);
+  flex-wrap: wrap;
+}
+
+.ss-tarjeta__titulo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.3rem;
+}
+
+.ss-tarjeta__sintomas {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Detalle ── */
+.ss-detalle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--sp-lg);
+  align-items: start;
+}
+
+.ss-detalle__principal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+  min-width: 0;
+}
+
+.ss-detalle__lateral {
+  position: sticky;
+  top: var(--sp-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-lg);
+}
+
+.ss-urgencia--baja    { color: var(--success); }
+.ss-urgencia--media   { color: var(--warning); }
+.ss-urgencia--alta    { color: #f97316; }
+.ss-urgencia--critica { color: var(--error); }
+
+/* ── Línea de tiempo ── */
+.ss-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ss-timeline__item {
+  position: relative;
+  padding: 0 0 var(--sp-md) 22px;
+  border-left: 2px solid var(--border);
+  margin-left: 6px;
+}
+
+.ss-timeline__item:last-child { border-left-color: transparent; padding-bottom: 0; }
+
+.ss-timeline__marca {
+  position: absolute;
+  left: -7px;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border2);
+}
+
+.ss-timeline__item--actual .ss-timeline__marca {
+  background: #18487A;
+  border-color: #18487A;
+  box-shadow: 0 0 0 4px rgba(24, 72, 122, 0.25);
+}
+
+.ss-timeline__cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ss-timeline__cabecera strong { font-size: 0.9rem; }
+.ss-timeline__cabecera time { font-size: 0.75rem; color: var(--text-muted); }
+.ss-timeline__nota { margin: 4px 0 2px; font-size: 0.85rem; line-height: 1.45; }
+.ss-timeline__actor { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ── Filtros de la bandeja ── */
+.ss-panel { display: flex; flex-direction: column; gap: var(--sp-md); }
+
+.ss-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-xs);
+  border-bottom: 1px solid var(--border);
+}
+
+.ss-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: 0.6rem 0.9rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.ss-filtro:hover { color: var(--text); }
+.ss-filtro--activo { color: var(--text); border-bottom-color: var(--primary); }
+
+.ss-filtro__conteo {
+  min-width: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: var(--r-full);
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+/* ── Diagnóstico ── */
+.ss-urgencias {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-sm);
+}
+
+.ss-urgencias legend {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.ss-urgencia-opcion {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.ss-urgencia-opcion input { position: absolute; opacity: 0; pointer-events: none; }
+.ss-urgencia-opcion strong { color: var(--text); font-size: 0.9rem; }
+.ss-urgencia-opcion:focus-within { box-shadow: 0 0 0 3px var(--primary-glow); }
+.ss-urgencia-opcion.is-activa { border-color: currentColor; background: var(--surface2); }
+.ss-urgencia-opcion--baja.is-activa    { color: var(--success); }
+.ss-urgencia-opcion--media.is-activa   { color: var(--warning); }
+.ss-urgencia-opcion--alta.is-activa    { color: #f97316; }
+.ss-urgencia-opcion--critica.is-activa { color: var(--error); }
+
+.ss-mecanico-actual { max-width: 320px; }
+
+/* ── Mecánicos ── */
+.ss-mecanicos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.ss-mecanico {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+  padding: var(--sp-sm) var(--sp-md);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.ss-mecanico--inactivo { opacity: 0.6; }
+
+.ss-mecanicos__form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: var(--sp-md) 0 0;
+}
+
+.ss-mecanicos__botones {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  gap: var(--sp-sm);
+}
+
+.ss-btn-icono {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ss-btn-icono:hover { border-color: var(--error); color: var(--error); }
+
+.ss-chip {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: var(--r-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(24, 72, 122, 0.2);
+  color: var(--text);
+}
+
+/* ── Repuestos del diagnóstico ── */
+.ss-repuestos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  padding-top: var(--sp-md);
+  border-top: 1px solid var(--border);
+}
+
+.ss-repuestos__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-md);
+  flex-wrap: wrap;
+}
+
+.ss-repuestos__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.ss-repuesto {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-sm) var(--sp-md);
+}
+
+.ss-repuesto--pendiente { border-color: var(--warning); }
+
+.ss-repuesto__fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 70px 110px 30px;
+  gap: var(--sp-sm);
+  align-items: center;
+}
+
+.ss-repuesto__producto { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ss-repuesto__precio { text-align: right; font-weight: 600; font-size: 0.9rem; }
+
+.ss-confirmar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  border-radius: var(--r-sm);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.ss-confirmar .ss-estado { align-self: flex-start; }
+
+.ss-confirmar__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ss-confirmar__check input { margin-top: 3px; accent-color: var(--primary); }
+
+/* ── Ventana del buscador ── */
+.ss-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-lg);
+  background: rgba(8, 15, 28, 0.72);
+  animation: ssModalFondo var(--dur-med) var(--ease-out);
+}
+
+.ss-modal__ventana {
+  width: min(1080px, 100%);
+  max-height: calc(100vh - 2 * var(--sp-lg));
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-top: 4px solid #18487A;
+  border-radius: var(--r-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: ssModalVentana var(--dur-med) var(--ease-out);
+}
+
+@keyframes ssModalFondo { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ssModalVentana { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+.ss-modal__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-md);
+  padding: var(--sp-lg) var(--sp-lg) var(--sp-md);
+}
+
+.ss-modal__titulo {
+  font-size: 1.6rem;
+  line-height: 1.1;
+  margin: 0 0 4px;
+}
+
+.ss-modal__filtros {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px auto auto;
+  gap: var(--sp-sm) var(--sp-md);
+  align-items: end;
+  padding: 0 var(--sp-lg) var(--sp-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.ss-modal__cuerpo {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-md) var(--sp-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-lg);
+}
+
+.ss-modal__cuerpo[aria-busy="true"] { opacity: 0.6; }
+
+.ss-modal__pie {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-md) var(--sp-lg);
+  border-top: 1px solid var(--border);
+}
+
+/* Interruptor "Solo compatibles" */
+.ss-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ss-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+
+.ss-switch__pista {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: var(--r-full);
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  transition: background var(--dur-fast);
+}
+
+.ss-switch__pista::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast);
+}
+
+.ss-switch input:checked + .ss-switch__pista { background: #18487A; border-color: #18487A; }
+.ss-switch input:checked + .ss-switch__pista::after { transform: translateX(16px); background: #fff; }
+.ss-switch input:focus-visible + .ss-switch__pista { box-shadow: 0 0 0 3px var(--primary-glow); }
+
+/* Pieza y sus ofertas por tienda */
+.ss-pieza { display: flex; flex-direction: column; gap: var(--sp-sm); }
+
+.ss-pieza__cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--sp-sm);
+  border-left: 3px solid #18487A;
+}
+
+.ss-pieza__resumen { font-size: 0.78rem; color: var(--text-muted); }
+
+.ss-ofertas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--sp-md);
+}
+
+.ss-oferta {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  transition: border-color var(--dur-fast);
+}
+
+.ss-oferta:hover { border-color: var(--border2); }
+.ss-oferta--bloqueada { opacity: 0.72; }
+
+.ss-oferta__foto {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  font-size: 2rem;
+}
+
+.ss-oferta__foto img { width: 100%; height: 100%; object-fit: cover; }
+
+.ss-oferta__cuerpo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--sp-sm) var(--sp-md);
+}
+
+.ss-oferta__cuerpo .ss-estado { align-self: flex-start; margin-bottom: 4px; }
+.ss-oferta__nombre { font-size: 0.95rem; line-height: 1.3; }
+.ss-oferta__tienda { font-size: 0.875rem; font-weight: 600; margin-top: 4px; }
+
+.ss-oferta__pie {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  border-top: 1px solid var(--border);
+}
+
+.ss-oferta__precio { font-size: 1.05rem; }
+.ss-btn-elegir { padding: 7px 16px; white-space: nowrap; }
+
+.ss-oferta__motivo {
+  grid-column: 1 / -1;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--error);
+}
+
+.ss-oferta__motivo--aviso { color: var(--warning); }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .ss-detalle { grid-template-columns: 1fr; }
+  .ss-detalle__lateral { position: static; }
+  .ss-urgencias { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ss-mecanicos__form { grid-template-columns: 1fr; }
+  .ss-modal__filtros { grid-template-columns: minmax(0, 1fr) 100px; }
+}
+
+@media (max-width: 560px) {
+  .ss-bloque { padding: var(--sp-md); }
+  .ss-modal { padding: 0; align-items: stretch; }
+  .ss-modal__ventana { max-height: 100vh; border-radius: 0; }
+  .ss-modal__cabecera,
+  .ss-modal__filtros,
+  .ss-modal__cuerpo,
+  .ss-modal__pie { padding-left: var(--sp-md); padding-right: var(--sp-md); }
+  .ss-modal__filtros { grid-template-columns: 1fr 1fr; }
+  .ss-modal__texto { grid-column: 1 / -1; }
+  .ss-repuesto__fila { grid-template-columns: minmax(0, 1fr) 64px 30px; }
+  .ss-repuesto__precio { grid-column: 1 / 2; text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-modal,
+  .ss-modal__ventana { animation: none; }
+}

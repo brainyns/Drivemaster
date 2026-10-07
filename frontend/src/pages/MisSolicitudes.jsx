@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { useState, useEffect } from "react";
 import { getToken } from "../services/authService";
 import { crearPago, verificarPago, getWompiRedirectUrl } from "../services/solicitudService";
@@ -36,7 +37,7 @@ export default function MisSolicitudes({ onVolver }) {
   const cargar = async () => {
     setCargando(true);
     try {
-      const res = await fetch(`${BASE}/mis-solicitudes`, {
+      const res = await apiFetch(`${BASE}/mis-solicitudes`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) setSolicitudes(await res.json());
