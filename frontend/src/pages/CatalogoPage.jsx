@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { obtenerProductos } from "../services/productoService";
+import { cargarTodosLosProductos, filtrosCatalogo } from "../services/catalogoService";
 import { getToken } from "../services/authService";
 
 import Navbar from "../components/public/Navbar";
@@ -20,107 +20,99 @@ const formatPrecio = (n) =>
   new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(n ?? 0);
 
 export default function CatalogoPage({
-  onIrLogin, onIrAdmin, onIrSolicitud, onIrCheckout, onLogout,
-  onSolicitarDiagnostico, onRegistroNegocio, onIrMarketplace, onIrMisCompras,
-  solicitudItems, solicitudCount, solicitudSubtotal, solicitudIva, solicitudTotal,
-  solicitudAbierta, onToggleSolicitud,
-  onAddProduct, onUpdateQuantity, onRemoveProduct,
+  onIrLogin, onIrAdmin, onIrSolicitud, onLogout,
+  onSolicitarDiagnostico, onRegistroNegocio, onIrMisCompras,
+  vistaInicial = "inicio",
+  onVistaConsumida,
+  carrito, onIrCarrito,
   theme, onToggleTheme,
 }) {
   const token = getToken();
 
-  const [todos, setTodos] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
+  // Catálogo global (productos de TODAS las tiendas aprobadas con datos completos, incluida la propia
+  // de DriveMaster): "base" es el conjunto sin filtros (inicio, marcas, techo de precio); "respuesta" es
+  // la consulta con los filtros del servidor. Ambos llevan su clave: la carga se deriva sin setState en el efecto.
+  const [base, setBase] = useState({ items: [], listo: false, error: null });
+  const [opciones, setOpciones] = useState({ ciudades: [], tiendas: [], categorias: [] });
+  const [respuesta, setRespuesta] = useState({ clave: null, items: [], error: null });
 
   const [busqueda, setBusqueda] = useState("");
-  const [categoriaActiva, setCategoriaActiva] = useState(TODAS);
+  const [q, setQ] = useState("");
+  const [categoriaActiva, setCategoriaActiva] = useState("");
+  const [ciudadActiva, setCiudadActiva] = useState("");
+  const [tiendaActiva, setTiendaActiva] = useState("");
   const [marcaActiva, setMarcaActiva] = useState("");
-  const [soloMasVendidos, setSoloMasVendidos] = useState(false);
-  const [soloCompatibles, setSoloCompatibles] = useState(false);
-  const [precioMax, setPrecioMax] = useState(0);
+  const [precioElegido, setPrecioElegido] = useState(null);
   const [sort, setSort] = useState("recommended");
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
   const [vehiculo, setVehiculo] = useState(null);
-  const [idsCompatibles, setIdsCompatibles] = useState(null);
 
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
-  const [vista, setVista] = useState("inicio");
+  const [vista, setVista] = useState(vistaInicial);
 
   const catalogoRef = useRef(null);
 
-  /* ── Carga del catálogo ─────────────────────────────────────────────── */
+  // La vista con la que se abrió ya se usó: el padre vuelve a "inicio" para la próxima vez
+  useEffect(() => { onVistaConsumida?.(); }, [onVistaConsumida]);
+
+  /* ── Carga inicial: conjunto completo y opciones de los filtros ─────── */
   useEffect(() => {
     let vivo = true;
-
-    obtenerProductos()
-      .then((data) => {
-        if (!vivo) return;
-        const lista = Array.isArray(data) ? data : [];
-        setTodos(lista);
-        const techo = lista.reduce((max, p) => Math.max(max, p.precioVenta ?? 0), 0);
-        setPrecioMax(Math.ceil((techo || 300000) / 10000) * 10000);
-      })
-      .catch((e) => {
-        if (vivo) setError(e.message);
-      })
-      .finally(() => {
-        if (vivo) setCargando(false);
-      });
-
-    return () => {
-      vivo = false;
-    };
+    cargarTodosLosProductos({})
+      .then(({ items }) => { if (vivo) setBase({ items, listo: true, error: null }); })
+      .catch((e) => { if (vivo) setBase({ items: [], listo: true, error: e.message }); });
+    filtrosCatalogo().then((f) => { if (vivo) setOpciones(f); }).catch(() => {});
+    return () => { vivo = false; };
   }, []);
 
-  /* ── Metadatos derivados (categorías, marcas) ───────────────────────── */
-  const categorias = useMemo(() => {
-    const mapa = new Map();
-    todos.forEach((p) => {
-      if (!p.categoria) return;
-      mapa.set(p.categoria, (mapa.get(p.categoria) || 0) + 1);
-    });
-    return [...mapa.entries()]
-      .map(([nombre, count]) => ({ nombre, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [todos]);
+  // El texto de búsqueda espera a que se deje de escribir
+  useEffect(() => {
+    const t = setTimeout(() => setQ(busqueda.trim()), 350);
+    return () => clearTimeout(t);
+  }, [busqueda]);
 
+  /* ── Consulta con los filtros del servidor (ciudad, tienda, categoría, texto, vehículo, orden) ── */
+  const orden = sort === "low" ? "precio_asc" : sort === "high" ? "precio_desc" : "";
+  const vehiculoId = vehiculo?.id || "";
+  const sinFiltrosDeServidor = !q && !ciudadActiva && !tiendaActiva && !categoriaActiva && !vehiculoId && !orden;
+  const clave = JSON.stringify([q, ciudadActiva, tiendaActiva, categoriaActiva, vehiculoId, orden]);
+
+  useEffect(() => {
+    if (sinFiltrosDeServidor || vista !== "catalogo") return undefined;
+    let vivo = true;
+    cargarTodosLosProductos({ q, ciudad: ciudadActiva, tiendaId: tiendaActiva, categoria: categoriaActiva, vehiculoId, orden })
+      .then(({ items }) => { if (vivo) setRespuesta({ clave, items, error: null }); })
+      .catch((e) => { if (vivo) setRespuesta({ clave, items: [], error: e.message }); });
+    return () => { vivo = false; };
+  }, [clave, sinFiltrosDeServidor, vista, q, ciudadActiva, tiendaActiva, categoriaActiva, vehiculoId, orden]);
+
+  const todos = base.items;
+  const error = sinFiltrosDeServidor ? base.error : (respuesta.clave === clave ? respuesta.error : null);
+  const cargando = sinFiltrosDeServidor ? !base.listo : respuesta.clave !== clave;
+  const consultados = sinFiltrosDeServidor ? base.items : respuesta.items;
+
+  /* ── Metadatos derivados ────────────────────────────────────────────── */
   const marcas = useMemo(
     () => [...new Set(todos.map((p) => p.marca).filter(Boolean))].sort(),
     [todos]
   );
 
   const precioTecho = useMemo(
-    () => Math.ceil((todos.reduce((max, p) => Math.max(max, p.precioVenta ?? 0), 0) || 300000) / 10000) * 10000,
+    () => Math.ceil((todos.reduce((max, p) => Math.max(max, p.precio ?? 0), 0) || 300000) / 10000) * 10000,
     [todos]
   );
+  const precioMax = precioElegido ?? precioTecho;
 
-  /* ── Filtrado ───────────────────────────────────────────────────────── */
-  const filtrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-
-    const resultado = todos.filter((p) => {
-      if (categoriaActiva !== TODAS && p.categoria !== categoriaActiva) return false;
+  /* ── Filtros del navegador: marca y precio ──────────────────────────── */
+  const filtrados = useMemo(
+    () => consultados.filter((p) => {
       if (marcaActiva && p.marca !== marcaActiva) return false;
-      if (soloMasVendidos && !p.masVendido) return false;
-      if (soloCompatibles && idsCompatibles && !idsCompatibles.has(p.id)) return false;
-      if (p.precioVenta != null && p.precioVenta > precioMax) return false;
-
-      if (q) {
-        const heno = `${p.nombre || ""} ${p.marca || ""} ${p.codigo || ""} ${p.categoria || ""}`.toLowerCase();
-        if (!heno.includes(q)) return false;
-      }
+      if (p.precio != null && p.precio > precioMax) return false;
       return true;
-    });
-
-    const ordenado = [...resultado];
-    if (sort === "low") ordenado.sort((a, b) => (a.precioVenta ?? 0) - (b.precioVenta ?? 0));
-    else if (sort === "high") ordenado.sort((a, b) => (b.precioVenta ?? 0) - (a.precioVenta ?? 0));
-    else ordenado.sort((a, b) => Number(!!b.masVendido) - Number(!!a.masVendido));
-
-    return ordenado;
-  }, [todos, busqueda, categoriaActiva, marcaActiva, soloMasVendidos, soloCompatibles, idsCompatibles, precioMax, sort]);
+    }),
+    [consultados, marcaActiva, precioMax]
+  );
 
   /* ── Vistas: el mockup es un SPA de dos páginas (home | catalog) ────── */
   const irAlCatalogo = useCallback(() => {
@@ -155,52 +147,39 @@ export default function CatalogoPage({
     onIrSolicitud?.("mis-servicios");
   }, [token, onIrLogin, onIrSolicitud]);
 
-  const seleccionarVehiculo = useCallback((v, ids) => {
+  // La compatibilidad ya no oculta nada: elegir un vehículo solo hace que el servidor avise y ordene.
+  const seleccionarVehiculo = useCallback((v) => {
     setVehiculo(v);
-    setIdsCompatibles(ids);
-    if (v && ids) {
-      setSoloCompatibles(true);
-      setCategoriaActiva(TODAS);
+    if (v) {
+      setCategoriaActiva("");
       setBusqueda("");
+      setQ("");
       setMarcaActiva("");
-      setSoloMasVendidos(false);
-    } else {
-      setSoloCompatibles(false);
     }
   }, []);
 
   const limpiarFiltros = useCallback(() => {
     setBusqueda("");
-    setCategoriaActiva(TODAS);
+    setQ("");
+    setCategoriaActiva("");
+    setCiudadActiva("");
+    setTiendaActiva("");
     setMarcaActiva("");
-    setSoloMasVendidos(false);
-    setSoloCompatibles(false);
-    setPrecioMax(precioTecho);
-  }, [precioTecho]);
+    setPrecioElegido(null);
+  }, []);
 
   const filtrosActivos =
-    (categoriaActiva !== TODAS ? 1 : 0) +
+    (categoriaActiva ? 1 : 0) +
+    (ciudadActiva ? 1 : 0) +
+    (tiendaActiva ? 1 : 0) +
     (marcaActiva ? 1 : 0) +
-    (soloMasVendidos ? 1 : 0) +
-    (soloCompatibles && vehiculo ? 1 : 0) +
     (precioMax < precioTecho ? 1 : 0);
 
   const abrirProducto = useCallback((p) => {
     setProductoSeleccionado(p);
   }, []);
 
-  const alternativas = productoSeleccionado
-    ? todos
-        .filter(
-          (p) =>
-            p.id !== productoSeleccionado.id &&
-            p.categoria === productoSeleccionado.categoria &&
-            (!idsCompatibles || idsCompatibles.has(p.id))
-        )
-        .slice(0, 4)
-    : [];
-
-  const hayFiltrosDeVehiculo = !!(vehiculo && idsCompatibles);
+  const hayFiltrosDeVehiculo = !!vehiculo;
 
   return (
     <div className="dm-page">
@@ -213,17 +192,9 @@ export default function CatalogoPage({
         onLogout={onLogout}
         onSolicitarDiagnostico={onSolicitarDiagnostico}
         onIrMisServicios={irAMisServicios}
-        onIrMarketplace={onIrMarketplace}
         onIrMisCompras={onIrMisCompras}
-        solicitudItems={solicitudItems}
-        solicitudCount={solicitudCount}
-        solicitudSubtotal={solicitudSubtotal}
-        solicitudIva={solicitudIva}
-        solicitudTotal={solicitudTotal}
-        solicitudAbierta={solicitudAbierta}
-        onToggleSolicitud={onToggleSolicitud}
-        onUpdateQuantity={onUpdateQuantity}
-        onRemoveProduct={onRemoveProduct}
+        carritoCount={carrito?.cantidad ?? 0}
+        onIrCarrito={onIrCarrito}
         theme={theme}
         onToggleTheme={onToggleTheme}
         vehiculoActivo={vehiculo}
@@ -249,13 +220,12 @@ export default function CatalogoPage({
                 <span className="dm-line" /> COMPRA DIRECTA
               </div>
               <h2>¿Prefieres comprar el repuesto tú mismo?</h2>
-              <p>Identifica tu vehículo y te mostramos los repuestos compatibles del catálogo DriveMaster.</p>
+              <p>Identifica tu vehículo y te avisamos qué repuestos le sirven, de DriveMaster y de las demás tiendas.</p>
             </div>
 
             <VehiculoSelector
               token={token}
               vehiculo={vehiculo}
-              idsCompatibles={idsCompatibles}
               onSelect={seleccionarVehiculo}
               onIrLogin={onIrLogin}
               onIrVehiculos={irAServicios}
@@ -292,11 +262,11 @@ export default function CatalogoPage({
                   </h1>
                   <p className="dm-catalogo__lead">
                     {hayFiltrosDeVehiculo
-                      ? "Repuestos compatibles con tu vehículo. Compara y elige con confianza."
-                      : "Explora, compara y encuentra la solución correcta."}
+                      ? "Los compatibles salen primero y te avisamos si alguno no le sirve. Compara y elige con confianza."
+                      : "Productos de DriveMaster y de las tiendas aliadas. Explora, compara y encuentra la solución correcta."}
                   </p>
                 </div>
-                <span className="dm-tag">{cargando ? "CARGANDO" : `${todos.length} PRODUCTOS`}</span>
+                <span className="dm-tag">{cargando ? "CARGANDO" : `${todos.length} PRODUCTOS · ${opciones.tiendas.length} TIENDAS`}</span>
               </div>
 
               <div className={`dm-cat-vehicle ${hayFiltrosDeVehiculo ? "is-identified" : ""}`}>
@@ -313,7 +283,7 @@ export default function CatalogoPage({
                       : "Encuentra repuestos que realmente encajan."}
                   </strong>
                   {!hayFiltrosDeVehiculo && (
-                    <small>Regístralo arriba y te mostramos solo lo que le sirve.</small>
+                    <small>Regístralo arriba y te avisamos qué repuestos le sirven.</small>
                   )}
                 </div>
                 {hayFiltrosDeVehiculo && (
@@ -340,19 +310,21 @@ export default function CatalogoPage({
               <div className="dm-cat-layout">
                 <CatalogFilters
                   abierto={filtrosAbiertos}
-                  categorias={categorias}
+                  categorias={opciones.categorias}
+                  ciudades={opciones.ciudades}
+                  tiendas={opciones.tiendas}
                   marcas={marcas}
                   categoriaActiva={categoriaActiva}
                   onCategoriaChange={setCategoriaActiva}
+                  ciudadActiva={ciudadActiva}
+                  onCiudadChange={setCiudadActiva}
+                  tiendaActiva={tiendaActiva}
+                  onTiendaChange={setTiendaActiva}
                   marcaActiva={marcaActiva}
                   onMarcaChange={setMarcaActiva}
                   precioMax={precioMax}
-                  onPrecioMaxChange={setPrecioMax}
+                  onPrecioMaxChange={setPrecioElegido}
                   precioTecho={precioTecho}
-                  soloMasVendidos={soloMasVendidos}
-                  onMasVendidosChange={setSoloMasVendidos}
-                  soloCompatibles={soloCompatibles}
-                  onSoloCompatiblesChange={setSoloCompatibles}
                   hayVehiculo={hayFiltrosDeVehiculo}
                   onIrVehiculo={irAlVehiculo}
                   onLimpiar={limpiarFiltros}
@@ -372,6 +344,15 @@ export default function CatalogoPage({
                     </div>
                   ) : (
                     <>
+                      {carrito?.mezclados && (
+                        <p className="dm-aviso" role="status">
+                          <span>
+                            <strong>Estos productos se pagan por separado.</strong> Tu carrito tiene productos de DriveMaster
+                            (compra normal) y de otras tiendas (un solo pago): paga cada grupo sin perder el otro.
+                          </span>
+                          <button onClick={onIrCarrito}>Ver carrito</button>
+                        </p>
+                      )}
                       <ProductList
                         productos={filtrados}
                         titulo="No encontramos repuestos con estos filtros."
@@ -380,15 +361,12 @@ export default function CatalogoPage({
                             ? `Hasta ${formatPrecio(precioMax)} COP`
                             : "Precios en COP"
                         }
-                        vehiculo={vehiculo}
-                        idsCompatibles={idsCompatibles}
-                        soloCompatibles={soloCompatibles}
                         onProductoClick={abrirProducto}
                         onRestablecer={limpiarFiltros}
                       />
                       <p className="dm-disclaimer">
-                        Productos, precios y existencias son datos de demostración.
-                        Confirma la referencia antes de comprar.
+                        Los precios y las existencias los define cada tienda. El IVA y el envío se calculan al pagar;
+                        confirma la referencia antes de comprar.
                       </p>
                     </>
                   )}
@@ -414,15 +392,15 @@ export default function CatalogoPage({
 
       {productoSeleccionado && (
         <ProductDetail
+          key={productoSeleccionado.id}
           producto={productoSeleccionado}
           vehiculo={vehiculo}
-          idsCompatibles={idsCompatibles}
           onClose={() => setProductoSeleccionado(null)}
-          onAddProduct={onAddProduct}
-          onIrSolicitud={onIrCheckout || (() => onIrSolicitud?.("checkout"))}
-          onIrVehiculo={irAlVehiculo}
-          alternativas={alternativas}
-          onAbrirAlternativa={abrirProducto}
+          onAgregar={(p, cantidad) => carrito?.agregar(p, cantidad)}
+          onIrCarrito={() => { setProductoSeleccionado(null); onIrCarrito?.(); }}
+          onIrVehiculo={() => { setProductoSeleccionado(null); irAlVehiculo(); }}
+          onAbrirProducto={abrirProducto}
+          carritoMezclado={!!carrito?.mezclados}
         />
       )}
     </div>

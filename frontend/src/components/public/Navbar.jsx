@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import Logo from "./Logo";
 import Icon from "./Icon";
 import ThemeToggle from "../ThemeToggle";
-import SolicitudDrawer from "../SolicitudDrawer";
 import { getUser, actualizarMiNombre } from "../../services/authService";
 import "../../css/navbar.css";
 
@@ -21,17 +20,9 @@ export default function Navbar({
   onLogout,
   onSolicitarDiagnostico,
   onIrMisServicios,
-  onIrMarketplace,
   onIrMisCompras,
-  solicitudItems,
-  solicitudCount,
-  solicitudSubtotal,
-  solicitudIva,
-  solicitudTotal,
-  solicitudAbierta,
-  onToggleSolicitud,
-  onUpdateQuantity,
-  onRemoveProduct,
+  carritoCount = 0,
+  onIrCarrito,
   theme,
   onToggleTheme,
   vehiculoActivo,
@@ -66,14 +57,6 @@ export default function Navbar({
     else onIrCatalogo?.();
   };
 
-  const handleCartClick = () => {
-    if (!user) {
-      (onIrLogin || onIrAdmin)?.();
-      return;
-    }
-    onToggleSolicitud?.();
-  };
-
   const handleGuardarNombre = async () => {
     try {
       await actualizarMiNombre(nuevoNombre);
@@ -93,7 +76,6 @@ export default function Navbar({
     { label: "Solicitar diagnóstico", onClick: cerrarY(onSolicitarDiagnostico) },
     { label: "Cómo funciona", onClick: cerrarY(() => onIrInicio?.("dm-pasos")) },
     { label: "Catálogo", onClick: cerrarY(onIrCatalogo) },
-    { label: "Repuestos de las tiendas", onClick: cerrarY(onIrMarketplace) },
     { label: "Para talleres y tiendas", onClick: cerrarY(() => onIrInicio?.("dm-negocios")) },
     { label: "Mis servicios", onClick: cerrarY(onIrMisServicios), soloCliente: true },
   ];
@@ -115,12 +97,11 @@ export default function Navbar({
           <div className="dm-header__actions">
             <ThemeToggle theme={theme} onToggle={onToggleTheme} />
 
-            {user && (
-              <button className="dm-header__cart" onClick={handleCartClick} aria-label={`Solicitud, ${solicitudCount} artículos`}>
-                <Icon name="box" size={21} />
-                {solicitudCount > 0 && <span className="dm-header__cart-badge">{solicitudCount}</span>}
-              </button>
-            )}
+            <button className="dm-header__cart" onClick={() => onIrCarrito?.()}
+              aria-label={`Carrito, ${carritoCount} ${carritoCount === 1 ? "artículo" : "artículos"}`}>
+              <Icon name="box" size={21} />
+              {carritoCount > 0 && <span className="dm-header__cart-badge">{carritoCount}</span>}
+            </button>
 
             {user ? (
               <div className="dm-header__user" ref={menuRef}>
@@ -215,18 +196,6 @@ export default function Navbar({
           )}
         </nav>
       )}
-
-      <SolicitudDrawer
-        abierto={solicitudAbierta}
-        onCerrar={() => onToggleSolicitud?.()}
-        onEnviarSolicitud={() => { onToggleSolicitud?.(); onIrSolicitud?.("checkout"); }}
-        items={solicitudItems}
-        subtotal={solicitudSubtotal}
-        iva={solicitudIva}
-        total={solicitudTotal}
-        onUpdateQuantity={onUpdateQuantity}
-        onRemoveProduct={onRemoveProduct}
-      />
 
       {editandoNombre && (
         <div className="dm-modal-overlay" onClick={() => setEditandoNombre(false)}>

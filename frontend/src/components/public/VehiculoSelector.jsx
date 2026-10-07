@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { misVehiculos, repuestosCompatibles } from "../../services/vehiculoService";
+import { misVehiculos } from "../../services/vehiculoService";
 import Icon from "./Icon";
 import "../../css/vehiculo-selector.css";
 
@@ -15,7 +15,6 @@ import "../../css/vehiculo-selector.css";
 export default function VehiculoSelector({
   token,
   vehiculo,
-  idsCompatibles,
   onSelect,
   onIrLogin,
   onIrVehiculos,
@@ -47,27 +46,9 @@ export default function VehiculoSelector({
   const error = respuesta?.token === token ? respuesta.error : null;
   const vehiculos = respuesta?.token === token ? respuesta.lista : [];
 
-  const elegir = async (v) => {
-    if (vehiculo?.id === v.id) {
-      onSelect(null, null);
-      return;
-    }
-    try {
-      const compatibles = await repuestosCompatibles(token, v.id);
-      const lista = Array.isArray(compatibles) ? compatibles : [];
-      onSelect(
-        v,
-        new Set(
-          lista
-            .map((p) => (typeof p === "object" && p ? p.id : p))
-            .filter((id) => id != null)
-        )
-      );
-    } catch {
-      // Si la consulta de compatibilidad falla, mostramos el vehículo sin
-      // filtrar en vez de ocultarlo.
-      onSelect(v, null);
-    }
+  // La compatibilidad la calcula el catálogo con el id del vehículo: aquí solo se elige o se quita.
+  const elegir = (v) => {
+    onSelect(vehiculo?.id === v.id ? null : v);
   };
 
   return (
@@ -91,7 +72,7 @@ export default function VehiculoSelector({
         {!hayToken && (
           <div className="dm-vehicle__empty">
             <p>
-              Identifica tu vehículo para ver solo los repuestos que realmente
+              Identifica tu vehículo para saber qué repuestos realmente
               le encajan.
             </p>
             <button className="dm-btn dm-btn--primary" onClick={onIrLogin}>
@@ -160,10 +141,10 @@ export default function VehiculoSelector({
               <div className="dm-vehicle__active">
                 <Icon name="shield" size={16} />
                 <span>
-                  Mostrando <strong>{idsCompatibles ? idsCompatibles.size : "todos"}</strong>{" "}
-                  repuestos compatibles con {vehiculo.marca} {vehiculo.modelo}.
+                  Te avisamos qué repuestos le sirven a tu <strong>{vehiculo.marca} {vehiculo.modelo}</strong>:
+                  los compatibles salen primero y ninguno se oculta.
                 </span>
-                <button onClick={() => onSelect(null, null)}>Quitar filtro</button>
+                <button onClick={() => onSelect(null)}>Quitar vehículo</button>
               </div>
             )}
           </>
@@ -171,7 +152,7 @@ export default function VehiculoSelector({
 
         <div className="dm-vehicle__footnote">
           <Icon name="check" size={13} />
-          <span>Solo te mostraremos repuestos que se ajustan a tu vehículo.</span>
+          <span>Te avisamos si un repuesto no se ajusta a tu vehículo.</span>
           <button onClick={onVerCatalogo}>
             ¿Ya conoces la referencia? Búscala aquí <Icon name="arrow" size={13} />
           </button>

@@ -22,7 +22,7 @@ const formatFecha = (f) => (f ? new Date(f).toLocaleDateString("es-CO", { day: "
 const estadoDe = (n) => n.estadoAprobacion || "APROBADO";
 
 /** Panel del ADMIN para validar y activar talleres y tiendas, y asignarles un plan. */
-export default function Aprobaciones({ token }) {
+export default function Aprobaciones({ token, onTiendaPropiaIncompleta }) {
   const [negocios, setNegocios] = useState([]);
   const [tiendaPropia, setTiendaPropia] = useState(null);
   const [planes, setPlanes] = useState([]);
@@ -44,7 +44,9 @@ export default function Aprobaciones({ token }) {
         listarTiendas(token),
         listarPlanes(token),
       ]);
-      setTiendaPropia(tiendas.find((t) => t.plataforma) || null);
+      const propia = tiendas.find((t) => t.plataforma) || null;
+      setTiendaPropia(propia);
+      onTiendaPropiaIncompleta?.(!!propia && propia.datosCompletos === false);
       setNegocios([
         ...talleres.map((t) => ({ ...t, tipo: "TALLER" })),
         // La tienda propia de DriveMaster no pasa por aprobación.
@@ -56,7 +58,7 @@ export default function Aprobaciones({ token }) {
     } finally {
       setCargando(false);
     }
-  }, [token]);
+  }, [token, onTiendaPropiaIncompleta]);
 
   useEffect(() => { cargar(); }, [cargar]);
 

@@ -45,6 +45,7 @@ function Linea({ item, onCambiar, onQuitar, onVer }) {
  */
 export default function CarritoMarketplace({
   header, carrito, onVolver, onVerProducto, onContinuarCatalogo, onPagarPlataforma, onIrLogin,
+  pendientesCompraNormal = 0, onIrCompraNormal,
 }) {
   const user = getUser();
   const esCliente = user?.rol === "CLIENTE";
@@ -76,6 +77,14 @@ export default function CarritoMarketplace({
             <strong>Estos productos se pagan por separado.</strong>{" "}
             Los de las tiendas se pagan con un solo pago; los «Vendido por DriveMaster» van por la compra normal.
             No pierdes nada: paga un grupo y el otro se queda aquí.
+          </div>
+        )}
+
+        {pendientesCompraNormal > 0 && (
+          <div className="mk-aviso mk-aviso--aviso" role="status">
+            Tienes {pendientesCompraNormal === 1 ? "un producto guardado" : `${pendientesCompraNormal} productos guardados`} de una compra
+            anterior en la <strong>compra normal</strong> de DriveMaster.{" "}
+            {onIrCompraNormal && <button className="mk-enlace" onClick={onIrCompraNormal}>Continuar la compra normal</button>}
           </div>
         )}
 

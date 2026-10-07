@@ -47,14 +47,13 @@ import ChatWidget            from "./components/chat/ChatWidget";
 import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
 import { useCarrito } from "./hooks/useCarrito";
 import MarketHeader from "./components/marketplace/MarketHeader";
-import CatalogoMarketplace from "./pages/CatalogoMarketplace";
 import DetalleProductoMarketplace from "./pages/DetalleProductoMarketplace";
 import CarritoMarketplace from "./pages/CarritoMarketplace";
 import CheckoutMarketplace from "./pages/CheckoutMarketplace";
 import MisCompras from "./pages/MisCompras";
 import ProblemasEnvios from "./pages/ProblemasEnvios";
 import DatosMiTienda from "./pages/DatosMiTienda";
-import { miTienda } from "./services/tiendaService";
+import { miTienda, listarTiendas } from "./services/tiendaService";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
 
@@ -120,7 +119,7 @@ const PAGINAS_CLIENTE = [
 ];
 
 // Catálogo marketplace: se consulta sin sesión y no usa el panel lateral aunque haya una.
-const PAGINAS_MARKETPLACE = ["marketplace", "producto-marketplace", "carrito-marketplace"];
+const PAGINAS_MARKETPLACE = ["producto-marketplace", "carrito-marketplace"];
 
 // Página inicial de cada rol después de iniciar sesión.
 const INICIO_POR_ROL = {
@@ -154,11 +153,14 @@ function App() {
   const [idSeleccionado, setIdSeleccionado] = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [solicitudItems, setSolicitudItems] = useState(loadSolicitud);
-  const [solicitudAbierta, setSolicitudAbierta] = useState(false);
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   // true cuando el cliente llegó a "Mis servicios" iniciando sesión desde el enlace de la cotización
   const [vieneDeCotizacion, setVieneDeCotizacion] = useState(false);
   const carrito = useCarrito();
+  // Vista con la que abre la landing: "inicio" o "catalogo" (el catálogo global)
+  const [vistaCatalogo, setVistaCatalogo] = useState("inicio");
+  // false: la tienda propia de DriveMaster tiene ciudad, dirección y horario (si no, sus productos no se muestran)
+  const [plataformaIncompleta, setPlataformaIncompleta] = useState(false);
   // true si la tienda (rol TIENDA) aún no completó ciudad, dirección y horario: no se muestra en el catálogo
   const [tiendaIncompleta, setTiendaIncompleta] = useState(false);
 
@@ -291,28 +293,6 @@ function App() {
     setPagina("catalogo");
   };
 
-  const addProduct = useCallback((producto, cantidad) => {
-    setSolicitudItems(prev => {
-      const idx = prev.findIndex(i => i.productoId === producto.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        const item = { ...next[idx] };
-        item.cantidad += cantidad;
-        next[idx] = item;
-        return next;
-      }
-      return [...prev, {
-        productoId: producto.id,
-        nombre: producto.nombre,
-        imagenUrl: producto.imagenUrl || "",
-        precioUnitario: producto.precioVenta,
-        cantidad,
-        tipo: producto.tipo || "STOCK",
-        stockActual: producto.stockActual ?? 0,
-      }];
-    });
-  }, []);
-
   // Fija (no suma) la cantidad de un producto en la compra normal: así pagar dos veces no duplica unidades
   const fijarProducto = useCallback((producto, cantidad) => {
     setSolicitudItems(prev => {
@@ -333,21 +313,10 @@ function App() {
     });
   }, []);
 
-  const updateQuantity = useCallback((productoId, cantidad) => {
-    setSolicitudItems(prev =>
-      prev.map(i => i.productoId === productoId ? { ...i, cantidad } : i)
-    );
-  }, []);
-
-  const removeProduct = useCallback((productoId) => {
-    setSolicitudItems(prev => prev.filter(i => i.productoId !== productoId));
-  }, []);
-
   const removeProductList = useCallback((productIds) => {
     setSolicitudItems(prev => prev.filter(i => !productIds.includes(i.productoId)));
   }, []);
 
-  const solicitudCount = solicitudItems.reduce((s, i) => s + i.cantidad, 0);
   const solicitudSubtotal = calcularSubtotal(solicitudItems);
   const solicitudIva = solicitudSubtotal * ivaRate;
   const solicitudTotal = solicitudSubtotal + solicitudIva;
@@ -393,6 +362,16 @@ function App() {
   };
   const esTienda = user?.rol === "TIENDA";
 
+  const esAdmin = user?.rol === "ADMIN" || user?.rol === "SUPERADMIN";
+  useEffect(() => {
+    if (!esAdmin) return undefined;
+    let vivo = true;
+    listarTiendas(getToken())
+      .then((lista) => { if (vivo) setPlataformaIncompleta(lista.some((t) => t.plataforma && t.datosCompletos === false)); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, [esAdmin]);
+
   useEffect(() => {
     if (user?.rol !== "TIENDA") return undefined;
     let vivo = true;
@@ -408,12 +387,16 @@ function App() {
     if (pendiente) carrito.quitarVarios(pendiente.ids);
   };
 
+  // El catálogo global vive en la landing: se abre directo en su vista de catálogo
+  const irAlCatalogoGlobal = () => { setVistaCatalogo("catalogo"); setPagina("catalogo"); };
+  const irAlInicio = () => { setVistaCatalogo("inicio"); setPagina("catalogo"); };
+
   const cabeceraMarketplace = (activo) => (
     <MarketHeader
       activo={activo}
       cantidadCarrito={carrito.cantidad}
-      onIrInicio={() => setPagina("catalogo")}
-      onIrCatalogo={() => setPagina("marketplace")}
+      onIrInicio={irAlInicio}
+      onIrCatalogo={irAlCatalogoGlobal}
       onIrCarrito={() => setPagina("carrito-marketplace")}
       onIrMisCompras={() => setPagina("mis-compras")}
       onIrLogin={() => setPagina("login")}
@@ -425,20 +408,13 @@ function App() {
   );
 
   const renderPagina = () => {
-    // Catálogo marketplace: público
-    if (pagina === "marketplace") return (
-      <CatalogoMarketplace
-        header={cabeceraMarketplace("catalogo")}
-        onVerProducto={(p) => irA("producto-marketplace", p.id)}
-        onAgregar={(p) => carrito.agregar(p, 1)}
-      />
-    );
+    // Ficha completa y carrito del catálogo: públicos
     if (pagina === "producto-marketplace") return (
       <DetalleProductoMarketplace
         key={idSeleccionado}
         header={cabeceraMarketplace("catalogo")}
         productoId={idSeleccionado}
-        onVolver={() => setPagina("marketplace")}
+        onVolver={() => irAlCatalogoGlobal()}
         onVerProducto={(p) => irA("producto-marketplace", p.id)}
         onAgregar={(p, cantidad) => carrito.agregar(p, cantidad)}
         onIrCarrito={() => setPagina("carrito-marketplace")}
@@ -448,10 +424,12 @@ function App() {
       <CarritoMarketplace
         header={cabeceraMarketplace("carrito")}
         carrito={carrito}
-        onVolver={() => setPagina("marketplace")}
+        onVolver={() => irAlCatalogoGlobal()}
         onVerProducto={(p) => irA("producto-marketplace", p.id)}
         onIrLogin={() => { guardarDestinoPostLogin("carrito-marketplace"); setPagina("login"); }}
         onContinuarCatalogo={() => setPagina("checkout-marketplace")}
+        pendientesCompraNormal={solicitudItems.filter((i) => !carrito.plataforma.some((x) => x.producto.id === i.productoId)).length}
+        onIrCompraNormal={() => setPagina("checkout")}
         // Los productos de DriveMaster se pagan por la compra normal, sin perder el resto del carrito
         onPagarPlataforma={(items) => {
           items.forEach((x) => fijarProducto(x.producto, x.cantidad));
@@ -471,7 +449,7 @@ function App() {
         <MisCompras
           header={cabeceraMarketplace("compras")}
           onVolver={() => setPagina("catalogo")}
-          onIrCatalogo={() => setPagina("marketplace")}
+          onIrCatalogo={() => irAlCatalogoGlobal()}
         />
       );
       return (
@@ -486,26 +464,17 @@ function App() {
 
     if (pagina === "catalogo") return (
       <CatalogoPage
+        vistaInicial={vistaCatalogo}
+        onVistaConsumida={() => setVistaCatalogo("inicio")}
         onIrLogin={() => setPagina("login")}
         onIrAdmin={() => setPagina(user?.rol === "TALLER" || user?.rol === "TIENDA" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
         onIrSolicitud={(p) => setPagina(p || "checkout")}
-        onIrCheckout={() => setPagina("checkout")}
         onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         onRegistroNegocio={() => setPagina("registro-negocio")}
-        onIrMarketplace={() => setPagina("marketplace")}
         onIrMisCompras={() => { if (!user) guardarDestinoPostLogin("checkout-marketplace"); setPagina("mis-compras"); }}
         onLogout={handleLogout}
-        solicitudItems={solicitudItems}
-        solicitudCount={solicitudCount}
-        solicitudSubtotal={solicitudSubtotal}
-        solicitudIva={solicitudIva}
-        solicitudTotal={solicitudTotal}
-        solicitudAbierta={solicitudAbierta}
-        onToggleSolicitud={() => setSolicitudAbierta(o => !o)}
-        onAddProduct={addProduct}
-        onUpdateQuantity={updateQuantity}
-        onRemoveProduct={removeProduct}
-        onClearSolicitud={() => setSolicitudItems([])}
+        carrito={carrito}
+        onIrCarrito={() => setPagina("carrito-marketplace")}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -678,7 +647,7 @@ function App() {
     if (pagina === "mi-perfil")        return <PerfilAdmin          />;
     if (pagina === "taller-panel")     return <PanelTaller          />;
     if (pagina === "admin-talleres")   return <AdminTalleres        />;
-    if (pagina === "aprobaciones")     return <Aprobaciones         token={token} />;
+    if (pagina === "aprobaciones")     return <Aprobaciones         token={token} onTiendaPropiaIncompleta={setPlataformaIncompleta} />;
     if (pagina === "liquidaciones")    return <Liquidaciones        />;
     if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
     if (pagina === "problemas-envios") return <ProblemasEnvios      />;
@@ -723,6 +692,13 @@ function App() {
             onColorChange={handleColorChange}
             onMenuClick={() => setSidebarAbierto(true)}
           />
+        )}
+
+        {esAdmin && plataformaIncompleta && pagina !== "aprobaciones" && (
+          <p className="ss-aviso" role="status" style={{ margin: "12px 16px" }}>
+            La tienda de DriveMaster aún no tiene ciudad, dirección y horario: sus productos no se muestran en el catálogo.{" "}
+            <button className="sv-btn-outline" onClick={() => irA("aprobaciones")}>Completar datos</button>
+          </p>
         )}
 
         {esTienda && tiendaIncompleta && pagina !== "mi-tienda" && (

@@ -2,24 +2,27 @@ import Icon from "./Icon";
 import "../../css/catalog.css";
 
 /**
- * Panel lateral de filtros del catálogo. En móvil se despliega debajo de la
- * barra de herramientas.
+ * Panel lateral de filtros del catálogo global. En móvil se despliega debajo de la barra de
+ * herramientas. Ciudad, tienda y categoría se consultan al servidor; marca y precio se filtran en el
+ * navegador. La compatibilidad con el vehículo solo avisa: no hay filtro que oculte productos.
  */
 export default function CatalogFilters({
   abierto,
   categorias = [],
+  ciudades = [],
+  tiendas = [],
   marcas = [],
   categoriaActiva,
   onCategoriaChange,
+  ciudadActiva,
+  onCiudadChange,
+  tiendaActiva,
+  onTiendaChange,
   marcaActiva,
   onMarcaChange,
   precioMax,
   onPrecioMaxChange,
   precioTecho,
-  soloMasVendidos,
-  onMasVendidosChange,
-  soloCompatibles,
-  onSoloCompatiblesChange,
   hayVehiculo,
   onIrVehiculo,
   onLimpiar,
@@ -33,19 +36,48 @@ export default function CatalogFilters({
         <button onClick={onLimpiar}>Limpiar</button>
       </div>
 
+      {ciudades.length > 0 && (
+        <fieldset>
+          <legend>Ciudad</legend>
+          <select value={ciudadActiva} onChange={(e) => onCiudadChange(e.target.value)} aria-label="Filtrar por ciudad">
+            <option value="">Todas</option>
+            {ciudades.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </fieldset>
+      )}
+
+      {tiendas.length > 0 && (
+        <fieldset>
+          <legend>Tienda</legend>
+          <select value={tiendaActiva} onChange={(e) => onTiendaChange(e.target.value)} aria-label="Filtrar por tienda">
+            <option value="">Todas</option>
+            {tiendas.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.esPlataforma ? "DriveMaster" : t.nombre} · {t.ciudad}
+              </option>
+            ))}
+          </select>
+        </fieldset>
+      )}
+
       {categorias.length > 0 && (
         <fieldset>
           <legend>Categorías</legend>
+          <label className="dm-filters__option">
+            <input type="radio" name="categoria" checked={!categoriaActiva} onChange={() => onCategoriaChange("")} />
+            <span>Todas</span>
+          </label>
           {categorias.map((c) => (
-            <label className="dm-filters__option" key={c.nombre}>
+            <label className="dm-filters__option" key={c}>
               <input
                 type="radio"
                 name="categoria"
-                checked={categoriaActiva === c.nombre}
-                onChange={() => onCategoriaChange(c.nombre)}
+                checked={categoriaActiva === c}
+                onChange={() => onCategoriaChange(c)}
               />
-              <span>{c.nombre}</span>
-              <small>{c.count}</small>
+              <span>{c}</span>
             </label>
           ))}
         </fieldset>
@@ -87,24 +119,12 @@ export default function CatalogFilters({
       </fieldset>
 
       <fieldset>
-        <legend>Disponibilidad y compatibilidad</legend>
-        <label className="dm-filters__option">
-          <input
-            type="checkbox"
-            checked={soloMasVendidos}
-            onChange={(e) => onMasVendidosChange(e.target.checked)}
-          />
-          <span>Solo más vendidos</span>
-        </label>
-        <label className="dm-filters__option">
-          <input
-            type="checkbox"
-            checked={soloCompatibles}
-            disabled={!hayVehiculo}
-            onChange={(e) => onSoloCompatiblesChange(e.target.checked)}
-          />
-          <span>Solo compatibles con mi vehículo</span>
-        </label>
+        <legend>Compatibilidad</legend>
+        <p className="dm-filters__note">
+          {hayVehiculo
+            ? "Los repuestos compatibles con tu vehículo salen primero. Avisamos si uno no le sirve; ninguno se oculta."
+            : "Identifica tu vehículo y te avisamos qué repuestos le sirven."}
+        </p>
         {!hayVehiculo && (
           <button className="dm-filters__vehicle-link" onClick={onIrVehiculo}>
             Identifica tu vehículo <Icon name="arrow" size={13} />
@@ -115,7 +135,7 @@ export default function CatalogFilters({
       <div className="dm-filters__help">
         <Icon name="shield" size={25} />
         <strong>Elige con confianza.</strong>
-        <p>Cada ficha reúne las especificaciones para una decisión informada.</p>
+        <p>Compara el mismo repuesto entre tiendas y elige envío o retiro.</p>
       </div>
     </aside>
   );
