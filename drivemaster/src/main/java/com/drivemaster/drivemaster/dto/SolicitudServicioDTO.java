@@ -69,5 +69,8 @@ public class SolicitudServicioDTO {
     private Diagnostico diagnostico;
     private List<RepuestoSeleccionado> repuestos;
 
+    // Cotización vigente (detalle en /api/cotizaciones/orden/{id})
+    private String cotizacionId;
+
     private List<EventoOrden> eventos;
 }

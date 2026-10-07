@@ -112,6 +112,9 @@ public class OrdenServicio {
     @Builder.Default
     private List<RepuestoSeleccionado> repuestos = new ArrayList<>();
 
+    // Cotización vigente (la última emitida; las anteriores quedan en la colección cotizaciones)
+    private String cotizacionId;
+
     @Builder.Default
     private List<EventoOrden> eventos = new ArrayList<>();
 }

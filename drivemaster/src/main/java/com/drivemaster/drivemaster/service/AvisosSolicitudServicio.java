@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.model.Cotizacion;
 import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.model.Usuario;
@@ -8,6 +9,7 @@ import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.util.EmailServicioBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -24,13 +26,16 @@ public class AvisosSolicitudServicio {
     private final EmailsService emailsService;
     private final UsuarioRepository usuarioRepository;
     private final TallerRepository tallerRepository;
+    private final String frontendUrl;
 
     public AvisosSolicitudServicio(EmailsService emailsService,
                                    UsuarioRepository usuarioRepository,
-                                   TallerRepository tallerRepository) {
+                                   TallerRepository tallerRepository,
+                                   @Value("${frontend.url}") String frontendUrl) {
         this.emailsService = emailsService;
         this.usuarioRepository = usuarioRepository;
         this.tallerRepository = tallerRepository;
+        this.frontendUrl = frontendUrl;
     }
 
     public void tallerAsignado(OrdenServicio orden, Taller taller) {
@@ -72,6 +77,31 @@ public class AvisosSolicitudServicio {
                 correoTaller(taller).ifPresent(correo -> enviar(correo, "Una solicitud salió de tu bandeja",
                         EmailServicioBuilder.tallerSolicitudRetirada(taller.getNombre(),
                                 orden.getVehiculoDescripcion(), motivo))));
+    }
+
+    /**
+     * Cotización emitida. El token va en el fragmento del enlace (nunca llega a un
+     * servidor) y no se escribe en el log, ni siquiera si el envío falla.
+     */
+    public void cotizacionEmitida(OrdenServicio orden, Cotizacion cotizacion, String token) {
+        String enlace = frontendUrl.replaceAll("/+$", "") + "/cotizacion#token=" + token;
+        cliente(orden).ifPresent(c -> enviar(c.getCorreo(),
+                "Tu cotización de " + cotizacion.getTallerNombre() + " está lista",
+                EmailServicioBuilder.clienteCotizacion(c.getNombre(), cotizacion, enlace)));
+    }
+
+    public void cotizacionRespondida(Cotizacion cotizacion, String respuesta, String motivo) {
+        tallerRepository.findById(cotizacion.getTallerId()).ifPresent(taller ->
+                correoTaller(taller).ifPresent(correo -> enviar(correo, "Respuesta a tu cotización: " + respuesta,
+                        EmailServicioBuilder.tallerRespuestaCotizacion(taller.getNombre(),
+                                cotizacion.getVehiculoDescripcion(), cotizacion.getVersion(), respuesta, motivo))));
+    }
+
+    public void cotizacionVencida(Cotizacion cotizacion) {
+        tallerRepository.findById(cotizacion.getTallerId()).ifPresent(taller ->
+                correoTaller(taller).ifPresent(correo -> enviar(correo, "Una cotización venció",
+                        EmailServicioBuilder.tallerCotizacionVencida(taller.getNombre(),
+                                cotizacion.getVehiculoDescripcion(), cotizacion.getVersion()))));
     }
 
     private Optional<Usuario> cliente(OrdenServicio orden) {
