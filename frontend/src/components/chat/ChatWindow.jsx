@@ -71,8 +71,10 @@ const ChatWindow = ({ onClose, onMinimize, isClosing }) => {
         <div className="chat-header">
           <div className="chat-header-left">
             <div className="chat-avatar">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2a8 8 0 00-8 8v8a4 4 0 004 4h8a4 4 0 004-4v-8a8 8 0 00-8-8z"/>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 8a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v2a3 3 0 0 1-1.5 2.6l-3 1.8a1 1 0 0 0-.5.9v1.2a1 1 0 0 1-2 0v-1.2a1 1 0 0 0-.5-.9l-3-1.8A3 3 0 0 1 7 10Z" />
+                <path d="M12 6v2" />
+                <circle cx="12" cy="15" r="1.25" fill="white" stroke="none" />
               </svg>
             </div>
             <div>

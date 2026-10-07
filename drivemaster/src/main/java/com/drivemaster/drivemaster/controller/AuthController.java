@@ -25,11 +25,13 @@ import com.drivemaster.drivemaster.service.GoogleAuthService;
 import com.drivemaster.drivemaster.dto.AuthRequest;
 import com.drivemaster.drivemaster.dto.AuthResponse;
 import com.drivemaster.drivemaster.dto.GoogleLoginRequest;
+import com.drivemaster.drivemaster.dto.RefreshRequest;
 import com.drivemaster.drivemaster.dto.RegisterRequest;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.CustomUserDetailsService;
 import com.drivemaster.drivemaster.security.JwtUtil;
+import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.service.UsuarioService;
 
 import jakarta.servlet.http.Cookie;
@@ -109,22 +111,14 @@ public class AuthController {
         resetFailedLogin(usuario);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getCorreo());
-        String accessToken = jwtUtil.generateToken(userDetails);
+        AuthResponse sesion = construirSesion(usuario, userDetails);
 
         usuario.setUltimoLogin(Instant.now());
         usuarioRepository.save(usuario);
 
-        Cookie jwtCookie = new Cookie("jwt", accessToken);
-        jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(false);
-        jwtCookie.setPath("/");
-        jwtCookie.setMaxAge((int) (expirationMs / 1000));
-        response.addCookie(jwtCookie);
+        agregarCookieJwt(response, sesion.getToken());
 
-        return ResponseEntity.ok(new AuthResponse(
-                accessToken, usuario.getId(), usuario.getNombre(),
-                usuario.getCorreo(), usuario.getRol(),
-                usuario.getProveedor(), usuario.getDatosCompletos()));
+        return ResponseEntity.ok(sesion);
     }
 
     @PostMapping("/login-interno")
@@ -168,22 +162,14 @@ public class AuthController {
         resetFailedLogin(usuario);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getCorreo());
-        String accessToken = jwtUtil.generateToken(userDetails);
+        AuthResponse sesion = construirSesion(usuario, userDetails);
 
         usuario.setUltimoLogin(Instant.now());
         usuarioRepository.save(usuario);
 
-        Cookie jwtCookie = new Cookie("jwt", accessToken);
-        jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(false);
-        jwtCookie.setPath("/");
-        jwtCookie.setMaxAge((int) (expirationMs / 1000));
-        response.addCookie(jwtCookie);
+        agregarCookieJwt(response, sesion.getToken());
 
-        return ResponseEntity.ok(new AuthResponse(
-                accessToken, usuario.getId(), usuario.getNombre(),
-                usuario.getCorreo(), usuario.getRol(),
-                usuario.getProveedor(), usuario.getDatosCompletos()));
+        return ResponseEntity.ok(sesion);
     }
 
     @PostMapping("/google")
@@ -191,15 +177,11 @@ public class AuthController {
         Usuario usuario = googleAuthService.autenticarConGoogle(request.getIdToken());
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getCorreo());
-        String accessToken = jwtUtil.generateToken(userDetails);
 
         usuario.setUltimoLogin(Instant.now());
         usuarioRepository.save(usuario);
 
-        return ResponseEntity.ok(new AuthResponse(
-                accessToken, usuario.getId(), usuario.getNombre(),
-                usuario.getCorreo(), usuario.getRol(),
-                usuario.getProveedor(), usuario.getDatosCompletos()));
+        return ResponseEntity.ok(construirSesion(usuario, userDetails));
     }
 
     @PostMapping("/register")
@@ -233,35 +215,53 @@ public class AuthController {
         usuario = usuarioService.crearUsuario(usuario);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getCorreo());
-        String token = jwtUtil.generateToken(userDetails);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new AuthResponse(token, usuario.getId(), usuario.getNombre(),
-                        usuario.getCorreo(), usuario.getRol(),
-                        usuario.getProveedor(), usuario.getDatosCompletos()));
+                .body(construirSesion(usuario, userDetails));
     }
 
+    /**
+     * Renueva la sesión. Acepta el refresh token en el body (flujo normal) o, por
+     * compatibilidad con sesiones abiertas antes de este cambio, un token de acceso
+     * todavía vigente en la cabecera Authorization.
+     */
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refreshToken(@RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+    public ResponseEntity<AuthResponse> refreshToken(
+            @RequestBody(required = false) RefreshRequest body,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        String token;
+        boolean esRefresh;
+        if (body != null && body.getRefreshToken() != null && !body.getRefreshToken().isBlank()) {
+            token = body.getRefreshToken();
+            esRefresh = true;
+        } else if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+            esRefresh = false;
+        } else {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token requerido");
         }
 
-        String token = authHeader.substring(7);
-        String username = jwtUtil.extractUsername(token);
-
-        if (jwtUtil.isTokenExpired(token)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token expirado");
+        String username;
+        try {
+            // parseClaimsJws valida firma y vencimiento; lanza excepción si no sirve.
+            username = jwtUtil.extractUsername(token);
+            if (jwtUtil.isRefreshToken(token) != esRefresh) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tipo de token inválido");
+            }
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesión expirada, inicie sesión nuevamente");
         }
 
         Usuario usuario = usuarioService.obtenerPorCorreo(username);
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        String newToken = jwtUtil.generateToken(userDetails);
+        if (Boolean.FALSE.equals(usuario.getActivo()) || Boolean.TRUE.equals(usuario.getBloqueado())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "La cuenta no está activa");
+        }
 
-        return ResponseEntity.ok(new AuthResponse(
-                newToken, usuario.getId(), usuario.getNombre(),
-                usuario.getCorreo(), usuario.getRol(),
-                usuario.getProveedor(), usuario.getDatosCompletos()));
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        return ResponseEntity.ok(construirSesion(usuario, userDetails));
     }
 
     @PostMapping("/change-password")
@@ -306,6 +306,23 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    private AuthResponse construirSesion(Usuario usuario, UserDetails userDetails) {
+        return new AuthResponse(
+                jwtUtil.generateToken(userDetails), usuario.getId(), usuario.getNombre(),
+                usuario.getCorreo(), usuario.getRol(),
+                usuario.getProveedor(), usuario.getDatosCompletos(),
+                jwtUtil.generateRefreshToken(userDetails));
+    }
+
+    private void agregarCookieJwt(HttpServletResponse response, String accessToken) {
+        Cookie jwtCookie = new Cookie("jwt", accessToken);
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setSecure(false);
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge((int) (expirationMs / 1000));
+        response.addCookie(jwtCookie);
+    }
+
     private void handleFailedLogin(Usuario usuario) {
         if (usuario == null) return;
 
@@ -343,34 +360,6 @@ public class AuthController {
     }
 
     private List<String> getPermisosPorRol(String rol) {
-        return switch (rol) {
-            case "SUPERADMIN" -> List.of(
-                    "USUARIOS_READ", "USUARIOS_WRITE", "USUARIOS_DELETE",
-                    "PRODUCTOS_READ", "PRODUCTOS_WRITE", "PRODUCTOS_DELETE",
-                    "CLIENTES_READ", "CLIENTES_WRITE", "CLIENTES_DELETE",
-                    "VENTAS_READ", "VENTAS_WRITE", "VENTAS_DELETE",
-                    "COMPRAS_READ", "COMPRAS_WRITE", "COMPRAS_DELETE",
-                    "PROVEEDORES_READ", "PROVEEDORES_WRITE", "PROVEEDORES_DELETE",
-                    "MOVIMIENTOS_READ", "MOVIMIENTOS_WRITE",
-                    "AJUSTES_READ", "AJUSTES_WRITE"
-            );
-            case "ADMIN" -> List.of(
-                    "USUARIOS_READ", "USUARIOS_WRITE",
-                    "PRODUCTOS_READ", "PRODUCTOS_WRITE",
-                    "CLIENTES_READ", "CLIENTES_WRITE",
-                    "VENTAS_READ", "VENTAS_WRITE",
-                    "COMPRAS_READ", "COMPRAS_WRITE",
-                    "PROVEEDORES_READ", "PROVEEDORES_WRITE",
-                    "MOVIMIENTOS_READ", "MOVIMIENTOS_WRITE",
-                    "AJUSTES_READ", "AJUSTES_WRITE"
-            );
-            case "VENDEDOR" -> List.of(
-                    "PRODUCTOS_READ",
-                    "CLIENTES_READ", "CLIENTES_WRITE",
-                    "VENTAS_READ", "VENTAS_WRITE"
-            );
-            case "CLIENTE" -> List.of("ROLE_CLIENTE", "PRODUCTOS_READ");
-            default -> List.of();
-        };
+        return RolPermisos.de(rol);
     }
 }

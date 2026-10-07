@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, subirImagenProducto } from "../services/productoService";
+import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, listarProductosMiTienda, subirImagenProducto } from "../services/productoService";
 import "../css/producto-form.css";
 
 const CATEGORIAS = [
@@ -105,6 +105,12 @@ function validarFormulario(form, productosExistentes, esEdicion, id) {
 
   if (campoVacio(form.marca)) errores.marca = "Seleccione una marca.";
 
+  if (form.tipo === "ENCARGO" && !campoVacio(form.diasEntregaEncargo)) {
+    const dias = Number(form.diasEntregaEncargo);
+    if (!Number.isInteger(dias) || dias < 1 || dias > 120)
+      errores.diasEntregaEncargo = "Ingrese entre 1 y 120 días.";
+  }
+
   const compra = Number(form.precioCompra);
   const venta  = Number(form.precioVenta);
   if (campoVacio(form.precioCompra) || isNaN(compra) || compra < 0)
@@ -121,8 +127,9 @@ function validarFormulario(form, productosExistentes, esEdicion, id) {
   if (campoVacio(form.stockMinimo) || isNaN(stockMinimo) || !Number.isInteger(stockMinimo) || stockMinimo < 0)
     errores.stockMinimo = "Ingrese un stock minimo valido (numero entero mayor o igual a 0).";
 
+  // Un producto universal no necesita vehículos compatibles.
   const erroresCompat = [];
-  form.modelosCompatibles.forEach((comp, i) => {
+  if (!form.compatibilidadUniversal) form.modelosCompatibles.forEach((comp, i) => {
     const e = {};
     if (campoVacio(comp.marca))   e.marca  = "Seleccione la marca del vehiculo.";
     if (campoVacio(comp.modelo))  e.modelo = "Seleccione el modelo.";
@@ -146,15 +153,19 @@ function FieldError({ msg }) {
   return <span className="pf-field-error">{msg}</span>;
 }
 
-function ProductoForm({ id, onVolver, token }) {
+const COMPAT_VACIA = { marca: "", modelo: "", anoDesde: "", anoHasta: "", motor: "" };
+
+function ProductoForm({ id, onVolver, token, esTienda = false }) {
   const esEdicion = Boolean(id);
 
   const [form, setForm] = useState({
     codigo: "", nombre: "", categoria: "", marca: "",
+    referencia: "", ubicacion: "", diasEntregaEncargo: "",
     precioCompra: "", precioVenta: "",
     stockActual: "", stockMinimo: "",
     tipo: "STOCK",
-    modelosCompatibles: [{ marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
+    compatibilidadUniversal: false,
+    modelosCompatibles: [COMPAT_VACIA],
   });
 
   const [errores,             setErrores]            = useState({});
@@ -167,11 +178,12 @@ function ProductoForm({ id, onVolver, token }) {
   const [subiendoImagen,      setSubiendoImagen]     = useState(false);
   const fileInputRef = useRef(null);
 
+  // El código SKU es único dentro de cada tienda: una tienda valida contra su propio catálogo.
   useEffect(() => {
-    listarProductos(token)
+    (esTienda ? listarProductosMiTienda(token) : listarProductos(token))
       .then(setProductosExistentes)
       .catch(() => {});
-  }, [token]);
+  }, [token, esTienda]);
 
   useEffect(() => {
     if (esEdicion) {
@@ -179,9 +191,13 @@ function ProductoForm({ id, onVolver, token }) {
         .then(data => {
           setForm({
             ...data,
+            referencia: data.referencia || "",
+            ubicacion: data.ubicacion || "",
+            diasEntregaEncargo: data.diasEntregaEncargo ?? "",
+            compatibilidadUniversal: !!data.compatibilidadUniversal,
             modelosCompatibles: data.modelosCompatibles?.length
-              ? data.modelosCompatibles
-              : [{ marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
+              ? data.modelosCompatibles.map(c => ({ ...c, motor: c.motor || "" }))
+              : [COMPAT_VACIA],
           });
           if (data.imagenUrl) setImagenPreview(data.imagenUrl);
         })
@@ -227,7 +243,7 @@ function ProductoForm({ id, onVolver, token }) {
   const agregarCompatibilidad = () => {
     setForm(prev => ({
       ...prev,
-      modelosCompatibles: [...prev.modelosCompatibles, { marca: "", modelo: "", anoDesde: "", anoHasta: "" }],
+      modelosCompatibles: [...prev.modelosCompatibles, COMPAT_VACIA],
     }));
   };
 
@@ -252,15 +268,23 @@ function ProductoForm({ id, onVolver, token }) {
         ...form,
         nombre:       form.nombre.trim(),
         codigo:       form.codigo.trim().toUpperCase(),
+        referencia:   form.referencia.trim() || null,
+        ubicacion:    form.ubicacion.trim() || null,
+        // Solo aplica a productos por encargo (tiempo estimado que ve el taller al cotizar).
+        diasEntregaEncargo: form.tipo === "ENCARGO" && String(form.diasEntregaEncargo).trim() !== ""
+          ? Number(form.diasEntregaEncargo) : null,
         precioCompra: Number(form.precioCompra),
         precioVenta:  Number(form.precioVenta),
         stockActual:  Number(form.stockActual),
         tipo:         form.tipo,
         stockMinimo:  Number(form.stockMinimo),
-        modelosCompatibles: form.modelosCompatibles.map(c => ({
+        compatibilidadUniversal: !!form.compatibilidadUniversal,
+        // Universal: sirve a cualquier vehículo, no se guardan modelos.
+        modelosCompatibles: form.compatibilidadUniversal ? [] : form.modelosCompatibles.map(c => ({
           ...c,
           anoDesde: Number(c.anoDesde),
           anoHasta: Number(c.anoHasta),
+          motor:    c.motor?.trim() || null,
         })),
       };
       let productoId = id;
@@ -371,6 +395,28 @@ function ProductoForm({ id, onVolver, token }) {
               </select>
               <FieldError msg={errores.marca} />
             </div>
+
+            <div className="pf-row">
+              <div className="pf-field">
+                <label>Referencia del fabricante</label>
+                <input
+                  name="referencia"
+                  value={form.referencia}
+                  onChange={handleChange}
+                  placeholder="Ej. P 85 020 (opcional)"
+                />
+              </div>
+
+              <div className="pf-field">
+                <label>Ubicación en bodega</label>
+                <input
+                  name="ubicacion"
+                  value={form.ubicacion}
+                  onChange={handleChange}
+                  placeholder="Ej. Estante B-3 (opcional)"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Tipo de producto */}
@@ -383,12 +429,42 @@ function ProductoForm({ id, onVolver, token }) {
             <FieldError msg={errores.tipo} />
           </div>
 
+          {form.tipo === "ENCARGO" && (
+            <div className="pf-field pf-field--full">
+              <label>Días estimados de entrega</label>
+              <input
+                type="number"
+                name="diasEntregaEncargo"
+                min="1"
+                max="120"
+                value={form.diasEntregaEncargo}
+                onChange={handleChange}
+                placeholder="Ej. 5"
+                className={errores.diasEntregaEncargo ? "pf-input--error" : ""}
+              />
+              <FieldError msg={errores.diasEntregaEncargo} />
+            </div>
+          )}
+
           {/* Modelos Compatibles */}
           <div className="pf-section">
             <div className="pf-section-header">
               <h3>Modelos Compatibles</h3>
             </div>
 
+            <label className="pf-universal">
+              <input
+                type="checkbox"
+                checked={!!form.compatibilidadUniversal}
+                onChange={e => setForm(prev => ({ ...prev, compatibilidadUniversal: e.target.checked }))}
+              />
+              <span>
+                <strong>Compatibilidad universal</strong>
+                Aceites, líquidos e insumos que sirven a cualquier vehículo. Los talleres lo verán como compatible.
+              </span>
+            </label>
+
+            {!form.compatibilidadUniversal && (<>
             {form.modelosCompatibles.map((comp, index) => {
               const modelosDisponibles = comp.marca ? (MARCAS_VEHICULO[comp.marca] || []) : [];
               const ce = compatErrores[index] || {};
@@ -472,6 +548,16 @@ function ProductoForm({ id, onVolver, token }) {
                       />
                       <FieldError msg={ce.anoHasta} />
                     </div>
+
+                    <div className="pf-field pf-field--full">
+                      <label>Motor</label>
+                      <input
+                        name="motor"
+                        value={comp.motor || ""}
+                        onChange={e => handleCompatibilidadChange(index, e)}
+                        placeholder="Ej. 1.6 (opcional; vacío = cualquier motor)"
+                      />
+                    </div>
                   </div>
                 </div>
               );
@@ -484,6 +570,7 @@ function ProductoForm({ id, onVolver, token }) {
             >
               + Agregar vehiculo compatible
             </button>
+            </>)}
           </div>
         </div>
 

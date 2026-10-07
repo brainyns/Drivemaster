@@ -36,4 +36,17 @@ public class PagoEntity {
     private LocalDateTime fechaCreacion;
 
     private LocalDateTime fechaPago;
+
+    // ─── Marketplace ───
+    // Qué se cobra: VENTA, SOLICITUD, DIAGNOSTICO o COTIZACION.
+    // Null en los pagos anteriores al marketplace.
+    @Column(length = 20)
+    private String concepto;
+
+    private String ordenServicioId;
+
+    private String cotizacionId;
+
+    // Usuario (cliente) que realiza el pago.
+    private String usuarioId;
 }

@@ -1,0 +1,87 @@
+/* ── Estado de revisión de un taller o tienda ───────────────────────────── */
+
+.estado-negocio {
+  --en-acento: #18487A;
+  max-width: 640px;
+  margin: var(--sp-xl) auto;
+  padding: var(--sp-xl);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--en-acento);
+  border-radius: var(--r-lg);
+  color: var(--text);
+}
+
+.estado-negocio--rechazado { --en-acento: var(--error); }
+.estado-negocio--inactivo  { --en-acento: var(--warning); }
+
+.estado-negocio__eyebrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--sp-sm);
+}
+
+.estado-negocio__titulo {
+  font-size: 1.8rem;
+  line-height: 1.1;
+  margin-bottom: var(--sp-sm);
+}
+
+.estado-negocio__nombre {
+  font-weight: 600;
+  margin-bottom: var(--sp-md);
+}
+
+.estado-negocio__detalle {
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.estado-negocio__motivo {
+  margin-top: var(--sp-md);
+  padding: var(--sp-md);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--r-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.estado-negocio__pasos {
+  list-style: none;
+  display: flex;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-lg);
+  flex-wrap: wrap;
+}
+
+.estado-negocio__paso {
+  flex: 1 1 140px;
+  padding: var(--sp-sm) var(--sp-md);
+  border-top: 3px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.estado-negocio__paso--hecho {
+  border-top-color: var(--success);
+  color: var(--text);
+}
+
+.estado-negocio__paso--actual {
+  border-top-color: var(--en-acento);
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .estado-negocio {
+    margin: var(--sp-md);
+    padding: var(--sp-lg);
+  }
+}

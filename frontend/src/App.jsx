@@ -25,23 +25,38 @@ import InventarioClientes    from "./pages/InventarioClientes";
 import ReportesClientes      from "./pages/ReportesClientes";
 import InventarioProductos   from "./pages/InventarioProductos";
 import ReportesProductos     from "./pages/ReportesProductos";
+import ReportesServicios     from "./pages/ReportesServicios";
 import MisPedidos            from "./pages/MisPedidos";
 import MisSolicitudes        from "./pages/MisSolicitudes";
 import PagoResultado         from "./pages/PagoResultado";
 import CheckoutPage          from "./pages/CheckoutPage";
 import SolicitudesAdmin      from "./pages/SolicitudesAdmin";
 import PerfilAdmin           from "./pages/PerfilAdmin";
+import PanelTaller           from "./pages/PanelTaller";
+import AdminTalleres         from "./pages/AdminTalleres";
+import MisVehiculos          from "./pages/MisVehiculos";
+import VehiculoServicio      from "./pages/VehiculoServicio";
+import Aprobaciones          from "./pages/Aprobaciones";
+import RegistroNegocio       from "./pages/RegistroNegocio";
+import SolicitarDiagnostico  from "./pages/SolicitarDiagnostico";
+import MisServicios          from "./pages/MisServicios";
+import CotizacionPublica     from "./pages/CotizacionPublica";
+import PedidosTienda         from "./pages/PedidosTienda";
+import Liquidaciones         from "./pages/Liquidaciones";
 import ChatWidget            from "./components/chat/ChatWidget";
-import { getUser, getToken, clearSession, refreshToken, logout } from "./services/authService";
+import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
 
 const storedUser  = getUser();
 const storedToken = getToken();
 
+// /cotizacion: enlace público del correo (el token viaja en el fragmento #token=…)
 const initialPage =
-  window.location.pathname.startsWith("/pago-resultado") ||
-  new URLSearchParams(window.location.search).get("pago") === "resultado"
-    ? "pago-resultado"
-    : "catalogo";
+  window.location.pathname.startsWith("/cotizacion")
+    ? "cotizacion-publica"
+    : window.location.pathname.startsWith("/pago-resultado") ||
+      new URLSearchParams(window.location.search).get("pago") === "resultado"
+      ? "pago-resultado"
+      : "catalogo";
 
 const TITULOS = {
   "dashboard-main":  "Dashboard",
@@ -67,14 +82,40 @@ const TITULOS = {
   "rep-clientes":    "Reportes Clientes",
   "inv-productos":   "Inventario Productos",
   "rep-productos":   "Reportes Productos",
+  "rep-servicios":   "Reporte de Servicios",
   "mis-solicitudes": "Mis Solicitudes",
   "pago-resultado":  "Resultado del pago",
   "mis-pedidos":     "Historial de compras",
   "checkout":        "Enviar solicitud",
   "mi-perfil":       "Mi Perfil",
+  "solicitar-diagnostico": "Solicitar diagnóstico",
+  "mis-servicios":   "Mis servicios",
+  "taller-panel":    "Panel de taller",
+  "admin-talleres":  "Servicios",
+  "aprobaciones":    "Aprobaciones",
+  "pedidos-tienda":  "Pedidos",
+  "liquidaciones":   "Liquidaciones y reembolsos",
 };
 
-const DEFAULT_IVA = 0.16;
+// Páginas del cliente que se muestran sin el panel lateral.
+const PAGINAS_CLIENTE = [
+  "checkout", "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo",
+  "solicitar-diagnostico", "mis-servicios",
+];
+
+// Página inicial de cada rol después de iniciar sesión.
+const INICIO_POR_ROL = {
+  CLIENTE: "catalogo",
+  TALLER:  "taller-panel",
+  TIENDA:  "productos",
+};
+
+const DEFAULT_IVA = 0.19;
+
+// El token se renueva un minuto antes de vencer. La espera mínima evita un ciclo
+// de renovaciones seguidas si el token dura menos que el margen.
+const MARGEN_RENOVACION_MS = 60 * 1000;
+const ESPERA_MINIMA_MS = 5 * 1000;
 
 function calcularSubtotal(items) {
   return items.reduce((s, i) => s + (i.precioUnitario * i.cantidad), 0);
@@ -95,6 +136,7 @@ function App() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [solicitudItems, setSolicitudItems] = useState(loadSolicitud);
   const [solicitudAbierta, setSolicitudAbierta] = useState(false);
+  const [sidebarAbierto, setSidebarAbierto] = useState(false);
 
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
 
@@ -109,7 +151,7 @@ function App() {
           const v = parseFloat(p.valor);
           if (!isNaN(v)) setIvaRate(v / 100);
         }
-      } catch { /* fallback 16% */ }
+      } catch { /* fallback 19% */ }
     };
     cargarIva();
   }, []);
@@ -140,16 +182,40 @@ function App() {
     localStorage.setItem("solicitudItems", JSON.stringify(solicitudItems));
   }, [solicitudItems]);
 
-  useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(async () => {
-      try { await refreshToken(); }
-      catch { setSessionExpired(true); }
-    }, 25 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [user]);
+  // Sesión expirada: limpiamos localmente pero conservamos el flag
+  // para poder mostrar la pantalla de "sesión expirada".
+  const expirarSesion = useCallback(() => {
+    clearSession();
+    setUser(null);
+    setToken(null);
+    setSolicitudItems([]);
+    setPagina("catalogo");
+    setSessionExpired(true);
+  }, []);
 
-  useEffect(() => { if (sessionExpired) handleLogout(); }, [sessionExpired]);
+  // Renueva el token según su vencimiento real. Antes era un intervalo fijo de
+  // 25 min que se reiniciaba al recargar la página, y el token vencía antes de
+  // renovarse (401 en el pago). Si al cargar ya está vencido, se renueva enseguida.
+  useEffect(() => {
+    if (!user || !token) return;
+    const exp = getTokenExpiracion(token);
+    const espera = exp ? Math.max(exp - Date.now() - MARGEN_RENOVACION_MS, ESPERA_MINIMA_MS) : ESPERA_MINIMA_MS;
+    const timer = setTimeout(() => {
+      refreshToken().catch(expirarSesion);
+    }, espera);
+    return () => clearTimeout(timer);
+  }, [user, token, expirarSesion]);
+
+  // apiFetch avisa cuando renovó el token o cuando la sesión ya no se pudo recuperar.
+  useEffect(() => {
+    const onRenovada = (e) => setToken(e.detail);
+    window.addEventListener("auth:renovada", onRenovada);
+    window.addEventListener("auth:expirada", expirarSesion);
+    return () => {
+      window.removeEventListener("auth:renovada", onRenovada);
+      window.removeEventListener("auth:expirada", expirarSesion);
+    };
+  }, [expirarSesion]);
 
   const irA = (p, id = null) => { setIdSeleccionado(id); setPagina(p); };
 
@@ -166,11 +232,10 @@ function App() {
     setToken(auth.token);
     setSessionExpired(false);
 
-    if (auth.rol === "CLIENTE") {
-      setPagina("catalogo");
-    } else {
-      setPagina("dashboard-main");
-    }
+    // Un cliente que inicia sesión desde una página de cliente (ej. Solicitar
+    // diagnóstico) se queda en ella en lugar de volver al catálogo.
+    if (auth.rol === "CLIENTE" && PAGINAS_CLIENTE.includes(pagina)) return;
+    setPagina(INICIO_POR_ROL[auth.rol] || "dashboard-main");
   };
 
   const handleLogout = async () => {
@@ -244,7 +309,8 @@ function App() {
       "compras", "compraNueva", "compraDetalle",
       "proveedores", "proveedorNuevo", "proveedorEditar",
       "movimientos",
-      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos",
+      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
+      "admin-talleres", "aprobaciones", "liquidaciones",
       "mi-perfil",
     ],
     SUPERADMIN: [
@@ -256,20 +322,26 @@ function App() {
       "compras", "compraNueva", "compraDetalle",
       "proveedores", "proveedorNuevo", "proveedorEditar",
       "movimientos",
-      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos",
+      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
       "usuarios",
+      "admin-talleres", "aprobaciones", "liquidaciones",
       "mi-perfil",
     ],
-    CLIENTE: ["catalogo", "mis-pedidos", "mis-solicitudes", "checkout"],
+    CLIENTE: ["catalogo", ...PAGINAS_CLIENTE],
+    TALLER: ["taller-panel"],
+    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda"],
   };
+  const esTienda = user?.rol === "TIENDA";
 
   const renderPagina = () => {
     if (pagina === "catalogo") return (
       <CatalogoPage
         onIrLogin={() => setPagina("login")}
-        onIrAdmin={() => setPagina("dashboard-main")}
+        onIrAdmin={() => setPagina(user?.rol === "TALLER" || user?.rol === "TIENDA" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
         onIrSolicitud={(p) => setPagina(p || "checkout")}
         onIrCheckout={() => setPagina("checkout")}
+        onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
+        onRegistroNegocio={() => setPagina("registro-negocio")}
         onLogout={handleLogout}
         solicitudItems={solicitudItems}
         solicitudCount={solicitudCount}
@@ -303,10 +375,12 @@ function App() {
       }
       return (
         <div className="app-layout">
-          <Sidebar paginaActual={pagina} irA={irA} userRole={user.rol} />
+          <Sidebar paginaActual={pagina} irA={irA} userRole={user.rol}
+            abierto={sidebarAbierto} onCerrar={() => setSidebarAbierto(false)} />
           <main className="app-content">
             <TopBar titulo="Enviar solicitud" user={user} onLogout={handleLogout}
-              colorTema={colorTema} theme={theme} onToggleTheme={toggleTheme} onColorChange={handleColorChange} />
+              colorTema={colorTema} theme={theme} onToggleTheme={toggleTheme} onColorChange={handleColorChange}
+              onMenuClick={() => setSidebarAbierto(true)} />
             <CheckoutPage
               onCompraExitosa={handleCompraExitosa}
               solicitudItems={solicitudItems}
@@ -327,6 +401,15 @@ function App() {
       <PagoResultado
         onPagoExitoso={() => setSolicitudItems([])}
         onIrSolicitudes={() => setPagina("mis-solicitudes")}
+        onIrServicios={() => setPagina("mis-servicios")}
+      />
+    );
+
+    // Pública: responder la cotización desde el correo sin iniciar sesión
+    if (pagina === "cotizacion-publica") return (
+      <CotizacionPublica
+        onIrServicios={() => { window.history.replaceState(null, "", "/"); setPagina("mis-servicios"); }}
+        onIrInicio={() => { window.history.replaceState(null, "", "/"); setPagina("catalogo"); }}
       />
     );
 
@@ -335,22 +418,69 @@ function App() {
       return <MisPedidos onVolver={() => setPagina("catalogo")} />;
     }
 
+    if (pagina === "mis-vehiculos") {
+      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
+      return (
+        <MisVehiculos
+          onVolver={() => setPagina("catalogo")}
+          onVerServicio={(id) => irA("servicio-vehiculo", id)}
+        />
+      );
+    }
+
+    if (pagina === "servicio-vehiculo") {
+      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
+      return (
+        <VehiculoServicio
+          vehiculoId={idSeleccionado}
+          onVolver={() => setPagina("mis-vehiculos")}
+          onSolicitarDiagnostico={(id) => irA("solicitar-diagnostico", id)}
+        />
+      );
+    }
+
+    if (pagina === "solicitar-diagnostico" || pagina === "mis-servicios") {
+      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
+      if (user.rol !== "CLIENTE") return (
+        <div style={{ padding: "40px" }}>Esta sección es para clientes. Ingresa con una cuenta de cliente para solicitar un diagnóstico.</div>
+      );
+      if (pagina === "mis-servicios") return (
+        <MisServicios
+          onVolver={() => setPagina("catalogo")}
+          onSolicitar={() => irA("solicitar-diagnostico")}
+        />
+      );
+      return (
+        <SolicitarDiagnostico
+          key={idSeleccionado || "nueva"}
+          vehiculoIdInicial={idSeleccionado}
+          onVolver={() => setPagina("catalogo")}
+          onVerServicios={() => irA("mis-servicios")}
+          onIrVehiculos={() => irA("mis-vehiculos")}
+        />
+      );
+    }
+
     if (pagina === "admin-login") {
       return <AdminLogin onLogin={handleLogin} onVolver={() => setPagina("catalogo")} />;
     }
 
-    if (!user) {
-      if (pagina === "register") return <Register onRegister={handleLogin} onBack={() => setPagina("login")} />;
-      return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} onGoAdminLogin={() => setPagina("admin-login")} />;
+    if (pagina === "registro-negocio") {
+      return <RegistroNegocio onIrLogin={() => setPagina("login")} onVolver={() => setPagina("catalogo")} />;
     }
 
     if (sessionExpired) return (
       <div style={{ padding: "40px", textAlign: "center" }}>
         <h2>Sesión expirada</h2>
         <p>Tu sesión ha expirado. Inicia sesión nuevamente.</p>
-        <button onClick={() => { clearSession(); setPagina("login"); }}>Volver al login</button>
+        <button onClick={() => { clearSession(); setSessionExpired(false); setPagina("login"); }}>Volver al login</button>
       </div>
     );
+
+    if (!user) {
+      if (pagina === "register") return <Register onRegister={handleLogin} onBack={() => setPagina("login")} />;
+      return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onGoRegistroNegocio={() => setPagina("registro-negocio")} onVolver={() => setPagina("catalogo")} onGoAdminLogin={() => setPagina("admin-login")} />;
+    }
 
     if (!allowedPages[user.rol]?.includes(pagina)) return (
       <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
@@ -358,9 +488,9 @@ function App() {
 
     if (pagina === "dashboard-main")   return <DashboardMain        token={token} />;
 
-    if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} />;
-    if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} />;
-    if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
+    if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} esTienda={esTienda} />;
+    if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
+    if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
     if (pagina === "inventarioAjuste") return <AjusteInventarioForm productoId={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
 
     if (pagina === "clientes")         return <Clientes             onNuevo={() => irA("clienteNuevo")} onEditar={id => irA("clienteEditar", id)} token={token} />;
@@ -381,20 +511,27 @@ function App() {
     if (pagina === "proveedorNuevo")   return <ProveedorForm        onVolver={() => irA("proveedores")} token={token} />;
     if (pagina === "proveedorEditar")  return <ProveedorForm        id={idSeleccionado} onVolver={() => irA("proveedores")} token={token} />;
 
-    if (pagina === "movimientos")      return <Movimientos          token={token} />;
+    if (pagina === "movimientos")      return <Movimientos          token={token} esTienda={esTienda} />;
     if (pagina === "usuarios")         return <Usuarios             token={token} />;
     if (pagina === "mi-perfil")        return <PerfilAdmin          />;
+    if (pagina === "taller-panel")     return <PanelTaller          />;
+    if (pagina === "admin-talleres")   return <AdminTalleres        />;
+    if (pagina === "aprobaciones")     return <Aprobaciones         token={token} />;
+    if (pagina === "liquidaciones")    return <Liquidaciones        />;
+    if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
 
     if (pagina === "inv-clientes")     return <InventarioClientes   token={token} />;
     if (pagina === "rep-clientes")     return <ReportesClientes     token={token} />;
     if (pagina === "inv-productos")    return <InventarioProductos  token={token} />;
     if (pagina === "rep-productos")    return <ReportesProductos    token={token} />;
+  if (pagina === "rep-servicios")     return <ReportesServicios    token={token} />;
 
     return <div style={{ padding: "40px" }}>Seleccione una sección válida.</div>;
   };
 
   const esCliente = user?.rol === "CLIENTE";
-  const usarPanel = pagina === "catalogo" || (esCliente && ["checkout", "mis-pedidos", "mis-solicitudes"].includes(pagina)) ? false
+  // El registro de negocios es público: nunca va dentro del panel, aunque haya sesión.
+  const usarPanel = pagina === "catalogo" || pagina === "registro-negocio" || (esCliente && PAGINAS_CLIENTE.includes(pagina)) ? false
     : !!user && pagina !== "catalogo";
 
   return (
@@ -404,6 +541,8 @@ function App() {
           paginaActual={pagina}
           irA={irA}
           userRole={user?.rol}
+          abierto={sidebarAbierto}
+          onCerrar={() => setSidebarAbierto(false)}
         />
       )}
 
@@ -418,6 +557,7 @@ function App() {
             theme={theme}
             onToggleTheme={toggleTheme}
             onColorChange={handleColorChange}
+            onMenuClick={() => setSidebarAbierto(true)}
           />
         )}
 

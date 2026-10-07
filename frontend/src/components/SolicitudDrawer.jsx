@@ -13,7 +13,7 @@ export default function SolicitudDrawer({
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (drawerRef.current && !drawerRef.current.contains(e.target) && !e.target.closest(".navbar__solicitud-btn")) {
+      if (drawerRef.current && !drawerRef.current.contains(e.target) && !e.target.closest(".navbar__solicitud-btn, .dm-header__cart")) {
         onCerrar();
       }
     };
@@ -108,5 +108,3 @@ export default function SolicitudDrawer({
     </>
   );
 }
-
-export { formatPrecio };

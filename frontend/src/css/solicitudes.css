@@ -1,5 +1,4 @@
-/* ── Solicitudes Premium ────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+﻿/* ── Solicitudes Premium ────────────────────────────────── */
 
 .sq-root {
   padding: 28px 32px;
@@ -731,4 +730,12 @@
   --card-bg: #1a1a1a;
   --border: #2a2a2a;
   --bg: #111;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .sq-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .sq-modal-grid { grid-template-columns: 1fr; }
+  .sq-toolbar { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+  .sq-header { flex-direction: column; align-items: flex-start; }
 }

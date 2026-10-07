@@ -3,32 +3,43 @@ import { getToken } from "../services/authService";
 import { verificarPago } from "../services/solicitudService";
 import "../css/solicitudes.css";
 
-export default function PagoResultado({ onIrSolicitudes, onPagoExitoso }) {
+// Pagos del marketplace (el backend envía "concepto"); las compras no lo traen.
+const TEXTO_MARKETPLACE = {
+  DIAGNOSTICO: "Recibimos el pago del diagnóstico. Tu cita de revisión quedó confirmada.",
+  COTIZACION: "Recibimos el pago de la cotización. Pedimos los repuestos y el taller seguirá con el trabajo.",
+};
+
+export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServicios }) {
   const token = getToken();
-  const [estado, setEstado] = useState("VERIFICANDO"); // VERIFICANDO | APPROVED | DECLINED | ERROR
-  const [transaccionId, setTransaccionId] = useState("");
+  const [transaccionId] = useState(() => new URLSearchParams(window.location.search).get("id") || "");
+  const [estado, setEstado] = useState(transaccionId ? "VERIFICANDO" : "ERROR"); // VERIFICANDO | APPROVED | DECLINED | ERROR
+  const [concepto, setConcepto] = useState(null); // null en compras normales
+  const [aplicacion, setAplicacion] = useState(null); // { aplicado, reembolsoPendiente, estadoPago } del marketplace
 
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("id");
-    if (!id) {
-      setEstado("ERROR");
-      return;
-    }
-    setTransaccionId(id);
+    if (!transaccionId) return;
+    let cancelado = false;
     const verificar = async () => {
       try {
-        const res = await verificarPago(token, id);
+        const res = await verificarPago(token, transaccionId);
+        if (cancelado) return;
+        // Solo informativo: el backend ya verificó y aplicó el pago con Wompi
+        if (res.concepto) {
+          setConcepto(res.concepto);
+          setAplicacion({ aplicado: res.aplicado, reembolsoPendiente: res.reembolsoPendiente, estadoPago: res.estadoPago });
+        }
         setEstado(res.estado || "ERROR");
-        if (res.estado === "APPROVED") {
+        if (res.estado === "APPROVED" && !res.concepto) {
           onPagoExitoso && onPagoExitoso();
         }
       } catch (e) {
         console.error(e);
-        setEstado("ERROR");
+        if (!cancelado) setEstado("ERROR");
       }
     };
     verificar();
-  }, []);
+    return () => { cancelado = true; };
+  }, [transaccionId, token]);
 
   const irAMisSolicitudes = () => {
     if (window.history?.replaceState) {
@@ -36,6 +47,59 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso }) {
     }
     onIrSolicitudes && onIrSolicitudes();
   };
+
+  const irAMisServicios = () => {
+    if (window.history?.replaceState) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    onIrServicios && onIrServicios();
+  };
+
+  // ─── Pago del marketplace (diagnóstico o cotización) ───
+  if (concepto && estado !== "VERIFICANDO") {
+    return (
+      <div className="sq-root">
+        <div className="sq-header">
+          <h1 className="sq-title">Resultado del pago</h1>
+          <p className="sq-subtitle">Confirmación de tu pago en línea.</p>
+        </div>
+        <div className="sq-empty" style={{ padding: "48px 24px", textAlign: "center" }}>
+          {estado === "APPROVED" && aplicacion?.aplicado === false ? (
+            <>
+              <div style={{ fontSize: "56px", marginBottom: "8px" }}>⚠️</div>
+              <h2 style={{ margin: "0 0 8px", color: "#b45309" }}>
+                {aplicacion.reembolsoPendiente ? "Recibimos tu pago, pero no se pudo aplicar" : "Estamos confirmando tu pago"}
+              </h2>
+              <p style={{ margin: "0 0 20px", color: "#374151" }}>
+                {aplicacion.reembolsoPendiente
+                  ? "Te enviamos un correo con el motivo. DriveMaster te devolverá el dinero."
+                  : "Revisa el estado de tu solicitud en unos segundos en “Mis servicios”."}
+              </p>
+            </>
+          ) : estado === "APPROVED" ? (
+            <>
+              <div style={{ fontSize: "56px", marginBottom: "8px" }}>✅</div>
+              <h2 style={{ margin: "0 0 8px", color: "#065f46" }}>¡Pago exitoso!</h2>
+              <p style={{ margin: "0 0 4px", color: "#374151" }}>{TEXTO_MARKETPLACE[concepto]}</p>
+              <p style={{ margin: "0 0 4px", color: "#374151" }}>Te enviamos el comprobante de pago por correo.</p>
+              <p style={{ margin: "0 0 20px", fontSize: "13px", color: "#6b7280" }}>Transacción: {transaccionId}</p>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: "56px", marginBottom: "8px" }}>❌</div>
+              <h2 style={{ margin: "0 0 8px", color: "#b91c1c" }}>Pago no aprobado</h2>
+              <p style={{ margin: "0 0 20px", color: "#374151" }}>
+                No se hizo ningún cobro. Puedes intentarlo de nuevo desde “Mis servicios”.
+              </p>
+            </>
+          )}
+          <button className="sq-btn sq-btn-approve sq-btn--md" onClick={irAMisServicios}>
+            Ver mis servicios
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="sq-root">

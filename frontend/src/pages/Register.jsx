@@ -25,7 +25,7 @@ export default function Register({ onRegister, onBack }) {
   };
 
   return (
-    <div className="auth-page auth-page--client">
+    <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
           <div className="auth-brand-row">

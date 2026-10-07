@@ -151,3 +151,14 @@
   border-color: #E8450A;
   color: #E8450A;
 }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .vt-filtros-panel {
+    position: fixed;
+    top: 56px;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+  }
+}

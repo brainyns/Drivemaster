@@ -1,0 +1,292 @@
+/* ── Cotizaciones, pagos, pedidos de tienda y liquidaciones (Fase 3) ──────
+   Complementa servicios.css (sv-*) y solicitud-servicio.css (ss-*). Prefijo ct-, BEM. */
+
+.ct-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.ct-detalle__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-sm);
+}
+
+.ct-detalle__grupo {
+  margin: var(--sp-sm) 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ct-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ct-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-md);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ct-item__desc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ct-item__valor {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ct-totales {
+  margin: var(--sp-sm) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ct-totales__fila {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.ct-totales__fila dt,
+.ct-totales__fila dd {
+  margin: 0;
+}
+
+.ct-totales__fila dd {
+  font-variant-numeric: tabular-nums;
+}
+
+.ct-totales__fila--descuento { color: var(--success); }
+
+.ct-totales__fila--final {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 2px solid var(--border2);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ct-totales__fila--info {
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* ── Formulario del taller ── */
+.ct-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.ct-form__agregar { align-self: flex-start; }
+
+.ct-linea {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  align-items: center;
+}
+
+.ct-linea__desc { flex: 1 1 240px; width: auto; }
+.ct-linea__modalidad { flex: 0 0 130px; width: auto; }
+.ct-linea__num { flex: 0 0 140px; width: auto; }
+.ct-linea__quitar { padding: 6px 12px; }
+
+.ct-previa {
+  margin-top: var(--sp-md);
+  padding-top: var(--sp-md);
+  border-top: 1px dashed var(--border2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+}
+
+/* ── Respuesta del cliente ── */
+.ct-respuesta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-md);
+}
+
+.ct-respuesta__opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+}
+
+.ct-opcion--activa {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── Página pública del enlace ── */
+.ct-publica {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: var(--sp-xl) var(--sp-md);
+}
+
+.ct-publica__caja {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-lg);
+}
+
+.ct-publica__marca {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.ct-publica__marca span { color: var(--primary); }
+
+/* ── Pedidos de tienda y liquidaciones ── */
+.ct-tabla-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.ct-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.ct-tabla th,
+.ct-tabla td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.ct-tabla th {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+
+.ct-tabla__monto {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ct-pedido__entrega {
+  padding: var(--sp-sm) var(--sp-md);
+  border-left: 4px solid #18487A;
+  background: var(--surface2);
+  border-radius: var(--r-sm);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.ct-motivos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ct-motivos label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.ct-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-md);
+  margin-bottom: var(--sp-md);
+}
+
+.ct-resumen__dato {
+  flex: 1 1 180px;
+  padding: var(--sp-md);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.ct-resumen__valor {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── Pago en desarrollo local (sin redirección de Wompi) ── */
+.ct-pago-local {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.ct-pago-local__pasos {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.6;
+}
+
+.ct-pago-local__fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  align-items: center;
+}
+
+.ct-pago-local__fila .ss-input { flex: 1 1 260px; width: auto; }
+
+.ct-pago-local__cerrar { align-self: flex-start; }
+
+/* ── Etapas finales y recepción ── */
+.ct-calificacion {
+  display: flex;
+  gap: 4px;
+}
+
+.ct-estrella {
+  background: none;
+  border: none;
+  padding: 2px;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--border2);
+}
+
+.ct-estrella--activa { color: #E8450A; }
+
+.ct-estrella:focus-visible {
+  outline: 2px solid var(--primary);
+  border-radius: 4px;
+}

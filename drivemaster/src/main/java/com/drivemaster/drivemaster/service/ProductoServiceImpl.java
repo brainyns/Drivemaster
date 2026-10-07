@@ -1,8 +1,16 @@
 package com.drivemaster.drivemaster.service;
 
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
 
@@ -14,17 +22,28 @@ public class ProductoServiceImpl implements ProductoService {
 
     private final ProductoRepository productoRepository;
     private final CloudinaryService cloudinaryService;
+    private final TiendaService tiendaService;
+    private final MongoTemplate mongoTemplate;
 
     public ProductoServiceImpl(ProductoRepository productoRepository,
-                               CloudinaryService cloudinaryService) {
+                               CloudinaryService cloudinaryService,
+                               TiendaService tiendaService,
+                               MongoTemplate mongoTemplate) {
         this.productoRepository = productoRepository;
         this.cloudinaryService = cloudinaryService;
+        this.tiendaService = tiendaService;
+        this.mongoTemplate = mongoTemplate;
     }
 
     @Override
     public Producto crearProducto(Producto producto) {
 
-        if (productoRepository.existsByCodigo(producto.getCodigo())) {
+        // Sin tienda indicada (alta desde el panel interno) es de la tienda de DriveMaster.
+        if (producto.getTiendaId() == null || producto.getTiendaId().isBlank()) {
+            producto.setTiendaId(tiendaService.obtenerPlataforma().getId());
+        }
+
+        if (productoRepository.existsByTiendaIdAndCodigo(producto.getTiendaId(), producto.getCodigo())) {
             throw new RuntimeException("Ya existe un producto con ese código");
         }
 
@@ -47,6 +66,12 @@ public class ProductoServiceImpl implements ProductoService {
         existente.setPrecioVenta(producto.getPrecioVenta());
         existente.setStockMinimo(producto.getStockMinimo());
         existente.setImagenUrl(producto.getImagenUrl());
+        // La tienda dueña no se cambia al editar.
+        existente.setReferencia(producto.getReferencia());
+        existente.setUbicacion(producto.getUbicacion());
+        existente.setProveedorId(producto.getProveedorId());
+        existente.setDiasEntregaEncargo(producto.getDiasEntregaEncargo());
+        existente.setCompatibilidadUniversal(producto.getCompatibilidadUniversal());
 
         return productoRepository.save(existente);
     }
@@ -66,6 +91,52 @@ public class ProductoServiceImpl implements ProductoService {
     @Override
     public List<Producto> listarTodos() {
         return productoRepository.findAll();
+    }
+
+    @Override
+    public List<Producto> listarCatalogoPublico() {
+        return productoRepository.findCatalogoPlataforma(tiendaService.obtenerPlataforma().getId());
+    }
+
+    @Override
+    public List<Producto> listarPorTienda(String tiendaId) {
+        return productoRepository.findByTiendaId(tiendaId);
+    }
+
+    @Override
+    public Producto descontarStock(String productoId, int cantidad) {
+        validarCantidad(cantidad);
+        // La condición stockActual >= cantidad se evalúa en la misma operación que el
+        // descuento: dos compras simultáneas ya no pueden dejar el stock en negativo.
+        Query query = Query.query(Criteria.where("id").is(productoId).and("stockActual").gte(cantidad));
+        Update update = new Update().inc("stockActual", -cantidad);
+        Producto actualizado = mongoTemplate.findAndModify(query, update,
+                FindAndModifyOptions.options().returnNew(true), Producto.class);
+        if (actualizado == null) {
+            Producto actual = obtenerPorId(productoId); // 404 si no existe
+            throw new StockInsuficienteException(actual.getNombre(),
+                    actual.getStockActual() != null ? actual.getStockActual() : 0);
+        }
+        return actualizado;
+    }
+
+    @Override
+    public Producto incrementarStock(String productoId, int cantidad) {
+        validarCantidad(cantidad);
+        Query query = Query.query(Criteria.where("id").is(productoId));
+        Update update = new Update().inc("stockActual", cantidad);
+        Producto actualizado = mongoTemplate.findAndModify(query, update,
+                FindAndModifyOptions.options().returnNew(true), Producto.class);
+        if (actualizado == null) {
+            throw new RuntimeException("Producto no encontrado");
+        }
+        return actualizado;
+    }
+
+    private void validarCantidad(int cantidad) {
+        if (cantidad <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cantidad debe ser mayor que cero");
+        }
     }
 
     @Override

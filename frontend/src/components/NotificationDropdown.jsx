@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getToken } from "../services/authService";
 import { subscribeNotifications } from "../services/websocketService";
@@ -28,17 +29,17 @@ export default function NotificationDropdown({ onClose, onNavigate }) {
   const ref = useRef(null);
   const token = getToken();
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [cargado, setCargado] = useState(false);
+  const loading = !cargado && !!token;
 
   const fetchNotifications = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
     try {
       const items = [];
 
       // Pending solicitudes
       try {
-        const sols = await fetch(`${API_BASE}/solicitudes`, { headers: authHeaders(token) }).then(r => r.json());
+        const sols = await apiFetch(`${API_BASE}/solicitudes`, { headers: authHeaders(token) }).then(r => r.json());
         const pending = (sols || []).filter(s => s.estado === "PENDIENTE" || s.estado === "PENDIENTE_PAGO" || s.estado === "PAGO_VERIFICADO");
         pending.forEach(s => {
           items.push({
@@ -58,7 +59,7 @@ export default function NotificationDropdown({ onClose, onNavigate }) {
 
       // Low stock
       try {
-        const prods = await fetch(`${API_BASE}/productos`, { headers: authHeaders(token) }).then(r => r.json());
+        const prods = await apiFetch(`${API_BASE}/productos`, { headers: authHeaders(token) }).then(r => r.json());
         const lowStock = (prods || []).filter(p => p.stockActual != null && p.stockMinimo != null && p.activo !== false && p.stockActual <= p.stockMinimo);
         lowStock.forEach(p => {
           const isOut = p.stockActual === 0;
@@ -79,7 +80,7 @@ export default function NotificationDropdown({ onClose, onNavigate }) {
 
       // Recent sales from dashboard
       try {
-        const d = await fetch(`${API_BASE}/reportes/dashboard`, { headers: authHeaders(token) }).then(r => r.json());
+        const d = await apiFetch(`${API_BASE}/reportes/dashboard`, { headers: authHeaders(token) }).then(r => r.json());
         const totalHoy = d.totalVentasDia || 0;
         if (totalHoy > 0) {
           items.push({
@@ -104,16 +105,16 @@ export default function NotificationDropdown({ onClose, onNavigate }) {
 
       setNotifications(items.slice(0, 20));
     } catch { /* ignore */ }
-    setLoading(false);
+    setCargado(true);
   }, [token]);
 
   useEffect(() => {
-    fetchNotifications();
+    const initial = setTimeout(fetchNotifications, 0);
     const interval = setInterval(fetchNotifications, 30000);
     const unsub = subscribeNotifications((msg) => {
       if (msg?.type === "solicitud" || msg?.type === "venta_estado") fetchNotifications();
     });
-    return () => { clearInterval(interval); unsub(); };
+    return () => { clearTimeout(initial); clearInterval(interval); unsub(); };
   }, [fetchNotifications]);
 
   useEffect(() => {

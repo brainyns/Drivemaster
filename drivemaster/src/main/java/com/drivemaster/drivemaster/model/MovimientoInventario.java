@@ -28,5 +28,8 @@ public class MovimientoInventario {
     private LocalDateTime fecha;
 
     private String usuarioId;
+
+    // Tienda dueña del producto (denormalizado para filtrar el inventario por tienda).
+    private String tiendaId;
 }
 

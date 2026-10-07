@@ -179,3 +179,15 @@
   border: 2px solid var(--card-bg, #1e1e1e);
   line-height: 1;
 }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .nt-dropdown {
+    position: fixed;
+    top: 56px;
+    right: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    max-width: none;
+  }
+}

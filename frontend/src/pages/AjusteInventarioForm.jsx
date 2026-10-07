@@ -17,7 +17,7 @@ function AjusteInventarioForm({ productoId, onVolver, token }) {
       setTimeout(() => {
         onVolver();
       }, 1000);
-    } catch (error) {
+    } catch {
       setMensaje("Error ajustando inventario");
     }
   };

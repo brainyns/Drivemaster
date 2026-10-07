@@ -27,7 +27,7 @@ public class PdfCompraBuilder {
     private static final Color BORDER      = new Color(229, 231, 235);  // bordes suaves
     private static final Color BORDER_ROW  = new Color(243, 244, 246);  // separadores de fila
 
-    private static final Locale LOCALE_CO = new Locale("es", "CO");
+    private static final Locale LOCALE_CO = Locale.forLanguageTag("es-CO");
 
     private static final float PAD = 32f;
     private static final float PW  = 595f; // A4 width

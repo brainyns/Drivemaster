@@ -243,6 +243,16 @@ function Ventas({ onNueva, onDetalle, token }) {
           <h1 className="vt-h1">Ventas</h1>
         </div>
         <div className="vt-header-actions">
+          <div className="vt-search">
+            <span className="vt-search-ico">🔍</span>
+            <input
+              type="search"
+              placeholder="Buscar venta, cliente..."
+              value={busqueda}
+              onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
+            />
+          </div>
+
           <div className="vt-toggle-group" style={{ border: "none", background: "none", padding: 0, display: "flex" }}>
             <button className="vt-toggle" onClick={onNueva}>Registrar Venta</button>
             <button className="vt-toggle active">Ver Ventas</button>

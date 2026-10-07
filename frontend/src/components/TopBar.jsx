@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { useState, useEffect, useRef, useCallback } from "react";
 import NotificationDropdown from "./NotificationDropdown";
 import { getToken } from "../services/authService";
@@ -59,6 +60,8 @@ const IcoMoon = () => (
 const getRolLabel = (rol) => {
   if (rol === "SUPERADMIN") return "Superadmin";
   if (rol === "ADMIN")      return "Administrador";
+  if (rol === "TALLER")     return "Taller";
+  if (rol === "TIENDA")     return "Tienda";
   return "Vendedor";
 };
 
@@ -194,6 +197,7 @@ function TopBar({
   theme,
   onToggleTheme,
   children,
+  onMenuClick,
 }) {
   const [configOpen, setConfigOpen] = useState(false);
   const [perfilOpen, setPerfilOpen] = useState(false);
@@ -202,7 +206,7 @@ function TopBar({
 
   const refreshCount = useCallback(async () => {
     try {
-      const sols = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`, {
+      const sols = await apiFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${getToken()}`,
@@ -214,22 +218,23 @@ function TopBar({
   }, []);
 
   useEffect(() => {
-    if (!user || user.rol === "CLIENTE") return;
+    // Las solicitudes pendientes son del personal interno; talleres y tiendas no tienen acceso.
+    if (!user || !["SUPERADMIN", "ADMIN", "VENDEDOR"].includes(user.rol)) return;
     const tok = getToken();
     if (!tok) return;
     connectNotifications(tok);
-    refreshCount();
+    const initial = setTimeout(refreshCount, 0);
     const unsub = subscribeNotifications((msg) => {
       if (msg?.type === "solicitud" || msg?.type === "venta_estado") refreshCount();
     });
-    return () => { unsub(); disconnectNotifications(); };
+    return () => { clearTimeout(initial); unsub(); disconnectNotifications(); };
   }, [user, refreshCount]);
 
   useEffect(() => {
     if (!notifOpen) return;
-    refreshCount();
+    const initial = setTimeout(refreshCount, 0);
     const interval = setInterval(refreshCount, 30000);
-    return () => clearInterval(interval);
+    return () => { clearTimeout(initial); clearInterval(interval); };
   }, [notifOpen, refreshCount]);
 
   const handleColorChange = (c) => {
@@ -241,6 +246,20 @@ function TopBar({
   return (
     <header className="tb-root">
       <div className="tb-left">
+        {onMenuClick && (
+          <button
+            className="tb-menu-btn"
+            onClick={onMenuClick}
+            title="Abrir menú"
+            aria-label="Abrir menú"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        )}
         <span className="tb-brand">DriveMaster</span>
         <span className="tb-divider">|</span>
         <span className="tb-breadcrumb">{titulo}</span>

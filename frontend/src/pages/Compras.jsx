@@ -87,10 +87,6 @@ function contarFiltrosActivos(filtros) {
 function FilterPanel({ open, onClose, onApply, filtrosActivos }) {
   const [draft, setDraft] = useState({ ...filtrosActivos });
 
-  useEffect(() => {
-    if (open) setDraft({ ...filtrosActivos });
-  }, [open, filtrosActivos]);
-
   function handleApply() {
     onApply(draft);
     onClose();
@@ -337,6 +333,7 @@ function Compras({ onNueva, onDetalle, token }) {
               </button>
 
               <FilterPanel
+                key={panelOpen ? "abierto" : "cerrado"}
                 open={panelOpen}
                 onClose={() => setPanelOpen(false)}
                 onApply={handleApplyFiltros}

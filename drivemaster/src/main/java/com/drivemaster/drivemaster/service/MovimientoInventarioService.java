@@ -21,9 +21,11 @@ public interface MovimientoInventarioService {
 
         List<MovimientoInventario> listarTodos();
 
+        /** tiendaId null = todas las tiendas (personal interno). */
         List<MovimientoInventario> buscarConFiltros(
                         String productoId,
                         String tipo,
                         LocalDateTime fechaInicio,
-                        LocalDateTime fechaFin);
+                        LocalDateTime fechaFin,
+                        String tiendaId);
 }

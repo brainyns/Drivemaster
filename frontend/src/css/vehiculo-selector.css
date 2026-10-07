@@ -1,0 +1,251 @@
+/* ── Panel de identificaciónón de vehíoulo ─────────────────────────────────── */
+
+.dm-vehicle {
+  position: relative;
+  margin-top: -47px;
+  z-index: 5;
+  scroll-margin-top: 110px;
+}
+
+.dm-vehicle__panel {
+  border-radius: 9px;
+  background: var(--dm-bg);
+  border: 1px solid var(--dm-line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  padding: 26px 30px 0;
+}
+
+.dm-vehicle__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 23px;
+}
+
+.dm-vehicle__title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.dm-vehicle__title h2 {
+  font-size: 22px;
+  letter-spacing: -0.65px;
+  font-weight: 700;
+}
+
+.dm-vehicle__title p {
+  font-size: 11px;
+  color: var(--dm-muted);
+  margin-top: 4px;
+}
+
+.dm-vehicle__hint {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  color: var(--dm-muted);
+}
+
+/* ── Estados sin sesión / sin vehíoulos ─────────────────────────────────── */
+.dm-vehicle__empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 4px 0 6px;
+}
+
+.dm-vehicle__empty p {
+  font-size: 12px;
+  color: var(--dm-muted);
+  max-width: 560px;
+}
+
+.dm-vehicle__empty .dm-btn {
+  min-height: 43px;
+  font-size: 10px;
+  padding: 12px 17px;
+}
+
+/* ── Lista de vehíoulos ─────────────────────────────────────────────────── */
+.dm-vehicle__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: 12px;
+}
+
+.dm-vehicle__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid var(--dm-line);
+  border-radius: 7px;
+  background: var(--dm-surface);
+  transition: border-color 0.2s, transform 0.2s, background 0.2s;
+}
+
+.dm-vehicle__item:hover {
+  border-color: var(--dm-orange);
+  transform: translateY(-2px);
+}
+
+.dm-vehicle__item.is-active {
+  border-color: var(--dm-orange);
+  background: var(--dm-orange-soft);
+}
+
+.dm-vehicle__photo {
+  width: 54px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 5px;
+  flex-shrink: 0;
+  background: var(--dm-surface-2);
+}
+
+.dm-vehicle__photo.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dm-muted);
+}
+
+.dm-vehicle__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.dm-vehicle__meta strong {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dm-vehicle__meta small {
+  font-size: 9px;
+  color: var(--dm-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dm-vehicle__go {
+  color: var(--dm-muted);
+  flex-shrink: 0;
+}
+
+.dm-vehicle__check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--dm-orange);
+  color: var(--dm-on-accent);
+  flex-shrink: 0;
+}
+
+/* ── Vehíoulo activo ────────────────────────────────────────────────────── */
+.dm-vehicle__active {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 15px;
+  padding: 11px 14px;
+  border-radius: 6px;
+  background: var(--dm-orange-soft);
+  font-size: 10px;
+  color: var(--dm-text);
+}
+
+.dm-vehicle__active svg {
+  color: var(--dm-orange-hover);
+  flex-shrink: 0;
+}
+
+.dm-vehicle__active button {
+  margin-left: auto;
+  background: transparent;
+  font-size: 10px;
+  color: var(--dm-orange-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+/* ── Footnote ───────────────────────────────────────────────────────────── */
+.dm-vehicle__footnote {
+  border-top: 1px solid var(--dm-line-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: var(--dm-muted);
+  padding: 14px 0;
+  margin-top: 19px;
+}
+
+.dm-vehicle__footnote > svg {
+  color: var(--dm-green);
+}
+
+.dm-vehicle__footnote > button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  background: transparent;
+  font-size: 9px;
+  color: var(--dm-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dm-vehicle__footnote > button:hover {
+  color: var(--dm-orange-hover);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .dm-vehicle__hint { font-size: 10px; }
+  .dm-vehicle__panel-heading { margin-bottom: 19px; }
+  .dm-vehicle__panel { padding: 25px 24px 0; }
+}
+
+@media (max-width: 760px) {
+  .dm-vehicle { margin-top: -30px; }
+  .dm-vehicle__panel { padding: 21px 19px 0; border-radius: 7px; }
+  .dm-vehicle__heading { margin-bottom: 22px; }
+  .dm-vehicle__title { gap: 11px; }
+  .dm-vehicle__title h2 { font-size: 21px; }
+  .dm-vehicle__title p { font-size: 10px; }
+  .dm-vehicle__title .dm-icon-tile { width: 39px; height: 39px; }
+  .dm-vehicle__hint { display: none; }
+  .dm-vehicle__list { grid-template-columns: 1fr; gap: 9px; }
+  .dm-vehicle__empty { flex-direction: column; align-items: flex-start; gap: 13px; }
+  .dm-vehicle__empty .dm-btn { width: 100%; }
+  .dm-vehicle__active { flex-wrap: wrap; font-size: 9px; }
+  .dm-vehicle__active button { margin-left: 0; width: 100%; text-align: left; }
+  .dm-vehicle__footnote {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    font-size: 10px;
+    gap: 5px;
+    padding: 13px 0 16px;
+    line-height: 1.6;
+  }
+  .dm-vehicle__footnote > button { margin-left: 18px; font-size: 10px; }
+}

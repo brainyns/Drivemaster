@@ -1,4 +1,4 @@
-/* ─────────────────────────────────────────────────────────────
+﻿/* ─────────────────────────────────────────────────────────────
    DASHBOARD.CSS — DriveMaster Main Dashboard
    Paleta dark: #0a0a0a / #ff3d00 / #111 / #181818
 ───────────────────────────────────────────────────────────── */
@@ -7,7 +7,7 @@
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: 'Inter', sans-serif;
   padding: 1.5rem 1.75rem 2.5rem;
 }
 
@@ -597,7 +597,7 @@
   border: none;
   padding: 0.45rem 1rem;
   border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
@@ -634,7 +634,7 @@
   border-bottom: 1px solid var(--border);
 }
 .db-pbi-header h2 {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
   margin: 0;
@@ -659,4 +659,20 @@
   border: none;
   width: 100%;
   height: 100%;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .db-root { padding: 1rem; }
+  .db-header { flex-direction: column; align-items: flex-start; }
+  .db-charts-row { flex-direction: column; }
+  .db-charts-row .db-card { min-width: 0; width: 100%; }
+  .db-pbi-overlay { padding: 1rem; }
+  .db-pbi-modal { height: 95vh; }
+  .db-hbar-label { width: 70px; font-size: 0.68rem; }
+}
+
+@media (max-width: 480px) {
+  .db-kpi-grid { grid-template-columns: 1fr 1fr; }
+  .db-kpi-val { font-size: 1.2rem; }
 }

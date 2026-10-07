@@ -7,7 +7,7 @@ import com.drivemaster.drivemaster.model.Usuario;
 
 public class EmailSolicitudBuilder {
 
-    private static final Locale LOCALE_CO = new Locale("es", "CO");
+    private static final Locale LOCALE_CO = Locale.forLanguageTag("es-CO");
 
     public static String pagoRecibido(Usuario usuario, double total) {
         NumberFormat fmt = NumberFormat.getCurrencyInstance(LOCALE_CO);
