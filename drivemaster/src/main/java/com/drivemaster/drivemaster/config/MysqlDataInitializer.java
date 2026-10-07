@@ -119,7 +119,12 @@ public class MysqlDataInitializer implements CommandLineRunner {
     new Object[]{"TARIFA_DIAGNOSTICO",       "50000", "Tarifa fija de diagnóstico en COP (ingreso del taller, descontable de la reparación)"},
     new Object[]{"COMISION_PCT",             "10",    "Comisión de la plataforma (%) sobre el subtotal antes de IVA; en v1 solo se registra"},
     new Object[]{"TIMEOUT_TALLER_MIN",       "120",   "Minutos que tiene un taller para aceptar una solicitud antes de reasignarla"},
-    new Object[]{"VIGENCIA_COTIZACION_DIAS", "7",     "Días de vigencia de una cotización"}
+    new Object[]{"VIGENCIA_COTIZACION_DIAS", "7",     "Días de vigencia de una cotización"},
+    new Object[]{"PAGO_DIAGNOSTICO_REQUERIDO",   "false", "Si es true, la solicitud pasa a revisión solo cuando el cliente paga el diagnóstico (Fase 3)"},
+    new Object[]{"TIMEOUT_PAGO_DIAGNOSTICO_MIN", "1440",  "Minutos para pagar el diagnóstico tras la propuesta de cita (sin pasar la cita); si vence, se cancela"},
+    new Object[]{"RADIO_MAX_KM",                 "30",    "Radio máximo (km) para asignar un taller fuera de la ciudad del cliente"},
+    new Object[]{"HORA_INICIO_ATENCION",         "7",     "Hora (Colombia) en que empieza a correr el plazo de respuesta del taller (L-S)"},
+    new Object[]{"HORA_FIN_ATENCION",            "19",    "Hora (Colombia) en que se detiene el plazo de respuesta del taller"}
 );
 
         for (Object[] p : params) {

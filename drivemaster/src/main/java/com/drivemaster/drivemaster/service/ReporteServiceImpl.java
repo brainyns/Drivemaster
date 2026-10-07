@@ -35,6 +35,7 @@ import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Venta;
 import com.drivemaster.drivemaster.model.OrdenServicio;
+import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.repository.VentaRepository;
 import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
@@ -473,6 +474,8 @@ public class ReporteServiceImpl implements ReporteService {
         LocalDateTime desde = inicioPeriodo(periodo);
 
         List<OrdenServicio> ordenes = ordenServicioRepository.findAll().stream()
+                // Reporte del flujo de servicio V1: las órdenes del marketplace tienen estados propios.
+                .filter(o -> !EstadoOrden.FLUJO_MARKETPLACE.equals(o.getFlujo()))
                 .filter(o -> o.getFechaCreacion() != null && !o.getFechaCreacion().isBefore(desde))
                 .collect(Collectors.toList());
 
