@@ -1,6 +1,8 @@
 package com.drivemaster.drivemaster.dto;
 
+import com.drivemaster.drivemaster.model.Diagnostico;
 import com.drivemaster.drivemaster.model.EventoOrden;
+import com.drivemaster.drivemaster.model.RepuestoSeleccionado;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -62,6 +64,10 @@ public class SolicitudServicioDTO {
     private LocalDateTime fechaLimitePagoDiagnostico;
 
     private String motivoCierre;
+
+    // Diagnóstico y repuestos elegidos (visibles para el cliente, el taller y el ADMIN)
+    private Diagnostico diagnostico;
+    private List<RepuestoSeleccionado> repuestos;
 
     private List<EventoOrden> eventos;
 }

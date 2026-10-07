@@ -4,12 +4,12 @@ import com.drivemaster.drivemaster.dto.ConfigMantenimientoRequest;
 import com.drivemaster.drivemaster.dto.CrearVehiculoRequest;
 import com.drivemaster.drivemaster.dto.RepuestoCompatibleDTO;
 import com.drivemaster.drivemaster.dto.VehiculoDTO;
-import com.drivemaster.drivemaster.model.Compatibilidad;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.Vehiculo;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
 import com.drivemaster.drivemaster.repository.VehiculoRepository;
+import com.drivemaster.drivemaster.util.CompatibilidadVehiculo;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -98,30 +98,9 @@ public class VehiculoServiceImpl implements VehiculoService {
                 .filter(p -> p.getTiendaId() == null || tiendaPlataformaId.equals(p.getTiendaId()))
                 .filter(p -> Boolean.TRUE.equals(p.getActivo()))
                 .filter(p -> p.getStockActual() != null && p.getStockActual() > 0)
-                .filter(p -> esCompatible(p, vehiculo))
+                .filter(p -> CompatibilidadVehiculo.esCompatible(p, vehiculo))
                 .map(this::toRepuestoDTO)
                 .collect(Collectors.toList());
-    }
-
-    private boolean esCompatible(Producto producto, Vehiculo vehiculo) {
-        if (producto.getModelosCompatibles() == null) return false;
-        for (Compatibilidad c : producto.getModelosCompatibles()) {
-            boolean marcaOk = c.getMarca() != null && c.getMarca().equalsIgnoreCase(vehiculo.getMarca());
-            boolean modeloOk = c.getModelo() != null && c.getModelo().equalsIgnoreCase(vehiculo.getModelo());
-            if (!marcaOk || !modeloOk) continue;
-
-            Integer desde = c.getAnoDesde();
-            Integer hasta = c.getAnoHasta();
-            Integer anioVehiculo = vehiculo.getAnio();
-            boolean anioOk = (desde == null || anioVehiculo == null || anioVehiculo >= desde)
-                    && (hasta == null || anioVehiculo == null || anioVehiculo <= hasta);
-            // El motor solo restringe si ambos lo indican.
-            boolean motorOk = c.getMotor() == null || c.getMotor().isBlank()
-                    || vehiculo.getMotor() == null || vehiculo.getMotor().isBlank()
-                    || c.getMotor().trim().equalsIgnoreCase(vehiculo.getMotor().trim());
-            if (anioOk && motorOk) return true;
-        }
-        return false;
     }
 
     private Vehiculo validarPropiedad(String correoUsuario, String vehiculoId) {

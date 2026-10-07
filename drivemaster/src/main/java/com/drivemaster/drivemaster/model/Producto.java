@@ -45,5 +45,12 @@ public class Producto {
 
     // Proveedor del que la tienda obtiene el producto (opcional).
     private String proveedorId;
+
+    // Solo productos por ENCARGO: días estimados de entrega (se informan al cotizar).
+    private Integer diasEntregaEncargo;
+
+    // La tienda lo marca para aceites, líquidos e insumos que sirven a cualquier
+    // vehículo: el buscador los muestra como compatibles sin pedir confirmación.
+    private Boolean compatibilidadUniversal;
 }
 

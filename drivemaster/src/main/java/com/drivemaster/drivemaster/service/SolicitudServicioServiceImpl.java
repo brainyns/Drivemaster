@@ -2,12 +2,18 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.AceptarSolicitudRequest;
 import com.drivemaster.drivemaster.dto.CrearSolicitudServicioRequest;
+import com.drivemaster.drivemaster.dto.DiagnosticoRequest;
+import com.drivemaster.drivemaster.dto.OfertaRepuestoDTO;
+import com.drivemaster.drivemaster.dto.SeleccionRepuestosRequest;
 import com.drivemaster.drivemaster.dto.SolicitudServicioDTO;
+import com.drivemaster.drivemaster.model.Diagnostico;
 import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.EventoOrden;
 import com.drivemaster.drivemaster.model.Mecanico;
 import com.drivemaster.drivemaster.model.OrdenServicio;
+import com.drivemaster.drivemaster.model.Producto;
+import com.drivemaster.drivemaster.model.RepuestoSeleccionado;
 import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.Vehiculo;
@@ -26,7 +32,10 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.Set;
 
 @Service
@@ -36,6 +45,11 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
 
     private static final int MAX_FOTOS = 5;
     private static final int MAX_SINTOMAS = 1500;
+    private static final int MAX_TEXTO_DIAGNOSTICO = 3000;
+    private static final int MAX_FALLAS = 20;
+    private static final int MAX_FOTOS_DIAGNOSTICO = 8;
+    private static final int MAX_REPUESTOS = 30;
+    private static final int MAX_CANTIDAD = 99;
     private static final Set<String> CANCELABLES_POR_CLIENTE =
             Set.of(EstadoOrden.ENVIADA, EstadoOrden.ASIGNADA_A_TALLER, EstadoOrden.REASIGNADA);
 
@@ -49,6 +63,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private final AsignacionTallerService asignacion;
     private final ParametrosMarketplace parametros;
     private final AvisosSolicitudServicio avisos;
+    private final ProductoService productoService;
+    private final BuscadorRepuestosService buscador;
 
     public SolicitudServicioServiceImpl(OrdenServicioRepository ordenRepository,
                                         TallerRepository tallerRepository,
@@ -59,7 +75,11 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                                         TransicionOrdenService transiciones,
                                         AsignacionTallerService asignacion,
                                         ParametrosMarketplace parametros,
-                                        AvisosSolicitudServicio avisos) {
+                                        AvisosSolicitudServicio avisos,
+                                        ProductoService productoService,
+                                        BuscadorRepuestosService buscador) {
+        this.productoService = productoService;
+        this.buscador = buscador;
         this.ordenRepository = ordenRepository;
         this.tallerRepository = tallerRepository;
         this.vehiculoService = vehiculoService;
@@ -299,6 +319,201 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         return toDTO(actualizada, Vista.TALLER);
     }
 
+    @Override
+    public SolicitudServicioDTO registrarDiagnostico(String correoTaller, String id, DiagnosticoRequest r) {
+        Taller taller = tallerOperativo(correoTaller);
+        OrdenServicio orden = solicitudDelTaller(taller, id);
+        boolean primeraVez = EstadoOrden.EN_REVISION.equals(orden.getEstado());
+        if (!primeraVez && !EstadoOrden.DIAGNOSTICADA.equals(orden.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "El diagnóstico se registra con el vehículo en revisión (estado actual: " + orden.getEstado() + ")");
+        }
+        if (r == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completa el diagnóstico");
+        }
+        String hallazgos = r.getHallazgos() != null ? r.getHallazgos().trim() : "";
+        if (hallazgos.length() < 10) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Describe los hallazgos (mínimo 10 caracteres)");
+        }
+        if (hallazgos.length() > MAX_TEXTO_DIAGNOSTICO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Los hallazgos son demasiado largos");
+        }
+        String urgencia = r.getUrgencia() != null ? r.getUrgencia().trim().toUpperCase() : "";
+        if (!Diagnostico.URGENCIAS.contains(urgencia)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica la urgencia: BAJA, MEDIA, ALTA o CRITICA");
+        }
+        List<String> fallas = r.getFallas() != null
+                ? r.getFallas().stream().filter(f -> f != null && !f.isBlank()).map(String::trim).toList()
+                : List.of();
+        if (fallas.size() > MAX_FALLAS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Máximo " + MAX_FALLAS + " fallas");
+        }
+        List<String> fotos = r.getFotos() != null
+                ? r.getFotos().stream().filter(f -> f != null && f.startsWith("http")).toList()
+                : List.of();
+        if (fotos.size() > MAX_FOTOS_DIAGNOSTICO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Máximo " + MAX_FOTOS_DIAGNOSTICO + " fotos");
+        }
+
+        // El diagnóstico queda a nombre de un mecánico: el de la solicitud o el que se indique ahora.
+        Mecanico mecanico = r.getMecanicoId() != null && !r.getMecanicoId().isBlank()
+                ? mecanicoActivo(taller, r.getMecanicoId()) : null;
+        String mecanicoId = mecanico != null ? mecanico.getId() : orden.getMecanicoId();
+        String mecanicoNombre = mecanico != null ? mecanico.getNombre() : orden.getMecanicoNombre();
+        if (mecanicoId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Asigna el mecánico que hizo la revisión");
+        }
+
+        Diagnostico diagnostico = Diagnostico.builder()
+                .hallazgos(hallazgos)
+                .fallas(new ArrayList<>(fallas))
+                .urgencia(urgencia)
+                .observaciones(r.getObservaciones() != null ? r.getObservaciones().trim() : null)
+                .fotos(new ArrayList<>(fotos))
+                .mecanicoId(mecanicoId)
+                .mecanicoNombre(mecanicoNombre)
+                .fecha(LocalDateTime.now())
+                .build();
+        Update cambios = new Update()
+                .set("diagnostico", diagnostico)
+                .set("mecanicoId", mecanicoId)
+                .set("mecanicoNombre", mecanicoNombre);
+
+        // Los repuestos necesarios se guardan en la misma escritura que el diagnóstico.
+        List<String> notasAdicionales = new ArrayList<>();
+        if (r.getRepuestos() != null) {
+            Seleccion seleccion = construirSeleccion(taller, orden, r.getRepuestos(), mecanicoId, mecanicoNombre);
+            cambios.set("repuestos", seleccion.repuestos());
+            notasAdicionales.add(notaSeleccion(seleccion.repuestos()));
+            notasAdicionales.addAll(seleccion.confirmaciones());
+        }
+
+        Criteria condicion = Criteria.where("tallerId").is(taller.getId());
+        Actor actor = actorTaller(taller);
+
+        OrdenServicio actualizada = primeraVez
+                ? transiciones.transicionar(orden, EstadoOrden.DIAGNOSTICADA, actor,
+                        "Diagnóstico registrado por " + mecanicoNombre + " (urgencia " + urgencia + ")",
+                        condicion, cambios, notasAdicionales)
+                : transiciones.registrar(orden, actor, "Diagnóstico actualizado", condicion, cambios, notasAdicionales);
+        return toDTO(actualizada, Vista.TALLER);
+    }
+
+    @Override
+    public SolicitudServicioDTO seleccionarRepuestos(String correoTaller, String id, SeleccionRepuestosRequest r) {
+        Taller taller = tallerOperativo(correoTaller);
+        OrdenServicio orden = solicitudDelTaller(taller, id);
+        if (!EstadoOrden.DIAGNOSTICADA.equals(orden.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Los repuestos se eligen después del diagnóstico y antes de cotizar");
+        }
+        List<SeleccionRepuestosRequest.Item> items = r != null && r.getItems() != null ? r.getItems() : List.of();
+        // Las confirmaciones quedan a nombre del mecánico responsable del diagnóstico.
+        Seleccion seleccion = construirSeleccion(taller, orden, items, orden.getMecanicoId(), orden.getMecanicoNombre());
+
+        OrdenServicio actualizada = transiciones.registrar(orden, actorTaller(taller), notaSeleccion(seleccion.repuestos()),
+                Criteria.where("tallerId").is(taller.getId()),
+                new Update().set("repuestos", seleccion.repuestos()),
+                seleccion.confirmaciones());
+        return toDTO(actualizada, Vista.TALLER);
+    }
+
+    /** Repuestos validados y notas de las confirmaciones nuevas para la línea de tiempo. */
+    private record Seleccion(List<RepuestoSeleccionado> repuestos, List<String> confirmaciones) {
+    }
+
+    /**
+     * Valida cada repuesto con las reglas del buscador: no se acepta lo NO_COMPATIBLE
+     * ni lo agotado o con stock insuficiente que no sea por encargo. Lo POR_CONFIRMAR
+     * exige confirmoCompatibilidad=true; la confirmación se guarda con el mecánico y la
+     * fecha. Una confirmación anterior del mismo producto se conserva tal cual.
+     */
+    private Seleccion construirSeleccion(Taller taller, OrdenServicio orden, List<SeleccionRepuestosRequest.Item> items,
+                                         String mecanicoId, String mecanicoNombre) {
+        if (items.size() > MAX_REPUESTOS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Máximo " + MAX_REPUESTOS + " repuestos por orden");
+        }
+        Vehiculo vehiculo = vehiculoService.obtenerEntidad(orden.getVehiculoId());
+        Map<String, RepuestoSeleccionado> confirmadosAntes = (orden.getRepuestos() != null ? orden.getRepuestos() : List.<RepuestoSeleccionado>of())
+                .stream()
+                .filter(rep -> Boolean.TRUE.equals(rep.getCompatibilidadConfirmada()) && rep.getProductoId() != null)
+                .collect(Collectors.toMap(RepuestoSeleccionado::getProductoId, rep -> rep, (a, b) -> a));
+
+        List<RepuestoSeleccionado> seleccion = new ArrayList<>();
+        List<String> confirmaciones = new ArrayList<>();
+        Set<String> productosVistos = new HashSet<>();
+        for (SeleccionRepuestosRequest.Item item : items) {
+            if (item.getProductoId() == null || item.getProductoId().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cada repuesto debe tener un producto elegido");
+            }
+            if (!productosVistos.add(item.getProductoId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Un mismo producto aparece dos veces: ajusta la cantidad en una sola línea");
+            }
+            int cantidad = item.getCantidad() != null ? item.getCantidad() : 0;
+            if (cantidad < 1 || cantidad > MAX_CANTIDAD) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cantidad debe estar entre 1 y " + MAX_CANTIDAD);
+            }
+            Producto producto;
+            try {
+                producto = productoService.obtenerPorId(item.getProductoId());
+            } catch (RuntimeException e) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Uno de los productos elegidos ya no existe");
+            }
+            OfertaRepuestoDTO oferta = buscador.ofertaParaSeleccion(producto, cantidad, taller, vehiculo);
+
+            String descripcion = item.getDescripcion() != null && !item.getDescripcion().isBlank()
+                    ? item.getDescripcion().trim() : producto.getNombre();
+            RepuestoSeleccionado.RepuestoSeleccionadoBuilder repuesto = RepuestoSeleccionado.builder()
+                    .descripcion(descripcion)
+                    .cantidad(cantidad)
+                    .productoId(producto.getId())
+                    .productoNombre(producto.getNombre())
+                    .marca(producto.getMarca())
+                    .referencia(producto.getReferencia())
+                    .tiendaId(oferta.getTiendaId())
+                    .tiendaNombre(oferta.getTiendaNombre())
+                    .precioReferencia(oferta.getPrecio())
+                    .disponibilidad(oferta.getDisponibilidad())
+                    .diasEntrega(oferta.getDiasEntrega())
+                    .distanciaKm(oferta.getDistanciaKm())
+                    .compatibilidad(oferta.getCompatibilidad());
+
+            if (oferta.isRequiereConfirmacion()) {
+                if (!Boolean.TRUE.equals(item.getConfirmoCompatibilidad())) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Confirma que \"" + producto.getNombre() + "\" es compatible con el vehículo: no tiene datos de compatibilidad");
+                }
+                if (mecanicoId == null) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Asigna el mecánico responsable antes de confirmar compatibilidades");
+                }
+                RepuestoSeleccionado anterior = confirmadosAntes.get(producto.getId());
+                if (anterior != null) {
+                    repuesto.compatibilidadConfirmada(true)
+                            .confirmadoPorMecanicoId(anterior.getConfirmadoPorMecanicoId())
+                            .confirmadoPorMecanicoNombre(anterior.getConfirmadoPorMecanicoNombre())
+                            .fechaConfirmacion(anterior.getFechaConfirmacion());
+                } else {
+                    repuesto.compatibilidadConfirmada(true)
+                            .confirmadoPorMecanicoId(mecanicoId)
+                            .confirmadoPorMecanicoNombre(mecanicoNombre)
+                            .fechaConfirmacion(LocalDateTime.now());
+                    confirmaciones.add("Compatibilidad confirmada por " + mecanicoNombre + ": "
+                            + producto.getNombre() + " (" + oferta.getTiendaNombre() + ")");
+                }
+            }
+            seleccion.add(repuesto.build());
+        }
+        return new Seleccion(seleccion, confirmaciones);
+    }
+
+    private static String notaSeleccion(List<RepuestoSeleccionado> seleccion) {
+        if (seleccion.isEmpty()) return "Sin repuestos (solo mano de obra)";
+        long tiendas = seleccion.stream().map(RepuestoSeleccionado::getTiendaId).distinct().count();
+        return seleccion.size() + " repuesto(s) elegidos en " + tiendas + " tienda(s)";
+    }
+
     // ─── ADMIN ───────────────────────────────────────────────────────────────
 
     @Override
@@ -390,6 +605,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 .pagoDiagnosticoEstado(o.getPagoDiagnosticoEstado())
                 .fechaLimitePagoDiagnostico(o.getFechaLimitePagoDiagnostico())
                 .motivoCierre(o.getMotivoCierre())
+                .diagnostico(o.getDiagnostico())
+                .repuestos(o.getRepuestos())
                 .eventos(o.getEventos());
 
         try {
