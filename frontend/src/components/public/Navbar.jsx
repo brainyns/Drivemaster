@@ -21,6 +21,7 @@ export default function Navbar({
   onLogout,
   onSolicitarDiagnostico,
   onIrMisServicios,
+  onIrMarketplace,
   solicitudItems,
   solicitudCount,
   solicitudSubtotal,
@@ -91,6 +92,7 @@ export default function Navbar({
     { label: "Solicitar diagnóstico", onClick: cerrarY(onSolicitarDiagnostico) },
     { label: "Cómo funciona", onClick: cerrarY(() => onIrInicio?.("dm-pasos")) },
     { label: "Catálogo", onClick: cerrarY(onIrCatalogo) },
+    { label: "Repuestos de las tiendas", onClick: cerrarY(onIrMarketplace) },
     { label: "Para talleres y tiendas", onClick: cerrarY(() => onIrInicio?.("dm-negocios")) },
     { label: "Mis servicios", onClick: cerrarY(onIrMisServicios), soloCliente: true },
   ];
