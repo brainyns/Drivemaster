@@ -2,7 +2,10 @@ import Logo from "./Logo";
 import Icon from "./Icon";
 import "../../css/footer.css";
 
-export default function Footer({ onIrCatalogo, onIrInicio, onIrSolicitud, onIrVehiculo, onIrServicios, onIrLogin, onIrAdmin }) {
+export default function Footer({
+  onIrCatalogo, onIrInicio, onIrSolicitud, onIrVehiculo, onIrLogin, onIrAdmin,
+  onSolicitarDiagnostico, onRegistroNegocio,
+}) {
   const anio = new Date().getFullYear();
 
   return (
@@ -11,23 +14,23 @@ export default function Footer({ onIrCatalogo, onIrInicio, onIrSolicitud, onIrVe
         <div>
           <Logo light as="div" />
           <p>
-            Precisión para tu vehículo.
+            Diagnóstico, repuestos e instalación.
             <br />
-            Confianza para tu camino.
+            Todo conectado.
           </p>
         </div>
 
         <div>
           <span>EXPLORA</span>
+          <button onClick={onSolicitarDiagnostico}>Solicitar diagnóstico</button>
           <button onClick={onIrCatalogo}>Catálogo de repuestos</button>
           <button onClick={onIrVehiculo}>Identifica tu vehículo</button>
-          <button onClick={onIrServicios}>Mantenimiento</button>
         </div>
 
         <div>
           <span>DRIVEMASTER</span>
           <button onClick={() => onIrInicio?.("dm-pasos")}>Cómo funciona</button>
-          <button onClick={() => onIrInicio?.("dm-nosotros")}>Nuestra visión</button>
+          <button onClick={onRegistroNegocio}>Para talleres y tiendas</button>
           <button onClick={onIrLogin || onIrAdmin}>Mi cuenta</button>
         </div>
 

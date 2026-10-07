@@ -19,6 +19,8 @@ export default function Navbar({
   onIrCatalogo,
   onIrInicio,
   onLogout,
+  onSolicitarDiagnostico,
+  onIrMisServicios,
   solicitudItems,
   solicitudCount,
   solicitudSubtotal,
@@ -82,12 +84,15 @@ export default function Navbar({
     }
   };
 
+  const cerrarY = (accion) => () => { setMenuAbierto(false); setMobileAbierto(false); accion?.(); };
+
   const enlaces = [
-    { label: "Inicio", onClick: () => { setMobileAbierto(false); onIrInicio?.(); } },
-    { label: "Catálogo", onClick: () => { setMobileAbierto(false); onIrCatalogo?.(); } },
-    { label: "Encuentra tu repuesto", onClick: () => { setMobileAbierto(false); onIrInicio?.("dm-vehicle"); } },
-    { label: "Mis vehículos", onClick: () => irA("mis-vehiculos"), soloCliente: true },
-    { label: "Cómo funciona", onClick: () => { setMobileAbierto(false); onIrInicio?.("dm-pasos"); } },
+    { label: "Inicio", onClick: cerrarY(() => onIrInicio?.()) },
+    { label: "Solicitar diagnóstico", onClick: cerrarY(onSolicitarDiagnostico) },
+    { label: "Cómo funciona", onClick: cerrarY(() => onIrInicio?.("dm-pasos")) },
+    { label: "Catálogo", onClick: cerrarY(onIrCatalogo) },
+    { label: "Para talleres y tiendas", onClick: cerrarY(() => onIrInicio?.("dm-negocios")) },
+    { label: "Mis servicios", onClick: cerrarY(onIrMisServicios), soloCliente: true },
   ];
 
   const enlacesVisibles = enlaces.filter((e) => !e.soloCliente || user?.rol === "CLIENTE");
@@ -130,6 +135,7 @@ export default function Navbar({
                   <div className="dm-header__dropdown">
                     {user.rol === "CLIENTE" && (
                       <>
+                        <button onClick={cerrarY(onIrMisServicios)}>Mis servicios</button>
                         <button onClick={() => irA("mis-pedidos")}>Historial de compras</button>
                         <button onClick={() => irA("mis-solicitudes")}>Mis solicitudes</button>
                         <button onClick={() => irA("mis-vehiculos")}>Mis vehículos</button>
@@ -140,7 +146,7 @@ export default function Navbar({
                     )}
                     {user.rol !== "CLIENTE" && (
                       <button onClick={() => { setMenuAbierto(false); onIrAdmin?.(); }}>
-                        {user.rol === "TALLER" ? "Panel de taller" : "Panel de administración"}
+                        {user.rol === "TALLER" ? "Panel de taller" : user.rol === "TIENDA" ? "Panel de tienda" : "Panel de administración"}
                       </button>
                     )}
                     <div className="dm-header__dropdown-divider" />
@@ -158,9 +164,9 @@ export default function Navbar({
 
             <button
               className="dm-btn dm-btn--dark dm-header__cta"
-              onClick={() => { setMobileAbierto(false); onIrCatalogo?.(); }}
+              onClick={cerrarY(onSolicitarDiagnostico)}
             >
-              Explorar catálogo <Icon name="arrow" size={16} />
+              Solicitar diagnóstico <Icon name="arrow" size={16} />
             </button>
 
             <button
@@ -192,7 +198,12 @@ export default function Navbar({
           ))}
           {user ? (
             <>
-              {user.rol === "CLIENTE" && <button onClick={() => irA("mis-pedidos")}>Historial de compras</button>}
+              {user.rol === "CLIENTE" && (
+                <>
+                  <button onClick={() => irA("mis-vehiculos")}>Mis vehículos</button>
+                  <button onClick={() => irA("mis-pedidos")}>Historial de compras</button>
+                </>
+              )}
               <button onClick={() => { setMobileAbierto(false); onLogout?.(); }}>Cerrar sesión</button>
             </>
           ) : (

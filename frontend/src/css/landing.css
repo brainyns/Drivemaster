@@ -436,8 +436,112 @@
 
 .dm-cierre .dm-cta { font-size: 11px; }
 
+/* ── Cómo funciona: los 5 pasos del flujo ───────────────────────────────── */
+.dm-steps--flujo {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+.dm-steps--flujo .dm-step { padding: 22px 20px 0; }
+.dm-steps--flujo .dm-step h3 { font-size: 15px; }
+.dm-steps--flujo .dm-step__number { font-size: 32px; }
+
+/* ── Para talleres y tiendas ────────────────────────────────────────────── */
+.dm-negocios__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.dm-negocios__card {
+  display: flex;
+  flex-direction: column;
+  background: var(--dm-bg);
+  border: 1px solid var(--dm-line);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.dm-negocios__card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+}
+
+.dm-negocios__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 24px;
+  background: #0C2240;
+  color: #F5F5F3;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.dm-negocios__card:nth-child(2) .dm-negocios__head { background: #18487A; }
+.dm-negocios__head > svg { color: var(--dm-orange); stroke-width: 1.5; }
+
+.dm-negocios__card h3 {
+  font-size: 22px;
+  letter-spacing: -0.6px;
+  padding: 22px 24px 10px;
+}
+
+.dm-negocios__card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dm-negocios__card li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dm-muted);
+}
+
+.dm-negocios__card li > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--dm-green);
+}
+
+.dm-negocios__cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+/* ── Compra directa (flujo secundario) ──────────────────────────────────── */
+.dm-compra-directa {
+  padding-top: 72px;
+}
+
+.dm-compra-directa .dm-eyebrow { margin-bottom: 13px; }
+
+.dm-compra-directa h2 {
+  font-size: 30px;
+  letter-spacing: -1.1px;
+}
+
+.dm-compra-directa > p {
+  color: var(--dm-muted);
+  font-size: 12px;
+  line-height: 1.8;
+  margin-top: 8px;
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 1180px) {
+  .dm-steps--flujo { grid-template-columns: repeat(3, 1fr); }
   .dm-step { padding: 23px 21px 0; }
   .dm-step h3 { font-size: 15px; }
   .dm-eco__copy { padding: 38px 36px 28px; }
@@ -533,6 +637,13 @@
   .dm-catalog-note { flex-wrap: wrap; font-size: 9px; gap: 7px; text-align: center; margin-top: 21px; }
   .dm-catalog-note > span { max-width: calc(100% - 30px); }
   .dm-catalog-note > button { font-size: 9px; margin: 5px 0 0; }
+
+  .dm-negocios__grid { grid-template-columns: 1fr; gap: 13px; }
+  .dm-negocios__card h3 { font-size: 19px; padding: 18px 20px 8px; }
+  .dm-negocios__card ul { padding: 0 20px 20px; }
+  .dm-negocios__head { padding: 15px 20px; }
+  .dm-compra-directa { padding-top: 48px; }
+  .dm-compra-directa h2 { font-size: 25px; }
 
   .dm-cierre { padding: 30px 0; }
   .dm-cierre > .dm-container { flex-direction: column; align-items: flex-start; gap: 22px; }

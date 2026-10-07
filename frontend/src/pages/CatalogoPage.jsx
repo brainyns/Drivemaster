@@ -5,7 +5,7 @@ import { getToken } from "../services/authService";
 import Navbar from "../components/public/Navbar";
 import Hero from "../components/public/Hero";
 import VehiculoSelector from "../components/public/VehiculoSelector";
-import { MarcasStrip, Pasos, Ecosistema, Beneficios, CierreBanner } from "../components/public/Landing";
+import { MarcasStrip, Pasos, Ecosistema, ParaNegocios, Beneficios, CierreBanner } from "../components/public/Landing";
 import CatalogToolbar from "../components/public/CatalogToolbar";
 import CatalogFilters from "../components/public/CatalogFilters";
 import ProductList from "../components/public/ProductList";
@@ -21,6 +21,7 @@ const formatPrecio = (n) =>
 
 export default function CatalogoPage({
   onIrLogin, onIrAdmin, onIrSolicitud, onIrCheckout, onLogout,
+  onSolicitarDiagnostico, onRegistroNegocio,
   solicitudItems, solicitudCount, solicitudSubtotal, solicitudIva, solicitudTotal,
   solicitudAbierta, onToggleSolicitud,
   onAddProduct, onUpdateQuantity, onRemoveProduct,
@@ -145,6 +146,15 @@ export default function CatalogoPage({
     onIrSolicitud?.("mis-vehiculos");
   }, [token, onIrLogin, onIrSolicitud]);
 
+  // Seguimiento de las solicitudes de diagnóstico del cliente.
+  const irAMisServicios = useCallback(() => {
+    if (!token) {
+      onIrLogin?.();
+      return;
+    }
+    onIrSolicitud?.("mis-servicios");
+  }, [token, onIrLogin, onIrSolicitud]);
+
   const seleccionarVehiculo = useCallback((v, ids) => {
     setVehiculo(v);
     setIdsCompatibles(ids);
@@ -201,6 +211,8 @@ export default function CatalogoPage({
         onIrCatalogo={irAlCatalogo}
         onIrInicio={irAInicio}
         onLogout={onLogout}
+        onSolicitarDiagnostico={onSolicitarDiagnostico}
+        onIrMisServicios={irAMisServicios}
         solicitudItems={solicitudItems}
         solicitudCount={solicitudCount}
         solicitudSubtotal={solicitudSubtotal}
@@ -218,7 +230,25 @@ export default function CatalogoPage({
       <main className="dm-view-shell">
         {vista === "inicio" ? (
           <div key="inicio" className="dm-view">
-            <Hero onVerCatalogo={irAlCatalogo} onIrVehiculo={irAlVehiculo} />
+            <Hero onVerCatalogo={irAlCatalogo} onSolicitarDiagnostico={onSolicitarDiagnostico} />
+
+            <Pasos
+              onSolicitarDiagnostico={onSolicitarDiagnostico}
+              onIrServicios={irAMisServicios}
+            />
+
+            <Ecosistema onSolicitarDiagnostico={onSolicitarDiagnostico} />
+
+            <ParaNegocios onRegistroNegocio={onRegistroNegocio} />
+
+            {/* Flujo secundario: compra directa en el catálogo de DriveMaster */}
+            <div className="dm-container dm-compra-directa">
+              <div className="dm-eyebrow">
+                <span className="dm-line" /> COMPRA DIRECTA
+              </div>
+              <h2>¿Prefieres comprar el repuesto tú mismo?</h2>
+              <p>Identifica tu vehículo y te mostramos los repuestos compatibles del catálogo DriveMaster.</p>
+            </div>
 
             <VehiculoSelector
               token={token}
@@ -232,17 +262,9 @@ export default function CatalogoPage({
 
             <MarcasStrip productos={todos} />
 
-            <Pasos
-              onIrVehiculo={irAlVehiculo}
-              onVerCatalogo={irAlCatalogo}
-              onIrServicios={irAServicios}
-            />
-
-            <Ecosistema onIrServicios={irAServicios} />
-
             <Beneficios productos={todos} onIrVehiculo={irAlVehiculo} />
 
-            <CierreBanner onIrVehiculo={irAlVehiculo} />
+            <CierreBanner onSolicitarDiagnostico={onSolicitarDiagnostico} />
           </div>
         ) : (
           <div key="catalogo" className="dm-view">
@@ -384,6 +406,8 @@ export default function CatalogoPage({
         onIrVehiculo={irAlVehiculo}
         onIrServicios={irAServicios}
         onIrSolicitud={onIrSolicitud}
+        onSolicitarDiagnostico={onSolicitarDiagnostico}
+        onRegistroNegocio={onRegistroNegocio}
       />
 
       {productoSeleccionado && (

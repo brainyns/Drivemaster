@@ -15,6 +15,15 @@ export async function listarClientes(token) {
   return res.json();
 }
 
+/** Perfil del cliente autenticado (dirección, ciudad, teléfono...). */
+export async function obtenerMiPerfil(token) {
+  const res = await apiFetch(`${BASE_URL}/mi-perfil`, {
+    headers: buildHeaders(token),
+  });
+  if (!res.ok) throw new Error("No se pudo cargar tu perfil");
+  return res.json();
+}
+
 export async function obtenerCliente(id, token) {
   const res = await apiFetch(`${BASE_URL}/${id}`, {
     headers: buildHeaders(token),

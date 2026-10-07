@@ -49,6 +49,41 @@ export async function miTaller(token) {
   return handle(res, "Error al cargar los datos del taller");
 }
 
+// ─── Mecánicos del taller autenticado ───
+
+export async function listarMecanicos(token) {
+  const res = await apiFetch(`${BASE}/mi-taller/mecanicos`, { headers: headers(token) });
+  return handle(res, "Error al cargar los mecánicos");
+}
+
+/** mecanico: { nombre, especialidad?, telefono? } */
+export async function agregarMecanico(token, mecanico) {
+  const res = await apiFetch(`${BASE}/mi-taller/mecanicos`, {
+    method: "POST",
+    headers: headers(token),
+    body: JSON.stringify(mecanico),
+  });
+  return handle(res, "No se pudo agregar el mecánico");
+}
+
+export async function actualizarMecanico(token, id, mecanico) {
+  const res = await apiFetch(`${BASE}/mi-taller/mecanicos/${id}`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(mecanico),
+  });
+  return handle(res, "No se pudo actualizar el mecánico");
+}
+
+export async function cambiarEstadoMecanico(token, id, activo) {
+  const res = await apiFetch(`${BASE}/mi-taller/mecanicos/${id}/activo`, {
+    method: "PATCH",
+    headers: headers(token),
+    body: JSON.stringify({ activo }),
+  });
+  return handle(res, "No se pudo cambiar el estado del mecánico");
+}
+
 /** Body: { aprobado, motivo?, planCodigo? } */
 export async function resolverAprobacionTaller(token, id, decision) {
   const res = await apiFetch(`${BASE}/${id}/aprobacion`, {
