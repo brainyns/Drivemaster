@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.dto.AceptarSolicitudRequest;
+import com.drivemaster.drivemaster.dto.ConfirmarRecepcionRequest;
 import com.drivemaster.drivemaster.dto.CrearSolicitudServicioRequest;
 import com.drivemaster.drivemaster.dto.DiagnosticoRequest;
 import com.drivemaster.drivemaster.dto.SeleccionRepuestosRequest;
@@ -95,6 +96,38 @@ public class SolicitudServicioController {
                                                                      @RequestBody SeleccionRepuestosRequest request,
                                                                      Authentication auth) {
         return ResponseEntity.ok(service.seleccionarRepuestos(auth.getName(), id, request));
+    }
+
+    // ─── Etapas finales (taller asignado) ──────────────────────
+
+    @PatchMapping("/{id}/iniciar-instalacion")
+    public ResponseEntity<SolicitudServicioDTO> iniciarInstalacion(@PathVariable String id, Authentication auth) {
+        return ResponseEntity.ok(service.iniciarInstalacion(auth.getName(), id));
+    }
+
+    @PatchMapping("/{id}/en-pruebas")
+    public ResponseEntity<SolicitudServicioDTO> enPruebas(@PathVariable String id, Authentication auth) {
+        return ResponseEntity.ok(service.marcarEnPruebas(auth.getName(), id));
+    }
+
+    @PatchMapping("/{id}/lista")
+    public ResponseEntity<SolicitudServicioDTO> lista(@PathVariable String id, Authentication auth) {
+        return ResponseEntity.ok(service.marcarLista(auth.getName(), id));
+    }
+
+    @PatchMapping("/{id}/entregada")
+    public ResponseEntity<SolicitudServicioDTO> entregada(@PathVariable String id, Authentication auth) {
+        return ResponseEntity.ok(service.marcarEntregada(auth.getName(), id));
+    }
+
+    // ─── Cliente: recepción ─────────────────────────────────
+
+    @PatchMapping("/{id}/confirmar-recepcion")
+    public ResponseEntity<SolicitudServicioDTO> confirmarRecepcion(@PathVariable String id,
+                                                                   @RequestBody(required = false) ConfirmarRecepcionRequest request,
+                                                                   Authentication auth) {
+        ConfirmarRecepcionRequest r = request != null ? request : new ConfirmarRecepcionRequest();
+        return ResponseEntity.ok(service.confirmarRecepcion(auth.getName(), id, r.getCalificacion(), r.getComentario()));
     }
 
     // ─── ADMIN ───────────────────────────────────────────────

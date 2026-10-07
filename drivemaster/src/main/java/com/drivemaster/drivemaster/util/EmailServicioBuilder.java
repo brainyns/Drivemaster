@@ -167,6 +167,15 @@ public final class EmailServicioBuilder {
                 + parrafo("Puedes ver el avance en tu panel."));
     }
 
+    public static String clienteVehiculoListo(String cliente, String vehiculo, String taller, String direccion) {
+        return plantilla("Vehículo listo", "Tu vehículo está listo",
+                saludo(cliente)
+                + parrafo("<strong>" + e(taller) + "</strong> terminó el trabajo de tu <strong>" + e(vehiculo)
+                        + "</strong>. Ya puedes recogerlo.")
+                + (direccion != null ? recuadro("Dirección: " + e(direccion)) : "")
+                + parrafo("Cuando lo recibas, confírmalo en \"Mis servicios\" y, si quieres, califica al taller."));
+    }
+
     // ─── Tienda ──────────────────────────────────────────────────────────────
 
     public static String tiendaNuevoPedido(String tienda, PedidoTienda p) {

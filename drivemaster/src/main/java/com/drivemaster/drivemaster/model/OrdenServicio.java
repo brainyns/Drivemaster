@@ -117,6 +117,18 @@ public class OrdenServicio {
     // Pago (tabla pagos) con el que se pagó la cotización
     private Long pagoCotizacionId;
 
+    // ─── Etapas finales (marketplace) ───
+    // Subestado opcional dentro de EN_INSTALACION (EN_PRUEBAS)
+    private String subestado;
+    private LocalDateTime fechaInicioInstalacion;
+    private LocalDateTime fechaLista;
+    private LocalDateTime fechaEntrega;
+    // El cliente confirma que recibió el vehículo; la calificación (1 a 5) es opcional
+    private Boolean recepcionConfirmada;
+    private LocalDateTime fechaRecepcionCliente;
+    private Integer calificacionTaller;
+    private String comentarioCalificacion;
+
     @Builder.Default
     private List<EventoOrden> eventos = new ArrayList<>();
 }

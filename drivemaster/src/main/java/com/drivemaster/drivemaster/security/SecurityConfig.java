@@ -116,6 +116,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/taller").hasRole("TALLER")
                         .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/aceptar",
                                 "/api/solicitudes-servicio/*/rechazar", "/api/solicitudes-servicio/*/mecanico").hasRole("TALLER")
+                        // Etapas finales: solo TALLER (el servicio exige además que sea el taller de la orden)
+                        .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/iniciar-instalacion",
+                                "/api/solicitudes-servicio/*/en-pruebas", "/api/solicitudes-servicio/*/lista",
+                                "/api/solicitudes-servicio/*/entregada").hasRole("TALLER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/confirmar-recepcion").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/reasignar").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/*").authenticated()

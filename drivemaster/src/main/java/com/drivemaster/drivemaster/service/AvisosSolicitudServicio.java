@@ -164,6 +164,13 @@ public class AvisosSolicitudServicio {
                 + (pedido.getMotivoNoDespacho() != null ? pedido.getMotivoNoDespacho() : "sin motivo"));
     }
 
+    public void vehiculoListo(OrdenServicio orden) {
+        Taller t = taller(orden).orElse(null);
+        cliente(orden).ifPresent(c -> enviar(c.getCorreo(), "Tu vehículo está listo",
+                EmailServicioBuilder.clienteVehiculoListo(c.getNombre(), orden.getVehiculoDescripcion(),
+                        t != null ? t.getNombre() : orden.getTallerNombre(), t != null ? t.getDireccion() : null)));
+    }
+
     public void alertaAdmin(String titulo, String detalle) {
         for (String rol : List.of("ADMIN", "SUPERADMIN")) {
             usuarioRepository.findByRol(rol).forEach(admin ->
