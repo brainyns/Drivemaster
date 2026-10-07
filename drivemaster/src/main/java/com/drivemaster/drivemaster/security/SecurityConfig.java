@@ -131,6 +131,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/cotizaciones/orden/*").authenticated()
                         .requestMatchers("/api/cotizaciones/**").denyAll()
 
+                        // Marketplace: pagos (links), pedidos a tiendas y liquidaciones
+                        .requestMatchers(HttpMethod.POST, "/api/pagos-marketplace/diagnostico/*",
+                                "/api/pagos-marketplace/cotizacion/*").hasRole("CLIENTE")
+                        .requestMatchers("/api/pagos-marketplace/**").denyAll()
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/mios").hasRole("TIENDA")
+                        .requestMatchers(HttpMethod.PATCH, "/api/pedidos-tienda/*/despachar",
+                                "/api/pedidos-tienda/*/no-despachar").hasRole("TIENDA")
+                        .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/orden/*/recibidos").hasRole("TALLER")
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/orden/*").authenticated()
+                        .requestMatchers("/api/pedidos-tienda/**").denyAll()
+                        .requestMatchers("/api/liquidaciones/**").hasAnyRole("SUPERADMIN", "ADMIN")
+
                         // Marketplace: tiendas y suscripciones
                         .requestMatchers(HttpMethod.POST, "/api/tiendas/registro").permitAll()
                         .requestMatchers("/api/tiendas/mi-tienda").hasRole("TIENDA")

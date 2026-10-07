@@ -12,6 +12,7 @@ import com.drivemaster.drivemaster.util.EmailSolicitudBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -46,6 +47,8 @@ public class PagoService {
     private final UsuarioRepository usuarioRepository;
     private final EmailsService emailsService;
     private final RestTemplate restTemplate;
+    // @Lazy: PagoMarketplaceService también usa este servicio para crear el link
+    private final PagoMarketplaceService pagoMarketplace;
 
     @Value("${wompi.public_key}")
     private String publicKey;
@@ -67,7 +70,9 @@ public class PagoService {
                        VentaService ventaService,
                        UsuarioRepository usuarioRepository,
                        EmailsService emailsService,
-                       RestTemplate restTemplate) {
+                       RestTemplate restTemplate,
+                       @Lazy PagoMarketplaceService pagoMarketplace) {
+        this.pagoMarketplace = pagoMarketplace;
         this.solicitudRepository = solicitudRepository;
         this.pagoRepository = pagoRepository;
         this.ventaService = ventaService;
@@ -100,7 +105,7 @@ public class PagoService {
         long montoCentavos = Math.round(solicitud.getTotal() * 100);
 
         String checkoutUrlFinal = construirUrlCheckout(
-                solicitud.getClienteId(), referencia, montoCentavos, redirectUrl);
+                solicitud.getClienteId(), referencia, montoCentavos, redirectUrl, true);
 
         PagoEntity pago = new PagoEntity();
         pago.setSolicitudId(solicitudId);
@@ -136,7 +141,7 @@ public class PagoService {
         long montoCentavos = Math.round(venta.getTotal() * 100);
 
         String checkoutUrlFinal = construirUrlCheckout(
-                venta.getClienteId(), referencia, montoCentavos, redirectUrl);
+                venta.getClienteId(), referencia, montoCentavos, redirectUrl, true);
 
         PagoEntity pago = new PagoEntity();
         pago.setVentaId(ventaId);
@@ -160,6 +165,33 @@ public class PagoService {
     }
 
     /**
+     * Link de pago del marketplace (DIAGNOSTICO o COTIZACION). Quien llama ya validó
+     * que el cliente es el dueño y que la orden espera ese pago. Sin dirección de
+     * envío: el servicio se presta en el taller.
+     */
+    public Map<String, Object> crearPagoMarketplace(String concepto, String usuarioId, double monto,
+                                                    String ordenId, String cotizacionId) {
+        String referencia = generarReferencia(ordenId);
+        long montoCentavos = Math.round(monto * 100);
+        String checkoutUrlFinal = construirUrlCheckout(usuarioId, referencia, montoCentavos, null, false);
+
+        PagoEntity pago = new PagoEntity();
+        pago.setConcepto(concepto);
+        pago.setOrdenServicioId(ordenId);
+        pago.setCotizacionId(cotizacionId);
+        pago.setUsuarioId(usuarioId);
+        pago.setReferencia(referencia);
+        pago.setMonto(montoCentavos / 100.0);
+        pago.setMetodo("WOMPI");
+        pago.setEstado("PENDIENTE");
+        pago.setFechaCreacion(LocalDateTime.now());
+        pagoRepository.save(pago);
+
+        log.info("Link de pago {} generado para la orden {} (ref {})", concepto, ordenId, referencia);
+        return Map.of("checkoutUrl", checkoutUrlFinal, "referencia", referencia, "monto", montoCentavos);
+    }
+
+    /**
      * Solo el cliente dueño puede generar el link de pago. El personal interno
      * también puede (desde Solicitudes se genera el link para el cliente).
      */
@@ -172,7 +204,8 @@ public class PagoService {
         }
     }
 
-    private String construirUrlCheckout(String clienteId, String referencia, long montoCentavos, String redirectUrl) {
+    private String construirUrlCheckout(String clienteId, String referencia, long montoCentavos, String redirectUrl,
+                                        boolean conEnvio) {
         String firma = generarFirma(referencia, montoCentavos);
 
         StringBuilder url = new StringBuilder(checkoutUrl)
@@ -190,6 +223,11 @@ public class PagoService {
         }
 
         usuarioRepository.findById(clienteId).ifPresent(u -> {
+            if (!conEnvio) {
+                if (u.getCorreo() != null) url.append("&customer-data:email=").append(enc(u.getCorreo()));
+                if (u.getNombre() != null) url.append("&customer-data:full-name=").append(enc(u.getNombre()));
+                return;
+            }
             if (u.getRegion() == null || u.getRegion().isBlank()) {
                 throw new RuntimeException("Complete su región o departamento de envío en sus datos de envío.");
             }
@@ -219,8 +257,32 @@ public class PagoService {
         String solicitudId = "";
         if ("APPROVED".equals(status)) {
             solicitudId = confirmarPagoAprobado(txn);
+        } else {
+            marcarSiRechazado(txn);
         }
-        return Map.of("estado", status, "solicitudId", solicitudId != null ? solicitudId : "");
+        Map<String, Object> resultado = new HashMap<>();
+        resultado.put("estado", status);
+        resultado.put("solicitudId", solicitudId != null ? solicitudId : "");
+        // Pagos del marketplace: la pantalla de resultado lleva a la solicitud
+        String referencia = str(txn.get("reference"));
+        if (referencia != null) {
+            pagoRepository.findByReferencia(referencia)
+                    .filter(p -> PagoMarketplaceService.esMarketplace(p.getConcepto()))
+                    .ifPresent(p -> {
+                        resultado.put("concepto", p.getConcepto());
+                        resultado.put("ordenId", p.getOrdenServicioId());
+                    });
+        }
+        return resultado;
+    }
+
+    /** Pago declinado o anulado según la API de Wompi: el pago pendiente queda RECHAZADO. */
+    private void marcarSiRechazado(Map<String, Object> txn) {
+        String status = str(txn.get("status"));
+        String referencia = str(txn.get("reference"));
+        if (referencia == null || !Set.of("DECLINED", "ERROR", "VOIDED").contains(status)) return;
+        pagoRepository.findByReferencia(referencia)
+                .ifPresent(p -> pagoRepository.marcarRechazado(p.getId(), str(txn.get("id"))));
     }
 
     // ─── WEBHOOK (Wompi notifica el evento) ─────────────────
@@ -250,6 +312,8 @@ public class PagoService {
 
             if ("APPROVED".equals(status)) {
                 confirmarPagoAprobado(txn);
+            } else {
+                marcarSiRechazado(txn);
             }
         } catch (Exception e) {
             log.error("Error procesando webhook de Wompi", e);
@@ -288,6 +352,12 @@ public class PagoService {
             pagoEntity.setTransactionId(transactionId);
             pagoRepository.save(pagoEntity);
             return null;
+        }
+
+        // Marketplace: toma el pago de forma atómica y aplica sus efectos (idempotente)
+        if (PagoMarketplaceService.esMarketplace(pagoEntity.getConcepto())) {
+            pagoMarketplace.confirmar(pagoEntity, transactionId);
+            return pagoEntity.getOrdenServicioId();
         }
 
         String ventaId = pagoEntity.getVentaId();
