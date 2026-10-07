@@ -70,6 +70,8 @@ public class ProductoServiceImpl implements ProductoService {
         existente.setReferencia(producto.getReferencia());
         existente.setUbicacion(producto.getUbicacion());
         existente.setProveedorId(producto.getProveedorId());
+        existente.setDiasEntregaEncargo(producto.getDiasEntregaEncargo());
+        existente.setCompatibilidadUniversal(producto.getCompatibilidadUniversal());
 
         return productoRepository.save(existente);
     }

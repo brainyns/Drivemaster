@@ -2,6 +2,8 @@ package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.dto.AceptarSolicitudRequest;
 import com.drivemaster.drivemaster.dto.CrearSolicitudServicioRequest;
+import com.drivemaster.drivemaster.dto.DiagnosticoRequest;
+import com.drivemaster.drivemaster.dto.SeleccionRepuestosRequest;
 import com.drivemaster.drivemaster.dto.SolicitudServicioDTO;
 import com.drivemaster.drivemaster.service.SolicitudServicioService;
 import org.springframework.http.HttpStatus;
@@ -78,6 +80,21 @@ public class SolicitudServicioController {
                                                                 @RequestBody Map<String, String> body,
                                                                 Authentication auth) {
         return ResponseEntity.ok(service.asignarMecanico(auth.getName(), id, texto(body, "mecanicoId")));
+    }
+
+    @PutMapping("/{id}/diagnostico")
+    public ResponseEntity<SolicitudServicioDTO> registrarDiagnostico(@PathVariable String id,
+                                                                     @RequestBody DiagnosticoRequest request,
+                                                                     Authentication auth) {
+        return ResponseEntity.ok(service.registrarDiagnostico(auth.getName(), id, request));
+    }
+
+    // Reemplaza la lista completa de repuestos elegidos en el buscador.
+    @PutMapping("/{id}/repuestos")
+    public ResponseEntity<SolicitudServicioDTO> seleccionarRepuestos(@PathVariable String id,
+                                                                     @RequestBody SeleccionRepuestosRequest request,
+                                                                     Authentication auth) {
+        return ResponseEntity.ok(service.seleccionarRepuestos(auth.getName(), id, request));
     }
 
     // ─── ADMIN ───────────────────────────────────────────────

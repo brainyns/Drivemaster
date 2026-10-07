@@ -2,6 +2,8 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.AceptarSolicitudRequest;
 import com.drivemaster.drivemaster.dto.CrearSolicitudServicioRequest;
+import com.drivemaster.drivemaster.dto.DiagnosticoRequest;
+import com.drivemaster.drivemaster.dto.SeleccionRepuestosRequest;
 import com.drivemaster.drivemaster.dto.SolicitudServicioDTO;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,6 +33,11 @@ public interface SolicitudServicioService {
 
     SolicitudServicioDTO asignarMecanico(String correoTaller, String id, String mecanicoId);
 
+    /** EN_REVISION → DIAGNOSTICADA; en DIAGNOSTICADA permite corregir el diagnóstico. */
+    SolicitudServicioDTO registrarDiagnostico(String correoTaller, String id, DiagnosticoRequest request);
+
+    /** Reemplaza la lista de repuestos elegidos (solo en DIAGNOSTICADA). */
+    SolicitudServicioDTO seleccionarRepuestos(String correoTaller, String id, SeleccionRepuestosRequest request);
 
     // ─── ADMIN ───
     List<SolicitudServicioDTO> listarAdmin(String estado);

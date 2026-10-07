@@ -107,6 +107,11 @@ public class OrdenServicio {
     // Motivo al cancelarse o rechazarse
     private String motivoCierre;
 
+    // Diagnóstico del mecánico y repuestos elegidos para la cotización
+    private Diagnostico diagnostico;
+    @Builder.Default
+    private List<RepuestoSeleccionado> repuestos = new ArrayList<>();
+
     @Builder.Default
     private List<EventoOrden> eventos = new ArrayList<>();
 }

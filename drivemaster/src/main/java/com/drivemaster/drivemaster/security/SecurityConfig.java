@@ -105,7 +105,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/talleres").hasAnyRole("SUPERADMIN", "ADMIN")
 
                         // Marketplace: solicitudes de diagnóstico (el acceso a cada solicitud lo valida el servicio)
-                        .requestMatchers(HttpMethod.POST, "/api/solicitudes-servicio", "/api/solicitudes-servicio/fotos").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.POST, "/api/solicitudes-servicio").hasRole("CLIENTE")
+                        // Fotos: el cliente al pedir el diagnóstico y el taller al registrarlo
+                        .requestMatchers(HttpMethod.POST, "/api/solicitudes-servicio/fotos").hasAnyRole("CLIENTE", "TALLER")
+                        .requestMatchers(HttpMethod.PUT, "/api/solicitudes-servicio/*/diagnostico",
+                                "/api/solicitudes-servicio/*/repuestos").hasRole("TALLER")
+                        .requestMatchers(HttpMethod.GET, "/api/repuestos/buscar").hasRole("TALLER")
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/mias").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/cancelar").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/taller").hasRole("TALLER")
