@@ -29,6 +29,10 @@ public class PedidoTienda {
     public static final String NO_DESPACHADO = "NO_DESPACHADO";
     public static final String RECIBIDO = "RECIBIDO";
 
+    // Motivo de "No puedo despachar"
+    public static final String MOTIVO_SIN_REPUESTO = "SIN_REPUESTO";
+    public static final String MOTIVO_OTRO = "OTRO";
+
     @Id
     private String id;
 
@@ -59,6 +63,8 @@ public class PedidoTienda {
     private LocalDateTime fechaDespacho;
     private String notaDespacho;
     private LocalDateTime fechaNoDespacho;
+    // SIN_REPUESTO (no tengo el repuesto) u OTRO (con detalle obligatorio)
+    private String tipoMotivoNoDespacho;
     private String motivoNoDespacho;
     private LocalDateTime fechaRecibido;
 }

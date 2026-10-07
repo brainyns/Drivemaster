@@ -40,17 +40,23 @@ import Aprobaciones          from "./pages/Aprobaciones";
 import RegistroNegocio       from "./pages/RegistroNegocio";
 import SolicitarDiagnostico  from "./pages/SolicitarDiagnostico";
 import MisServicios          from "./pages/MisServicios";
+import CotizacionPublica     from "./pages/CotizacionPublica";
+import PedidosTienda         from "./pages/PedidosTienda";
+import Liquidaciones         from "./pages/Liquidaciones";
 import ChatWidget            from "./components/chat/ChatWidget";
 import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
 
 const storedUser  = getUser();
 const storedToken = getToken();
 
+// /cotizacion: enlace público del correo (el token viaja en el fragmento #token=…)
 const initialPage =
-  window.location.pathname.startsWith("/pago-resultado") ||
-  new URLSearchParams(window.location.search).get("pago") === "resultado"
-    ? "pago-resultado"
-    : "catalogo";
+  window.location.pathname.startsWith("/cotizacion")
+    ? "cotizacion-publica"
+    : window.location.pathname.startsWith("/pago-resultado") ||
+      new URLSearchParams(window.location.search).get("pago") === "resultado"
+      ? "pago-resultado"
+      : "catalogo";
 
 const TITULOS = {
   "dashboard-main":  "Dashboard",
@@ -87,6 +93,8 @@ const TITULOS = {
   "taller-panel":    "Panel de taller",
   "admin-talleres":  "Servicios",
   "aprobaciones":    "Aprobaciones",
+  "pedidos-tienda":  "Pedidos",
+  "liquidaciones":   "Liquidaciones y reembolsos",
 };
 
 // Páginas del cliente que se muestran sin el panel lateral.
@@ -302,7 +310,7 @@ function App() {
       "proveedores", "proveedorNuevo", "proveedorEditar",
       "movimientos",
       "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
-      "admin-talleres", "aprobaciones",
+      "admin-talleres", "aprobaciones", "liquidaciones",
       "mi-perfil",
     ],
     SUPERADMIN: [
@@ -316,12 +324,12 @@ function App() {
       "movimientos",
       "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
       "usuarios",
-      "admin-talleres", "aprobaciones",
+      "admin-talleres", "aprobaciones", "liquidaciones",
       "mi-perfil",
     ],
     CLIENTE: ["catalogo", ...PAGINAS_CLIENTE],
     TALLER: ["taller-panel"],
-    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos"],
+    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda"],
   };
   const esTienda = user?.rol === "TIENDA";
 
@@ -393,6 +401,15 @@ function App() {
       <PagoResultado
         onPagoExitoso={() => setSolicitudItems([])}
         onIrSolicitudes={() => setPagina("mis-solicitudes")}
+        onIrServicios={() => setPagina("mis-servicios")}
+      />
+    );
+
+    // Pública: responder la cotización desde el correo sin iniciar sesión
+    if (pagina === "cotizacion-publica") return (
+      <CotizacionPublica
+        onIrServicios={() => { window.history.replaceState(null, "", "/"); setPagina("mis-servicios"); }}
+        onIrInicio={() => { window.history.replaceState(null, "", "/"); setPagina("catalogo"); }}
       />
     );
 
@@ -500,6 +517,8 @@ function App() {
     if (pagina === "taller-panel")     return <PanelTaller          />;
     if (pagina === "admin-talleres")   return <AdminTalleres        />;
     if (pagina === "aprobaciones")     return <Aprobaciones         token={token} />;
+    if (pagina === "liquidaciones")    return <Liquidaciones        />;
+    if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
 
     if (pagina === "inv-clientes")     return <InventarioClientes   token={token} />;
     if (pagina === "rep-clientes")     return <ReportesClientes     token={token} />;

@@ -36,7 +36,36 @@ export const ESTADO_OFERTA = {
 
 export const TEXTO_CONFIRMACION = "Confirmo que este repuesto es compatible con el vehículo";
 
-export const ESTADOS_CANCELABLES_CLIENTE = ["ENVIADA", "ASIGNADA_A_TALLER", "REASIGNADA"];
+// ─── Fase 3: cotización, pedidos a tiendas y liquidaciones ───
+
+export const ESTADOS_COTIZACION = {
+  EMITIDA:             { label: "Esperando respuesta",  tono: "aviso" },
+  APROBADA:            { label: "Aprobada",             tono: "ok" },
+  RECHAZADA:           { label: "Rechazada",            tono: "error" },
+  CAMBIOS_SOLICITADOS: { label: "Cambios solicitados",  tono: "aviso" },
+  VENCIDA:             { label: "Vencida",              tono: "error" },
+  REEMPLAZADA:         { label: "Reemplazada",          tono: "info" },
+  ANULADA:             { label: "Anulada (sin stock)",  tono: "error" },
+};
+
+export const ESTADOS_PEDIDO = {
+  PENDIENTE:     { label: "Por despachar",     tono: "aviso" },
+  DESPACHADO:    { label: "Despachado",        tono: "proceso" },
+  NO_DESPACHADO: { label: "No se despachó",    tono: "error" },
+  RECIBIDO:      { label: "Recibido en taller", tono: "ok" },
+};
+
+export const MOTIVOS_NO_DESPACHO = [
+  { valor: "SIN_REPUESTO", label: "No tengo el repuesto" },
+  { valor: "OTRO",         label: "Otro motivo" },
+];
+
+// Estados del taller después de diagnosticar, hasta la entrega
+export const ESTADOS_EN_CURSO = [
+  "COTIZADA", "APROBADA", "PAGADA", "REPUESTOS_PEDIDOS", "REPUESTOS_RECIBIDOS", "EN_INSTALACION", "LISTA",
+];
+
+export const ESTADOS_CANCELABLES_CLIENTE =["ENVIADA", "ASIGNADA_A_TALLER", "REASIGNADA"];
 
 export const formatPrecio = (v) =>
   v == null ? "—" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(v);

@@ -1,15 +1,111 @@
 import { useCallback, useEffect, useState } from "react";
 import { getToken } from "../services/authService";
 import { misSolicitudesServicio, cancelarSolicitudServicio } from "../services/solicitudServicioService";
+import { cotizacionesDeOrden, responderCotizacion } from "../services/cotizacionService";
+import { pagarDiagnostico, pagarCotizacion } from "../services/pagoMarketplaceService";
+import { pedidosDeOrden } from "../services/pedidoTiendaService";
 import EstadoServicio from "../components/servicio/EstadoServicio";
 import LineaTiempo from "../components/servicio/LineaTiempo";
+import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
+import RespuestaCotizacion from "../components/servicio/RespuestaCotizacion";
+import Etiqueta from "../components/servicio/Etiqueta";
 import {
-  ESTADOS_CANCELABLES_CLIENTE, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
+  ESTADOS_CANCELABLES_CLIENTE, ESTADOS_PEDIDO, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
+import "../css/cotizacion.css";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
+
+/**
+ * Cotización vigente, respuesta, pago y pedidos a tiendas de una solicitud. El
+ * pago solo pide el link al backend y redirige a Wompi: nada se marca como
+ * pagado desde aquí.
+ */
+function CotizacionCliente({ token, solicitud, onCambio }) {
+  const [cotizaciones, setCotizaciones] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
+  const [error, setError] = useState(null);
+  const [pagando, setPagando] = useState(false);
+
+  // Se recarga cada vez que cambia el estado de la solicitud
+  useEffect(() => {
+    let cancelado = false;
+    Promise.all([cotizacionesDeOrden(token, solicitud.id), pedidosDeOrden(token, solicitud.id)])
+      .then(([c, p]) => {
+        if (cancelado) return;
+        setCotizaciones(c || []);
+        setPedidos(p || []);
+      })
+      .catch((e) => { if (!cancelado) setError(e.message); });
+    return () => { cancelado = true; };
+  }, [token, solicitud.id, solicitud.estado]);
+
+  const vigente = cotizaciones[0];
+  if (!vigente && pedidos.length === 0) return error ? <p className="ss-alerta" role="alert">{error}</p> : null;
+
+  const responder = async (accion, motivo) => {
+    await responderCotizacion(token, vigente.id, accion, motivo);
+    await onCambio();
+  };
+
+  const pagar = async () => {
+    setPagando(true);
+    setError(null);
+    try {
+      await pagarCotizacion(token, solicitud.id);
+    } catch (e) {
+      setError(e.message);
+      setPagando(false);
+      await onCambio();
+    }
+  };
+
+  return (
+    <>
+      {vigente && (
+        <section className={`ss-bloque${vigente.puedeResponder || solicitud.estado === "APROBADA" ? " ss-bloque--destacado" : ""}`}>
+          <h2 className="ss-bloque__titulo">Cotización</h2>
+          {error && <p className="ss-alerta" role="alert">{error}</p>}
+          <CotizacionDetalle cotizacion={vigente} />
+          {vigente.puedeResponder && solicitud.estado === "COTIZADA" && <RespuestaCotizacion onResponder={responder} />}
+          {solicitud.estado === "APROBADA" && vigente.estado === "APROBADA" && (
+            <div className="ss-acciones">
+              <button className="sv-btn" onClick={pagar} disabled={pagando}>
+                {pagando ? "Abriendo el pago..." : `Pagar ${formatPrecio(vigente.totalAPagar)}`}
+              </button>
+              <span className="ss-ayuda">Pago seguro con Wompi. Recibirás un comprobante de pago por correo.</span>
+            </div>
+          )}
+        </section>
+      )}
+
+      {pedidos.length > 0 && (
+        <section className="ss-bloque">
+          <h2 className="ss-bloque__titulo">Repuestos</h2>
+          <ul className="ct-items">
+            {pedidos.map((p) => (
+              <li key={p.id} className="ct-item">
+                <span className="ct-item__desc">
+                  <strong>{p.tiendaNombre}</strong>
+                  <span className="ss-meta">
+                    {p.items.map((i) => `${i.cantidad} × ${i.productoNombre}`).join(", ")}
+                    {p.diasEntrega ? ` · encargo hasta ${p.diasEntrega} días` : ""}
+                  </span>
+                  {p.estado === "NO_DESPACHADO" && (
+                    <span className="ss-meta">No se pudo despachar: te devolveremos {formatPrecio(p.total)}.</span>
+                  )}
+                </span>
+                <Etiqueta estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
+  );
+}
 
 /** Solicitudes de diagnóstico del cliente y el avance de cada una. */
 export default function MisServicios({ onVolver, onSolicitar }) {
@@ -21,6 +117,7 @@ export default function MisServicios({ onVolver, onSolicitar }) {
   const [cancelando, setCancelando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [procesando, setProcesando] = useState(false);
+  const [pagandoDiagnostico, setPagandoDiagnostico] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -50,6 +147,18 @@ export default function MisServicios({ onVolver, onSolicitar }) {
       setError(e.message);
     } finally {
       setProcesando(false);
+    }
+  };
+
+  // Solo pide el link y redirige a Wompi; la confirmación la hace el backend.
+  const pagarElDiagnostico = async () => {
+    setPagandoDiagnostico(true);
+    setError(null);
+    try {
+      await pagarDiagnostico(token, seleccionada.id);
+    } catch (e) {
+      setError(e.message);
+      setPagandoDiagnostico(false);
     }
   };
 
@@ -106,12 +215,20 @@ export default function MisServicios({ onVolver, onSolicitar }) {
                     Tarifa de diagnóstico: {formatPrecio(s.tarifaDiagnostico)} (se descuenta si aceptas la reparación)
                   </p>
                 )}
-                {s.pagoDiagnosticoEstado === "PENDIENTE" && (
-                  <p className="ss-aviso">
-                    Para confirmar la cita debes pagar el diagnóstico antes del {formatFechaHora(s.fechaLimitePagoDiagnostico)}.
-                    El pago en línea estará disponible muy pronto.
-                  </p>
+                {s.pagoDiagnosticoEstado === "PENDIENTE" && s.estado === "ASIGNADA_A_TALLER" && (
+                  <>
+                    <p className="ss-aviso">
+                      Para confirmar la cita debes pagar el diagnóstico antes del {formatFechaHora(s.fechaLimitePagoDiagnostico)}.
+                    </p>
+                    <div className="ss-acciones">
+                      <button className="sv-btn" onClick={pagarElDiagnostico} disabled={pagandoDiagnostico}>
+                        {pagandoDiagnostico ? "Abriendo el pago..." : `Pagar diagnóstico ${formatPrecio(s.tarifaDiagnostico)}`}
+                      </button>
+                      <span className="ss-ayuda">Pago seguro con Wompi.</span>
+                    </div>
+                  </>
                 )}
+                {s.pagoDiagnosticoEstado === "PAGADO" && <p className="ss-meta">Diagnóstico pagado.</p>}
               </section>
             )}
 
@@ -137,7 +254,7 @@ export default function MisServicios({ onVolver, onSolicitar }) {
               </section>
             )}
 
-            {s.repuestos?.length > 0 && (
+            {s.repuestos?.length > 0 && s.estado === "DIAGNOSTICADA" && (
               <section className="ss-bloque">
                 <h2 className="ss-bloque__titulo">Repuestos propuestos</h2>
                 <ul className="ss-lista">
@@ -150,6 +267,8 @@ export default function MisServicios({ onVolver, onSolicitar }) {
                 <p className="ss-meta">El taller está preparando tu cotización con precios finales y mano de obra.</p>
               </section>
             )}
+
+            {s.cotizacionId && <CotizacionCliente token={token} solicitud={s} onCambio={cargar} />}
 
             {s.motivoCierre && ["CANCELADA", "RECHAZADA"].includes(s.estado) && (
               <p className="ss-aviso">{s.motivoCierre}</p>
