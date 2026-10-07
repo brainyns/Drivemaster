@@ -69,6 +69,7 @@ public class CotizacionService {
     private final BuscadorRepuestosService buscador;
     private final ParametrosMarketplace parametros;
     private final AvisosSolicitudServicio avisos;
+    private final LiquidacionService liquidacion;
 
     public CotizacionService(CotizacionRepository cotizacionRepository,
                              OrdenServicioRepository ordenRepository,
@@ -80,7 +81,9 @@ public class CotizacionService {
                              ProductoService productoService,
                              BuscadorRepuestosService buscador,
                              ParametrosMarketplace parametros,
-                             AvisosSolicitudServicio avisos) {
+                             AvisosSolicitudServicio avisos,
+                             LiquidacionService liquidacion) {
+        this.liquidacion = liquidacion;
         this.cotizacionRepository = cotizacionRepository;
         this.ordenRepository = ordenRepository;
         this.mongoTemplate = mongoTemplate;
@@ -327,6 +330,10 @@ public class CotizacionService {
             throw e;
         }
 
+        // El cliente rechazó tras el diagnóstico: el taller ya hizo su trabajo, su línea queda habilitada
+        if (RespuestaCotizacionRequest.RECHAZAR.equals(accion)) {
+            liquidacion.ordenCanceladaPorRechazoDeCotizacion(cotizacion.getOrdenId());
+        }
         avisos.cotizacionRespondida(marcada, respuesta, motivo);
         return marcada;
     }

@@ -52,6 +52,7 @@ class CotizacionServiceTest {
     private TransicionOrdenService transiciones;
     private ParametrosMarketplace parametros;
     private AvisosSolicitudServicio avisos;
+    private LiquidacionService liquidacion;
     private CotizacionService service;
 
     private Taller taller;
@@ -66,6 +67,7 @@ class CotizacionServiceTest {
         transiciones = mock(TransicionOrdenService.class);
         parametros = mock(ParametrosMarketplace.class);
         avisos = mock(AvisosSolicitudServicio.class);
+        liquidacion = mock(LiquidacionService.class);
         TallerService tallerService = mock(TallerService.class);
         UsuarioService usuarioService = mock(UsuarioService.class);
         VehiculoService vehiculoService = mock(VehiculoService.class);
@@ -73,7 +75,7 @@ class CotizacionServiceTest {
         BuscadorRepuestosService buscador = mock(BuscadorRepuestosService.class);
 
         service = new CotizacionService(cotizacionRepository, ordenRepository, mongoTemplate, transiciones,
-                tallerService, usuarioService, vehiculoService, productoService, buscador, parametros, avisos);
+                tallerService, usuarioService, vehiculoService, productoService, buscador, parametros, avisos, liquidacion);
 
         taller = Taller.builder().id("t1").nombre("AutoMax").activo(true).tarifaHora(60_000.0)
                 .estadoAprobacion(EstadoAprobacion.APROBADO).build();
@@ -251,6 +253,8 @@ class CotizacionServiceTest {
                 new RespuestaCotizacionRequest(RespuestaCotizacionRequest.APROBAR, null, token));
 
         assertEquals(Cotizacion.APROBADA, dto.getEstado());
+        // Aprobar no libera ninguna línea del taller: eso pasa al entregar
+        verifyNoInteractions(liquidacion);
         verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.APROBADA),
                 argThat(a -> EstadoOrden.CLIENTE.equals(a.rol()) && "u1".equals(a.id())), anyString(), any(), any());
         verify(avisos).cotizacionRespondida(eq(c), eq("aprobada"), anyString());
@@ -298,6 +302,8 @@ class CotizacionServiceTest {
         ArgumentCaptor<Update> cambios = ArgumentCaptor.forClass(Update.class);
         verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.CANCELADA), any(), anyString(), any(), cambios.capture());
         assertTrue(cambios.getValue().modifies("motivoCierre"));
+        // Rechazo tras el diagnóstico: el taller ya trabajó, su línea del diagnóstico queda habilitada
+        verify(liquidacion).ordenCanceladaPorRechazoDeCotizacion(orden.getId());
     }
 
     @Test

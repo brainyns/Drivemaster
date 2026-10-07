@@ -36,11 +36,14 @@ public class AsignacionTallerService {
     private final TransicionOrdenService transiciones;
     private final ParametrosMarketplace parametros;
     private final AvisosSolicitudServicio avisos;
+    private final LiquidacionService liquidacion;
 
     public AsignacionTallerService(TallerRepository tallerRepository,
                                    TransicionOrdenService transiciones,
                                    ParametrosMarketplace parametros,
-                                   AvisosSolicitudServicio avisos) {
+                                   AvisosSolicitudServicio avisos,
+                                   LiquidacionService liquidacion) {
+        this.liquidacion = liquidacion;
         this.tallerRepository = tallerRepository;
         this.transiciones = transiciones;
         this.parametros = parametros;
@@ -58,6 +61,8 @@ public class AsignacionTallerService {
             OrdenServicio rechazada = transiciones.transicionar(orden, EstadoOrden.RECHAZADA, Actor.SISTEMA,
                     "No hay talleres disponibles en la zona", null,
                     new Update().set("motivoCierre", "No hay talleres disponibles en la zona"));
+            // Sin taller no hubo diagnóstico: si ya se había pagado, la línea se anula y se reembolsa
+            liquidacion.ordenRechazadaSinTaller(rechazada.getId());
             avisos.sinTallerDisponible(rechazada);
             return rechazada;
         }
