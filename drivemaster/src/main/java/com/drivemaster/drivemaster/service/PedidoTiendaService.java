@@ -90,6 +90,30 @@ public class PedidoTiendaService {
     }
 
     /**
+     * Lo que la tienda puede ver de un pedido. De la persona que compró solo lo necesario para despachar:
+     * nunca sus identificadores internos (cliente, compra, pago) ni su nombre de cuenta; y la dirección,
+     * el teléfono y quien recibe solo si el pedido es con envío (en retiro esos datos ni se guardan).
+     * Los pedidos de talleres conservan los datos del taller, que la tienda necesita para entregar.
+     */
+    public static PedidoTienda paraTienda(PedidoTienda p) {
+        if (p == null) return null;
+        PedidoTienda vista = p.toBuilder().clienteId(null).clienteNombre(null).compraId(null).pagoId(null).build();
+        if (!PedidoTienda.ENVIO.equals(p.getEntrega())) {
+            vista.setEnvioReceptor(null);
+            vista.setEnvioTelefono(null);
+            vista.setEnvioDireccion(null);
+            vista.setEnvioCiudad(null);
+            vista.setEnvioIndicaciones(null);
+        }
+        return vista;
+    }
+
+    /** ADMIN: pedidos con un problema reportado, abiertos y resueltos. */
+    public List<PedidoTienda> problemasDeEnvio() {
+        return pedidoRepository.findByProblemaReportadoTrueOrderByFechaProblemaDesc();
+    }
+
+    /**
      * La tienda empieza a conseguir un repuesto por encargo: PENDIENTE → EN_PREPARACION.
      * Solo pedidos con al menos un ítem por encargo; los de stock se despachan directo.
      * El plazo de despacho no cambia (corre desde el pago).
@@ -216,10 +240,14 @@ public class PedidoTiendaService {
      * queda ENTREGADO y la línea de la tienda se habilita) o REEMBOLSAR (no llegó: se anula la línea
      * de la tienda y se registra el reembolso de ese pedido). Solo si el problema sigue abierto.
      */
-    public PedidoTienda resolverProblema(String correoAdmin, String pedidoId, String resolucion) {
+    public PedidoTienda resolverProblema(String correoAdmin, String pedidoId, String resolucion, String motivo) {
         String r = resolucion != null ? resolucion.trim().toUpperCase() : "";
         if (!RESOLVER_ENTREGA.equals(r) && !RESOLVER_REEMBOLSO.equals(r)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La resolución debe ser CONFIRMAR_ENTREGA o REEMBOLSAR");
+        }
+        String razon = recortar(motivo);
+        if (razon == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe el motivo de tu decisión: queda registrado");
         }
         PedidoTienda actual = pedidoRepository.findById(pedidoId).filter(PedidoTienda::esCatalogo)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
@@ -232,7 +260,9 @@ public class PedidoTiendaService {
                         .and("problemaReportado").is(true).and("resolucionProblema").exists(false)),
                 new Update().set("estado", reembolsa ? PedidoTienda.NO_ENTREGADO : PedidoTienda.ENTREGADO)
                         .set("resolucionProblema", reembolsa ? "REEMBOLSO" : "ENTREGA_CONFIRMADA_POR_ADMIN")
-                        .set("fechaResolucionProblema", LocalDateTime.now()),
+                        .set("fechaResolucionProblema", LocalDateTime.now())
+                        .set("motivoResolucion", razon)
+                        .set("resueltoPor", correoAdmin),
                 FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
         if (pedido == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Alguien más ya resolvió este problema");
@@ -241,12 +271,12 @@ public class PedidoTiendaService {
             for (RepartoPago linea : repartoRepository.findByPedidoTiendaId(pedidoId)) {
                 if (RepartoPago.PENDIENTE.equals(linea.getEstado())) {
                     linea.setEstado(RepartoPago.ANULADO);
-                    linea.setNota("Problema con el envío resuelto con reembolso por " + correoAdmin);
+                    linea.setNota(recortar("Problema con el envío resuelto con reembolso por " + correoAdmin + ": " + razon));
                     repartoRepository.save(linea);
                 }
             }
             pagoRepository.findById(pedido.getPagoId()).ifPresent(pago -> pagoMarketplace.registrarReembolso(pago, pedidoId,
-                    pedido.getTotal(), "El envío de " + pedido.getTiendaNombre() + " no llegó (resuelto por el ADMIN)"));
+                    pedido.getTotal(), "El envío de " + pedido.getTiendaNombre() + " no llegó (resuelto por el ADMIN): " + razon));
         } else {
             liquidacion.pedidoRecibido(pedidoId, "ENTREGA_CONFIRMADA_POR_ADMIN");
         }
@@ -315,7 +345,10 @@ public class PedidoTiendaService {
                 throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                         "Código incorrecto. Por seguridad el pedido se bloquea " + BLOQUEO_CODIGO_MINUTOS + " minutos.");
             }
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código no es correcto");
+            int restantes = MAX_INTENTOS_CODIGO - intentos;
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código no es correcto. Te quedan " + restantes
+                    + (restantes == 1 ? " intento" : " intentos") + " antes de que el pedido se bloquee "
+                    + BLOQUEO_CODIGO_MINUTOS + " minutos.");
         }
         PedidoTienda retirado = mongoTemplate.findAndModify(
                 Query.query(Criteria.where("id").is(pedidoId).and("tiendaId").is(tienda.getId())

@@ -29,39 +29,47 @@ public class PedidoTiendaController {
 
     @GetMapping("/mios")
     public ResponseEntity<List<PedidoTienda>> misPedidos(Authentication auth) {
-        return ResponseEntity.ok(service.misPedidos(auth.getName()));
+        return ResponseEntity.ok(service.misPedidos(auth.getName()).stream().map(PedidoTiendaService::paraTienda).toList());
     }
 
     @PatchMapping("/{id}/preparar")
     public ResponseEntity<PedidoTienda> preparar(@PathVariable String id, Authentication auth) {
-        return ResponseEntity.ok(service.iniciarPreparacion(auth.getName(), id));
+        return ResponseEntity.ok(PedidoTiendaService.paraTienda(service.iniciarPreparacion(auth.getName(), id)));
     }
 
     /** Compra directa con retiro: el pedido está listo y el cliente ya puede pasar por él. */
     @PatchMapping("/{id}/listo-retiro")
     public ResponseEntity<PedidoTienda> listoRetiro(@PathVariable String id, Authentication auth) {
-        return ResponseEntity.ok(service.listoParaRetirar(auth.getName(), id));
+        return ResponseEntity.ok(PedidoTiendaService.paraTienda(service.listoParaRetirar(auth.getName(), id)));
     }
 
     /** La tienda valida el código de retiro que muestra el cliente (un solo uso). */
     @PostMapping("/{id}/retiro/validar")
     public ResponseEntity<PedidoTienda> validarRetiro(@PathVariable String id,
                                                       @RequestBody Map<String, String> body, Authentication auth) {
-        return ResponseEntity.ok(service.validarRetiro(auth.getName(), id, body != null ? body.get("codigo") : null));
+        return ResponseEntity.ok(PedidoTiendaService.paraTienda(
+                service.validarRetiro(auth.getName(), id, body != null ? body.get("codigo") : null)));
     }
 
-    /** ADMIN: resuelve un problema reportado por el cliente (CONFIRMAR_ENTREGA o REEMBOLSAR). */
+    /** ADMIN: pedidos con un problema de envío reportado (abiertos y resueltos). */
+    @GetMapping("/problemas")
+    public ResponseEntity<List<PedidoTienda>> problemas() {
+        return ResponseEntity.ok(service.problemasDeEnvio());
+    }
+
+    /** ADMIN: resuelve un problema reportado por el cliente (CONFIRMAR_ENTREGA o REEMBOLSAR), con motivo escrito. */
     @PostMapping("/{id}/problema/resolver")
     public ResponseEntity<PedidoTienda> resolverProblema(@PathVariable String id,
                                                          @RequestBody Map<String, String> body, Authentication auth) {
-        return ResponseEntity.ok(service.resolverProblema(auth.getName(), id, body != null ? body.get("resolucion") : null));
+        return ResponseEntity.ok(service.resolverProblema(auth.getName(), id,
+                body != null ? body.get("resolucion") : null, body != null ? body.get("motivo") : null));
     }
 
     @PatchMapping("/{id}/despachar")
     public ResponseEntity<PedidoTienda> despachar(@PathVariable String id,
                                                   @RequestBody(required = false) Map<String, String> body,
                                                   Authentication auth) {
-        return ResponseEntity.ok(service.despachar(auth.getName(), id, body != null ? body.get("nota") : null));
+        return ResponseEntity.ok(PedidoTiendaService.paraTienda(service.despachar(auth.getName(), id, body != null ? body.get("nota") : null)));
     }
 
     @PatchMapping("/{id}/no-despachar")
@@ -69,8 +77,8 @@ public class PedidoTiendaController {
                                                     @RequestBody(required = false) Map<String, String> body,
                                                     Authentication auth) {
         // body: { tipoMotivo: "SIN_REPUESTO" | "OTRO", detalle }
-        return ResponseEntity.ok(service.noPuedoDespachar(auth.getName(), id,
-                body != null ? body.get("tipoMotivo") : null, body != null ? body.get("detalle") : null));
+        return ResponseEntity.ok(PedidoTiendaService.paraTienda(service.noPuedoDespachar(auth.getName(), id,
+                body != null ? body.get("tipoMotivo") : null, body != null ? body.get("detalle") : null)));
     }
 
     // ─── Taller / cliente / ADMIN ────────────────────────────────────────────

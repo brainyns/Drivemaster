@@ -10,4 +10,6 @@ public interface PedidoTiendaRepository extends MongoRepository<PedidoTienda, St
     List<PedidoTienda> findByOrdenIdOrderByFechaCreacionAsc(String ordenId);
     List<PedidoTienda> findByPagoId(Long pagoId);
     List<PedidoTienda> findByCompraIdOrderByFechaCreacionAsc(String compraId);
+    /** Pedidos con un problema reportado por el cliente (abiertos y ya resueltos), el más reciente primero. */
+    List<PedidoTienda> findByProblemaReportadoTrueOrderByFechaProblemaDesc();
 }

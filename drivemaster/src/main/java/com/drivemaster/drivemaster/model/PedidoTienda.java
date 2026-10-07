@@ -21,7 +21,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 public class PedidoTienda {
 
     public static final String PENDIENTE = "PENDIENTE";
@@ -131,6 +131,9 @@ public class PedidoTienda {
     // ENTREGA_CONFIRMADA_POR_ADMIN o REEMBOLSO
     private String resolucionProblema;
     private LocalDateTime fechaResolucionProblema;
+    // Motivo escrito por el ADMIN al resolver y quién lo resolvió
+    private String motivoResolucion;
+    private String resueltoPor;
 
     @com.fasterxml.jackson.annotation.JsonIgnore
     public boolean esCatalogo() {

@@ -54,6 +54,11 @@ export const ESTADOS_PEDIDO = {
   DESPACHADO:    { label: "Despachado",        tono: "proceso" },
   NO_DESPACHADO: { label: "No se despachó",    tono: "error" },
   RECIBIDO:      { label: "Recibido en taller", tono: "ok" },
+  // Compras directas del catálogo
+  LISTO_PARA_RETIRAR: { label: "Listo para retirar", tono: "ok" },
+  RETIRADO:      { label: "Retirado",          tono: "ok" },
+  ENTREGADO:     { label: "Entregado",         tono: "ok" },
+  NO_ENTREGADO:  { label: "No entregado",      tono: "error" },
 };
 
 export const MOTIVOS_NO_DESPACHO = [
