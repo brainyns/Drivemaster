@@ -77,10 +77,10 @@ class CatalogoServiceTest {
         pendiente.setEstadoAprobacion(EstadoAprobacion.PENDIENTE);
         Tienda inactiva = tienda("F", "Bogotá", "Cra 7", "L-S", null);
         inactiva.setActivo(false);
-        Tienda plataforma = tienda("G", "Bogotá", "Cra 7", "L-S", null);
-        plataforma.setPlataforma(true);
+        Tienda plataformaSinDatos = tienda("G", "Bogotá", "Cra 7", null, null);
+        plataformaSinDatos.setPlataforma(true);
 
-        for (Tienda t : List.of(sinHorario, sinDireccion, sinCiudad, pendiente, inactiva, plataforma)) {
+        for (Tienda t : List.of(sinHorario, sinDireccion, sinCiudad, pendiente, inactiva, plataformaSinDatos)) {
             assertFalse(CatalogoService.tiendaVisible(t), t.getId());
         }
         assertFalse(CatalogoService.tiendaVisible(null));
@@ -327,5 +327,46 @@ class CatalogoServiceTest {
         ArgumentCaptor<Query> q = ArgumentCaptor.forClass(Query.class);
         verify(mongoTemplate).find(q.capture(), eq(Producto.class));
         assertTrue(q.getValue().getQueryObject().toString().contains("\\Q.*(\\E"), q.getValue().getQueryObject().toString());
+    }
+
+    // ─── Etapa 1 de la unificación: la tienda propia aparece como "Vendido por DriveMaster" ───
+
+    @Test
+    void laTiendaPropiaConDatosCompletosEsVisibleYSeEtiqueta() {
+        Tienda propia = tienda("tP", "Bogotá", "Cra 7", "L-S", null);
+        propia.setPlataforma(true);
+        assertTrue(CatalogoService.tiendaVisible(propia));
+
+        ProductoCatalogoDTO d = CatalogoService.aDTO(producto("p1", "tP", "Filtro", "F1", 10_000, 5), propia, null);
+        assertTrue(d.esPlataforma());
+        assertTrue(d.tienda().esPlataforma());
+        assertFalse(CatalogoService.aDTO(producto("p2", "tA", "Filtro", "F1", 10_000, 5),
+                tienda("tA", "Bogotá", "Cra 7", "L-S", null), null).esPlataforma());
+    }
+
+    @Test
+    void laTiendaPropiaSinDatosCompletosNoSeMuestraHastaCompletarlos() {
+        // La migración la crea sin ciudad, dirección ni horario: el ADMIN debe completarlos
+        Tienda propia = Tienda.builder().id("tP").nombre("DriveMaster").plataforma(true)
+                .estadoAprobacion(EstadoAprobacion.APROBADO).activo(true).build();
+        assertFalse(CatalogoService.tiendaVisible(propia));
+    }
+
+    @Test
+    void losProductosDeDriveMasterConviven_conLosDeOtrasTiendasYSePuedenComparar() {
+        Tienda propia = tienda("tP", "Bogotá", "Cra 7", "L-S", null);
+        propia.setPlataforma(true);
+        when(tiendaRepository.findAll()).thenReturn(List.of(propia, tienda("tB", "Medellín", "Cll 10", "L-V", 8000.0)));
+        Producto base = producto("p1", "tP", "Filtro de aceite", "FA-100", 20_000, 5);
+        when(mongoTemplate.findById("p1", Producto.class)).thenReturn(base);
+        when(mongoTemplate.find(any(Query.class), eq(Producto.class))).thenReturn(List.of(
+                base, producto("p2", "tB", "Filtro de aceite", "FA-100", 18_000, 5)));
+
+        ProductoCatalogoDTO d = service.detalle("p1", null, null);
+
+        assertTrue(d.esPlataforma());
+        assertEquals(1, d.otrasTiendas().size());
+        assertFalse(d.otrasTiendas().get(0).esPlataforma());
+        assertEquals("Tienda tB", d.otrasTiendas().get(0).tienda().nombre());
     }
 }
