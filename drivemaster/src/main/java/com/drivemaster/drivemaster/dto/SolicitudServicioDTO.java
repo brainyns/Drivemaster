@@ -72,5 +72,15 @@ public class SolicitudServicioDTO {
     // Cotización vigente (detalle en /api/cotizaciones/orden/{id})
     private String cotizacionId;
 
+    // Etapas finales
+    private String subestado;
+    private LocalDateTime fechaInicioInstalacion;
+    private LocalDateTime fechaLista;
+    private LocalDateTime fechaEntrega;
+    private Boolean recepcionConfirmada;
+    private LocalDateTime fechaRecepcionCliente;
+    private Integer calificacionTaller;
+    private String comentarioCalificacion;
+
     private List<EventoOrden> eventos;
 }

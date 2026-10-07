@@ -50,6 +50,9 @@ public final class EstadoOrden {
     public static final String PAGO_PAGADO = "PAGADO";
     public static final String PAGO_VENCIDO = "VENCIDO";
 
+    // ─── Subestado opcional de EN_INSTALACION ───
+    public static final String SUB_EN_PRUEBAS = "EN_PRUEBAS";
+
     /** estado origen → (estado destino → actores que pueden ejecutarlo) */
     private static final Map<String, Map<String, Set<String>>> TRANSICIONES = Map.ofEntries(
             Map.entry(ENVIADA, Map.of(

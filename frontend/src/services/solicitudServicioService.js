@@ -92,3 +92,28 @@ export async function guardarRepuestosSolicitud(token, id, items) {
   });
   return handle(res, "No se pudieron guardar los repuestos");
 }
+
+// ─── Etapas finales (taller asignado) ─────────────────────────────────────
+
+export function iniciarInstalacion(token, id) {
+  return patch(token, `${BASE}/${id}/iniciar-instalacion`, null, "No se pudo iniciar la instalación");
+}
+
+export function marcarEnPruebas(token, id) {
+  return patch(token, `${BASE}/${id}/en-pruebas`, null, "No se pudo marcar en pruebas");
+}
+
+export function marcarLista(token, id) {
+  return patch(token, `${BASE}/${id}/lista`, null, "No se pudo marcar como lista");
+}
+
+export function marcarEntregada(token, id) {
+  return patch(token, `${BASE}/${id}/entregada`, null, "No se pudo marcar la entrega");
+}
+
+// ─── Cliente: recepción ────────────────────────────────────────────────────
+
+/** calificacion: 1 a 5 u omitida; comentario opcional */
+export function confirmarRecepcion(token, id, calificacion, comentario) {
+  return patch(token, `${BASE}/${id}/confirmar-recepcion`, { calificacion, comentario }, "No se pudo confirmar la recepción");
+}

@@ -10,6 +10,7 @@ import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
 import RespuestaCotizacion from "../components/servicio/RespuestaCotizacion";
 import Etiqueta from "../components/servicio/Etiqueta";
 import PagoLocal from "../components/servicio/PagoLocal";
+import ConfirmarRecepcion from "../components/servicio/ConfirmarRecepcion";
 import {
   ESTADOS_CANCELABLES_CLIENTE, ESTADOS_PEDIDO, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
@@ -188,7 +189,7 @@ export default function MisServicios({ onVolver, onSolicitar }) {
           <div>
             <span className="ss-eyebrow">Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
             <h1 className="sv-title">{s.vehiculoDescripcion}</h1>
-            <p className="sv-subtitle">{s.vehiculoPlaca ? `Placa ${s.vehiculoPlaca} · ` : ""}<EstadoServicio estado={s.estado} /></p>
+            <p className="sv-subtitle">{s.vehiculoPlaca ? `Placa ${s.vehiculoPlaca} · ` : ""}<EstadoServicio estado={s.estado} />{s.estado === "EN_INSTALACION" && s.subestado === "EN_PRUEBAS" ? " · En pruebas" : ""}</p>
           </div>
           <button className="sv-volver" onClick={() => { setSeleccionadaId(null); setCancelando(false); }}>← Mis servicios</button>
         </div>
@@ -287,6 +288,14 @@ export default function MisServicios({ onVolver, onSolicitar }) {
                 <p className="ss-meta">El taller está preparando tu cotización con precios finales y mano de obra.</p>
               </section>
             )}
+
+            {s.estado === "LISTA" && (
+              <p className="ss-exito" role="status">
+                Tu vehículo está listo{s.tallerNombre ? ` en ${s.tallerNombre}` : ""}. Puedes recogerlo.
+              </p>
+            )}
+
+            {s.estado === "ENTREGADA" && <ConfirmarRecepcion token={token} solicitud={s} onConfirmada={cargar} />}
 
             {s.cotizacionId && <CotizacionCliente token={token} solicitud={s} onCambio={cargar} />}
 

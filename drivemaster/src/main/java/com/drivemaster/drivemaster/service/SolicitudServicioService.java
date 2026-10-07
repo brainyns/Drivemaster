@@ -40,6 +40,23 @@ public interface SolicitudServicioService {
     SolicitudServicioDTO seleccionarRepuestos(String correoTaller, String id, SeleccionRepuestosRequest request);
 
     // ─── ADMIN ───
+    // ─── Etapas finales (solo el taller asignado) ───
+
+    /** REPUESTOS_RECIBIDOS → EN_INSTALACION */
+    SolicitudServicioDTO iniciarInstalacion(String correoTaller, String id);
+
+    /** Subestado opcional EN_PRUEBAS dentro de EN_INSTALACION (no cambia el estado). */
+    SolicitudServicioDTO marcarEnPruebas(String correoTaller, String id);
+
+    /** EN_INSTALACION → LISTA */
+    SolicitudServicioDTO marcarLista(String correoTaller, String id);
+
+    /** LISTA → ENTREGADA */
+    SolicitudServicioDTO marcarEntregada(String correoTaller, String id);
+
+    /** El cliente dueño confirma la recepción, con calificación opcional (1 a 5). */
+    SolicitudServicioDTO confirmarRecepcion(String correoCliente, String id, Integer calificacion, String comentario);
+
     List<SolicitudServicioDTO> listarAdmin(String estado);
 
     SolicitudServicioDTO reasignarPorAdmin(String correoAdmin, String id, String motivo);

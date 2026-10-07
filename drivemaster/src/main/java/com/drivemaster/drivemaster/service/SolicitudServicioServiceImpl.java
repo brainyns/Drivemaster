@@ -514,6 +514,91 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         return seleccion.size() + " repuesto(s) elegidos en " + tiendas + " tienda(s)";
     }
 
+    // ─── Etapas finales ──────────────────────────────────────────────────────
+
+    @Override
+    public SolicitudServicioDTO iniciarInstalacion(String correoTaller, String id) {
+        return avanzar(correoTaller, id, EstadoOrden.EN_INSTALACION, "Instalación iniciada",
+                new Update().set("fechaInicioInstalacion", LocalDateTime.now()));
+    }
+
+    @Override
+    public SolicitudServicioDTO marcarEnPruebas(String correoTaller, String id) {
+        Taller taller = tallerOperativo(correoTaller);
+        OrdenServicio orden = solicitudDelTaller(taller, id);
+        if (!EstadoOrden.EN_INSTALACION.equals(orden.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo una solicitud en instalación pasa a pruebas");
+        }
+        if (EstadoOrden.SUB_EN_PRUEBAS.equals(orden.getSubestado())) return toDTO(orden, Vista.TALLER);
+        OrdenServicio actualizada = transiciones.registrar(orden, actorTaller(taller), conMecanico("En pruebas", orden),
+                Criteria.where("tallerId").is(taller.getId()).and("subestado").ne(EstadoOrden.SUB_EN_PRUEBAS),
+                new Update().set("subestado", EstadoOrden.SUB_EN_PRUEBAS));
+        return toDTO(actualizada, Vista.TALLER);
+    }
+
+    @Override
+    public SolicitudServicioDTO marcarLista(String correoTaller, String id) {
+        SolicitudServicioDTO lista = avanzar(correoTaller, id, EstadoOrden.LISTA, "Vehículo listo para entregar",
+                new Update().set("fechaLista", LocalDateTime.now()).unset("subestado"));
+        ordenRepository.findById(id).ifPresent(avisos::vehiculoListo);
+        return lista;
+    }
+
+    @Override
+    public SolicitudServicioDTO marcarEntregada(String correoTaller, String id) {
+        return avanzar(correoTaller, id, EstadoOrden.ENTREGADA, "Vehículo entregado al cliente",
+                new Update().set("fechaEntrega", LocalDateTime.now()));
+    }
+
+    /**
+     * Mueve la orden con las transiciones existentes. Solo el taller asignado (y
+     * habilitado): la escritura además exige que la orden siga siendo de ese taller.
+     * La tabla de EstadoOrden decide desde qué estado se puede ir.
+     */
+    private SolicitudServicioDTO avanzar(String correoTaller, String id, String hacia, String nota, Update cambios) {
+        Taller taller = tallerOperativo(correoTaller);
+        OrdenServicio orden = solicitudDelTaller(taller, id);
+        OrdenServicio actualizada = transiciones.transicionar(orden, hacia, actorTaller(taller), conMecanico(nota, orden),
+                Criteria.where("tallerId").is(taller.getId()), cambios);
+        return toDTO(actualizada, Vista.TALLER);
+    }
+
+    private static String conMecanico(String nota, OrdenServicio orden) {
+        return orden.getMecanicoNombre() != null ? nota + " · Mecánico: " + orden.getMecanicoNombre() : nota;
+    }
+
+    @Override
+    public SolicitudServicioDTO confirmarRecepcion(String correoCliente, String id, Integer calificacion, String comentario) {
+        Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);
+        OrdenServicio orden = obtenerMarketplace(id);
+        if (!cliente.getId().equals(orden.getUsuarioId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Esta solicitud no le pertenece");
+        }
+        if (!EstadoOrden.ENTREGADA.equals(orden.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El taller aún no ha marcado la entrega");
+        }
+        if (Boolean.TRUE.equals(orden.getRecepcionConfirmada())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya confirmaste la recepción");
+        }
+        if (calificacion != null && (calificacion < 1 || calificacion > 5)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La calificación va de 1 a 5");
+        }
+        String texto = comentario != null && !comentario.isBlank() ? comentario.trim() : null;
+        if (texto != null && texto.length() > 500) texto = texto.substring(0, 500);
+
+        Update cambios = new Update()
+                .set("recepcionConfirmada", true)
+                .set("fechaRecepcionCliente", LocalDateTime.now());
+        if (calificacion != null) cambios.set("calificacionTaller", calificacion);
+        if (texto != null) cambios.set("comentarioCalificacion", texto);
+        String nota = "El cliente confirmó la recepción del vehículo"
+                + (calificacion != null ? " · Calificación: " + calificacion + "/5" : "");
+        OrdenServicio actualizada = transiciones.registrar(orden,
+                new Actor(EstadoOrden.CLIENTE, cliente.getId(), cliente.getNombre()), nota,
+                Criteria.where("usuarioId").is(cliente.getId()).and("recepcionConfirmada").ne(true), cambios);
+        return toDTO(actualizada, Vista.CLIENTE);
+    }
+
     // ─── ADMIN ───────────────────────────────────────────────────────────────
 
     @Override
@@ -608,6 +693,14 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 .diagnostico(o.getDiagnostico())
                 .repuestos(o.getRepuestos())
                 .cotizacionId(o.getCotizacionId())
+                .subestado(o.getSubestado())
+                .fechaInicioInstalacion(o.getFechaInicioInstalacion())
+                .fechaLista(o.getFechaLista())
+                .fechaEntrega(o.getFechaEntrega())
+                .recepcionConfirmada(o.getRecepcionConfirmada())
+                .fechaRecepcionCliente(o.getFechaRecepcionCliente())
+                .calificacionTaller(o.getCalificacionTaller())
+                .comentarioCalificacion(o.getComentarioCalificacion())
                 .eventos(o.getEventos());
 
         try {

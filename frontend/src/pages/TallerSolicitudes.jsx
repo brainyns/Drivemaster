@@ -3,6 +3,7 @@ import { getToken } from "../services/authService";
 import { listarMecanicos, miTaller } from "../services/tallerService";
 import {
   bandejaSolicitudesTaller, aceptarSolicitudServicio, rechazarSolicitudServicio, asignarMecanicoSolicitud,
+  iniciarInstalacion, marcarEnPruebas, marcarLista, marcarEntregada,
 } from "../services/solicitudServicioService";
 import { cotizacionesDeOrden } from "../services/cotizacionService";
 import { pedidosDeOrden, confirmarRepuestosRecibidos } from "../services/pedidoTiendaService";
@@ -218,7 +219,7 @@ export default function TallerSolicitudes() {
           <div>
             <span className="ss-eyebrow">Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
             <h2 className="sv-title">{s.vehiculoDescripcion}</h2>
-            <p className="sv-subtitle">{s.vehiculoPlaca ? `Placa ${s.vehiculoPlaca} · ` : ""}<EstadoServicio estado={s.estado} /></p>
+            <p className="sv-subtitle">{s.vehiculoPlaca ? `Placa ${s.vehiculoPlaca} · ` : ""}<EstadoServicio estado={s.estado} />{s.estado === "EN_INSTALACION" && s.subestado === "EN_PRUEBAS" ? " · En pruebas" : ""}</p>
           </div>
           <button className="sv-volver" onClick={() => setSeleccionadaId(null)}>← Solicitudes</button>
         </div>
@@ -368,6 +369,62 @@ export default function TallerSolicitudes() {
               <CotizacionForm token={token} solicitud={s} tarifaHora={tarifaHora}
                 onCancelar={() => setCotizando(false)}
                 onEmitida={async () => { setCotizando(false); await cargar(); }} />
+            )}
+
+            {["REPUESTOS_RECIBIDOS", "EN_INSTALACION", "LISTA", "ENTREGADA"].includes(s.estado) && (
+              <section className="ss-bloque ss-bloque--destacado">
+                <h3 className="ss-bloque__titulo">Trabajo en el taller</h3>
+                {s.estado === "REPUESTOS_RECIBIDOS" && (
+                  <>
+                    <p className="ss-meta">Repuestos en el taller. Inicia la instalación cuando empiece el trabajo.</p>
+                    <div className="ss-acciones">
+                      <button className="sv-btn" disabled={procesando}
+                        onClick={() => ejecutar(async () => reemplazar(await iniciarInstalacion(token, s.id)))}>
+                        Iniciar instalación
+                      </button>
+                    </div>
+                  </>
+                )}
+                {s.estado === "EN_INSTALACION" && (
+                  <>
+                    <p className="ss-meta">
+                      En instalación desde {formatFechaHora(s.fechaInicioInstalacion)}
+                      {s.subestado === "EN_PRUEBAS" ? " · En pruebas" : ""}
+                    </p>
+                    <div className="ss-acciones">
+                      {s.subestado !== "EN_PRUEBAS" && (
+                        <button className="sv-btn-outline" disabled={procesando}
+                          onClick={() => ejecutar(async () => reemplazar(await marcarEnPruebas(token, s.id)))}>
+                          Marcar en pruebas (opcional)
+                        </button>
+                      )}
+                      <button className="sv-btn" disabled={procesando}
+                        onClick={() => ejecutar(async () => reemplazar(await marcarLista(token, s.id)))}>
+                        Marcar lista
+                      </button>
+                    </div>
+                  </>
+                )}
+                {s.estado === "LISTA" && (
+                  <>
+                    <p className="ss-meta">Lista desde {formatFechaHora(s.fechaLista)}. Avisamos al cliente por correo.</p>
+                    <div className="ss-acciones">
+                      <button className="sv-btn" disabled={procesando}
+                        onClick={() => ejecutar(async () => reemplazar(await marcarEntregada(token, s.id)))}>
+                        Marcar entregada
+                      </button>
+                    </div>
+                  </>
+                )}
+                {s.estado === "ENTREGADA" && (
+                  <p className="ss-meta">
+                    Entregada el {formatFechaHora(s.fechaEntrega)}
+                    {s.recepcionConfirmada
+                      ? ` · El cliente confirmó la recepción${s.calificacionTaller ? ` y calificó ${s.calificacionTaller}/5` : ""}`
+                      : " · Esperando la confirmación del cliente"}
+                  </p>
+                )}
+              </section>
             )}
 
             {s.cotizacionId && <SeguimientoTaller token={token} solicitud={s} onCambio={cargar} />}
