@@ -215,7 +215,44 @@ public class CotizacionService {
                 log.error("No se pudo vencer la cotización {}", c.getId(), e);
             }
         }
+
+        // Aprobadas que no se pagaron dentro de la vigencia
+        LocalDateTime ahora = LocalDateTime.now();
+        for (OrdenServicio o : ordenRepository.findByFlujoAndEstadoOrderByFechaCreacionDesc(
+                EstadoOrden.FLUJO_MARKETPLACE, EstadoOrden.APROBADA)) {
+            try {
+                Cotizacion c = o.getCotizacionId() != null ? cotizacionRepository.findById(o.getCotizacionId()).orElse(null) : null;
+                if (c == null || c.getVigenciaHasta() == null || c.getVigenciaHasta().isAfter(ahora)) continue;
+                if (devolverAprobadaADiagnosticada(o, c, Cotizacion.VENCIDA,
+                        "La cotización v" + c.getVersion() + " venció sin pago")) {
+                    avisos.cotizacionVencida(c);
+                    vencidas++;
+                }
+            } catch (ResponseStatusException e) {
+                log.debug("Orden {}: ya cambió, se omite", o.getId());
+            } catch (Exception e) {
+                log.error("No se pudo vencer la cotización aprobada de la orden {}", o.getId(), e);
+            }
+        }
         return vencidas;
+    }
+
+    /**
+     * Cotización aprobada que ya no se puede pagar (venció o falta stock): la marca
+     * con el estado indicado y devuelve la orden APROBADA → COTIZADA → DIAGNOSTICADA
+     * para que el taller emita otra. Devuelve false si alguien la cambió antes.
+     */
+    public boolean devolverAprobadaADiagnosticada(OrdenServicio orden, Cotizacion c, String estadoCotizacion, String nota) {
+        Cotizacion marcada = mongoTemplate.findAndModify(
+                Query.query(Criteria.where("id").is(c.getId()).and("estado").is(Cotizacion.APROBADA)),
+                new Update().set("estado", estadoCotizacion).set("motivoRespuesta", nota),
+                FindAndModifyOptions.options().returnNew(true), Cotizacion.class);
+        if (marcada == null) return false;
+        Criteria mismaCotizacion = Criteria.where("cotizacionId").is(c.getId());
+        OrdenServicio cotizada = transiciones.transicionar(orden, EstadoOrden.COTIZADA, Actor.SISTEMA, nota, mismaCotizacion, null);
+        transiciones.transicionar(cotizada, EstadoOrden.DIAGNOSTICADA, Actor.SISTEMA,
+                "El taller debe emitir una nueva cotización", mismaCotizacion, null);
+        return true;
     }
 
     // ─── Respuesta ───────────────────────────────────────────────────────────

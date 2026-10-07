@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.util;
 
 import com.drivemaster.drivemaster.model.Cotizacion;
 import com.drivemaster.drivemaster.model.CotizacionItem;
+import com.drivemaster.drivemaster.model.PedidoTienda;
 import org.springframework.web.util.HtmlUtils;
 
 import java.text.NumberFormat;
@@ -121,7 +122,109 @@ public final class EmailServicioBuilder {
                         + "Para pagar te pediremos iniciar sesión.</span>"));
     }
 
+    /**
+     * Comprobante de pago (no es una factura: cada taller y tienda factura lo suyo).
+     * lineas: concepto → valor; puede ir vacía.
+     */
+    public static String clienteComprobantePago(String cliente, String concepto, String vehiculo, String referencia,
+                                                String transaccion, LocalDateTime fecha, double monto,
+                                                java.util.Map<String, Double> lineas, String siguientePaso) {
+        StringBuilder detalle = new StringBuilder();
+        if (lineas != null) lineas.forEach((k, v) -> detalle.append(linea(k, v)));
+        return plantilla("Comprobante de pago", "Comprobante de pago",
+                saludo(cliente)
+                + parrafo("Recibimos tu pago de <strong>" + e(concepto) + "</strong> para tu <strong>" + e(vehiculo) + "</strong>.")
+                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 16px;\">"
+                + detalle
+                + "<tr><td style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">Total pagado</td>"
+                + "<td align=\"right\" style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">"
+                + moneda(monto) + "</td></tr></table>"
+                + recuadro("Referencia: <strong>" + e(referencia) + "</strong><br/>"
+                        + (transaccion != null ? "Transacción Wompi: " + e(transaccion) + "<br/>" : "")
+                        + "Fecha: " + e(formatoFecha(fecha)))
+                + (siguientePaso != null ? parrafo(e(siguientePaso)) : "")
+                + parrafo("<span style=\"font-size:12px;color:#9ca3af;\">Este comprobante no es una factura. "
+                        + "El taller y las tiendas expiden la suya por sus productos y servicios.</span>"));
+    }
+
+    /** El pago llegó pero no se pudo aplicar: se devolverá el dinero. */
+    public static String clientePagoNoAplicado(String cliente, String vehiculo, double monto, String motivo) {
+        return plantilla("Reembolso", "Te devolveremos tu pago",
+                saludo(cliente)
+                + parrafo("Recibimos un pago de <strong>" + moneda(monto) + "</strong> para tu <strong>" + e(vehiculo)
+                        + "</strong>, pero no se pudo aplicar.")
+                + recuadro("Motivo: " + e(motivo))
+                + parrafo("DriveMaster gestionará el reembolso al mismo medio de pago. Te avisaremos cuando esté hecho."));
+    }
+
+    public static String clientePedidoNoDespachado(String cliente, String vehiculo, String tienda, double monto) {
+        return plantilla("Repuestos", "Una tienda no pudo despachar",
+                saludo(cliente)
+                + parrafo("<strong>" + e(tienda) + "</strong> no pudo despachar los repuestos para tu <strong>"
+                        + e(vehiculo) + "</strong>.")
+                + recuadro("Te devolveremos <strong>" + moneda(monto) + "</strong> (lo que pagaste por esos repuestos). "
+                        + "El taller te contactará para conseguirlos por otro medio.")
+                + parrafo("Puedes ver el avance en tu panel."));
+    }
+
+    // ─── Tienda ──────────────────────────────────────────────────────────────
+
+    public static String tiendaNuevoPedido(String tienda, PedidoTienda p) {
+        StringBuilder filas = new StringBuilder();
+        for (CotizacionItem i : p.getItems()) {
+            filas.append("<tr><td style=\"padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;\">")
+                    .append(i.getCantidad()).append(" × ").append(e(i.getProductoNombre()))
+                    .append(i.getReferencia() != null ? " <span style=\"color:#9ca3af;\">(" + e(i.getReferencia()) + ")</span>" : "")
+                    .append("ENCARGO".equals(i.getDisponibilidad()) ? " · encargo" : "")
+                    .append("</td><td align=\"right\" style=\"padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;\">")
+                    .append(moneda(i.getSubtotal())).append("</td></tr>");
+        }
+        return plantilla("Nuevo pedido", "Tienes un pedido pagado",
+                saludo(tienda)
+                + parrafo("El cliente ya pagó. Lleva estos repuestos al taller:")
+                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 16px;\">" + filas
+                + linea("IVA", p.getIva()) + linea("Total del pedido", p.getTotal()) + "</table>"
+                + recuadro("Entregar en: <strong>" + e(p.getTallerNombre()) + "</strong><br/>"
+                        + e(unir(p.getTallerDireccion(), p.getTallerCiudad()))
+                        + (p.getTallerTelefono() != null ? "<br/>Tel. " + e(p.getTallerTelefono()) : "")
+                        + "<br/>Vehículo: " + e(p.getVehiculoDescripcion()))
+                + parrafo("Marca el pedido como despachado en tu panel, o \"No puedo despachar\" si no lo puedes surtir."));
+    }
+
+    // ─── ADMIN ───────────────────────────────────────────────────────────────
+
+    public static String adminAlerta(String titulo, String detalle) {
+        return plantilla("Alerta", titulo,
+                parrafo(e(detalle))
+                + parrafo("Revisa Liquidaciones y reembolsos en el panel de administración."));
+    }
+
     // ─── Taller ──────────────────────────────────────────────────────────────
+
+    public static String tallerDiagnosticoPagado(String taller, String vehiculo, LocalDateTime cita) {
+        return plantilla("Diagnóstico pagado", "El cliente pagó el diagnóstico",
+                saludo(taller)
+                + parrafo("La revisión del <strong>" + e(vehiculo) + "</strong> quedó confirmada para el <strong>"
+                        + e(formatoFecha(cita)) + "</strong>."));
+    }
+
+    public static String tallerCotizacionPagada(String taller, String vehiculo, int pedidos) {
+        return plantilla("Cotización pagada", "El cliente pagó la cotización",
+                saludo(taller)
+                + parrafo("El cliente pagó la cotización del <strong>" + e(vehiculo) + "</strong>.")
+                + parrafo(pedidos > 0
+                        ? "Pedimos los repuestos a " + pedidos + " tienda(s). Confirma en tu panel cuando los recibas."
+                        : "La cotización es solo mano de obra: puedes empezar el trabajo."));
+    }
+
+    public static String tallerPedidoNoDespachado(String taller, String vehiculo, String tienda, String motivo) {
+        return plantilla("Repuestos", "Una tienda no puede despachar",
+                saludo(taller)
+                + parrafo("<strong>" + e(tienda) + "</strong> no puede despachar los repuestos del <strong>"
+                        + e(vehiculo) + "</strong>.")
+                + (motivo != null && !motivo.isBlank() ? recuadro("Motivo: " + e(motivo)) : "")
+                + parrafo("El cliente recibirá el reembolso de esos repuestos. Coordina con él cómo conseguirlos."));
+    }
 
     public static String tallerRespuestaCotizacion(String taller, String vehiculo, int version, String respuesta, String motivo) {
         return plantilla("Respuesta del cliente", "El cliente respondió tu cotización",

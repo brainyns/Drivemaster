@@ -31,6 +31,8 @@ public class Cotizacion {
     public static final String CAMBIOS_SOLICITADOS = "CAMBIOS_SOLICITADOS";
     public static final String VENCIDA = "VENCIDA";
     public static final String REEMPLAZADA = "REEMPLAZADA";
+    // Aprobada, pero sin stock al pagar: el taller debe emitir otra
+    public static final String ANULADA = "ANULADA";
 
     @Id
     private String id;

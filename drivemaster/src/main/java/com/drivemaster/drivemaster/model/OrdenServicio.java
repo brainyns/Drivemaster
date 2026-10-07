@@ -114,6 +114,8 @@ public class OrdenServicio {
 
     // Cotización vigente (la última emitida; las anteriores quedan en la colección cotizaciones)
     private String cotizacionId;
+    // Pago (tabla pagos) con el que se pagó la cotización
+    private Long pagoCotizacionId;
 
     @Builder.Default
     private List<EventoOrden> eventos = new ArrayList<>();
