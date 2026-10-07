@@ -2,11 +2,14 @@ import { useEffect, useState, useMemo } from "react";
 import { getToken } from "../services/authService";
 import { miTaller } from "../services/tallerService";
 import EstadoNegocio from "../components/EstadoNegocio";
+import MecanicosTaller from "../components/servicio/MecanicosTaller";
+import TallerSolicitudes from "./TallerSolicitudes";
 import { ordenesDelTaller, iniciarServicio, finalizarServicio, programarCita, confirmarPagoOrden } from "../services/ordenServicioService";
 import "../css/servicios.css";
 import "../css/panel-taller.css";
 
 const TABS = [
+  { key: "solicitudes", label: "Solicitudes" },
   { key: "resumen",     label: "Resumen" },
   { key: "ordenes",     label: "Por iniciar" },
   { key: "proceso",     label: "En proceso" },
@@ -65,7 +68,7 @@ export default function PanelTaller() {
   const [taller, setTaller] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [tab, setTab] = useState("resumen");
+  const [tab, setTab] = useState("solicitudes");
   const [procesando, setProcesando] = useState(null);
   const [observaciones, setObservaciones] = useState({});
   const [fechasCita, setFechasCita] = useState({});
@@ -135,9 +138,12 @@ export default function PanelTaller() {
     [finalizadas]
   );
 
-  const tallerInfo = ordenes[0]
-    ? { nombre: ordenes[0].tallerNombre, precioManoObra: ordenes[0].precioManoObra }
-    : null;
+  // Datos del taller: del perfil (mi-taller) y, si aún no carga, de sus órdenes.
+  const tallerInfo = taller
+    ? { nombre: taller.nombre, precioManoObra: taller.precioManoObra }
+    : ordenes[0]
+      ? { nombre: ordenes[0].tallerNombre, precioManoObra: ordenes[0].precioManoObra }
+      : null;
 
   // Agenda del taller: lo primero que entra por la puerta.
   const agenda = useMemo(() => {
@@ -219,8 +225,8 @@ export default function PanelTaller() {
           <span className="pt-eyebrow">Taller aliado</span>
           <h1 className="pt-title">Panel del taller</h1>
           <p className="pt-subtitle">
-            Gestiona los servicios que tus clientes han pagado: agenda el ingreso, inicia el
-            trabajo y ciérralo cuando el vehículo esté listo.
+            Responde las solicitudes de diagnóstico de tu zona, registra el diagnóstico y elige
+            los repuestos; luego da seguimiento a cada trabajo hasta entregarlo.
           </p>
         </div>
         {agenda.length > 0 && (
@@ -262,7 +268,40 @@ export default function PanelTaller() {
         })}
       </nav>
 
-      {cargando ? (
+      {/* Solicitudes y Mi taller no dependen de las órdenes del flujo anterior. */}
+      {tab === "solicitudes" ? (
+        <TallerSolicitudes />
+      ) : tab === "mitaller" ? (
+        <div className="pt-perfil">
+          {tallerInfo ? (
+            <>
+              <span className="pt-eyebrow">Datos del taller</span>
+              <h2 className="pt-perfil-nombre">{tallerInfo.nombre}</h2>
+              <div className="pt-perfil-facts">
+                <div className="pt-fact">
+                  <span className="pt-fact-label">Precio de mano de obra</span>
+                  <span className="pt-fact-value">{formatPrecio(tallerInfo.precioManoObra)}</span>
+                </div>
+                <div className="pt-fact">
+                  <span className="pt-fact-label">Servicios recibidos</span>
+                  <span className="pt-fact-value">{ordenes.length}</span>
+                </div>
+                <div className="pt-fact">
+                  <span className="pt-fact-label">Finalizados</span>
+                  <span className="pt-fact-value">{finalizadas.length}</span>
+                </div>
+              </div>
+              <p className="pt-hint">
+                Para actualizar el nombre, la ciudad, la dirección o el precio de mano de
+                obra de tu taller, escríbele al administrador de DriveMaster.
+              </p>
+            </>
+          ) : (
+            <p className="sv-empty">Tu taller todavía no aparece en el reporte.</p>
+          )}
+          <MecanicosTaller token={token} />
+        </div>
+      ) : cargando ? (
         <div className="pt-skel-wrap">
           <div className="pt-skel-grid">
             {[0, 1, 2, 3].map(i => <div className="pt-skel-card" key={i} />)}
@@ -527,36 +566,6 @@ export default function PanelTaller() {
             </div>
           )}
 
-          {tab === "mitaller" && (
-            <div className="pt-perfil">
-              {tallerInfo ? (
-                <>
-                  <span className="pt-eyebrow">Datos del taller</span>
-                  <h2 className="pt-perfil-nombre">{tallerInfo.nombre}</h2>
-                  <div className="pt-perfil-facts">
-                    <div className="pt-fact">
-                      <span className="pt-fact-label">Precio de mano de obra</span>
-                      <span className="pt-fact-value">{formatPrecio(tallerInfo.precioManoObra)}</span>
-                    </div>
-                    <div className="pt-fact">
-                      <span className="pt-fact-label">Servicios recibidos</span>
-                      <span className="pt-fact-value">{ordenes.length}</span>
-                    </div>
-                    <div className="pt-fact">
-                      <span className="pt-fact-label">Finalizados</span>
-                      <span className="pt-fact-value">{finalizadas.length}</span>
-                    </div>
-                  </div>
-                  <p className="pt-hint">
-                    Para actualizar el nombre, la ciudad, la dirección o el precio de mano de
-                    obra de tu taller, escríbele al administrador de DriveMaster.
-                  </p>
-                </>
-              ) : (
-                <p className="sv-empty">Tu taller todavía no aparece en el reporte.</p>
-              )}
-            </div>
-          )}
         </>
       )}
     </div>

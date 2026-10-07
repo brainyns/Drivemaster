@@ -38,6 +38,8 @@ import MisVehiculos          from "./pages/MisVehiculos";
 import VehiculoServicio      from "./pages/VehiculoServicio";
 import Aprobaciones          from "./pages/Aprobaciones";
 import RegistroNegocio       from "./pages/RegistroNegocio";
+import SolicitarDiagnostico  from "./pages/SolicitarDiagnostico";
+import MisServicios          from "./pages/MisServicios";
 import ChatWidget            from "./components/chat/ChatWidget";
 import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
 
@@ -80,10 +82,18 @@ const TITULOS = {
   "mis-pedidos":     "Historial de compras",
   "checkout":        "Enviar solicitud",
   "mi-perfil":       "Mi Perfil",
+  "solicitar-diagnostico": "Solicitar diagnóstico",
+  "mis-servicios":   "Mis servicios",
   "taller-panel":    "Panel de taller",
   "admin-talleres":  "Servicios",
   "aprobaciones":    "Aprobaciones",
 };
+
+// Páginas del cliente que se muestran sin el panel lateral.
+const PAGINAS_CLIENTE = [
+  "checkout", "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo",
+  "solicitar-diagnostico", "mis-servicios",
+];
 
 // Página inicial de cada rol después de iniciar sesión.
 const INICIO_POR_ROL = {
@@ -214,6 +224,9 @@ function App() {
     setToken(auth.token);
     setSessionExpired(false);
 
+    // Un cliente que inicia sesión desde una página de cliente (ej. Solicitar
+    // diagnóstico) se queda en ella en lugar de volver al catálogo.
+    if (auth.rol === "CLIENTE" && PAGINAS_CLIENTE.includes(pagina)) return;
     setPagina(INICIO_POR_ROL[auth.rol] || "dashboard-main");
   };
 
@@ -306,7 +319,7 @@ function App() {
       "admin-talleres", "aprobaciones",
       "mi-perfil",
     ],
-    CLIENTE: ["catalogo", "mis-pedidos", "mis-solicitudes", "checkout", "mis-vehiculos", "servicio-vehiculo"],
+    CLIENTE: ["catalogo", ...PAGINAS_CLIENTE],
     TALLER: ["taller-panel"],
     TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos"],
   };
@@ -319,6 +332,8 @@ function App() {
         onIrAdmin={() => setPagina(user?.rol === "TALLER" || user?.rol === "TIENDA" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
         onIrSolicitud={(p) => setPagina(p || "checkout")}
         onIrCheckout={() => setPagina("checkout")}
+        onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
+        onRegistroNegocio={() => setPagina("registro-negocio")}
         onLogout={handleLogout}
         solicitudItems={solicitudItems}
         solicitudCount={solicitudCount}
@@ -402,6 +417,29 @@ function App() {
         <VehiculoServicio
           vehiculoId={idSeleccionado}
           onVolver={() => setPagina("mis-vehiculos")}
+          onSolicitarDiagnostico={(id) => irA("solicitar-diagnostico", id)}
+        />
+      );
+    }
+
+    if (pagina === "solicitar-diagnostico" || pagina === "mis-servicios") {
+      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
+      if (user.rol !== "CLIENTE") return (
+        <div style={{ padding: "40px" }}>Esta sección es para clientes. Ingresa con una cuenta de cliente para solicitar un diagnóstico.</div>
+      );
+      if (pagina === "mis-servicios") return (
+        <MisServicios
+          onVolver={() => setPagina("catalogo")}
+          onSolicitar={() => irA("solicitar-diagnostico")}
+        />
+      );
+      return (
+        <SolicitarDiagnostico
+          key={idSeleccionado || "nueva"}
+          vehiculoIdInicial={idSeleccionado}
+          onVolver={() => setPagina("catalogo")}
+          onVerServicios={() => irA("mis-servicios")}
+          onIrVehiculos={() => irA("mis-vehiculos")}
         />
       );
     }
@@ -473,7 +511,8 @@ function App() {
   };
 
   const esCliente = user?.rol === "CLIENTE";
-  const usarPanel = pagina === "catalogo" || (esCliente && ["checkout", "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo"].includes(pagina)) ? false
+  // El registro de negocios es público: nunca va dentro del panel, aunque haya sesión.
+  const usarPanel = pagina === "catalogo" || pagina === "registro-negocio" || (esCliente && PAGINAS_CLIENTE.includes(pagina)) ? false
     : !!user && pagina !== "catalogo";
 
   return (

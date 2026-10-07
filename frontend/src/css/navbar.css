@@ -245,6 +245,10 @@
   .dm-header__inner { width: calc(100% - 48px); gap: 20px; }
   .dm-header__nav { gap: 19px; }
   .dm-header__nav > button { font-size: 10px; }
+  /* "Solicitar diagnóstico" ya es el botón de la derecha y "Para talleres y
+     tiendas" está en la landing y el footer: se ocultan para que el header quepa. */
+  .dm-header__nav > button:nth-child(2),
+  .dm-header__nav > button:nth-child(5) { display: none; }
   .dm-header__actions { gap: 14px; }
   .dm-logo { font-size: 21px; }
   .dm-logo svg { width: 28px; height: 24px; }
