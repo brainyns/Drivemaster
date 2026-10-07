@@ -243,3 +243,50 @@
   font-weight: 700;
   color: var(--text);
 }
+
+/* ── Pago en desarrollo local (sin redirección de Wompi) ── */
+.ct-pago-local {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.ct-pago-local__pasos {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.6;
+}
+
+.ct-pago-local__fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm);
+  align-items: center;
+}
+
+.ct-pago-local__fila .ss-input { flex: 1 1 260px; width: auto; }
+
+.ct-pago-local__cerrar { align-self: flex-start; }
+
+/* ── Etapas finales y recepción ── */
+.ct-calificacion {
+  display: flex;
+  gap: 4px;
+}
+
+.ct-estrella {
+  background: none;
+  border: none;
+  padding: 2px;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--border2);
+}
+
+.ct-estrella--activa { color: #E8450A; }
+
+.ct-estrella:focus-visible {
+  outline: 2px solid var(--primary);
+  border-radius: 4px;
+}

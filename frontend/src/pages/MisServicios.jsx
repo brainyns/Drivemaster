@@ -9,6 +9,7 @@ import LineaTiempo from "../components/servicio/LineaTiempo";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
 import RespuestaCotizacion from "../components/servicio/RespuestaCotizacion";
 import Etiqueta from "../components/servicio/Etiqueta";
+import PagoLocal from "../components/servicio/PagoLocal";
 import {
   ESTADOS_CANCELABLES_CLIENTE, ESTADOS_PEDIDO, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
@@ -28,6 +29,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
   const [pedidos, setPedidos] = useState([]);
   const [error, setError] = useState(null);
   const [pagando, setPagando] = useState(false);
+  const [pagoLocal, setPagoLocal] = useState(null);
 
   // Se recarga cada vez que cambia el estado de la solicitud
   useEffect(() => {
@@ -54,7 +56,11 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
     setPagando(true);
     setError(null);
     try {
-      await pagarCotizacion(token, solicitud.id);
+      const local = await pagarCotizacion(token, solicitud.id);
+      if (local) {
+        setPagoLocal(local);
+        setPagando(false);
+      }
     } catch (e) {
       setError(e.message);
       setPagando(false);
@@ -70,7 +76,11 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
           {error && <p className="ss-alerta" role="alert">{error}</p>}
           <CotizacionDetalle cotizacion={vigente} />
           {vigente.puedeResponder && solicitud.estado === "COTIZADA" && <RespuestaCotizacion onResponder={responder} />}
-          {solicitud.estado === "APROBADA" && vigente.estado === "APROBADA" && (
+          {solicitud.estado === "APROBADA" && pagoLocal && (
+            <PagoLocal token={token} pago={pagoLocal} onCerrar={() => setPagoLocal(null)}
+              onVerificado={async () => { setPagoLocal(null); await onCambio(); }} />
+          )}
+          {solicitud.estado === "APROBADA" && vigente.estado === "APROBADA" && !pagoLocal && (
             <div className="ss-acciones">
               <button className="sv-btn" onClick={pagar} disabled={pagando}>
                 {pagando ? "Abriendo el pago..." : `Pagar ${formatPrecio(vigente.totalAPagar)}`}
@@ -118,6 +128,7 @@ export default function MisServicios({ onVolver, onSolicitar }) {
   const [motivo, setMotivo] = useState("");
   const [procesando, setProcesando] = useState(false);
   const [pagandoDiagnostico, setPagandoDiagnostico] = useState(false);
+  const [pagoDiagnosticoLocal, setPagoDiagnosticoLocal] = useState(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -155,7 +166,11 @@ export default function MisServicios({ onVolver, onSolicitar }) {
     setPagandoDiagnostico(true);
     setError(null);
     try {
-      await pagarDiagnostico(token, seleccionada.id);
+      const local = await pagarDiagnostico(token, seleccionada.id);
+      if (local) {
+        setPagoDiagnosticoLocal(local);
+        setPagandoDiagnostico(false);
+      }
     } catch (e) {
       setError(e.message);
       setPagandoDiagnostico(false);
@@ -220,12 +235,17 @@ export default function MisServicios({ onVolver, onSolicitar }) {
                     <p className="ss-aviso">
                       Para confirmar la cita debes pagar el diagnóstico antes del {formatFechaHora(s.fechaLimitePagoDiagnostico)}.
                     </p>
-                    <div className="ss-acciones">
-                      <button className="sv-btn" onClick={pagarElDiagnostico} disabled={pagandoDiagnostico}>
-                        {pagandoDiagnostico ? "Abriendo el pago..." : `Pagar diagnóstico ${formatPrecio(s.tarifaDiagnostico)}`}
-                      </button>
-                      <span className="ss-ayuda">Pago seguro con Wompi.</span>
-                    </div>
+                    {pagoDiagnosticoLocal ? (
+                      <PagoLocal token={token} pago={pagoDiagnosticoLocal} onCerrar={() => setPagoDiagnosticoLocal(null)}
+                        onVerificado={async () => { setPagoDiagnosticoLocal(null); await cargar(); }} />
+                    ) : (
+                      <div className="ss-acciones">
+                        <button className="sv-btn" onClick={pagarElDiagnostico} disabled={pagandoDiagnostico}>
+                          {pagandoDiagnostico ? "Abriendo el pago..." : `Pagar diagnóstico ${formatPrecio(s.tarifaDiagnostico)}`}
+                        </button>
+                        <span className="ss-ayuda">Pago seguro con Wompi.</span>
+                      </div>
+                    )}
                   </>
                 )}
                 {s.pagoDiagnosticoEstado === "PAGADO" && <p className="ss-meta">Diagnóstico pagado.</p>}
