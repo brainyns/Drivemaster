@@ -7,9 +7,10 @@ import "../css/solicitudes.css";
 const TEXTO_MARKETPLACE = {
   DIAGNOSTICO: "Recibimos el pago del diagnóstico. Tu cita de revisión quedó confirmada.",
   COTIZACION: "Recibimos el pago de la cotización. Pedimos los repuestos y el taller seguirá con el trabajo.",
+  CATALOGO: "Recibimos el pago de tu compra. Avisamos a cada tienda; el estado de cada pedido está en “Mis compras”. Si elegiste retiro, el código te llegó por correo.",
 };
 
-export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServicios }) {
+export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServicios, onCompraCatalogoPagada, onIrMisCompras }) {
   const token = getToken();
   const [transaccionId] = useState(() => new URLSearchParams(window.location.search).get("id") || "");
   const [estado, setEstado] = useState(transaccionId ? "VERIFICANDO" : "ERROR"); // VERIFICANDO | APPROVED | DECLINED | ERROR
@@ -31,6 +32,10 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
         setEstado(res.estado || "ERROR");
         if (res.estado === "APPROVED" && !res.concepto) {
           onPagoExitoso && onPagoExitoso();
+        }
+        // Compra del catálogo aplicada: se vacían del carrito solo los productos que se pagaron
+        if (res.estado === "APPROVED" && res.concepto === "CATALOGO" && res.aplicado !== false) {
+          onCompraCatalogoPagada && onCompraCatalogoPagada();
         }
       } catch (e) {
         console.error(e);
@@ -55,7 +60,14 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
     onIrServicios && onIrServicios();
   };
 
-  // ─── Pago del marketplace (diagnóstico o cotización) ───
+  const irAMisCompras = () => {
+    if (window.history?.replaceState) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    onIrMisCompras && onIrMisCompras();
+  };
+
+  // ─── Pago del marketplace (diagnóstico, cotización o compra del catálogo) ───
   if (concepto && estado !== "VERIFICANDO") {
     return (
       <div className="sq-root">
@@ -73,7 +85,9 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
               <p style={{ margin: "0 0 20px", color: "#374151" }}>
                 {aplicacion.reembolsoPendiente
                   ? "Te enviamos un correo con el motivo. DriveMaster te devolverá el dinero."
-                  : "Revisa el estado de tu solicitud en unos segundos en “Mis servicios”."}
+                  : concepto === "CATALOGO"
+                    ? "Revisa el estado de tu compra en unos segundos en “Mis compras”."
+                    : "Revisa el estado de tu solicitud en unos segundos en “Mis servicios”."}
               </p>
             </>
           ) : estado === "APPROVED" ? (
@@ -89,13 +103,21 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
               <div style={{ fontSize: "56px", marginBottom: "8px" }}>❌</div>
               <h2 style={{ margin: "0 0 8px", color: "#b91c1c" }}>Pago no aprobado</h2>
               <p style={{ margin: "0 0 20px", color: "#374151" }}>
-                No se hizo ningún cobro. Puedes intentarlo de nuevo desde “Mis servicios”.
+                No se hizo ningún cobro. {concepto === "CATALOGO"
+                  ? "Tu carrito sigue guardado: puedes intentarlo de nuevo."
+                  : "Puedes intentarlo de nuevo desde “Mis servicios”."}
               </p>
             </>
           )}
-          <button className="sq-btn sq-btn-approve sq-btn--md" onClick={irAMisServicios}>
-            Ver mis servicios
-          </button>
+          {concepto === "CATALOGO" ? (
+            <button className="sq-btn sq-btn-approve sq-btn--md" onClick={irAMisCompras}>
+              Ver mis compras
+            </button>
+          ) : (
+            <button className="sq-btn sq-btn-approve sq-btn--md" onClick={irAMisServicios}>
+              Ver mis servicios
+            </button>
+          )}
         </div>
       </div>
     );

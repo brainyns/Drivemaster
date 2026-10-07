@@ -161,3 +161,57 @@
   .mk-filtros { padding: 12px; }
   .mk-campo { min-width: 130px; flex: 1 1 130px; }
 }
+
+/* ── Bloque 2: entrega, pago, mis compras, confirmaciones ─────────────── */
+.mk-resumen-lineas { list-style: none; margin: 0 0 10px; padding: 0; font-size: 0.9rem; }
+.mk-resumen-lineas li { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; }
+
+.mk-opciones { border: 0; padding: 0; margin: 14px 0 6px; display: grid; gap: 10px; }
+.mk-opciones legend { font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; padding: 0; }
+.mk-opcion {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; cursor: pointer;
+  border: 1px solid var(--dm-line); border-radius: 8px; background: var(--dm-surface);
+}
+.mk-opcion input { margin-top: 4px; accent-color: var(--dm-orange); }
+.mk-opcion span { display: flex; flex-direction: column; gap: 2px; }
+.mk-opcion small { color: var(--dm-muted); font-size: 0.8rem; line-height: 1.4; }
+.mk-opcion--activa { border-color: var(--dm-orange); background: var(--dm-orange-soft); }
+.mk-opcion--inactiva { opacity: 0.55; cursor: not-allowed; }
+
+.mk-formulario { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.mk-totales { margin: 14px 0 0; display: grid; gap: 4px; max-width: 360px; margin-left: auto; font-size: 0.92rem; }
+.mk-totales div { display: flex; justify-content: space-between; gap: 16px; }
+.mk-totales dt { color: var(--dm-muted); }
+.mk-totales dd { margin: 0; }
+.mk-totales__final { border-top: 1px solid var(--dm-line); padding-top: 6px; font-weight: 800; }
+.mk-totales__final dt { color: var(--dm-text); }
+
+.mk-pago {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin-top: 22px; padding: 18px; background: var(--dm-surface); border: 1px solid var(--dm-orange); border-radius: 8px;
+}
+.mk-pago > div { display: flex; flex-direction: column; gap: 2px; }
+.mk-pago__total { font-size: 1.7rem; }
+
+.mk-compra__cabecera, .mk-pedido__cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.mk-compra__cabecera h2 { margin: 0; }
+.mk-compra__resumen { display: flex; align-items: center; gap: 12px; }
+.mk-pedido { border: 1px solid var(--dm-line); border-radius: 8px; padding: 14px; margin-top: 12px; background: var(--dm-bg); }
+.mk-pedido__cabecera h3 { margin: 0; font-size: 1rem; }
+.mk-pedido p { margin: 6px 0 0; }
+.mk-pedido__acciones { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.mk-compra__detalle { margin-top: 14px; font-size: 0.9rem; }
+.mk-compra__detalle summary { cursor: pointer; color: var(--dm-orange); }
+
+.mk-modal {
+  position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(0, 0, 0, 0.6);
+}
+.mk-modal__caja {
+  width: min(480px, 100%); max-height: 90vh; overflow: auto; padding: 22px; border-radius: 10px;
+  background: var(--dm-surface); color: var(--dm-text); border: 1px solid var(--dm-line);
+}
+.mk-modal__caja:focus { outline: none; }
+.mk-modal__caja h2 { margin: 0 0 8px; font-size: 1.2rem; }
+.mk-modal__acciones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; flex-wrap: wrap; }

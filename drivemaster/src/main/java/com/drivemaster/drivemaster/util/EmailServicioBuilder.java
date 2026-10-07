@@ -287,6 +287,16 @@ public final class EmailServicioBuilder {
                         : ""));
     }
 
+    public static String clienteCodigoRetiroNuevo(String cliente, PedidoTienda p, String codigo) {
+        return plantilla("Retiro", "Tu nuevo código de retiro",
+                saludo(cliente)
+                + parrafo("Pediste un código nuevo para retirar tu pedido en <strong>" + e(p.getTiendaNombre()) + "</strong>.")
+                + recuadro("Código de retiro: <strong style=\"font-size:20px;letter-spacing:2px;\">" + e(codigo) + "</strong><br/>"
+                        + e(unir(p.getTiendaDireccion(), p.getTiendaCiudad())) + "<br/>Horario: " + e(p.getTiendaHorario()))
+                + parrafo("Este código reemplaza al anterior, que ya no sirve. Muéstralo en la tienda al retirar; solo se usa una vez. "
+                        + "No lo compartas con nadie más."));
+    }
+
     public static String clientePedidoListoParaRetirar(String cliente, PedidoTienda p) {
         return plantilla("Retiro", "Tu pedido está listo para retirar",
                 saludo(cliente)

@@ -350,3 +350,24 @@
     border-top: 1px solid var(--border);
   }
 }
+
+/* ── Tienda propia de DriveMaster (datos para el catálogo) ── */
+.ap-propia {
+  margin-bottom: var(--sp-lg);
+  padding: var(--sp-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--ap-steel);
+  border-radius: var(--r-lg);
+}
+.ap-propia__cabecera { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-md); flex-wrap: wrap; }
+.ap-propia__cabecera h2 { margin: 0; font-size: 1.15rem; }
+.ap-propia__form { display: flex; flex-wrap: wrap; gap: var(--sp-md); margin-top: var(--sp-md); }
+.ap-propia__form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--text-muted); flex: 1 1 200px; }
+.ap-propia__form input:not([type="checkbox"]) {
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border2);
+  border-radius: var(--r-md); padding: 9px 12px; font: inherit;
+}
+.ap-propia__ancho { flex-basis: 100% !important; }
+.ap-propia__check { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--text) !important; }
+.ap-propia__acciones { flex-basis: 100%; display: flex; justify-content: flex-end; }

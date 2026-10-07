@@ -50,6 +50,9 @@ import MarketHeader from "./components/marketplace/MarketHeader";
 import CatalogoMarketplace from "./pages/CatalogoMarketplace";
 import DetalleProductoMarketplace from "./pages/DetalleProductoMarketplace";
 import CarritoMarketplace from "./pages/CarritoMarketplace";
+import CheckoutMarketplace from "./pages/CheckoutMarketplace";
+import MisCompras from "./pages/MisCompras";
+import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
 
 const storedUser  = getUser();
@@ -96,6 +99,8 @@ const TITULOS = {
   "mi-perfil":       "Mi Perfil",
   "solicitar-diagnostico": "Solicitar diagnóstico",
   "mis-servicios":   "Mis servicios",
+  "mis-compras":     "Mis compras",
+  "checkout-marketplace": "Entrega y pago",
   "taller-panel":    "Panel de taller",
   "admin-talleres":  "Servicios",
   "aprobaciones":    "Aprobaciones",
@@ -106,7 +111,7 @@ const TITULOS = {
 // Páginas del cliente que se muestran sin el panel lateral.
 const PAGINAS_CLIENTE = [
   "checkout", "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo",
-  "solicitar-diagnostico", "mis-servicios",
+  "solicitar-diagnostico", "mis-servicios", "checkout-marketplace", "mis-compras",
 ];
 
 // Catálogo marketplace: se consulta sin sesión y no usa el panel lateral aunque haya una.
@@ -381,6 +386,12 @@ function App() {
   };
   const esTienda = user?.rol === "TIENDA";
 
+  // Tras un pago aprobado se vacían del carrito solo los productos que se pagaron; el otro grupo se queda
+  const vaciarCarritoPagado = () => {
+    const pendiente = consumirPagoPendiente();
+    if (pendiente) carrito.quitarVarios(pendiente.ids);
+  };
+
   const cabeceraMarketplace = (activo) => (
     <MarketHeader
       activo={activo}
@@ -424,6 +435,7 @@ function App() {
         onVolver={() => setPagina("marketplace")}
         onVerProducto={(p) => irA("producto-marketplace", p.id)}
         onIrLogin={() => { guardarDestinoPostLogin("carrito-marketplace"); setPagina("login"); }}
+        onContinuarCatalogo={() => setPagina("checkout-marketplace")}
         // Los productos de DriveMaster se pagan por la compra normal, sin perder el resto del carrito
         onPagarPlataforma={(items) => {
           items.forEach((x) => fijarProducto(x.producto, x.cantidad));
@@ -431,6 +443,30 @@ function App() {
         }}
       />
     );
+
+    // Pago y compras del catálogo: solo clientes (sin sesión se pide iniciarla y se vuelve aquí)
+    if (pagina === "checkout-marketplace" || pagina === "mis-compras") {
+      if (!user) {
+        return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")}
+          onVolver={() => { limpiarDestinoPostLogin(); setPagina("carrito-marketplace"); }} />;
+      }
+      if (user.rol !== "CLIENTE") return <div style={{ padding: "40px" }}>Esta sección es para clientes.</div>;
+      if (pagina === "mis-compras") return (
+        <MisCompras
+          header={cabeceraMarketplace("compras")}
+          onVolver={() => setPagina("catalogo")}
+          onIrCatalogo={() => setPagina("marketplace")}
+        />
+      );
+      return (
+        <CheckoutMarketplace
+          header={cabeceraMarketplace("carrito")}
+          carrito={carrito}
+          onVolverCarrito={() => setPagina("carrito-marketplace")}
+          onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); setPagina("mis-compras"); }}
+        />
+      );
+    }
 
     if (pagina === "catalogo") return (
       <CatalogoPage
@@ -441,6 +477,7 @@ function App() {
         onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         onRegistroNegocio={() => setPagina("registro-negocio")}
         onIrMarketplace={() => setPagina("marketplace")}
+        onIrMisCompras={() => { if (!user) guardarDestinoPostLogin("checkout-marketplace"); setPagina("mis-compras"); }}
         onLogout={handleLogout}
         solicitudItems={solicitudItems}
         solicitudCount={solicitudCount}
@@ -501,6 +538,8 @@ function App() {
         onPagoExitoso={() => setSolicitudItems([])}
         onIrSolicitudes={() => setPagina("mis-solicitudes")}
         onIrServicios={() => setPagina("mis-servicios")}
+        onCompraCatalogoPagada={vaciarCarritoPagado}
+        onIrMisCompras={() => setPagina("mis-compras")}
       />
     );
 

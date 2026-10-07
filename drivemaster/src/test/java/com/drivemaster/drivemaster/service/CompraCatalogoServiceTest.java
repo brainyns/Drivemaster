@@ -737,8 +737,13 @@ class CompraCatalogoServiceTest {
 
         Map<String, Object> r = service.nuevoCodigoRetiro(CORREO, retiro.getId());
 
-        String codigo = (String) r.get("codigo");
+        // El código llega por correo, nunca en la respuesta (y por tanto nunca en pantalla)
+        ArgumentCaptor<String> enviado = ArgumentCaptor.forClass(String.class);
+        verify(avisos).codigoRetiroNuevo(eq(retiro), enviado.capture());
+        String codigo = enviado.getValue();
         assertTrue(CodigoRetiro.normalizar(codigo) != null);
+        assertFalse(r.containsKey("codigo"));
+        assertFalse(r.toString().contains(codigo.replace("-", "")) || r.toString().contains(codigo), r.toString());
         ArgumentCaptor<Update> cambios = ArgumentCaptor.forClass(Update.class);
         ArgumentCaptor<Query> consulta = ArgumentCaptor.forClass(Query.class);
         verify(mongoTemplate).findAndModify(consulta.capture(), cambios.capture(), any(FindAndModifyOptions.class), eq(PedidoTienda.class));
@@ -756,6 +761,7 @@ class CompraCatalogoServiceTest {
         PedidoTienda retiro = pedidoDeRetiro();
         // La escritura condicional no encuentra el pedido (ya retirado)
         assertEstado(HttpStatus.CONFLICT, () -> service.nuevoCodigoRetiro(CORREO, retiro.getId()));
+        verify(avisos, never()).codigoRetiroNuevo(any(), anyString());
     }
 
     @Test

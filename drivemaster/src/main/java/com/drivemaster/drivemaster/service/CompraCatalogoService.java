@@ -398,7 +398,8 @@ public class CompraCatalogoService {
 
     /**
      * El cliente pide un código de retiro nuevo (el del correo se perdió). El anterior deja de
-     * servir: solo se guarda el hash del vigente. El código en claro se muestra una sola vez.
+     * servir: solo se guarda el hash del vigente. El código en claro NUNCA vuelve en la respuesta ni
+     * se muestra en pantalla: se envía por correo al titular de la compra.
      */
     public Map<String, Object> nuevoCodigoRetiro(String correoCliente, String pedidoId) {
         Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);
@@ -419,10 +420,10 @@ public class CompraCatalogoService {
         if (actualizado == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Este pedido ya no admite un código de retiro");
         }
+        avisos.codigoRetiroNuevo(actualizado, codigo);
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("pedidoId", pedidoId);
-        r.put("codigo", codigo);
-        r.put("aviso", "Este código reemplaza al anterior. Muéstralo en la tienda al retirar; solo sirve una vez.");
+        r.put("aviso", "Te enviamos un código de retiro nuevo a tu correo. Reemplaza al anterior y solo sirve una vez.");
         return r;
     }
 

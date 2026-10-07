@@ -221,6 +221,12 @@ public class AvisosSolicitudServicio {
                         pedido.getTotal() != null ? pedido.getTotal() : 0)));
     }
 
+    /** Código de retiro nuevo: se envía al titular de la compra (nunca se muestra en pantalla). */
+    public void codigoRetiroNuevo(PedidoTienda pedido, String codigo) {
+        usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(), "Tu nuevo código de retiro",
+                EmailServicioBuilder.clienteCodigoRetiroNuevo(c.getNombre(), pedido, codigo)));
+    }
+
     /** El pedido de retiro está listo: el cliente ya puede pasar por la tienda con su código. */
     public void pedidoListoParaRetirar(PedidoTienda pedido) {
         usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(),

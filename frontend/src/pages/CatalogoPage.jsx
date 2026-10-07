@@ -21,7 +21,7 @@ const formatPrecio = (n) =>
 
 export default function CatalogoPage({
   onIrLogin, onIrAdmin, onIrSolicitud, onIrCheckout, onLogout,
-  onSolicitarDiagnostico, onRegistroNegocio, onIrMarketplace,
+  onSolicitarDiagnostico, onRegistroNegocio, onIrMarketplace, onIrMisCompras,
   solicitudItems, solicitudCount, solicitudSubtotal, solicitudIva, solicitudTotal,
   solicitudAbierta, onToggleSolicitud,
   onAddProduct, onUpdateQuantity, onRemoveProduct,
@@ -214,6 +214,7 @@ export default function CatalogoPage({
         onSolicitarDiagnostico={onSolicitarDiagnostico}
         onIrMisServicios={irAMisServicios}
         onIrMarketplace={onIrMarketplace}
+        onIrMisCompras={onIrMisCompras}
         solicitudItems={solicitudItems}
         solicitudCount={solicitudCount}
         solicitudSubtotal={solicitudSubtotal}
