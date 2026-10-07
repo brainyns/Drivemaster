@@ -5,6 +5,7 @@ import { formatPrecio } from "../components/servicio/estadosServicio";
 import { AvisoCompatibilidad, EtiquetaCompatibilidad, EtiquetaVendedor } from "../components/marketplace/EtiquetasProducto";
 import { textoDisponibilidad } from "../components/marketplace/disponibilidad";
 import { limitarCantidad } from "../hooks/useCarrito";
+import ImagenProducto from "../components/marketplace/ImagenProducto";
 import "../css/marketplace.css";
 
 const CLAVE_VEHICULO = "marketplaceVehiculoId";
@@ -33,7 +34,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
 
   if (error) {
     return (
-      <div className="mk-pagina">
+      <div className="dm-page mk-pagina">
         {header}
         <main className="dm-container mk-contenido">
           <p className="mk-aviso mk-aviso--error" role="alert">{error}</p>
@@ -42,7 +43,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
       </div>
     );
   }
-  if (!producto) return <div className="mk-pagina">{header}<main className="dm-container mk-contenido"><p className="mk-conteo">Cargando...</p></main></div>;
+  if (!producto) return <div className="dm-page mk-pagina">{header}<main className="dm-container mk-contenido"><p className="mk-conteo">Cargando...</p></main></div>;
 
   const t = producto.tienda;
   const agotado = !producto.disponible;
@@ -54,14 +55,14 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
   };
 
   return (
-    <div className="mk-pagina">
+    <div className="dm-page mk-pagina">
       {header}
       <main className="dm-container mk-contenido">
         <button className="mk-enlace mk-volver" onClick={onVolver}>← Volver al catálogo</button>
 
         <section className="mk-detalle">
           <div className="mk-detalle__imagen">
-            {producto.imagenUrl ? <img src={producto.imagenUrl} alt={producto.nombre} /> : <span aria-hidden="true">Sin foto</span>}
+            <ImagenProducto src={producto.imagenUrl} alt={producto.nombre} tamanioIcono={56} />
           </div>
 
           <div className="mk-detalle__info">
