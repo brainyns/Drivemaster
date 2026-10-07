@@ -69,3 +69,13 @@ export async function actualizarTiendaPropia(token, datos) {
   });
   return handle(res, "No se pudieron guardar los datos de la tienda");
 }
+
+/** TIENDA: actualiza los datos públicos de su tienda (ciudad, dirección, horario, envío). */
+export async function actualizarMiTienda(token, datos) {
+  const res = await apiFetch(`${BASE}/mi-tienda`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(datos),
+  });
+  return handle(res, "No se pudieron guardar los datos de la tienda");
+}

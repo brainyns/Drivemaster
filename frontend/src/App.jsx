@@ -52,6 +52,9 @@ import DetalleProductoMarketplace from "./pages/DetalleProductoMarketplace";
 import CarritoMarketplace from "./pages/CarritoMarketplace";
 import CheckoutMarketplace from "./pages/CheckoutMarketplace";
 import MisCompras from "./pages/MisCompras";
+import ProblemasEnvios from "./pages/ProblemasEnvios";
+import DatosMiTienda from "./pages/DatosMiTienda";
+import { miTienda } from "./services/tiendaService";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
 
@@ -106,6 +109,8 @@ const TITULOS = {
   "aprobaciones":    "Aprobaciones",
   "pedidos-tienda":  "Pedidos",
   "liquidaciones":   "Liquidaciones y reembolsos",
+  "problemas-envios": "Problemas de envío",
+  "mi-tienda":       "Mi tienda",
 };
 
 // Páginas del cliente que se muestran sin el panel lateral.
@@ -154,6 +159,8 @@ function App() {
   // true cuando el cliente llegó a "Mis servicios" iniciando sesión desde el enlace de la cotización
   const [vieneDeCotizacion, setVieneDeCotizacion] = useState(false);
   const carrito = useCarrito();
+  // true si la tienda (rol TIENDA) aún no completó ciudad, dirección y horario: no se muestra en el catálogo
+  const [tiendaIncompleta, setTiendaIncompleta] = useState(false);
 
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
 
@@ -363,7 +370,7 @@ function App() {
       "proveedores", "proveedorNuevo", "proveedorEditar",
       "movimientos",
       "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
-      "admin-talleres", "aprobaciones", "liquidaciones",
+      "admin-talleres", "aprobaciones", "liquidaciones", "problemas-envios",
       "mi-perfil",
     ],
     SUPERADMIN: [
@@ -377,14 +384,23 @@ function App() {
       "movimientos",
       "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
       "usuarios",
-      "admin-talleres", "aprobaciones", "liquidaciones",
+      "admin-talleres", "aprobaciones", "liquidaciones", "problemas-envios",
       "mi-perfil",
     ],
     CLIENTE: ["catalogo", ...PAGINAS_CLIENTE],
     TALLER: ["taller-panel"],
-    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda"],
+    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda"],
   };
   const esTienda = user?.rol === "TIENDA";
+
+  useEffect(() => {
+    if (user?.rol !== "TIENDA") return undefined;
+    let vivo = true;
+    miTienda(getToken())
+      .then((t) => { if (vivo) setTiendaIncompleta(t.datosCompletos === false); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, [user?.rol]);
 
   // Tras un pago aprobado se vacían del carrito solo los productos que se pagaron; el otro grupo se queda
   const vaciarCarritoPagado = () => {
@@ -665,6 +681,8 @@ function App() {
     if (pagina === "aprobaciones")     return <Aprobaciones         token={token} />;
     if (pagina === "liquidaciones")    return <Liquidaciones        />;
     if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
+    if (pagina === "problemas-envios") return <ProblemasEnvios      />;
+    if (pagina === "mi-tienda")        return <DatosMiTienda        token={token} onGuardado={(t) => setTiendaIncompleta(!t.datosCompletos)} />;
 
     if (pagina === "inv-clientes")     return <InventarioClientes   token={token} />;
     if (pagina === "rep-clientes")     return <ReportesClientes     token={token} />;
@@ -705,6 +723,13 @@ function App() {
             onColorChange={handleColorChange}
             onMenuClick={() => setSidebarAbierto(true)}
           />
+        )}
+
+        {esTienda && tiendaIncompleta && pagina !== "mi-tienda" && (
+          <p className="ss-aviso" role="status" style={{ margin: "12px 16px" }}>
+            Tus productos aún no se muestran en el catálogo: faltan la ciudad, la dirección o el horario de tu tienda.{" "}
+            <button className="sv-btn-outline" onClick={() => irA("mi-tienda")}>Completar datos</button>
+          </p>
         )}
 
         {renderPagina()}

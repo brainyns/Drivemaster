@@ -549,7 +549,7 @@ class PedidoTiendaServiceTest {
     void elAdminConfirmaLaEntregaYSeHabilitaLaLiquidacionDeLaTienda() {
         PedidoTienda p = conProblema();
 
-        PedidoTienda r = service.resolverProblema("admin@demo.com", "ped1", "CONFIRMAR_ENTREGA");
+        PedidoTienda r = service.resolverProblema("admin@demo.com", "ped1", "CONFIRMAR_ENTREGA", "La guía muestra entrega");
 
         assertEquals(PedidoTienda.ENTREGADO, r.getEstado());
         assertEquals("ENTREGA_CONFIRMADA_POR_ADMIN", p.getResolucionProblema());
@@ -564,7 +564,7 @@ class PedidoTiendaServiceTest {
         RepartoPago linea = RepartoPago.builder().id(1L).pedidoTiendaId("ped1").estado(RepartoPago.PENDIENTE).monto(47_600.0).build();
         when(repartoRepository.findByPedidoTiendaId("ped1")).thenReturn(List.of(linea));
 
-        PedidoTienda r = service.resolverProblema("admin@demo.com", "ped1", "reembolsar");
+        PedidoTienda r = service.resolverProblema("admin@demo.com", "ped1", "reembolsar", "La transportadora perdió el paquete");
 
         assertEquals(PedidoTienda.NO_ENTREGADO, r.getEstado());
         assertEquals(RepartoPago.ANULADO, linea.getEstado());
@@ -578,17 +578,17 @@ class PedidoTiendaServiceTest {
         // Sin problema reportado
         PedidoTienda sinProblema = catalogo(PedidoTienda.ENVIO, PedidoTienda.DESPACHADO, null);
         assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
-                () -> service.resolverProblema("admin@demo.com", "ped1", "REEMBOLSAR")).getStatusCode());
+                () -> service.resolverProblema("admin@demo.com", "ped1", "REEMBOLSAR", "Motivo")).getStatusCode());
         assertEquals(PedidoTienda.DESPACHADO, sinProblema.getEstado());
 
         // Con problema: el primero gana, el segundo recibe 409 y no se duplica nada
         conProblema();
-        service.resolverProblema("admin@demo.com", "ped1", "CONFIRMAR_ENTREGA");
+        service.resolverProblema("admin@demo.com", "ped1", "CONFIRMAR_ENTREGA", "Motivo");
         when(pedidoRepository.findById("ped1")).thenReturn(Optional.of(PedidoTienda.builder().id("ped1")
                 .origen(PedidoTienda.ORIGEN_CATALOGO).estado(PedidoTienda.DESPACHADO).problemaReportado(true)
                 .resolucionProblema("ENTREGA_CONFIRMADA_POR_ADMIN").build()));
         assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
-                () -> service.resolverProblema("otro@demo.com", "ped1", "CONFIRMAR_ENTREGA")).getStatusCode());
+                () -> service.resolverProblema("otro@demo.com", "ped1", "CONFIRMAR_ENTREGA", "Motivo")).getStatusCode());
         verify(liquidacion, times(1)).pedidoRecibido(anyString(), anyString());
     }
 
@@ -597,7 +597,7 @@ class PedidoTiendaServiceTest {
         conProblema();
         for (String mala : new String[]{null, "", "ARCHIVAR"}) {
             assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
-                    () -> service.resolverProblema("admin@demo.com", "ped1", mala)).getStatusCode());
+                    () -> service.resolverProblema("admin@demo.com", "ped1", mala, "Motivo")).getStatusCode());
         }
         verifyNoInteractions(liquidacion);
     }
@@ -605,6 +605,124 @@ class PedidoTiendaServiceTest {
     @Test
     void unPedidoDelTallerNoTieneProblemaDeEnvioQueResolver() {
         assertEquals(HttpStatus.NOT_FOUND, assertThrows(ResponseStatusException.class,
-                () -> service.resolverProblema("admin@demo.com", "ped1", "REEMBOLSAR")).getStatusCode());
+                () -> service.resolverProblema("admin@demo.com", "ped1", "REEMBOLSAR", "Motivo")).getStatusCode());
+    }
+
+    // ─── Bloque 3: motivo obligatorio, intentos restantes y vista de la tienda ──
+
+    @Test
+    void resolverUnProblemaExigeElMotivoEscrito() {
+        PedidoTienda p = conProblema();
+        for (String vacio : new String[]{null, "", "   "}) {
+            assertEquals(HttpStatus.BAD_REQUEST, assertThrows(ResponseStatusException.class,
+                    () -> service.resolverProblema("admin@demo.com", "ped1", "REEMBOLSAR", vacio)).getStatusCode());
+        }
+        // Sin motivo no pasa nada: ni cambia el pedido, ni se libera el pago, ni se reembolsa
+        assertEquals(PedidoTienda.DESPACHADO, p.getEstado());
+        verifyNoInteractions(liquidacion);
+        verify(pagoMarketplace, never()).registrarReembolso(any(), any(), anyDouble(), anyString());
+    }
+
+    @Test
+    void elMotivoYQuienResolvioQuedanRegistrados() {
+        PedidoTienda p = conProblema();
+        ArgumentCaptor<Update> cambios = ArgumentCaptor.forClass(Update.class);
+        when(mongoTemplate.findAndModify(any(Query.class), cambios.capture(), any(FindAndModifyOptions.class), eq(PedidoTienda.class)))
+                .thenReturn(p);
+        service.resolverProblema("admin@demo.com", "ped1", "CONFIRMAR_ENTREGA", "  El cliente la recibió  ");
+        Document set = (Document) cambios.getValue().getUpdateObject().get("$set");
+        assertEquals("El cliente la recibió", set.get("motivoResolucion"));
+        assertEquals("admin@demo.com", set.get("resueltoPor"));
+    }
+
+    @Test
+    void elReembolsoLlevaElMotivoDelAdmin() {
+        conProblema();
+        RepartoPago linea = RepartoPago.builder().id(1L).pedidoTiendaId("ped1").estado(RepartoPago.PENDIENTE).monto(47_600.0).build();
+        when(repartoRepository.findByPedidoTiendaId("ped1")).thenReturn(List.of(linea));
+        service.resolverProblema("admin@demo.com", "ped1", "REEMBOLSAR", "Paquete perdido");
+        verify(pagoMarketplace).registrarReembolso(eq(pago), eq("ped1"), eq(47_600.0), contains("Paquete perdido"));
+        assertTrue(linea.getNota().contains("Paquete perdido"));
+    }
+
+    @Test
+    void elListadoDeProblemasLoDaElRepositorio() {
+        PedidoTienda abierto = PedidoTienda.builder().id("a").problemaReportado(true).build();
+        when(pedidoRepository.findByProblemaReportadoTrueOrderByFechaProblemaDesc()).thenReturn(List.of(abierto));
+        assertEquals(List.of(abierto), service.problemasDeEnvio());
+    }
+
+    @Test
+    void elCodigoIncorrectoDiceCuantosIntentosQuedan() {
+        PedidoTienda p = catalogo(PedidoTienda.RETIRO, PedidoTienda.LISTO_PARA_RETIRAR, "ABCD-1234");
+        mongoEnMemoria(p);
+        String[] esperado = {"Te quedan 4 intentos", "Te quedan 3 intentos", "Te quedan 2 intentos", "Te quedan 1 intento "};
+        for (String texto : esperado) {
+            ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                    () -> service.validarRetiro(CORREO_TIENDA, "ped1", "ZZZZ-0000"));
+            assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+            assertTrue(e.getReason().contains(texto.trim()), e.getReason());
+            assertTrue(e.getReason().contains("15 minutos"), e.getReason());
+        }
+        // El quinto error bloquea y lo dice
+        ResponseStatusException bloqueo = assertThrows(ResponseStatusException.class,
+                () -> service.validarRetiro(CORREO_TIENDA, "ped1", "ZZZZ-0000"));
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, bloqueo.getStatusCode());
+        assertTrue(bloqueo.getReason().contains("se bloquea 15 minutos"), bloqueo.getReason());
+    }
+
+    @Test
+    void laTiendaNoVeLosIdentificadoresNiElNombreDelClienteDeUnRetiro() {
+        PedidoTienda retiro = catalogo(PedidoTienda.RETIRO, PedidoTienda.LISTO_PARA_RETIRAR, "ABCD-1234");
+
+        PedidoTienda vista = PedidoTiendaService.paraTienda(retiro);
+
+        assertNull(vista.getClienteId());
+        assertNull(vista.getClienteNombre());
+        assertNull(vista.getCompraId());
+        assertNull(vista.getPagoId());
+        assertNull(vista.getEnvioDireccion());
+        assertNull(vista.getEnvioTelefono());
+        assertNull(vista.getEnvioReceptor());
+        // Lo que sí necesita para despachar
+        assertEquals("ped1", vista.getId());
+        assertEquals(47_600.0, vista.getTotal());
+        assertEquals(1, vista.getItems().size());
+        assertEquals(PedidoTienda.RETIRO, vista.getEntrega());
+        // El original no se toca
+        assertEquals("u1", retiro.getClienteId());
+    }
+
+    @Test
+    void laDireccionSoloLlegaALaTiendaSiElPedidoEsConEnvio() {
+        PedidoTienda envio = catalogo(PedidoTienda.ENVIO, PedidoTienda.PENDIENTE, null);
+        envio.setEnvioReceptor("Ana Pérez");
+        envio.setEnvioTelefono("3001234567");
+        envio.setEnvioDireccion("Cra 10 # 20-30");
+        envio.setEnvioCiudad("Medellín");
+        envio.setEnvioIndicaciones("Apto 301");
+
+        PedidoTienda vista = PedidoTiendaService.paraTienda(envio);
+
+        assertEquals("Ana Pérez", vista.getEnvioReceptor());
+        assertEquals("3001234567", vista.getEnvioTelefono());
+        assertEquals("Cra 10 # 20-30", vista.getEnvioDireccion());
+        assertEquals("Medellín", vista.getEnvioCiudad());
+        assertNull(vista.getClienteId());
+        assertNull(vista.getPagoId());
+
+        // Aunque por error un retiro trajera dirección, la vista la quita
+        PedidoTienda retiroConDireccion = envio.toBuilder().entrega(PedidoTienda.RETIRO).build();
+        assertNull(PedidoTiendaService.paraTienda(retiroConDireccion).getEnvioDireccion());
+        assertNull(PedidoTiendaService.paraTienda(retiroConDireccion).getEnvioTelefono());
+    }
+
+    @Test
+    void laTiendaSoloConsultaSusPropiosPedidos() {
+        when(pedidoRepository.findByTiendaIdOrderByFechaCreacionDesc("s1")).thenReturn(List.of(pedido));
+        assertEquals(List.of(pedido), service.misPedidos(CORREO_TIENDA));
+        // Siempre por el id de SU tienda (sacado de su sesión), nunca por un parámetro de la petición
+        verify(pedidoRepository).findByTiendaIdOrderByFechaCreacionDesc("s1");
+        verify(pedidoRepository, never()).findAll();
     }
 }

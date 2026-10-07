@@ -155,7 +155,7 @@ export default function Aprobaciones({ token }) {
         </label>
       </div>
 
-      {tiendaPropia && <DatosTiendaPropia key={tiendaPropia.id + (tiendaPropia.datosCompletos ? "-ok" : "-falta")} token={token} tienda={tiendaPropia} onGuardado={cargar} />}
+      {tiendaPropia && <DatosTiendaPropia key={tiendaPropia.id} token={token} tienda={tiendaPropia} onGuardado={cargar} />}
 
       {error && <p className="ap-alerta ap-alerta--error" role="alert">{error}</p>}
       {aviso && <p className="ap-alerta ap-alerta--ok" role="status">{aviso}</p>}

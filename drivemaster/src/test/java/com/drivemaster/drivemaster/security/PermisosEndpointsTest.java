@@ -54,7 +54,7 @@ class PermisosEndpointsTest {
         when(recepcionEnvioService.reportarProblema(anyString(), anyString(), anyString())).thenReturn(vacio);
     }
 
-    private static final String JSON_RESOLUCION = "{\"resolucion\":\"REEMBOLSAR\"}";
+    private static final String JSON_RESOLUCION = "{\"resolucion\":\"REEMBOLSAR\",\"motivo\":\"No llegó\"}";
 
     private MockHttpServletRequestBuilder resolver() {
         return post("/api/pedidos-tienda/p1/problema/resolver").contentType(MediaType.APPLICATION_JSON).content(JSON_RESOLUCION);
@@ -68,7 +68,7 @@ class PermisosEndpointsTest {
             mvc.perform(resolver().with(user("jefe@demo.com").roles(rol))).andExpect(status().isOk());
         }
         verify(pedidoTiendaService, times(2)).resolverProblema(anyString(), org.mockito.ArgumentMatchers.eq("p1"),
-                org.mockito.ArgumentMatchers.eq("REEMBOLSAR"));
+                org.mockito.ArgumentMatchers.eq("REEMBOLSAR"), org.mockito.ArgumentMatchers.eq("No llegó"));
     }
 
     @Test
@@ -165,5 +165,71 @@ class PermisosEndpointsTest {
                     .with(user("x@demo.com").roles(rol))).andExpect(status().isForbidden());
         }
         verify(tiendaService, times(2)).actualizarPlataforma(org.mockito.ArgumentMatchers.any());
+    }
+
+    // ─── Bloque 3: lista de problemas (ADMIN) y vista de la tienda ───────────
+
+    @Test
+    void soloAdministracionVeLosProblemasDeEnvio() throws Exception {
+        for (String rol : new String[]{"ADMIN", "SUPERADMIN"}) {
+            mvc.perform(get("/api/pedidos-tienda/problemas").with(user("jefe@demo.com").roles(rol))).andExpect(status().isOk());
+        }
+        for (String rol : new String[]{"TIENDA", "CLIENTE", "TALLER"}) {
+            mvc.perform(get("/api/pedidos-tienda/problemas").with(user("x@demo.com").roles(rol))).andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/api/pedidos-tienda/problemas")).andExpect(status().isUnauthorized());
+        verify(pedidoTiendaService, times(2)).problemasDeEnvio();
+    }
+
+    private static com.drivemaster.drivemaster.model.PedidoTienda pedidoConDatosDelCliente(String entrega) {
+        return com.drivemaster.drivemaster.model.PedidoTienda.builder().id("p1").tiendaId("s1").tiendaNombre("Tienda Norte")
+                .origen("CATALOGO").entrega(entrega).estado("PENDIENTE").total(47_600.0)
+                .clienteId("u-secreto").clienteNombre("Ana Cuenta").compraId("c-secreta").pagoId(99L)
+                .envioReceptor("Ana Pérez").envioTelefono("3001234567").envioDireccion("Cra 10 # 20-30").envioCiudad("Medellín")
+                .codigoRetiroHash("hash-secreto").codigoRetiroIntentos(2).build();
+    }
+
+    @Test
+    void laTiendaRecibeSusPedidosSinIdentificadoresInternosNiCodigos() throws Exception {
+        when(pedidoTiendaService.misPedidos(anyString())).thenReturn(java.util.List.of(
+                pedidoConDatosDelCliente("RETIRO"), pedidoConDatosDelCliente("ENVIO")));
+
+        String json = mvc.perform(get("/api/pedidos-tienda/mios").with(user("tienda@demo.com").roles("TIENDA")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // Los valores internos no viajan (las claves pueden venir en null) y los hashes ni siquiera existen
+        for (String secreto : new String[]{"u-secreto", "Ana Cuenta", "c-secreta", "hash-secreto", "codigoRetiroHash", "codigoRetiroIntentos"}) {
+            org.junit.jupiter.api.Assertions.assertFalse(json.contains(secreto), "no debe viajar a la tienda: " + secreto + " en " + json);
+        }
+        // Un retiro no lleva dirección del cliente; un envío sí, porque la necesita para despachar
+        com.fasterxml.jackson.databind.JsonNode lista = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        org.junit.jupiter.api.Assertions.assertTrue(lista.get(0).path("envioDireccion").isMissingNode()
+                || lista.get(0).path("envioDireccion").isNull());
+        org.junit.jupiter.api.Assertions.assertEquals("Cra 10 # 20-30", lista.get(1).path("envioDireccion").asText());
+        org.junit.jupiter.api.Assertions.assertEquals("3001234567", lista.get(1).path("envioTelefono").asText());
+    }
+
+    @Test
+    void lasAccionesDeLaTiendaTampocoDevuelvenDatosInternos() throws Exception {
+        com.drivemaster.drivemaster.model.PedidoTienda p = pedidoConDatosDelCliente("RETIRO");
+        when(pedidoTiendaService.listoParaRetirar(anyString(), anyString())).thenReturn(p);
+        when(pedidoTiendaService.validarRetiro(anyString(), anyString(), anyString())).thenReturn(p);
+        when(pedidoTiendaService.despachar(anyString(), anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(p);
+
+        String[] respuestas = {
+                mvc.perform(patch("/api/pedidos-tienda/p1/listo-retiro").with(user("t@demo.com").roles("TIENDA")))
+                        .andReturn().getResponse().getContentAsString(),
+                mvc.perform(post("/api/pedidos-tienda/p1/retiro/validar").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"codigo\":\"ABCD-1234\"}").with(user("t@demo.com").roles("TIENDA")))
+                        .andReturn().getResponse().getContentAsString(),
+                mvc.perform(patch("/api/pedidos-tienda/p1/despachar").contentType(MediaType.APPLICATION_JSON).content("{}")
+                        .with(user("t@demo.com").roles("TIENDA"))).andReturn().getResponse().getContentAsString(),
+        };
+        for (String json : respuestas) {
+            org.junit.jupiter.api.Assertions.assertFalse(json.contains("u-secreto") || json.contains("hash-secreto")
+                    || json.contains("Ana Cuenta") || json.contains("c-secreta") || json.contains("99") && json.contains("\"pagoId\":99"), json);
+            org.junit.jupiter.api.Assertions.assertTrue(json.contains("\"pagoId\":null") && json.contains("\"clienteId\":null"), json);
+        }
     }
 }

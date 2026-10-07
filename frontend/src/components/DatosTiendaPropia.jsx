@@ -2,12 +2,12 @@ import { useState } from "react";
 import { actualizarTiendaPropia } from "../services/tiendaService";
 
 /**
- * El ADMIN completa los datos de la tienda propia de DriveMaster (ciudad, dirección, horario, costo de
- * envío). Mientras falten ciudad, dirección u horario, sus productos no aparecen en el catálogo
- * marketplace con la etiqueta "Vendido por DriveMaster". Esta tienda no tiene usuario TIENDA que pueda
- * hacerlo por su cuenta.
+ * Datos públicos de una tienda: ciudad, dirección, horario y costo de envío. Mientras falten ciudad,
+ * dirección u horario, sus productos no aparecen en el catálogo marketplace.
+ *  - ADMIN, para la tienda propia de DriveMaster (no tiene usuario TIENDA): guardar = actualizarTiendaPropia.
+ *  - TIENDA, para la suya: se pasa alGuardar = actualizarMiTienda.
  */
-export default function DatosTiendaPropia({ token, tienda, onGuardado }) {
+export default function DatosTiendaPropia({ token, tienda, onGuardado, alGuardar = actualizarTiendaPropia, titulo = "Tienda de DriveMaster" }) {
   const [form, setForm] = useState({
     ciudad: tienda.ciudad || "",
     barrio: tienda.barrio || "",
@@ -38,7 +38,7 @@ export default function DatosTiendaPropia({ token, tienda, onGuardado }) {
     setGuardando(true);
     setError(null);
     try {
-      await actualizarTiendaPropia(token, {
+      await alGuardar(token, {
         ciudad: form.ciudad.trim(), barrio: form.barrio.trim() || null, direccion: form.direccion.trim(),
         horario: form.horario.trim(), telefono: form.telefono.trim() || null,
         ofreceEnvio: form.ofreceEnvio, costoEnvio: form.ofreceEnvio ? Number(form.costoEnvio) : null,
@@ -55,15 +55,17 @@ export default function DatosTiendaPropia({ token, tienda, onGuardado }) {
   return (
     <section className="ap-propia" aria-labelledby="ap-propia-titulo">
       <div className="ap-propia__cabecera">
-        <h2 id="ap-propia-titulo">Tienda de DriveMaster</h2>
+        <h2 id="ap-propia-titulo">{titulo}</h2>
         <span className={`ap-chip ${tienda.datosCompletos ? "ap-chip--aprobado" : "ap-chip--pendiente"}`}>
           {tienda.datosCompletos ? "Visible en el catálogo" : "Completar datos"}
         </span>
       </div>
       <p className="ap-sub">
         {tienda.datosCompletos
-          ? "Sus productos se muestran en el catálogo con la etiqueta «Vendido por DriveMaster»; se pagan por la compra normal."
-          : "Sus productos no se muestran en el catálogo hasta completar ciudad, dirección y horario."}
+          ? (tienda.plataforma
+            ? "Sus productos se muestran en el catálogo con la etiqueta «Vendido por DriveMaster»; se pagan por la compra normal."
+            : "Tus productos se muestran en el catálogo de las tiendas.")
+          : (tienda.plataforma ? "Sus productos" : "Tus productos") + " no se muestran en el catálogo hasta completar ciudad, dirección y horario."}
       </p>
 
       <form className="ap-propia__form" onSubmit={guardar}>
