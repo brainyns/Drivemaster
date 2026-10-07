@@ -53,6 +53,7 @@ public class PedidoTiendaService {
     private final PagoMarketplaceService pagoMarketplace;
     private final AvisosSolicitudServicio avisos;
     private final LiquidacionService liquidacion;
+    private final ParametrosMarketplace parametros;
 
     public PedidoTiendaService(PedidoTiendaRepository pedidoRepository,
                                TiendaRepository tiendaRepository,
@@ -65,8 +66,10 @@ public class PedidoTiendaService {
                                TransicionOrdenService transiciones,
                                PagoMarketplaceService pagoMarketplace,
                                AvisosSolicitudServicio avisos,
-                               LiquidacionService liquidacion) {
+                               LiquidacionService liquidacion,
+                               ParametrosMarketplace parametros) {
         this.liquidacion = liquidacion;
+        this.parametros = parametros;
         this.pedidoRepository = pedidoRepository;
         this.tiendaRepository = tiendaRepository;
         this.ordenRepository = ordenRepository;
@@ -123,16 +126,24 @@ public class PedidoTiendaService {
 
     public PedidoTienda despachar(String correoTienda, String pedidoId, String nota) {
         Tienda tienda = tiendaDe(correoTienda);
-        pedidoRepository.findById(pedidoId).filter(p -> tienda.getId().equals(p.getTiendaId())).ifPresent(p -> {
-            if (PedidoTienda.RETIRO.equals(p.getEntrega())) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Este pedido es para retirar en tu tienda: márcalo como \"Listo para retirar\"");
-            }
-        });
-        PedidoTienda pedido = cambiarPendiente(tienda, pedidoId, new Update()
+        PedidoTienda previo = pedidoRepository.findById(pedidoId).filter(p -> tienda.getId().equals(p.getTiendaId())).orElse(null);
+        if (previo != null && PedidoTienda.RETIRO.equals(previo.getEntrega())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Este pedido es para retirar en tu tienda: márcalo como \"Listo para retirar\"");
+        }
+        LocalDateTime ahora = LocalDateTime.now();
+        Update cambios = new Update()
                 .set("estado", PedidoTienda.DESPACHADO)
-                .set("fechaDespacho", LocalDateTime.now())
-                .set("notaDespacho", recortar(nota)));
+                .set("fechaDespacho", ahora)
+                .set("notaDespacho", recortar(nota));
+        // Envío del catálogo: el cliente confirma la recepción; si no responde, se confirma sola a los N días hábiles
+        boolean envioCatalogo = previo != null && previo.esCatalogo() && PedidoTienda.ENVIO.equals(previo.getEntrega());
+        int diasAuto = parametros.plazoAutoconfirmacionDiasHabiles();
+        if (envioCatalogo) {
+            cambios.set("autoconfirmaDespuesDe", com.drivemaster.drivemaster.util.PlazoHabil.sumarDiasHabiles(ahora, diasAuto));
+        }
+        PedidoTienda pedido = cambiarPendiente(tienda, pedidoId, cambios);
+        if (envioCatalogo) avisos.pedidoEnviado(pedido, diasAuto);
         ordenDe(pedido).ifPresent(o -> {
             try {
                 transiciones.registrar(o, new Actor("TIENDA", tienda.getId(), tienda.getNombre()),
@@ -192,6 +203,54 @@ public class PedidoTiendaService {
             }
             avisos.pedidoNoDespachado(orden, pedido);
         }
+        return pedido;
+    }
+
+    // ─── Problemas con envíos del catálogo (ADMIN) ───────────────────────────
+
+    public static final String RESOLVER_ENTREGA = "CONFIRMAR_ENTREGA";
+    public static final String RESOLVER_REEMBOLSO = "REEMBOLSAR";
+
+    /**
+     * El ADMIN resuelve un problema reportado por el cliente: CONFIRMAR_ENTREGA (sí llegó: el pedido
+     * queda ENTREGADO y la línea de la tienda se habilita) o REEMBOLSAR (no llegó: se anula la línea
+     * de la tienda y se registra el reembolso de ese pedido). Solo si el problema sigue abierto.
+     */
+    public PedidoTienda resolverProblema(String correoAdmin, String pedidoId, String resolucion) {
+        String r = resolucion != null ? resolucion.trim().toUpperCase() : "";
+        if (!RESOLVER_ENTREGA.equals(r) && !RESOLVER_REEMBOLSO.equals(r)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La resolución debe ser CONFIRMAR_ENTREGA o REEMBOLSAR");
+        }
+        PedidoTienda actual = pedidoRepository.findById(pedidoId).filter(PedidoTienda::esCatalogo)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+        if (!Boolean.TRUE.equals(actual.getProblemaReportado()) || !PedidoTienda.DESPACHADO.equals(actual.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este pedido no tiene un problema abierto");
+        }
+        boolean reembolsa = RESOLVER_REEMBOLSO.equals(r);
+        PedidoTienda pedido = mongoTemplate.findAndModify(
+                Query.query(Criteria.where("id").is(pedidoId).and("estado").is(PedidoTienda.DESPACHADO)
+                        .and("problemaReportado").is(true).and("resolucionProblema").exists(false)),
+                new Update().set("estado", reembolsa ? PedidoTienda.NO_ENTREGADO : PedidoTienda.ENTREGADO)
+                        .set("resolucionProblema", reembolsa ? "REEMBOLSO" : "ENTREGA_CONFIRMADA_POR_ADMIN")
+                        .set("fechaResolucionProblema", LocalDateTime.now()),
+                FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
+        if (pedido == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Alguien más ya resolvió este problema");
+        }
+        if (reembolsa) {
+            for (RepartoPago linea : repartoRepository.findByPedidoTiendaId(pedidoId)) {
+                if (RepartoPago.PENDIENTE.equals(linea.getEstado())) {
+                    linea.setEstado(RepartoPago.ANULADO);
+                    linea.setNota("Problema con el envío resuelto con reembolso por " + correoAdmin);
+                    repartoRepository.save(linea);
+                }
+            }
+            pagoRepository.findById(pedido.getPagoId()).ifPresent(pago -> pagoMarketplace.registrarReembolso(pago, pedidoId,
+                    pedido.getTotal(), "El envío de " + pedido.getTiendaNombre() + " no llegó (resuelto por el ADMIN)"));
+        } else {
+            liquidacion.pedidoRecibido(pedidoId, "ENTREGA_CONFIRMADA_POR_ADMIN");
+        }
+        avisos.problemaEnvioResuelto(pedido, reembolsa);
         return pedido;
     }
 

@@ -126,7 +126,8 @@ public class MysqlDataInitializer implements CommandLineRunner {
     new Object[]{"HORA_INICIO_ATENCION",         "7",     "Hora (Colombia) en que empieza a correr el plazo de respuesta del taller (L-S)"},
     new Object[]{"HORA_FIN_ATENCION",            "19",    "Hora (Colombia) en que se detiene el plazo de respuesta del taller"},
     new Object[]{"PLAZO_DESPACHO_DIAS_HABILES",  "2",     "Días hábiles que tiene una tienda para despachar un pedido (desde el pago)"},
-    new Object[]{"PLAZO_ENCARGO_DIAS_EXTRA",     "2",     "Días hábiles extra sobre los días estimados de un encargo antes de alertar al ADMIN"}
+    new Object[]{"PLAZO_ENCARGO_DIAS_EXTRA",     "2",     "Días hábiles extra sobre los días estimados de un encargo antes de alertar al ADMIN"},
+    new Object[]{"PLAZO_AUTOCONFIRMACION_DIAS_HABILES", "5", "Días hábiles tras despachar un envío del catálogo para que el cliente confirme; si no responde se confirma sola"}
 );
 
         for (Object[] p : params) {

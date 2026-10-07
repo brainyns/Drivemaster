@@ -50,6 +50,13 @@ public class PedidoTiendaController {
         return ResponseEntity.ok(service.validarRetiro(auth.getName(), id, body != null ? body.get("codigo") : null));
     }
 
+    /** ADMIN: resuelve un problema reportado por el cliente (CONFIRMAR_ENTREGA o REEMBOLSAR). */
+    @PostMapping("/{id}/problema/resolver")
+    public ResponseEntity<PedidoTienda> resolverProblema(@PathVariable String id,
+                                                         @RequestBody Map<String, String> body, Authentication auth) {
+        return ResponseEntity.ok(service.resolverProblema(auth.getName(), id, body != null ? body.get("resolucion") : null));
+    }
+
     @PatchMapping("/{id}/despachar")
     public ResponseEntity<PedidoTienda> despachar(@PathVariable String id,
                                                   @RequestBody(required = false) Map<String, String> body,

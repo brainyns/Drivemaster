@@ -16,14 +16,21 @@ public record CompraDTO(String id, String estado, String motivoNoAplicada, doubl
                                   double total, double costoEnvio, LocalDateTime plazoDespachoHasta,
                                   String tiendaDireccion, String tiendaCiudad, String tiendaHorario,
                                   String envioDireccion, String envioCiudad,
-                                  LocalDateTime fechaListoRetiro, LocalDateTime fechaRetirado, boolean codigoUsado) {
+                                  LocalDateTime fechaListoRetiro, LocalDateTime fechaRetirado, boolean codigoUsado,
+                                  // Envío: despacho, guía, confirmación y problema reportado
+                                  LocalDateTime fechaDespacho, String notaDespacho, LocalDateTime autoconfirmaDespuesDe,
+                                  LocalDateTime fechaRecibidoCliente, boolean recepcionAutomatica,
+                                  boolean problemaReportado, String resolucionProblema) {
 
         public static PedidoCompraDTO de(PedidoTienda p) {
             return new PedidoCompraDTO(p.getId(), p.getTiendaId(), p.getTiendaNombre(), p.getEntrega(), p.getEstado(),
                     p.getTotal() != null ? p.getTotal() : 0, p.getCostoEnvio() != null ? p.getCostoEnvio() : 0,
                     p.getPlazoDespachoHasta(), p.getTiendaDireccion(), p.getTiendaCiudad(), p.getTiendaHorario(),
                     p.getEnvioDireccion(), p.getEnvioCiudad(), p.getFechaListoRetiro(), p.getFechaRetirado(),
-                    Boolean.TRUE.equals(p.getCodigoRetiroUsado()));
+                    Boolean.TRUE.equals(p.getCodigoRetiroUsado()),
+                    p.getFechaDespacho(), p.getNotaDespacho(), p.getAutoconfirmaDespuesDe(), p.getFechaRecibidoCliente(),
+                    Boolean.TRUE.equals(p.getRecepcionAutomatica()), Boolean.TRUE.equals(p.getProblemaReportado()),
+                    p.getResolucionProblema());
         }
     }
 }

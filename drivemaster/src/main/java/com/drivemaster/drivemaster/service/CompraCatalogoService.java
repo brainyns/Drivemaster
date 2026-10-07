@@ -511,6 +511,12 @@ public class CompraCatalogoService {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                             tienda.getNombre() + " no hace envíos: elige retiro en la tienda para esos productos");
                 }
+                // La tienda solo envía dentro de su ciudad (el costo fijo no cubre otras)
+                if (!CatalogoService.normalizar(tienda.getCiudad()).equals(CatalogoService.normalizar(r.envio() != null ? r.envio().ciudad() : null))) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, tienda.getNombre() + " solo envía dentro de "
+                            + tienda.getCiudad() + ": elige retiro en la tienda o una dirección en esa ciudad");
+                }
+                // PENDIENTE (ver drivemaster/PENDIENTES.md): el costo de envío se cobra tal cual, sin IVA
                 costoEnvio = Dinero.pesos(tienda.getCostoEnvio());
             }
             BigDecimal totalTienda = sub.add(ivaTienda).add(costoEnvio);

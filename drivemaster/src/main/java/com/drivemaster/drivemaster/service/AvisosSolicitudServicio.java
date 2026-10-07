@@ -199,6 +199,28 @@ public class AvisosSolicitudServicio {
                 + (pedido.getMotivoNoDespacho() != null ? pedido.getMotivoNoDespacho() : "sin motivo"));
     }
 
+    /** La tienda despachó un envío: el cliente sabe que debe confirmar la recepción (o reportar un problema). */
+    public void pedidoEnviado(PedidoTienda pedido, int diasAutoconfirmacion) {
+        usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(), "Tu pedido va en camino",
+                EmailServicioBuilder.clienteEnvioEnCamino(c.getNombre(), pedido, diasAutoconfirmacion)));
+    }
+
+    /** El cliente reportó un problema con un envío: alerta al ADMIN y aviso a la tienda. */
+    public void problemaEnvio(PedidoTienda pedido, String detalle) {
+        alertaAdmin("Problema con un envío", "El cliente de la compra " + pedido.getCompraId() + " reportó un problema con el pedido "
+                + pedido.getId() + " de " + pedido.getTiendaNombre() + " (" + Math.round(pedido.getTotal() != null ? pedido.getTotal() : 0)
+                + " COP): " + detalle + ". La liquidación de la tienda está en pausa hasta que lo resuelvas.");
+        tiendaRepository.findById(pedido.getTiendaId()).ifPresent(tienda -> correoTienda(tienda).ifPresent(correo ->
+                enviar(correo, "El cliente reportó un problema con un envío",
+                        EmailServicioBuilder.tiendaProblemaEnvio(tienda.getNombre(), pedido, detalle))));
+    }
+
+    public void problemaEnvioResuelto(PedidoTienda pedido, boolean reembolsa) {
+        usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(), "Resolvimos el problema con tu pedido",
+                EmailServicioBuilder.clienteProblemaEnvioResuelto(c.getNombre(), pedido.getTiendaNombre(), reembolsa,
+                        pedido.getTotal() != null ? pedido.getTotal() : 0)));
+    }
+
     /** El pedido de retiro está listo: el cliente ya puede pasar por la tienda con su código. */
     public void pedidoListoParaRetirar(PedidoTienda pedido) {
         usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(),

@@ -177,6 +177,11 @@ export default function Aprobaciones({ token }) {
                     <span className={`ap-chip ap-chip--${estado.toLowerCase()}`}>{ETIQUETA_ESTADO[estado]}</span>
                     {n.planActual && <span className="ap-chip">Plan {n.planActual}</span>}
                     {estado === "APROBADO" && !n.activo && <span className="ap-chip ap-chip--rechazado">Inactivo</span>}
+                    {n.tipo === "TIENDA" && n.datosCompletos === false && (
+                      <span className="ap-chip ap-chip--pendiente" title="Le falta dirección, ciudad u horario: sus productos no se muestran en el catálogo hasta completarlos">
+                        Completar datos
+                      </span>
+                    )}
                   </div>
 
                   <h2 className="ap-card__nombre">{n.nombre}</h2>
@@ -188,6 +193,10 @@ export default function Aprobaciones({ token }) {
                     <div><dt>Correo</dt><dd>{n.correoUsuario || n.correoContacto || "—"}</dd></div>
                     <div><dt>Teléfono</dt><dd>{n.telefono || "—"}</dd></div>
                     {n.tipo === "TIENDA" && <div><dt>NIT</dt><dd>{n.nit || "—"}</dd></div>}
+                    {n.tipo === "TIENDA" && <div><dt>Horario</dt><dd>{n.horario || "Falta completarlo"}</dd></div>}
+                    {n.tipo === "TIENDA" && (
+                      <div><dt>Envío</dt><dd>{n.costoEnvio != null ? `${formatPrecio(n.costoEnvio)} (solo en ${n.ciudad || "su ciudad"})` : "Solo retiro"}</dd></div>
+                    )}
                     {n.tipo === "TALLER" && (
                       <div><dt>Mano de obra</dt><dd>{n.precioManoObra ? formatPrecio(n.precioManoObra) : "—"}</dd></div>
                     )}
