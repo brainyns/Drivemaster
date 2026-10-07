@@ -271,6 +271,8 @@ public class PagoService {
         resultado.put("estado", "APPROVED");
         resultado.put("concepto", pago.getConcepto());
         resultado.put("ordenId", pago.getOrdenServicioId());
+        pagoRepository.findByReferencia(referencia)
+                .ifPresent(p -> resultado.putAll(pagoMarketplace.resumenAplicacion(p)));
         return resultado;
     }
 
@@ -352,6 +354,8 @@ public class PagoService {
                     .ifPresent(p -> {
                         resultado.put("concepto", p.getConcepto());
                         resultado.put("ordenId", p.getOrdenServicioId());
+                        // "estado" es lo que dice Wompi; esto dice si DriveMaster lo aplicó
+                        resultado.putAll(pagoMarketplace.resumenAplicacion(p));
                     });
         }
         return resultado;

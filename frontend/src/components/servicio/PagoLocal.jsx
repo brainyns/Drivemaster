@@ -29,6 +29,14 @@ export default function PagoLocal({ token, pago, onVerificado, onCerrar }) {
     setMensaje(null);
     try {
       const res = await accion();
+      // Wompi puede aprobar y DriveMaster no aplicar el pago (la solicitud cambió, faltó stock…)
+      if (res?.estado === "APPROVED" && res.aplicado === false) {
+        setMensaje(res.reembolsoPendiente
+          ? "Wompi aprobó el pago, pero no se pudo aplicar a esta solicitud. Te enviamos un correo y DriveMaster te devolverá el dinero."
+          : "Wompi aprobó el pago y lo estamos confirmando. Verifica de nuevo en unos segundos.");
+        if (res.reembolsoPendiente) await onVerificado();
+        return;
+      }
       setMensaje(ESTADO_WOMPI[res?.estado] || `Estado: ${res?.estado || "desconocido"}`);
       if (res?.estado === "APPROVED") await onVerificado();
     } catch (e) {
