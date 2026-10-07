@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "./Modal";
 import Icon from "./Icon";
-import { getToken } from "../../services/authService";
+import { detalleProducto } from "../../services/catalogoService";
 import "../../css/product-detail.css";
 
 const formatPrecio = (precio) => {
@@ -15,40 +15,35 @@ const formatPrecio = (precio) => {
 
 const WHATSAPP = "573015335263";
 
-/** Bloque de compatibilidad: no afirma nada hasta que hay vehículo + consulta. */
-function BloqueCompatibilidad({ producto, vehiculo, idsCompatibles, onIrVehiculo }) {
-  const evaluado = !!(vehiculo && idsCompatibles);
-  const compatible = evaluado && idsCompatibles.has(producto.id);
+/** Bloque de compatibilidad: la calcula el backend con el vehículo elegido y solo avisa. */
+function BloqueCompatibilidad({ producto, vehiculo, onIrVehiculo }) {
+  const c = producto.compatibilidad;
 
-  if (!evaluado) {
+  if (!vehiculo || !c) {
     return (
       <div className="dm-detail__compat">
         <Icon name="car" size={25} />
         <div>
-          <strong>{vehiculo ? "Verificando compatibilidad..." : "La compatibilidad es lo primero."}</strong>
-          <p>
-            {vehiculo
-              ? "Estamos consultando los repuestos que le encajan."
-              : "Identifica tu vehículo antes de elegir."}
-          </p>
+          <strong>La compatibilidad es lo primero.</strong>
+          <p>Identifica tu vehículo y te avisamos si este repuesto le sirve.</p>
           <button onClick={onIrVehiculo}>
-            {vehiculo ? "Cambiar vehículo" : "Verificar compatibilidad"} <Icon name="arrow" size={13} />
+            Verificar compatibilidad <Icon name="arrow" size={13} />
           </button>
         </div>
       </div>
     );
   }
 
+  const ok = c === "COMPATIBLE";
   return (
-    <div className={`dm-detail__compat ${compatible ? "is-ok" : "is-no"}`}>
-      <Icon name={compatible ? "shield" : "car"} size={25} />
+    <div className={`dm-detail__compat ${ok ? "is-ok" : "is-no"}`}>
+      <Icon name={ok ? "shield" : "car"} size={25} />
       <div>
         <strong>
-          {compatible ? "Compatible con" : "No compatible con"} {vehiculo.marca} {vehiculo.modelo}
+          {c === "COMPATIBLE" ? "Compatible con" : c === "NO_COMPATIBLE" ? "No compatible con" : "Confirma que le sirve a"}{" "}
+          {vehiculo.marca} {vehiculo.modelo}
         </strong>
-        <p>
-          {[vehiculo.anio, vehiculo.motor].filter(Boolean).join(" · ")}
-        </p>
+        <p>{producto.avisoCompatibilidad || [vehiculo.anio, vehiculo.motor].filter(Boolean).join(" · ")}</p>
         <button onClick={onIrVehiculo}>
           Cambiar vehículo <Icon name="arrow" size={13} />
         </button>
@@ -57,58 +52,55 @@ function BloqueCompatibilidad({ producto, vehiculo, idsCompatibles, onIrVehiculo
   );
 }
 
+/**
+ * Ficha de un producto del catálogo global: la tienda que lo vende (ciudad, dirección, horario y envío)
+ * y el mismo repuesto en otras tiendas para comparar. Se agrega al carrito del catálogo; los productos
+ * "Vendido por DriveMaster" se pagan por la compra normal, por separado de los de las demás tiendas.
+ */
 export default function ProductDetail({
-  producto,
+  producto: inicial,
   vehiculo,
-  idsCompatibles,
   onClose,
-  onAddProduct,
-  onIrSolicitud,
+  onAgregar,
+  onIrCarrito,
   onIrVehiculo,
-  alternativas = [],
-  onAbrirAlternativa,
+  onAbrirProducto,
+  carritoMezclado = false,
 }) {
   const [cantidad, setCantidad] = useState(1);
-  const [mensaje, setMensaje] = useState(null);
-  const token = getToken();
+  const [agregado, setAgregado] = useState(false);
+  // Detalle completo (con otras tiendas); mientras llega se muestra la tarjeta
+  const [completo, setCompleto] = useState({ id: null, producto: null });
+  const producto = completo.id === inicial.id && completo.producto ? completo.producto : inicial;
+  const otras = completo.id === inicial.id ? completo.producto?.otrasTiendas || [] : [];
 
-  if (!producto) return null;
+  useEffect(() => {
+    let vivo = true;
+    detalleProducto(inicial.id, vehiculo?.id || "")
+      .then((p) => { if (vivo) setCompleto({ id: inicial.id, producto: p }); })
+      .catch(() => { /* la ficha se queda con los datos de la tarjeta */ });
+    return () => { vivo = false; };
+  }, [inicial.id, vehiculo?.id]);
 
-  const nombre      = producto.nombre || "Sin nombre";
-  const categoria   = producto.categoria || "Repuesto";
-  const marca       = producto.marca || null;
-  const referencia  = producto.codigo || null;
-  const precio      = producto.precioVenta;
-  const stock       = producto.stockActual ?? 0;
-  const stockMinimo = producto.stockMinimo ?? 0;
-  const imagen      = producto.imagenUrl || producto.imagen || null;
-  const tipo        = producto.tipo || "STOCK";
-
-  const esEncargo  = tipo === "ENCARGO";
-  const sinStock   = !esEncargo && stock === 0;
-  const stockBajo  = !esEncargo && stock > 0 && stock <= stockMinimo;
-  const excede     = !esEncargo && cantidad > stock;
-
-  const evaluado    = !!(vehiculo && idsCompatibles);
-  const compatible  = evaluado && idsCompatibles.has(producto.id);
-  const bloqueado   = sinStock || excede || (evaluado && !compatible);
+  const nombre = producto.nombre || "Sin nombre";
+  const categoria = producto.categoria || "Repuesto";
+  const marca = producto.marca || null;
+  const tienda = producto.tienda;
+  const encargo = producto.tipo === "ENCARGO";
+  const tope = encargo ? 99 : Math.max(1, Math.min(99, producto.stock ?? 99));
+  const sinStock = !producto.disponible;
+  const excede = !encargo && producto.stock != null && producto.stock < 20 && cantidad > producto.stock;
+  const bloqueado = sinStock || excede;
 
   const whatsappUrl = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(
-    `Hola, estoy interesado en el producto: ${nombre}${referencia ? ` (Ref: ${referencia})` : ""}. ¿Podrían brindarme información sobre disponibilidad, precio y tiempo de entrega? Quedo atento. Saludos.`
+    `Hola, estoy interesado en el producto: ${nombre}${producto.referencia ? ` (Ref: ${producto.referencia})` : ""}. ¿Podrían brindarme información sobre disponibilidad, precio y tiempo de entrega? Quedo atento. Saludos.`
   )}`;
 
-  const handleAgregar = () => {
-    if (!token) {
-      setMensaje("Debes iniciar sesión primero");
-      return;
-    }
-    if (excede) {
-      setMensaje(`Solo quedan ${stock} unidades disponibles`);
-      return;
-    }
-    onAddProduct(producto, cantidad);
-    setMensaje("¡Agregado a la solicitud!");
-    setTimeout(() => setMensaje(null), 2000);
+  const agregar = () => {
+    // El carrito guarda lo necesario para mostrarse; las otras tiendas no se arrastran al almacenamiento
+    const { otrasTiendas, ...ligero } = producto; // eslint-disable-line no-unused-vars
+    onAgregar(ligero, cantidad);
+    setAgregado(true);
   };
 
   return (
@@ -116,8 +108,8 @@ export default function ProductDetail({
       <div className="dm-detail">
         <div className="dm-detail__visual">
           <span className="dm-eyebrow">{categoria}{marca ? ` / ${marca}` : ""}</span>
-          {imagen ? (
-            <img className="dm-detail__image" src={imagen} alt={nombre} />
+          {producto.imagenUrl ? (
+            <img className="dm-detail__image" src={producto.imagenUrl} alt={nombre} />
           ) : (
             <div className="dm-detail__placeholder">
               <Icon name="box" size={64} />
@@ -125,73 +117,45 @@ export default function ProductDetail({
             </div>
           )}
           <span className="dm-detail__note">
-            {producto.masVendido && "Producto más solicitado · "}
-            Referencia de catálogo interna
+            {producto.esPlataforma ? "Vendido por DriveMaster" : `Vendido por ${tienda?.nombre}`}
           </span>
         </div>
 
         <div className="dm-detail__copy">
           <div className="dm-card__brand">
-            <span>{marca || "DriveMaster"}</span>
-            {referencia && <em>REF. {referencia}</em>}
+            <span>{marca || tienda?.nombre || "DriveMaster"}</span>
+            {producto.referencia && <em>REF. {producto.referencia}</em>}
           </div>
 
           <h2>{nombre}</h2>
 
-          <BloqueCompatibilidad
-            producto={producto}
-            vehiculo={vehiculo}
-            idsCompatibles={idsCompatibles}
-            onIrVehiculo={onIrVehiculo}
-          />
+          <BloqueCompatibilidad producto={producto} vehiculo={vehiculo} onIrVehiculo={onIrVehiculo} />
 
           <dl className="dm-specs">
             <div>
               <dt>Categoría</dt>
               <dd>{categoria}</dd>
             </div>
-            {referencia && (
-              <div>
-                <dt>Referencia</dt>
-                <dd>{referencia}</dd>
-              </div>
-            )}
             <div>
               <dt>Disponibilidad</dt>
               <dd>
-                {esEncargo
-                  ? "Bajo pedido"
-                  : sinStock
-                    ? "Sin stock"
-                    : `${stock} unidades${stockBajo ? " · stock bajo" : ""}`}
+                {encargo
+                  ? `Bajo pedido${producto.diasEntrega ? ` · ${producto.diasEntrega} días` : ""}`
+                  : sinStock ? "Sin stock" : `${producto.stock}${producto.stock >= 20 ? "+" : ""} unidades`}
               </dd>
             </div>
-            {producto.especificaciones &&
-              Object.entries(producto.especificaciones).map(([k, v]) => (
-                <div key={k}>
-                  <dt>{k}</dt>
-                  <dd>{v}</dd>
-                </div>
-              ))}
+            {tienda && (
+              <>
+                <div><dt>Tienda</dt><dd>{producto.esPlataforma ? "DriveMaster" : tienda.nombre} · {tienda.ciudad}</dd></div>
+                <div><dt>Retiro</dt><dd>{tienda.direccion} · {tienda.horario}</dd></div>
+                <div><dt>Envío</dt><dd>{tienda.ofreceEnvio ? `${formatPrecio(tienda.costoEnvio)} · solo dentro de ${tienda.ciudad}` : "Solo retiro en la tienda"}</dd></div>
+              </>
+            )}
           </dl>
 
-          {producto.modelosCompatibles?.length > 0 && (
-            <div className="dm-detail__models">
-              <span>Modelos compatibles</span>
-              <div>
-                {producto.modelosCompatibles.map((c, i) => (
-                  <em key={i}>
-                    {c.marca} {c.modelo}
-                    {c.anio ? ` ${c.anio}` : ""}
-                  </em>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="dm-detail__price">
-            <strong>{formatPrecio(precio)}</strong>
-            <span>COP · Precio referencial</span>
+            <strong>{formatPrecio(producto.precio)}</strong>
+            <span>COP · el IVA y el envío se calculan al pagar</span>
           </div>
 
           <div className="dm-detail__qty">
@@ -206,8 +170,8 @@ export default function ProductDetail({
               </button>
               <strong>{cantidad}</strong>
               <button
-                onClick={() => setCantidad(cantidad + 1)}
-                disabled={!esEncargo && cantidad >= stock}
+                onClick={() => setCantidad(Math.min(tope, cantidad + 1))}
+                disabled={cantidad >= tope}
                 aria-label="Aumentar cantidad"
               >
                 +
@@ -215,14 +179,8 @@ export default function ProductDetail({
             </div>
           </div>
 
-          <button className="dm-btn dm-btn--primary dm-btn--full" onClick={handleAgregar} disabled={bloqueado}>
-            {sinStock
-              ? "Sin stock disponible"
-              : excede
-                ? `Solo quedan ${stock}`
-                : evaluado && !compatible
-                  ? "No compatible con tu vehículo"
-                  : "Agregar a solicitud"}
+          <button className="dm-btn dm-btn--primary dm-btn--full" onClick={agregar} disabled={bloqueado}>
+            {sinStock ? "Sin stock disponible" : excede ? `Solo quedan ${producto.stock}` : "Agregar al carrito"}
             {!bloqueado && <Icon name="arrow" size={18} />}
           </button>
 
@@ -235,39 +193,57 @@ export default function ProductDetail({
             <Icon name="message" size={19} /> Cotizar por WhatsApp
           </a>
 
-          {token && onIrSolicitud && (
-            <button className="dm-detail__go" onClick={onIrSolicitud}>
-              Ir a mi solicitud <Icon name="arrow" size={14} />
-            </button>
+          {agregado && (
+            <div className="dm-detail__msg" role="status">
+              ¡Agregado al carrito!{" "}
+              {(carritoMezclado || producto.esPlataforma) && (
+                <span className="dm-detail__sep">
+                  {carritoMezclado
+                    ? "Estos productos se pagan por separado: los de DriveMaster por la compra normal y los de las demás tiendas con un solo pago."
+                    : "Los productos de DriveMaster se pagan por la compra normal, aparte de los de otras tiendas."}
+                </span>
+              )}
+              <button className="dm-detail__go" onClick={onIrCarrito}>
+                Ir al carrito <Icon name="arrow" size={14} />
+              </button>
+            </div>
           )}
-
-          {mensaje && <div className="dm-detail__msg">{mensaje}</div>}
         </div>
       </div>
 
-      {alternativas.length > 0 && (
-        <div className="dm-alternatives">
-          <h3>Alternativas para seguir avanzando</h3>
-          <p>Compara otras opciones de la misma categoría.</p>
-          <div>
-            {alternativas.map((a) => (
-              <button key={a.id} onClick={() => onAbrirAlternativa(a)}>
-                {a.imagenUrl || a.imagen ? (
-                  <img src={a.imagenUrl || a.imagen} alt="" />
-                ) : (
-                  <span className="dm-alternatives__ph"><Icon name="box" size={26} /></span>
-                )}
-                <span>
-                  <small>{a.marca || "DriveMaster"}{a.codigo ? ` · ${a.codigo}` : ""}</small>
-                  <strong>{a.nombre}</strong>
-                  <b>{formatPrecio(a.precioVenta)}</b>
-                </span>
-                <Icon name="arrow" size={19} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="dm-alternatives">
+        <h3>El mismo repuesto en otras tiendas</h3>
+        {otras.length === 0 ? (
+          <p>Por ahora solo lo vende {producto.esPlataforma ? "DriveMaster" : tienda?.nombre}.</p>
+        ) : (
+          <>
+            <p>Compara precio, ciudad y envío.</p>
+            <div>
+              {otras.map((a) => (
+                <button key={a.id} onClick={() => onAbrirProducto(a)}>
+                  {a.imagenUrl ? <img src={a.imagenUrl} alt="" /> : <span className="dm-alternatives__ph"><Icon name="box" size={26} /></span>}
+                  <span>
+                    <small>
+                      {a.esPlataforma ? "Vendido por DriveMaster" : a.tienda.nombre} · {a.tienda.ciudad}
+                      {a.tienda.ofreceEnvio ? ` · envío ${formatPrecio(a.tienda.costoEnvio)}` : " · solo retiro"}
+                    </small>
+                    <strong>{a.nombre}</strong>
+                    <b>
+                      {formatPrecio(a.precio)}
+                      {a.precio !== producto.precio && (
+                        <i className={`dm-diff dm-diff--${a.precio < producto.precio ? "menor" : "mayor"}`}>
+                          {" "}({a.precio < producto.precio ? "−" : "+"}{formatPrecio(Math.abs(a.precio - producto.precio))})
+                        </i>
+                      )}
+                    </b>
+                  </span>
+                  <Icon name="arrow" size={19} />
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </Modal>
   );
 }

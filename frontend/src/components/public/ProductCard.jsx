@@ -11,20 +11,16 @@ const formatPrecio = (precio) => {
 };
 
 /**
- * Etiqueta de compatibilidad. Sin vehículo seleccionado no se afirma nada:
- * el prototipo del mockup decía "verificar compatibilidad" y aquí se mantiene
- * para no prometer una compatibilidad que todavía no se ha comprobado.
+ * Etiqueta de compatibilidad. La calcula el backend con el vehículo elegido (solo avisa: un repuesto
+ * "no compatible" se muestra igual). Sin vehículo no se afirma nada.
  */
-function Compatibilidad({ producto, vehiculo, idsCompatibles }) {
-  let estado = "verificar";
-  let texto = "Verificar compatibilidad";
-
-  if (vehiculo && idsCompatibles) {
-    estado = idsCompatibles.has(producto.id) ? "compatible" : "incompatible";
-    texto = estado === "compatible"
-      ? "Compatible con tu vehículo"
-      : "No compatible con tu vehículo";
-  }
+function Compatibilidad({ producto }) {
+  const mapa = {
+    COMPATIBLE: { estado: "compatible", texto: "Compatible con tu vehículo" },
+    NO_COMPATIBLE: { estado: "incompatible", texto: "No compatible con tu vehículo" },
+    POR_CONFIRMAR: { estado: "verificar", texto: "Confirma la compatibilidad" },
+  };
+  const { estado, texto } = mapa[producto.compatibilidad] || { estado: "verificar", texto: "Verificar compatibilidad" };
 
   return (
     <span className={`dm-compat dm-compat--${estado}`}>
@@ -34,36 +30,29 @@ function Compatibilidad({ producto, vehiculo, idsCompatibles }) {
   );
 }
 
-/** Estado de inventario. "ENCARGO" significa bajo pedido, no stock local. */
+/** Estado de inventario según el catálogo global. "ENCARGO" significa bajo pedido, no stock local. */
 function EstadoStock({ producto }) {
-  const stock = producto.stockActual ?? 0;
-  const stockMinimo = producto.stockMinimo ?? 0;
-  const esEncargo = producto.tipo === "ENCARGO";
-
-  if (esEncargo) {
+  if (producto.tipo === "ENCARGO") {
     return (
       <span className="dm-stock is-encargo">
-        <i /> Bajo pedido
+        <i /> Bajo pedido{producto.diasEntrega ? ` · ${producto.diasEntrega} días` : ""}
       </span>
     );
   }
-
-  if (stock === 0) {
+  if (!producto.disponible) {
     return (
       <span className="dm-stock is-out">
         <i /> Sin stock
       </span>
     );
   }
-
-  if (stock <= stockMinimo) {
+  if (producto.stock != null && producto.stock <= 5) {
     return (
       <span className="dm-stock is-low">
-        <i /> Quedan {stock}
+        <i /> Quedan {producto.stock}
       </span>
     );
   }
-
   return (
     <span className="dm-stock">
       <i /> En stock
@@ -71,13 +60,13 @@ function EstadoStock({ producto }) {
   );
 }
 
-export default function ProductCard({ producto, vehiculo, idsCompatibles, onClick }) {
-  const nombre    = producto.nombre || "Sin nombre";
+/** Tarjeta de un producto del catálogo global: de DriveMaster o de cualquier tienda aprobada. */
+export default function ProductCard({ producto, onClick }) {
+  const nombre = producto.nombre || "Sin nombre";
   const categoria = producto.categoria || "Repuesto";
-  const marca     = producto.marca || null;
-  const referencia= producto.codigo || null;
-  const precio    = producto.precioVenta;
-  const imagen    = producto.imagenUrl || producto.imagen || null;
+  const tienda = producto.tienda;
+  const marca = producto.marca || null;
+  const imagen = producto.imagenUrl || null;
 
   return (
     <button className="dm-card" onClick={() => onClick(producto)}>
@@ -93,7 +82,7 @@ export default function ProductCard({ producto, vehiculo, idsCompatibles, onClic
           </div>
         )}
 
-        {producto.masVendido && <span className="dm-card__top">Top ventas</span>}
+        {producto.esPlataforma && <span className="dm-card__top">Vendido por DriveMaster</span>}
 
         <span className="dm-card__open">
           <Icon name="plus" size={18} />
@@ -102,18 +91,29 @@ export default function ProductCard({ producto, vehiculo, idsCompatibles, onClic
 
       <div className="dm-card__info">
         <div className="dm-card__brand">
-          <span>{marca || "DriveMaster"}</span>
-          {referencia && <em>REF. {referencia}</em>}
+          <span>{marca || tienda?.nombre || "DriveMaster"}</span>
+          {producto.referencia && <em>REF. {producto.referencia}</em>}
         </div>
 
         <h3>{nombre}</h3>
 
-        <Compatibilidad producto={producto} vehiculo={vehiculo} idsCompatibles={idsCompatibles} />
+        {tienda && (
+          <p className="dm-card__store">
+            {producto.esPlataforma ? "DriveMaster" : tienda.nombre} · {tienda.ciudad}
+          </p>
+        )}
+
+        <Compatibilidad producto={producto} />
+        {producto.avisoCompatibilidad && (
+          <p className={`dm-card__aviso dm-card__aviso--${producto.compatibilidad === "NO_COMPATIBLE" ? "error" : "aviso"}`}>
+            {producto.avisoCompatibilidad}
+          </p>
+        )}
 
         <div className="dm-card__bottom">
           <strong>
-            {formatPrecio(precio)}
-            <small>COP · Precio referencial</small>
+            {formatPrecio(producto.precio)}
+            <small>COP · {tienda?.ofreceEnvio ? `Envío ${formatPrecio(tienda.costoEnvio)}` : "Retiro en tienda"}</small>
           </strong>
           <EstadoStock producto={producto} />
         </div>

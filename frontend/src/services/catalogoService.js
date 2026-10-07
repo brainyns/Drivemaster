@@ -80,3 +80,21 @@ export function confirmarRecepcion(token, pedidoId) {
 export function reportarProblema(token, pedidoId, detalle) {
   return post(token, `/pedidos/${encodeURIComponent(pedidoId)}/problema`, { detalle }, "No se pudo enviar el reporte");
 }
+
+/**
+ * Trae TODAS las páginas de una consulta del catálogo (tope de seguridad: 10 páginas de 60). La vitrina
+ * principal filtra marca y precio en el navegador, así que necesita el conjunto completo.
+ */
+export async function cargarTodosLosProductos(params = {}) {
+  const TAMANIO = 60;
+  const MAX_PAGINAS = 10;
+  const items = [];
+  let total = 0;
+  for (let pagina = 0; pagina < MAX_PAGINAS; pagina++) {
+    const r = await buscarProductos({ ...params, pagina, tamanio: TAMANIO });
+    items.push(...r.items);
+    total = r.total;
+    if (items.length >= total || r.items.length === 0) break;
+  }
+  return { items, total };
+}

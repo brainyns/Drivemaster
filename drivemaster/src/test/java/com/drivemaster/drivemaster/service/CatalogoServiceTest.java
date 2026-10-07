@@ -369,4 +369,46 @@ class CatalogoServiceTest {
         assertFalse(d.otrasTiendas().get(0).esPlataforma());
         assertEquals("Tienda tB", d.otrasTiendas().get(0).tienda().nombre());
     }
+
+    // ─── La vitrina global muestra la tienda propia solo con datos completos ──
+
+    @Test
+    void losProductosDeDriveMasterSoloSeConsultanSiSuTiendaTieneDatosCompletos() {
+        Tienda propiaIncompleta = Tienda.builder().id("tP").nombre("DriveMaster").plataforma(true)
+                .estadoAprobacion(EstadoAprobacion.APROBADO).activo(true).build();
+        when(tiendaRepository.findAll()).thenReturn(List.of(propiaIncompleta, tienda("tA", "Bogotá", "Cra 7", "L-S", null)));
+        when(mongoTemplate.find(any(Query.class), eq(Producto.class)))
+                .thenReturn(List.of(producto("p1", "tA", "Filtro", "F1", 10_000, 5)));
+
+        service.buscar(null, null, null, null, null, null, null, null, null);
+
+        ArgumentCaptor<Query> q = ArgumentCaptor.forClass(Query.class);
+        verify(mongoTemplate).find(q.capture(), eq(Producto.class));
+        String consulta = q.getValue().getQueryObject().toString();
+        assertTrue(consulta.contains("tA"), consulta);
+        assertFalse(consulta.contains("tP"), "sin ciudad, dirección y horario la tienda propia no se consulta: " + consulta);
+        assertEquals(1, service.filtros().tiendas().size(), "ni aparece en el filtro de tiendas");
+
+        // El ADMIN completa los datos: ahora sí entra, con la etiqueta
+        propiaIncompleta.setCiudad("Bogotá");
+        propiaIncompleta.setDireccion("Cra 7 # 45-10");
+        propiaIncompleta.setHorario("L-S 8-6");
+        reset(mongoTemplate);
+        when(mongoTemplate.find(any(Query.class), eq(Producto.class)))
+                .thenReturn(List.of(producto("p2", "tP", "Aceite", "AC1", 40_000, 9)));
+        PaginaCatalogoDTO pagina = service.buscar(null, null, null, null, null, null, null, null, null);
+        verify(mongoTemplate).find(q.capture(), eq(Producto.class));
+        assertTrue(q.getValue().getQueryObject().toString().contains("tP"));
+        assertTrue(pagina.items().get(0).esPlataforma());
+        assertEquals(2, service.filtros().tiendas().size());
+        assertTrue(service.filtros().tiendas().stream().anyMatch(t -> t.esPlataforma()));
+    }
+
+    @Test
+    void unaVezCompletaLaTiendaPropiaEntraEnLosFiltrosDeCiudad() {
+        Tienda propia = tienda("tP", "Bogotá", "Cra 7", "L-S", null);
+        propia.setPlataforma(true);
+        when(tiendaRepository.findAll()).thenReturn(List.of(propia));
+        assertEquals(List.of("Bogotá"), service.filtros().ciudades());
+    }
 }

@@ -285,3 +285,18 @@
 @media (max-width: 380px) {
   .dm-card__info { padding: 12px 9px 0; }
 }
+/* ── Catálogo global: tienda y avisos de compatibilidad ─────────────────── */
+.dm-card__store {
+  margin: 0;
+  font-size: 12px;
+  color: var(--dm-muted);
+}
+
+.dm-card__aviso {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.dm-card__aviso--error { color: var(--dm-red); }
+.dm-card__aviso--aviso { color: var(--dm-orange); }

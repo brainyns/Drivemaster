@@ -25,7 +25,7 @@ export default function MarketHeader({
         <nav className="dm-header__nav" aria-label="Navegación del catálogo">
           <button onClick={() => onIrInicio?.()}>Inicio</button>
           <button className={activo === "catalogo" ? "mk-header__activo" : ""} aria-current={activo === "catalogo" ? "page" : undefined}
-            onClick={() => onIrCatalogo?.()}>Repuestos de las tiendas</button>
+            onClick={() => onIrCatalogo?.()}>Catálogo</button>
           {esCliente && (
             <button className={activo === "compras" ? "mk-header__activo" : ""} aria-current={activo === "compras" ? "page" : undefined}
               onClick={() => onIrMisCompras?.()}>Mis compras</button>

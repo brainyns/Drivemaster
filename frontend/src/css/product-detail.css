@@ -333,3 +333,15 @@
   .dm-alternatives > div { grid-template-columns: 1fr; }
   .dm-alternatives h3 { font-size: 16px; }
 }
+/* ── Catálogo global: comparación entre tiendas y aviso de pagos separados ── */
+.dm-detail__sep {
+  display: block;
+  margin: 4px 0;
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.dm-diff { font-style: normal; font-size: 12px; font-weight: 600; }
+.dm-diff--menor { color: var(--dm-green); }
+.dm-diff--mayor { color: var(--dm-red); }

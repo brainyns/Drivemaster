@@ -373,3 +373,36 @@
   .dm-catalogo__lead { font-size: 11px; }
   .dm-catalogo .dm-section-heading { gap: 15px; }
 }
+/* ── Catálogo global: nota de compatibilidad y aviso de pagos separados ──── */
+.dm-filters__note {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dm-muted);
+}
+
+.dm-aviso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid rgba(242, 140, 40, 0.5);
+  border-radius: 6px;
+  background: var(--dm-orange-soft);
+  color: var(--dm-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.dm-aviso button {
+  background: none;
+  border: none;
+  color: var(--dm-orange);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
