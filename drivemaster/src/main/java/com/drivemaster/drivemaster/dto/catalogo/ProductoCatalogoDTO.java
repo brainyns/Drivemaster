@@ -14,11 +14,13 @@ public record ProductoCatalogoDTO(String id, String nombre, String marca, String
                                   Integer stock, Integer diasEntrega,
                                   String compatibilidad, String avisoCompatibilidad,
                                   TiendaCatalogoDTO tienda,
+                                  // true: lo vende DriveMaster y se paga por la compra normal, no por el carrito del catálogo
+                                  boolean esPlataforma,
                                   // Solo en el detalle: el mismo repuesto en otras tiendas
                                   List<ProductoCatalogoDTO> otrasTiendas) {
 
     public ProductoCatalogoDTO conOtrasTiendas(List<ProductoCatalogoDTO> otras) {
         return new ProductoCatalogoDTO(id, nombre, marca, categoria, referencia, imagenUrl, precio, tipo, disponible,
-                stock, diasEntrega, compatibilidad, avisoCompatibilidad, tienda, otras);
+                stock, diasEntrega, compatibilidad, avisoCompatibilidad, tienda, esPlataforma, otras);
     }
 }

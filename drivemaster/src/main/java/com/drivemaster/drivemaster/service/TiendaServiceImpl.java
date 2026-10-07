@@ -129,7 +129,15 @@ public class TiendaServiceImpl implements TiendaService {
     /** El dueño actualiza los datos de contacto y ubicación. Nombre y NIT los cambia el ADMIN. */
     @Override
     public TiendaDTO actualizarMiTienda(String correoUsuario, RegistroNegocioRequest r) {
-        Tienda tienda = obtenerPorUsuario(correoUsuario);
+        return toDTO(tiendaRepository.save(aplicarDatos(obtenerPorUsuario(correoUsuario), r)));
+    }
+
+    @Override
+    public TiendaDTO actualizarPlataforma(RegistroNegocioRequest r) {
+        return toDTO(tiendaRepository.save(aplicarDatos(obtenerPlataforma(), r)));
+    }
+
+    private Tienda aplicarDatos(Tienda tienda, RegistroNegocioRequest r) {
         if (r.getTelefono() != null) tienda.setTelefono(r.getTelefono());
         if (r.getCiudad() != null && !r.getCiudad().isBlank()) tienda.setCiudad(r.getCiudad());
         if (r.getBarrio() != null) tienda.setBarrio(r.getBarrio());
@@ -142,7 +150,7 @@ public class TiendaServiceImpl implements TiendaService {
             validarCostoEnvio(r);
             tienda.setCostoEnvio(costoEnvioDe(r));
         }
-        return toDTO(tiendaRepository.save(tienda));
+        return tienda;
     }
 
     @Override

@@ -137,6 +137,23 @@ class TiendaRegistroDatosTest {
     }
 
     @Test
+    void elAdminCompletaLosDatosDeLaTiendaPropiaYQuedaVisibleEnElCatalogo() {
+        Tienda propia = Tienda.builder().id("tP").nombre("DriveMaster").plataforma(true).build();
+        when(tiendaRepository.findFirstByPlataformaTrue()).thenReturn(Optional.of(propia));
+        assertFalse(propia.tieneDatosCompletos());
+
+        RegistroNegocioRequest r = new RegistroNegocioRequest();
+        r.setCiudad("Bogotá");
+        r.setDireccion("Cra 7 # 45-10");
+        r.setHorario("L-S 8am-6pm");
+        TiendaDTO dto = service.actualizarPlataforma(r);
+
+        assertTrue(dto.getDatosCompletos());
+        assertTrue(propia.tieneDatosCompletos());
+        assertTrue(dto.getPlataforma());
+    }
+
+    @Test
     void noSeInventanDatosAlMigrarUnaTiendaSinHorario() {
         // La tienda anterior no se toca sola: sin horario sigue "por completar"
         Tienda vieja = Tienda.builder().id("s1").nombre("Vieja").ciudad("Cali").direccion("Av 3").build();
