@@ -1,29 +1,115 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken } from "../services/authService";
-import { listarMecanicos } from "../services/tallerService";
+import { listarMecanicos, miTaller } from "../services/tallerService";
 import {
   bandejaSolicitudesTaller, aceptarSolicitudServicio, rechazarSolicitudServicio, asignarMecanicoSolicitud,
 } from "../services/solicitudServicioService";
+import { cotizacionesDeOrden } from "../services/cotizacionService";
+import { pedidosDeOrden, confirmarRepuestosRecibidos } from "../services/pedidoTiendaService";
 import EstadoServicio from "../components/servicio/EstadoServicio";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import DiagnosticoForm from "../components/servicio/DiagnosticoForm";
+import CotizacionForm from "../components/servicio/CotizacionForm";
+import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
+import Etiqueta from "../components/servicio/Etiqueta";
 import {
-  URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
+  ESTADOS_EN_CURSO, ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
+import "../css/cotizacion.css";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 
 const porResponder = (s) => s.estado === "ASIGNADA_A_TALLER" && !s.aceptadaPorTaller;
 const agendada = (s) => (s.estado === "ASIGNADA_A_TALLER" && s.aceptadaPorTaller) || s.estado === "EN_REVISION";
+const enCurso = (s) => ESTADOS_EN_CURSO.includes(s.estado);
 
 const FILTROS = [
   { key: "responder", label: "Por responder", filtro: porResponder },
   { key: "agendadas", label: "Agendadas", filtro: agendada },
   { key: "diagnosticadas", label: "Diagnosticadas", filtro: (s) => s.estado === "DIAGNOSTICADA" },
-  { key: "historial", label: "Historial", filtro: (s) => !porResponder(s) && !agendada(s) && s.estado !== "DIAGNOSTICADA" },
+  { key: "encurso", label: "En curso", filtro: enCurso },
+  { key: "historial", label: "Historial", filtro: (s) => !porResponder(s) && !agendada(s) && !enCurso(s) && s.estado !== "DIAGNOSTICADA" },
 ];
+
+/** Cotizaciones emitidas, pedidos a tiendas y recepción de repuestos. */
+function SeguimientoTaller({ token, solicitud, onCambio }) {
+  const [cotizaciones, setCotizaciones] = useState([]);
+  const [pedidos, setPedidos] = useState([]);
+  const [error, setError] = useState(null);
+  const [procesando, setProcesando] = useState(false);
+
+  // Se recarga cada vez que cambia el estado de la solicitud
+  useEffect(() => {
+    let cancelado = false;
+    Promise.all([cotizacionesDeOrden(token, solicitud.id), pedidosDeOrden(token, solicitud.id)])
+      .then(([c, p]) => {
+        if (cancelado) return;
+        setCotizaciones(c || []);
+        setPedidos(p || []);
+      })
+      .catch((e) => { if (!cancelado) setError(e.message); });
+    return () => { cancelado = true; };
+  }, [token, solicitud.id, solicitud.estado]);
+
+  const recibidos = async () => {
+    setProcesando(true);
+    setError(null);
+    try {
+      await confirmarRepuestosRecibidos(token, solicitud.id);
+      await onCambio();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const vigente = cotizaciones[0];
+  return (
+    <>
+      {error && <p className="ss-alerta" role="alert">{error}</p>}
+      {vigente && (
+        <section className="ss-bloque">
+          <h3 className="ss-bloque__titulo">Cotización</h3>
+          <CotizacionDetalle cotizacion={vigente} mostrarComision />
+          {solicitud.estado === "COTIZADA" && <p className="ss-meta">Esperando la respuesta del cliente.</p>}
+          {solicitud.estado === "APROBADA" && <p className="ss-meta">El cliente aprobó. Esperando el pago.</p>}
+          {cotizaciones.length > 1 && <p className="ss-ayuda">{cotizaciones.length - 1} versión(es) anterior(es).</p>}
+        </section>
+      )}
+      {pedidos.length > 0 && (
+        <section className="ss-bloque">
+          <h3 className="ss-bloque__titulo">Pedidos a tiendas</h3>
+          <ul className="ct-items">
+            {pedidos.map((p) => (
+              <li key={p.id} className="ct-item">
+                <span className="ct-item__desc">
+                  <strong>{p.tiendaNombre}</strong>
+                  <span className="ss-meta">
+                    {p.items.map((i) => `${i.cantidad} × ${i.productoNombre}`).join(", ")}
+                    {p.diasEntrega ? ` · encargo hasta ${p.diasEntrega} días` : ""}
+                  </span>
+                  {p.motivoNoDespacho && <span className="ss-meta">Motivo: {p.motivoNoDespacho}</span>}
+                </span>
+                <Etiqueta estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+              </li>
+            ))}
+          </ul>
+          {solicitud.estado === "REPUESTOS_PEDIDOS" && (
+            <div className="ss-acciones">
+              <button className="sv-btn" onClick={recibidos} disabled={procesando}>
+                {procesando ? "Confirmando..." : "Confirmar repuestos recibidos"}
+              </button>
+              <span className="ss-ayuda">Confírmalo cuando tengas los repuestos en el taller.</span>
+            </div>
+          )}
+        </section>
+      )}
+    </>
+  );
+}
 
 /**
  * Bandeja de solicitudes de diagnóstico del taller: responder (aceptar con cita o
@@ -43,13 +129,18 @@ export default function TallerSolicitudes() {
   const [rechazando, setRechazando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [editandoDiagnostico, setEditandoDiagnostico] = useState(false);
+  const [cotizando, setCotizando] = useState(false);
+  const [tarifaHora, setTarifaHora] = useState(null);
   const [procesando, setProcesando] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
-      const [bandeja, mecs] = await Promise.all([bandejaSolicitudesTaller(token), listarMecanicos(token)]);
+      const [bandeja, mecs, taller] = await Promise.all([
+        bandejaSolicitudesTaller(token), listarMecanicos(token), miTaller(token).catch(() => null),
+      ]);
       setSolicitudes(bandeja || []);
       setMecanicos(mecs || []);
+      setTarifaHora(taller?.tarifaHora || null);
       setError(null);
     } catch (e) {
       setError(e.message);
@@ -75,6 +166,7 @@ export default function TallerSolicitudes() {
     setRechazando(false);
     setMotivo("");
     setEditandoDiagnostico(false);
+    setCotizando(false);
     setError(null);
   };
 
@@ -262,12 +354,23 @@ export default function TallerSolicitudes() {
                   ) : (
                     <p className="ss-meta">Sin repuestos: solo mano de obra.</p>
                   )}
-                  {s.estado === "DIAGNOSTICADA" && (
-                    <button className="sv-btn-outline" onClick={() => setEditandoDiagnostico(true)}>Editar diagnóstico y repuestos</button>
+                  {s.estado === "DIAGNOSTICADA" && !cotizando && (
+                    <div className="ss-acciones">
+                      <button className="sv-btn" onClick={() => setCotizando(true)}>Cotizar</button>
+                      <button className="sv-btn-outline" onClick={() => setEditandoDiagnostico(true)}>Editar diagnóstico y repuestos</button>
+                    </div>
                   )}
                 </section>
               )
             )}
+
+            {s.estado === "DIAGNOSTICADA" && cotizando && !editandoDiagnostico && (
+              <CotizacionForm token={token} solicitud={s} tarifaHora={tarifaHora}
+                onCancelar={() => setCotizando(false)}
+                onEmitida={async () => { setCotizando(false); await cargar(); }} />
+            )}
+
+            {s.cotizacionId && <SeguimientoTaller token={token} solicitud={s} onCambio={cargar} />}
           </div>
 
           <aside className="ss-detalle__lateral">

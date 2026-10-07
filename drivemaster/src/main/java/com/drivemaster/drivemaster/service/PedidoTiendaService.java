@@ -97,15 +97,27 @@ public class PedidoTiendaService {
         return pedido;
     }
 
-    public PedidoTienda noPuedoDespachar(String correoTienda, String pedidoId, String motivo) {
-        String texto = recortar(motivo);
-        if (texto == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica por qué no puedes despachar");
+    /**
+     * tipoMotivo: SIN_REPUESTO ("No tengo el repuesto", detalle opcional) u OTRO
+     * (detalle obligatorio).
+     */
+    public PedidoTienda noPuedoDespachar(String correoTienda, String pedidoId, String tipoMotivo, String detalle) {
+        String tipo = tipoMotivo != null ? tipoMotivo.trim().toUpperCase() : "";
+        String nota = recortar(detalle);
+        if (PedidoTienda.MOTIVO_OTRO.equals(tipo) && nota == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cuéntanos por qué no puedes despachar");
         }
+        if (!PedidoTienda.MOTIVO_SIN_REPUESTO.equals(tipo) && !PedidoTienda.MOTIVO_OTRO.equals(tipo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Elige el motivo: no tengo el repuesto u otro motivo");
+        }
+        String texto = recortar(PedidoTienda.MOTIVO_SIN_REPUESTO.equals(tipo)
+                ? "No tengo el repuesto" + (nota != null ? ": " + nota : "")
+                : nota);
         Tienda tienda = tiendaDe(correoTienda);
         PedidoTienda pedido = cambiarPendiente(tienda, pedidoId, new Update()
                 .set("estado", PedidoTienda.NO_DESPACHADO)
                 .set("fechaNoDespacho", LocalDateTime.now())
+                .set("tipoMotivoNoDespacho", tipo)
                 .set("motivoNoDespacho", texto));
 
         for (RepartoPago r : repartoRepository.findByPedidoTiendaId(pedido.getId())) {

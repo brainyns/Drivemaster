@@ -1,0 +1,183 @@
+import { useCallback, useEffect, useState } from "react";
+import { getToken } from "../services/authService";
+import { misPedidosTienda, despacharPedido, noPuedoDespachar } from "../services/pedidoTiendaService";
+import Etiqueta from "../components/servicio/Etiqueta";
+import { ESTADOS_PEDIDO, MOTIVOS_NO_DESPACHO, formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
+import "../css/servicios.css";
+import "../css/solicitud-servicio.css";
+import "../css/cotizacion.css";
+
+const FILTROS = [
+  { key: "PENDIENTE", label: "Por despachar" },
+  { key: "DESPACHADO", label: "Despachados" },
+  { key: "TODOS", label: "Todos" },
+];
+
+/**
+ * Pedidos pagados que la tienda debe llevar al taller. "No puedo despachar" exige
+ * el motivo: "No tengo el repuesto" (detalle opcional) u "Otro motivo" (detalle
+ * obligatorio). El reembolso al cliente lo gestiona DriveMaster.
+ */
+export default function PedidosTienda() {
+  const token = getToken();
+  const [pedidos, setPedidos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [filtro, setFiltro] = useState("PENDIENTE");
+  const [abiertoId, setAbiertoId] = useState(null);
+  const [modo, setModo] = useState(null); // null | DESPACHAR | NO_DESPACHAR
+  const [nota, setNota] = useState("");
+  const [tipoMotivo, setTipoMotivo] = useState("");
+  const [procesando, setProcesando] = useState(false);
+
+  const cargar = useCallback(async () => {
+    try {
+      setPedidos((await misPedidosTienda(token)) || []);
+      setError(null);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCargando(false);
+    }
+  }, [token]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const abrir = (id) => {
+    setAbiertoId(abiertoId === id ? null : id);
+    setModo(null);
+    setNota("");
+    setTipoMotivo("");
+    setError(null);
+  };
+
+  const confirmar = async (pedido) => {
+    if (modo === "NO_DESPACHAR") {
+      if (!tipoMotivo) return setError("Elige el motivo.");
+      if (tipoMotivo === "OTRO" && !nota.trim()) return setError("Cuéntanos por qué no puedes despachar.");
+    }
+    setProcesando(true);
+    setError(null);
+    try {
+      if (modo === "DESPACHAR") await despacharPedido(token, pedido.id, nota.trim() || null);
+      else await noPuedoDespachar(token, pedido.id, tipoMotivo, nota.trim() || null);
+      setAbiertoId(null);
+      setModo(null);
+      await cargar();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  if (cargando) return <p className="sv-empty">Cargando pedidos...</p>;
+
+  const visibles = filtro === "TODOS" ? pedidos : pedidos.filter((p) => p.estado === filtro);
+  const conteo = (key) => (key === "TODOS" ? pedidos.length : pedidos.filter((p) => p.estado === key).length);
+
+  return (
+    <div className="ss-panel">
+      {error && !abiertoId && <p className="ss-alerta" role="alert">{error}</p>}
+
+      <nav className="ss-filtros" aria-label="Pedidos por estado">
+        {FILTROS.map((f) => (
+          <button key={f.key} className={`ss-filtro${filtro === f.key ? " ss-filtro--activo" : ""}`}
+            aria-current={filtro === f.key ? "page" : undefined} onClick={() => setFiltro(f.key)}>
+            {f.label}
+            {conteo(f.key) > 0 && <span className="ss-filtro__conteo">{conteo(f.key)}</span>}
+          </button>
+        ))}
+      </nav>
+
+      {visibles.length === 0 ? (
+        <p className="sv-empty">
+          {filtro === "PENDIENTE" ? "No tienes pedidos por despachar. Te avisaremos por correo cuando llegue uno." : "No hay pedidos en esta lista."}
+        </p>
+      ) : (
+        <div className="sv-list">
+          {visibles.map((p) => (
+            <section key={p.id} className={`ss-bloque${p.estado === "PENDIENTE" ? " ss-bloque--destacado" : ""}`}>
+              <div className="ct-detalle__cabecera">
+                <span className="ss-eyebrow">Pedido #{refSolicitud(p.id)} · {formatFechaHora(p.fechaCreacion)}</span>
+                <Etiqueta estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+              </div>
+
+              <ul className="ct-items">
+                {p.items.map((i, n) => (
+                  <li key={n} className="ct-item">
+                    <span className="ct-item__desc">
+                      {i.cantidad} × {i.productoNombre}
+                      <span className="ss-meta">
+                        {[i.marca, i.referencia].filter(Boolean).join(" · ")}
+                        {i.disponibilidad === "ENCARGO" && ` · Encargo${i.diasEntrega ? ` (${i.diasEntrega} días)` : ""}`}
+                      </span>
+                    </span>
+                    <span className="ct-item__valor">{formatPrecio(i.subtotal)}</span>
+                  </li>
+                ))}
+              </ul>
+              <dl className="ct-totales">
+                <div className="ct-totales__fila"><dt>IVA</dt><dd>{formatPrecio(p.iva)}</dd></div>
+                <div className="ct-totales__fila ct-totales__fila--final"><dt>Total del pedido</dt><dd>{formatPrecio(p.total)}</dd></div>
+              </dl>
+
+              <div className="ct-pedido__entrega">
+                Entregar en <strong>{p.tallerNombre}</strong>
+                {(p.tallerDireccion || p.tallerCiudad) && <> · {[p.tallerDireccion, p.tallerCiudad].filter(Boolean).join(", ")}</>}
+                {p.tallerTelefono && <> · Tel. {p.tallerTelefono}</>}
+                <br />Vehículo: {p.vehiculoDescripcion}
+              </div>
+
+              {p.estado === "DESPACHADO" && (
+                <p className="ss-meta">Despachado el {formatFechaHora(p.fechaDespacho)}{p.notaDespacho ? ` · ${p.notaDespacho}` : ""}</p>
+              )}
+              {p.estado === "NO_DESPACHADO" && (
+                <p className="ss-meta">No despachado: {p.motivoNoDespacho}</p>
+              )}
+
+              {p.estado === "PENDIENTE" && (abiertoId !== p.id ? (
+                <div className="ss-acciones">
+                  <button className="sv-btn" onClick={() => { abrir(p.id); setModo("DESPACHAR"); }}>Marcar despachado</button>
+                  <button className="sv-btn-outline" onClick={() => { abrir(p.id); setModo("NO_DESPACHAR"); }}>No puedo despachar</button>
+                </div>
+              ) : (
+                <div className="ct-respuesta">
+                  {error && <p className="ss-alerta" role="alert">{error}</p>}
+                  {modo === "NO_DESPACHAR" && (
+                    <fieldset className="ct-motivos">
+                      <legend className="ss-meta">¿Por qué no puedes despachar?</legend>
+                      {MOTIVOS_NO_DESPACHO.map((m) => (
+                        <label key={m.valor}>
+                          <input type="radio" name={`motivo-${p.id}`} value={m.valor}
+                            checked={tipoMotivo === m.valor} onChange={() => setTipoMotivo(m.valor)} />
+                          {m.label}
+                        </label>
+                      ))}
+                    </fieldset>
+                  )}
+                  <label className="ss-meta" htmlFor={`nota-${p.id}`}>
+                    {modo === "DESPACHAR" ? "Nota del despacho (opcional, ej. mensajero o guía)"
+                      : tipoMotivo === "OTRO" ? "Detalle (obligatorio)" : "Detalle (opcional)"}
+                  </label>
+                  <textarea id={`nota-${p.id}`} className="ss-textarea" rows={2} maxLength={500}
+                    value={nota} onChange={(e) => setNota(e.target.value)} />
+                  {modo === "NO_DESPACHAR" && (
+                    <p className="ss-ayuda">Se cancelará tu parte del pedido y DriveMaster reembolsará {formatPrecio(p.total)} al cliente.</p>
+                  )}
+                  <div className="ss-acciones">
+                    <button className={`sv-btn${modo === "NO_DESPACHAR" ? " ss-btn-peligro" : ""}`}
+                      onClick={() => confirmar(p)} disabled={procesando}>
+                      {procesando ? "Guardando..." : modo === "DESPACHAR" ? "Confirmar despacho" : "Confirmar: no puedo despachar"}
+                    </button>
+                    <button className="sv-btn-outline" onClick={() => abrir(p.id)} disabled={procesando}>Volver</button>
+                  </div>
+                </div>
+              ))}
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

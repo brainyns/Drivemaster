@@ -42,11 +42,13 @@ const menu = [
   { key: "usuarios", label: "Usuarios", icon: "admin" },
   { key: "admin-talleres", label: "Servicios", icon: "taller" },
   { key: "aprobaciones", label: "Aprobaciones", icon: "aprobaciones" },
+  { key: "liquidaciones", label: "Liquidaciones", icon: "reportes" },
   { key: "taller-panel", label: "Panel de taller", icon: "taller" },
+  { key: "pedidos-tienda", label: "Pedidos", icon: "proveedores" },
 ];
 
-// Tienda del marketplace: su catálogo y los movimientos de su inventario.
-const MENU_TIENDA = ["productos", "movimientos"];
+// Tienda del marketplace: sus pedidos, su catálogo y los movimientos de su inventario.
+const MENU_TIENDA = ["pedidos-tienda", "productos", "movimientos"];
 
 function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
   const [abiertos, setAbiertos] = useState([]);
@@ -65,8 +67,8 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
   const visibleMenu = menu.filter(item => {
     if (userRole === "TALLER") return item.key === "taller-panel";
     if (userRole === "TIENDA") return MENU_TIENDA.includes(item.key);
-    if (item.key === "taller-panel") return false;
-    if (item.key === "admin-talleres" || item.key === "aprobaciones") return userRole === "SUPERADMIN" || userRole === "ADMIN";
+    if (item.key === "taller-panel" || item.key === "pedidos-tienda") return false;
+    if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "liquidaciones") return userRole === "SUPERADMIN" || userRole === "ADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
     if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "ADMIN" || userRole === "VENDEDOR";
     if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas", "solicitudes"].includes(item.key);

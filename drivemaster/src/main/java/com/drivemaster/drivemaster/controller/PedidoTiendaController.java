@@ -43,7 +43,9 @@ public class PedidoTiendaController {
     public ResponseEntity<PedidoTienda> noDespachar(@PathVariable String id,
                                                     @RequestBody(required = false) Map<String, String> body,
                                                     Authentication auth) {
-        return ResponseEntity.ok(service.noPuedoDespachar(auth.getName(), id, body != null ? body.get("motivo") : null));
+        // body: { tipoMotivo: "SIN_REPUESTO" | "OTRO", detalle }
+        return ResponseEntity.ok(service.noPuedoDespachar(auth.getName(), id,
+                body != null ? body.get("tipoMotivo") : null, body != null ? body.get("detalle") : null));
     }
 
     // ─── Taller / cliente / ADMIN ────────────────────────────────────────────

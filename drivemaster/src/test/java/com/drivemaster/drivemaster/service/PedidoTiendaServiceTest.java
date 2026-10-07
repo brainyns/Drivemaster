@@ -92,7 +92,7 @@ class PedidoTiendaServiceTest {
         cambioAplicado(PedidoTienda.NO_DESPACHADO, "Sin transporte");
         when(transiciones.registrar(any(), any(), anyString(), any(), any())).thenReturn(orden);
 
-        PedidoTienda r = service.noPuedoDespachar(CORREO_TIENDA, "ped1", "Sin transporte");
+        PedidoTienda r = service.noPuedoDespachar(CORREO_TIENDA, "ped1", PedidoTienda.MOTIVO_OTRO, "Sin transporte");
 
         assertEquals(PedidoTienda.NO_DESPACHADO, r.getEstado());
         assertEquals(RepartoPago.ANULADO, reparto.getEstado());
@@ -103,10 +103,26 @@ class PedidoTiendaServiceTest {
 
     @Test
     void noPuedoDespacharExigeMotivo() {
+        // Sin tipo de motivo
         ResponseStatusException e = assertThrows(ResponseStatusException.class,
-                () -> service.noPuedoDespachar(CORREO_TIENDA, "ped1", " "));
+                () -> service.noPuedoDespachar(CORREO_TIENDA, "ped1", null, "algo"));
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        // "Otro motivo" exige el detalle
+        e = assertThrows(ResponseStatusException.class,
+                () -> service.noPuedoDespachar(CORREO_TIENDA, "ped1", PedidoTienda.MOTIVO_OTRO, " "));
         assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
         verifyNoInteractions(pagoMarketplace);
+    }
+
+    @Test
+    void sinRepuestoNoExigeDetalle() {
+        when(repartoRepository.findByPedidoTiendaId("ped1")).thenReturn(List.of());
+        cambioAplicado(PedidoTienda.NO_DESPACHADO, "No tengo el repuesto");
+        when(transiciones.registrar(any(), any(), anyString(), any(), any())).thenReturn(orden);
+
+        service.noPuedoDespachar(CORREO_TIENDA, "ped1", PedidoTienda.MOTIVO_SIN_REPUESTO, null);
+
+        verify(pagoMarketplace).registrarReembolso(eq(pago), eq("ped1"), eq(107_100.0), contains("No tengo el repuesto"));
     }
 
     @Test
@@ -114,7 +130,7 @@ class PedidoTiendaServiceTest {
         pedido.setEstado(PedidoTienda.DESPACHADO);
         // La escritura condicional (estado PENDIENTE) no encuentra el pedido
         ResponseStatusException e = assertThrows(ResponseStatusException.class,
-                () -> service.noPuedoDespachar(CORREO_TIENDA, "ped1", "Sin transporte"));
+                () -> service.noPuedoDespachar(CORREO_TIENDA, "ped1", PedidoTienda.MOTIVO_OTRO, "Sin transporte"));
         assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
         verifyNoInteractions(pagoMarketplace, repartoRepository);
     }
