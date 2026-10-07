@@ -48,6 +48,7 @@ class PagoMarketplaceServiceTest {
     private RepartoPagoRepository repartoRepository;
     private ReembolsoRepository reembolsoRepository;
     private ProductoService productoService;
+    private MovimientoInventarioService movimientoService;
     private TransicionOrdenService transiciones;
     private CotizacionService cotizacionService;
     private AvisosSolicitudServicio avisos;
@@ -66,6 +67,7 @@ class PagoMarketplaceServiceTest {
         repartoRepository = mock(RepartoPagoRepository.class);
         reembolsoRepository = mock(ReembolsoRepository.class);
         productoService = mock(ProductoService.class);
+        movimientoService = mock(MovimientoInventarioService.class);
         transiciones = mock(TransicionOrdenService.class);
         cotizacionService = mock(CotizacionService.class);
         avisos = mock(AvisosSolicitudServicio.class);
@@ -74,7 +76,7 @@ class PagoMarketplaceServiceTest {
 
         service = new PagoMarketplaceService(pagoService, pagoRepository, ordenRepository, cotizacionRepository,
                 pedidoRepository, repartoRepository, reembolsoRepository, tallerRepository, productoService,
-                usuarioService, transiciones, cotizacionService, avisos);
+                movimientoService, mock(com.drivemaster.drivemaster.repository.MovimientoInventarioRepository.class), usuarioService, transiciones, cotizacionService, avisos);
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).estado(EstadoOrden.APROBADA)
                 .tallerId("t1").usuarioId("u1").cotizacionId("c1").vehiculoDescripcion("Spark")
@@ -128,7 +130,7 @@ class PagoMarketplaceServiceTest {
     void unPagoYaTomadoNoSeAplicaDosVeces() {
         when(pagoRepository.reclamar(anyLong(), anyString())).thenReturn(0);
         service.confirmar(pago(PagoMarketplaceService.COTIZACION, 100_000), "txn-1");
-        verifyNoInteractions(transiciones, productoService, repartoRepository, reembolsoRepository);
+        verifyNoInteractions(transiciones, movimientoService, repartoRepository, reembolsoRepository);
         verify(pagoRepository, never()).save(any());
     }
 
@@ -185,8 +187,8 @@ class PagoMarketplaceServiceTest {
 
         service.confirmar(pago, "txn-1");
 
-        verify(productoService).descontarStock("p1", 2);
-        verify(productoService, never()).descontarStock(eq("p2"), anyInt());
+        verify(movimientoService).registrarMovimiento(eq("p1"), eq("SALIDA"), eq(2), anyString(), eq("PAGO-DRV-REF"), any());
+        verify(movimientoService, never()).registrarMovimiento(eq("p2"), anyString(), anyInt(), anyString(), anyString(), any());
         verify(pedidoRepository, times(2)).save(any());
         ArgumentCaptor<RepartoPago> repartos = ArgumentCaptor.forClass(RepartoPago.class);
         verify(repartoRepository, times(3)).save(repartos.capture());
@@ -208,12 +210,13 @@ class PagoMarketplaceServiceTest {
         cotizacion(new ArrayList<>(List.of(
                 repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"),
                 repuesto("p2", "s1", 1, 30_000, "DISPONIBLE"))), 142_800);
-        when(productoService.descontarStock("p2", 1)).thenThrow(new StockInsuficienteException("p2", 0));
+        when(movimientoService.registrarMovimiento(eq("p2"), eq("SALIDA"), eq(1), anyString(), anyString(), any()))
+                .thenThrow(new StockInsuficienteException("p2", 0));
         PagoEntity pago = pago(PagoMarketplaceService.COTIZACION, 142_800);
 
         service.confirmar(pago, "txn-1");
 
-        verify(productoService).incrementarStock("p1", 2);
+        verify(movimientoService).registrarMovimiento(eq("p1"), eq("ENTRADA"), eq(2), anyString(), eq("PAGO-DRV-REF"), any());
         verify(pedidoRepository, never()).save(any());
         verify(repartoRepository, never()).save(any());
         verify(reembolsoRepository).save(argThat(r -> r.getMonto() == 142_800 && r.getMotivo().contains("p2")));
@@ -240,7 +243,7 @@ class PagoMarketplaceServiceTest {
 
         service.confirmar(pago(PagoMarketplaceService.COTIZACION, 11_900), "txn-1");
 
-        verifyNoInteractions(productoService);
+        verifyNoInteractions(movimientoService);
         verify(reembolsoRepository).save(any());
         verify(transiciones, never()).transicionar(any(), anyString(), any(), anyString(), any(), any());
     }

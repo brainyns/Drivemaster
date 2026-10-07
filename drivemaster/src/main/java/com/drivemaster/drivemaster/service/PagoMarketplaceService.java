@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 import com.drivemaster.drivemaster.model.Cotizacion;
 import com.drivemaster.drivemaster.model.CotizacionItem;
 import com.drivemaster.drivemaster.model.EstadoOrden;
@@ -12,6 +13,7 @@ import com.drivemaster.drivemaster.model.mysql.PagoEntity;
 import com.drivemaster.drivemaster.model.mysql.Reembolso;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.repository.CotizacionRepository;
+import com.drivemaster.drivemaster.repository.MovimientoInventarioRepository;
 import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
 import com.drivemaster.drivemaster.repository.PedidoTiendaRepository;
 import com.drivemaster.drivemaster.repository.TallerRepository;
@@ -57,6 +59,8 @@ public class PagoMarketplaceService {
     public static final String DIAGNOSTICO = "DIAGNOSTICO";
     public static final String COTIZACION = "COTIZACION";
     private static final Set<String> CONCEPTOS = Set.of(DIAGNOSTICO, COTIZACION);
+    private static final String SALIDA = "SALIDA";
+    private static final String ENTRADA = "ENTRADA";
 
     private final PagoService pagoService;
     private final PagoRepository pagoRepository;
@@ -67,6 +71,8 @@ public class PagoMarketplaceService {
     private final ReembolsoRepository reembolsoRepository;
     private final TallerRepository tallerRepository;
     private final ProductoService productoService;
+    private final MovimientoInventarioService movimientoService;
+    private final MovimientoInventarioRepository movimientoRepository;
     private final UsuarioService usuarioService;
     private final TransicionOrdenService transiciones;
     private final CotizacionService cotizacionService;
@@ -81,6 +87,8 @@ public class PagoMarketplaceService {
                                   ReembolsoRepository reembolsoRepository,
                                   TallerRepository tallerRepository,
                                   ProductoService productoService,
+                                  MovimientoInventarioService movimientoService,
+                                  MovimientoInventarioRepository movimientoRepository,
                                   UsuarioService usuarioService,
                                   TransicionOrdenService transiciones,
                                   CotizacionService cotizacionService,
@@ -94,6 +102,8 @@ public class PagoMarketplaceService {
         this.reembolsoRepository = reembolsoRepository;
         this.tallerRepository = tallerRepository;
         this.productoService = productoService;
+        this.movimientoService = movimientoService;
+        this.movimientoRepository = movimientoRepository;
         this.usuarioService = usuarioService;
         this.transiciones = transiciones;
         this.cotizacionService = cotizacionService;
@@ -102,6 +112,25 @@ public class PagoMarketplaceService {
 
     public static boolean esMarketplace(String concepto) {
         return concepto != null && CONCEPTOS.contains(concepto);
+    }
+
+    /** Referencia de los movimientos de inventario de un pago (clave de idempotencia). */
+    public static String referenciaInventario(PagoEntity pago) {
+        return "PAGO-" + pago.getReferencia();
+    }
+
+    /**
+     * Si el pago quedó aplicado. Wompi puede decir APPROVED y aun así el pago no
+     * haberse aplicado (la solicitud cambió, faltó stock…): en ese caso hay un
+     * reembolso pendiente y la pantalla debe decirlo.
+     */
+    public Map<String, Object> resumenAplicacion(PagoEntity pago) {
+        boolean reembolso = pago.getId() != null && reembolsoRepository.existsByPagoId(pago.getId());
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("estadoPago", pago.getEstado());
+        r.put("reembolsoPendiente", reembolso);
+        r.put("aplicado", "PAGADO".equals(pago.getEstado()) && !reembolso);
+        return r;
     }
 
     // ─── Links de pago (cliente con sesión) ──────────────────────────────────
@@ -158,7 +187,7 @@ public class PagoMarketplaceService {
 
     public void confirmar(PagoEntity pago, String transactionId) {
         if (pagoRepository.reclamar(pago.getId(), transactionId) == 0) {
-            log.info("Pago {} ya procesado o en proceso: se omite", pago.getReferencia());
+            log.info("Pago {} ya procesado o en proceso (estado {}): se omite", pago.getReferencia(), pago.getEstado());
             return;
         }
         pago.setTransactionId(transactionId);
@@ -216,15 +245,30 @@ public class PagoMarketplaceService {
             return;
         }
 
-        // 1. Stock: se descuenta lo que estaba en stock; lo de encargo lo consigue la tienda
+        // 1. Stock: se descuenta lo que estaba en stock (con su SALIDA en el inventario);
+        //    lo de encargo lo consigue la tienda
+        String refInventario = referenciaInventario(pago);
+        String motivoSalida = "Pedido marketplace · cotización v" + cotizacion.getVersion();
         List<CotizacionItem> descontados = new ArrayList<>();
         String faltante = null;
         for (CotizacionItem item : repuestos(cotizacion)) {
             if (!descuentaStock(item)) continue;
-            try {
-                productoService.descontarStock(item.getProductoId(), item.getCantidad());
+            // Idempotente: si este pago ya tiene su SALIDA de este producto, no se descuenta otra vez
+            if (movimientoRepository.existsByProductoIdAndTipoAndReferencia(item.getProductoId(), SALIDA, refInventario)) {
+                log.warn("Pago {}: la salida de {} ya estaba registrada, no se descuenta otra vez",
+                        pago.getReferencia(), item.getProductoId());
                 descontados.add(item);
+                continue;
+            }
+            try {
+                movimientoService.registrarMovimiento(item.getProductoId(), SALIDA, item.getCantidad(),
+                        motivoSalida, refInventario, pago.getUsuarioId());
+                descontados.add(item);
+            } catch (StockInsuficienteException e) {
+                faltante = item.getProductoNombre();
+                break;
             } catch (Exception e) {
+                log.error("Pago {}: no se pudo descontar el stock de {}", pago.getReferencia(), item.getProductoId(), e);
                 faltante = item.getProductoNombre();
                 break;
             }
@@ -233,7 +277,7 @@ public class PagoMarketplaceService {
         String notaPago = "Pago de la cotización v" + cotizacion.getVersion() + " confirmado (ref. " + pago.getReferencia() + ")";
 
         if (faltante != null) {
-            reponerStock(descontados);
+            reponerStock(descontados, refInventario);
             String motivo = "Sin stock suficiente de \"" + faltante + "\" al confirmar el pago";
             try {
                 OrdenServicio pagada = transiciones.transicionar(orden, EstadoOrden.PAGADA, Actor.SISTEMA, notaPago, mismaCotizacion, null);
@@ -257,7 +301,7 @@ public class PagoMarketplaceService {
             pagada = transiciones.transicionar(orden, EstadoOrden.PAGADA, Actor.SISTEMA, notaPago, mismaCotizacion,
                     new Update().set("pagoCotizacionId", pago.getId()));
         } catch (ResponseStatusException e) {
-            reponerStock(descontados);
+            reponerStock(descontados, refInventario);
             noAplicado(pago, orden, "La solicitud cambió mientras se confirmaba el pago");
             return;
         }
@@ -372,10 +416,12 @@ public class PagoMarketplaceService {
                 && item.getCantidad() != null && item.getCantidad() > 0;
     }
 
-    private void reponerStock(List<CotizacionItem> descontados) {
+    /** Devuelve el stock con una ENTRADA registrada (misma referencia que la salida). */
+    private void reponerStock(List<CotizacionItem> descontados, String refInventario) {
         for (CotizacionItem item : descontados) {
             try {
-                productoService.incrementarStock(item.getProductoId(), item.getCantidad());
+                movimientoService.registrarMovimiento(item.getProductoId(), ENTRADA, item.getCantidad(),
+                        "Reversa pedido marketplace (pago no aplicado)", refInventario, null);
             } catch (Exception e) {
                 log.error("No se pudo reponer el stock de {} ({} u.)", item.getProductoId(), item.getCantidad(), e);
             }

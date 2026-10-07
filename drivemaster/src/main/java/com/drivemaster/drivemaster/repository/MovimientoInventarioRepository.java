@@ -25,4 +25,7 @@ public interface MovimientoInventarioRepository extends MongoRepository<Movimien
 
     List<MovimientoInventario> findByTiendaIdOrderByFechaDesc(String tiendaId);
 
+    // Idempotencia del descuento de stock de un pago del marketplace
+    boolean existsByProductoIdAndTipoAndReferencia(String productoId, String tipo, String referencia);
+
 }

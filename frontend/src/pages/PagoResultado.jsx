@@ -14,6 +14,7 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
   const [transaccionId] = useState(() => new URLSearchParams(window.location.search).get("id") || "");
   const [estado, setEstado] = useState(transaccionId ? "VERIFICANDO" : "ERROR"); // VERIFICANDO | APPROVED | DECLINED | ERROR
   const [concepto, setConcepto] = useState(null); // null en compras normales
+  const [aplicacion, setAplicacion] = useState(null); // { aplicado, reembolsoPendiente, estadoPago } del marketplace
 
   useEffect(() => {
     if (!transaccionId) return;
@@ -23,7 +24,10 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
         const res = await verificarPago(token, transaccionId);
         if (cancelado) return;
         // Solo informativo: el backend ya verificó y aplicó el pago con Wompi
-        if (res.concepto) setConcepto(res.concepto);
+        if (res.concepto) {
+          setConcepto(res.concepto);
+          setAplicacion({ aplicado: res.aplicado, reembolsoPendiente: res.reembolsoPendiente, estadoPago: res.estadoPago });
+        }
         setEstado(res.estado || "ERROR");
         if (res.estado === "APPROVED" && !res.concepto) {
           onPagoExitoso && onPagoExitoso();
@@ -60,7 +64,19 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
           <p className="sq-subtitle">Confirmación de tu pago en línea.</p>
         </div>
         <div className="sq-empty" style={{ padding: "48px 24px", textAlign: "center" }}>
-          {estado === "APPROVED" ? (
+          {estado === "APPROVED" && aplicacion?.aplicado === false ? (
+            <>
+              <div style={{ fontSize: "56px", marginBottom: "8px" }}>⚠️</div>
+              <h2 style={{ margin: "0 0 8px", color: "#b45309" }}>
+                {aplicacion.reembolsoPendiente ? "Recibimos tu pago, pero no se pudo aplicar" : "Estamos confirmando tu pago"}
+              </h2>
+              <p style={{ margin: "0 0 20px", color: "#374151" }}>
+                {aplicacion.reembolsoPendiente
+                  ? "Te enviamos un correo con el motivo. DriveMaster te devolverá el dinero."
+                  : "Revisa el estado de tu solicitud en unos segundos en “Mis servicios”."}
+              </p>
+            </>
+          ) : estado === "APPROVED" ? (
             <>
               <div style={{ fontSize: "56px", marginBottom: "8px" }}>✅</div>
               <h2 style={{ margin: "0 0 8px", color: "#065f46" }}>¡Pago exitoso!</h2>
