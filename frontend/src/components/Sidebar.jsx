@@ -53,7 +53,7 @@ const menu = [
 const MENU_TIENDA = ["pedidos-tienda", "productos", "movimientos", "mi-tienda"];
 
 // Operación diaria del ADMIN: aprobar tiendas y talleres, servicios y problemas de envío.
-const MENU_ADMIN = ["aprobaciones", "admin-talleres", "problemas-envios"];
+const MENU_ADMIN = ["dashboard-main", "aprobaciones", "admin-talleres", "problemas-envios"];
 
 function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
   const [abiertos, setAbiertos] = useState([]);

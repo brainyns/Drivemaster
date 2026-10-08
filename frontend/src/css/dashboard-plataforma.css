@@ -58,3 +58,37 @@
   .dp-barras li { grid-template-columns: 1fr auto; }
   .dp-barras__pista { grid-column: 1 / -1; order: 3; }
 }
+
+/* ── Panel operativo del ADMIN ─────────────────────────────── */
+.dp-tareas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.dp-tarea { border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.2rem; display: grid; gap: .5rem; align-content: start; }
+.dp-tarea--critica { border-color: #d64545; }
+.dp-tarea__n { margin: 0; font-size: 2.2rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.dp-tarea--critica .dp-tarea__n { color: #d64545; }
+.dp-tarea__titulo { margin: 0; font-size: .95rem; font-weight: 700; }
+.dp-tarea__detalle { margin: 0; font-size: .82rem; color: var(--muted); line-height: 1.45; }
+.dp-tarea .dp-btn { justify-self: start; margin-top: .25rem; }
+
+/* ── Listas de solo lectura (productos, clientes) ──────────── */
+.dp-filtros { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; margin: 0 0 1rem; }
+.dp-campo { display: grid; gap: .3rem; font-size: .75rem; color: var(--muted); font-weight: 600; min-width: 150px; }
+.dp-campo--ancho { flex: 1 1 260px; }
+.dp-campo input, .dp-campo select {
+  border: 1px solid var(--border);
+  background: var(--card, transparent);
+  color: var(--text);
+  border-radius: 8px;
+  padding: .5rem .65rem;
+  font: inherit;
+  font-size: .85rem;
+}
+.dp-filtros__acciones { display: flex; gap: .5rem; }
+.dp-btn--sutil { background: transparent; color: var(--muted); }
+
+.dp-lista { padding: .5rem 0 0; }
+.dp-sub-celda { display: block; font-size: .74rem; color: var(--muted); margin-top: .15rem; }
+.dp-etiqueta { display: inline-block; border-radius: 99px; padding: .15rem .6rem; font-size: .72rem; font-weight: 700; border: 1px solid var(--border); }
+.dp-etiqueta--ok { color: #2e9e5b; border-color: #2e9e5b; }
+.dp-etiqueta--no { color: var(--muted); }
+
+.dp-paginacion { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; font-size: .82rem; color: var(--muted); }

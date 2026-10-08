@@ -32,6 +32,9 @@ import PagoResultado         from "./pages/PagoResultado";
 import CheckoutPage          from "./pages/CheckoutPage";
 import SolicitudesAdmin      from "./pages/SolicitudesAdmin";
 import DashboardPlataforma   from "./pages/DashboardPlataforma";
+import DashboardOperacion    from "./pages/DashboardOperacion";
+import ProductosPlataforma   from "./pages/ProductosPlataforma";
+import ClientesPlataforma    from "./pages/ClientesPlataforma";
 import PerfilAdmin           from "./pages/PerfilAdmin";
 import PanelTaller           from "./pages/PanelTaller";
 import AdminTalleres         from "./pages/AdminTalleres";
@@ -127,7 +130,7 @@ const INICIO_POR_ROL = {
   CLIENTE: "catalogo",
   TALLER:  "taller-panel",
   TIENDA:  "productos",
-  ADMIN:   "aprobaciones",
+  ADMIN:   "dashboard-main",
 };
 
 const DEFAULT_IVA = 0.19;
@@ -333,6 +336,7 @@ function App() {
     ],
     // ADMIN: solo la operación diaria (el panel de plataforma completo es del SUPERADMIN)
     ADMIN: [
+      "dashboard-main",
       "aprobaciones", "admin-talleres", "problemas-envios",
       "mi-perfil",
     ],
@@ -611,16 +615,21 @@ function App() {
       <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
     );
 
-    // SUPERADMIN: panel de la plataforma; el dashboard de ventas queda para el VENDEDOR
-    if (pagina === "dashboard-main")   return user?.rol === "SUPERADMIN"
-      ? <DashboardPlataforma token={token} onIr={(p) => irA(p)} />
-      : <DashboardMain token={token} />;
+    // SUPERADMIN: panel de la plataforma. ADMIN: su resumen operativo. El dashboard de ventas queda para el VENDEDOR.
+    if (pagina === "dashboard-main") {
+      if (user?.rol === "SUPERADMIN") return <DashboardPlataforma token={token} onIr={(p) => irA(p)} />;
+      if (user?.rol === "ADMIN") return <DashboardOperacion token={token} onIr={(p) => irA(p)} />;
+      return <DashboardMain token={token} />;
+    }
 
+    // SUPERADMIN: catálogo global de solo lectura; la TIENDA y el VENDEDOR siguen con su gestión de productos
+    if (pagina === "productos" && user?.rol === "SUPERADMIN") return <ProductosPlataforma token={token} />;
     if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} esTienda={esTienda} />;
     if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
     if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
     if (pagina === "inventarioAjuste") return <AjusteInventarioForm productoId={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
 
+    if (pagina === "clientes" && user?.rol === "SUPERADMIN") return <ClientesPlataforma token={token} />;
     if (pagina === "clientes")         return <Clientes             onNuevo={() => irA("clienteNuevo")} onEditar={id => irA("clienteEditar", id)} token={token} />;
     if (pagina === "clienteNuevo")     return <ClienteForm          onVolver={() => irA("clientes")} token={token} />;
     if (pagina === "clienteEditar")    return <ClienteForm          id={idSeleccionado} onVolver={() => irA("clientes")} token={token} />;
