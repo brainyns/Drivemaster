@@ -263,3 +263,15 @@ html[data-theme="light"] .tp-segmentos__opcion--activa { background: #18487a; }
   .tp-barras__barra { animation: none; }
   .tp-segmentos__opcion { transition: none; }
 }
+
+/* ── Editar tarifa y horario ──────────────────────────────────────────────── */
+.tp-edicion { display: grid; gap: 1rem; margin-top: 1.25rem; padding: 1.1rem 1.25rem; background: var(--tp-superficie); border: 1px solid var(--tp-linea); border-radius: 12px; max-width: 34rem; }
+.tp-edicion h3 { font-size: 1rem; margin: 0; }
+.tp-edicion__campo { display: grid; gap: .35rem; }
+.tp-edicion__campo label { font-weight: 600; font-size: .9rem; }
+.tp-edicion__campo input, .tp-edicion__campo textarea { font: inherit; padding: .55rem .7rem; color: var(--tp-texto); background: transparent; border: 1px solid var(--tp-linea); border-radius: 8px; }
+.tp-edicion__campo textarea { min-height: 4.5rem; resize: vertical; }
+.tp-edicion__campo input:focus-visible, .tp-edicion__campo textarea:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 1px; }
+.tp-edicion__ayuda { font-size: .8rem; color: var(--tp-texto-2); margin: 0; }
+.tp-edicion__botones { display: flex; flex-wrap: wrap; gap: .6rem; }
+.tp-edicion__ok { color: var(--tp-texto); font-size: .85rem; margin: .5rem 0 0; }
