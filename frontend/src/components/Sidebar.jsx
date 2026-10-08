@@ -98,8 +98,8 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar, resumenTaller
     if (["compras", "proveedores", "movimientos", "informes-tienda"].includes(item.key)) return false;
     if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "negocios" || item.key === "finanzas" || item.key === "pedidos-envios") return userRole === "SUPERADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
-    // VENDEDOR es un rol retirado: solo conserva su inicio (con un aviso) y la lista de clientes
-    if (userRole === "VENDEDOR") return ["dashboard-main", "clientes"].includes(item.key);
+    // VENDEDOR es un rol retirado: solo conserva su inicio (con un aviso)
+    if (userRole === "VENDEDOR") return ["dashboard-main"].includes(item.key);
     return true;
   });
 

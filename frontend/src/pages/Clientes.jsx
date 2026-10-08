@@ -104,7 +104,7 @@ function Clientes({ onNuevo, onEditar, token }) {
   };
 
   const filtrados = clientes.filter(c => {
-    const matchTexto = [c.nombre, c.identificacion, c.correo, c.telefono, c.direccion]
+    const matchTexto = [c.nombre, c.correo, c.telefono, c.direccion]
       .some(v => v?.toLowerCase().includes(filtros.busqueda.toLowerCase()));
     if (!matchTexto) return false;
     if (filtros.soloHoy    && !esHoy(c.fechaRegistro ?? c.createdAt ?? c.fecha)) return false;
@@ -232,14 +232,14 @@ function Clientes({ onNuevo, onEditar, token }) {
             <table className="km-table">
               <thead>
                 <tr>
-                  <th>Nombre</th><th>Identificación</th><th>Teléfono</th>
+                  <th>Nombre</th><th>Teléfono</th>
                   <th>Correo</th><th>Dirección</th>
                   <th style={{ textAlign:"right" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {paginados.length === 0 ? (
-                  <tr><td colSpan={6} className="km-empty">No se encontraron clientes</td></tr>
+                  <tr><td colSpan={5} className="km-empty">No se encontraron clientes</td></tr>
                 ) : paginados.map(c => (
                   <tr key={c.id}>
                     <td>
@@ -253,7 +253,6 @@ function Clientes({ onNuevo, onEditar, token }) {
                         </div>
                       </div>
                     </td>
-                    <td><span className="km-badge">{c.identificacion || "—"}</span></td>
                     <td className="km-muted">{c.telefono || "—"}</td>
                     <td className="km-muted">{c.correo || "—"}</td>
                     <td className="km-muted">{c.direccion || "—"}</td>

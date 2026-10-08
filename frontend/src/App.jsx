@@ -335,10 +335,9 @@ function App() {
   const solicitudTotal = solicitudSubtotal + solicitudIva;
 
   const allowedPages = {
-    // VENDEDOR es un rol retirado: solo ve un aviso en su inicio y la lista de clientes
+    // VENDEDOR es un rol retirado: solo ve un aviso en su inicio (los clientes son del SUPERADMIN)
     VENDEDOR: [
       "dashboard-main",
-      "clientes", "clienteNuevo", "clienteEditar",
       "mi-perfil",
     ],
     // ADMIN: solo la operación diaria (el panel de plataforma completo es del SUPERADMIN)

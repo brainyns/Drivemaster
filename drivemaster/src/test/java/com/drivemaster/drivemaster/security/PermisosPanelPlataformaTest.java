@@ -97,7 +97,12 @@ class PermisosPanelPlataformaTest {
             // Gestión comercial interna: SUPERADMIN y VENDEDOR (ya no ADMIN)
             ruta(HttpMethod.GET, "/api/ventas", "SUPERADMIN", "VENDEDOR"),
             ruta(HttpMethod.GET, "/api/compras", "TIENDA"),
-            ruta(HttpMethod.GET, "/api/clientes/c1", "SUPERADMIN", "VENDEDOR"),
+            // Clientes: todo es del SUPERADMIN; cada usuario edita solo su cuenta (ClientesSeguridadWebTest)
+            ruta(HttpMethod.GET, "/api/clientes", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/clientes/c1", "SUPERADMIN"),
+            ruta(HttpMethod.POST, "/api/clientes/guardar", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/clientes/exportar", "SUPERADMIN"),
+            ruta(HttpMethod.DELETE, "/api/clientes/c1", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/solicitudes", "SUPERADMIN", "VENDEDOR"),
 
             // Inventario y productos: SUPERADMIN y la TIENDA (que ve solo lo suyo, lo valida el controlador)
