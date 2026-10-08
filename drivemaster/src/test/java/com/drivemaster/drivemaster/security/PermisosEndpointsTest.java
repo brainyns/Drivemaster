@@ -152,18 +152,16 @@ class PermisosEndpointsTest {
         mvc.perform(delete("/api/catalogo/compras/c1").with(user("admin@demo.com").roles("ADMIN"))).andExpect(status().isForbidden());
     }
 
-    // ─── Datos de la tienda propia: solo administración ──────────────────────
+    // ─── DriveMaster no es una tienda: ya no hay "datos de la tienda propia" ──
 
     @Test
-    void soloAdministracionCompletaLosDatosDeLaTiendaPropia() throws Exception {
-        mvc.perform(put("/api/tiendas/plataforma/datos").contentType(MediaType.APPLICATION_JSON).content("{}")
-                .with(user("jefe@demo.com").roles("SUPERADMIN"))).andExpect(status().isOk());
-        // El ADMIN solo aprueba y rechaza negocios: los datos de la tienda propia ya no son suyos
-        for (String rol : new String[]{"ADMIN", "TIENDA", "CLIENTE", "TALLER"}) {
-            mvc.perform(put("/api/tiendas/plataforma/datos").contentType(MediaType.APPLICATION_JSON).content("{}")
-                    .with(user("x@demo.com").roles(rol))).andExpect(status().isForbidden());
+    void laRutaDeLosDatosDeLaTiendaPropiaYaNoExiste() throws Exception {
+        for (String rol : new String[]{"SUPERADMIN", "ADMIN", "TIENDA"}) {
+            int estado = mvc.perform(put("/api/tiendas/plataforma/datos").contentType(MediaType.APPLICATION_JSON).content("{}")
+                    .with(user("x@demo.com").roles(rol))).andReturn().getResponse().getStatus();
+            org.junit.jupiter.api.Assertions.assertTrue(estado == 403 || estado == 404 || estado == 405, rol + " -> " + estado);
         }
-        verify(tiendaService, times(1)).actualizarPlataforma(org.mockito.ArgumentMatchers.any());
+        verifyNoInteractions(tiendaService);
     }
 
     // ─── Bloque 3: lista de problemas (ADMIN) y vista de la tienda ───────────

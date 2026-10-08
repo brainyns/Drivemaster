@@ -63,7 +63,6 @@ public class TiendaServiceImpl implements TiendaService {
                 .costoEnvio(costoEnvioDe(r))
                 .estadoAprobacion(EstadoAprobacion.PENDIENTE)
                 .activo(false)
-                .plataforma(false)
                 .fechaRegistro(LocalDateTime.now())
                 .build();
 
@@ -86,9 +85,6 @@ public class TiendaServiceImpl implements TiendaService {
     @Override
     public TiendaDTO resolverAprobacion(String id, AprobacionRequest request, String correoAdmin) {
         Tienda tienda = obtenerEntidad(id);
-        if (Boolean.TRUE.equals(tienda.getPlataforma())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "La tienda de la plataforma no requiere aprobación");
-        }
         cuentaNegocioService.validarMotivoRechazo(request.getAprobado(), request.getMotivo());
         boolean aprobado = request.getAprobado();
 
@@ -132,11 +128,6 @@ public class TiendaServiceImpl implements TiendaService {
         return toDTO(tiendaRepository.save(aplicarDatos(obtenerPorUsuario(correoUsuario), r)));
     }
 
-    @Override
-    public TiendaDTO actualizarPlataforma(RegistroNegocioRequest r) {
-        return toDTO(tiendaRepository.save(aplicarDatos(obtenerPlataforma(), r)));
-    }
-
     private Tienda aplicarDatos(Tienda tienda, RegistroNegocioRequest r) {
         if (r.getTelefono() != null) tienda.setTelefono(r.getTelefono());
         if (r.getCiudad() != null && !r.getCiudad().isBlank()) tienda.setCiudad(r.getCiudad());
@@ -167,10 +158,8 @@ public class TiendaServiceImpl implements TiendaService {
     }
 
     @Override
-    public Tienda obtenerPlataforma() {
-        return tiendaRepository.findFirstByPlataformaTrue()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "No existe la tienda de la plataforma (revise la migración del marketplace)"));
+    public java.util.List<Tienda> listarVisibles() {
+        return tiendaRepository.findAll().stream().filter(CatalogoService::tiendaVisible).toList();
     }
 
     private Tienda obtenerEntidad(String id) {
@@ -221,7 +210,6 @@ public class TiendaServiceImpl implements TiendaService {
                 .estadoAprobacion(t.getEstadoAprobacion())
                 .motivoRechazo(t.getMotivoRechazo())
                 .activo(t.getActivo())
-                .plataforma(t.getPlataforma())
                 .horario(t.getHorario())
                 .costoEnvio(t.getCostoEnvio())
                 .datosCompletos(t.tieneDatosCompletos())

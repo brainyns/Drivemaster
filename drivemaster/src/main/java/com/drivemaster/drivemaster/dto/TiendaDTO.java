@@ -34,7 +34,6 @@ public class TiendaDTO {
     private String estadoAprobacion;
     private String motivoRechazo;
     private Boolean activo;
-    private Boolean plataforma;
     private LocalDateTime fechaRegistro;
     private LocalDateTime fechaAprobacion;
 

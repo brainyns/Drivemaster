@@ -245,8 +245,7 @@ public class CompraCatalogoService {
         for (CompraCatalogo.Linea l : compra.getLineas()) {
             Producto p = buscarProducto(l.getProductoId());
             // El producto o la tienda pudieron cambiar entre el link y el pago
-            if (p == null || Boolean.FALSE.equals(p.getActivo()) || !visibles.containsKey(l.getTiendaId())
-                    || Boolean.TRUE.equals(visibles.get(l.getTiendaId()).getPlataforma())) {
+            if (p == null || Boolean.FALSE.equals(p.getActivo()) || !visibles.containsKey(l.getTiendaId())) {
                 return l.getProductoNombre();
             }
             if ("ENCARGO".equals(l.getTipo())) continue; // lo consigue la tienda; no hay stock que descontar
@@ -473,11 +472,6 @@ public class CompraCatalogoService {
                         "Un producto del carrito ya no está disponible en el catálogo. Quítalo y vuelve a intentar.");
             }
             Tienda tienda = visibles.get(p.getTiendaId());
-            if (Boolean.TRUE.equals(tienda.getPlataforma())) {
-                // Etapa 1 de la unificación: se muestran juntos, pero cada flujo cobra por su lado
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "\"" + p.getNombre()
-                        + "\" lo vende DriveMaster y se paga por separado: quítalo de este carrito y pídelo por la compra normal.");
-            }
             if (p.getPrecioVenta() == null || p.getPrecioVenta() <= 0) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "\"" + p.getNombre() + "\" no tiene precio y no se puede comprar");
             }

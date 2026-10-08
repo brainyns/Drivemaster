@@ -61,7 +61,7 @@ import CheckoutMarketplace from "./pages/CheckoutMarketplace";
 import MisCompras from "./pages/MisCompras";
 import ProblemasEnvios from "./pages/ProblemasEnvios";
 import DatosMiTienda from "./pages/DatosMiTienda";
-import { miTienda, listarTiendas } from "./services/tiendaService";
+import { miTienda } from "./services/tiendaService";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
 
@@ -172,7 +172,6 @@ function App() {
   // Vista con la que abre la landing: "inicio" o "catalogo" (el catálogo global)
   const [vistaCatalogo, setVistaCatalogo] = useState("inicio");
   // false: la tienda propia de DriveMaster tiene ciudad, dirección y horario (si no, sus productos no se muestran)
-  const [plataformaIncompleta, setPlataformaIncompleta] = useState(false);
   // true si la tienda (rol TIENDA) aún no completó ciudad, dirección y horario: no se muestra en el catálogo
   const [tiendaIncompleta, setTiendaIncompleta] = useState(false);
 
@@ -305,26 +304,6 @@ function App() {
     setPagina("catalogo");
   };
 
-  // Fija (no suma) la cantidad de un producto en la compra normal: así pagar dos veces no duplica unidades
-  const fijarProducto = useCallback((producto, cantidad) => {
-    setSolicitudItems(prev => {
-      const item = {
-        productoId: producto.id,
-        nombre: producto.nombre,
-        imagenUrl: producto.imagenUrl || "",
-        precioUnitario: producto.precio,
-        cantidad,
-        tipo: producto.tipo || "STOCK",
-        stockActual: producto.stock ?? 0,
-      };
-      const idx = prev.findIndex(i => i.productoId === producto.id);
-      if (idx < 0) return [...prev, item];
-      const next = [...prev];
-      next[idx] = item;
-      return next;
-    });
-  }, []);
-
   const removeProductList = useCallback((productIds) => {
     setSolicitudItems(prev => prev.filter(i => !productIds.includes(i.productoId)));
   }, []);
@@ -366,16 +345,6 @@ function App() {
       "compras", "compraNueva", "compraDetalle", "proveedores", "proveedorNuevo", "proveedorEditar"],
   };
   const esTienda = user?.rol === "TIENDA";
-
-  const esAdmin = user?.rol === "SUPERADMIN";
-  useEffect(() => {
-    if (!esAdmin) return undefined;
-    let vivo = true;
-    listarTiendas(getToken())
-      .then((lista) => { if (vivo) setPlataformaIncompleta(lista.some((t) => t.plataforma && t.datosCompletos === false)); })
-      .catch(() => {});
-    return () => { vivo = false; };
-  }, [esAdmin]);
 
   useEffect(() => {
     if (user?.rol !== "TIENDA") return undefined;
@@ -433,13 +402,6 @@ function App() {
         onVerProducto={(p) => irA("producto-marketplace", p.id)}
         onIrLogin={() => { guardarDestinoPostLogin("carrito-marketplace"); setPagina("login"); }}
         onContinuarCatalogo={() => setPagina("checkout-marketplace")}
-        pendientesCompraNormal={solicitudItems.filter((i) => !carrito.plataforma.some((x) => x.producto.id === i.productoId)).length}
-        onIrCompraNormal={() => setPagina("checkout")}
-        // Los productos de DriveMaster se pagan por la compra normal, sin perder el resto del carrito
-        onPagarPlataforma={(items) => {
-          items.forEach((x) => fijarProducto(x.producto, x.cantidad));
-          setPagina("checkout");
-        }}
       />
     );
 
@@ -662,7 +624,7 @@ function App() {
     if (pagina === "admin-talleres")   return <AdminTalleres        />;
     // ADMIN: solo aprueba o rechaza; SUPERADMIN: gestión completa (y la lista unificada "Tiendas y talleres")
     if (pagina === "aprobaciones" && user?.rol === "ADMIN") return <AprobacionesAdmin token={token} />;
-    if (pagina === "aprobaciones")     return <Aprobaciones         token={token} onTiendaPropiaIncompleta={setPlataformaIncompleta} />;
+    if (pagina === "aprobaciones")     return <Aprobaciones         token={token} />;
     if (pagina === "negocios")         return <NegociosPlataforma   token={token} />;
     if (pagina === "liquidaciones")    return <Liquidaciones        />;
     if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
@@ -721,13 +683,6 @@ function App() {
             onColorChange={handleColorChange}
             onMenuClick={() => setSidebarAbierto(true)}
           />
-        )}
-
-        {esAdmin && plataformaIncompleta && pagina !== "aprobaciones" && (
-          <p className="ss-aviso" role="status" style={{ margin: "12px 16px" }}>
-            La tienda de DriveMaster aún no tiene ciudad, dirección y horario: sus productos no se muestran en el catálogo.{" "}
-            <button className="sv-btn-outline" onClick={() => irA("aprobaciones")}>Completar datos</button>
-          </p>
         )}
 
         {esTienda && tiendaIncompleta && pagina !== "mi-tienda" && (

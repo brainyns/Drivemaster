@@ -15,17 +15,9 @@ Queda para el final.
 
 Hoy el ADMIN los hace a mano en el panel de Wompi y los marca en Liquidaciones y reembolsos.
 
-## Unificación del catálogo, etapa 2 (después de la 4-C)
+## Unificación del catálogo (resuelta)
 
-La etapa 1 ya está: la tienda propia de DriveMaster aparece en el catálogo nuevo con la etiqueta
-"Vendido por DriveMaster" (`esPlataforma`) y se compara con las demás, pero su compra sigue por la
-compra normal (Solicitud/Venta + Wompi). Un carrito no mezcla ambos flujos: el carrito del catálogo
-rechaza productos de DriveMaster (409) y el frontend los separa para pagarlos por aparte.
-
-La etapa 2 sería un solo pago para todo: la tienda propia pasaría por `CompraCatalogo` como una tienda
-más. Antes hay que resolver:
-- Su línea de reparto no se liquida (el dinero ya es de DriveMaster): hay que marcarla sin dispersión.
-- Sus ventas dejan de ser `Venta` y salen de los reportes y del Dashboard "Tienda DriveMaster" de la
-  4-C: hay que migrar esos reportes (y sus facturas/PDF) al nuevo modelo.
-- Los datos de la tienda propia (ciudad, dirección, horario) deben estar completos; el ADMIN los
-  completa con `PUT /api/tiendas/plataforma/datos`.
+Ya no aplica: DriveMaster es la aplicación, no una tienda. No hay tienda propia, ni la etiqueta
+"Vendido por DriveMaster", ni un segundo flujo de pago para sus productos: todo producto es de una tienda
+y se compra con el carrito del catálogo. La limpieza de los datos de la antigua tienda propia está en
+`MIGRACIONES_PENDIENTES.md` (migración que no corre sola).

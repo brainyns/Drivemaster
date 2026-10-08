@@ -77,7 +77,7 @@ class CompraCatalogoServiceTest {
 
     private static Tienda tienda(String id, String ciudad, String horario, Double envio) {
         return Tienda.builder().id(id).nombre("Tienda " + id).ciudad(ciudad).direccion("Calle " + id).horario(horario)
-                .costoEnvio(envio).estadoAprobacion(EstadoAprobacion.APROBADO).activo(true).plataforma(false).build();
+                .costoEnvio(envio).estadoAprobacion(EstadoAprobacion.APROBADO).activo(true).build();
     }
 
     private static Producto producto(String id, String tiendaId, double precio, int stock, String tipo) {
@@ -101,11 +101,6 @@ class CompraCatalogoServiceTest {
         productos.put("filtro", producto("filtro", "s1", 20_000, 5, "STOCK"));
         productos.put("pastilla", producto("pastilla", "s2", 30_000, 3, "STOCK"));
         productos.put("disco", producto("disco", "s2", 50_000, 0, "ENCARGO"));
-        // Tienda propia de DriveMaster (completa): sus productos se ven en el catálogo pero se pagan por la compra normal
-        Tienda propia = tienda("sP", "Bogotá", "L-S 8am-6pm", null);
-        propia.setPlataforma(true);
-        tiendas.add(propia);
-        productos.put("aceite", producto("aceite", "sP", 40_000, 9, "STOCK"));
 
         tiendaRepository = mock(TiendaRepository.class);
         when(tiendaRepository.findAll()).thenAnswer(i -> tiendas);
@@ -860,42 +855,23 @@ class CompraCatalogoServiceTest {
         assertDoesNotThrow(() -> service.cotizar(CORREO, carritoMixto()));
     }
 
-    // ─── Etapa 1 de la unificación: dos flujos de pago, sin mezclarse ────────
+    // ─── DriveMaster no es una tienda: un solo carrito para todas ────────────
 
     @Test
-    void unProductoDeDriveMasterNoSePagaPorEsteCarrito() {
-        ResponseStatusException e = assertEstado(HttpStatus.CONFLICT, () -> service.cotizar(CORREO, new CompraRequest(
-                List.of(item("aceite", 1)), List.of(entrega("sP", "RETIRO")), null, null)));
-        assertTrue(e.getReason().contains("se paga por separado"), e.getReason());
-        assertTrue(e.getReason().contains("compra normal"));
-    }
-
-    @Test
-    void unCarritoConProductosDeLosDosFlujosNoGeneraLinkNiCobraNada() {
-        assertEstado(HttpStatus.CONFLICT, () -> service.iniciarPago(CORREO, new CompraRequest(
-                List.of(item("filtro", 1), item("aceite", 1)),
-                List.of(entrega("s1", "RETIRO"), entrega("sP", "RETIRO")), null, null)));
-        verify(pagoService, never()).crearPagoCatalogo(anyString(), anyDouble(), anyString());
-        assertTrue(compras.isEmpty());
-        assertEquals(5, productos.get("filtro").getStockActual());
-        assertEquals(9, productos.get("aceite").getStockActual());
-    }
-
-    @Test
-    void sinLosProductosDeDriveMasterElMismoCarritoSiSePaga() {
-        assertDoesNotThrow(() -> service.iniciarPago(CORREO, new CompraRequest(
-                List.of(item("filtro", 1)), List.of(entrega("s1", "RETIRO")), null, null)));
+    void todasLasTiendasSePaganConElMismoCarritoSinReglasEspeciales() {
+        assertDoesNotThrow(() -> service.iniciarPago(CORREO, carritoMixto()));
         assertEquals(1, compras.size());
     }
 
     @Test
-    void siElPagoLlegaConUnProductoDeDriveMasterNoSeAplicaYSeReembolsa() {
-        // Defensa: si por algún motivo la compra guardada trae un producto de la tienda propia, no se aplica
-        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
-        CompraCatalogo compra = compras.values().iterator().next();
-        compra.getLineas().get(0).setTiendaId("sP");
-        service.aplicar(pago);
-        assertEquals(1, reembolsos.size());
-        assertTrue(pedidos.isEmpty() || pedidos.values().stream().noneMatch(p -> "sP".equals(p.getTiendaId()) && !p.esCatalogo()));
+    void unProductoDeUnaTiendaQueDejoDeSerVisibleYaNoSePuedeComprar() {
+        // La tienda s2 pierde su horario: deja de ser visible y sus productos salen del catálogo
+        tiendas.stream().filter(t -> t.getId().equals("s2")).findFirst().orElseThrow().setHorario(null);
+
+        ResponseStatusException e = assertEstado(HttpStatus.CONFLICT, () -> service.cotizar(CORREO, new CompraRequest(
+                List.of(item("pastilla", 1)), List.of(entrega("s2", "RETIRO")), null, null)));
+
+        assertTrue(e.getReason().contains("ya no está disponible"), e.getReason());
+        assertTrue(compras.isEmpty());
     }
 }

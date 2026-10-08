@@ -23,12 +23,9 @@ public interface TiendaService {
 
     TiendaDTO actualizarMiTienda(String correoUsuario, RegistroNegocioRequest request);
 
-    /** El ADMIN completa los datos de la tienda propia de DriveMaster (ciudad, dirección, horario, envío). */
-    TiendaDTO actualizarPlataforma(RegistroNegocioRequest request);
-
     /** Tienda del usuario, solo si ya fue aprobada y está activa (403 en otro caso). */
     Tienda obtenerOperativaPorUsuario(String correoUsuario);
 
-    /** Tienda propia de DriveMaster (catálogo de compra directa). */
-    Tienda obtenerPlataforma();
+    /** Tiendas que muestran sus productos: aprobadas, activas y con dirección, ciudad y horario. */
+    java.util.List<Tienda> listarVisibles();
 }

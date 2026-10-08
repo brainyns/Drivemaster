@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { actualizarTiendaPropia } from "../services/tiendaService";
 
 /**
  * Datos públicos de una tienda: ciudad, dirección, horario y costo de envío. Mientras falten ciudad,
  * dirección u horario, sus productos no aparecen en el catálogo marketplace.
- *  - ADMIN, para la tienda propia de DriveMaster (no tiene usuario TIENDA): guardar = actualizarTiendaPropia.
- *  - TIENDA, para la suya: se pasa alGuardar = actualizarMiTienda.
+ * La TIENDA edita la suya: se pasa alGuardar = actualizarMiTienda.
  */
-export default function DatosTiendaPropia({ token, tienda, onGuardado, alGuardar = actualizarTiendaPropia, titulo = "Tienda de DriveMaster" }) {
+export default function DatosTiendaPropia({ token, tienda, onGuardado, alGuardar, titulo = "Mi tienda" }) {
   const [form, setForm] = useState({
     ciudad: tienda.ciudad || "",
     barrio: tienda.barrio || "",
@@ -62,10 +60,8 @@ export default function DatosTiendaPropia({ token, tienda, onGuardado, alGuardar
       </div>
       <p className="ap-sub">
         {tienda.datosCompletos
-          ? (tienda.plataforma
-            ? "Sus productos se muestran en el catálogo con la etiqueta «Vendido por DriveMaster»; se pagan por la compra normal."
-            : "Tus productos se muestran en el catálogo de las tiendas.")
-          : (tienda.plataforma ? "Sus productos" : "Tus productos") + " no se muestran en el catálogo hasta completar ciudad, dirección y horario."}
+          ? "Tus productos se muestran en el catálogo de las tiendas."
+          : "Tus productos no se muestran en el catálogo hasta completar ciudad, dirección y horario."}
       </p>
 
       <form className="ap-propia__form" onSubmit={guardar}>

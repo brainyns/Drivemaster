@@ -16,4 +16,8 @@ public class RepuestoCompatibleDTO {
     private Double precioVenta;
     private Integer stockActual;
     private String imagenUrl;
+    // La tienda que lo vende
+    private String tiendaId;
+    private String tiendaNombre;
+    private String tiendaCiudad;
 }

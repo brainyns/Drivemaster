@@ -92,14 +92,11 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
                 Agregado al carrito. <button className="mk-enlace" onClick={onIrCarrito}>Ver carrito</button>
               </p>
             )}
-            {producto.esPlataforma && (
-              <p className="mk-nota">Este producto lo vende DriveMaster: se paga por separado de los de las demás tiendas.</p>
-            )}
           </div>
         </section>
 
         <section className="mk-tienda" aria-labelledby="mk-tienda-titulo">
-          <h2 id="mk-tienda-titulo">{producto.esPlataforma ? "Vendido por DriveMaster" : `Vendido por ${t.nombre}`}</h2>
+          <h2 id="mk-tienda-titulo">Vendido por {t.nombre}</h2>
           <dl className="mk-datos">
             <div><dt>Ciudad</dt><dd>{t.ciudad}{t.barrio ? ` · ${t.barrio}` : ""}</dd></div>
             <div><dt>Dirección (retiro)</dt><dd>{t.direccion}</dd></div>
@@ -123,7 +120,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
                   <tbody>
                     {[producto, ...producto.otrasTiendas].sort((a, b) => a.precio - b.precio).map((o) => (
                       <tr key={o.id} className={o.id === producto.id ? "mk-tabla__actual" : ""}>
-                        <td>{o.esPlataforma ? "DriveMaster" : o.tienda.nombre}{o.id === producto.id && <span className="mk-etiqueta">Estás viendo esta</span>}</td>
+                        <td>{o.tienda.nombre}{o.id === producto.id && <span className="mk-etiqueta">Estás viendo esta</span>}</td>
                         <td>{o.tienda.ciudad}</td>
                         <td>{textoDisponibilidad(o)}</td>
                         <td>{o.tienda.ofreceEnvio ? formatPrecio(o.tienda.costoEnvio) : "Solo retiro"}</td>

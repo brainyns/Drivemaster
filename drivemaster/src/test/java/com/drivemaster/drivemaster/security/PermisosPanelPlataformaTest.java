@@ -61,7 +61,6 @@ class PermisosPanelPlataformaTest {
             // Tiendas, talleres y planes: el ADMIN solo aprueba o rechaza
             ruta(HttpMethod.GET, "/api/tiendas/t1", "SUPERADMIN"),
             ruta(HttpMethod.PATCH, "/api/tiendas/t1/activo", "SUPERADMIN"),
-            ruta(HttpMethod.PUT, "/api/tiendas/plataforma/datos", "SUPERADMIN"),
             ruta(HttpMethod.POST, "/api/talleres", "SUPERADMIN"),
             ruta(HttpMethod.PUT, "/api/talleres/w1", "SUPERADMIN"),
             ruta(HttpMethod.PATCH, "/api/talleres/w1/activo", "SUPERADMIN"),

@@ -79,6 +79,9 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
               <h3>{r.nombre}</h3>
               <span className="sv-card-meta">{r.marca} · {r.categoria}</span>
               <span className="sv-card-meta">Stock: {r.stockActual}</span>
+              {r.tiendaNombre && (
+                <span className="sv-card-meta">Vende: {r.tiendaNombre}{r.tiendaCiudad ? ` · ${r.tiendaCiudad}` : ""}</span>
+              )}
               <strong>{formatPrecio(r.precioVenta)}</strong>
               <span className="sv-card-meta">¿Solo comprar el repuesto? Búscalo en el catálogo.</span>
             </div>

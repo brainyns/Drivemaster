@@ -74,7 +74,7 @@ public class PlataformaDashboardService {
 
     /** Visible para pruebas: el panel a la hora dada. */
     public DashboardPlataformaDTO dashboard(LocalDateTime ahora) {
-        Negocios tiendas = negocios(Tienda.class, Criteria.where("plataforma").ne(true));
+        Negocios tiendas = negocios(Tienda.class, new Criteria());
         Negocios talleres = negocios(Taller.class, new Criteria());
 
         Instant hace7 = ahora.minusDays(7).atZone(ZoneId.systemDefault()).toInstant();
@@ -128,7 +128,7 @@ public class PlataformaDashboardService {
 
     public Operacion operacion(LocalDateTime ahora) {
         return new Operacion(ahora,
-                pendientes(Tienda.class, Criteria.where("plataforma").ne(true)),
+                pendientes(Tienda.class, new Criteria()),
                 pendientes(Taller.class, new Criteria()),
                 problemasAbiertos(), despachosAtrasados(ahora));
     }
