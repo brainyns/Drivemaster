@@ -513,7 +513,7 @@ public class PagoService {
         solicitudRepository.save(solicitud);
 
         usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
-                emailsService.enviarEmail(usuario.getCorreo(),
+                enviarCorreo(usuario.getCorreo(),
                         "Hemos recibido tu pago en DriveMaster",
                         EmailSolicitudBuilder.pagoRecibido(usuario, solicitud.getTotal())));
 
@@ -584,5 +584,14 @@ public class PagoService {
 
     private String str(Object o) {
         return o != null ? o.toString() : null;
+    }
+
+    /** El aviso es secundario: si el correo falla, el pago ya aplicado no se toca. */
+    private void enviarCorreo(String destinatario, String asunto, String html) {
+        try {
+            emailsService.enviarEmail(destinatario, asunto, html);
+        } catch (Exception e) {
+            log.warn("El pago quedó aplicado pero no se pudo enviar el correo '{}': {}", asunto, e.getMessage());
+        }
     }
 }

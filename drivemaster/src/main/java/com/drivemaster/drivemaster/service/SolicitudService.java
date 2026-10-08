@@ -26,6 +26,8 @@ import com.drivemaster.drivemaster.util.EmailSolicitudBuilder;
 @Service
 public class SolicitudService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SolicitudService.class);
+
     private final SolicitudRepository solicitudRepository;
     private final UsuarioRepository usuarioRepository;
     private final ProductoRepository productoRepository;
@@ -183,7 +185,7 @@ public class SolicitudService {
                     final String urlPago = checkoutUrl;
                     final double total = solicitud.getTotal();
                     usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
-                            emailsService.enviarEmail(usuario.getCorreo(),
+                            enviarCorreo(usuario.getCorreo(),
                                     "Link de pago para tu pedido en DriveMaster",
                                     construirHtmlLinkPago(usuario, total, urlPago)));
                 }
@@ -210,7 +212,7 @@ public class SolicitudService {
             solicitud.setVentaId(ventaGuardada.getId());
 
             usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
-                    emailsService.enviarEmail(usuario.getCorreo(),
+                    enviarCorreo(usuario.getCorreo(),
                             "Hemos recibido tu pago en DriveMaster",
                             EmailSolicitudBuilder.pagoRecibido(usuario, solicitud.getTotal())));
         }
@@ -247,7 +249,7 @@ public class SolicitudService {
         }
 
         usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario ->
-                emailsService.enviarEmail(usuario.getCorreo(),
+                enviarCorreo(usuario.getCorreo(),
                         "Tu pedido fue entregado",
                         EmailSolicitudBuilder.entregado(usuario)));
 
@@ -289,7 +291,7 @@ public class SolicitudService {
                     + "<p class='brand'>DriveMaster — Automotive Engine</p>"
                     + "<p>© 2026 DriveMaster. Todos los derechos reservados.</p>"
                     + "</div></div></body></html>";
-            emailsService.enviarEmail(usuario.getCorreo(),
+            enviarCorreo(usuario.getCorreo(),
                     "Actualización de tu pedido en DriveMaster", html);
         });
 
@@ -371,5 +373,14 @@ public class SolicitudService {
         }
 
         return dto;
+    }
+
+    /** El aviso es secundario: si el correo falla, el cambio de estado ya hecho no se toca. */
+    private void enviarCorreo(String destinatario, String asunto, String html) {
+        try {
+            emailsService.enviarEmail(destinatario, asunto, html);
+        } catch (Exception e) {
+            log.warn("La solicitud se actualizó pero no se pudo enviar el correo '{}': {}", asunto, e.getMessage());
+        }
     }
 }

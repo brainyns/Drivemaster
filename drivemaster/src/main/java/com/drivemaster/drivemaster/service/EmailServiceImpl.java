@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -24,11 +25,12 @@ import jakarta.annotation.PostConstruct;
  * Correo transaccional por la API de Brevo.
  *
  * Variables de entorno: BREVO_API_KEY (clave de la API), BREVO_SENDER_EMAIL (remitente, que debe estar
- * verificado en Brevo; si falta se usa SPRING_MAIL_USERNAME), BREVO_SENDER_NAME y MAIL_DEV_LOG.
+ * verificado en Brevo; si falta se usa SPRING_MAIL_USERNAME), BREVO_SENDER_NAME, MAIL_DEV_LOG y MAIL_DEV_SKIP_SEND.
  *
  * Cuando Brevo rechaza el envío, el motivo queda en el log con una pista de qué revisar. Nunca se escribe
- * la clave ni el contenido del correo. Con MAIL_DEV_LOG=true (solo desarrollo) no se envía nada: se registra
- * el asunto y el destinatario de cada correo que se habría enviado.
+ * la clave ni el contenido del correo. Solo para desarrollo, y apagadas por defecto:
+ *  - MAIL_DEV_LOG: registra el asunto y el destinatario de cada correo y SIGUE enviándolo.
+ *  - MAIL_DEV_SKIP_SEND: no envía ningún correo (independiente de la anterior).
  */
 @Service
 public class EmailServiceImpl implements EmailsService {
@@ -43,23 +45,29 @@ public class EmailServiceImpl implements EmailsService {
     private final String senderEmail;
     private final String senderName;
     private final boolean devLog;
+    private final boolean devSkipSend;
 
-    public EmailServiceImpl(RestTemplate restTemplate,
+    public EmailServiceImpl(@Qualifier("brevoRestTemplate") RestTemplate restTemplate,
                             @Value("${brevo.api.key:}") String apiKey,
                             @Value("${brevo.sender.email:}") String senderEmail,
                             @Value("${brevo.sender.name:DriveMaster}") String senderName,
-                            @Value("${mail.dev-log:false}") boolean devLog) {
+                            @Value("${mail.dev-log:false}") boolean devLog,
+                            @Value("${mail.dev-skip-send:false}") boolean devSkipSend) {
         this.restTemplate = restTemplate;
         this.apiKey = apiKey != null ? apiKey.trim() : "";
         this.senderEmail = senderEmail != null ? senderEmail.trim() : "";
         this.senderName = senderName;
         this.devLog = devLog;
+        this.devSkipSend = devSkipSend;
     }
 
     @PostConstruct
     void avisarConfiguracion() {
         if (devLog) {
-            log.warn("MAIL_DEV_LOG activo: los correos NO se envían, solo se registra su asunto y destinatario. Solo para desarrollo.");
+            log.warn("MAIL_DEV_LOG activo: se registra el asunto y destinatario de cada correo. Solo para desarrollo.");
+        }
+        if (devSkipSend) {
+            log.warn("MAIL_DEV_SKIP_SEND activo: los correos NO se envían. Solo para desarrollo.");
             return;
         }
         if (apiKey.isEmpty()) {
@@ -72,7 +80,7 @@ public class EmailServiceImpl implements EmailsService {
 
     @Override
     public void enviarEmail(String destinatario, String asunto, String contenido) {
-        if (modoDesarrollo(destinatario, asunto)) return;
+        if (omitirEnvio(destinatario, asunto)) return;
         Map<String, Object> body = Map.of(
                 "sender", Map.of("name", senderName, "email", senderEmail),
                 "to", List.of(Map.of("email", destinatario)),
@@ -84,7 +92,7 @@ public class EmailServiceImpl implements EmailsService {
     @Override
     public void enviarEmailConAdjunto(String destinatario, String asunto, String html,
                                        byte[] adjunto, String nombreAdjunto) {
-        if (modoDesarrollo(destinatario, asunto)) return;
+        if (omitirEnvio(destinatario, asunto)) return;
         String base64Adjunto = Base64.getEncoder().encodeToString(adjunto);
         Map<String, Object> body = Map.of(
                 "sender", Map.of("name", senderName, "email", senderEmail),
@@ -98,10 +106,15 @@ public class EmailServiceImpl implements EmailsService {
         enviar(body, destinatario, asunto);
     }
 
-    private boolean modoDesarrollo(String destinatario, String asunto) {
-        if (!devLog) return false;
-        log.info("[CORREO-DEV] No enviado (MAIL_DEV_LOG). Destinatario: {} | Asunto: {}", destinatario, asunto);
-        return true;
+    /** Aplica las variables de desarrollo. Devuelve true si el correo NO debe enviarse (MAIL_DEV_SKIP_SEND). */
+    private boolean omitirEnvio(String destinatario, String asunto) {
+        if (devLog) {
+            log.info("[CORREO-DEV] Destinatario: {} | Asunto: {}{}", destinatario, asunto,
+                    devSkipSend ? " | NO se envía (MAIL_DEV_SKIP_SEND)" : "");
+        } else if (devSkipSend) {
+            log.info("[CORREO-DEV] Envío omitido por MAIL_DEV_SKIP_SEND. Asunto: {}", asunto);
+        }
+        return devSkipSend;
     }
 
     private void enviar(Map<String, Object> body, String destinatario, String asunto) {
