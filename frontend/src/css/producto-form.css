@@ -6,7 +6,7 @@
 }
 .pf-tab {
   background: none; border: none; border-bottom: 2px solid transparent;
-  color: var(--text-muted); font-family: 'Inter',sans-serif; font-size: 0.85rem;
+  color: var(--text-muted); font-family: var(--ui-font); font-size: 0.85rem;
   font-weight: 600; padding: 0.5rem 1rem 0.8rem; cursor: pointer; transition: all 0.15s;
 }
 .pf-tab:hover { color: var(--text); }
@@ -53,7 +53,7 @@ html[data-theme="light"] {
 }
 .pf-section-icon { font-size: 1.1rem; }
 .pf-section-header h3 {
-  font-family: 'Barlow Condensed',sans-serif; font-size: 1rem;
+  font-family: var(--ui-font); font-size: 1rem;
   font-weight: 700; color: var(--text);
 }
 
@@ -74,7 +74,7 @@ html[data-theme="light"] {
   background: var(--input-bg); border: 1px solid var(--border);
   color: var(--text); padding: 0.75rem 1rem;
   border-radius: 10px; font-size: 0.88rem;
-  font-family: 'Inter',sans-serif; outline: none;
+  font-family: var(--ui-font); outline: none;
   transition: border 0.2s; width: 100%;
 }
 .pf-field input:focus,
@@ -122,7 +122,7 @@ html[data-theme="light"] {
 .pf-compat-del {
   background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
   color: var(--error); border-radius: 8px; padding: 0.3rem 0.7rem;
-  cursor: pointer; font-size: 0.78rem; font-family: 'Inter',sans-serif;
+  cursor: pointer; font-size: 0.78rem; font-family: var(--ui-font);
   font-weight: 600; transition: all 0.15s;
 }
 .pf-compat-del:hover { background: rgba(239,68,68,0.2); }
@@ -130,7 +130,7 @@ html[data-theme="light"] {
 .pf-add-compat {
   background: transparent; border: 1px dashed var(--border);
   color: var(--text-muted); border-radius: 8px; padding: 0.5rem 1rem;
-  font-family: 'Inter',sans-serif; font-size: 0.82rem; cursor: pointer;
+  font-family: var(--ui-font); font-size: 0.82rem; cursor: pointer;
   transition: all 0.18s; margin-top: 0.3rem;
 }
 .pf-add-compat:hover { border-color: var(--primary); color: var(--primary-text); }
@@ -154,7 +154,7 @@ html[data-theme="light"] {
 .pf-money-input input {
   flex: 1; border: none; background: transparent;
   padding: 0 1rem; color: var(--text);
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
   font-size: 1.2rem; font-weight: 700;
   outline: none;
   appearance: textfield;
@@ -174,7 +174,7 @@ html[data-theme="light"] {
 .pf-stock-input input {
   flex: 1; border: none; background: transparent;
   padding: 0 1rem; color: var(--text);
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
   font-size: 1.4rem; font-weight: 800;
   outline: none; width: 100%;
   appearance: textfield;
@@ -198,15 +198,15 @@ html[data-theme="light"] {
 }
 .pf-margen--pos { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.15); }
 .pf-margen--neg { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.15); }
-.pf-margen--pos strong { color: var(--success); font-size: 1.1rem; font-family: 'Barlow Condensed',sans-serif; }
-.pf-margen--neg strong { color: var(--error);   font-size: 1.1rem; font-family: 'Barlow Condensed',sans-serif; }
+.pf-margen--pos strong { color: var(--success); font-size: 1.1rem; font-family: var(--ui-font); }
+.pf-margen--neg strong { color: var(--error);   font-size: 1.1rem; font-family: var(--ui-font); }
 
 /* ── VALIDATION SUMMARY ── */
 .pf-validation-summary {
   background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
   color: var(--error); border-radius: 10px;
   padding: 0.75rem 1rem; font-size: 0.82rem;
-  font-family: 'Inter',sans-serif;
+  font-family: var(--ui-font);
 }
 
 /* ── BUTTONS ── */
@@ -214,7 +214,7 @@ html[data-theme="light"] {
   width: 100%;
   background: linear-gradient(135deg, var(--primary), #ff6b35);
   color: white; border: none; padding: 1rem;
-  border-radius: 12px; font-family: 'Barlow Condensed',sans-serif;
+  border-radius: 12px; font-family: var(--ui-font);
   font-weight: 800; font-size: 1rem; cursor: pointer;
   transition: all 0.18s; box-shadow: 0 4px 20px rgba(255,61,0,0.35);
 }
@@ -223,7 +223,7 @@ html[data-theme="light"] {
 
 .pf-btn-cancel {
   width: 100%; background: none; border: none;
-  color: var(--text-muted); font-family: 'Inter',sans-serif;
+  color: var(--text-muted); font-family: var(--ui-font);
   font-size: 0.85rem; font-weight: 600; cursor: pointer;
   padding: 0.6rem; transition: color 0.15s;
 }
@@ -236,7 +236,7 @@ html[data-theme="light"] {
   border-radius: 14px; padding: 1.2rem;
 }
 .pf-info-title {
-  font-family: 'Barlow Condensed',sans-serif; font-weight: 800;
+  font-family: var(--ui-font); font-weight: 800;
   color: var(--primary-text); font-size: 0.88rem; margin-bottom: 0.5rem;
 }
 .pf-info-text { font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; }
@@ -273,7 +273,7 @@ html[data-theme="light"] {
   border: 1px solid rgba(239,68,68,0.2);
   color: var(--error); border-radius: 8px;
   padding: 0.4rem 0.8rem; cursor: pointer;
-  font-size: 0.78rem; font-family: 'Inter',sans-serif;
+  font-size: 0.78rem; font-family: var(--ui-font);
   font-weight: 600; transition: all 0.15s;
 }
 .pf-imagen-remove:hover { background: rgba(239,68,68,0.2); }

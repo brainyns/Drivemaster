@@ -2,7 +2,7 @@
 
 .sq-root {
   padding: 28px 32px;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--ui-font);
 }
 
 /* ── HEADER ── */
@@ -705,7 +705,7 @@
   color: var(--text);
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--ui-font);
   font-size: 0.82rem;
   cursor: pointer;
   transition: all 0.15s;

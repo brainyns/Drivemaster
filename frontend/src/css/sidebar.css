@@ -53,7 +53,7 @@
 }
 
 .sidebar-brand-name {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
   font-size: 1rem; font-weight: 800;
   color: var(--text); letter-spacing: 0.02em; line-height: 1.1;
 }
@@ -76,7 +76,7 @@
   border-radius: 8px; border: none;
   background: transparent;
   color: var(--text-muted);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--ui-font);
   font-size: 0.85rem; font-weight: 500;
   cursor: pointer; transition: all 0.15s; text-align: left;
 }
@@ -112,7 +112,7 @@
   padding: 0.45rem 0.85rem 0.45rem 3rem;
   border-radius: 7px; border: none;
   background: transparent; color: var(--text-muted);
-  font-family: 'Inter', sans-serif; font-size: 0.8rem;
+  font-family: var(--ui-font); font-size: 0.8rem;
   font-weight: 500; cursor: pointer; transition: all 0.15s; text-align: left;
   position: relative;
 }
@@ -140,7 +140,7 @@
   border-radius: 8px; border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--ui-font);
   font-size: 0.82rem; font-weight: 500;
   cursor: pointer; transition: all 0.15s; text-align: left;
 }
