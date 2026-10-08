@@ -75,8 +75,12 @@ public class TallerController {
     // ─── Administración de talleres (rol ADMIN/SUPERADMIN) ───
 
     @GetMapping
-    public ResponseEntity<List<TallerDTO>> listarTodos(@RequestParam(required = false) String estado) {
-        return ResponseEntity.ok(tallerService.listarTodos(estado));
+    public ResponseEntity<List<?>> listarTodos(@RequestParam(required = false) String estado, Authentication auth) {
+        List<TallerDTO> talleres = tallerService.listarTodos(estado);
+        // El ADMIN ve la lista sin teléfono, correos ni coordenadas; el SUPERADMIN, completa
+        return ResponseEntity.ok(com.drivemaster.drivemaster.security.PermisosAprobacion.esSuperadmin(auth)
+                ? talleres
+                : talleres.stream().map(com.drivemaster.drivemaster.dto.plataforma.RespuestasAdminDTO.TallerResumen::de).toList());
     }
 
     @PostMapping
@@ -96,10 +100,12 @@ public class TallerController {
     }
 
     @PatchMapping("/{id}/aprobacion")
-    public ResponseEntity<TallerDTO> resolverAprobacion(@PathVariable String id,
-                                                        @RequestBody AprobacionRequest request,
-                                                        Authentication auth) {
+    public ResponseEntity<Object> resolverAprobacion(@PathVariable String id,
+                                                     @RequestBody AprobacionRequest request,
+                                                     Authentication auth) {
         com.drivemaster.drivemaster.security.PermisosAprobacion.validarPlan(auth, request);
-        return ResponseEntity.ok(tallerService.resolverAprobacion(id, request, auth.getName()));
+        TallerDTO resultado = tallerService.resolverAprobacion(id, request, auth.getName());
+        return ResponseEntity.ok(com.drivemaster.drivemaster.security.PermisosAprobacion.esSuperadmin(auth)
+                ? resultado : com.drivemaster.drivemaster.dto.plataforma.RespuestasAdminDTO.ResultadoAprobacion.de(resultado));
     }
 }

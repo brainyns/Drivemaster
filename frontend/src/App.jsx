@@ -313,11 +313,10 @@ function App() {
   const solicitudTotal = solicitudSubtotal + solicitudIva;
 
   const allowedPages = {
+    // VENDEDOR es un rol retirado: solo ve un aviso en su inicio y la lista de clientes
     VENDEDOR: [
       "dashboard-main",
       "clientes", "clienteNuevo", "clienteEditar",
-      "ventas", "ventaNueva", "ventaDetalle",
-      "solicitudes",
       "mi-perfil",
     ],
     // ADMIN: solo la operación diaria (el panel de plataforma completo es del SUPERADMIN)
@@ -330,9 +329,8 @@ function App() {
       "dashboard-main",
       "productos", "productoNuevo", "productoEditar",
       "clientes", "clienteNuevo", "clienteEditar",
-      "ventas", "ventaNueva", "ventaDetalle",
-      "solicitudes",
-      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios", "reportes-plataforma",
+      // Ventas, Solicitudes e Historial anterior (flujo anterior) están ocultos para todos los roles: sin ruta
+      "rep-servicios", "reportes-plataforma",
       "usuarios",
       "pedidos-envios",
       "admin-talleres", "aprobaciones", "negocios", "liquidaciones", "problemas-envios",
@@ -588,6 +586,14 @@ function App() {
     if (pagina === "dashboard-main") {
       if (user?.rol === "SUPERADMIN") return <DashboardPlataforma token={token} onIr={(p, id) => irA(p, id)} />;
       if (user?.rol === "ADMIN") return <DashboardOperacion token={token} onIr={(p, id) => irA(p, id)} />;
+      if (user?.rol === "VENDEDOR") {
+        return (
+          <div className="db-root dp-root">
+            <h1 className="db-h1">El rol de vendedor se retiró</h1>
+            <p className="db-sub">Pide a un superadmin que reasigne tu cuenta a administrador o que la desactive.</p>
+          </div>
+        );
+      }
       return <DashboardMain token={token} />;
     }
 

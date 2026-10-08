@@ -24,9 +24,7 @@ const menu = [
   { key: "dashboard-main", label: "Dashboard",   icon: "dashboard"   },
   { key: "productos",      label: "Productos",   icon: "productos"   },
   { key: "clientes",       label: "Clientes",    icon: "clientes"    },
-  { key: "ventas",         label: "Ventas",      icon: "ventas"      },
   { key: "pedidos-envios", label: "Pedidos y envíos", icon: "compras" },
-  { key: "solicitudes",    label: "Solicitudes", icon: "ventas"      },
   { key: "compras",        label: "Compras",     icon: "compras"     },
   { key: "proveedores",    label: "Proveedores", icon: "proveedores" },
   { key: "movimientos",    label: "Inventario",  icon: "movimientos" },
@@ -35,16 +33,6 @@ const menu = [
     subItems: [
       { key: "reportes-plataforma", label: "Reportes de plataforma", icon: "repProductos" },
       { key: "rep-servicios",       label: "Reporte Servicios",      icon: "repServicios" },
-    ],
-  },
-  // Reportes sobre las ventas del flujo anterior (Venta): solo lectura, hasta que se decida retirarlos
-  {
-    key: "historial-anterior", label: "Historial anterior", icon: "reportes",
-    subItems: [
-      { key: "inv-clientes",  label: "Inventario Clientes",  icon: "invClientes"  },
-      { key: "rep-clientes",  label: "Reportes Clientes",    icon: "repClientes"  },
-      { key: "inv-productos", label: "Inventario Productos", icon: "invProductos" },
-      { key: "rep-productos", label: "Reportes Productos",   icon: "repProductos" },
     ],
   },
   { key: "usuarios", label: "Usuarios", icon: "admin" },
@@ -96,8 +84,8 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
     if (["compras", "proveedores", "movimientos"].includes(item.key)) return false;
     if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "negocios" || item.key === "finanzas" || item.key === "pedidos-envios") return userRole === "SUPERADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
-    if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "VENDEDOR";
-    if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas", "solicitudes"].includes(item.key);
+    // VENDEDOR es un rol retirado: solo conserva su inicio (con un aviso) y la lista de clientes
+    if (userRole === "VENDEDOR") return ["dashboard-main", "clientes"].includes(item.key);
     return true;
   });
 

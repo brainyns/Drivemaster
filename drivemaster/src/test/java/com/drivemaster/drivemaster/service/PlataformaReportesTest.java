@@ -316,16 +316,24 @@ class PlataformaReportesTest {
     }
 
     @Test
-    void sinRolSoloSeListanCuentasDelSistemaYUnRolInventadoNoDevuelveNada() {
+    void sinRolSeListanTodosLosRolesYUnRolInventadoNoDevuelveNada() {
         listarUsuarios(null, null, null);
         ArgumentCaptor<Query> q = ArgumentCaptor.forClass(Query.class);
         verify(mongo).find(q.capture(), eq(Usuario.class));
         String filtro = q.getValue().getQueryObject().toJson();
-        assertFalse(filtro.contains("CLIENTE"), "los clientes tienen su propia pantalla: " + filtro);
-        assertTrue(filtro.contains("SUPERADMIN") && filtro.contains("TIENDA"), filtro);
+        for (String rol : new String[]{"SUPERADMIN", "ADMIN", "TIENDA", "TALLER", "CLIENTE", "VENDEDOR"}) {
+            assertTrue(filtro.contains(rol), "la lista incluye " + rol + ": " + filtro);
+        }
 
         reset(mongo);
         listarUsuarios(null, "CLIENTE", null);
+        ArgumentCaptor<Query> q1 = ArgumentCaptor.forClass(Query.class);
+        verify(mongo).find(q1.capture(), eq(Usuario.class));
+        String soloClientes = q1.getValue().getQueryObject().toJson();
+        assertTrue(soloClientes.contains("CLIENTE") && !soloClientes.contains("SUPERADMIN"), soloClientes);
+
+        reset(mongo);
+        listarUsuarios(null, "INVENTADO", null);
         ArgumentCaptor<Query> q2 = ArgumentCaptor.forClass(Query.class);
         verify(mongo).find(q2.capture(), eq(Usuario.class));
         assertTrue(q2.getValue().getQueryObject().toJson().contains("__ninguno__"));

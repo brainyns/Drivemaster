@@ -348,17 +348,6 @@ public class AuthController {
         usuarioRepository.save(usuario);
     }
 
-    private String determineRole(String requestedRole) {
-        if (requestedRole == null) {
-            return "VENDEDOR";
-        }
-        String normalized = requestedRole.trim().toUpperCase();
-        if (List.of("SUPERADMIN", "ADMIN", "VENDEDOR").contains(normalized)) {
-            return normalized;
-        }
-        return "VENDEDOR";
-    }
-
     private List<String> getPermisosPorRol(String rol) {
         return RolPermisos.de(rol);
     }
