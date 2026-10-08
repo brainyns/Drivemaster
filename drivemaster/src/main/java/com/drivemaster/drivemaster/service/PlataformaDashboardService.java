@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Operacion;
 import com.drivemaster.drivemaster.dto.plataforma.DashboardPlataformaDTO;
 import com.drivemaster.drivemaster.dto.plataforma.DashboardPlataformaDTO.Alertas;
 import com.drivemaster.drivemaster.dto.plataforma.DashboardPlataformaDTO.Clientes;
@@ -105,10 +106,8 @@ public class PlataformaDashboardService {
                 parametros.comisionPct(), repartoRepository.sumaPorLiquidar());
 
         Alertas alertas = new Alertas(
-                mongo.count(Query.query(Criteria.where("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)
-                        .and("plazoDespachoHasta").lt(ahora)), PedidoTienda.class),
-                mongo.count(Query.query(Criteria.where("problemaReportado").is(true).and("resolucionProblema").is(null)),
-                        PedidoTienda.class),
+                despachosAtrasados(ahora),
+                problemasAbiertos(),
                 repartoRepository.countByEstado(RepartoPago.POR_LIQUIDAR),
                 repartoRepository.countByEstado(RepartoPago.FALLIDO),
                 reembolsoRepository.countByEstado(Reembolso.PENDIENTE),
@@ -117,6 +116,36 @@ public class PlataformaDashboardService {
 
         return new DashboardPlataformaDTO(ahora, tiendas, talleres, clientes, productos, productosMasVendidos(),
                 tiendasMasVendedoras(), porEstado, dinero, planes, alertas);
+    }
+
+    /**
+     * Panel operativo mínimo del ADMIN: solo lo que le toca atender (negocios por aprobar, problemas de envío
+     * abiertos y despachos atrasados). Sin dinero ni datos de la plataforma.
+     */
+    public Operacion operacion() {
+        return operacion(LocalDateTime.now());
+    }
+
+    public Operacion operacion(LocalDateTime ahora) {
+        return new Operacion(ahora,
+                pendientes(Tienda.class, Criteria.where("plataforma").ne(true)),
+                pendientes(Taller.class, new Criteria()),
+                problemasAbiertos(), despachosAtrasados(ahora));
+    }
+
+    private long pendientes(Class<?> tipo, Criteria base) {
+        return mongo.count(Query.query(new Criteria().andOperator(base,
+                Criteria.where("estadoAprobacion").is(EstadoAprobacion.PENDIENTE))), tipo);
+    }
+
+    private long problemasAbiertos() {
+        return mongo.count(Query.query(Criteria.where("problemaReportado").is(true).and("resolucionProblema").is(null)),
+                PedidoTienda.class);
+    }
+
+    private long despachosAtrasados(LocalDateTime ahora) {
+        return mongo.count(Query.query(Criteria.where("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)
+                .and("plazoDespachoHasta").lt(ahora)), PedidoTienda.class);
     }
 
     // ─── Piezas ──────────────────────────────────────────────────────────────
