@@ -36,6 +36,56 @@ final class ComisionPlataforma {
     }
 
     /**
+     * Un reembolso anula la comisión del dinero devuelto, con una línea informativa NEGATIVA (la original no se
+     * toca, queda el rastro). Reembolso total: toda la comisión que quede. Parcial (la parte de una tienda): la
+     * misma proporción que el reembolso tiene del pago. Una sola vez por reembolso y nunca lanza: un fallo aquí no
+     * puede romper el reembolso.
+     *
+     * @param reembolsoId id del reembolso guardado (null en pruebas); pedidoTiendaId distingue el reembolso parcial
+     */
+    static void anular(RepartoPagoRepository repartos, PagoEntity pago, double montoReembolso, Long reembolsoId,
+                       String pedidoTiendaId) {
+        try {
+            if (pago == null || pago.getId() == null) return;
+            double vigente = repartos.sumaComisionDePago(pago.getId());
+            if (vigente <= 0) return;
+            String referencia = "REEMBOLSO-" + (reembolsoId != null ? reembolsoId
+                    : pedidoTiendaId != null ? "PEDIDO-" + pedidoTiendaId : "TOTAL");
+            if (repartos.existsByPagoIdAndBeneficiarioTipoAndReferenciaLiquidacion(pago.getId(), RepartoPago.PLATAFORMA, referencia)) return;
+
+            BigDecimal restante = Dinero.pesos(vigente);
+            double montoPago = pago.getMonto() != null ? pago.getMonto() : 0;
+            BigDecimal anulado;
+            if (montoPago <= 0 || montoReembolso >= montoPago - 0.5) {
+                anulado = restante;
+            } else {
+                BigDecimal bruta = Dinero.pesos(repartos.sumaComisionBruta(pago.getId()));
+                anulado = Dinero.pesos(bruta.multiply(BigDecimal.valueOf(montoReembolso))
+                        .divide(BigDecimal.valueOf(montoPago), 2, RoundingMode.HALF_UP)).min(restante);
+            }
+            if (anulado.signum() <= 0) return;
+            repartos.save(RepartoPago.builder()
+                    .pagoId(pago.getId())
+                    .ordenServicioId(pago.getOrdenServicioId())
+                    .cotizacionId(pago.getCotizacionId())
+                    .compraCatalogoId(pago.getCompraCatalogoId())
+                    .concepto(pago.getConcepto())
+                    .beneficiarioTipo(RepartoPago.PLATAFORMA)
+                    .beneficiarioId(RepartoPago.PLATAFORMA)
+                    .beneficiarioNombre("DriveMaster")
+                    .monto(-Dinero.aDouble(anulado))
+                    .estado(RepartoPago.INFORMATIVA)
+                    .liquidacionPorEvento(false)
+                    .referenciaLiquidacion(referencia)
+                    .nota("Comisión anulada por reembolso de $" + Dinero.pesos(montoReembolso).toPlainString())
+                    .fechaCreacion(LocalDateTime.now())
+                    .build());
+        } catch (RuntimeException e) {
+            log.error("No se pudo anular la comisión del pago {} por el reembolso", pago != null ? pago.getReferencia() : null, e);
+        }
+    }
+
+    /**
      * Registra la comisión de un pago aprobado. Idempotente por pago y nunca lanza: un fallo aquí no
      * puede deshacer un pago ya aplicado.
      */

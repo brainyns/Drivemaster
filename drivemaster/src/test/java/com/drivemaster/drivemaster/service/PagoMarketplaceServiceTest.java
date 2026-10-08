@@ -250,6 +250,37 @@ class PagoMarketplaceServiceTest {
     }
 
     @Test
+    void elReembolsoDeUnaTiendaAnulaSoloSuParteDeLaComision() {
+        PagoEntity pago = pago(PagoMarketplaceService.COTIZACION, 100_000);
+        pago.setId(10L);
+        when(reembolsoRepository.save(any(Reembolso.class))).thenAnswer(i -> {
+            Reembolso r = i.getArgument(0);
+            r.setId(55L);
+            return r;
+        });
+        when(repartoRepository.sumaComisionDePago(10L)).thenReturn(8_000.0);
+        when(repartoRepository.sumaComisionBruta(10L)).thenReturn(8_000.0);
+
+        service.registrarReembolso(pago, "ped-s1", 25_000, "No despachó");
+
+        ArgumentCaptor<RepartoPago> linea = ArgumentCaptor.forClass(RepartoPago.class);
+        verify(repartoRepository).save(linea.capture());
+        assertEquals(RepartoPago.PLATAFORMA, linea.getValue().getBeneficiarioTipo());
+        assertEquals(-2_000, linea.getValue().getMonto()); // 25% del pago = 25% de la comisión
+        assertEquals("REEMBOLSO-55", linea.getValue().getReferenciaLiquidacion());
+    }
+
+    @Test
+    void siFallaLaAnulacionElReembolsoSeRegistraIgual() {
+        PagoEntity pago = pago(PagoMarketplaceService.COTIZACION, 100_000);
+        Reembolso guardado = Reembolso.builder().id(1L).build();
+        when(reembolsoRepository.save(any(Reembolso.class))).thenReturn(guardado);
+        when(repartoRepository.sumaComisionDePago(anyLong())).thenThrow(new RuntimeException("caída"));
+
+        assertSame(guardado, service.registrarReembolso(pago, null, 100_000, "Pago no aplicado"));
+    }
+
+    @Test
     void unPagoNoAplicadoNoRegistraComision() {
         when(parametros.comisionPct()).thenReturn(10.0);
         when(parametros.ivaPct()).thenReturn(19.0);

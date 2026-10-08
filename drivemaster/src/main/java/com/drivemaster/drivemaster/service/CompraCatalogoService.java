@@ -373,7 +373,7 @@ public class CompraCatalogoService {
     }
 
     private void registrarReembolso(PagoEntity pago, String compraId, double monto, String motivo) {
-        reembolsoRepository.save(Reembolso.builder()
+        Reembolso guardado = reembolsoRepository.save(Reembolso.builder()
                 .pagoId(pago.getId())
                 .compraCatalogoId(compraId != null ? compraId : pago.getCompraCatalogoId())
                 .usuarioId(pago.getUsuarioId())
@@ -384,6 +384,8 @@ public class CompraCatalogoService {
                 .estado(Reembolso.PENDIENTE)
                 .fechaCreacion(LocalDateTime.now())
                 .build());
+        // La comisión del dinero devuelto deja de contar
+        ComisionPlataforma.anular(repartoRepository, pago, monto, guardado != null ? guardado.getId() : null, null);
     }
 
     // ─── Consultas del cliente ───────────────────────────────────────────────

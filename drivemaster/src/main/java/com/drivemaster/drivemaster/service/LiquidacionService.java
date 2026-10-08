@@ -117,7 +117,7 @@ public class LiquidacionService {
                 pagoRepository.findById(r.getPagoId()).ifPresent(pago -> {
                     // Si el pago ya tiene un reembolso registrado (ej. por no aplicarse) no se duplica
                     if (reembolsoRepository.existsByPagoId(pago.getId())) return;
-                    reembolsoRepository.save(Reembolso.builder()
+                    Reembolso guardado = reembolsoRepository.save(Reembolso.builder()
                             .pagoId(pago.getId())
                             .ordenServicioId(pago.getOrdenServicioId())
                             .usuarioId(pago.getUsuarioId())
@@ -128,6 +128,9 @@ public class LiquidacionService {
                             .estado(Reembolso.PENDIENTE)
                             .fechaCreacion(LocalDateTime.now())
                             .build());
+                    // El diagnóstico no se prestó: su comisión deja de contar
+                    ComisionPlataforma.anular(repartoRepository, pago, pago.getMonto(),
+                            guardado != null ? guardado.getId() : null, null);
                     avisos.alertaAdmin("Reembolso pendiente", "La solicitud " + ordenId
                             + " quedó sin taller. Reembolsar " + Math.round(pago.getMonto())
                             + " COP del diagnóstico (pago " + pago.getReferencia() + ").");
