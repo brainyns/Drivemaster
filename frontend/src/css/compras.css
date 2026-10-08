@@ -5,6 +5,9 @@
 
 /* ── ROOT ────────────────────────────────────────────────────────────────────── */
 .cp-root {
+  /* Estilos en línea del detalle de compra usan los tokens viejos: aquí apuntan al sistema común */
+  --bg: var(--ui-bg); --surface: var(--ui-surface); --surface2: var(--ui-surface-2); --border: var(--ui-line); --border2: var(--ui-line);
+  --text: var(--ui-text); --muted: var(--ui-muted); --text-muted: var(--ui-muted);
   min-height: 100vh;
   background: var(--ui-bg);
   color: var(--ui-text);
