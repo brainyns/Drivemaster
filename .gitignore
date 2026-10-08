@@ -6,3 +6,9 @@ build/
 
 be.txt
 *.log
+
+# Arnés local de capturas y auditoría de contraste (no forma parte de la app)
+frontend/preview-b1.html
+frontend/preview-movil.html
+frontend/src/__preview_b1.jsx
+capturas/
