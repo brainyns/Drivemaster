@@ -61,7 +61,7 @@
   --dm-line-soft:   #26292C;
   --dm-text:        #F5F5F3;
   --dm-muted:       #9B9E9C;
-  --dm-muted-2:     #7C807E;
+  --dm-muted-2:     #959896;   /* 4,5:1 o más sobre todas las superficies oscuras */
 
   /* Texto sobre naranja: siempre oscuro, en ambos temas. */
   --dm-on-accent:   #17191C;
@@ -219,7 +219,7 @@ html[data-theme="light"] .auth-aside {
   --dm-orange-text:       #F28C28;
   --dm-orange-text-hover: #E27C18;
   --dm-muted:     #9B9E9C;
-  --dm-muted-2:   #7C807E;
+  --dm-muted-2:   #959896;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

@@ -176,7 +176,7 @@ html[data-theme="light"] .dm-btn--dark:hover:not(:disabled) {
 
 .dm-btn--whatsapp {
   margin-top: 10px;
-  color: var(--dm-green);
+  color: var(--ui-ok);
   font-size: 11px;
 }
 .dm-btn--whatsapp:hover:not(:disabled) {
@@ -331,7 +331,7 @@ html[data-theme="light"] .dm-btn--dark:hover:not(:disabled) {
 }
 
 .dm-form-error {
-  color: var(--dm-red);
+  color: var(--ui-error);
   font-size: 10px;
 }
 

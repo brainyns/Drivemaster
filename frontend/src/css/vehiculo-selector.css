@@ -199,7 +199,7 @@
 }
 
 .dm-vehicle__footnote > svg {
-  color: var(--dm-green);
+  color: var(--ui-ok);
 }
 
 .dm-vehicle__footnote > button {

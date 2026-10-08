@@ -126,7 +126,7 @@
 
 .dm-cat-vehicle__check {
   display: flex;
-  color: var(--dm-green);
+  color: var(--ui-ok);
 }
 
 .dm-cat-vehicle .dm-btn {
