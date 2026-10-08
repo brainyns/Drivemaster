@@ -179,6 +179,8 @@ class CompraCatalogoServiceTest {
             lista.forEach(repartos::remove);
             return null;
         }).when(repartoRepository).deleteAll(anyIterable());
+        when(repartoRepository.existsByPagoIdAndBeneficiarioTipo(anyLong(), anyString())).thenAnswer(i -> repartos.stream()
+                .anyMatch(r -> i.getArgument(0).equals(r.getPagoId()) && i.getArgument(1).equals(r.getBeneficiarioTipo())));
 
         ReembolsoRepository reembolsoRepository = mock(ReembolsoRepository.class);
         when(reembolsoRepository.save(any(Reembolso.class))).thenAnswer(i -> {
@@ -210,6 +212,7 @@ class CompraCatalogoServiceTest {
         when(usuarioService.obtenerPorCorreo(CORREO)).thenReturn(Usuario.builder().id("u1").nombre("Ana").correo(CORREO).rol("CLIENTE").build());
         ParametrosMarketplace parametros = mock(ParametrosMarketplace.class);
         when(parametros.ivaPct()).thenReturn(19.0);
+        when(parametros.comisionPct()).thenReturn(10.0);
         when(parametros.plazoDespachoDiasHabiles()).thenReturn(2);
         when(parametros.plazoEncargoDiasExtra()).thenReturn(2);
         avisos = mock(AvisosSolicitudServicio.class);
@@ -244,6 +247,15 @@ class CompraCatalogoServiceTest {
         ResponseStatusException e = assertThrows(ResponseStatusException.class, accion::run);
         assertEquals(esperado, e.getStatusCode(), e.getReason());
         return e;
+    }
+
+    /** Líneas que se pagan a las tiendas (sin la comisión informativa de la plataforma). */
+    private List<RepartoPago> repartosDeNegocio() {
+        return repartos.stream().filter(r -> !RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())).toList();
+    }
+
+    private List<RepartoPago> comisiones() {
+        return repartos.stream().filter(r -> RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())).toList();
     }
 
     private PagoEntity iniciarYObtenerPago(CompraRequest r) {
@@ -473,8 +485,8 @@ class CompraCatalogoServiceTest {
         assertNull(p2.getCodigoRetiroHash(), "un envío no tiene código de retiro");
 
         // El pago se reparte a la tienda dueña de cada producto: lo pagado = lo repartido
-        assertEquals(2, repartos.size());
-        for (RepartoPago r : repartos) {
+        assertEquals(2, repartosDeNegocio().size());
+        for (RepartoPago r : repartosDeNegocio()) {
             assertEquals(RepartoPago.TIENDA, r.getBeneficiarioTipo());
             assertEquals("CATALOGO", r.getConcepto());
             assertEquals(RepartoPago.PENDIENTE, r.getEstado());
@@ -482,10 +494,20 @@ class CompraCatalogoServiceTest {
             assertNotNull(r.getCompraCatalogoId());
             assertNull(r.getOrdenServicioId());
         }
-        assertEquals(47_600.0, repartos.stream().filter(r -> r.getBeneficiarioId().equals("s1")).findFirst().orElseThrow().getMonto());
-        assertEquals(43_700.0, repartos.stream().filter(r -> r.getBeneficiarioId().equals("s2")).findFirst().orElseThrow().getMonto());
-        assertEquals(91_300.0, repartos.stream().mapToDouble(RepartoPago::getMonto).sum());
-        assertEquals(p1.getId(), repartos.stream().filter(r -> r.getBeneficiarioId().equals("s1")).findFirst().orElseThrow().getPedidoTiendaId());
+        assertEquals(47_600.0, repartosDeNegocio().stream().filter(r -> r.getBeneficiarioId().equals("s1")).findFirst().orElseThrow().getMonto());
+        assertEquals(43_700.0, repartosDeNegocio().stream().filter(r -> r.getBeneficiarioId().equals("s2")).findFirst().orElseThrow().getMonto());
+        assertEquals(91_300.0, repartosDeNegocio().stream().mapToDouble(RepartoPago::getMonto).sum());
+        assertEquals(p1.getId(), repartosDeNegocio().stream().filter(r -> r.getBeneficiarioId().equals("s1")).findFirst().orElseThrow().getPedidoTiendaId());
+
+        // Comisión de la plataforma: 10% del subtotal antes de IVA (70.000, sin envío), solo informativa
+        assertEquals(1, comisiones().size());
+        RepartoPago comision = comisiones().get(0);
+        assertEquals(7_000.0, comision.getMonto());
+        assertEquals(RepartoPago.INFORMATIVA, comision.getEstado());
+        assertEquals("CATALOGO", comision.getConcepto());
+        assertNotNull(comision.getCompraCatalogoId());
+        assertNull(comision.getPedidoTiendaId(), "sin pedido: ninguna liquidación ni anulación la toca");
+        assertFalse(Boolean.TRUE.equals(comision.getLiquidacionPorEvento()));
 
         CompraCatalogo compra = compras.values().iterator().next();
         assertEquals(CompraCatalogo.PAGADA, compra.getEstado());
@@ -550,7 +572,8 @@ class CompraCatalogoServiceTest {
         assertEquals(2, productos.get("pastilla").getStockActual());
         assertEquals(2, movimientos.size());
         assertEquals(2, pedidos.size());
-        assertEquals(2, repartos.size());
+        assertEquals(2, repartosDeNegocio().size());
+        assertEquals(1, comisiones().size(), "reprocesar un pago ya aplicado no repite la comisión");
         assertTrue(reembolsos.isEmpty(), "reprocesar un pago ya aplicado no genera reembolsos");
         verify(avisos, times(1)).compraPagada(any(), anyList(), anyMap(), any());
     }
@@ -702,7 +725,8 @@ class CompraCatalogoServiceTest {
         assertEquals(3, productos.get("filtro").getStockActual());
         assertEquals(2, movimientos.size());
         assertEquals(2, pedidos.size());
-        assertEquals(2, repartos.size());
+        assertEquals(2, repartosDeNegocio().size());
+        assertEquals(1, comisiones().size());
         assertTrue(reembolsos.isEmpty());
         assertEquals(CompraCatalogo.PAGADA, compras.values().iterator().next().getEstado());
         assertEquals("CATALOGO", fila.getConcepto());

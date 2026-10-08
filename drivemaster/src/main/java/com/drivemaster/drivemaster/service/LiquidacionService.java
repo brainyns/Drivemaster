@@ -60,9 +60,11 @@ public class LiquidacionService {
     }
 
     public List<RepartoPago> repartos(String estado) {
-        return estado != null && !estado.isBlank()
+        List<RepartoPago> lista = estado != null && !estado.isBlank()
                 ? repartoRepository.findByEstadoOrderByFechaCreacionDesc(estado.trim().toUpperCase())
                 : repartoRepository.findAllByOrderByFechaCreacionDesc();
+        // La comisión de la plataforma es informativa: no hay nada que liquidar
+        return lista.stream().filter(r -> !RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())).toList();
     }
 
     /** Modo de dispersión vigente, para mostrarlo en la pantalla del ADMIN. */
