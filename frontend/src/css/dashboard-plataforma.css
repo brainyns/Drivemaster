@@ -1,0 +1,60 @@
+/* Panel de la plataforma (SUPERADMIN). Reutiliza las tarjetas del dashboard (db-*) y solo agrega lo propio (dp-*). */
+
+.dp-acciones { display: flex; align-items: center; gap: .75rem; }
+
+.dp-btn {
+  border: 1px solid var(--border);
+  background: var(--card, transparent);
+  color: var(--text);
+  border-radius: 8px;
+  padding: .45rem .9rem;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dp-btn:hover:not(:disabled) { border-color: var(--accent, #ff3d00); }
+.dp-btn:disabled { opacity: .6; cursor: default; }
+
+.dp-seccion {
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 1.6rem 0 .7rem;
+}
+
+.dp-alertas { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .25rem; }
+.dp-alertas__ok { margin: 0; font-size: .85rem; color: var(--muted); }
+
+.dp-alerta {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 999px;
+  padding: .4rem .9rem;
+  font: inherit;
+  font-size: .82rem;
+  cursor: pointer;
+}
+.dp-alerta strong { font-size: .95rem; }
+.dp-alerta:hover { border-color: var(--accent, #ff3d00); }
+.dp-alerta--critica { border-color: #d64545; }
+.dp-alerta--critica strong { color: #d64545; }
+
+.dp-kpi__detalle { margin: .35rem 0 0; font-size: .75rem; color: var(--muted); line-height: 1.35; }
+
+.dp-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-top: 1.1rem; }
+.dp-der { text-align: right; }
+
+.dp-barras { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .55rem; }
+.dp-barras li { display: grid; grid-template-columns: minmax(110px, 160px) 1fr auto; gap: .75rem; align-items: center; font-size: .82rem; }
+.dp-barras__pista { height: 8px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.dp-barras__pista > span { display: block; height: 100%; border-radius: 99px; background: var(--accent, #ff3d00); }
+
+@media (max-width: 640px) {
+  .dp-dos { grid-template-columns: 1fr; }
+  .dp-barras li { grid-template-columns: 1fr auto; }
+  .dp-barras__pista { grid-column: 1 / -1; order: 3; }
+}

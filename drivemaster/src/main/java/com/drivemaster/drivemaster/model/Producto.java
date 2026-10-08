@@ -29,6 +29,9 @@ public class Producto {
     private Integer stockMinimo;
 
     private String tipo; // STOCK | ENCARGO
+
+    // Cuándo ingresó al catálogo. Los anteriores no lo tienen: se deduce del _id de Mongo.
+    private java.time.LocalDateTime fechaCreacion;
     private Boolean activo;
     private String imagenUrl;
 

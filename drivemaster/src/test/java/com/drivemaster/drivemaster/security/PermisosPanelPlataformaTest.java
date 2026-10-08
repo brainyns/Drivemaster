@@ -52,6 +52,7 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.GET, "/api/reportes/dashboard", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/reportes/servicios/reportes", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/liquidaciones", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/plataforma/dashboard", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/proveedores", "SUPERADMIN"),
             ruta(HttpMethod.PUT, "/api/suscripciones/planes/basico", "SUPERADMIN"),
             ruta(HttpMethod.PUT, "/api/config/parametros/COMISION_PCT", "SUPERADMIN"),
