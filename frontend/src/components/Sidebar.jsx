@@ -48,8 +48,15 @@ const menu = [
     ],
   },
   { key: "mi-tienda", label: "Mi tienda", icon: "admin" },
-  { key: "taller-panel", label: "Panel de taller", icon: "taller" },
   { key: "pedidos-tienda", label: "Pedidos", icon: "proveedores" },
+];
+
+// Taller: del primer aviso a la entrega. "Órdenes anteriores" solo aparece mientras quede alguna por atender.
+const MENU_TALLER = [
+  { key: "taller-inicio",      label: "Inicio",      icon: "dashboard" },
+  { key: "taller-solicitudes", label: "Solicitudes", icon: "aprobaciones" },
+  { key: "taller-mitaller",    label: "Mi taller",   icon: "admin" },
+  { key: "taller-anteriores",  label: "Órdenes anteriores", icon: "ventas" },
 ];
 
 // Tienda del marketplace: sus pedidos, su catálogo y los movimientos de su inventario.
@@ -61,7 +68,7 @@ const MENU_ADMIN = ["dashboard-main", "pedidos-envios", "aprobaciones", "admin-t
 // Dentro de "Finanzas": las liquidaciones son solo del SUPERADMIN; los problemas de envío también los resuelve el ADMIN
 const SUB_SOLO_SUPERADMIN = ["liquidaciones"];
 
-function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
+function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar, resumenTaller }) {
   const [abiertos, setAbiertos] = useState([]);
 
   const toggleAbierto = (key) => {
@@ -75,10 +82,13 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
     if (onCerrar) onCerrar();
   };
 
-  const visibleMenu = menu.filter(item => {
-    if (userRole === "TALLER") return item.key === "taller-panel";
+  // Contador junto al nombre: lo que pide acción en esa sección
+  const contador = (key) => (userRole === "TALLER" && key === "taller-solicitudes" ? resumenTaller?.porResponder : 0) || 0;
+
+  const visibleMenu = (userRole === "TALLER" ? MENU_TALLER : menu).filter(item => {
+    if (userRole === "TALLER") return item.key !== "taller-anteriores" || (resumenTaller?.anteriores || 0) > 0;
     if (userRole === "TIENDA") return MENU_TIENDA.includes(item.key);
-    if (item.key === "taller-panel" || item.key === "pedidos-tienda" || item.key === "mi-tienda") return false;
+    if (item.key === "pedidos-tienda" || item.key === "mi-tienda") return false;
     // ADMIN: solo la operación diaria; el resto del panel es del SUPERADMIN
     if (userRole === "ADMIN") return MENU_ADMIN.includes(item.key);
     // Compras, proveedores e inventario son de cada tienda: el personal interno ya no los ve
@@ -121,6 +131,7 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
               >
                 <span className="sidebar-item-icon">{Icons[item.icon]}</span>
                 <span>{item.label}</span>
+                {contador(item.key) > 0 && <span className="sidebar-contador" aria-label={`${contador(item.key)} pendientes`}>{contador(item.key)}</span>}
                 {tieneSubItems && (
                   <span className={`sidebar-arrow${estaAbierto ? " abierto" : ""}`}>›</span>
                 )}

@@ -116,13 +116,13 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
  * Bandeja de solicitudes de diagnóstico del taller: responder (aceptar con cita o
  * rechazar), asignar mecánico, registrar el diagnóstico y elegir repuestos.
  */
-export default function TallerSolicitudes() {
+export default function TallerSolicitudes({ filtroInicial = "responder" }) {
   const token = getToken();
   const [solicitudes, setSolicitudes] = useState([]);
   const [mecanicos, setMecanicos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [filtro, setFiltro] = useState("responder");
+  const [filtro, setFiltro] = useState(FILTROS.some((f) => f.key === filtroInicial) ? filtroInicial : "responder");
   const [seleccionadaId, setSeleccionadaId] = useState(null);
 
   const [fechaRevision, setFechaRevision] = useState("");

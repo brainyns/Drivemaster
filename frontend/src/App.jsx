@@ -113,7 +113,11 @@ const TITULOS = {
   "mis-servicios":   "Mis servicios",
   "mis-compras":     "Mis compras",
   "checkout-marketplace": "Entrega y pago",
-  "taller-panel":    "Panel de taller",
+  "taller-panel":    "Inicio del taller",
+  "taller-inicio":   "Inicio del taller",
+  "taller-solicitudes": "Solicitudes",
+  "taller-mitaller": "Mi taller",
+  "taller-anteriores": "Órdenes anteriores",
   "admin-talleres":  "Servicios",
   "aprobaciones":    "Aprobaciones",
   "negocios":        "Tiendas y talleres",
@@ -134,10 +138,18 @@ const PAGINAS_CLIENTE = [
 // Catálogo marketplace: se consulta sin sesión y no usa el panel lateral aunque haya una.
 const PAGINAS_MARKETPLACE = ["producto-marketplace", "carrito-marketplace"];
 
+// Secciones del panel del taller (cada una es una entrada del menú lateral).
+const SECCION_TALLER = {
+  "taller-inicio":      "inicio",
+  "taller-solicitudes": "solicitudes",
+  "taller-mitaller":    "mitaller",
+  "taller-anteriores":  "anteriores",
+};
+
 // Página inicial de cada rol después de iniciar sesión.
 const INICIO_POR_ROL = {
   CLIENTE: "catalogo",
-  TALLER:  "taller-panel",
+  TALLER:  "taller-inicio",
   TIENDA:  "productos",
   ADMIN:   "dashboard-main",
 };
@@ -165,6 +177,8 @@ function App() {
   const [user,           setUser]           = useState(storedUser);
   const [token,          setToken]          = useState(storedToken);
   const [idSeleccionado, setIdSeleccionado] = useState(null);
+  // Lo que el panel del taller le avisa al menú (solicitudes por responder, órdenes anteriores)
+  const [resumenTaller, setResumenTaller] = useState({ anteriores: 0, porResponder: 0 });
   const [sessionExpired, setSessionExpired] = useState(false);
   const [solicitudItems, setSolicitudItems] = useState(loadSolicitud);
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
@@ -339,7 +353,8 @@ function App() {
       "mi-perfil",
     ],
     CLIENTE: ["catalogo", ...PAGINAS_CLIENTE],
-    TALLER: ["taller-panel"],
+    // "taller-panel" era la única página del taller: se conserva como alias de Inicio
+    TALLER: ["taller-panel", ...Object.keys(SECCION_TALLER)],
     // Compras, proveedores e inventario son de cada tienda (el backend filtra por dueño)
     TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda", "informes-tienda",
       "compras", "compraNueva", "compraDetalle", "proveedores", "proveedorNuevo", "proveedorEditar"],
@@ -628,7 +643,9 @@ function App() {
     if (pagina === "movimientos")      return <Movimientos          token={token} esTienda={esTienda} />;
     if (pagina === "usuarios")         return <Usuarios             token={token} />;
     if (pagina === "mi-perfil")        return <PerfilAdmin          />;
-    if (pagina === "taller-panel")     return <PanelTaller          />;
+    if (pagina === "taller-panel" || SECCION_TALLER[pagina]) {
+      return <PanelTaller seccion={SECCION_TALLER[pagina] || "inicio"} param={idSeleccionado} irA={irA} onResumen={setResumenTaller} />;
+    }
     if (pagina === "admin-talleres")   return <AdminTalleres        />;
     // ADMIN: solo aprueba o rechaza; SUPERADMIN: gestión completa (y la lista unificada "Tiendas y talleres")
     if (pagina === "aprobaciones" && user?.rol === "ADMIN") return <AprobacionesAdmin token={token} />;
@@ -674,6 +691,7 @@ function App() {
           paginaActual={pagina}
           irA={irA}
           userRole={user?.rol}
+          resumenTaller={resumenTaller}
           abierto={sidebarAbierto}
           onCerrar={() => setSidebarAbierto(false)}
         />

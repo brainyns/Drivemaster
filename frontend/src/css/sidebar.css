@@ -185,3 +185,17 @@
     visibility: visible;
   }
 }
+/* Contador de pendientes junto al nombre de la sección (p. ej. solicitudes por responder del taller) */
+.sidebar-contador {
+  margin-left: auto;
+  min-width: 1.35rem;
+  padding: 0 .4rem;
+  border-radius: 999px;
+  background: var(--primary, #ff3d00);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1.35rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
