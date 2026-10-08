@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
@@ -56,6 +57,17 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.GET, "/api/plataforma/productos", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/clientes", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/inexistente", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/plataforma/negocios", "SUPERADMIN"),
+            // Tiendas, talleres y planes: el ADMIN solo aprueba o rechaza
+            ruta(HttpMethod.GET, "/api/tiendas/t1", "SUPERADMIN"),
+            ruta(HttpMethod.PATCH, "/api/tiendas/t1/activo", "SUPERADMIN"),
+            ruta(HttpMethod.PUT, "/api/tiendas/plataforma/datos", "SUPERADMIN"),
+            ruta(HttpMethod.POST, "/api/talleres", "SUPERADMIN"),
+            ruta(HttpMethod.PUT, "/api/talleres/w1", "SUPERADMIN"),
+            ruta(HttpMethod.PATCH, "/api/talleres/w1/activo", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/suscripciones", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/suscripciones/planes", "SUPERADMIN"),
+            ruta(HttpMethod.POST, "/api/suscripciones", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/reportes/ventas", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/reportes/productos", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/reportes/clientes", "SUPERADMIN"),
@@ -81,12 +93,11 @@ class PermisosPanelPlataformaTest {
             // Operación diaria: SUPERADMIN y ADMIN
             ruta(HttpMethod.GET, "/api/plataforma/operacion", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/pedidos", "SUPERADMIN", "ADMIN"),
-            ruta(HttpMethod.GET, "/api/tiendas", "SUPERADMIN", "ADMIN"),
+            ruta(HttpMethod.GET, "/api/plataforma/negocios/pendientes", "SUPERADMIN", "ADMIN"),
+            ruta(HttpMethod.GET, "/api/tiendas", "SUPERADMIN"),
             ruta(HttpMethod.PATCH, "/api/tiendas/t1/aprobacion", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.GET, "/api/talleres", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.PATCH, "/api/talleres/t1/aprobacion", "SUPERADMIN", "ADMIN"),
-            ruta(HttpMethod.GET, "/api/suscripciones/planes", "SUPERADMIN", "ADMIN"),
-            ruta(HttpMethod.POST, "/api/suscripciones", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.GET, "/api/pedidos-tienda/problemas", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.POST, "/api/pedidos-tienda/p1/problema/resolver", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.GET, "/api/solicitudes-servicio", "SUPERADMIN", "ADMIN"),
@@ -114,6 +125,29 @@ class PermisosPanelPlataformaTest {
         }
     }
 
+    // ─── El ADMIN solo aprueba y rechaza: el plan de prueba es el único que puede asignar ──
+
+    private int aprobar(String rol, String json) throws Exception {
+        return mvc.perform(request(HttpMethod.PATCH, "/api/tiendas/t1/aprobacion")
+                        .contentType(MediaType.APPLICATION_JSON).content(json).with(user(rol.toLowerCase() + "@demo.com").roles(rol)))
+                .andReturn().getResponse().getStatus();
+    }
+
+    @Test
+    void elAdminSoloPuedeAprobarConElPlanDePrueba() throws Exception {
+        assertEquals(403, aprobar("ADMIN", "{\"aprobado\":true,\"planCodigo\":\"PREMIUM\"}"), "otro plan: solo SUPERADMIN");
+        assertEquals(403, aprobar("ADMIN", "{\"aprobado\":true,\"planCodigo\":\"basico\"}"));
+        assertEquals(200, aprobar("ADMIN", "{\"aprobado\":true,\"planCodigo\":\"PRUEBA\"}"));
+        assertEquals(200, aprobar("ADMIN", "{\"aprobado\":true,\"planCodigo\":\"prueba\"}"));
+        assertEquals(200, aprobar("ADMIN", "{\"aprobado\":true}"), "sin plan arranca con PRUEBA");
+        assertEquals(200, aprobar("ADMIN", "{\"aprobado\":false,\"motivo\":\"Documentos incompletos\"}"), "rechazar sí puede");
+    }
+
+    @Test
+    void elSuperadminPuedeAprobarConCualquierPlan() throws Exception {
+        assertEquals(200, aprobar("SUPERADMIN", "{\"aprobado\":true,\"planCodigo\":\"PREMIUM\"}"));
+    }
+
     @Test
     void sinSesionNingunaRutaDelPanelEstaAbierta() throws Exception {
         for (Ruta r : RUTAS) {
@@ -132,7 +166,7 @@ class PermisosPanelPlataformaTest {
                     || r.url().startsWith("/api/productos") || r.url().startsWith("/api/movimientos")
                     || r.url().startsWith("/api/proveedores") || r.url().startsWith("/api/config")
                     || r.url().equals("/api/solicitudes")
-                    || (r.url().startsWith("/api/plataforma/") && !r.url().endsWith("/operacion") && !r.url().endsWith("/pedidos"));
+                    || (r.url().startsWith("/api/plataforma/") && !r.url().endsWith("/operacion") && !r.url().endsWith("/pedidos") && !r.url().endsWith("/pendientes"));
             if (!financieraOComercial) continue;
             int status = mvc.perform(peticion(r).with(user("admin@demo.com").roles("ADMIN")))
                     .andReturn().getResponse().getStatus();

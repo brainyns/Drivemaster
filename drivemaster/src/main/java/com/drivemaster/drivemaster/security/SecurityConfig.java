@@ -102,8 +102,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/talleres/activos").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/talleres/registro").permitAll()
                         .requestMatchers("/api/talleres/mi-taller", "/api/talleres/mi-taller/**").hasRole("TALLER")
-                        .requestMatchers("/api/talleres/**").hasAnyRole("SUPERADMIN", "ADMIN")
-                        .requestMatchers("/api/talleres").hasAnyRole("SUPERADMIN", "ADMIN")
+                        // El ADMIN solo ve la lista de talleres y los aprueba o rechaza; crear, editar y pausar es del SUPERADMIN
+                        .requestMatchers(HttpMethod.PATCH, "/api/talleres/*/aprobacion").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/talleres").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers("/api/talleres", "/api/talleres/**").hasRole("SUPERADMIN")
 
                         // Marketplace: solicitudes de diagnóstico (el acceso a cada solicitud lo valida el servicio)
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes-servicio").hasRole("CLIENTE")
@@ -162,17 +164,17 @@ public class SecurityConfig {
                         // Finanzas: liquidaciones solo SUPERADMIN
                         .requestMatchers("/api/liquidaciones/**").hasRole("SUPERADMIN")
                         // Panel de la plataforma: solo SUPERADMIN, salvo el panel operativo mínimo del ADMIN
-                        .requestMatchers(HttpMethod.GET, "/api/plataforma/operacion", "/api/plataforma/pedidos")
-                                .hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/plataforma/operacion", "/api/plataforma/pedidos",
+                                "/api/plataforma/negocios/pendientes").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/plataforma/**").hasRole("SUPERADMIN")
 
                         // Marketplace: tiendas y suscripciones
                         .requestMatchers(HttpMethod.POST, "/api/tiendas/registro").permitAll()
                         .requestMatchers("/api/tiendas/mi-tienda").hasRole("TIENDA")
-                        .requestMatchers("/api/tiendas", "/api/tiendas/**").hasAnyRole("SUPERADMIN", "ADMIN")
-                        // Los planes se editan solo desde la plataforma; activar uno hace parte de aprobar un negocio
-                        .requestMatchers(HttpMethod.PUT, "/api/suscripciones/planes/*").hasRole("SUPERADMIN")
-                        .requestMatchers("/api/suscripciones", "/api/suscripciones/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        // El ADMIN solo aprueba o rechaza (con el plan de prueba); lo demás de tiendas y planes es del SUPERADMIN
+                        .requestMatchers(HttpMethod.PATCH, "/api/tiendas/*/aprobacion").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers("/api/tiendas", "/api/tiendas/**").hasRole("SUPERADMIN")
+                        .requestMatchers("/api/suscripciones", "/api/suscripciones/**").hasRole("SUPERADMIN")
 
                         // Configuración: se puede leer con sesión o sin ella (ver más abajo), pero escribir
                         // (comisión, tarifas, métodos de pago) es solo del SUPERADMIN

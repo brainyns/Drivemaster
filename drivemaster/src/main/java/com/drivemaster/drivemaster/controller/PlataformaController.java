@@ -11,9 +11,13 @@ import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.Producto
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ServiciosPorTaller;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.UsuariosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.VentasPorTienda;
+import com.drivemaster.drivemaster.dto.plataforma.NegociosPlataformaDTO.NegocioPendiente;
+import com.drivemaster.drivemaster.dto.plataforma.NegociosPlataformaDTO.NegociosRespuesta;
 import com.drivemaster.drivemaster.service.PlataformaConsultasService;
+import com.drivemaster.drivemaster.service.PlataformaNegociosService;
 import com.drivemaster.drivemaster.service.PlataformaReportesService;
 import com.drivemaster.drivemaster.service.PlataformaDashboardService;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,12 +35,14 @@ public class PlataformaController {
     private final PlataformaDashboardService dashboardService;
     private final PlataformaConsultasService consultas;
     private final PlataformaReportesService reportes;
+    private final PlataformaNegociosService negocios;
 
     public PlataformaController(PlataformaDashboardService dashboardService, PlataformaConsultasService consultas,
-                                PlataformaReportesService reportes) {
+                                PlataformaReportesService reportes, PlataformaNegociosService negocios) {
         this.dashboardService = dashboardService;
         this.consultas = consultas;
         this.reportes = reportes;
+        this.negocios = negocios;
     }
 
     @GetMapping("/dashboard")
@@ -60,6 +66,23 @@ public class PlataformaController {
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "20") int tamano) {
         return ResponseEntity.ok(consultas.pedidos(estado, tiendaId, entrega, atrasados, pagina, tamano));
+    }
+
+    /** SUPERADMIN: tiendas y talleres en una lista, con estado, plan, calificación, productos u órdenes y datos por completar. */
+    @GetMapping("/negocios")
+    public ResponseEntity<NegociosRespuesta> negocios(
+            @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "20") int tamano) {
+        return ResponseEntity.ok(negocios.negocios(tipo, estado, q, pagina, tamano));
+    }
+
+    /** ADMIN y SUPERADMIN: negocios por revisar, con lo mínimo para aprobarlos o rechazarlos. */
+    @GetMapping("/negocios/pendientes")
+    public ResponseEntity<List<NegocioPendiente>> pendientes() {
+        return ResponseEntity.ok(negocios.pendientes());
     }
 
     // ─── Reportes financieros (solo SUPERADMIN) ──────────────────────────────
