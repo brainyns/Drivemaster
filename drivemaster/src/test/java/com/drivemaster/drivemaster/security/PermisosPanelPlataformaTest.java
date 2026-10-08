@@ -53,6 +53,9 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.GET, "/api/reportes/servicios/reportes", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/liquidaciones", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/dashboard", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/plataforma/productos", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/plataforma/clientes", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/plataforma/inexistente", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/proveedores", "SUPERADMIN"),
             ruta(HttpMethod.PUT, "/api/suscripciones/planes/basico", "SUPERADMIN"),
             ruta(HttpMethod.PUT, "/api/config/parametros/COMISION_PCT", "SUPERADMIN"),
@@ -70,6 +73,7 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.POST, "/api/productos", "SUPERADMIN", "VENDEDOR", "TIENDA"),
 
             // Operación diaria: SUPERADMIN y ADMIN
+            ruta(HttpMethod.GET, "/api/plataforma/operacion", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.GET, "/api/tiendas", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.PATCH, "/api/tiendas/t1/aprobacion", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.GET, "/api/talleres", "SUPERADMIN", "ADMIN"),
@@ -120,7 +124,8 @@ class PermisosPanelPlataformaTest {
                     || r.url().startsWith("/api/compras") || r.url().startsWith("/api/clientes")
                     || r.url().startsWith("/api/productos") || r.url().startsWith("/api/movimientos")
                     || r.url().startsWith("/api/proveedores") || r.url().startsWith("/api/config")
-                    || r.url().equals("/api/solicitudes");
+                    || r.url().equals("/api/solicitudes")
+                    || (r.url().startsWith("/api/plataforma/") && !r.url().endsWith("/operacion"));
             if (!financieraOComercial) continue;
             int status = mvc.perform(peticion(r).with(user("admin@demo.com").roles("ADMIN")))
                     .andReturn().getResponse().getStatus();
