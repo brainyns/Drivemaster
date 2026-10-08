@@ -162,7 +162,8 @@ public class SecurityConfig {
                         // Finanzas: liquidaciones solo SUPERADMIN
                         .requestMatchers("/api/liquidaciones/**").hasRole("SUPERADMIN")
                         // Panel de la plataforma: solo SUPERADMIN, salvo el panel operativo mínimo del ADMIN
-                        .requestMatchers(HttpMethod.GET, "/api/plataforma/operacion").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/plataforma/operacion", "/api/plataforma/pedidos")
+                                .hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/plataforma/**").hasRole("SUPERADMIN")
 
                         // Marketplace: tiendas y suscripciones

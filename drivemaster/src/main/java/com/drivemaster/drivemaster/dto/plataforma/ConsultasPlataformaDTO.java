@@ -29,6 +29,18 @@ public final class ConsultasPlataformaDTO {
 
     public record ClientesRespuesta(Pagina<ClienteFila> clientes, List<String> ciudades) {}
 
+    /**
+     * Una fila del monitor "Pedidos y envíos". Sin datos del cliente (ni nombre, teléfono, dirección ni montos):
+     * para vigilar el avance basta saber la tienda, la ciudad de destino y cuántos días lleva.
+     */
+    public record PedidoFila(String id, String origen, String estado, String tiendaId, String tienda, String entrega,
+                             String destino, int articulos, long diasDesdePago, LocalDateTime fechaPago,
+                             LocalDateTime plazoDespacho, boolean atrasado, boolean problemaAbierto) {}
+
+    /** porEstado: todos los pedidos por estado (para los contadores); atrasados y problemas, también del total. */
+    public record PedidosRespuesta(Pagina<PedidoFila> pedidos, java.util.Map<String, Long> porEstado, long atrasados,
+                                   long problemasAbiertos, List<TiendaOpcion> tiendas) {}
+
     /** Panel operativo mínimo del ADMIN: solo lo que le toca atender. */
     public record Operacion(LocalDateTime generadoEn, long tiendasPorAprobar, long talleresPorAprobar,
                             long problemasEnvioAbiertos, long despachosAtrasados) {}

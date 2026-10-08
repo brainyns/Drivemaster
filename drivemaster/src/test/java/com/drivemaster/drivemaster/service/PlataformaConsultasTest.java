@@ -3,6 +3,9 @@ package com.drivemaster.drivemaster.service;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ClienteFila;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ClientesRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Operacion;
+import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidoFila;
+import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidosRespuesta;
+import com.drivemaster.drivemaster.dto.plataforma.ProblemaEnvioDTO;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductoFila;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductosRespuesta;
 import com.drivemaster.drivemaster.model.CompraCatalogo;
@@ -178,6 +181,115 @@ class PlataformaConsultasTest {
         assertEquals("x***@d.co", PlataformaConsultasService.enmascarar("x@d.co"));
         assertNull(PlataformaConsultasService.enmascarar(null));
         assertNull(PlataformaConsultasService.enmascarar("sin-arroba"));
+    }
+
+    // ─── Pedidos y envíos ────────────────────────────────────────────────────
+
+    private static final LocalDateTime AHORA = LocalDateTime.of(2026, 10, 7, 12, 0);
+
+    private static PedidoTienda pedidoEnvio() {
+        return PedidoTienda.builder().id("p1").origen(PedidoTienda.ORIGEN_CATALOGO).entrega(PedidoTienda.ENVIO)
+                .estado(PedidoTienda.PENDIENTE).tiendaId("t1").tiendaNombre("Repuestos Sur")
+                .clienteId("u1").clienteNombre("Ana Pérez").envioReceptor("Ana Pérez").envioTelefono("3001234567")
+                .envioDireccion("Cra 10 # 20-30").envioCiudad("Medellín").codigoRetiroHash("hash-secreto")
+                .fechaCreacion(AHORA.minusDays(4)).plazoDespachoHasta(AHORA.minusDays(1)).total(150_000.0)
+                .items(List.of(com.drivemaster.drivemaster.model.CotizacionItem.builder().cantidad(2).build(),
+                        com.drivemaster.drivemaster.model.CotizacionItem.builder().cantidad(1).build())).build();
+    }
+
+    @Test
+    void laFilaDelMonitorCalculaDiasYAtrasoYNoLlevaDatosDelCliente() {
+        PedidoFila f = PlataformaConsultasService.fila(pedidoEnvio(), AHORA);
+
+        assertEquals(4, f.diasDesdePago());
+        assertTrue(f.atrasado());
+        assertEquals("Medellín", f.destino());
+        assertEquals(3, f.articulos());
+        assertFalse(f.problemaAbierto());
+        // Sin nombre, teléfono, dirección, montos ni el hash del código de retiro
+        String datos = f.toString();
+        for (String prohibido : new String[]{"Ana", "3001234567", "Cra 10", "150000", "hash-secreto", "u1"}) {
+            assertFalse(datos.contains(prohibido), prohibido);
+        }
+    }
+
+    @Test
+    void unPedidoYaDespachadoONoVencidoNoEstaAtrasado() {
+        PedidoTienda despachado = pedidoEnvio().toBuilder().estado(PedidoTienda.DESPACHADO).build();
+        PedidoTienda aTiempo = pedidoEnvio().toBuilder().plazoDespachoHasta(AHORA.plusDays(1)).build();
+
+        assertFalse(PlataformaConsultasService.fila(despachado, AHORA).atrasado());
+        assertFalse(PlataformaConsultasService.fila(aTiempo, AHORA).atrasado());
+    }
+
+    @Test
+    void elDestinoDeUnRetiroEsLaTiendaYElDeUnPedidoDeTallerEsElTaller() {
+        PedidoTienda retiro = pedidoEnvio().toBuilder().entrega(PedidoTienda.RETIRO).tiendaCiudad("Bogotá").build();
+        PedidoTienda deTaller = PedidoTienda.builder().id("p2").origen(PedidoTienda.ORIGEN_TALLER).estado(PedidoTienda.PENDIENTE)
+                .tallerNombre("AutoMax").tallerCiudad("Cali").fechaCreacion(AHORA).build();
+
+        assertEquals("Retiro en tienda · Bogotá", PlataformaConsultasService.fila(retiro, AHORA).destino());
+        assertEquals("Taller AutoMax · Cali", PlataformaConsultasService.fila(deTaller, AHORA).destino());
+    }
+
+    @SuppressWarnings("unchecked")
+    private PedidosRespuesta consultarPedidos(String estado, String tienda, String entrega, boolean atrasados) {
+        when(mongo.find(any(Query.class), eq(PedidoTienda.class))).thenReturn(List.of(pedidoEnvio()));
+        when(mongo.findAll(Tienda.class)).thenReturn(List.of());
+        AggregationResults<Document> grupos = mock(AggregationResults.class);
+        when(grupos.getMappedResults()).thenReturn(List.of(new Document("_id", "PENDIENTE").append("n", 5)));
+        when(mongo.aggregate(any(Aggregation.class), eq("pedidos_tienda"), eq(Document.class))).thenReturn(grupos);
+        return servicio.pedidos(estado, tienda, entrega, atrasados, 0, 20, AHORA);
+    }
+
+    @Test
+    void elMonitorFiltraPorEstadoTiendaEntregaYAtrasoEnElServidor() {
+        PedidosRespuesta r = consultarPedidos("pendiente", "t1", "ENVIO", true);
+
+        String filtro = consultaDe(PedidoTienda.class).toString();
+        assertTrue(filtro.contains("PENDIENTE") && filtro.contains("t1") && filtro.contains("ENVIO"), filtro);
+        assertTrue(filtro.contains("plazoDespachoHasta"), "atrasados: " + filtro);
+        assertEquals(1, r.pedidos().items().size());
+        assertEquals(5L, r.porEstado().get("PENDIENTE"));
+    }
+
+    @Test
+    void unEstadoInventadoNoDevuelveNadaEnVezDeIgnorarseElFiltro() {
+        consultarPedidos("DROP", null, null, false);
+
+        assertTrue(consultaDe(PedidoTienda.class).toString().contains("__ninguno__"));
+    }
+
+    @Test
+    void elFiltroProblemaMuestraSoloLosProblemasAbiertos() {
+        consultarPedidos("PROBLEMA", null, null, false);
+
+        String filtro = consultaDe(PedidoTienda.class).toString();
+        assertTrue(filtro.contains("problemaReportado") && filtro.contains("resolucionProblema"), filtro);
+    }
+
+    // ─── Problemas de envío: datos mínimos ───────────────────────────────────
+
+    @Test
+    void losProblemasDeEnvioNoExponenElHashDelCodigoNiLosDatosPersonales() {
+        PedidoTienda p = pedidoEnvio().toBuilder().problemaReportado(true).problemaDetalle("No llegó")
+                .estado(PedidoTienda.DESPACHADO).build();
+
+        ProblemaEnvioDTO dto = ProblemaEnvioDTO.de(p);
+
+        assertEquals("p1", dto.id());
+        assertEquals("Medellín", dto.envioCiudad());
+        assertEquals("No llegó", dto.problemaDetalle());
+        String datos = dto.toString();
+        for (String prohibido : new String[]{"hash-secreto", "3001234567", "Cra 10", "Ana Pérez", "u1"}) {
+            assertFalse(datos.contains(prohibido), prohibido);
+        }
+        for (var campo : ProblemaEnvioDTO.class.getRecordComponents()) {
+            String n = campo.getName().toLowerCase();
+            assertFalse(n.contains("hash") || n.contains("telefono") || n.contains("receptor") || n.contains("direccion")
+                    || n.contains("cliente"), "campo con datos personales: " + n);
+        }
+        assertNull(ProblemaEnvioDTO.de(null));
     }
 
     // ─── Panel operativo del ADMIN ───────────────────────────────────────────

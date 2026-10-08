@@ -53,16 +53,17 @@ public class PedidoTiendaController {
 
     /** ADMIN: pedidos con un problema de envío reportado (abiertos y resueltos). */
     @GetMapping("/problemas")
-    public ResponseEntity<List<PedidoTienda>> problemas() {
-        return ResponseEntity.ok(service.problemasDeEnvio());
+    public ResponseEntity<List<com.drivemaster.drivemaster.dto.plataforma.ProblemaEnvioDTO>> problemas() {
+        return ResponseEntity.ok(service.problemasDeEnvio().stream()
+                .map(com.drivemaster.drivemaster.dto.plataforma.ProblemaEnvioDTO::de).toList());
     }
 
     /** ADMIN: resuelve un problema reportado por el cliente (CONFIRMAR_ENTREGA o REEMBOLSAR), con motivo escrito. */
     @PostMapping("/{id}/problema/resolver")
-    public ResponseEntity<PedidoTienda> resolverProblema(@PathVariable String id,
+    public ResponseEntity<com.drivemaster.drivemaster.dto.plataforma.ProblemaEnvioDTO> resolverProblema(@PathVariable String id,
                                                          @RequestBody Map<String, String> body, Authentication auth) {
-        return ResponseEntity.ok(service.resolverProblema(auth.getName(), id,
-                body != null ? body.get("resolucion") : null, body != null ? body.get("motivo") : null));
+        return ResponseEntity.ok(com.drivemaster.drivemaster.dto.plataforma.ProblemaEnvioDTO.de(service.resolverProblema(auth.getName(), id,
+                body != null ? body.get("resolucion") : null, body != null ? body.get("motivo") : null)));
     }
 
     @PatchMapping("/{id}/despachar")

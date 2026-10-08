@@ -3,11 +3,14 @@ package com.drivemaster.drivemaster.service;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ClienteFila;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ClientesRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Pagina;
+import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidoFila;
+import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductoFila;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.TiendaOpcion;
 import com.drivemaster.drivemaster.model.CompraCatalogo;
 import com.drivemaster.drivemaster.model.OrdenServicio;
+import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.model.Usuario;
@@ -27,6 +30,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Set;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -161,6 +167,93 @@ public class PlataformaConsultasService {
             r.put(String.valueOf(d.get("_id")), n instanceof Number num ? num.longValue() : 0L);
         }
         return r;
+    }
+
+    // ─── Pedidos y envíos ────────────────────────────────────────────────────
+
+    static final String PROBLEMA = "PROBLEMA";
+    private static final Set<String> ESTADOS_PEDIDO = Set.of(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION,
+            PedidoTienda.DESPACHADO, PedidoTienda.NO_DESPACHADO, PedidoTienda.RECIBIDO, PedidoTienda.LISTO_PARA_RETIRAR,
+            PedidoTienda.RETIRADO, PedidoTienda.ENTREGADO, PedidoTienda.NO_ENTREGADO);
+
+    /**
+     * Monitor de lo que se vende en las tiendas y de los envíos y retiros en curso. Lo ve el ADMIN y el SUPERADMIN.
+     *
+     * @param estado un estado del pedido o "PROBLEMA" (problema de envío abierto); vacío = todos
+     * @param entrega ENVIO o RETIRO (vacío = ambos)
+     * @param soloAtrasados solo los que la tienda no despachó dentro del plazo
+     */
+    public PedidosRespuesta pedidos(String estado, String tiendaId, String entrega, boolean soloAtrasados,
+                                    int pagina, int tamano) {
+        return pedidos(estado, tiendaId, entrega, soloAtrasados, pagina, tamano, LocalDateTime.now());
+    }
+
+    PedidosRespuesta pedidos(String estado, String tiendaId, String entrega, boolean soloAtrasados,
+                             int pagina, int tamano, LocalDateTime ahora) {
+        List<Criteria> y = new ArrayList<>();
+        if (hay(estado)) {
+            String e = estado.trim().toUpperCase();
+            if (PROBLEMA.equals(e)) y.add(problemaAbierto());
+            else if (ESTADOS_PEDIDO.contains(e)) y.add(Criteria.where("estado").is(e));
+            else y.add(Criteria.where("estado").is("__ninguno__")); // un estado inventado no devuelve nada
+        }
+        if (hay(tiendaId)) y.add(Criteria.where("tiendaId").is(tiendaId.trim()));
+        if (PedidoTienda.ENVIO.equalsIgnoreCase(entrega)) y.add(Criteria.where("entrega").is(PedidoTienda.ENVIO));
+        if (PedidoTienda.RETIRO.equalsIgnoreCase(entrega)) y.add(Criteria.where("entrega").is(PedidoTienda.RETIRO));
+        if (soloAtrasados) y.add(atrasado(ahora));
+        Criteria criterio = y.isEmpty() ? new Criteria() : new Criteria().andOperator(y.toArray(new Criteria[0]));
+
+        int tam = tamano(tamano);
+        int pag = Math.max(0, pagina);
+        long total = mongo.count(Query.query(criterio), PedidoTienda.class);
+        List<PedidoTienda> pedidos = mongo.find(Query.query(criterio)
+                .with(PageRequest.of(pag, tam, Sort.by(Sort.Direction.DESC, "fechaCreacion"))), PedidoTienda.class);
+        List<PedidoFila> filas = pedidos.stream().map(p -> fila(p, ahora)).toList();
+
+        Map<String, Long> porEstado = new LinkedHashMap<>();
+        for (Document d : mongo.aggregate(Aggregation.newAggregation(Aggregation.group("estado").count().as("n")),
+                "pedidos_tienda", Document.class).getMappedResults()) {
+            Object n = d.get("n");
+            porEstado.put(String.valueOf(d.get("_id")), n instanceof Number num ? num.longValue() : 0L);
+        }
+        long atrasados = mongo.count(Query.query(atrasado(ahora)), PedidoTienda.class);
+        long problemas = mongo.count(Query.query(problemaAbierto()), PedidoTienda.class);
+        List<TiendaOpcion> tiendas = mongo.findAll(Tienda.class).stream()
+                .map(t -> new TiendaOpcion(t.getId(), t.getNombre()))
+                .sorted(Comparator.comparing(t -> t.nombre() == null ? "" : t.nombre().toLowerCase())).toList();
+        return new PedidosRespuesta(new Pagina<>(filas, total, pag, tam), porEstado, atrasados, problemas, tiendas);
+    }
+
+    private static Criteria atrasado(LocalDateTime ahora) {
+        return Criteria.where("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)
+                .and("plazoDespachoHasta").lt(ahora);
+    }
+
+    private static Criteria problemaAbierto() {
+        return Criteria.where("problemaReportado").is(true).and("resolucionProblema").is(null);
+    }
+
+    static PedidoFila fila(PedidoTienda p, LocalDateTime ahora) {
+        boolean catalogo = p.esCatalogo();
+        boolean enEspera = PedidoTienda.PENDIENTE.equals(p.getEstado()) || PedidoTienda.EN_PREPARACION.equals(p.getEstado());
+        boolean atrasado = enEspera && p.getPlazoDespachoHasta() != null && p.getPlazoDespachoHasta().isBefore(ahora);
+        long dias = p.getFechaCreacion() == null ? 0
+                : Math.max(0, ChronoUnit.DAYS.between(p.getFechaCreacion().toLocalDate(), ahora.toLocalDate()));
+        int articulos = p.getItems() == null ? 0 : p.getItems().stream()
+                .mapToInt(i -> i.getCantidad() != null ? i.getCantidad() : 0).sum();
+        return new PedidoFila(p.getId(), catalogo ? PedidoTienda.ORIGEN_CATALOGO : PedidoTienda.ORIGEN_TALLER, p.getEstado(),
+                p.getTiendaId(), p.getTiendaNombre(), catalogo ? p.getEntrega() : null, destino(p, catalogo), articulos, dias,
+                p.getFechaCreacion(), p.getPlazoDespachoHasta(), atrasado,
+                Boolean.TRUE.equals(p.getProblemaReportado()) && p.getResolucionProblema() == null);
+    }
+
+    /** Solo la ciudad: la dirección y el nombre del cliente no hacen falta para vigilar el avance. */
+    private static String destino(PedidoTienda p, boolean catalogo) {
+        if (!catalogo) {
+            return "Taller " + (p.getTallerNombre() != null ? p.getTallerNombre() : "") + (p.getTallerCiudad() != null ? " · " + p.getTallerCiudad() : "");
+        }
+        if (PedidoTienda.ENVIO.equals(p.getEntrega())) return p.getEnvioCiudad();
+        return "Retiro en tienda" + (p.getTiendaCiudad() != null ? " · " + p.getTiendaCiudad() : "");
     }
 
     // ─── Utilidades ──────────────────────────────────────────────────────────
