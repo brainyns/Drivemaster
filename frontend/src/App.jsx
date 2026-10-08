@@ -46,6 +46,7 @@ import SolicitarDiagnostico  from "./pages/SolicitarDiagnostico";
 import MisServicios          from "./pages/MisServicios";
 import CotizacionPublica     from "./pages/CotizacionPublica";
 import ReportesPlataforma     from "./pages/ReportesPlataforma";
+import InformesTienda        from "./pages/InformesTienda";
 import NegociosPlataforma     from "./pages/NegociosPlataforma";
 import AprobacionesAdmin     from "./pages/AprobacionesAdmin";
 import PedidosEnvios         from "./pages/PedidosEnvios";
@@ -116,6 +117,7 @@ const TITULOS = {
   "admin-talleres":  "Servicios",
   "aprobaciones":    "Aprobaciones",
   "negocios":        "Tiendas y talleres",
+  "informes-tienda": "Informes",
   "pedidos-tienda":  "Pedidos",
   "liquidaciones":   "Liquidaciones y reembolsos",
   "problemas-envios": "Problemas de envío",
@@ -339,7 +341,7 @@ function App() {
     CLIENTE: ["catalogo", ...PAGINAS_CLIENTE],
     TALLER: ["taller-panel"],
     // Compras, proveedores e inventario son de cada tienda (el backend filtra por dueño)
-    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda",
+    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda", "informes-tienda",
       "compras", "compraNueva", "compraDetalle", "proveedores", "proveedorNuevo", "proveedorEditar"],
   };
   const esTienda = user?.rol === "TIENDA";
@@ -632,6 +634,7 @@ function App() {
     if (pagina === "aprobaciones" && user?.rol === "ADMIN") return <AprobacionesAdmin token={token} />;
     if (pagina === "aprobaciones")     return <Aprobaciones         token={token} />;
     if (pagina === "negocios")         return <NegociosPlataforma   token={token} />;
+    if (pagina === "informes-tienda")  return <InformesTienda       token={token} onIr={(p) => irA(p)} />;
     if (pagina === "liquidaciones")    return <Liquidaciones        />;
     if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
     if (pagina === "problemas-envios") return <ProblemasEnvios      />;
