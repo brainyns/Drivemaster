@@ -609,6 +609,73 @@
   margin-top: 8px;
 }
 
+/* ── Cotización de ejemplo ──────────────────────────────────────────────── */
+.dm-ejemplo {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 48px;
+  align-items: center;
+}
+
+.dm-ejemplo__copy h2 { font-size: 30px; letter-spacing: -1.1px; margin-bottom: 14px; text-wrap: balance; }
+.dm-ejemplo__copy h2 span { color: var(--dm-muted); font-weight: 400; }
+.dm-ejemplo__copy p { color: var(--dm-muted); font-size: 13px; line-height: 1.8; max-width: 46ch; margin-bottom: 22px; text-wrap: pretty; }
+
+.dm-ejemplo__figura { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.dm-ejemplo__rotulo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.dm-ejemplo__rotulo strong { font-size: 12px; letter-spacing: 0.4px; color: var(--dm-text); }
+.dm-ejemplo__rotulo span { font-size: 11px; color: var(--dm-muted); }
+
+/* La cotización es el componente real del panel: se le dan los colores de la landing */
+.dm-ejemplo__tarjeta {
+  --sp-sm: 8px;
+  --sp-md: 14px;
+  --text: var(--dm-text);
+  --text-muted: var(--dm-muted);
+  --border: var(--dm-line);
+  --surface: var(--dm-surface);
+  --bg: var(--dm-bg);
+  --primary: var(--dm-orange);
+  padding: 22px 24px;
+  background: var(--dm-surface);
+  border: 1px solid var(--dm-line);
+  border-radius: 8px;
+  box-shadow: 0 18px 40px -24px rgba(12, 34, 64, 0.35);
+  color: var(--dm-text);
+}
+
+/* ── Tiendas que ya venden ──────────────────────────────────────────────── */
+.dm-aliadas h2 { font-size: 30px; letter-spacing: -1.1px; margin-bottom: 8px; text-wrap: balance; }
+.dm-aliadas h2 span { color: var(--dm-muted); font-weight: 400; }
+.dm-aliadas > div > p { color: var(--dm-muted); font-size: 13px; line-height: 1.8; max-width: 60ch; text-wrap: pretty; }
+
+.dm-aliadas__lista {
+  list-style: none;
+  margin: 26px 0 28px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--dm-line);
+}
+
+.dm-aliadas__tienda {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 16px 18px 16px 0;
+  border-bottom: 1px solid var(--dm-line);
+}
+
+.dm-aliadas__tienda strong { font-size: 14px; letter-spacing: -0.2px; overflow-wrap: anywhere; }
+.dm-aliadas__tienda span { font-size: 12px; color: var(--dm-muted); }
+.dm-aliadas__entrega { font-size: 11px; }
+
+/* ── Aparición al desplazarse: solo opacidad y transform ────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] { opacity: 0; transform: translateY(18px); transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+  [data-reveal].dm-visto { opacity: 1; transform: none; }
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 1180px) {
   .dm-steps--flujo { grid-template-columns: repeat(3, 1fr); }
@@ -619,6 +686,8 @@
 }
 
 @media (max-width: 1000px) {
+  .dm-ejemplo { grid-template-columns: 1fr; gap: 28px; }
+  .dm-aliadas__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dm-entrega { grid-template-columns: 1fr 1fr; }
   .dm-entrega__titulo { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--dm-line); }
   .dm-entrega__caso:nth-child(2) { border-left: 0; }
@@ -715,6 +784,9 @@
   .dm-catalog-note > span { max-width: calc(100% - 30px); }
   .dm-catalog-note > button { font-size: 9px; margin: 5px 0 0; }
 
+  .dm-ejemplo__copy h2, .dm-aliadas h2 { font-size: 24px; }
+  .dm-ejemplo__tarjeta { padding: 16px; }
+  .dm-aliadas__lista { grid-template-columns: 1fr 1fr; }
   .dm-negocios__grid { grid-template-columns: 1fr; gap: 13px; }
   .dm-negocios__proceso { grid-template-columns: 1fr; }
   .dm-negocios__proceso li, .dm-negocios__proceso li + li { padding: 16px 0 0; border-left: 0; }

@@ -4,8 +4,9 @@ import { getToken } from "../services/authService";
 
 import Navbar from "../components/public/Navbar";
 import Hero from "../components/public/Hero";
+import useRevelar from "../components/public/useRevelar";
 import VehiculoSelector from "../components/public/VehiculoSelector";
-import { MarcasStrip, Pasos, Ecosistema, ParaNegocios, Beneficios, CierreBanner } from "../components/public/Landing";
+import { MarcasStrip, Pasos, Ecosistema, CotizacionEjemplo, TiendasAliadas, ParaNegocios, Beneficios, CierreBanner } from "../components/public/Landing";
 import CatalogToolbar from "../components/public/CatalogToolbar";
 import CatalogFilters from "../components/public/CatalogFilters";
 import ProductList from "../components/public/ProductList";
@@ -34,6 +35,7 @@ export default function CatalogoPage({
   // la consulta con los filtros del servidor. Ambos llevan su clave: la carga se deriva sin setState en el efecto.
   const [base, setBase] = useState({ items: [], listo: false, error: null });
   const [opciones, setOpciones] = useState({ ciudades: [], tiendas: [], categorias: [] });
+  const tiendasCargadas = opciones.tiendas.length;
   const [respuesta, setRespuesta] = useState({ clave: null, items: [], error: null });
 
   const [busqueda, setBusqueda] = useState("");
@@ -50,6 +52,7 @@ export default function CatalogoPage({
 
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
   const [vista, setVista] = useState(vistaInicial);
+  useRevelar(vista === "inicio", tiendasCargadas);
 
   const catalogoRef = useRef(null);
 
@@ -212,6 +215,10 @@ export default function CatalogoPage({
             />
 
             <Ecosistema onSolicitarDiagnostico={onSolicitarDiagnostico} />
+
+            <CotizacionEjemplo onSolicitarDiagnostico={onSolicitarDiagnostico} />
+
+            <TiendasAliadas tiendas={opciones.tiendas} onVerCatalogo={irAlCatalogo} />
 
             <ParaNegocios onRegistroNegocio={onRegistroNegocio} />
 
