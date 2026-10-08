@@ -71,6 +71,32 @@
   color: var(--dm-text);
 }
 
+/* El enlace para registrar un taller o tienda: más presente que el resto, sin competir con el botón principal */
+.dm-header__nav > .dm-header__nav-negocio {
+  color: var(--dm-text);
+  font-weight: 600;
+}
+
+.dm-header__nav > .dm-header__nav-negocio::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  height: 2px;
+  background: var(--dm-orange);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.dm-header__nav > .dm-header__nav-negocio:hover::after,
+.dm-header__nav > .dm-header__nav-negocio:focus-visible::after { transform: scaleX(1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dm-header__nav > .dm-header__nav-negocio::after { transition: none; }
+}
+
 /* ── Acciones ───────────────────────────────────────────────────────────── */
 .dm-header__actions {
   display: flex;
@@ -245,10 +271,10 @@
   .dm-header__inner { width: calc(100% - 48px); gap: 20px; }
   .dm-header__nav { gap: 19px; }
   .dm-header__nav > button { font-size: 10px; }
-  /* "Solicitar diagnóstico" ya es el botón de la derecha y "Para talleres y
-     tiendas" está en la landing y el footer: se ocultan para que el header quepa. */
+  /* "Solicitar diagnóstico" ya es el botón de la derecha y "Cómo funciona" está
+     en la landing: se ocultan para que el header quepa y "Registra tu negocio" siga visible. */
   .dm-header__nav > button:nth-child(2),
-  .dm-header__nav > button:nth-child(5) { display: none; }
+  .dm-header__nav > button:nth-child(3) { display: none; }
   .dm-header__actions { gap: 14px; }
   .dm-logo { font-size: 21px; }
   .dm-logo svg { width: 28px; height: 24px; }

@@ -191,6 +191,7 @@ export default function CatalogoPage({
         onIrInicio={irAInicio}
         onLogout={onLogout}
         onSolicitarDiagnostico={onSolicitarDiagnostico}
+        onRegistroNegocio={onRegistroNegocio}
         onIrMisServicios={irAMisServicios}
         onIrMisCompras={onIrMisCompras}
         carritoCount={carrito?.cantidad ?? 0}

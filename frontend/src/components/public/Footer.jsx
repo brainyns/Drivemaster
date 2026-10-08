@@ -30,7 +30,7 @@ export default function Footer({
         <div>
           <span>DRIVEMASTER</span>
           <button onClick={() => onIrInicio?.("dm-pasos")}>Cómo funciona</button>
-          <button onClick={onRegistroNegocio}>Para talleres y tiendas</button>
+          <button onClick={onRegistroNegocio}>Registra tu negocio</button>
           <button onClick={onIrLogin || onIrAdmin}>Mi cuenta</button>
         </div>
 

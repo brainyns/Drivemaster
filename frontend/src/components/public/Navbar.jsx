@@ -19,6 +19,7 @@ export default function Navbar({
   onIrInicio,
   onLogout,
   onSolicitarDiagnostico,
+  onRegistroNegocio,
   onIrMisServicios,
   onIrMisCompras,
   carritoCount = 0,
@@ -76,7 +77,7 @@ export default function Navbar({
     { label: "Solicitar diagnóstico", onClick: cerrarY(onSolicitarDiagnostico) },
     { label: "Cómo funciona", onClick: cerrarY(() => onIrInicio?.("dm-pasos")) },
     { label: "Catálogo", onClick: cerrarY(onIrCatalogo) },
-    { label: "Para talleres y tiendas", onClick: cerrarY(() => onIrInicio?.("dm-negocios")) },
+    { label: "Registra tu negocio", onClick: cerrarY(onRegistroNegocio), destacado: true },
     { label: "Mis servicios", onClick: cerrarY(onIrMisServicios), soloCliente: true },
   ];
 
@@ -90,7 +91,7 @@ export default function Navbar({
 
           <nav className="dm-header__nav" aria-label="Navegación principal">
             {enlacesVisibles.map((e) => (
-              <button key={e.label} onClick={e.onClick}>{e.label}</button>
+              <button key={e.label} onClick={e.onClick} className={e.destacado ? "dm-header__nav-negocio" : undefined}>{e.label}</button>
             ))}
           </nav>
 
