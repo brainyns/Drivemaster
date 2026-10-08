@@ -8,6 +8,8 @@ import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Pedidos
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductoFila;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.TiendaOpcion;
+import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.UsuarioFila;
+import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.UsuariosRespuesta;
 import com.drivemaster.drivemaster.model.CompraCatalogo;
 import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.PedidoTienda;
@@ -24,6 +26,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -167,6 +170,58 @@ public class PlataformaConsultasService {
             r.put(String.valueOf(d.get("_id")), n instanceof Number num ? num.longValue() : 0L);
         }
         return r;
+    }
+
+    // ─── Usuarios del sistema ────────────────────────────────────────────────
+
+    /** Roles de cuentas del sistema; los clientes tienen su propia pantalla. */
+    static final Set<String> ROLES_USUARIOS = Set.of("SUPERADMIN", "ADMIN", "VENDEDOR", "TIENDA", "TALLER", "MECANICO");
+
+    /**
+     * Lista de usuarios con filtros por rol y estado y búsqueda, con el correo enmascarado. Cambiar el rol o
+     * activar o desactivar sigue siendo solo del SUPERADMIN (PUT /api/usuarios/{id}).
+     *
+     * @param rol uno de ROLES_USUARIOS (vacío = todos); un rol desconocido no devuelve nada
+     * @param estado "activos" o "inactivos" (vacío = todos)
+     */
+    public UsuariosRespuesta usuarios(String q, String rol, String estado, int pagina, int tamano) {
+        List<Criteria> y = new ArrayList<>();
+        if (hay(rol)) {
+            String r = rol.trim().toUpperCase();
+            y.add(ROLES_USUARIOS.contains(r) ? Criteria.where("rol").is(r) : Criteria.where("rol").is("__ninguno__"));
+        } else {
+            y.add(Criteria.where("rol").in(ROLES_USUARIOS));
+        }
+        if ("activos".equals(estado)) y.add(Criteria.where("activo").ne(false));
+        if ("inactivos".equals(estado)) y.add(Criteria.where("activo").is(false));
+        if (hay(q)) {
+            Pattern p = coincide(q);
+            y.add(new Criteria().orOperator(Criteria.where("nombre").regex(p), Criteria.where("correo").regex(p)));
+        }
+        Criteria criterio = new Criteria().andOperator(y.toArray(new Criteria[0]));
+
+        int tam = tamano(tamano);
+        int pag = Math.max(0, pagina);
+        long total = mongo.count(Query.query(criterio), Usuario.class);
+        List<UsuarioFila> filas = mongo.find(Query.query(criterio)
+                .with(PageRequest.of(pag, tam, Sort.by(Sort.Direction.DESC, "id"))), Usuario.class).stream()
+                .map(u -> new UsuarioFila(u.getId(), u.getNombre(), enmascarar(u.getCorreo()), u.getRol(),
+                        !Boolean.FALSE.equals(u.getActivo()), Boolean.TRUE.equals(u.getBloqueado()),
+                        local(u.getFechaCreacion()), local(u.getUltimoLogin())))
+                .toList();
+
+        Map<String, Long> porRol = new LinkedHashMap<>();
+        for (Document d : mongo.aggregate(Aggregation.newAggregation(
+                Aggregation.match(Criteria.where("rol").in(ROLES_USUARIOS)),
+                Aggregation.group("rol").count().as("n")), Usuario.class, Document.class).getMappedResults()) {
+            Object n = d.get("n");
+            porRol.put(String.valueOf(d.get("_id")), n instanceof Number num ? num.longValue() : 0L);
+        }
+        return new UsuariosRespuesta(new Pagina<>(filas, total, pag, tam), porRol);
+    }
+
+    private static LocalDateTime local(Instant i) {
+        return i == null ? null : LocalDateTime.ofInstant(i, ZoneId.systemDefault());
     }
 
     // ─── Pedidos y envíos ────────────────────────────────────────────────────

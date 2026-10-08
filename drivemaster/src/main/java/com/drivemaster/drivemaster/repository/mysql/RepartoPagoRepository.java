@@ -27,6 +27,16 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> 
     @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.pagoId = :pagoId and r.beneficiarioTipo = 'PLATAFORMA' and r.monto > 0")
     double sumaComisionBruta(@Param("pagoId") Long pagoId);
 
+    /** Lo repartido a cada taller (sin lo anulado): [beneficiarioId, suma]. */
+    @Query("select r.beneficiarioId, sum(r.monto) from RepartoPago r "
+            + "where r.beneficiarioTipo = 'TALLER' and r.estado <> 'ANULADO' group by r.beneficiarioId")
+    List<Object[]> sumaRepartidaPorTaller();
+
+    /** Líneas de comisión (registradas y anuladas) desde una fecha, para el reporte por mes. */
+    @Query("select r from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA' and r.fechaCreacion >= :desde "
+            + "order by r.fechaCreacion")
+    List<RepartoPago> comisionDesde(@Param("desde") LocalDateTime desde);
+
     /** Comisión registrada (líneas informativas de la plataforma, ya sin lo anulado por reembolsos). */
     @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA'")
     double sumaComisionRegistrada();
