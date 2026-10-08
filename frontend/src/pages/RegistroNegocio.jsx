@@ -32,6 +32,8 @@ function validar(tipo, f) {
   if (vacio(f.nombreNegocio)) e.nombreNegocio = "Escribe el nombre del negocio.";
   if (vacio(f.ciudad)) e.ciudad = "Indica la ciudad.";
   if (vacio(f.direccion)) e.direccion = "Indica la dirección.";
+  // La tienda vende con retiro en su local: el horario es obligatorio (el servidor también lo exige)
+  if (tipo === "TIENDA" && vacio(f.horario)) e.horario = "Indica el horario de atención: lo necesita el cliente para retirar.";
   if (!vacio(f.telefono) && !/^[0-9+\s()-]{7,20}$/.test(f.telefono.trim())) e.telefono = "Teléfono no válido.";
   if (tipo === "TALLER") {
     const precio = Number(f.precioManoObra);
@@ -122,8 +124,8 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
       datos.especialidades = form.especialidades.split(",").map((s) => s.trim()).filter(Boolean);
       datos.precioManoObra = numero(form.precioManoObra);
       datos.tarifaHora = numero(form.tarifaHora);
-      datos.horario = form.horario.trim() || null;
     }
+    datos.horario = form.horario.trim() || null;
 
     setEnviando(true);
     try {
@@ -210,6 +212,9 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
             <Campo id="rn-direccion" label="Dirección" error={errores.direccion} ancho>
               <input id="rn-direccion" name="direccion" className="rn-input" value={form.direccion} onChange={cambiar} placeholder="Cra 13 # 45-20" />
             </Campo>
+            <Campo id="rn-horario" label="Horario de atención" error={errores.horario} opcional={esTaller} ancho>
+              <input id="rn-horario" name="horario" className="rn-input" value={form.horario} onChange={cambiar} placeholder="L-V 8:00-18:00, S 8:00-13:00" />
+            </Campo>
             <div className="rn-campo rn-campo--ancho rn-ubicacion">
               <button type="button" className="rn-boton-secundario" onClick={usarUbicacion} disabled={ubicando}>
                 {ubicando ? "Obteniendo ubicación..." : "Usar mi ubicación actual"}
@@ -234,9 +239,6 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
                 </Campo>
                 <Campo id="rn-especialidades" label="Especialidades" opcional ancho>
                   <input id="rn-especialidades" name="especialidades" className="rn-input" value={form.especialidades} onChange={cambiar} placeholder="Frenos, Suspensión, Motor (separadas por coma)" />
-                </Campo>
-                <Campo id="rn-horario" label="Horario de atención" opcional ancho>
-                  <input id="rn-horario" name="horario" className="rn-input" value={form.horario} onChange={cambiar} placeholder="L-V 8:00-18:00, S 8:00-13:00" />
                 </Campo>
               </div>
             </>
