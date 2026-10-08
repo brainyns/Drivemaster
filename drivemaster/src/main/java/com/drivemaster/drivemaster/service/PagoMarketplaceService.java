@@ -247,6 +247,8 @@ public class PagoMarketplaceService {
 
         Map<String, Double> lineas = new LinkedHashMap<>();
         lineas.put("Tarifa de diagnóstico (IVA incluido)", pago.getMonto());
+        ComisionPlataforma.registrar(repartoRepository, pago, ComisionPlataforma.baseSinIva(pago.getMonto(), parametros.ivaPct()),
+                parametros.comisionPct());
         avisos.comprobantePago(enRevision, pago, "la revisión y diagnóstico", lineas,
                 "Tu cita de revisión quedó confirmada. El valor se descontará de la cotización si la apruebas.");
         avisos.diagnosticoPagado(enRevision);
@@ -347,6 +349,9 @@ public class PagoMarketplaceService {
                 pedidos.isEmpty() ? "Cotización solo de mano de obra" : "Repuestos pedidos a " + pedidos.size() + " tienda(s)",
                 null, null);
 
+        double ivaPagado = cotizacion.getIvaPct() != null ? cotizacion.getIvaPct() : parametros.ivaPct();
+        ComisionPlataforma.registrar(repartoRepository, pago, ComisionPlataforma.baseSinIva(pago.getMonto(), ivaPagado),
+                parametros.comisionPct());
         avisos.comprobantePago(actualizada, pago, "la cotización v" + cotizacion.getVersion() + " de " + cotizacion.getTallerNombre(),
                 lineasCotizacion(cotizacion),
                 pedidos.isEmpty() ? "El taller ya puede empezar el trabajo."

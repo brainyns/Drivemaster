@@ -14,6 +14,16 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> 
     List<RepartoPago> findAllByOrderByFechaCreacionDesc();
     List<RepartoPago> findByEstadoOrderByFechaCreacionDesc(String estado);
     List<RepartoPago> findByPedidoTiendaId(String pedidoTiendaId);
+    boolean existsByPagoIdAndBeneficiarioTipo(Long pagoId, String beneficiarioTipo);
+    long countByEstado(String estado);
+
+    /** Comisión registrada (líneas informativas de la plataforma). */
+    @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA'")
+    double sumaComisionRegistrada();
+
+    /** Lo que falta pagar a talleres y tiendas: líneas habilitadas (o con fallo) y su monto. */
+    @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.estado in ('POR_LIQUIDAR', 'FALLIDO')")
+    double sumaPorLiquidar();
     List<RepartoPago> findByOrdenServicioIdAndBeneficiarioTipo(String ordenServicioId, String beneficiarioTipo);
 
     /**

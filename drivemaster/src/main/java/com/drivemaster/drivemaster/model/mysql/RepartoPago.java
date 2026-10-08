@@ -29,6 +29,10 @@ public class RepartoPago {
     // La tienda no despachó: su parte se reembolsa al cliente
     public static final String ANULADO = "ANULADO";
 
+    // Línea de la comisión de la plataforma: solo deja constancia, no se liquida (ver ComisionPlataforma)
+    public static final String INFORMATIVA = "INFORMATIVA";
+
+    public static final String PLATAFORMA = "PLATAFORMA";
     public static final String TALLER = "TALLER";
     public static final String TIENDA = "TIENDA";
 

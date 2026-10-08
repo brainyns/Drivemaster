@@ -53,6 +53,7 @@ class PagoMarketplaceServiceTest {
     private CotizacionService cotizacionService;
     private AvisosSolicitudServicio avisos;
     private PagoMarketplaceService service;
+    private ParametrosMarketplace parametros;
 
     private OrdenServicio orden;
     private Cotizacion cotizacion;
@@ -77,7 +78,7 @@ class PagoMarketplaceServiceTest {
         service = new PagoMarketplaceService(pagoService, pagoRepository, ordenRepository, cotizacionRepository,
                 pedidoRepository, repartoRepository, reembolsoRepository, tallerRepository, productoService,
                 movimientoService, mock(com.drivemaster.drivemaster.repository.MovimientoInventarioRepository.class), usuarioService, transiciones, cotizacionService, avisos,
-                mock(ParametrosMarketplace.class));
+                parametros = mock(ParametrosMarketplace.class));
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).estado(EstadoOrden.APROBADA)
                 .tallerId("t1").usuarioId("u1").cotizacionId("c1").vehiculoDescripcion("Spark")
@@ -204,6 +205,63 @@ class PagoMarketplaceServiceTest {
         verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.REPUESTOS_PEDIDOS), any(), anyString(), any(), any());
         verify(avisos).cotizacionPagada(eq(orden), argThat(l -> l.size() == 2));
         verify(reembolsoRepository, never()).save(any());
+    }
+
+    // ─── Comisión informativa de la plataforma ───────────────────────────────
+
+    private List<RepartoPago> lineasGuardadas(int cuantas) {
+        ArgumentCaptor<RepartoPago> captor = ArgumentCaptor.forClass(RepartoPago.class);
+        verify(repartoRepository, times(cuantas)).save(captor.capture());
+        return captor.getAllValues();
+    }
+
+    @Test
+    void elDiagnosticoPagadoRegistraLaComisionSobreLaBaseSinIva() {
+        when(parametros.comisionPct()).thenReturn(10.0);
+        when(parametros.ivaPct()).thenReturn(19.0);
+        orden.setEstado(EstadoOrden.ASIGNADA_A_TALLER);
+        orden.setPagoDiagnosticoEstado(EstadoOrden.PAGO_PENDIENTE);
+
+        service.confirmar(pago(PagoMarketplaceService.DIAGNOSTICO, 50_000), "txn-1");
+
+        List<RepartoPago> lineas = lineasGuardadas(2);
+        assertEquals(RepartoPago.TALLER, lineas.get(0).getBeneficiarioTipo());
+        assertEquals(50_000, lineas.get(0).getMonto(), "el taller recibe el pago completo: la comisión no se descuenta");
+        RepartoPago comision = lineas.get(1);
+        assertEquals(RepartoPago.PLATAFORMA, comision.getBeneficiarioTipo());
+        assertEquals(RepartoPago.INFORMATIVA, comision.getEstado());
+        assertEquals(4_202, comision.getMonto()); // 10% de 42.017 (50.000 sin IVA 19%)
+    }
+
+    @Test
+    void laCotizacionPagadaRegistraLaComisionSobreLoPagadoSinIva() {
+        when(parametros.comisionPct()).thenReturn(10.0);
+        cotizacion(new ArrayList<>(List.of(
+                repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"),
+                CotizacionItem.builder().tipo(CotizacionItem.MANO_OBRA).subtotal(100_000.0).build())), 211_800);
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 211_800), "txn-1");
+
+        List<RepartoPago> lineas = lineasGuardadas(3);
+        RepartoPago comision = lineas.get(lineas.size() - 1);
+        assertEquals(RepartoPago.PLATAFORMA, comision.getBeneficiarioTipo());
+        assertEquals(17_798, comision.getMonto()); // 10% de 177.983 (211.800 sin IVA 19%)
+        assertNull(comision.getPedidoTiendaId());
+    }
+
+    @Test
+    void unPagoNoAplicadoNoRegistraComision() {
+        when(parametros.comisionPct()).thenReturn(10.0);
+        when(parametros.ivaPct()).thenReturn(19.0);
+        orden.setEstado(EstadoOrden.CANCELADA); // ya no esperaba el pago: se reembolsa
+        orden.setPagoDiagnosticoEstado(EstadoOrden.PAGO_VENCIDO);
+        when(transiciones.transicionar(any(), eq(EstadoOrden.EN_REVISION), any(), anyString(), any(), any()))
+                .thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "x"));
+
+        service.confirmar(pago(PagoMarketplaceService.DIAGNOSTICO, 50_000), "txn-1");
+
+        verify(repartoRepository, never()).save(any());
+        verify(reembolsoRepository).save(any());
     }
 
     @Test

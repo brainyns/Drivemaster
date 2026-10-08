@@ -226,7 +226,9 @@ public class CompraCatalogoService {
             compra.setFechaPago(pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now());
             compra.setPagoId(pago.getId());
             compraRepository.save(compra);
-            // 3. Avisos (un fallo de envío nunca deshace la compra)
+            // 3. Comisión informativa (sobre los productos, antes de IVA y sin el envío) y avisos
+            //    (un fallo de envío nunca deshace la compra)
+            ComisionPlataforma.registrar(repartoRepository, pago, Dinero.pesos(compra.getSubtotal()), parametros.comisionPct());
             avisos.compraPagada(compra, pedidos, codigos, pago);
         } catch (RuntimeException e) {
             log.error("No se pudo aplicar el pago {} de la compra {}: se deshace todo", pago.getReferencia(), compra.getId(), e);
