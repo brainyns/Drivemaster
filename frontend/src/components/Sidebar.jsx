@@ -64,7 +64,7 @@ const menu = [
 ];
 
 // Tienda del marketplace: sus pedidos, su catálogo y los movimientos de su inventario.
-const MENU_TIENDA = ["pedidos-tienda", "productos", "movimientos", "mi-tienda"];
+const MENU_TIENDA = ["pedidos-tienda", "productos", "compras", "proveedores", "movimientos", "mi-tienda"];
 
 // Operación diaria del ADMIN: aprobar tiendas y talleres, servicios y problemas de envío.
 const MENU_ADMIN = ["dashboard-main", "pedidos-envios", "aprobaciones", "admin-talleres", "finanzas"];
@@ -92,6 +92,8 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
     if (item.key === "taller-panel" || item.key === "pedidos-tienda" || item.key === "mi-tienda") return false;
     // ADMIN: solo la operación diaria; el resto del panel es del SUPERADMIN
     if (userRole === "ADMIN") return MENU_ADMIN.includes(item.key);
+    // Compras, proveedores e inventario son de cada tienda: el personal interno ya no los ve
+    if (["compras", "proveedores", "movimientos"].includes(item.key)) return false;
     if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "negocios" || item.key === "finanzas" || item.key === "pedidos-envios") return userRole === "SUPERADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
     if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "VENDEDOR";
