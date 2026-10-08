@@ -368,7 +368,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 
 .ss-urgencia--baja    { color: var(--success); }
 .ss-urgencia--media   { color: var(--amber-text); }
-.ss-urgencia--alta    { color: #f97316; }
+.ss-urgencia--alta    { color: var(--primary-text); }
 .ss-urgencia--critica { color: var(--error); }
 
 /* ── Línea de tiempo ── */
@@ -488,7 +488,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 .ss-urgencia-opcion.is-activa { border-color: currentColor; background: var(--surface2); }
 .ss-urgencia-opcion--baja.is-activa    { color: var(--success); }
 .ss-urgencia-opcion--media.is-activa   { color: var(--amber-text); }
-.ss-urgencia-opcion--alta.is-activa    { color: #f97316; }
+.ss-urgencia-opcion--alta.is-activa    { color: var(--primary-text); }
 .ss-urgencia-opcion--critica.is-activa { color: var(--error); }
 
 .ss-mecanico-actual { max-width: 320px; }

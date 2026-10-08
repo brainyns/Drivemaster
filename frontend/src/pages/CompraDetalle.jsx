@@ -95,7 +95,7 @@ function CompraDetalle({ id, onVolver, token }) {
           <div className="cp-invoice-parties">
             <div>
               <p className="cp-invoice-party-label">Datos del proveedor</p>
-              <p className="cp-invoice-party-name" style={{ color: "var(--primary)" }}>
+              <p className="cp-invoice-party-name" style={{ color: "var(--primary-text)" }}>
                 {compra.proveedorNombre || `Proveedor #${String(compra.proveedorId).slice(-6)}`}
               </p>
               <p className="cp-invoice-party-sub">{compra.proveedorContacto || "—"}</p>
@@ -142,7 +142,7 @@ function CompraDetalle({ id, onVolver, token }) {
                     <td style={{ textAlign: "right", color: "var(--muted)", fontSize: ".85rem" }}>
                       ${(p.costo || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
                     </td>
-                    <td style={{ textAlign: "right", fontWeight: 800, color: "var(--primary)", fontSize: ".9rem" }}>
+                    <td style={{ textAlign: "right", fontWeight: 800, color: "var(--primary-text)", fontSize: ".9rem" }}>
                       ${(p.subtotal || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
