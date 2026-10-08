@@ -64,8 +64,8 @@ function CompraDetalle({ id, onVolver, token }) {
       <div className="cp-header">
         <div>
           <button className="cp-back-link" onClick={onVolver}>{IcArrow} Volver a Compras</button>
-          <h1 className="cp-h1" style={{ marginTop: ".4rem" }}>Purchase Registry</h1>
-          <p className="cp-breadcrumb">Registry ID: {poId}</p>
+          <h1 className="cp-h1" style={{ marginTop: ".4rem" }}>Registro de compra</h1>
+          <p className="cp-breadcrumb">ID de registro: {poId}</p>
         </div>
         <button
           className="cp-btn-new"
@@ -83,18 +83,18 @@ function CompraDetalle({ id, onVolver, token }) {
 
           <div className="cp-invoice-head">
             <div>
-              <span className="cp-invoice-tag">OFFICIAL INVOICE</span>
+              <span className="cp-invoice-tag">FACTURA OFICIAL</span>
               <h2 className="cp-invoice-title">FACTURA #{poId}</h2>
             </div>
             <div style={{ textAlign: "right" }}>
-              <p style={{ fontSize: ".72rem", color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em" }}>Issue Date</p>
+              <p style={{ fontSize: ".72rem", color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em" }}>Fecha de emisión</p>
               <p style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-.02em" }}>{fecha}</p>
             </div>
           </div>
 
           <div className="cp-invoice-parties">
             <div>
-              <p className="cp-invoice-party-label">Supplier Information</p>
+              <p className="cp-invoice-party-label">Datos del proveedor</p>
               <p className="cp-invoice-party-name" style={{ color: "var(--primary)" }}>
                 {compra.proveedorNombre || `Proveedor #${String(compra.proveedorId).slice(-6)}`}
               </p>
@@ -102,7 +102,7 @@ function CompraDetalle({ id, onVolver, token }) {
               {compra.proveedorEmail && <p className="cp-invoice-party-sub">{compra.proveedorEmail}</p>}
             </div>
             <div>
-              <p className="cp-invoice-party-label">Ship To</p>
+              <p className="cp-invoice-party-label">Enviar a</p>
               <p className="cp-invoice-party-name">DriveMaster</p>
               <p className="cp-invoice-party-sub">Almacén Central</p>
               <p className="cp-invoice-party-sub">Colombia</p>
@@ -111,16 +111,16 @@ function CompraDetalle({ id, onVolver, token }) {
 
           <div className="cp-invoice-section">
             <div className="cp-invoice-section-header">
-              <h3 className="cp-invoice-section-title">Purchase Order Items</h3>
-              <span className="cp-items-badge">{`ITEMS_COUNT: ${String(compra.productos?.length || 0).padStart(2, "0")}`}</span>
+              <h3 className="cp-invoice-section-title">Productos de la orden de compra</h3>
+              <span className="cp-items-badge">{`ÍTEMS: ${String(compra.productos?.length || 0).padStart(2, "0")}`}</span>
             </div>
             <table className="cp-invoice-table">
               <thead>
                 <tr>
                   <th></th>
-                  <th>Product Name</th>
-                  <th style={{ textAlign: "center" }}>Quantity</th>
-                  <th style={{ textAlign: "right" }}>Unit Cost</th>
+                  <th>Producto</th>
+                  <th style={{ textAlign: "center" }}>Cantidad</th>
+                  <th style={{ textAlign: "right" }}>Costo unitario</th>
                   <th style={{ textAlign: "right" }}>Subtotal</th>
                 </tr>
               </thead>
@@ -157,7 +157,7 @@ function CompraDetalle({ id, onVolver, token }) {
               <span>${subtotal.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="cp-invoice-total-final">
-              <span>TOTAL DUE</span>
+              <span>TOTAL A PAGAR</span>
               <span>${(compra.total || subtotal).toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
             </div>
             <button
@@ -166,7 +166,7 @@ function CompraDetalle({ id, onVolver, token }) {
               onClick={handlePdf}
               disabled={descargando}
             >
-              {IcDown} {descargando ? "Generando..." : "Download Transaction Log"}
+              {IcDown} {descargando ? "Generando..." : "Descargar registro de la transacción"}
             </button>
           </div>
         </div>
@@ -175,11 +175,11 @@ function CompraDetalle({ id, onVolver, token }) {
         <div className="cp-detalle-side">
 
           <div className="cp-side-panel">
-            <p className="cp-side-panel-title">Registry Actions</p>
+            <p className="cp-side-panel-title">Acciones</p>
             {[
-              { ico: IcPrint, label: "Print Invoice",                          onClick: handleImprimir },
-              { ico: IcDown,  label: descargando ? "Generando..." : "Download PDF", onClick: handlePdf },
-              { ico: IcTruck, label: "Email Supplier",                          onClick: () => alert("El PDF se envía automáticamente al registrar la compra.") },
+              { ico: IcPrint, label: "Imprimir factura",                       onClick: handleImprimir },
+              { ico: IcDown,  label: descargando ? "Generando..." : "Descargar PDF", onClick: handlePdf },
+              { ico: IcTruck, label: "Enviar al proveedor por correo",         onClick: () => alert("El PDF se envía automáticamente al registrar la compra.") },
             ].map((a, i) => (
               <button key={i} className="cp-action-row" onClick={a.onClick} disabled={descargando}>
                 <span className="cp-action-ico">{a.ico}</span>
@@ -192,7 +192,7 @@ function CompraDetalle({ id, onVolver, token }) {
           <div className="cp-side-panel cp-side-panel--verified">
             <div className="cp-verified-head">
               <span className="cp-verified-dot"/>{IcCheck}
-              <span className="cp-verified-label">VERIFIED PURCHASE</span>
+              <span className="cp-verified-label">COMPRA VERIFICADA</span>
             </div>
             <p className="cp-verified-desc">
               Esta compra ha sido reconciliada con el inventario y los controles de calidad han sido aplicados.
@@ -203,7 +203,7 @@ function CompraDetalle({ id, onVolver, token }) {
             <p className="cp-side-panel-title">Información General</p>
             <div className="cp-info-rows">
               {[
-                { label: "Purchase ID", val: poId },
+                { label: "ID de compra", val: poId },
                 { label: "Fecha",       val: fecha },
                 { label: "Estado",      val: compra.estado || "RECIBIDA" },
                 { label: "Total ítems", val: compra.productos?.length || 0 },

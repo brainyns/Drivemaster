@@ -256,7 +256,7 @@ function Compras({ onNueva, onDetalle, token }) {
       <div className="cp-header">
         <div>
           <p className="cp-breadcrumb">Gestión de compras</p>
-          <h1 className="cp-h1">Purchase Management</h1>
+          <h1 className="cp-h1">Gestión de compras</h1>
         </div>
         <button className="cp-btn-new" onClick={onNueva}>
           {IcPlus} Nueva Compra
@@ -306,7 +306,7 @@ function Compras({ onNueva, onDetalle, token }) {
         <div className="cp-card-toolbar">
           <div className="cp-card-title-wrap">
             <span className="cp-accent-bar" />
-            <span className="cp-card-title">Live Purchase Feed</span>
+            <span className="cp-card-title">Compras recientes</span>
             <span className="cp-card-sub">Sincronización en tiempo real</span>
           </div>
           <div className="cp-toolbar-right">
@@ -372,7 +372,7 @@ function Compras({ onNueva, onDetalle, token }) {
               <thead>
                 <tr>
                   <th>Fecha</th>
-                  <th>Purchase ID</th>
+                  <th>ID de compra</th>
                   <th>Proveedor</th>
                   <th style={{ textAlign: "center" }}>Ítems</th>
                   <th style={{ textAlign: "right" }}>Total</th>
