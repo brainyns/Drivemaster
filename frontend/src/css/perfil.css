@@ -184,6 +184,8 @@
   border-color: var(--primary);
 }
 
+.pf-pass-input:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+
 .pf-show-pass {
   display: flex;
   align-items: center;
@@ -329,20 +331,3 @@
   .pf-stats-grid { grid-template-columns: 1fr 1fr; }
 }
 
-/* producto-form.css usa el mismo prefijo pf- (.pf-field label / input) y se aplicaba
-   también aquí: estas reglas mantienen el perfil con sus propios valores. */
-.pf-field > .pf-field-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: var(--ui-muted);
-}
-.pf-pass-input-wrap > .pf-pass-input {
-  padding: 10px 14px;
-  background: var(--ui-bg);
-  border: 1px solid var(--ui-line);
-  border-radius: var(--ui-r-md);
-  color: var(--ui-text);
-  font-size: 13px;
-}
-.pf-pass-input-wrap > .pf-pass-input:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }

@@ -3,17 +3,17 @@
    ================================================================ */
 
 .cp-btn-outline.active {
-  border-color: #ff4500;
-  color: #ff4500;
-  background: rgba(255, 69, 0, 0.08);
+  border-color: var(--primary);
+  color: var(--primary-text);
+  background: var(--primary-soft);
 }
 
 .cp-filter-badge {
-  background: #ff4500;
-  color: #fff;
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: 10px;
   font-weight: 700;
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   padding: 1px 6px;
   margin-left: 4px;
   line-height: 1.4;
@@ -28,12 +28,12 @@
   top: calc(100% + 8px);
   right: 0;
   width: 292px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
   z-index: 300;
   overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+  box-shadow: var(--ui-sombra-1);
   animation: cp-fp-in 0.14s ease;
 }
 
@@ -47,13 +47,13 @@
   justify-content: space-between;
   align-items: center;
   padding: 13px 16px 11px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ui-line);
 }
 
 .cp-fp-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--ui-text);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -62,17 +62,17 @@
 .cp-fp-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
   padding: 2px 6px;
-  border-radius: 5px;
+  border-radius: var(--ui-r-sm);
   transition: color 0.1s, background 0.1s;
 }
 .cp-fp-close:hover {
-  color: var(--text);
-  background: var(--surface2);
+  color: var(--ui-text);
+  background: var(--ui-surface-2);
 }
 
 .cp-fp-body {
@@ -84,7 +84,7 @@
 
 .cp-fp-label {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -98,25 +98,25 @@
 }
 
 .cp-fp-chip {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
   padding: 5px 13px;
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   cursor: pointer;
   user-select: none;
   transition: border-color 0.12s, color 0.12s, background 0.12s;
 }
 .cp-fp-chip:hover {
-  border-color: var(--border2);
-  color: var(--text);
+  border-color: var(--ui-line);
+  color: var(--ui-text);
 }
 
-.cp-fp-chip--recibida.on  { background: rgba(74, 222, 128, 0.12); border-color: #1a6e50; color: #4ade80; }
-.cp-fp-chip--pendiente.on { background: rgba(240, 165, 0, 0.12); border-color: #b07800; color: #f0a500; }
-.cp-fp-chip--cancelada.on { background: rgba(248, 113, 113, 0.12); border-color: #b83333; color: #f87171; }
-.cp-fp-chip--pagada.on    { background: rgba(96, 165, 250, 0.12); border-color: #2a6fd6; color: #60a5fa; }
+.cp-fp-chip--recibida.on  { background: var(--ui-ok-bg); border-color: transparent; color: var(--ui-ok); }
+.cp-fp-chip--pendiente.on { background: var(--ui-aviso-bg); border-color: transparent; color: var(--ui-aviso); }
+.cp-fp-chip--cancelada.on { background: var(--ui-error-bg); border-color: transparent; color: var(--ui-error); }
+.cp-fp-chip--pagada.on    { background: var(--ui-info-bg); border-color: transparent; color: var(--ui-info); }
 
 .cp-fp-range {
   display: flex;
@@ -125,43 +125,43 @@
 }
 
 .cp-fp-range-sep {
-  color: var(--text-muted);
+  color: var(--ui-muted);
   font-size: 14px;
   flex-shrink: 0;
 }
 
 .cp-fp-input {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 7px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-md);
   padding: 7px 10px;
   font-size: 12px;
-  color: var(--text);
+  color: var(--ui-text);
   width: 100%;
   outline: none;
   transition: border-color 0.12s;
   color-scheme: dark;
 }
 .cp-fp-input:focus {
-  border-color: #ff4500;
+  border-color: var(--primary);
 }
 .cp-fp-input::placeholder {
-  color: var(--text-muted);
+  color: var(--ui-muted);
 }
 
 .cp-fp-footer {
   display: flex;
   gap: 8px;
   padding: 10px 16px 14px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--ui-line);
 }
 
 .cp-fp-btn-clear {
   flex: 1;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  color: var(--text-muted);
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-md);
+  color: var(--ui-muted);
   font-size: 12px;
   font-weight: 500;
   padding: 8px;
@@ -169,16 +169,16 @@
   transition: border-color 0.1s, color 0.1s;
 }
 .cp-fp-btn-clear:hover {
-  border-color: var(--border2);
-  color: var(--text);
+  border-color: var(--ui-line);
+  color: var(--ui-text);
 }
 
 .cp-fp-btn-apply {
   flex: 2;
-  background: #ff4500;
+  background: var(--primary);
   border: none;
-  border-radius: 7px;
-  color: #fff;
+  border-radius: var(--ui-r-md);
+  color: var(--on-primary);
   font-size: 12px;
   font-weight: 600;
   padding: 8px;
@@ -186,7 +186,7 @@
   transition: background 0.1s;
 }
 .cp-fp-btn-apply:hover {
-  background: #e03d00;
+  background: var(--primary-h);
 }
 
 .cp-filter-tags-bar {
@@ -196,12 +196,12 @@
   gap: 6px;
   padding: 8px 20px;
   background: var(--primary-soft);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ui-line);
 }
 
 .cp-filter-tags-label {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--ui-muted);
 }
 
 .cp-filter-tag {
@@ -210,16 +210,16 @@
   gap: 5px;
   background: rgba(255, 69, 0, 0.1);
   border: 1px solid rgba(255, 69, 0, 0.25);
-  border-radius: 20px;
+  border-radius: var(--ui-r-lg);
   padding: 3px 10px;
   font-size: 11px;
-  color: #ff6a1a;
+  color: var(--primary-text);
 }
 
 .cp-filter-tag button {
   background: none;
   border: none;
-  color: #ff6a1a;
+  color: var(--primary-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -234,7 +234,7 @@
 .cp-filter-clear-all {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   font-size: 11px;
   cursor: pointer;
   margin-left: 4px;
@@ -243,7 +243,7 @@
   transition: color 0.1s;
 }
 .cp-filter-clear-all:hover {
-  color: var(--text);
+  color: var(--ui-text);
 }
 
 /* ── RESPONSIVE ── */

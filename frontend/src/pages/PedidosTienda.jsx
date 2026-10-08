@@ -129,7 +129,7 @@ export default function PedidosTienda() {
   const visibles = enFiltro(filtro);
 
   return (
-    <div className="ss-panel">
+    <div className="ss-panel ss-panel--tienda">
       {error && !abiertoId && <p className="ss-alerta" role="alert">{error}</p>}
       {aviso && <p className="ss-exito" role="status">{aviso} <button className="sv-btn-outline" onClick={() => setAviso(null)}>Cerrar</button></p>}
 
