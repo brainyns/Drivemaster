@@ -160,6 +160,14 @@ public class CotizacionService {
                 .toList();
     }
 
+    /** Todas las cotizaciones del taller de la sesión, la más reciente primero. El taller sale de la sesión, nunca de un parámetro. */
+    public List<CotizacionDTO> delTaller(String correoTaller) {
+        String tallerId = tallerService.obtenerPorUsuario(correoTaller).getId();
+        return cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc(tallerId).stream()
+                .map(CotizacionDTO::completa)
+                .toList();
+    }
+
     /** Respuesta del cliente desde su panel. */
     public CotizacionDTO responder(String correoCliente, String cotizacionId, RespuestaCotizacionRequest r) {
         Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);

@@ -117,6 +117,7 @@ const TITULOS = {
   "taller-inicio":   "Inicio del taller",
   "taller-solicitudes": "Solicitudes",
   "taller-trabajos": "Trabajos",
+  "taller-cotizaciones": "Cotizaciones",
   "taller-mitaller": "Mi taller",
   "taller-anteriores": "Órdenes anteriores",
   "admin-talleres":  "Servicios",
@@ -144,6 +145,7 @@ const SECCION_TALLER = {
   "taller-inicio":      "inicio",
   "taller-solicitudes": "solicitudes",
   "taller-trabajos":    "trabajos",
+  "taller-cotizaciones": "cotizaciones",
   "taller-mitaller":    "mitaller",
   "taller-anteriores":  "anteriores",
 };

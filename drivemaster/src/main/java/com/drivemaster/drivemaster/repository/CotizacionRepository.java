@@ -13,6 +13,8 @@ public interface CotizacionRepository extends MongoRepository<Cotizacion, String
 
     Optional<Cotizacion> findFirstByOrdenIdOrderByVersionDesc(String ordenId);
 
+    List<Cotizacion> findByTallerIdOrderByFechaEmisionDesc(String tallerId);
+
     Optional<Cotizacion> findByTokenHash(String tokenHash);
 
     List<Cotizacion> findByEstadoAndVigenciaHastaBefore(String estado, LocalDateTime fecha);
