@@ -353,9 +353,6 @@ function App() {
       "clientes", "clienteNuevo", "clienteEditar",
       "ventas", "ventaNueva", "ventaDetalle",
       "solicitudes",
-      "compras", "compraNueva", "compraDetalle",
-      "proveedores", "proveedorNuevo", "proveedorEditar",
-      "movimientos",
       "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios", "reportes-plataforma",
       "usuarios",
       "pedidos-envios",
@@ -364,7 +361,9 @@ function App() {
     ],
     CLIENTE: ["catalogo", ...PAGINAS_CLIENTE],
     TALLER: ["taller-panel"],
-    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda"],
+    // Compras, proveedores e inventario son de cada tienda (el backend filtra por dueño)
+    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda",
+      "compras", "compraNueva", "compraDetalle", "proveedores", "proveedorNuevo", "proveedorEditar"],
   };
   const esTienda = user?.rol === "TIENDA";
 

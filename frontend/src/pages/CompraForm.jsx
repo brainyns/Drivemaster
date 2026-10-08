@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { crearCompra } from "../services/compraService";
 import { listarProveedores } from "../services/proveedorService";
-import { listarProductos } from "../services/productoService";
+import { listarProductosMiTienda } from "../services/productoService";
 import "../css/compras.css";
 
 const IcTruck  = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
@@ -32,7 +32,8 @@ function CompraForm({ onVolver, token }) {
 
   useEffect(() => {
     listarProveedores(token).then(setProveedores).catch(() => {});
-    listarProductos(token).then(setProductos).catch(() => {});
+    // Solo los productos de la tienda: no se puede comprar (ni subir el stock de) un producto de otra
+    listarProductosMiTienda(token).then(setProductos).catch(() => {});
   }, [token]);
 
   const proveedorActivo = proveedores.find(p => p.id === proveedorId);
