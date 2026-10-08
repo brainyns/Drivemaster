@@ -117,8 +117,8 @@
   /* Estados: texto y fondo suave, medidos en los dos temas */
   --ui-ok:        #3FBF7F;  --ui-ok-bg:     rgba(63, 191, 127, 0.12);
   --ui-aviso:     #F5A524;  --ui-aviso-bg:  rgba(245, 165, 36, 0.12);
-  --ui-error:     #EF6B6B;  --ui-error-bg:  rgba(239, 107, 107, 0.12);
-  --ui-info:      #6FA3DD;  --ui-info-bg:   rgba(111, 163, 221, 0.12);
+  --ui-error:     #F58A8A;  --ui-error-bg:  rgba(245, 138, 138, 0.12);
+  --ui-info:      #80B0E5;  --ui-info-bg:   rgba(128, 176, 229, 0.12);
 
   --ui-r-sm: 4px;   /* etiquetas */
   --ui-r-md: 6px;   /* campos y botones */
@@ -203,7 +203,7 @@ html[data-theme="light"] {
   --ui-focus:     #A84A00;   /* el naranja de Figma no llega a 3:1 sobre blanco */
   --ui-brand-tinta:#0C2240;
   --ui-activo-bg:  rgba(12, 34, 64, 0.07);
-  --ui-ok:        #15803D;  --ui-ok-bg:     rgba(21, 128, 61, 0.09);
+  --ui-ok:        #137333;  --ui-ok-bg:     rgba(19, 115, 51, 0.09);
   --ui-aviso:     #92400E;  --ui-aviso-bg:  rgba(217, 119, 6, 0.10);
   --ui-error:     #B42318;  --ui-error-bg:  rgba(180, 35, 24, 0.08);
   --ui-info:      #18487A;  --ui-info-bg:   rgba(24, 72, 122, 0.08);

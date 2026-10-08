@@ -9,9 +9,6 @@
   --text: #f0f0f0;
   --muted: #6b7280;
   --muted2: #4a4a55;
-  --primary: #ff3d00;
-  --accent: #ff7043;
-  --primary-soft: rgba(255, 61, 0, 0.08);
   --blue: #3b82f6;
   --green: #22c55e;
   --red: #ef4444;
@@ -32,9 +29,6 @@ html[data-theme="light"] {
   --text: #1a1a1a;
   --muted: #8a8a9a;
   --muted2: #b0b0ba;
-  --primary: #ff3d00;
-  --accent: #ff7043;
-  --primary-soft: rgba(255, 61, 0, 0.05);
   --blue: #3b82f6;
   --green: #22c55e;
   --red: #ef4444;
