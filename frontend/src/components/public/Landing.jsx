@@ -224,6 +224,21 @@ export function ParaNegocios({ onRegistroNegocio }) {
         ))}
       </div>
 
+      <ol className="dm-negocios__proceso" aria-label="Cómo se registra un negocio">
+        <li>
+          <strong>Te registras</strong>
+          <span>Completas los datos de tu taller o de tu tienda.</span>
+        </li>
+        <li>
+          <strong>Lo revisamos</strong>
+          <span>DriveMaster aprueba o rechaza el registro antes de activarlo.</span>
+        </li>
+        <li>
+          <strong>Empiezas</strong>
+          <span>Un taller recibe solicitudes de su zona. Una tienda publica su catálogo.</span>
+        </li>
+      </ol>
+
       <div className="dm-negocios__cta">
         <button className="dm-btn dm-btn--primary" onClick={onRegistroNegocio}>
           Registra tu negocio <Icon name="arrow" size={18} />

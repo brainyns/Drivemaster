@@ -563,6 +563,27 @@
   color: var(--dm-green);
 }
 
+.dm-negocios__proceso {
+  list-style: none;
+  margin: 26px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--dm-line);
+}
+
+.dm-negocios__proceso li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 24px 0 0;
+}
+
+.dm-negocios__proceso li + li { padding-left: 24px; border-left: 1px solid var(--dm-line); }
+.dm-negocios__proceso strong { font-size: 15px; letter-spacing: -0.3px; }
+.dm-negocios__proceso span { font-size: 12px; line-height: 1.7; color: var(--dm-muted); max-width: 34ch; text-wrap: pretty; }
+
 .dm-negocios__cta {
   display: flex;
   justify-content: center;
@@ -695,6 +716,8 @@
   .dm-catalog-note > button { font-size: 9px; margin: 5px 0 0; }
 
   .dm-negocios__grid { grid-template-columns: 1fr; gap: 13px; }
+  .dm-negocios__proceso { grid-template-columns: 1fr; }
+  .dm-negocios__proceso li, .dm-negocios__proceso li + li { padding: 16px 0 0; border-left: 0; }
   .dm-negocios__card h3 { font-size: 19px; padding: 18px 20px 8px; }
   .dm-negocios__card ul { padding: 0 20px 20px; }
   .dm-negocios__head { padding: 15px 20px; }
