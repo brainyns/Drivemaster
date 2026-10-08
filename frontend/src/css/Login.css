@@ -192,7 +192,7 @@
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 2.6px;
-  color: rgba(245, 245, 243, 0.34);
+  color: rgba(245, 245, 243, 0.62);
 }
 
 /* ── Card ────────────────────────────────────────────────────────────────── */
@@ -279,7 +279,7 @@
 
 .auth-aside .auth-brand-sub {
   text-align: left;
-  color: rgba(245, 245, 243, 0.4);
+  color: rgba(245, 245, 243, 0.62);
 }
 
 .auth-card__brand {
