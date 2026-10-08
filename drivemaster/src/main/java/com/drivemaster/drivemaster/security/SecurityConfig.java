@@ -81,14 +81,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/ventas/mis-ventas").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/ventas/compra-inmediata").authenticated()
                         .requestMatchers("/api/ventas/**").hasAnyRole("SUPERADMIN", "VENDEDOR")
-                        .requestMatchers("/api/compras/**").hasAnyRole("SUPERADMIN", "VENDEDOR")
-                        .requestMatchers("/api/proveedores/**").hasRole("SUPERADMIN")
+                        // Compras, proveedores e inventario son de cada tienda: solo ese rol, cada una con lo suyo
+                        .requestMatchers("/api/compras", "/api/compras/**").hasRole("TIENDA")
+                        .requestMatchers("/api/proveedores", "/api/proveedores/**").hasRole("TIENDA")
                         // Reportes financieros y de plataforma: solo SUPERADMIN
                         .requestMatchers("/api/reportes/**").hasRole("SUPERADMIN")
                         // Inventario: antes los movimientos eran públicos y cualquier usuario con
                         // sesión podía ajustar stock. TIENDA queda limitada a su inventario.
-                        .requestMatchers("/api/movimientos", "/api/movimientos/**").hasAnyRole("SUPERADMIN", "TIENDA")
-                        .requestMatchers("/inventario/**").hasAnyRole("SUPERADMIN", "TIENDA")
+                        .requestMatchers("/api/movimientos", "/api/movimientos/**").hasRole("TIENDA")
+                        .requestMatchers("/inventario/**").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes/mis-solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes").hasAnyRole("SUPERADMIN", "VENDEDOR")

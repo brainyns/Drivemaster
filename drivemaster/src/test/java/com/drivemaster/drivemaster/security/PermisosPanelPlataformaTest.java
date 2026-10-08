@@ -74,7 +74,18 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.GET, "/api/plataforma/reportes/servicios", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/reportes/comision", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/usuarios", "SUPERADMIN"),
-            ruta(HttpMethod.GET, "/api/proveedores", "SUPERADMIN"),
+            // Compras, proveedores e inventario: solo la TIENDA, cada una con lo suyo (lo comprueba AislamientoTiendasWebTest)
+            ruta(HttpMethod.GET, "/api/proveedores", "TIENDA"),
+            ruta(HttpMethod.GET, "/api/proveedores/p1", "TIENDA"),
+            ruta(HttpMethod.POST, "/api/proveedores/guardar", "TIENDA"),
+            ruta(HttpMethod.PUT, "/api/proveedores/p1", "TIENDA"),
+            ruta(HttpMethod.DELETE, "/api/proveedores/p1", "TIENDA"),
+            ruta(HttpMethod.GET, "/api/proveedores/exportar", "TIENDA"),
+            ruta(HttpMethod.GET, "/api/compras/c1", "TIENDA"),
+            ruta(HttpMethod.GET, "/api/compras/c1/pdf", "TIENDA"),
+            ruta(HttpMethod.POST, "/api/compras/guardar", "TIENDA"),
+            ruta(HttpMethod.POST, "/api/movimientos/registrar", "TIENDA"),
+            ruta(HttpMethod.PUT, "/inventario/ajuste/p1/5", "TIENDA"),
             ruta(HttpMethod.PUT, "/api/suscripciones/planes/basico", "SUPERADMIN"),
             ruta(HttpMethod.PUT, "/api/config/parametros/COMISION_PCT", "SUPERADMIN"),
             ruta(HttpMethod.POST, "/api/config/metodos-pago", "SUPERADMIN"),
@@ -82,12 +93,12 @@ class PermisosPanelPlataformaTest {
 
             // Gestión comercial interna: SUPERADMIN y VENDEDOR (ya no ADMIN)
             ruta(HttpMethod.GET, "/api/ventas", "SUPERADMIN", "VENDEDOR"),
-            ruta(HttpMethod.GET, "/api/compras", "SUPERADMIN", "VENDEDOR"),
+            ruta(HttpMethod.GET, "/api/compras", "TIENDA"),
             ruta(HttpMethod.GET, "/api/clientes/c1", "SUPERADMIN", "VENDEDOR"),
             ruta(HttpMethod.GET, "/api/solicitudes", "SUPERADMIN", "VENDEDOR"),
 
             // Inventario y productos: SUPERADMIN y la TIENDA (que ve solo lo suyo, lo valida el controlador)
-            ruta(HttpMethod.GET, "/api/movimientos", "SUPERADMIN", "TIENDA"),
+            ruta(HttpMethod.GET, "/api/movimientos", "TIENDA"),
             ruta(HttpMethod.POST, "/api/productos", "SUPERADMIN", "VENDEDOR", "TIENDA"),
 
             // Operación diaria: SUPERADMIN y ADMIN

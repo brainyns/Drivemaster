@@ -23,4 +23,7 @@ public class Compra {
 
     private Double total;
     private String usuarioId;
+
+    // Tienda dueña de la compra. null = registro anterior a que las tiendas llevaran sus propias compras.
+    private String tiendaId;
 }

@@ -6,5 +6,6 @@ import com.drivemaster.drivemaster.model.Proveedor;
 
 @Repository
 public interface ProveedorRepository extends MongoRepository<Proveedor, String> {
+    java.util.List<Proveedor> findByTiendaId(String tiendaId);
 
 }

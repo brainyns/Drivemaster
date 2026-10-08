@@ -20,4 +20,7 @@ public class Proveedor {
     private String nit;
     private String telefono;
     private String correo;
+
+    // Tienda dueña del proveedor. null = registro anterior a que las tiendas llevaran sus propios proveedores.
+    private String tiendaId;
 }
