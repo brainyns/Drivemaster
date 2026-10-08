@@ -1,5 +1,8 @@
 import Icon from "./Icon";
+import CotizacionDetalle from "../servicio/CotizacionDetalle";
 import "../../css/landing.css";
+import "../../css/solicitud-servicio.css";
+import "../../css/cotizacion.css";
 
 /* ── Tira de marcas ────────────────────────────────────────────────────────
    El mockup mostraba logos fijos (Bosch, Mobil, NGK…). Aquí se listan las
@@ -96,7 +99,7 @@ export function Pasos({ onSolicitarDiagnostico, onIrServicios }) {
         </p>
       </div>
 
-      <div className="dm-steps dm-steps--flujo">
+      <div className="dm-steps dm-steps--flujo" data-reveal>
         {pasos.map((p, i) => (
           <button className="dm-step" key={p.title} onClick={p.onClick}>
             <div className="dm-step__top">
@@ -161,6 +164,95 @@ export function Ecosistema({ onSolicitarDiagnostico }) {
   );
 }
 
+/* ── Cotización de ejemplo ────────────────────────────────────────────────
+   Usa el mismo componente que ve el cliente de verdad, con datos inventados:
+   nombres, precios y repuestos no corresponden a ningún taller ni tienda. */
+const COTIZACION_EJEMPLO = {
+  version: 1,
+  tallerNombre: "Taller Los Cedros",
+  items: [
+    { tipo: "REPUESTO", cantidad: 1, descripcion: "Juego de pastillas delanteras", marca: "Frenotec", referencia: "FT-2231",
+      tiendaNombre: "Repuestos La Sabana", subtotal: 118400 },
+    { tipo: "REPUESTO", cantidad: 2, descripcion: "Disco de freno delantero", marca: "Frenotec", referencia: "FD-880",
+      tiendaNombre: "Autopartes del Norte", subtotal: 173800 },
+    { tipo: "MANO_OBRA", descripcion: "Cambio de pastillas y discos delanteros", modalidad: "HORAS", horas: 1.5,
+      precioUnitario: 62000, subtotal: 93000 },
+  ],
+  subtotal: 385200,
+  ivaPct: 19,
+  iva: 73188,
+  total: 458388,
+  anticipoDiagnostico: 45000,
+  totalAPagar: 413388,
+  tiempoEstimadoHoras: 3,
+};
+
+export function CotizacionEjemplo({ onSolicitarDiagnostico }) {
+  return (
+    <section className="dm-section dm-container dm-ejemplo" id="dm-cotizacion">
+      <div className="dm-ejemplo__copy" data-reveal>
+        <h2>
+          Una cotización que <span>se entiende.</span>
+        </h2>
+        <p>
+          Cada repuesto con su tienda, la mano de obra por horas, el IVA y el diagnóstico que ya
+          pagaste descontado. Apruebas, pides cambios o la rechazas antes de pagar.
+        </p>
+        <button className="dm-btn dm-btn--dark" onClick={onSolicitarDiagnostico}>
+          Solicitar diagnóstico <Icon name="arrow" size={18} />
+        </button>
+      </div>
+
+      <figure className="dm-ejemplo__figura" data-reveal>
+        <figcaption className="dm-ejemplo__rotulo">
+          <strong>Ejemplo ilustrativo</strong>
+          <span>Nombres, precios y repuestos inventados.</span>
+        </figcaption>
+        <div className="dm-ejemplo__tarjeta">
+          <CotizacionDetalle cotizacion={COTIZACION_EJEMPLO} sinEstado />
+        </div>
+      </figure>
+    </section>
+  );
+}
+
+/* ── Tiendas que ya venden ────────────────────────────────────────────────
+   Solo tiendas aprobadas, activas y con datos completos (así las entrega el
+   catálogo) y solo con lo público: nombre, ciudad y si envían. Sin tiendas,
+   la sección no se muestra: no se rellena con nombres inventados. */
+const MAX_TIENDAS = 8;
+
+export function TiendasAliadas({ tiendas = [], onVerCatalogo }) {
+  if (!tiendas.length) return null;
+  const visibles = tiendas.slice(0, MAX_TIENDAS);
+  const resto = tiendas.length - visibles.length;
+
+  return (
+    <section className="dm-section dm-container dm-aliadas" id="dm-tiendas" aria-labelledby="dm-aliadas-t">
+      <div data-reveal>
+        <h2 id="dm-aliadas-t">
+          Tiendas que ya venden <span>en DriveMaster.</span>
+        </h2>
+        <p>Los talleres comparan su inventario al cotizar, y tú puedes comprarles directo en el catálogo.</p>
+      </div>
+
+      <ul className="dm-aliadas__lista" data-reveal>
+        {visibles.map((t) => (
+          <li key={t.id} className="dm-aliadas__tienda">
+            <strong>{t.nombre}</strong>
+            <span>{t.ciudad}</span>
+            <span className="dm-aliadas__entrega">{t.ofreceEnvio ? "Envía y entrega en tienda" : "Entrega en tienda"}</span>
+          </li>
+        ))}
+      </ul>
+
+      <button className="dm-btn dm-btn--dark" onClick={onVerCatalogo}>
+        {resto > 0 ? `Ver el catálogo (${resto} tiendas más)` : "Ver el catálogo"} <Icon name="arrow" size={18} />
+      </button>
+    </section>
+  );
+}
+
 /* ── Para talleres y tiendas ───────────────────────────────────────────── */
 export function ParaNegocios({ onRegistroNegocio }) {
   const negocios = [
@@ -204,7 +296,7 @@ export function ParaNegocios({ onRegistroNegocio }) {
         </p>
       </div>
 
-      <div className="dm-negocios__grid">
+      <div className="dm-negocios__grid" data-reveal>
         {negocios.map((n) => (
           <article className="dm-negocios__card" key={n.tipo}>
             <div className="dm-negocios__head">
@@ -224,7 +316,7 @@ export function ParaNegocios({ onRegistroNegocio }) {
         ))}
       </div>
 
-      <ol className="dm-negocios__proceso" aria-label="Cómo se registra un negocio">
+      <ol className="dm-negocios__proceso" aria-label="Cómo se registra un negocio" data-reveal>
         <li>
           <strong>Te registras</strong>
           <span>Completas los datos de tu taller o de tu tienda.</span>
@@ -317,7 +409,7 @@ export function Beneficios({ productos = [], onIrVehiculo }) {
         ))}
       </div>
 
-      <div className="dm-entrega">
+      <div className="dm-entrega" data-reveal>
         <div className="dm-entrega__titulo">
           <Icon name="box" size={25} />
           <h3>
