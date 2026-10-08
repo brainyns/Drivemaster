@@ -125,58 +125,58 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
 
   return (
     <>
-      <div className="kp-prov">
+      <div className="kv-prov">
         {/* Header */}
-        <div className="kp-prov-header">
+        <div className="kv-prov-header">
           <div>
-            <div className="kp-prov-title">Directorio de Proveedores</div>
-            <div className="kp-prov-subtitle">Gestiona y monitorea el rendimiento de tus socios comerciales</div>
+            <div className="kv-prov-title">Directorio de Proveedores</div>
+            <div className="kv-prov-subtitle">Gestiona y monitorea el rendimiento de tus socios comerciales</div>
           </div>
-          <div className="kp-prov-actions">
-            <button className="kp-btn-report" onClick={handleExportar} disabled={exportando}>
+          <div className="kv-prov-actions">
+            <button className="kv-btn-report" onClick={handleExportar} disabled={exportando}>
               <IconDownload /> {exportando ? "Generando..." : "Descargar Reporte"}
             </button>
-            <button className="kp-btn-nuevo" onClick={onNuevo}><IconPlus /> Nuevo Proveedor</button>
+            <button className="kv-btn-nuevo" onClick={onNuevo}><IconPlus /> Nuevo Proveedor</button>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="kp-stats">
-          <div className="kp-stat orange">
-            <div className="kp-stat-top">
-              <div className="kp-stat-icon"><IconTruck /></div>
-              <span className="kp-stat-badge">98% OTD</span>
+        <div className="kv-stats">
+          <div className="kv-stat orange">
+            <div className="kv-stat-top">
+              <div className="kv-stat-icon"><IconTruck /></div>
+              <span className="kv-stat-badge">98% OTD</span>
             </div>
-            <div className="kp-stat-label">Entregas a Tiempo</div>
-            <div className="kp-stat-value">{proveedores.length} Activos</div>
+            <div className="kv-stat-label">Entregas a Tiempo</div>
+            <div className="kv-stat-value">{proveedores.length} Activos</div>
           </div>
-          <div className="kp-stat purple">
-            <div className="kp-stat-top">
-              <div className="kp-stat-icon"><IconShield /></div>
-              <span className="kp-stat-badge">Top Tier</span>
+          <div className="kv-stat purple">
+            <div className="kv-stat-top">
+              <div className="kv-stat-icon"><IconShield /></div>
+              <span className="kv-stat-badge">Top Tier</span>
             </div>
-            <div className="kp-stat-label">Calidad de Repuestos</div>
-            <div className="kp-stat-value">Premium</div>
+            <div className="kv-stat-label">Calidad de Repuestos</div>
+            <div className="kv-stat-value">Premium</div>
           </div>
-          <div className="kp-stat teal">
-            <div className="kp-stat-top">
-              <div className="kp-stat-icon"><IconDollar /></div>
-              <span className="kp-stat-badge">−12% Var</span>
+          <div className="kv-stat teal">
+            <div className="kv-stat-top">
+              <div className="kv-stat-icon"><IconDollar /></div>
+              <span className="kv-stat-badge">−12% Var</span>
             </div>
-            <div className="kp-stat-label">Gasto Mensual</div>
-            <div className="kp-stat-value">{gastoMensual}</div>
+            <div className="kv-stat-label">Gasto Mensual</div>
+            <div className="kv-stat-value">{gastoMensual}</div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="kp-table-wrap">
-          <div className="kp-table-toolbar">
-            <div className="kp-table-info">
+        <div className="kv-table-wrap">
+          <div className="kv-table-toolbar">
+            <div className="kv-table-info">
               Catálogo de Socios Comerciales
               <span>Mostrando {filtrados.length} de {proveedores.length} registrados</span>
             </div>
-            <div className="kp-table-controls">
-              <div className="kp-search">
+            <div className="kv-table-controls">
+              <div className="kv-search">
                 <IconSearch />
                 <input
                   placeholder="Buscar por nombre, contacto o correo..."
@@ -189,18 +189,18 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
           </div>
 
           {loading ? (
-            <div className="kp-empty"><div className="kp-empty-text">Cargando proveedores...</div></div>
+            <div className="kv-empty"><div className="kv-empty-text">Cargando proveedores...</div></div>
           ) : error ? (
-            <div className="kp-error">Error: {error}</div>
+            <div className="kv-error">Error: {error}</div>
           ) : filtrados.length === 0 ? (
-            <div className="kp-empty">
-              <div className="kp-empty-icon">🏭</div>
-              <div className="kp-empty-text">
+            <div className="kv-empty">
+              <div className="kv-empty-icon">🏭</div>
+              <div className="kv-empty-text">
                 {busqueda ? "Sin resultados para tu búsqueda." : "No hay proveedores registrados."}
               </div>
             </div>
           ) : (
-            <table className="kp-table">
+            <table className="kv-table">
               <thead>
                 <tr>
                   <th>Nombre del Proveedor</th>
@@ -216,25 +216,25 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
                   return (
                     <tr key={p.id}>
                       <td>
-                        <div className="kp-cell-prov">
-                          <div className="kp-avatar" style={{ background: color }}>
+                        <div className="kv-cell-prov">
+                          <div className="kv-avatar" style={{ background: color }}>
                             {getInitials(p.nombre)}
                           </div>
                           <div>
-                            <div className="kp-prov-name">{p.nombre}</div>
-                            {p.categoria && <div className="kp-prov-cat">{p.categoria}</div>}
+                            <div className="kv-prov-name">{p.nombre}</div>
+                            {p.categoria && <div className="kv-prov-cat">{p.categoria}</div>}
                           </div>
                         </div>
                       </td>
-                      <td><span className="kp-cell-text">{p.nit || "—"}</span></td>
-                      <td><span className="kp-cell-mono">{p.telefono || "—"}</span></td>
-                      <td><span className="kp-cell-email">{p.correo || "—"}</span></td>
+                      <td><span className="kv-cell-text">{p.nit || "—"}</span></td>
+                      <td><span className="kv-cell-mono">{p.telefono || "—"}</span></td>
+                      <td><span className="kv-cell-email">{p.correo || "—"}</span></td>
                       <td>
-                        <div className="kp-cell-actions">
-                          <button className="kp-btn-edit" title="Editar" onClick={() => onEditar(p.id)}>
+                        <div className="kv-cell-actions">
+                          <button className="kv-btn-edit" title="Editar" onClick={() => onEditar(p.id)}>
                             <IconEdit />
                           </button>
-                          <button className="kp-btn-del" title="Eliminar" onClick={() => setConfirmId(p.id)}>
+                          <button className="kv-btn-del" title="Eliminar" onClick={() => setConfirmId(p.id)}>
                             <IconTrash />
                           </button>
                         </div>
@@ -248,20 +248,20 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
 
           {/* Pagination */}
           {totalPaginas > 1 && (
-            <div className="kp-pagination">
-              <div className="kp-pag-info">
+            <div className="kv-pagination">
+              <div className="kv-pag-info">
                 Página {pagina} de {totalPaginas}
               </div>
-              <div className="kp-pag-controls">
-                <button className="kp-pag-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>
+              <div className="kv-pag-controls">
+                <button className="kv-pag-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>
                   <IconChevronLeft />
                 </button>
                 {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
-                  <button key={n} className={`kp-pag-btn ${n === pagina ? "active" : ""}`} onClick={() => setPagina(n)}>
+                  <button key={n} className={`kv-pag-btn ${n === pagina ? "active" : ""}`} onClick={() => setPagina(n)}>
                     {n}
                   </button>
                 ))}
-                <button className="kp-pag-btn" disabled={pagina === totalPaginas} onClick={() => setPagina(p => p + 1)}>
+                <button className="kv-pag-btn" disabled={pagina === totalPaginas} onClick={() => setPagina(p => p + 1)}>
                   <IconChevronRight />
                 </button>
               </div>
@@ -272,14 +272,14 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
 
       {/* Modal de confirmación */}
       {confirmId && (
-        <div className="kp-overlay" onClick={() => setConfirmId(null)}>
-          <div className="kp-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="kp-modal-icon">⚠️</div>
+        <div className="kv-overlay" onClick={() => setConfirmId(null)}>
+          <div className="kv-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="kv-modal-icon">⚠️</div>
             <h3>¿Eliminar proveedor?</h3>
             <p>Esta acción es permanente y no se puede deshacer. Se perderán todos los datos del proveedor.</p>
-            <div className="kp-modal-btns">
-              <button className="kp-modal-cancel" onClick={() => setConfirmId(null)}>Cancelar</button>
-              <button className="kp-modal-confirm" onClick={() => handleEliminar(confirmId)}>Sí, eliminar</button>
+            <div className="kv-modal-btns">
+              <button className="kv-modal-cancel" onClick={() => setConfirmId(null)}>Cancelar</button>
+              <button className="kv-modal-confirm" onClick={() => handleEliminar(confirmId)}>Sí, eliminar</button>
             </div>
           </div>
         </div>
