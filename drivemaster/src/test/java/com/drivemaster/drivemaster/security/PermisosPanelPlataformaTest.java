@@ -80,6 +80,7 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.PUT, "/api/proveedores/p1", "TIENDA"),
             ruta(HttpMethod.DELETE, "/api/proveedores/p1", "TIENDA"),
             ruta(HttpMethod.GET, "/api/proveedores/exportar", "TIENDA"),
+            ruta(HttpMethod.GET, "/api/tiendas/mi-tienda/informes", "TIENDA"),
             ruta(HttpMethod.GET, "/api/compras/c1", "TIENDA"),
             ruta(HttpMethod.GET, "/api/compras/c1/pdf", "TIENDA"),
             ruta(HttpMethod.POST, "/api/compras/guardar", "TIENDA"),

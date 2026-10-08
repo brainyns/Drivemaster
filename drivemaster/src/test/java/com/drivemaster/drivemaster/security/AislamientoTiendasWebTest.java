@@ -1,6 +1,8 @@
 package com.drivemaster.drivemaster.security;
 
 import com.drivemaster.drivemaster.controller.CompraController;
+import com.drivemaster.drivemaster.controller.InformesTiendaController;
+import com.drivemaster.drivemaster.service.InformesTiendaService;
 import com.drivemaster.drivemaster.controller.ProveedorController;
 import com.drivemaster.drivemaster.model.Compra;
 import com.drivemaster.drivemaster.model.Proveedor;
@@ -33,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Rutas reales de compras y proveedores con la seguridad real: solo la TIENDA entra, y siempre con SU tienda, que
  * sale de la sesión y no de lo que mande la petición.
  */
-@WebMvcTest(controllers = {CompraController.class, ProveedorController.class})
+@WebMvcTest(controllers = {CompraController.class, ProveedorController.class, InformesTiendaController.class})
 @Import({SecurityConfig.class, AlcanceTienda.class})
 class AislamientoTiendasWebTest {
 
@@ -41,6 +43,7 @@ class AislamientoTiendasWebTest {
 
     @MockBean private CompraService compraService;
     @MockBean private ProveedorService proveedorService;
+    @MockBean private InformesTiendaService informesTiendaService;
     @MockBean private TiendaService tiendaService;
     @MockBean private ProductoService productoService; // lo necesita AlcanceTienda
     @MockBean private JwtUtil jwtUtil;
@@ -113,6 +116,26 @@ class AislamientoTiendasWebTest {
         verify(proveedorService).actualizarEnTienda(org.mockito.ArgumentMatchers.eq("p9"), any(Proveedor.class), org.mockito.ArgumentMatchers.eq("A"));
         verify(proveedorService).eliminarDeTienda("p9", "A");
         verify(proveedorService, never()).crearEnTienda(any(Proveedor.class), org.mockito.ArgumentMatchers.eq("B"));
+    }
+
+    @Test
+    void losInformesSeCalculanSiempreParaLaTiendaDeLaSesion() throws Exception {
+        mvc.perform(get("/api/tiendas/mi-tienda/informes?meses=6").with(user("a@demo.com").roles("TIENDA"))).andExpect(status().isOk());
+        mvc.perform(get("/api/tiendas/mi-tienda/informes?meses=12&tiendaId=B").with(user("a@demo.com").roles("TIENDA"))).andExpect(status().isOk());
+        mvc.perform(get("/api/tiendas/mi-tienda/informes").with(user("b@demo.com").roles("TIENDA"))).andExpect(status().isOk());
+
+        // El parámetro tiendaId que mande el cliente se ignora: la tienda sale de la sesión
+        verify(informesTiendaService, times(2)).informes(org.mockito.ArgumentMatchers.eq("A"), org.mockito.ArgumentMatchers.anyInt());
+        verify(informesTiendaService, times(1)).informes(org.mockito.ArgumentMatchers.eq("B"), org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void ningunOtroRolVeLosInformesDeUnaTienda() throws Exception {
+        for (String rol : new String[]{"SUPERADMIN", "ADMIN", "VENDEDOR", "CLIENTE", "TALLER"}) {
+            mvc.perform(get("/api/tiendas/mi-tienda/informes").with(user("x@demo.com").roles(rol))).andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/api/tiendas/mi-tienda/informes")).andExpect(status().isUnauthorized());
+        verifyNoInteractions(informesTiendaService);
     }
 
     @Test
