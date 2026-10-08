@@ -13,7 +13,7 @@
   margin-bottom: var(--sp-lg);
 }
 
-.sv-title { font-family: 'Barlow Condensed', sans-serif; font-size: 2rem; font-weight: 800; margin: 0; }
+.sv-title { font-family: var(--ui-font); font-size: 2rem; font-weight: 800; margin: 0; }
 .sv-subtitle { color: var(--text-muted); margin: 4px 0 0; }
 
 .sv-volver {
@@ -29,7 +29,7 @@
   padding: var(--sp-lg); display: flex; flex-direction: column; gap: 8px;
 }
 
-.sv-card h3 { margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 1.3rem; }
+.sv-card h3 { margin: 0; font-family: var(--ui-font); font-size: 1.3rem; }
 .sv-card-meta { color: var(--text-muted); font-size: 0.9rem; }
 .sv-card-foto {
   width: 100%; height: 150px; object-fit: cover;
@@ -107,4 +107,4 @@
 .sv-manto-opt { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; }
 .sv-manto-error { display: block; margin-top: 6px; color: #ef4444; font-size: 0.82rem; }
 
-.sv-section-title { font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; margin: var(--sp-xl) 0 var(--sp-md); }
+.sv-section-title { font-family: var(--ui-font); font-size: 1.4rem; margin: var(--sp-xl) 0 var(--sp-md); }

@@ -4,16 +4,6 @@ import { getToken } from "../services/authService";
 import { connectNotifications, disconnectNotifications, subscribeNotifications } from "../services/websocketService";
 import "../css/topbar.css";
 
-const COLORES_TEMA = [
-  { label: "Naranja", valor: "#FF3D00", hover: "#e63600" },
-  { label: "Azul",    valor: "#2563EB", hover: "#1d4ed8" },
-  { label: "Violeta", valor: "#7C3AED", hover: "#6d28d9" },
-  { label: "Verde",   valor: "#059669", hover: "#047857" },
-  { label: "Rosa",    valor: "#DB2777", hover: "#be185d" },
-  { label: "Cyan",    valor: "#0891B2", hover: "#0e7490" },
-  { label: "Ámbar",   valor: "#D97706", hover: "#b45309" },
-];
-
 const IcoSettings = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3"/>
@@ -70,7 +60,7 @@ const getIniciales = (nombre) => {
 };
 
 // ── Dropdown Configuración ────────────────────────────────────────────────────
-function DropdownConfig({ onClose, colorActual, onColorChange, theme, onToggleTheme }) {
+function DropdownConfig({ onClose, theme, onToggleTheme }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -109,32 +99,6 @@ function DropdownConfig({ onClose, colorActual, onColorChange, theme, onToggleTh
         </div>
       </div>
 
-      {/* Selector de color */}
-      <div className="tb-section">
-        <p className="tb-section-label">Color principal</p>
-        <div className="tb-colors-grid">
-          {COLORES_TEMA.map(c => (
-            <button
-              key={c.valor}
-              className={`tb-color-btn${colorActual === c.valor ? " tb-color-btn--active" : ""}`}
-              style={{ "--c": c.valor }}
-              onClick={() => onColorChange(c)}
-              title={c.label}
-            >
-              <span className="tb-color-swatch" />
-              {colorActual === c.valor && <span className="tb-color-check">✓</span>}
-            </button>
-          ))}
-        </div>
-        <p className="tb-color-name">
-          {COLORES_TEMA.find(c => c.valor === colorActual)?.label ?? "Personalizado"}
-        </p>
-      </div>
-
-      <div className="tb-dropdown-footer">
-        <div className="tb-preview-bar" style={{ background: colorActual }} />
-        <span className="tb-preview-label">Vista previa del color activo</span>
-      </div>
     </div>
   );
 }
@@ -191,8 +155,6 @@ function TopBar({
   user,
   onLogout,
   onNavigate,
-  colorTema,
-  onColorChange,
   theme,
   onToggleTheme,
   children,
@@ -229,12 +191,6 @@ function TopBar({
     const interval = setInterval(refreshCount, 30000);
     return () => { clearTimeout(initial); clearInterval(interval); };
   }, [notifOpen, refreshCount]);
-
-  const handleColorChange = (c) => {
-    document.documentElement.style.setProperty("--primary",   c.valor);
-    document.documentElement.style.setProperty("--primary-h", c.hover);
-    onColorChange?.(c);
-  };
 
   return (
     <header className="tb-root">
@@ -322,8 +278,6 @@ function TopBar({
           {configOpen && (
             <DropdownConfig
               onClose={() => setConfigOpen(false)}
-              colorActual={colorTema}
-              onColorChange={handleColorChange}
               theme={theme}
               onToggleTheme={onToggleTheme}
             />

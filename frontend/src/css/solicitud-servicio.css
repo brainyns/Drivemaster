@@ -113,7 +113,7 @@
 }
 
 .ss-bloque__titulo {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0 0 4px;
@@ -331,7 +331,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 }
 
 .ss-tarjeta__titulo {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
   font-size: 1.3rem;
 }
 

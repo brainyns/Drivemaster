@@ -8,7 +8,7 @@
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--ui-font);
   padding: 1.5rem 1.75rem 2.5rem;
   animation: kpFadeIn 0.3s ease;
 }

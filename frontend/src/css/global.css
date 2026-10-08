@@ -1,9 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --primary:   #FF3D00;
-  --primary-h: #e63600;
-  --primary-rgb: 255, 61, 0;
+  /* Acento único de DriveMaster: el naranja de Figma. El texto naranja usa --primary-text. */
+  --primary:   #F28C28;
+  --primary-h: #E27C18;
+  --primary-rgb: 242, 140, 40;
   --secondary: #1A237E;
   --tertiary:  #9F5BBB;
   --neutral:   #121212;
@@ -17,7 +18,7 @@
   --text-muted:#6b7280;
   --text-primary: #F1F5F9;
   --text-secondary: #6b7280;
-  --accent-hover: #ff7043;
+  --accent-hover: #E27C18;
   --muted:     #6b7280;
   --muted2:    #4a4a55;
   --success:   #22C55E;
@@ -28,10 +29,10 @@
   --green:     #22c55e;
   --red:       #ef4444;
   --amber:     #f59e0b;
-  --accent:    #ff7043;
-  --primary-glow: rgba(255, 61, 0, 0.15);
-  --primary-soft: rgba(255, 61, 0, 0.08);
-  --primary-glow-strong: rgba(255, 61, 0, 0.4);
+  --accent:    #F28C28;
+  --primary-glow: rgba(242, 140, 40, 0.15);
+  --primary-soft: rgba(242, 140, 40, 0.08);
+  --primary-glow-strong: rgba(242, 140, 40, 0.4);
   --grid-line: rgba(255,255,255,0.03);
 
   /* ── Design system del sitio público (mockup Figma) ─────────────────────
@@ -89,12 +90,54 @@
   --dur-fast: 0.15s;
   --dur-med: 0.25s;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── Sistema común del panel (--ui-*): los mismos valores que la landing ──
+     Superficies cálidas de Figma, un solo acento (--primary) y #0C2240 solo en
+     sombras y detalles. Cada pantalla pasa a estos tokens en su bloque. */
+  --ui-font:      'DM Sans', system-ui, sans-serif;
+  --ui-mono:      'JetBrains Mono', ui-monospace, monospace; /* solo códigos y referencias */
+
+  --ui-bg:        #141517;
+  --ui-surface:   #1E2023;
+  --ui-surface-2: #282B2E;
+  --ui-line:      #34383C;
+  --ui-line-soft: #26292C;
+  --ui-text:      #F5F5F3;
+  --ui-muted:     #9B9E9C;   /* 5,3:1 o más sobre todas las superficies */
+  --ui-hover:     rgba(245, 245, 243, 0.05);
+
+  --on-primary:   #17191C;   /* texto sobre el naranja: 7,2:1 */
+  --ui-focus:     #F28C28;
+
+  /* #0C2240: marca. En oscuro no se lee sobre el fondo; el detalle usa su tinte claro */
+  --ui-brand:      #0C2240;
+  --ui-brand-tinta:#8FB3E0;
+  --ui-activo-bg:  rgba(143, 179, 224, 0.12);
+
+  /* Estados: texto y fondo suave, medidos en los dos temas */
+  --ui-ok:        #3FBF7F;  --ui-ok-bg:     rgba(63, 191, 127, 0.12);
+  --ui-aviso:     #F5A524;  --ui-aviso-bg:  rgba(245, 165, 36, 0.12);
+  --ui-error:     #EF6B6B;  --ui-error-bg:  rgba(239, 107, 107, 0.12);
+  --ui-info:      #6FA3DD;  --ui-info-bg:   rgba(111, 163, 221, 0.12);
+
+  --ui-r-sm: 4px;   /* etiquetas */
+  --ui-r-md: 6px;   /* campos y botones */
+  --ui-r-lg: 8px;   /* tarjetas, tablas y menús */
+
+  --ui-sp-1: 4px;  --ui-sp-2: 8px;  --ui-sp-3: 12px; --ui-sp-4: 16px;
+  --ui-sp-5: 24px; --ui-sp-6: 32px; --ui-sp-7: 48px;
+
+  --ui-sombra-1: 0 1px 2px rgba(3, 8, 16, 0.35), 0 6px 16px -10px rgba(3, 8, 16, 0.6);
+  --ui-sombra-2: 0 12px 32px -12px rgba(3, 8, 16, 0.7);
+
+  --ui-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --ui-dur:  160ms;
 }
 
 html[data-theme="light"] {
-  --primary:   #FF3D00;
-  --primary-h: #e63600;
-  --primary-rgb: 255, 61, 0;
+  --primary:   #F28C28;
+  --primary-h: #E27C18;
+  --primary-rgb: 242, 140, 40;
   --secondary: #1A237E;
   --tertiary:  #9F5BBB;
   --neutral:   #e5e5e5;
@@ -108,7 +151,7 @@ html[data-theme="light"] {
   --text-muted:#8a8a9a;
   --text-primary: #1a1a1a;
   --text-secondary: #8a8a9a;
-  --accent-hover: #ff7043;
+  --accent-hover: #E27C18;
   --muted:     #8a8a9a;
   --muted2:    #b0b0ba;
   --success:   #22C55E;
@@ -119,10 +162,10 @@ html[data-theme="light"] {
   --green:     #22c55e;
   --red:       #ef4444;
   --amber:     #f59e0b;
-  --accent:    #ff7043;
-  --primary-glow: rgba(255, 61, 0, 0.10);
-  --primary-soft: rgba(255, 61, 0, 0.05);
-  --primary-glow-strong: rgba(255, 61, 0, 0.30);
+  --accent:    #F28C28;
+  --primary-glow: rgba(242, 140, 40, 0.12);
+  --primary-soft: rgba(242, 140, 40, 0.07);
+  --primary-glow-strong: rgba(242, 140, 40, 0.30);
   --grid-line: rgba(0,0,0,0.05);
 
   /* overriding del sitio público en tema claro */
@@ -144,9 +187,28 @@ html[data-theme="light"] {
   --dm-orange-text-hover: #8A3B00;
   --dm-muted:     #62666A;
   --dm-muted-2:   #666A6E;
-  --primary-text: color-mix(in srgb, var(--primary) 70%, #000);
-  --accent-text:  #B82A00;
+  --primary-text: #A84A00;
+  --accent-text:  #A84A00;
   --amber-text:   #92400E;
+
+  /* Sistema común del panel en tema claro */
+  --ui-bg:        #F5F5F3;
+  --ui-surface:   #FFFFFF;
+  --ui-surface-2: #FAFAF7;
+  --ui-line:      #E5E5E1;
+  --ui-line-soft: #EEEEEA;
+  --ui-text:      #17191C;
+  --ui-muted:     #62666A;   /* 5,3:1 sobre el fondo, 5,8:1 sobre blanco */
+  --ui-hover:     rgba(12, 34, 64, 0.04);
+  --ui-focus:     #A84A00;   /* el naranja de Figma no llega a 3:1 sobre blanco */
+  --ui-brand-tinta:#0C2240;
+  --ui-activo-bg:  rgba(12, 34, 64, 0.07);
+  --ui-ok:        #15803D;  --ui-ok-bg:     rgba(21, 128, 61, 0.09);
+  --ui-aviso:     #92400E;  --ui-aviso-bg:  rgba(217, 119, 6, 0.10);
+  --ui-error:     #B42318;  --ui-error-bg:  rgba(180, 35, 24, 0.08);
+  --ui-info:      #18487A;  --ui-info-bg:   rgba(24, 72, 122, 0.08);
+  --ui-sombra-1: 0 1px 2px rgba(12, 34, 64, 0.06), 0 6px 16px -10px rgba(12, 34, 64, 0.18);
+  --ui-sombra-2: 0 14px 34px -14px rgba(12, 34, 64, 0.28);
 }
 
 /* Superficies que son oscuras también en tema claro: conservan el naranja y los grises del tema oscuro */
@@ -165,7 +227,7 @@ html[data-theme="light"] .auth-aside {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--ui-font);
   min-height: 100vh;
   overflow-x: hidden;
   max-width: 100%;
@@ -175,9 +237,9 @@ img, video, iframe, table, canvas {
   max-width: 100%;
 }
 
-h1, h2, h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; }
+h1, h2, h3 { font-family: var(--ui-font); font-weight: 700; }
 
-code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+code, pre, .mono { font-family: var(--ui-mono); }
 
 .theme-toggle {
   width: 32px;

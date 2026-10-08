@@ -1,0 +1,210 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Componentes comunes del panel (BEM, prefijo ui-). Usan solo los tokens --ui-*
+   y --primary de global.css, así que siguen el tema claro y oscuro sin reglas
+   propias. Movimiento: solo transform, opacity y color, y nada con movimiento
+   reducido.
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Cabecera de página ─────────────────────────────────────────────────── */
+.ui-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ui-sp-3) var(--ui-sp-5);
+  margin-bottom: var(--ui-sp-5);
+}
+
+.ui-page-header__titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ui-text);
+  text-wrap: balance;
+}
+
+.ui-page-header__sub {
+  margin: 4px 0 0;
+  max-width: 65ch;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ui-muted);
+  text-wrap: pretty;
+}
+
+.ui-page-header__acciones { display: flex; flex-wrap: wrap; gap: var(--ui-sp-2); }
+
+/* ── Tarjeta ────────────────────────────────────────────────────────────── */
+.ui-card {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-1);
+  min-width: 0;
+}
+
+.ui-card__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--ui-sp-3);
+  padding: 18px 20px 12px;
+}
+
+.ui-card__titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--ui-text);
+}
+
+.ui-card__sub { font-size: 0.78rem; color: var(--ui-muted); }
+.ui-card__cuerpo { padding: 0 20px 20px; }
+
+/* ── Tabla ──────────────────────────────────────────────────────────────── */
+.ui-table-wrap { width: 100%; overflow-x: auto; }
+
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ui-muted);
+  border-bottom: 1px solid var(--ui-line);
+  white-space: nowrap;
+}
+
+.ui-table td {
+  padding: 12px 16px;
+  color: var(--ui-text);
+  border-bottom: 1px solid var(--ui-line-soft);
+  vertical-align: middle;
+}
+
+.ui-table tbody tr:last-child td { border-bottom: 0; }
+.ui-table tbody tr { transition: background-color var(--ui-dur) ease; }
+.ui-table__num { text-align: right; }
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-table tbody tr:hover { background: var(--ui-hover); }
+}
+
+/* ── Botón ──────────────────────────────────────────────────────────────── */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-sp-2);
+  min-height: 38px;
+  padding: 8px 16px;
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: var(--ui-r-md);
+  cursor: pointer;
+  transition: background-color var(--ui-dur) ease, border-color var(--ui-dur) ease,
+              color var(--ui-dur) ease, transform var(--ui-dur) var(--ui-ease);
+}
+
+.ui-btn:active:not(:disabled) { transform: scale(0.98); }
+.ui-btn:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.ui-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.ui-btn--primario { background: var(--primary); color: var(--on-primary); }
+.ui-btn--secundario { background: var(--ui-surface); color: var(--ui-text); border-color: var(--ui-line); }
+.ui-btn--texto { background: transparent; color: var(--primary-text); padding-inline: 8px; }
+.ui-btn--peligro { background: transparent; color: var(--ui-error); border-color: currentColor; }
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-btn--primario:hover:not(:disabled) { background: var(--primary-h); }
+  .ui-btn--secundario:hover:not(:disabled) { background: var(--ui-surface-2); }
+  .ui-btn--texto:hover:not(:disabled) { background: var(--ui-hover); }
+  .ui-btn--peligro:hover:not(:disabled) { background: var(--ui-error-bg); }
+}
+
+/* ── Etiqueta de estado ─────────────────────────────────────────────────── */
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  border-radius: var(--ui-r-sm);
+  color: var(--ui-muted);
+  background: var(--ui-hover);
+}
+
+.ui-badge--ok    { color: var(--ui-ok);    background: var(--ui-ok-bg); }
+.ui-badge--aviso { color: var(--ui-aviso); background: var(--ui-aviso-bg); }
+.ui-badge--error { color: var(--ui-error); background: var(--ui-error-bg); }
+.ui-badge--info  { color: var(--ui-info);  background: var(--ui-info-bg); }
+.ui-badge--acento { color: var(--primary-text); background: var(--primary-soft); }
+
+/* ── Estado vacío ───────────────────────────────────────────────────────── */
+.ui-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--ui-sp-2);
+  padding: var(--ui-sp-5) 20px;
+  color: var(--ui-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.ui-empty__titulo { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--ui-text); }
+
+/* ── Campo de formulario: etiqueta arriba, ayuda y error abajo ──────────── */
+.ui-field { display: grid; gap: 6px; min-width: 0; }
+.ui-field__label { font-size: 0.8rem; font-weight: 600; color: var(--ui-text); }
+.ui-field__ayuda { margin: 0; font-size: 0.78rem; color: var(--ui-muted); }
+.ui-field__error { margin: 0; font-size: 0.78rem; color: var(--ui-error); }
+
+.ui-field__input {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--ui-text);
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-md);
+  transition: border-color var(--ui-dur) ease;
+}
+
+.ui-field__input::placeholder { color: var(--ui-muted); }
+.ui-field__input:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; border-color: transparent; }
+
+/* ── Carga ──────────────────────────────────────────────────────────────── */
+.ui-skeleton {
+  display: block;
+  min-height: 1em;
+  border-radius: var(--ui-r-sm);
+  background: var(--ui-surface-2);
+  animation: ui-pulso 1.4s ease-in-out infinite;
+}
+
+@keyframes ui-pulso { 50% { opacity: 0.55; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton { animation: none; }
+  .ui-btn, .ui-table tbody tr, .ui-field__input { transition: none; }
+  .ui-btn:active:not(:disabled) { transform: none; }
+}

@@ -222,21 +222,6 @@ function App() {
 
   const toggleTheme = () => setTheme(prev => prev === "dark" ? "light" : "dark");
 
-  const [colorTema, setColorTema] = useState(
-    () => localStorage.getItem("colorTema") || "#FF3D00"
-  );
-
-  useEffect(() => {
-    document.documentElement.style.setProperty("--primary", colorTema);
-  }, []);
-
-  const handleColorChange = (c) => {
-    setColorTema(c.valor);
-    localStorage.setItem("colorTema", c.valor);
-    document.documentElement.style.setProperty("--primary",   c.valor);
-    document.documentElement.style.setProperty("--primary-h", c.hover);
-  };
-
   useEffect(() => {
     localStorage.setItem("solicitudItems", JSON.stringify(solicitudItems));
   }, [solicitudItems]);
@@ -487,7 +472,7 @@ function App() {
             abierto={sidebarAbierto} onCerrar={() => setSidebarAbierto(false)} />
           <main className="app-content">
             <TopBar titulo="Enviar solicitud" user={user} onLogout={handleLogout}
-              colorTema={colorTema} theme={theme} onToggleTheme={toggleTheme} onColorChange={handleColorChange}
+              theme={theme} onToggleTheme={toggleTheme}
               onMenuClick={() => setSidebarAbierto(true)} />
             <CheckoutPage
               onCompraExitosa={handleCompraExitosa}
@@ -709,10 +694,8 @@ function App() {
             user={user}
             onLogout={handleLogout}
             onNavigate={irA}
-            colorTema={colorTema}
             theme={theme}
             onToggleTheme={toggleTheme}
-            onColorChange={handleColorChange}
             onMenuClick={() => setSidebarAbierto(true)}
           />
         )}

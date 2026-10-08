@@ -156,7 +156,7 @@
 }
 
 .ct-publica__marca {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
   font-size: 1.6rem;
   font-weight: 800;
   color: var(--text);
