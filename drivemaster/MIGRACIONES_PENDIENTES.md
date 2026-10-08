@@ -74,3 +74,61 @@ Si la tienda no existe o el nombre es ambiguo, el arranque se aborta sin tocar n
 ### 4. Después
 
 Quita las tres variables (la migración no debe quedar activada).
+
+## Limpieza de la antigua "Tienda DriveMaster" (parte 8)
+
+DriveMaster es la aplicación, no una tienda. Esta migración borra la antigua tienda propia (la marcada con
+`plataforma: true`), **sus productos** y **sus movimientos de inventario**. **No toca ventas, solicitudes,
+cotizaciones ni compras**: se conservan como historial (cada línea guarda su propia copia del nombre, la imagen
+y el precio, así que se siguen viendo aunque el producto ya no exista). No corre sola.
+
+### Orden
+
+1. **Desplegar primero el código de la parte 8-1.** Antes de ese código, cada arranque recreaba la tienda y le
+   asignaba los productos sin tienda; con el código nuevo ya no.
+2. **Respaldo** (abajo).
+3. **Informe previo (simulación, no borra nada):** arranca el backend una vez con
+   ```
+   MIGRAR_LIMPIEZA_TIENDA_PROPIA=true
+   MIGRAR_LIMPIEZA_TIENDA_PROPIA_SIMULAR=true
+   ```
+   El log trae: productos y movimientos que se borrarían, cuántas ventas, solicitudes y cotizaciones tienen productos
+   de esa tienda (y cuántas están sin cerrar), y qué impediría ejecutarla.
+4. **Resolver lo que impida ejecutarla**, si aparece: ventas o solicitudes sin cerrar con esos productos (apruébalas,
+   recházalas, anúlalas o espera a que se paguen) y cotizaciones de taller sin resolver. Si hay pedidos, compras del
+   catálogo, compras a proveedores o proveedores atados a esa tienda, la limpieza se niega a borrarla.
+5. **Ejecución:** igual que la simulación pero sin `MIGRAR_LIMPIEZA_TIENDA_PROPIA_SIMULAR`. Si algo no cuadra, aborta
+   **sin tocar nada**. Reporta cuántos productos, movimientos y tiendas borró. Es idempotente: una segunda corrida
+   no encuentra tienda propia y no hace nada.
+6. **Quitar las variables** (la limpieza no debe quedar activada).
+
+### Respaldo antes de ejecutar
+
+La URI de Mongo lleva la clave: tómala del `.env` en una variable de entorno y no la pegues en chats ni capturas.
+
+```powershell
+# PowerShell
+$env:URI = "<SPRING_DATA_MONGODB_URI del .env>"
+foreach ($c in "tiendas","productos","movimientos_inventario","ventas","solicitudes","cotizaciones") {
+  mongodump --uri="$env:URI" --collection=$c --out="respaldo-limpieza-tienda-propia"
+}
+```
+
+```bash
+# bash
+for c in tiendas productos movimientos_inventario ventas solicitudes cotizaciones; do
+  mongodump --uri="$URI" --collection=$c --out=respaldo-limpieza-tienda-propia
+done
+```
+
+Las tres primeras son las que se modifican; ventas, solicitudes y cotizaciones se respaldan por prudencia (la
+limpieza no las toca). Guarda la carpeta fuera del repositorio. En Atlas de pago también puedes tomar un snapshot.
+
+Para deshacer, justo después de ejecutarla y antes de que entren datos nuevos:
+`mongorestore --uri="$URI" --nsInclude="<base>.tiendas" --nsInclude="<base>.productos" --nsInclude="<base>.movimientos_inventario" --drop respaldo-limpieza-tienda-propia`
+(vuelve a poner esas tres colecciones como estaban).
+
+### Lo que no hace
+
+- No borra las imágenes de los productos en Cloudinary (quedan en la nube; se pueden limpiar a mano).
+- No toca los productos que no tienen tienda (el informe dice cuántos son); si existen, no aparecen en ningún catálogo.
