@@ -33,7 +33,7 @@ export default function ReportesServicios({ token }) {
     setPeriodo(k);
   };
 
-  if (error) return <div className="rp-root"><p className="rp-error">{error}</p></div>;
+  if (error) return <div className="rp-root rp-root--servicios"><p className="rp-error">{error}</p></div>;
 
   const sinOrdenes = data && data.totalOrdenes === 0;
   const tasaCierre = data && data.ordenesFacturadas > 0
@@ -47,7 +47,7 @@ export default function ReportesServicios({ token }) {
   const maxProductos = Math.max(...barrasProductos.map((p) => p.ordenes), 1);
 
   return (
-    <div className="rp-root">
+    <div className="rp-root rp-root--servicios">
       <div className="rp-page-header">
         <div>
           <h1 className="rp-h">Reporte de servicios</h1>

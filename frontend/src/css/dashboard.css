@@ -5,8 +5,8 @@
 
 .db-root {
   min-height: 100vh;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--ui-bg);
+  color: var(--ui-text);
   font-family: var(--ui-font);
   padding: 1.5rem 1.75rem 2.5rem;
 }
@@ -22,21 +22,25 @@
 }
 
 .db-h1 {
-  font-size: 1.7rem;
-  font-weight: 800;
-  letter-spacing: -.035em;
-  margin: 0 0 .2rem;
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-wrap: balance;
+  margin: 0 0 .25rem;
 }
 
 .db-sub {
-  font-size: .83rem;
-  color: var(--muted);
+  font-size: .875rem;
+  line-height: 1.55;
+  max-width: 65ch;
+  color: var(--ui-muted);
   margin: 0;
 }
 
 .db-date {
   font-size: .78rem;
-  color: var(--muted);
+  color: var(--ui-muted);
   font-weight: 500;
   text-transform: capitalize;
   padding-top: .35rem;
@@ -50,7 +54,7 @@
   min-height: 60vh;
   flex-direction: column;
   gap: .85rem;
-  color: var(--muted);
+  color: var(--ui-muted);
   font-size: .85rem;
 }
 
@@ -58,7 +62,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 2.5px solid var(--surface3);
+  border: 2.5px solid var(--ui-surface-2);
   border-top-color: var(--primary);
   animation: db-spin .7s linear infinite;
 }
@@ -72,9 +76,9 @@
 .db-error {
   padding: 1rem;
   background: rgba(239, 68, 68, .1);
-  border-left: 3px solid var(--red);
-  border-radius: 8px;
-  color: var(--red);
+  border-left: 3px solid var(--ui-error);
+  border-radius: var(--ui-r-lg);
+  color: var(--ui-error);
 }
 
 /* ── Alertas inteligentes ───────────────────────────────────── */
@@ -90,7 +94,7 @@
   align-items: center;
   gap: .6rem;
   padding: .6rem 1rem;
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   font-size: .8rem;
   font-weight: 500;
   border: 1px solid;
@@ -105,19 +109,19 @@
 .db-alerta--warn {
   background: rgba(245, 158, 11, .08);
   border-color: rgba(245, 158, 11, .2);
-  color: var(--amber-text);
+  color: var(--ui-aviso);
 }
 
 .db-alerta--danger {
   background: rgba(239, 68, 68, .08);
   border-color: rgba(239, 68, 68, .2);
-  color: var(--red);
+  color: var(--ui-error);
 }
 
 .db-alerta--info {
   background: rgba(59, 130, 246, .08);
   border-color: rgba(59, 130, 246, .2);
-  color: var(--blue);
+  color: var(--ui-info);
 }
 
 /* ── KPI Grid ───────────────────────────────────────────────── */
@@ -129,9 +133,9 @@
 }
 
 .db-kpi {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
   padding: 1rem 1.15rem;
   position: relative;
   overflow: hidden;
@@ -139,7 +143,7 @@
 }
 
 .db-kpi:hover {
-  border-color: var(--border2);
+  border-color: var(--ui-line);
   transform: translateY(-1px);
 }
 
@@ -167,7 +171,7 @@
 }
 
 .db-kpi-ico {
-  color: var(--muted);
+  color: var(--ui-muted);
   display: flex;
 }
 
@@ -175,22 +179,22 @@
   font-size: .68rem;
   font-weight: 700;
   padding: .18rem .45rem;
-  border-radius: 20px;
+  border-radius: var(--ui-r-lg);
 }
 
 .db-kpi-delta.pos {
   background: rgba(34, 197, 94, .12);
-  color: var(--green);
+  color: var(--ui-ok);
 }
 
 .db-kpi-delta.neg {
   background: rgba(239, 68, 68, .12);
-  color: var(--red);
+  color: var(--ui-error);
 }
 
 .db-kpi-delta.neu {
-  background: var(--surface2);
-  color: var(--muted);
+  background: var(--ui-surface-2);
+  color: var(--ui-muted);
 }
 
 .db-kpi-label {
@@ -198,7 +202,7 @@
   text-transform: uppercase;
   letter-spacing: .07em;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--ui-muted);
   margin-bottom: .3rem;
 }
 
@@ -213,15 +217,15 @@
 }
 
 .db-kpi-val.blue {
-  color: var(--blue);
+  color: var(--ui-info);
 }
 
 .db-kpi-val.green {
-  color: var(--green);
+  color: var(--ui-ok);
 }
 
 .db-kpi-val.red {
-  color: var(--red);
+  color: var(--ui-error);
 }
 
 /* ── Highlights ─────────────────────────────────────────────── */
@@ -239,9 +243,9 @@
 }
 
 .db-highlight {
-  background: linear-gradient(135deg, rgba(255, 61, 0, .07), rgba(255, 112, 67, .03));
-  border: 1px solid rgba(255, 61, 0, .16);
-  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(242, 140, 40, .07), rgba(255, 112, 67, .03));
+  border: 1px solid rgba(242, 140, 40, .16);
+  border-radius: var(--ui-r-lg);
   padding: .9rem 1.1rem;
   display: flex;
   align-items: center;
@@ -258,7 +262,7 @@
   font-size: .7rem;
   text-transform: uppercase;
   letter-spacing: .07em;
-  color: var(--muted);
+  color: var(--ui-muted);
   font-weight: 700;
   margin-bottom: .2rem;
 }
@@ -271,11 +275,21 @@
 
 /* ── Cards genéricas ────────────────────────────────────────── */
 .db-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  position: relative; /* contiene los textos solo para lectores de pantalla (.dp-oculto) */
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-1);
   overflow: hidden;
 }
+
+/* Título suelto dentro de la tarjeta (sin .db-card-header): mismo relleno que la cabecera */
+.db-card > .db-card-title {
+  margin: 0;
+  padding: 18px 20px 12px;
+}
+
+.db-card > .db-empty { padding: 0 20px 20px; }
 
 .db-card--lg {
   flex: 2;
@@ -290,18 +304,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: .9rem 1.15rem;
-  border-bottom: 1px solid var(--border);
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid var(--ui-line);
 }
 
 .db-card-title {
-  font-size: .88rem;
-  font-weight: 700;
+  font-size: .95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
 }
 
 .db-card-sub {
   font-size: .73rem;
-  color: var(--muted);
+  color: var(--ui-muted);
 }
 
 /* ── Rows de gráficas ───────────────────────────────────────── */
@@ -321,7 +336,7 @@
 .db-chart-empty {
   padding: 2rem 1rem;
   text-align: center;
-  color: var(--muted);
+  color: var(--ui-muted);
   font-size: .8rem;
 }
 
@@ -349,13 +364,13 @@
 .db-barchart-tooltip {
   position: absolute;
   top: -28px;
-  background: var(--surface3);
-  border: 1px solid var(--border2);
-  border-radius: 6px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-md);
   padding: .2rem .45rem;
   font-size: .65rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--ui-text);
   white-space: nowrap;
   opacity: 0;
   transition: opacity .15s;
@@ -372,14 +387,14 @@
 
 .db-barchart-bar {
   width: 100%;
-  border-radius: 5px 5px 0 0;
+  border-radius: var(--ui-r-sm) var(--ui-r-sm) 0 0;
   min-height: 3px;
   transition: height .5s cubic-bezier(.4, 0, .2, 1);
 }
 
 .db-barchart-label {
   font-size: .62rem;
-  color: var(--muted);
+  color: var(--ui-muted);
   text-align: center;
   white-space: nowrap;
 }
@@ -414,12 +429,12 @@
 }
 
 .db-pie-lbl {
-  color: var(--text);
+  color: var(--ui-text);
   flex: 1;
 }
 
 .db-pie-pct {
-  color: var(--muted);
+  color: var(--ui-muted);
   font-weight: 700;
   font-size: .73rem;
 }
@@ -440,7 +455,7 @@
 
 .db-hbar-label {
   font-size: .74rem;
-  color: var(--text);
+  color: var(--ui-text);
   width: 100px;
   white-space: nowrap;
   overflow: hidden;
@@ -452,22 +467,22 @@
 .db-hbar-bg {
   flex: 1;
   height: 20px;
-  background: var(--surface2);
-  border-radius: 5px;
+  background: var(--ui-surface-2);
+  border-radius: var(--ui-r-sm);
   overflow: hidden;
 }
 
 .db-hbar-fill {
   height: 100%;
-  border-radius: 5px;
-  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: var(--ui-r-sm);
+  background: var(--primary);
   transition: width .55s cubic-bezier(.4, 0, .2, 1);
 }
 
 .db-hbar-val {
   font-size: .72rem;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--ui-muted);
   width: 28px;
   text-align: right;
 }
@@ -484,7 +499,7 @@
 }
 
 .db-table thead tr {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ui-line);
 }
 
 .db-table th {
@@ -492,14 +507,14 @@
   font-size: .69rem;
   text-transform: uppercase;
   letter-spacing: .07em;
-  color: var(--muted);
+  color: var(--ui-muted);
   font-weight: 700;
   text-align: left;
   white-space: nowrap;
 }
 
 .db-table tbody tr {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ui-line);
   transition: background .12s;
 }
 
@@ -508,7 +523,7 @@
 }
 
 .db-table tbody tr:hover {
-  background: var(--surface2);
+  background: var(--ui-surface-2);
 }
 
 .db-table td {
@@ -516,11 +531,15 @@
   vertical-align: middle;
 }
 
+/* La primera y la última columna se alinean con el título de la tarjeta */
+.db-table th:first-child, .db-table td:first-child { padding-left: 20px; }
+.db-table th:last-child, .db-table td:last-child { padding-right: 20px; }
+
 .db-id {
   font-size: .73rem;
-  color: var(--muted);
+  color: var(--ui-muted);
   font-weight: 700;
-  font-family: monospace;
+  font-family: var(--ui-mono);
 }
 
 .db-cliente {
@@ -528,7 +547,7 @@
 }
 
 .db-muted {
-  color: var(--muted);
+  color: var(--ui-muted);
   font-size: .77rem;
 }
 
@@ -544,12 +563,12 @@
 
 .db-metodo {
   font-size: .76rem;
-  color: var(--text);
+  color: var(--ui-text);
 }
 
 .db-empty {
   text-align: center;
-  color: var(--muted);
+  color: var(--ui-muted);
   padding: 2.5rem;
   font-size: .83rem;
 }
@@ -558,7 +577,7 @@
 .db-estado {
   display: inline-block;
   padding: .22rem .6rem;
-  border-radius: 20px;
+  border-radius: var(--ui-r-lg);
   font-size: .68rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -567,22 +586,22 @@
 
 .st-pagada {
   background: rgba(34, 197, 94, .12);
-  color: var(--green);
+  color: var(--ui-ok);
 }
 
 .st-pendiente {
   background: rgba(245, 158, 11, .12);
-  color: var(--amber-text);
+  color: var(--ui-aviso);
 }
 
 .st-cancelada {
   background: rgba(239, 68, 68, .12);
-  color: var(--red);
+  color: var(--ui-error);
 }
 
 .st-anulada {
   background: rgba(107, 114, 128, .12);
-  color: var(--muted);
+  color: var(--ui-muted);
 }
 
 /* ── Power BI Modal ─────────────────────────────── */
@@ -593,10 +612,10 @@
 }
 .db-powerbi-btn {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   border: none;
   padding: 0.45rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--ui-r-lg);
   font-family: var(--ui-font);
   font-size: 0.8rem;
   font-weight: 700;
@@ -619,19 +638,19 @@
   width: 100%;
   max-width: 1300px;
   height: 90vh;
-  background: var(--surface);
-  border-radius: 16px;
+  background: var(--ui-surface);
+  border-radius: var(--ui-r-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid var(--ui-line);
 }
 .db-pbi-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ui-line);
 }
 .db-pbi-header h2 {
   font-family: var(--ui-font);
@@ -642,14 +661,14 @@
 .db-pbi-close {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   font-size: 1.2rem;
   cursor: pointer;
   padding: 0.25rem;
   line-height: 1;
   transition: color 0.15s;
 }
-.db-pbi-close:hover { color: var(--text); }
+.db-pbi-close:hover { color: var(--ui-text); }
 .db-pbi-body {
   flex: 1;
   min-height: 0;

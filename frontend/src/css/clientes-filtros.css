@@ -5,11 +5,11 @@
   left: 0;
   z-index: 100;
   width: 280px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
   padding: 1.1rem;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  box-shadow: var(--ui-sombra-1);
   display: flex;
   flex-direction: column;
   gap: .9rem;
@@ -30,14 +30,14 @@
 .km-filtros-title {
   font-size: .8rem;
   font-weight: 700;
-  color: var(--text, #fff);
+  color: var(--ui-text);
   letter-spacing: .05em;
   text-transform: uppercase;
 }
 
 .km-filtros-clear {
   font-size: .72rem;
-  color: #E8450A;
+  color: var(--primary-text);
   background: none;
   border: none;
   cursor: pointer;
@@ -57,7 +57,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .07em;
-  color: var(--muted, #888);
+  color: var(--ui-muted);
   margin: 0;
 }
 
@@ -72,31 +72,31 @@
   font-weight: 600;
   padding: .3rem .75rem;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  color: var(--muted);
+  border: 1px solid var(--ui-line);
+  background: var(--ui-surface-2);
+  color: var(--ui-muted);
   cursor: pointer;
-  transition: all .15s;
+  transition: background-color .15s, border-color .15s, color .15s, opacity .15s, transform .15s, box-shadow .15s;
   text-transform: uppercase;
   letter-spacing: .03em;
 }
 .km-chip:hover {
-  border-color: var(--border2);
-  color: var(--text);
+  border-color: var(--ui-line);
+  color: var(--ui-text);
 }
 .km-chip.on {
   background: rgba(232,69,10,0.15);
-  border-color: #E8450A;
-  color: #E8450A;
+  border-color: var(--primary);
+  color: var(--primary-text);
 }
 
 .km-filtros-apply {
   width: 100%;
   padding: .5rem;
-  background: #E8450A;
-  color: #fff;
+  background: var(--primary);
+  color: var(--on-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--ui-r-lg);
   font-size: .78rem;
   font-weight: 700;
   cursor: pointer;
@@ -109,8 +109,8 @@
 /* Botón tool-btn activo cuando hay filtros */
 .km-tool-btn.active {
   background: rgba(232,69,10,0.12);
-  border-color: #E8450A;
-  color: #E8450A;
+  border-color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── RESPONSIVE ── */

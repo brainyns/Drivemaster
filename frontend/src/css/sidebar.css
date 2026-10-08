@@ -9,7 +9,7 @@
   width: calc(100vw - 220px);
   flex: 1;
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--ui-bg);
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
@@ -21,8 +21,8 @@
   top: 0; left: 0;
   height: 100vh;
   width: 220px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
+  background: var(--ui-surface);
+  border-right: 1px solid var(--ui-line);
   display: flex;
   flex-direction: column;
   z-index: 100;
@@ -38,28 +38,29 @@
   align-items: center;
   gap: 0.7rem;
   padding: 1.4rem 1.2rem 1.2rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ui-line);
   flex-shrink: 0;
 }
 
 .sidebar-brand-icon {
   width: 36px; height: 36px;
-  background: var(--primary);
-  border-radius: 8px;
+  /* Detalle de marca: #0C2240, con un filo claro para que se lea también en tema oscuro */
+  background: var(--ui-brand);
+  color: #F5F5F3;
+  border-radius: var(--ui-r-lg);
   display: flex; align-items: center; justify-content: center;
   font-size: 1rem; flex-shrink: 0;
-  box-shadow: 0 0 12px rgba(255,61,0,0.35);
-  transition: box-shadow 0.2s;
+  box-shadow: inset 0 0 0 1px rgba(143, 179, 224, 0.28), var(--ui-sombra-1);
 }
 
 .sidebar-brand-name {
   font-family: var(--ui-font);
-  font-size: 1rem; font-weight: 800;
-  color: var(--text); letter-spacing: 0.02em; line-height: 1.1;
+  font-size: 1rem; font-weight: 700;
+  color: var(--ui-text); letter-spacing: -0.01em; line-height: 1.1;
 }
 
 .sidebar-brand-sub {
-  font-size: 0.58rem; color: var(--text-muted);
+  font-size: 0.58rem; color: var(--ui-muted);
   text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
 }
 
@@ -73,19 +74,28 @@
   width: 100%;
   display: flex; align-items: center; gap: 0.75rem;
   padding: 0.6rem 0.85rem;
-  border-radius: 8px; border: none;
+  border-radius: var(--ui-r-md); border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   font-family: var(--ui-font);
   font-size: 0.85rem; font-weight: 500;
-  cursor: pointer; transition: all 0.15s; text-align: left;
+  cursor: pointer; transition: background-color var(--ui-dur) ease, color var(--ui-dur) ease; text-align: left;
+  position: relative;
 }
 
-.sidebar-item:hover { background: var(--surface2); color: var(--text); }
+@media (hover: hover) and (pointer: fine) {
+  .sidebar-item:hover { background: var(--ui-hover); color: var(--ui-text); }
+}
 
+/* Estado activo: detalle de marca #0C2240 (su tinte claro en tema oscuro) */
 .sidebar-item.activo {
-  background: rgba(255,61,0,0.12);
-  color: var(--primary-text); font-weight: 600;
+  background: var(--ui-activo-bg);
+  color: var(--ui-brand-tinta); font-weight: 600;
+}
+
+.sidebar-item.activo::before {
+  content: ""; position: absolute; left: -0.6rem; top: 8px; bottom: 8px;
+  width: 3px; border-radius: 0 2px 2px 0; background: var(--ui-brand-tinta);
 }
 
 .sidebar-item-icon {
@@ -100,7 +110,7 @@
 
 .sidebar-arrow {
   margin-left: auto; font-size: 0.8rem;
-  color: var(--text-muted); transition: transform 0.2s;
+  color: var(--ui-muted); transition: transform 0.2s;
 }
 .sidebar-arrow.abierto { transform: rotate(90deg); }
 
@@ -110,44 +120,57 @@
 .sidebar-subitem {
   width: 100%; display: flex; align-items: center;
   padding: 0.45rem 0.85rem 0.45rem 3rem;
-  border-radius: 7px; border: none;
-  background: transparent; color: var(--text-muted);
+  border-radius: var(--ui-r-md); border: none;
+  background: transparent; color: var(--ui-muted);
   font-family: var(--ui-font); font-size: 0.8rem;
-  font-weight: 500; cursor: pointer; transition: all 0.15s; text-align: left;
+  font-weight: 500; cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s; text-align: left;
   position: relative;
 }
 
 .sidebar-subitem::before {
   content: ''; position: absolute; left: 2rem;
-  width: 4px; height: 4px; border-radius: 50%; background: var(--border);
+  width: 4px; height: 4px; border-radius: 50%; background: var(--ui-line);
 }
 
-.sidebar-subitem:hover { color: var(--text); }
-.sidebar-subitem:hover::before { background: var(--primary); }
-.sidebar-subitem.activo { color: var(--primary-text); font-weight: 600; }
-.sidebar-subitem.activo::before { background: var(--primary); }
+.sidebar-subitem:hover { color: var(--ui-text); }
+.sidebar-subitem:hover::before { background: var(--ui-muted); }
+.sidebar-subitem.activo { color: var(--ui-brand-tinta); font-weight: 600; }
+.sidebar-subitem.activo::before { background: var(--ui-brand-tinta); }
 
 /* ── FOOTER ── */
 .sidebar-footer {
   padding: 0.6rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--ui-line);
   flex-shrink: 0;
 }
 .sidebar-catalogo-btn {
   width: 100%;
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0.6rem 0.85rem;
-  border-radius: 8px; border: 1px solid var(--border);
+  border-radius: var(--ui-r-lg); border: 1px solid var(--ui-line);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   font-family: var(--ui-font);
   font-size: 0.82rem; font-weight: 500;
-  cursor: pointer; transition: all 0.15s; text-align: left;
+  cursor: pointer; transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s; text-align: left;
 }
 .sidebar-catalogo-btn:hover {
-  background: var(--surface2);
-  color: var(--text);
-  border-color: var(--primary);
+  background: var(--ui-hover);
+  color: var(--ui-text);
+}
+
+.sidebar-item:focus-visible, .sidebar-subitem:focus-visible, .sidebar-catalogo-btn:focus-visible {
+  outline: 2px solid var(--ui-focus); outline-offset: -2px;
+}
+
+/* Movimiento reducido en todo el panel: sin desplazamientos ni animaciones */
+@media (prefers-reduced-motion: reduce) {
+  .app-layout *, .app-layout *::before, .app-layout *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── RESPONSIVE (móvil) ── */
@@ -160,7 +183,7 @@
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(.4, 0, .2, 1);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, .5);
+    box-shadow: var(--ui-sombra-1);
     width: 260px;
     z-index: 1100;
   }
@@ -191,8 +214,8 @@
   min-width: 1.35rem;
   padding: 0 .4rem;
   border-radius: 999px;
-  background: var(--primary, #ff3d00);
-  color: #fff;
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: .72rem;
   font-weight: 700;
   line-height: 1.35rem;

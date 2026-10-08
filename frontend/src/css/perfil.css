@@ -6,7 +6,7 @@
 
 .pf-loading {
   text-align: center;
-  color: var(--text-tertiary, #888);
+  color: var(--text-tertiary, var(--ui-muted));
   padding: 60px 0;
   font-size: 15px;
 }
@@ -16,15 +16,18 @@
 }
 
 .pf-title {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-wrap: balance;
   margin: 0 0 4px;
-  color: var(--text-primary, #fff);
+  color: var(--ui-text);
 }
 
 .pf-subtitle {
   font-size: 13px;
-  color: var(--text-tertiary, #888);
+  color: var(--text-tertiary, var(--ui-muted));
   margin: 0;
 }
 
@@ -38,9 +41,9 @@
 
 /* ── Cards ── */
 .pf-card {
-  background: var(--card-bg, #1e1e1e);
-  border: 1px solid var(--border, #2a2a2a);
-  border-radius: 12px;
+  background: var(--card-bg, var(--ui-surface));
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
   padding: 24px;
 }
 
@@ -52,7 +55,7 @@
 }
 
 .pf-card-header svg {
-  stroke: var(--primary, #FF3D00);
+  stroke: var(--primary);
   flex-shrink: 0;
 }
 
@@ -60,7 +63,7 @@
   font-size: 15px;
   font-weight: 600;
   margin: 0;
-  color: var(--text-primary, #fff);
+  color: var(--ui-text);
 }
 
 /* ── Avatar ── */
@@ -70,7 +73,7 @@
   gap: 16px;
   margin-bottom: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid var(--border, #2a2a2a);
+  border-bottom: 1px solid var(--ui-line);
 }
 
 .pf-avatar {
@@ -82,13 +85,13 @@
   justify-content: center;
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--ui-text);
   flex-shrink: 0;
 }
 
-.pf-rol--superadmin { background: linear-gradient(135deg, #E8450A, #ff6b35); }
-.pf-rol--admin { background: linear-gradient(135deg, #7C3AED, #a78bfa); }
-.pf-rol--vendedor { background: linear-gradient(135deg, #0EA5E9, #38bdf8); }
+.pf-rol--superadmin { background: var(--primary); }
+.pf-rol--admin { background: var(--ui-info); }
+.pf-rol--vendedor { background: var(--ui-info); }
 
 .pf-avatar-info {
   display: flex;
@@ -100,7 +103,7 @@
   font-size: 17px;
   font-weight: 600;
   margin: 0;
-  color: var(--text-primary, #fff);
+  color: var(--ui-text);
 }
 
 /* ── Fields ── */
@@ -121,12 +124,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-tertiary, #888);
+  color: var(--ui-muted);
 }
 
 .pf-field-value {
   font-size: 14px;
-  color: var(--text-primary, #fff);
+  color: var(--ui-text);
 }
 
 /* ── Rol Badge ── */
@@ -136,28 +139,28 @@
   font-size: 11px;
   font-weight: 700;
   padding: 3px 10px;
-  border-radius: 20px;
+  border-radius: var(--ui-r-lg);
   text-transform: uppercase;
   letter-spacing: 0.3px;
   width: fit-content;
 }
 
-.pf-rol--superadmin { background: rgba(232, 69, 10, 0.15); color: #ff6b35; }
-.pf-rol--admin { background: rgba(124, 58, 237, 0.15); color: #a78bfa; }
-.pf-rol--vendedor { background: rgba(14, 165, 233, 0.15); color: #38bdf8; }
+.pf-rol--superadmin { background: rgba(232, 69, 10, 0.15); color: var(--primary-text); }
+.pf-rol--admin { background: rgba(124, 58, 237, 0.15); color: var(--ui-info); }
+.pf-rol--vendedor { background: rgba(14, 165, 233, 0.15); color: var(--ui-info); }
 
 /* ── Password Form ── */
 .pf-pass-form {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid var(--border, #2a2a2a);
+  border-top: 1px solid var(--ui-line);
 }
 
 .pf-pass-title {
   font-size: 13px;
   font-weight: 600;
   margin: 0 0 16px;
-  color: var(--text-primary, #fff);
+  color: var(--ui-text);
 }
 
 .pf-pass-input-wrap {
@@ -167,10 +170,10 @@
 .pf-pass-input {
   width: 100%;
   padding: 10px 14px;
-  background: var(--bg, #141414);
-  border: 1px solid var(--border, #2a2a2a);
-  border-radius: 8px;
-  color: var(--text-primary, #fff);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  color: var(--ui-text);
   font-size: 13px;
   outline: none;
   box-sizing: border-box;
@@ -178,7 +181,7 @@
 }
 
 .pf-pass-input:focus {
-  border-color: var(--primary, #FF3D00);
+  border-color: var(--primary);
 }
 
 .pf-show-pass {
@@ -186,22 +189,22 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--text-tertiary, #888);
+  color: var(--text-tertiary, var(--ui-muted));
   margin: 10px 0;
   cursor: pointer;
 }
 
 .pf-show-pass input {
-  accent-color: var(--primary, #FF3D00);
+  accent-color: var(--primary);
 }
 
 .pf-btn-primary {
   width: 100%;
   padding: 10px;
-  background: var(--primary, #FF3D00);
-  color: #fff;
+  background: var(--primary);
+  color: var(--on-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--ui-r-lg);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -213,28 +216,28 @@
 /* ── Messages ── */
 .pf-msg {
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--ui-r-lg);
   font-size: 12px;
   margin-bottom: 12px;
 }
 
 .pf-msg--success {
   background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
+  color: var(--ui-ok);
   border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .pf-msg--error {
   background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
+  color: var(--ui-error);
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 /* ── Section ── */
 .pf-section {
-  background: var(--card-bg, #1e1e1e);
-  border: 1px solid var(--border, #2a2a2a);
-  border-radius: 12px;
+  background: var(--card-bg, var(--ui-surface));
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
   padding: 24px;
 }
 
@@ -247,9 +250,9 @@
 }
 
 .pf-stat {
-  background: var(--bg, #141414);
-  border: 1px solid var(--border, #2a2a2a);
-  border-radius: 10px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
   padding: 18px;
   text-align: center;
 }
@@ -257,7 +260,7 @@
 .pf-stat-icon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -265,19 +268,19 @@
 }
 
 .pf-stat--orange .pf-stat-icon { background: rgba(232, 69, 10, 0.12); }
-.pf-stat--orange .pf-stat-icon svg { stroke: #ff6b35; }
+.pf-stat--orange .pf-stat-icon svg { stroke: var(--primary-text); }
 .pf-stat--green .pf-stat-icon { background: rgba(16, 185, 129, 0.12); }
-.pf-stat--green .pf-stat-icon svg { stroke: #34d399; }
+.pf-stat--green .pf-stat-icon svg { stroke: var(--ui-ok); }
 .pf-stat--blue .pf-stat-icon { background: rgba(14, 165, 233, 0.12); }
-.pf-stat--blue .pf-stat-icon svg { stroke: #38bdf8; }
+.pf-stat--blue .pf-stat-icon svg { stroke: var(--ui-info); }
 .pf-stat--purple .pf-stat-icon { background: rgba(124, 58, 237, 0.12); }
-.pf-stat--purple .pf-stat-icon svg { stroke: #a78bfa; }
+.pf-stat--purple .pf-stat-icon svg { stroke: var(--ui-info); }
 .pf-stat--red .pf-stat-icon { background: rgba(239, 68, 68, 0.12); }
-.pf-stat--red .pf-stat-icon svg { stroke: #f87171; }
+.pf-stat--red .pf-stat-icon svg { stroke: var(--ui-error); }
 
 .pf-stat-label {
   font-size: 11px;
-  color: var(--text-tertiary, #888);
+  color: var(--text-tertiary, var(--ui-muted));
   margin: 0 0 4px;
   text-transform: uppercase;
   font-weight: 600;
@@ -288,7 +291,7 @@
   font-size: 22px;
   font-weight: 700;
   margin: 0;
-  color: var(--text-primary, #fff);
+  color: var(--ui-text);
 }
 
 /* ── Secondary Stats ── */
@@ -297,7 +300,7 @@
   gap: 20px;
   flex-wrap: wrap;
   padding-top: 16px;
-  border-top: 1px solid var(--border, #2a2a2a);
+  border-top: 1px solid var(--ui-line);
 }
 
 .pf-stat-simple {
@@ -308,16 +311,16 @@
 }
 
 .pf-stat-simple-label {
-  color: var(--text-tertiary, #888);
+  color: var(--text-tertiary, var(--ui-muted));
 }
 
 .pf-stat-simple-value {
   font-weight: 600;
 }
 
-.pf-badge--danger { color: #f87171; }
-.pf-badge--warn { color: #fbbf24; }
-.pf-badge--info { color: #38bdf8; }
+.pf-badge--danger { color: var(--ui-error); }
+.pf-badge--warn { color: var(--ui-aviso); }
+.pf-badge--info { color: var(--ui-info); }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
@@ -325,3 +328,21 @@
   .pf-grid { grid-template-columns: 1fr; }
   .pf-stats-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* producto-form.css usa el mismo prefijo pf- (.pf-field label / input) y se aplicaba
+   también aquí: estas reglas mantienen el perfil con sus propios valores. */
+.pf-field > .pf-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--ui-muted);
+}
+.pf-pass-input-wrap > .pf-pass-input {
+  padding: 10px 14px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-md);
+  color: var(--ui-text);
+  font-size: 13px;
+}
+.pf-pass-input-wrap > .pf-pass-input:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }

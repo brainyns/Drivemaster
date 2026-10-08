@@ -10,8 +10,8 @@
   gap: 1rem;
   height: 56px;
   padding: 0 1.5rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--ui-surface);
+  border-bottom: 1px solid var(--ui-line);
   position: sticky;
   top: 0;
   z-index: 90;
@@ -35,13 +35,13 @@
 }
 
 .tb-divider {
-  color: var(--border);
+  color: var(--ui-muted);
   font-size: 1rem;
 }
 
 .tb-breadcrumb {
   font-size: 0.82rem;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   font-weight: 500;
 }
 
@@ -62,7 +62,7 @@
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   font-family: var(--ui-font);
   font-size: 0.83rem;
   font-weight: 500;
@@ -72,7 +72,7 @@
   height: 56px;
 }
 
-.tb-tab:hover { color: var(--text); }
+.tb-tab:hover { color: var(--ui-text); }
 
 .tb-tab--active {
   color: var(--primary-text);
@@ -101,9 +101,9 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
   padding: 0 0.75rem;
   height: 34px;
   transition: border-color 0.15s;
@@ -113,7 +113,7 @@
 
 .tb-search-ico {
   width: 15px; height: 15px;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   flex-shrink: 0;
 }
 
@@ -121,13 +121,13 @@
   border: none;
   outline: none;
   background: transparent;
-  color: var(--text);
+  color: var(--ui-text);
   font-family: var(--ui-font);
   font-size: 0.8rem;
   width: 180px;
 }
 
-.tb-search-input::placeholder { color: var(--text-muted); }
+.tb-search-input::placeholder { color: var(--ui-muted); }
 
 /* ── Botones icono ─────────────────────────────────── */
 .tb-ico-wrap {
@@ -139,37 +139,37 @@
   display: flex; align-items: center; justify-content: center;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
-  color: var(--text-muted);
+  border-radius: var(--ui-r-lg);
+  color: var(--ui-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
 .tb-ico-btn svg { width: 17px; height: 17px; }
 
 .tb-ico-btn:hover {
-  background: var(--surface2);
-  color: var(--text);
-  border-color: var(--border);
+  background: var(--ui-surface-2);
+  color: var(--ui-text);
+  border-color: var(--ui-line);
 }
 
 .tb-ico-btn--active {
-  background: var(--surface2);
+  background: var(--ui-surface-2);
   color: var(--primary-text);
-  border-color: var(--border);
+  border-color: var(--ui-line);
 }
 
 /* ── Avatar ────────────────────────────────────────── */
 .tb-avatar {
   width: 34px; height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), #ff6b35);
+  background: var(--primary);
   border: none;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--ui-font);
   font-size: 0.75rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--on-primary);
   cursor: pointer;
   transition: opacity 0.15s, box-shadow 0.15s;
   flex-shrink: 0;
@@ -189,10 +189,10 @@
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-1);
   z-index: 200;
   overflow: hidden;
   animation: tb-fadein 0.15s ease;
@@ -205,7 +205,7 @@
 
 .tb-dropdown-header {
   padding: 1rem 1.1rem 0.75rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ui-line);
 }
 
 .tb-dropdown-title {
@@ -213,25 +213,25 @@
   font-family: var(--ui-font);
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--ui-text);
 }
 
 .tb-dropdown-sub {
   display: block;
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   margin-top: 0.15rem;
 }
 
 .tb-dropdown-divider {
   height: 1px;
-  background: var(--border);
+  background: var(--ui-line);
   margin: 0;
 }
 
 .tb-dropdown-footer {
   padding: 0.75rem 1.1rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--ui-line);
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -247,15 +247,15 @@
 }
 
 .tb-section--border {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ui-line);
 }
 
 /* Toggle Oscuro / Claro */
 .tb-theme-toggle {
   display: flex;
   gap: 0.4rem;
-  background: var(--surface2);
-  border-radius: 8px;
+  background: var(--ui-surface-2);
+  border-radius: var(--ui-r-lg);
   padding: 3px;
 }
 
@@ -267,22 +267,22 @@
   gap: 0.4rem;
   padding: 0.45rem 0.6rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--ui-r-md);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   font-family: var(--ui-font);
   font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
-.tb-theme-opt:hover { color: var(--text); }
+.tb-theme-opt:hover { color: var(--ui-text); }
 
 .tb-theme-opt--active {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-line);
   font-weight: 600;
 }
 
@@ -297,7 +297,7 @@
 .tb-section-label {
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 0.65rem;
@@ -327,7 +327,7 @@
 .tb-color-btn:hover { transform: scale(1.15); }
 
 .tb-color-btn--active {
-  border-color: var(--text);
+  border-color: var(--ui-text);
 }
 
 .tb-color-swatch {
@@ -340,14 +340,14 @@
 .tb-color-check {
   position: absolute;
   font-size: 0.55rem;
-  color: #fff;
+  color: var(--ui-text);
   font-weight: 800;
   pointer-events: none;
 }
 
 .tb-color-name {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   margin-top: 0.3rem;
 }
 
@@ -355,14 +355,14 @@
 .tb-preview-bar {
   height: 6px;
   width: 40px;
-  border-radius: 4px;
+  border-radius: var(--ui-r-sm);
   flex-shrink: 0;
   transition: background 0.2s;
 }
 
 .tb-preview-label {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--ui-muted);
 }
 
 /* ── Dropdown Perfil ─────────────────────────────────── */
@@ -380,19 +380,19 @@
 .tb-perfil-avatar {
   width: 40px; height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), #ff6b35);
+  background: var(--primary);
   display: flex; align-items: center; justify-content: center;
   font-family: var(--ui-font);
   font-size: 0.82rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--on-primary);
   flex-shrink: 0;
 }
 
 .tb-perfil-nombre {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--ui-text);
   line-height: 1.2;
   font-family: var(--ui-font);
 }
@@ -406,7 +406,7 @@
 
 .tb-perfil-correo {
   font-size: 0.68rem;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   margin-top: 0.1rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -427,19 +427,19 @@
   padding: 0.55rem 0.65rem;
   background: transparent;
   border: none;
-  border-radius: 8px;
-  color: var(--text-muted);
+  border-radius: var(--ui-r-lg);
+  color: var(--ui-muted);
   font-family: var(--ui-font);
   font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.13s;
+  transition: background-color 0.13s, border-color 0.13s, color 0.13s, opacity 0.13s, transform 0.13s, box-shadow 0.13s;
   text-align: left;
 }
 
 .tb-perfil-item:hover {
-  background: var(--surface2);
-  color: var(--text);
+  background: var(--ui-surface-2);
+  color: var(--ui-text);
 }
 
 .tb-perfil-item-ico {
@@ -459,7 +459,7 @@
   padding: 0.65rem 1.1rem;
   background: transparent;
   border: none;
-  color: var(--error);
+  color: var(--ui-error);
   font-family: var(--ui-font);
   font-size: 0.82rem;
   font-weight: 600;
@@ -472,7 +472,7 @@
   background: rgba(239,68,68,0.08);
 }
 
-.tb-perfil-logout .tb-perfil-item-ico { color: var(--error); }
+.tb-perfil-logout .tb-perfil-item-ico { color: var(--ui-error); }
 
 /* ── Botón menú (hamburguesa) ── */
 .tb-menu-btn {
@@ -480,11 +480,11 @@
   width: 34px; height: 34px;
   align-items: center; justify-content: center;
   background: transparent; border: 1px solid transparent;
-  border-radius: 8px; color: var(--text-muted); cursor: pointer;
-  transition: all 0.15s; flex-shrink: 0;
+  border-radius: var(--ui-r-lg); color: var(--ui-muted); cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s; flex-shrink: 0;
 }
 .tb-menu-btn svg { width: 20px; height: 20px; }
-.tb-menu-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border); }
+.tb-menu-btn:hover { background: var(--ui-surface-2); color: var(--ui-text); border-color: var(--ui-line); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {

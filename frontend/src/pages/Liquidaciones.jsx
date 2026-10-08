@@ -103,7 +103,7 @@ export default function Liquidaciones() {
   const totalPendiente = pendientes.reduce((s, f) => s + (f.monto || 0), 0);
 
   return (
-    <div className="ss-panel">
+    <div className="ss-panel ss-panel--plataforma">
       {vista === "repartos" && modo && (
         <p className={modo.modo === "SIMULADO" ? "ss-aviso" : "ss-meta"} role="status" data-testid="modo-liquidacion">
           <strong>Modo de liquidación: {modo.modo}.</strong>{" "}

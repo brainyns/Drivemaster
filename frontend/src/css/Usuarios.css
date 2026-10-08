@@ -3,48 +3,31 @@
    ───────────────────────────────────────── */
 
 
-/* ── Tokens ── */
+/* ── Tokens: alias del sistema común (global.css). Siguen el tema claro y oscuro solos. ── */
 :root {
-  --us-bg: #0d0d0f;
-  --us-surface: #141417;
-  --us-surface-2: #1a1a1f;
-  --us-border: rgba(255, 255, 255, 0.07);
-  --us-border-hover: rgba(255, 255, 255, 0.14);
+  --us-bg: var(--ui-bg);
+  --us-surface: var(--ui-surface);
+  --us-surface-2: var(--ui-surface-2);
+  --us-border: var(--ui-line);
+  --us-border-hover: var(--ui-muted);
 
-  --us-text: #f0f0f2;
-  --us-muted: #6b6b7a;
-  --us-subtle: #3a3a48;
+  --us-text: var(--ui-text);
+  --us-muted: var(--ui-muted);
+  --us-subtle: var(--ui-muted);
 
-  --us-orange: #E8450A;
-  --us-orange-dim: rgba(232, 69, 10, 0.15);
-  --us-purple: #7C3AED;
-  --us-purple-dim: rgba(124, 58, 237, 0.15);
-  --us-blue: #0EA5E9;
-  --us-blue-dim: rgba(14, 165, 233, 0.15);
-  --us-green: #10B981;
-  --us-green-dim: rgba(16, 185, 129, 0.12);
+  /* Un solo acento; los demás colores solo indican estado o tipo de cuenta */
+  --us-orange: var(--primary);
+  --us-orange-text: var(--primary-text);
+  --us-orange-dim: var(--primary-soft);
+  --us-purple: var(--ui-muted);
+  --us-purple-dim: var(--ui-hover);
+  --us-blue: var(--ui-info);
+  --us-blue-dim: var(--ui-info-bg);
+  --us-green: var(--ui-ok);
+  --us-green-dim: var(--ui-ok-bg);
 
-  --us-radius: 12px;
-  --us-radius-sm: 8px;
-}
-
-html[data-theme="light"] {
-  --us-bg: #f5f5f5;
-  --us-surface: #ffffff;
-  --us-surface-2: #f0f0f0;
-  --us-border: rgba(0, 0, 0, 0.08);
-  --us-border-hover: rgba(0, 0, 0, 0.16);
-  --us-text: #1a1a1a;
-  --us-muted: #8a8a9a;
-  --us-subtle: #c0c0ca;
-  --us-orange: #E8450A;
-  --us-orange-dim: rgba(232, 69, 10, 0.10);
-  --us-purple: #7C3AED;
-  --us-purple-dim: rgba(124, 58, 237, 0.10);
-  --us-blue: #0EA5E9;
-  --us-blue-dim: rgba(14, 165, 233, 0.10);
-  --us-green: #10B981;
-  --us-green-dim: rgba(16, 185, 129, 0.10);
+  --us-radius: var(--ui-r-lg);
+  --us-radius-sm: var(--ui-r-md);
 }
 
 /* ── Root layout ── */
@@ -68,16 +51,18 @@ html[data-theme="light"] {
 }
 
 .us-page-title {
-  font-size: 1.7rem;
-  font-weight: 800;
-  letter-spacing: -.035em;
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-wrap: balance;
   color: var(--us-text);
   margin: 0 0 .2rem;
 }
 
 .us-page-sub {
   font-size: .83rem;
-  color: var(--muted);
+  color: var(--ui-muted);
   margin: 0;
 }
 
@@ -116,7 +101,7 @@ html[data-theme="light"] {
 }
 
 .us-stat.is-activa {
-  border-color: var(--us-orange);
+  border-color: var(--us-orange-text);
 }
 
 .us-stat:hover {
@@ -127,7 +112,7 @@ html[data-theme="light"] {
   display: flex;
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,7 +121,7 @@ html[data-theme="light"] {
 
 .us-stat--superadmin .us-stat__icon {
   background: var(--us-orange-dim);
-  color: var(--us-orange);
+  color: var(--us-orange-text);
 }
 
 .us-stat--admin .us-stat__icon {
@@ -165,10 +150,10 @@ html[data-theme="light"] {
 }
 
 .us-stat__priority {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--ui-font); font-variant-numeric: tabular-nums;
   font-size: 10px;
   font-weight: 500;
-  color: var(--us-orange);
+  color: var(--us-orange-text);
   letter-spacing: 0.08em;
   position: absolute;
   top: 20px;
@@ -228,10 +213,18 @@ html[data-theme="light"] {
 /* ── Main grid ── */
 .us-main {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: 20px;
   align-items: start;
 }
+
+/* Sin esto la tabla ensanchaba la columna y la tarjeta se salía de la pantalla en móvil */
+.us-main > * { min-width: 0; }
+
+/* Búsqueda: campo y botón en una fila, separados de la tabla */
+.us-search { display: flex; gap: 8px; margin: 0 0 16px; }
+.us-search .us-input { flex: 1; min-width: 0; }
+.us-btn-submit.us-btn-submit--sm { width: auto; padding: 10px 18px; flex-shrink: 0; }
 
 /* ── Panel base ── */
 .us-panel {
@@ -243,8 +236,10 @@ html[data-theme="light"] {
 
 .us-panel__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 8px 16px;
   margin-bottom: 20px;
 }
 
@@ -294,7 +289,7 @@ html[data-theme="light"] {
 }
 
 .us-table thead th {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--ui-font); font-variant-numeric: tabular-nums;
   font-size: 11px;
   font-weight: 500;
   color: var(--us-muted);
@@ -334,6 +329,7 @@ html[data-theme="light"] {
   gap: 10px;
 }
 
+/* Avatares neutros: el color de cada uno lo pone la pantalla en línea; un solo acento en todo el panel */
 .us-avatar {
   width: 34px;
   height: 34px;
@@ -341,7 +337,9 @@ html[data-theme="light"] {
   font-family: var(--ui-font);
   font-size: 12px;
   font-weight: 700;
-  color: #fff;
+  color: var(--ui-text);
+  background: var(--ui-surface-2) !important;
+  box-shadow: inset 0 0 0 1px var(--ui-line);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -360,11 +358,11 @@ html[data-theme="light"] {
 
 /* ── Badges ── */
 .us-badge {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--ui-font); font-variant-numeric: tabular-nums;
   font-size: 10px;
   font-weight: 500;
   padding: 4px 9px;
-  border-radius: 5px;
+  border-radius: var(--ui-r-sm);
   letter-spacing: 0.04em;
   display: inline-block;
   white-space: nowrap;
@@ -372,7 +370,7 @@ html[data-theme="light"] {
 
 .us-badge--superadmin {
   background: var(--us-orange-dim);
-  color: var(--us-orange);
+  color: var(--us-orange-text);
 }
 
 .us-badge--admin {
@@ -445,7 +443,7 @@ html[data-theme="light"] {
 }
 
 .us-label {
-  font-family: "JetBrains Mono", monospace;
+  font-family: var(--ui-font); font-variant-numeric: tabular-nums;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.07em;
@@ -472,7 +470,7 @@ html[data-theme="light"] {
 }
 
 .us-input:focus {
-  border-color: var(--us-orange);
+  border-color: var(--us-orange-text);
   box-shadow: 0 0 0 3px var(--us-orange-dim);
 }
 
@@ -523,7 +521,7 @@ html[data-theme="light"] {
 }
 
 .us-select:focus {
-  border-color: var(--us-orange);
+  border-color: var(--us-orange-text);
 }
 
 .us-select-arrow {
@@ -540,7 +538,7 @@ html[data-theme="light"] {
   width: 100%;
   padding: 14px;
   background: var(--us-orange);
-  color: #fff;
+  color: var(--on-primary);
   font-family: var(--ui-font);
   font-size: 13px;
   font-weight: 700;
@@ -591,7 +589,7 @@ html[data-theme="light"] {
 /* ── Error ── */
 .us-error {
   font-size: 13px;
-  color: #f87171;
+  color: var(--ui-error);
   background: rgba(248, 113, 113, 0.1);
   border: 1px solid rgba(248, 113, 113, 0.25);
   border-radius: var(--us-radius-sm);
@@ -608,7 +606,7 @@ html[data-theme="light"] {
 .us-action-btn {
   width: 32px;
   height: 32px;
-  border-radius: 6px;
+  border-radius: var(--ui-r-md);
   border: 1px solid var(--us-border);
   background: var(--us-surface-2);
   color: var(--us-muted);
@@ -616,18 +614,18 @@ html[data-theme="light"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
 .us-action-btn--edit:hover {
   background: rgba(14, 165, 233, 0.12);
-  color: #38bdf8;
+  color: var(--ui-info);
   border-color: rgba(14, 165, 233, 0.3);
 }
 
 .us-action-btn--delete:hover {
   background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
+  color: var(--ui-error);
   border-color: rgba(239, 68, 68, 0.3);
 }
 
@@ -646,11 +644,11 @@ html[data-theme="light"] {
 .us-modal {
   background: var(--us-surface);
   border: 1px solid var(--us-border);
-  border-radius: 12px;
+  border-radius: var(--ui-r-lg);
   width: 100%;
   max-width: 440px;
   padding: 24px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--ui-sombra-1);
 }
 
 .us-modal-header {

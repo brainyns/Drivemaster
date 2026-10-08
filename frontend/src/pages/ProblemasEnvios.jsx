@@ -77,7 +77,7 @@ export default function ProblemasEnvios() {
   }[decision.resolucion];
 
   return (
-    <div className="ss-panel">
+    <div className="ss-panel ss-panel--plataforma">
       <p className="ss-ayuda">
         Envíos del catálogo en los que el cliente dijo que algo salió mal. Mientras no los resuelvas, la tienda no cobra ese pedido.
       </p>
