@@ -62,6 +62,7 @@ public class TiendaController {
     public ResponseEntity<TiendaDTO> resolverAprobacion(@PathVariable String id,
                                                         @RequestBody AprobacionRequest request,
                                                         Authentication auth) {
+        com.drivemaster.drivemaster.security.PermisosAprobacion.validarPlan(auth, request);
         return ResponseEntity.ok(tiendaService.resolverAprobacion(id, request, auth.getName()));
     }
 

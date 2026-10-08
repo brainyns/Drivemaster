@@ -99,6 +99,7 @@ public class TallerController {
     public ResponseEntity<TallerDTO> resolverAprobacion(@PathVariable String id,
                                                         @RequestBody AprobacionRequest request,
                                                         Authentication auth) {
+        com.drivemaster.drivemaster.security.PermisosAprobacion.validarPlan(auth, request);
         return ResponseEntity.ok(tallerService.resolverAprobacion(id, request, auth.getName()));
     }
 }

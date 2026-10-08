@@ -156,15 +156,14 @@ class PermisosEndpointsTest {
 
     @Test
     void soloAdministracionCompletaLosDatosDeLaTiendaPropia() throws Exception {
-        for (String rol : new String[]{"ADMIN", "SUPERADMIN"}) {
-            mvc.perform(put("/api/tiendas/plataforma/datos").contentType(MediaType.APPLICATION_JSON).content("{}")
-                    .with(user("jefe@demo.com").roles(rol))).andExpect(status().isOk());
-        }
-        for (String rol : new String[]{"TIENDA", "CLIENTE", "TALLER"}) {
+        mvc.perform(put("/api/tiendas/plataforma/datos").contentType(MediaType.APPLICATION_JSON).content("{}")
+                .with(user("jefe@demo.com").roles("SUPERADMIN"))).andExpect(status().isOk());
+        // El ADMIN solo aprueba y rechaza negocios: los datos de la tienda propia ya no son suyos
+        for (String rol : new String[]{"ADMIN", "TIENDA", "CLIENTE", "TALLER"}) {
             mvc.perform(put("/api/tiendas/plataforma/datos").contentType(MediaType.APPLICATION_JSON).content("{}")
                     .with(user("x@demo.com").roles(rol))).andExpect(status().isForbidden());
         }
-        verify(tiendaService, times(2)).actualizarPlataforma(org.mockito.ArgumentMatchers.any());
+        verify(tiendaService, times(1)).actualizarPlataforma(org.mockito.ArgumentMatchers.any());
     }
 
     // ─── Bloque 3: lista de problemas (ADMIN) y vista de la tienda ───────────
