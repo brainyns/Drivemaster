@@ -803,3 +803,13 @@
   .dm-cierre .dm-cta { font-size: 10px; }
 }
 
+
+/* ── Contraste en tema claro ────────────────────────────────────────────────
+   El gris de apoyo (#73767A) pasa sobre blanco (4.6:1) pero no sobre el fondo de
+   tarjeta (#F5F5F3, 4.2:1), y el verde de "ya pagado" tampoco. En las piezas nuevas
+   que van sobre ese fondo se usan tonos más oscuros: 5.9:1 y 4.9:1. */
+html[data-theme="light"] .dm-ejemplo__tarjeta,
+html[data-theme="light"] .dm-entrega {
+  --dm-muted: #5c5f63;
+  --success: #15803d;
+}
