@@ -28,6 +28,7 @@ const menu = [
   { key: "compras",        label: "Compras",     icon: "compras"     },
   { key: "proveedores",    label: "Proveedores", icon: "proveedores" },
   { key: "movimientos",    label: "Inventario",  icon: "movimientos" },
+  { key: "informes-tienda", label: "Informes",    icon: "reportes"    },
   {
     key: "reportes", label: "Reportes", icon: "reportes",
     subItems: [
@@ -52,7 +53,7 @@ const menu = [
 ];
 
 // Tienda del marketplace: sus pedidos, su catálogo y los movimientos de su inventario.
-const MENU_TIENDA = ["pedidos-tienda", "productos", "compras", "proveedores", "movimientos", "mi-tienda"];
+const MENU_TIENDA = ["pedidos-tienda", "productos", "compras", "proveedores", "movimientos", "informes-tienda", "mi-tienda"];
 
 // Operación diaria del ADMIN: aprobar tiendas y talleres, servicios y problemas de envío.
 const MENU_ADMIN = ["dashboard-main", "pedidos-envios", "aprobaciones", "admin-talleres", "finanzas"];
@@ -81,7 +82,7 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
     // ADMIN: solo la operación diaria; el resto del panel es del SUPERADMIN
     if (userRole === "ADMIN") return MENU_ADMIN.includes(item.key);
     // Compras, proveedores e inventario son de cada tienda: el personal interno ya no los ve
-    if (["compras", "proveedores", "movimientos"].includes(item.key)) return false;
+    if (["compras", "proveedores", "movimientos", "informes-tienda"].includes(item.key)) return false;
     if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "negocios" || item.key === "finanzas" || item.key === "pedidos-envios") return userRole === "SUPERADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
     // VENDEDOR es un rol retirado: solo conserva su inicio (con un aviso) y la lista de clientes
