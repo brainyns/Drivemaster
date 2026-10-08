@@ -25,6 +25,7 @@ const menu = [
   { key: "productos",      label: "Productos",   icon: "productos"   },
   { key: "clientes",       label: "Clientes",    icon: "clientes"    },
   { key: "ventas",         label: "Ventas",      icon: "ventas"      },
+  { key: "pedidos-envios", label: "Pedidos y envíos", icon: "compras" },
   { key: "solicitudes",    label: "Solicitudes", icon: "ventas"      },
   { key: "compras",        label: "Compras",     icon: "compras"     },
   { key: "proveedores",    label: "Proveedores", icon: "proveedores" },
@@ -42,8 +43,13 @@ const menu = [
   { key: "usuarios", label: "Usuarios", icon: "admin" },
   { key: "admin-talleres", label: "Servicios", icon: "taller" },
   { key: "aprobaciones", label: "Aprobaciones", icon: "aprobaciones" },
-  { key: "liquidaciones", label: "Liquidaciones", icon: "reportes" },
-  { key: "problemas-envios", label: "Problemas de envío", icon: "aprobaciones" },
+  {
+    key: "finanzas", label: "Finanzas", icon: "reportes",
+    subItems: [
+      { key: "liquidaciones",    label: "Liquidaciones",      icon: "reportes" },
+      { key: "problemas-envios", label: "Problemas de envío", icon: "aprobaciones" },
+    ],
+  },
   { key: "mi-tienda", label: "Mi tienda", icon: "admin" },
   { key: "taller-panel", label: "Panel de taller", icon: "taller" },
   { key: "pedidos-tienda", label: "Pedidos", icon: "proveedores" },
@@ -53,7 +59,10 @@ const menu = [
 const MENU_TIENDA = ["pedidos-tienda", "productos", "movimientos", "mi-tienda"];
 
 // Operación diaria del ADMIN: aprobar tiendas y talleres, servicios y problemas de envío.
-const MENU_ADMIN = ["dashboard-main", "aprobaciones", "admin-talleres", "problemas-envios"];
+const MENU_ADMIN = ["dashboard-main", "pedidos-envios", "aprobaciones", "admin-talleres", "finanzas"];
+
+// Dentro de "Finanzas": las liquidaciones son solo del SUPERADMIN; los problemas de envío también los resuelve el ADMIN
+const SUB_SOLO_SUPERADMIN = ["liquidaciones"];
 
 function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
   const [abiertos, setAbiertos] = useState([]);
@@ -75,7 +84,7 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
     if (item.key === "taller-panel" || item.key === "pedidos-tienda" || item.key === "mi-tienda") return false;
     // ADMIN: solo la operación diaria; el resto del panel es del SUPERADMIN
     if (userRole === "ADMIN") return MENU_ADMIN.includes(item.key);
-    if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "liquidaciones" || item.key === "problemas-envios") return userRole === "SUPERADMIN";
+    if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "finanzas" || item.key === "pedidos-envios") return userRole === "SUPERADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
     if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "VENDEDOR";
     if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas", "solicitudes"].includes(item.key);
@@ -98,11 +107,12 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
       {/* Navegación */}
       <nav className="sidebar-nav">
         {visibleMenu.map(item => {
-          const tieneSubItems = item.subItems?.length > 0;
+          const subItems = (item.subItems || []).filter((s) => !SUB_SOLO_SUPERADMIN.includes(s.key) || userRole === "SUPERADMIN");
+          const tieneSubItems = subItems.length > 0;
           const estaAbierto   = abiertos.includes(item.key);
           const activo =
             paginaActual === item.key ||
-            (tieneSubItems && item.subItems.some(s => s.key === paginaActual));
+            (tieneSubItems && subItems.some(s => s.key === paginaActual));
 
           return (
             <div key={item.key}>
@@ -119,7 +129,7 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
 
               {tieneSubItems && (
                 <div className={`sidebar-submenu${estaAbierto ? " abierto" : ""}`}>
-                  {item.subItems.map(sub => (
+                  {subItems.map(sub => (
                     <button
                       key={sub.key}
                       className={`sidebar-subitem${paginaActual === sub.key ? " activo" : ""}`}
