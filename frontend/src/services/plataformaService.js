@@ -8,9 +8,40 @@ function headers(token) {
   return h;
 }
 
+/** Arma ?a=1&b=2 solo con los filtros que tienen valor. */
+function consulta(filtros = {}) {
+  const p = new URLSearchParams();
+  Object.entries(filtros).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && String(v).trim() !== "") p.set(k, String(v).trim());
+  });
+  const s = p.toString();
+  return s ? `?${s}` : "";
+}
+
+async function leer(res, fallo) {
+  if (res.status === 403) throw new Error("No tienes permiso para ver esta sección.");
+  if (!res.ok) throw new Error(fallo);
+  return res.json();
+}
+
 /** Cifras del panel de la plataforma (solo SUPERADMIN). */
 export async function dashboardPlataforma(token) {
-  const res = await apiFetch(`${BASE}/dashboard`, { headers: headers(token) });
-  if (!res.ok) throw new Error(res.status === 403 ? "No tienes permiso para ver el panel de la plataforma." : "No se pudo cargar el panel.");
-  return res.json();
+  return leer(await apiFetch(`${BASE}/dashboard`, { headers: headers(token) }), "No se pudo cargar el panel.");
+}
+
+/** Lo que el ADMIN tiene que atender (negocios por aprobar, problemas de envío y despachos atrasados). */
+export async function operacionPlataforma(token) {
+  return leer(await apiFetch(`${BASE}/operacion`, { headers: headers(token) }), "No se pudo cargar tu resumen.");
+}
+
+/** Catálogo global de solo lectura. Filtros: q, tiendaId, nuevosDias (7|30), estado, pagina, tamano. */
+export async function productosPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/productos${consulta(filtros)}`, { headers: headers(token) }),
+    "No se pudieron cargar los productos.");
+}
+
+/** Clientes registrados (solo lectura). Filtros: q, ciudad, estado, pagina, tamano. */
+export async function clientesPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/clientes${consulta(filtros)}`, { headers: headers(token) }),
+    "No se pudieron cargar los clientes.");
 }

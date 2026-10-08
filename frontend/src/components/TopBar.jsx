@@ -295,6 +295,8 @@ function TopBar({
           </div>
         )}
 
+        {/* Las notificaciones (solicitudes, ventas, stock) son del personal interno; el ADMIN no tiene acceso a esos datos */}
+        {user?.rol !== "ADMIN" && (
         <div className="tb-ico-wrap tb-notif-wrap">
           <button
             className={`tb-ico-btn${notifOpen ? " tb-ico-btn--active" : ""}`}
@@ -314,6 +316,7 @@ function TopBar({
             />
           )}
         </div>
+        )}
 
         <div className="tb-ico-wrap">
           <button
