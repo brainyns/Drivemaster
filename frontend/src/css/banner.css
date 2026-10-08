@@ -70,7 +70,7 @@
 }
 
 .dm-hero h1 span {
-  color: var(--dm-orange);
+  color: var(--dm-orange-text);
   display: block;
 }
 
@@ -127,7 +127,7 @@
 
 .dm-hero__cross {
   font-weight: 300;
-  color: var(--dm-orange);
+  color: var(--dm-orange-text);
   font-size: 26px;
 }
 
@@ -168,7 +168,7 @@
 }
 .dm-hero__coordinate span {
   font-size: 23px;
-  color: var(--dm-orange);
+  color: var(--dm-orange-text);
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */

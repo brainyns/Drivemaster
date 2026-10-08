@@ -47,7 +47,7 @@
 }
 
 .dm-footer__top > div > button:hover {
-  color: var(--dm-orange);
+  color: var(--dm-orange-text);
 }
 
 .dm-footer__signoff > span {
@@ -67,7 +67,7 @@
 }
 
 .dm-footer__signoff > strong > span {
-  color: var(--dm-orange);
+  color: var(--dm-orange-text);
   margin-left: 30px;
   font-size: 31px;
   position: absolute;
@@ -125,5 +125,5 @@
   transition: color 0.2s;
 }
 .dm-footer__link:hover {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
 }

@@ -241,7 +241,7 @@
 }
 
 .dm-card:hover .dm-card__link {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
@@ -299,4 +299,4 @@
 }
 
 .dm-card__aviso--error { color: var(--dm-red); }
-.dm-card__aviso--aviso { color: var(--dm-orange); }
+.dm-card__aviso--aviso { color: var(--dm-orange-text); }

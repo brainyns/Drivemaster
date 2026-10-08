@@ -265,7 +265,7 @@
 }
 
 .ss-fotos__agregar span { font-size: 1.5rem; line-height: 1; }
-.ss-fotos__agregar:hover { border-color: var(--primary); color: var(--primary); }
+.ss-fotos__agregar:hover { border-color: var(--primary); color: var(--primary-text); }
 
 .ss-galeria {
   display: flex;
@@ -295,7 +295,7 @@
 
 .ss-estado__punto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .ss-estado--info    { background: rgba(24, 72, 122, 0.18); color: #6ea8e0; }
-.ss-estado--aviso   { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.ss-estado--aviso   { background: rgba(245, 158, 11, 0.15); color: var(--amber-text); }
 .ss-estado--proceso { background: rgba(139, 92, 246, 0.15); color: var(--purple); }
 .ss-estado--ok      { background: rgba(34, 197, 94, 0.15);  color: var(--success); }
 .ss-estado--error   { background: rgba(239, 68, 68, 0.15);  color: var(--error); }
@@ -367,7 +367,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 }
 
 .ss-urgencia--baja    { color: var(--success); }
-.ss-urgencia--media   { color: var(--warning); }
+.ss-urgencia--media   { color: var(--amber-text); }
 .ss-urgencia--alta    { color: #f97316; }
 .ss-urgencia--critica { color: var(--error); }
 
@@ -487,7 +487,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 .ss-urgencia-opcion:focus-within { box-shadow: 0 0 0 3px var(--primary-glow); }
 .ss-urgencia-opcion.is-activa { border-color: currentColor; background: var(--surface2); }
 .ss-urgencia-opcion--baja.is-activa    { color: var(--success); }
-.ss-urgencia-opcion--media.is-activa   { color: var(--warning); }
+.ss-urgencia-opcion--media.is-activa   { color: var(--amber-text); }
 .ss-urgencia-opcion--alta.is-activa    { color: #f97316; }
 .ss-urgencia-opcion--critica.is-activa { color: var(--error); }
 
@@ -809,7 +809,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
   color: var(--error);
 }
 
-.ss-oferta__motivo--aviso { color: var(--warning); }
+.ss-oferta__motivo--aviso { color: var(--amber-text); }
 
 /* ── Responsive ── */
 @media (max-width: 900px) {

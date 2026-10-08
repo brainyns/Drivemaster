@@ -59,7 +59,7 @@
   color: var(--text-secondary);
 }
 .mis-pedidos-tab.activo {
-  color: var(--accent);
+  color: var(--accent-text);
   border-bottom-color: var(--accent);
 }
 

@@ -172,7 +172,7 @@
 }
 
 .dm-vehicle__active svg {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
   flex-shrink: 0;
 }
 
@@ -180,7 +180,7 @@
   margin-left: auto;
   background: transparent;
   font-size: 10px;
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
   text-decoration: underline;
   text-underline-offset: 3px;
   white-space: nowrap;
@@ -215,7 +215,7 @@
 }
 
 .dm-vehicle__footnote > button:hover {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */

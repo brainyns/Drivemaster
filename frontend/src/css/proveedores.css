@@ -466,9 +466,9 @@
 }
 
 .kpf-breadcrumb a { color: var(--muted); text-decoration: none; cursor: pointer; transition: color .2s; }
-.kpf-breadcrumb a:hover { color: var(--primary); }
+.kpf-breadcrumb a:hover { color: var(--primary-text); }
 .kpf-breadcrumb .sep { color: var(--muted); }
-.kpf-breadcrumb .current { color: var(--primary); }
+.kpf-breadcrumb .current { color: var(--primary-text); }
 
 /* ── Header ── */
 .kpf-header { margin-bottom: 32px; position: relative; }
@@ -514,7 +514,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-.kpf-card-icon { color: var(--primary); }
+.kpf-card-icon { color: var(--primary-text); }
 
 /* ── Form grid ── */
 .kpf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
@@ -523,7 +523,7 @@
 .kpf-group.full { grid-column: 1 / -1; }
 
 .kpf-label { font-size: 10px; font-weight: 700; letter-spacing: 1.3px; color: var(--muted); text-transform: uppercase; }
-.kpf-label .req { color: var(--primary); margin-left: 3px; }
+.kpf-label .req { color: var(--primary-text); margin-left: 3px; }
 
 .kpf-input-wrap { position: relative; display: flex; align-items: center; }
 .kpf-input-icon { position: absolute; left: 13px; color: var(--muted); pointer-events: none; display: flex; }
@@ -635,7 +635,7 @@
 }
 
 .kpf-option:hover { background: var(--surface3); color: var(--text); }
-.kpf-option.selected { color: var(--primary); background: var(--primary-soft); }
+.kpf-option.selected { color: var(--primary-text); background: var(--primary-soft); }
 
 /* ── Sidebar ── */
 .kpf-side { display: flex; flex-direction: column; gap: 16px; }

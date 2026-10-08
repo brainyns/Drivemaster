@@ -20,7 +20,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--primary);
+  color: var(--primary-text);
   margin-bottom: var(--sp-xs);
 }
 
@@ -195,7 +195,7 @@
 
 .ap-chip--taller    { background: var(--ap-navy); border-color: var(--ap-navy); color: #fff; }
 .ap-chip--tienda    { background: var(--ap-steel); border-color: var(--ap-steel); color: #fff; }
-.ap-chip--pendiente { color: var(--warning); border-color: rgba(245, 158, 11, 0.4); }
+.ap-chip--pendiente { color: var(--amber-text); border-color: rgba(245, 158, 11, 0.4); }
 .ap-chip--aprobado  { color: var(--success); border-color: rgba(34, 197, 94, 0.4); }
 .ap-chip--rechazado { color: var(--error); border-color: rgba(239, 68, 68, 0.4); }
 

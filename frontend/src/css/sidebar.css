@@ -85,7 +85,7 @@
 
 .sidebar-item.activo {
   background: rgba(255,61,0,0.12);
-  color: var(--primary); font-weight: 600;
+  color: var(--primary-text); font-weight: 600;
 }
 
 .sidebar-item-icon {
@@ -124,7 +124,7 @@
 
 .sidebar-subitem:hover { color: var(--text); }
 .sidebar-subitem:hover::before { background: var(--primary); }
-.sidebar-subitem.activo { color: var(--primary); font-weight: 600; }
+.sidebar-subitem.activo { color: var(--primary-text); font-weight: 600; }
 .sidebar-subitem.activo::before { background: var(--primary); }
 
 /* ── FOOTER ── */

@@ -167,7 +167,7 @@ html[data-theme="light"] .dm-btn--dark:hover:not(:disabled) {
   border-radius: 0;
 }
 .dm-btn--text:hover {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
 }
 
 .dm-btn--full {
@@ -206,7 +206,7 @@ html[data-theme="light"] .dm-btn--dark:hover:not(:disabled) {
   display: flex;
   justify-content: center;
   align-items: center;
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
   flex-shrink: 0;
 }
 
@@ -293,7 +293,7 @@ html[data-theme="light"] .dm-btn--dark:hover:not(:disabled) {
   height: 58px;
   border-radius: 10px;
   background: var(--dm-orange-soft);
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
   margin-bottom: 22px;
 }
 

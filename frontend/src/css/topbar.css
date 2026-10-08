@@ -30,7 +30,7 @@
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 0.85rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--primary-text);
   letter-spacing: 0.02em;
 }
 
@@ -75,7 +75,7 @@
 .tb-tab:hover { color: var(--text); }
 
 .tb-tab--active {
-  color: var(--primary);
+  color: var(--primary-text);
   border-bottom-color: var(--primary);
   font-weight: 600;
 }
@@ -155,7 +155,7 @@
 
 .tb-ico-btn--active {
   background: var(--surface2);
-  color: var(--primary);
+  color: var(--primary-text);
   border-color: var(--border);
 }
 
@@ -399,7 +399,7 @@
 
 .tb-perfil-rol {
   font-size: 0.7rem;
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 600;
   margin-top: 0.1rem;
 }

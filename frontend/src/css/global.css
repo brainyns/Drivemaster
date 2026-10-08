@@ -40,6 +40,12 @@
   --dm-orange:      #F28C28;
   --dm-orange-hover:#E27C18;
   --dm-orange-soft: rgba(242, 140, 40, 0.12);
+  /* Naranja para TEXTO. El naranja de Figma queda para rellenos y decoración; en tema claro el texto usa uno más oscuro (>= 4,5:1). */
+  --dm-orange-text:       #F28C28;
+  --dm-orange-text-hover: #E27C18;
+  --primary-text: var(--primary);
+  --accent-text:  var(--accent);
+  --amber-text:   var(--amber);
   --dm-red:         #C92F2F;
   --dm-green:       #457659;
   --dm-graphite:    #17191C;
@@ -132,6 +138,26 @@ html[data-theme="light"] {
   --dm-ink:       #17191C;
   --dm-ink-fg:    #FFFFFF;
   --dm-deep:      #17191C;
+
+  /* Texto sobre fondo claro: contraste >= 4,5:1 sobre blanco, #F5F5F3 y el naranja suave */
+  --dm-orange-text:       #A84A00;
+  --dm-orange-text-hover: #8A3B00;
+  --dm-muted:     #62666A;
+  --dm-muted-2:   #666A6E;
+  --primary-text: color-mix(in srgb, var(--primary) 70%, #000);
+  --accent-text:  #B82A00;
+  --amber-text:   #92400E;
+}
+
+/* Superficies que son oscuras también en tema claro: conservan el naranja y los grises del tema oscuro */
+html[data-theme="light"] .dm-hero,
+html[data-theme="light"] .dm-footer,
+html[data-theme="light"] .dm-cierre,
+html[data-theme="light"] .auth-aside {
+  --dm-orange-text:       #F28C28;
+  --dm-orange-text-hover: #E27C18;
+  --dm-muted:     #9B9E9C;
+  --dm-muted-2:   #7C807E;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

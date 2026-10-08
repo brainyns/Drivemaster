@@ -90,14 +90,14 @@
   background: var(--surface2); display: grid; place-items: center;
   color: var(--muted); flex-shrink: 0;
 }
-.cp-kpi-ico-wrap.orange { background: rgba(255,61,0,.1); color: var(--primary); }
+.cp-kpi-ico-wrap.orange { background: rgba(255,61,0,.1); color: var(--primary-text); }
 .cp-kpi-ico-wrap.blue   { background: rgba(59,130,246,.1); color: var(--blue); }
-.cp-kpi-ico-wrap.amber  { background: rgba(245,158,11,.1); color: var(--amber); }
+.cp-kpi-ico-wrap.amber  { background: rgba(245,158,11,.1); color: var(--amber-text); }
 .cp-kpi-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; margin-bottom: .2rem; }
 .cp-kpi-val   { font-size: 1.45rem; font-weight: 800; letter-spacing: -.03em; }
-.cp-kpi-val.orange { color: var(--primary); }
+.cp-kpi-val.orange { color: var(--primary-text); }
 .cp-kpi-val.blue   { color: var(--blue); }
-.cp-kpi-val.amber  { color: var(--amber); }
+.cp-kpi-val.amber  { color: var(--amber-text); }
 .cp-kpi-sub   { font-size: .69rem; color: var(--muted); margin-top: .1rem; }
 
 /* ── CARD / TABLA ────────────────────────────────────────────────────────────── */
@@ -142,7 +142,7 @@
 .cp-fecha-date { font-size: .8rem; font-weight: 600; }
 .cp-fecha-time { font-size: .7rem; color: var(--muted); margin-top: .1rem; }
 
-.cp-po-id { font-family: monospace; font-size: .78rem; color: var(--primary); font-weight: 800; }
+.cp-po-id { font-family: monospace; font-size: .78rem; color: var(--primary-text); font-weight: 800; }
 
 .cp-prov-cell { display: flex; align-items: center; gap: .6rem; }
 .cp-prov-ico {
@@ -160,7 +160,7 @@
   font-size: .7rem; font-weight: 700; font-family: monospace;
   color: var(--muted);
 }
-.cp-total { font-weight: 800; color: var(--primary); font-size: .9rem; }
+.cp-total { font-weight: 800; color: var(--primary-text); font-size: .9rem; }
 
 /* Estados */
 .cp-estado {
@@ -168,7 +168,7 @@
   font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
 }
 .cp-est--recibida  { background: rgba(34,197,94,.12);  color: var(--green); }
-.cp-est--pendiente { background: rgba(245,158,11,.12); color: var(--amber); }
+.cp-est--pendiente { background: rgba(245,158,11,.12); color: var(--amber-text); }
 .cp-est--cancelada { background: rgba(239,68,68,.12);  color: var(--red); }
 
 .cp-empty   { text-align: center; color: var(--muted); padding: 2.5rem; font-size: .83rem; }
@@ -199,7 +199,7 @@
   border-radius: 14px; padding: 1.25rem;
 }
 .cp-panel-head { display: flex; align-items: flex-start; gap: .75rem; margin-bottom: 1rem; }
-.cp-panel-ico  { color: var(--primary); display: flex; flex-shrink: 0; margin-top: .1rem; }
+.cp-panel-ico  { color: var(--primary-text); display: flex; flex-shrink: 0; margin-top: .1rem; }
 .cp-panel-title { font-size: .9rem; font-weight: 800; letter-spacing: -.01em; }
 .cp-panel-sub   { font-size: .74rem; color: var(--muted); margin-top: .1rem; }
 
@@ -259,7 +259,7 @@
 .cp-prod-thumb {
   width: 26px; height: 26px; border-radius: 6px;
   background: var(--surface3); display: grid; place-items: center;
-  font-size: .72rem; font-weight: 800; color: var(--primary); flex-shrink: 0;
+  font-size: .72rem; font-weight: 800; color: var(--primary-text); flex-shrink: 0;
 }
 
 .cp-btn-add-item {
@@ -270,7 +270,7 @@
   font-family: 'Inter', sans-serif; font-size: .82rem; font-weight: 600;
   transition: border-color .15s, color .15s, background .15s;
 }
-.cp-btn-add-item:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.cp-btn-add-item:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-text); background: var(--primary-soft); }
 .cp-btn-add-item:disabled { opacity: .4; cursor: default; }
 
 /* ── BASKET ──────────────────────────────────────────────────────────────────── */
@@ -301,7 +301,7 @@
 .cp-basket-item-meta { display: flex; gap: .75rem; font-size: .7rem; color: var(--muted); }
 .cp-basket-item-meta strong { color: var(--text); }
 .cp-basket-item-right { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; flex-shrink: 0; }
-.cp-basket-item-total { font-weight: 800; font-size: .88rem; color: var(--primary); }
+.cp-basket-item-total { font-weight: 800; font-size: .88rem; color: var(--primary-text); }
 .cp-basket-item-del {
   background: none; border: 1px solid var(--border); border-radius: 6px;
   width: 24px; height: 24px; display: grid; place-items: center;
@@ -341,7 +341,7 @@
   display: flex; align-items: flex-start; justify-content: space-between;
   padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
 }
-.cp-modal-tag   { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--primary); font-weight: 800; margin-bottom: .3rem; }
+.cp-modal-tag   { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--primary-text); font-weight: 800; margin-bottom: .3rem; }
 .cp-modal-title { font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em; margin: 0; }
 .cp-modal-close {
   background: var(--surface2); border: 1px solid var(--border);
@@ -353,7 +353,7 @@
 .cp-modal-body { padding: 1.25rem 1.5rem; }
 .cp-modal-prov {
   display: flex; align-items: center; gap: .5rem;
-  font-size: .88rem; font-weight: 700; color: var(--primary);
+  font-size: .88rem; font-weight: 700; color: var(--primary-text);
   margin-bottom: 1rem; padding: .6rem .9rem;
   background: var(--primary-soft); border-radius: 8px;
 }
@@ -367,7 +367,7 @@
   display: flex; justify-content: space-between; align-items: baseline;
   font-size: 1.1rem; font-weight: 900; letter-spacing: -.02em;
   padding: .75rem 0; border-top: 2px solid var(--border2);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 .cp-modal-footer {
   display: flex; gap: .75rem; justify-content: flex-end;
@@ -393,7 +393,7 @@
 .cp-invoice-tag {
   display: inline-block; font-size: .65rem; font-weight: 800;
   text-transform: uppercase; letter-spacing: .12em;
-  color: var(--primary); border: 1px solid rgba(255,61,0,.3);
+  color: var(--primary-text); border: 1px solid rgba(255,61,0,.3);
   border-radius: 20px; padding: .2rem .65rem; margin-bottom: .6rem;
 }
 .cp-invoice-title { font-size: 1.6rem; font-weight: 900; letter-spacing: -.04em; margin: 0; }
@@ -421,7 +421,7 @@
 .cp-invoice-prod-ico {
   width: 34px; height: 34px; border-radius: 8px;
   background: var(--surface2); display: grid; place-items: center;
-  font-size: .8rem; font-weight: 800; color: var(--primary); border: 1px solid var(--border);
+  font-size: .8rem; font-weight: 800; color: var(--primary-text); border: 1px solid var(--border);
 }
 .cp-invoice-prod-name { font-weight: 600; font-size: .83rem; }
 .cp-invoice-prod-sku  { font-size: .7rem; color: var(--muted); font-family: monospace; margin-top: .1rem; }
@@ -430,7 +430,7 @@
 .cp-invoice-total-row { display: flex; justify-content: space-between; font-size: .82rem; color: var(--muted); padding: .3rem 0; }
 .cp-invoice-total-final {
   display: flex; justify-content: space-between; align-items: baseline;
-  font-size: 1.1rem; font-weight: 900; color: var(--primary);
+  font-size: 1.1rem; font-weight: 900; color: var(--primary-text);
   padding: .75rem 0; border-top: 2px solid rgba(255,61,0,.2); margin-top: .4rem;
 }
 
@@ -451,7 +451,7 @@
   transition: border-color .15s, background .15s;
 }
 .cp-action-row:hover { border-color: var(--border2); background: var(--surface2); }
-.cp-action-ico   { color: var(--primary); display: flex; }
+.cp-action-ico   { color: var(--primary-text); display: flex; }
 .cp-action-arrow { margin-left: auto; color: var(--muted); font-size: .85rem; }
 
 .cp-side-panel--verified {
