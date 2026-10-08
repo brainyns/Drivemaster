@@ -161,6 +161,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/pedidos-tienda/**").denyAll()
                         // Finanzas: liquidaciones solo SUPERADMIN
                         .requestMatchers("/api/liquidaciones/**").hasRole("SUPERADMIN")
+                        // Panel de la plataforma (cifras agregadas)
+                        .requestMatchers("/api/plataforma/**").hasRole("SUPERADMIN")
 
                         // Marketplace: tiendas y suscripciones
                         .requestMatchers(HttpMethod.POST, "/api/tiendas/registro").permitAll()

@@ -12,6 +12,11 @@ import java.util.Optional;
 public interface PagoRepository extends JpaRepository<PagoEntity, Long> {
     Optional<PagoEntity> findByReferencia(String referencia);
 
+    /** Dinero que pasó por la plataforma: pagos aprobados del marketplace (no es ingreso de DriveMaster). */
+    @Query("select coalesce(sum(p.monto), 0) from PagoEntity p where p.estado = 'PAGADO' "
+            + "and p.concepto in ('DIAGNOSTICO', 'COTIZACION', 'CATALOGO')")
+    double sumaMovidaMarketplace();
+
     /**
      * Toma un pago para procesarlo (→ PROCESANDO) en una sola sentencia: si el
      * webhook y la redirección llegan a la vez, solo uno gana. También toma uno

@@ -31,6 +31,7 @@ import MisSolicitudes        from "./pages/MisSolicitudes";
 import PagoResultado         from "./pages/PagoResultado";
 import CheckoutPage          from "./pages/CheckoutPage";
 import SolicitudesAdmin      from "./pages/SolicitudesAdmin";
+import DashboardPlataforma   from "./pages/DashboardPlataforma";
 import PerfilAdmin           from "./pages/PerfilAdmin";
 import PanelTaller           from "./pages/PanelTaller";
 import AdminTalleres         from "./pages/AdminTalleres";
@@ -610,7 +611,10 @@ function App() {
       <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
     );
 
-    if (pagina === "dashboard-main")   return <DashboardMain        token={token} />;
+    // SUPERADMIN: panel de la plataforma; el dashboard de ventas queda para el VENDEDOR
+    if (pagina === "dashboard-main")   return user?.rol === "SUPERADMIN"
+      ? <DashboardPlataforma token={token} onIr={(p) => irA(p)} />
+      : <DashboardMain token={token} />;
 
     if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} esTienda={esTienda} />;
     if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;

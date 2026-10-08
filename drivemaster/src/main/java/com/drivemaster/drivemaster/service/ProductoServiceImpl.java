@@ -43,6 +43,8 @@ public class ProductoServiceImpl implements ProductoService {
             producto.setTiendaId(tiendaService.obtenerPlataforma().getId());
         }
 
+        producto.setFechaCreacion(java.time.LocalDateTime.now());
+
         if (productoRepository.existsByTiendaIdAndCodigo(producto.getTiendaId(), producto.getCodigo())) {
             throw new RuntimeException("Ya existe un producto con ese código");
         }
