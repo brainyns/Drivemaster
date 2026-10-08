@@ -8,6 +8,7 @@ import TallerSolicitudes from "./TallerSolicitudes";
 import TallerInicio from "./taller/TallerInicio";
 import TallerMiTaller from "./taller/TallerMiTaller";
 import TallerCotizaciones from "./taller/TallerCotizaciones";
+import TallerInformes from "./taller/TallerInformes";
 import OrdenesAnteriores from "./taller/OrdenesAnteriores";
 import { ordenesPorAtender } from "./taller/resumenTaller";
 import "../css/servicios.css";
@@ -77,6 +78,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
           <TallerSolicitudes key={param || "repuestos"} modo="trabajos" filtroInicial={param || undefined} />
         )}
         {seccion === "cotizaciones" && <TallerCotizaciones />}
+        {seccion === "informes" && <TallerInformes />}
         {seccion === "mitaller" && (
           <TallerMiTaller taller={taller} ordenes={ordenes} token={token} />
         )}

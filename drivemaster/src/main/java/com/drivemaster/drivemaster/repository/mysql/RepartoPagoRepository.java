@@ -37,6 +37,11 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> 
             + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id group by r.estado")
     List<Object[]> resumenPorEstado(@Param("tipo") String tipo, @Param("id") String id);
 
+    /** Lo repartido a un beneficiario por concepto y estado: [concepto, estado, líneas, suma]. */
+    @Query("select r.concepto, r.estado, count(r), sum(r.monto) from RepartoPago r "
+            + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id group by r.concepto, r.estado")
+    List<Object[]> resumenPorConceptoYEstado(@Param("tipo") String tipo, @Param("id") String id);
+
     /** Líneas de comisión (registradas y anuladas) desde una fecha, para el reporte por mes. */
     @Query("select r from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA' and r.fechaCreacion >= :desde "
             + "order by r.fechaCreacion")
