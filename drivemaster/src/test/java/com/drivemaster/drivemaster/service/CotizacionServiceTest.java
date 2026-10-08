@@ -54,6 +54,7 @@ class CotizacionServiceTest {
     private AvisosSolicitudServicio avisos;
     private LiquidacionService liquidacion;
     private CotizacionService service;
+    private TallerService tallerService;
 
     private Taller taller;
     private OrdenServicio orden;
@@ -68,7 +69,7 @@ class CotizacionServiceTest {
         parametros = mock(ParametrosMarketplace.class);
         avisos = mock(AvisosSolicitudServicio.class);
         liquidacion = mock(LiquidacionService.class);
-        TallerService tallerService = mock(TallerService.class);
+        tallerService = mock(TallerService.class);
         UsuarioService usuarioService = mock(UsuarioService.class);
         VehiculoService vehiculoService = mock(VehiculoService.class);
         ProductoService productoService = mock(ProductoService.class);
@@ -353,5 +354,25 @@ class CotizacionServiceTest {
 
         assertEquals(0, service.vencerCotizaciones());
         verify(transiciones, never()).transicionar(any(), anyString(), any(), anyString(), any(), any());
+    }
+
+    @Test
+    void cadaTallerSoloVeSusCotizaciones() {
+        Taller otro = Taller.builder().id("t2").nombre("Otro taller").activo(true).build();
+        when(tallerService.obtenerPorUsuario("otro@taller.com")).thenReturn(otro);
+        Cotizacion deA = emitida(TokenSeguro.generar().token(), LocalDateTime.now().plusDays(3));
+        deA.setTallerId("t1");
+        Cotizacion deB = emitida(TokenSeguro.generar().token(), LocalDateTime.now().plusDays(3));
+        deB.setTallerId("t2");
+        when(cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc("t1")).thenReturn(List.of(deA));
+        when(cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc("t2")).thenReturn(List.of(deB));
+
+        List<CotizacionDTO> deLaA = service.delTaller(CORREO_TALLER);
+        List<CotizacionDTO> deLaB = service.delTaller("otro@taller.com");
+
+        assertEquals(1, deLaA.size());
+        assertEquals(1, deLaB.size());
+        verify(cotizacionRepository).findByTallerIdOrderByFechaEmisionDesc("t1");
+        verify(cotizacionRepository).findByTallerIdOrderByFechaEmisionDesc("t2");
     }
 }

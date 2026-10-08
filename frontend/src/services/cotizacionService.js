@@ -62,3 +62,9 @@ export async function responderCotizacionPublica(tokenEnlace, accion, motivo) {
   });
   return handle(res, "No se pudo enviar tu respuesta");
 }
+
+/** Todas las cotizaciones del taller de la sesión, la más reciente primero. */
+export async function cotizacionesDelTaller(token) {
+  const res = await apiFetch(`${BASE}/taller`, { headers: headers(token) });
+  return handle(res, "No se pudieron cargar las cotizaciones");
+}

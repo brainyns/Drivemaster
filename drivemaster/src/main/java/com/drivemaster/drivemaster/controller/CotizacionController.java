@@ -51,6 +51,12 @@ public class CotizacionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.emitir(auth.getName(), ordenId, request));
     }
 
+    /** Cotizaciones emitidas por el taller de la sesión. */
+    @GetMapping("/taller")
+    public ResponseEntity<List<CotizacionDTO>> delTaller(Authentication auth) {
+        return ResponseEntity.ok(service.delTaller(auth.getName()));
+    }
+
     // ─── Con sesión ──────────────────────────────────────────────────────────
 
     @GetMapping("/orden/{ordenId}")

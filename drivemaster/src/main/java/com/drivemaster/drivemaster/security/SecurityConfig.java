@@ -136,6 +136,7 @@ public class SecurityConfig {
                                 "/api/cotizaciones/publica/responder").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/cotizaciones/orden/*/previsualizar",
                                 "/api/cotizaciones/orden/*").hasRole("TALLER")
+                        .requestMatchers(HttpMethod.GET, "/api/cotizaciones/taller").hasRole("TALLER")
                         .requestMatchers(HttpMethod.POST, "/api/cotizaciones/*/responder").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.GET, "/api/cotizaciones/orden/*").authenticated()
                         .requestMatchers("/api/cotizaciones/**").denyAll()
