@@ -14,8 +14,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.drivemaster.drivemaster.dto.UpdateClienteRequest;
+import com.drivemaster.drivemaster.dto.cliente.ClienteDTO;
+import com.drivemaster.drivemaster.dto.cliente.DatosClienteRequest;
+import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.util.PdfClienteBuilder;
@@ -32,57 +36,112 @@ public class ClienteController {
         this.passwordEncoder = passwordEncoder;
     }
 
-    @PostMapping("/guardar")
-    public ResponseEntity<Usuario> guardar(@RequestBody Usuario usuario) {
-        if (usuario.getCorreo() == null || usuario.getCorreo().isBlank()) {
-            throw new RuntimeException("El correo es obligatorio");
-        }
-        if (usuarioRepository.existsByCorreo(usuario.getCorreo())) {
-            throw new RuntimeException("El correo ya está registrado");
-        }
-        usuario.setRol("CLIENTE");
-        usuario.setProveedor("LOCAL");
-        if (usuario.getPassword() != null && !usuario.getPassword().isBlank()) {
-            usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
-        }
-        usuario.setActivo(true);
-        usuario.setDatosCompletos(true);
-        usuario.setFechaCreacion(Instant.now());
-        usuario.setIntentosFallidos(0);
-        usuario.setBloqueado(false);
-        return ResponseEntity.status(HttpStatus.CREATED).body(usuarioRepository.save(usuario));
+    private static final int PASSWORD_MIN = 6;
+
+    private static boolean esSuperadmin(Authentication auth) {
+        return auth.getAuthorities().stream().anyMatch(a -> ("ROLE_" + RolPermisos.SUPERADMIN).equals(a.getAuthority()));
     }
 
+    private Usuario porId(String id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+    }
+
+    private static boolean esCliente(Usuario u) {
+        return RolPermisos.CLIENTE.equals(u.getRol());
+    }
+
+    /** Alta de un cliente por el SUPERADMIN. El rol y los permisos los pone el servidor; el cuerpo no los controla. */
+    @PostMapping("/guardar")
+    public ResponseEntity<ClienteDTO.Detalle> guardar(@RequestBody DatosClienteRequest datos) {
+        if (datos.getCorreo() == null || datos.getCorreo().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El correo es obligatorio");
+        }
+        String correo = datos.getCorreo().trim();
+        if (usuarioRepository.existsByCorreo(correo)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo ya está registrado");
+        }
+        if (datos.getPassword() != null && !datos.getPassword().isBlank() && datos.getPassword().length() < PASSWORD_MIN) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La contraseña debe tener al menos " + PASSWORD_MIN + " caracteres");
+        }
+        Usuario usuario = Usuario.builder()
+                .nombre(datos.getNombre()).correo(correo)
+                .identificacion(datos.getIdentificacion()).telefono(datos.getTelefono())
+                .direccion(datos.getDireccion()).ciudad(datos.getCiudad())
+                .region(datos.getRegion()).referencia(datos.getReferencia())
+                .rol(RolPermisos.CLIENTE).permisos(RolPermisos.de(RolPermisos.CLIENTE))
+                .proveedor("LOCAL").activo(true).datosCompletos(true)
+                .fechaCreacion(Instant.now()).intentosFallidos(0).bloqueado(false)
+                .build();
+        if (datos.getPassword() != null && !datos.getPassword().isBlank()) {
+            usuario.setPassword(passwordEncoder.encode(datos.getPassword()));
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(ClienteDTO.Detalle.de(usuarioRepository.save(usuario)));
+    }
+
+    /** Lista del SUPERADMIN: solo clientes activos y sin cédula, googleId ni permisos. */
     @GetMapping
-    public List<Usuario> listarClientes() {
+    public List<ClienteDTO.Resumen> listarClientes() {
         return usuarioRepository.findAll().stream()
-                .filter(u -> "CLIENTE".equals(u.getRol()))
+                .filter(ClienteController::esCliente)
+                .filter(u -> !Boolean.FALSE.equals(u.getActivo()))
+                .map(ClienteDTO.Resumen::de)
                 .toList();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Usuario> obtenerPorId(@PathVariable String id) {
-        return ResponseEntity.ok(usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado")));
+    public ResponseEntity<ClienteDTO.Detalle> obtenerPorId(@PathVariable String id) {
+        Usuario u = porId(id);
+        if (!esCliente(u)) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado");
+        return ResponseEntity.ok(ClienteDTO.Detalle.de(u));
     }
 
+    /**
+     * Cada usuario edita solo su cuenta (la ruta debe coincidir con la de la sesión); el SUPERADMIN edita cualquier
+     * cliente. Solo se aplican los datos personales: rol, permisos, estado y correo no se tocan desde aquí.
+     */
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> actualizar(@PathVariable String id, @RequestBody Usuario usuario) {
-        Usuario existente = usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        if (usuario.getNombre() != null) existente.setNombre(usuario.getNombre());
-        if (usuario.getIdentificacion() != null) existente.setIdentificacion(usuario.getIdentificacion());
-        if (usuario.getTelefono() != null) existente.setTelefono(usuario.getTelefono());
-        if (usuario.getDireccion() != null) existente.setDireccion(usuario.getDireccion());
-        if (usuario.getCiudad() != null) existente.setCiudad(usuario.getCiudad());
-        if (usuario.getRegion() != null) existente.setRegion(usuario.getRegion());
-        if (usuario.getReferencia() != null) existente.setReferencia(usuario.getReferencia());
-        return ResponseEntity.ok(usuarioRepository.save(existente));
+    public ResponseEntity<ClienteDTO.Detalle> actualizar(@PathVariable String id, @RequestBody DatosClienteRequest datos,
+                                                         Authentication auth) {
+        Usuario existente = porId(id);
+        boolean propia = auth.getName().equals(existente.getCorreo());
+        if (!propia) {
+            if (!esSuperadmin(auth)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo puedes editar tu propia cuenta");
+            }
+            if (!esCliente(existente)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente no encontrado");
+            }
+        }
+        if (datos.getNombre() != null && !datos.getNombre().isBlank()) existente.setNombre(datos.getNombre());
+        if (datos.getIdentificacion() != null) existente.setIdentificacion(datos.getIdentificacion());
+        if (datos.getTelefono() != null) existente.setTelefono(datos.getTelefono());
+        if (datos.getDireccion() != null) existente.setDireccion(datos.getDireccion());
+        if (datos.getCiudad() != null) existente.setCiudad(datos.getCiudad());
+        if (datos.getRegion() != null) existente.setRegion(datos.getRegion());
+        if (datos.getReferencia() != null) existente.setReferencia(datos.getReferencia());
+        return ResponseEntity.ok(ClienteDTO.Detalle.de(usuarioRepository.save(existente)));
     }
 
+    /**
+     * "Eliminar" desactiva la cuenta (no puede iniciar sesión y conserva su historial). Nunca a un SUPERADMIN ni a
+     * uno mismo.
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable String id) {
-        usuarioRepository.deleteById(id);
+    public ResponseEntity<Void> eliminar(@PathVariable String id, Authentication auth) {
+        Usuario objetivo = porId(id);
+        if (auth.getName().equals(objetivo.getCorreo())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes desactivar tu propia cuenta");
+        }
+        if (RolPermisos.SUPERADMIN.equals(objetivo.getRol())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No se puede desactivar a un SUPERADMIN");
+        }
+        if (!esCliente(objetivo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta cuenta no es de un cliente");
+        }
+        objetivo.setActivo(false);
+        usuarioRepository.save(objetivo);
         return ResponseEntity.noContent().build();
     }
 

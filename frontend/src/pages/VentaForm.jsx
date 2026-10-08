@@ -69,7 +69,7 @@ function VentaForm({ onVolver, token }) {
   const buscarCliente = () => {
     const found = clientes.find(
       (c) =>
-        String(c.identificacion).trim() === clienteIdInput.trim() ||
+        String(c.correo).trim().toLowerCase() === clienteIdInput.trim().toLowerCase() ||
         String(c.id).trim() === clienteIdInput.trim()
     );
     if (found) { setClienteEncontrado(found); setClienteError(false); }
@@ -188,14 +188,14 @@ function VentaForm({ onVolver, token }) {
               <div className="vf-section-ico">👤</div>
               <div>
                 <p className="vf-section-title">Información del Cliente</p>
-                <p className="vf-section-sub">Busca por cédula o ID del sistema</p>
+                <p className="vf-section-sub">Busca por correo o ID del sistema</p>
               </div>
             </div>
             <div style={{ display: "flex", gap: ".5rem", alignItems: "flex-end" }}>
               <div className="vf-field" style={{ flex: 1 }}>
                 <label>Buscar por ID</label>
                 <input
-                  placeholder="Ingresa cédula o ID..."
+                  placeholder="Ingresa correo o ID..."
                   value={clienteIdInput}
                   onChange={(e) => { setClienteIdInput(e.target.value); setClienteEncontrado(null); setClienteError(false); }}
                   onKeyDown={(e) => e.key === "Enter" && buscarCliente()}

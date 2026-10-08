@@ -74,10 +74,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/productos/mi-tienda").hasRole("TIENDA")
                         // TIENDA solo gestiona sus productos: lo verifica AlcanceTienda en el controlador
                         .requestMatchers("/api/productos/**").hasAnyRole("SUPERADMIN", "VENDEDOR", "TIENDA")
-                        .requestMatchers(HttpMethod.GET, "/api/clientes", "/api/clientes/").permitAll()
+                        // Clientes: la lista, el alta, el detalle, la exportación y el borrado son solo del SUPERADMIN.
+                        // Cada usuario edita únicamente su propia cuenta (lo verifica ClienteController).
+                        .requestMatchers(HttpMethod.GET, "/api/clientes/mi-perfil").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR", "CLIENTE")
                         .requestMatchers(HttpMethod.PUT, "/api/clientes/**").authenticated()
-                         .requestMatchers(HttpMethod.GET, "/api/clientes/mi-perfil").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR", "CLIENTE")
-                        .requestMatchers("/api/clientes/**").hasAnyRole("SUPERADMIN", "VENDEDOR")
+                        .requestMatchers("/api/clientes", "/api/clientes/", "/api/clientes/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/ventas/mis-ventas").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/ventas/compra-inmediata").authenticated()
                         .requestMatchers("/api/ventas/**").hasAnyRole("SUPERADMIN", "VENDEDOR")
