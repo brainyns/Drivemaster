@@ -49,6 +49,7 @@ const menu = [
   },
   { key: "usuarios", label: "Usuarios", icon: "admin" },
   { key: "admin-talleres", label: "Servicios", icon: "taller" },
+  { key: "negocios", label: "Tiendas y talleres", icon: "aprobaciones" },
   { key: "aprobaciones", label: "Aprobaciones", icon: "aprobaciones" },
   {
     key: "finanzas", label: "Finanzas", icon: "reportes",
@@ -91,7 +92,7 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
     if (item.key === "taller-panel" || item.key === "pedidos-tienda" || item.key === "mi-tienda") return false;
     // ADMIN: solo la operación diaria; el resto del panel es del SUPERADMIN
     if (userRole === "ADMIN") return MENU_ADMIN.includes(item.key);
-    if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "finanzas" || item.key === "pedidos-envios") return userRole === "SUPERADMIN";
+    if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "negocios" || item.key === "finanzas" || item.key === "pedidos-envios") return userRole === "SUPERADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
     if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "VENDEDOR";
     if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas", "solicitudes"].includes(item.key);
