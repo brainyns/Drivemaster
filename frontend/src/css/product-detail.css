@@ -40,7 +40,6 @@
   justify-content: center;
   gap: 12px;
   color: var(--dm-muted);
-  opacity: 0.6;
 }
 
 .dm-detail__placeholder p {
@@ -81,13 +80,13 @@
 .dm-detail__compat.is-ok {
   background: rgba(69, 118, 89, 0.1);
   border-color: rgba(69, 118, 89, 0.32);
-  color: var(--dm-green);
+  color: var(--ui-ok);
 }
 
 .dm-detail__compat.is-no {
   background: rgba(201, 47, 47, 0.08);
   border-color: rgba(201, 47, 47, 0.28);
-  color: var(--dm-red);
+  color: var(--ui-error);
 }
 
 .dm-detail__compat strong {
@@ -98,7 +97,6 @@
 .dm-detail__compat p {
   font-size: 11px;
   margin-top: 3px;
-  opacity: 0.85;
 }
 
 .dm-detail__compat button {
@@ -234,7 +232,7 @@
 .dm-detail__msg {
   margin-top: 12px;
   font-size: 10px;
-  color: var(--dm-green);
+  color: var(--ui-ok);
   text-align: center;
 }
 
@@ -343,5 +341,5 @@
 }
 
 .dm-diff { font-style: normal; font-size: 12px; font-weight: 600; }
-.dm-diff--menor { color: var(--dm-green); }
-.dm-diff--mayor { color: var(--dm-red); }
+.dm-diff--menor { color: var(--ui-ok); }
+.dm-diff--mayor { color: var(--ui-error); }
