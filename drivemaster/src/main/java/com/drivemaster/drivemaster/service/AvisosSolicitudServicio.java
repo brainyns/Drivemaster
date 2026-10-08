@@ -35,6 +35,9 @@ public class AvisosSolicitudServicio {
     private final TallerRepository tallerRepository;
     private final TiendaRepository tiendaRepository;
     private final String frontendUrl;
+    // SOLO desarrollo (MAIL_DEV_LOG): escribe el código de retiro en el log del backend. Nunca en pantalla ni en la API.
+    @Value("${mail.dev-log:false}")
+    private boolean devLog;
 
     public AvisosSolicitudServicio(EmailsService emailsService,
                                    UsuarioRepository usuarioRepository,
@@ -169,6 +172,9 @@ public class AvisosSolicitudServicio {
     /** Comprobante al cliente (con sus códigos de retiro) y aviso a cada tienda. */
     public void compraPagada(com.drivemaster.drivemaster.model.CompraCatalogo compra, List<PedidoTienda> pedidos,
                              Map<String, String> codigos, PagoEntity pago) {
+        if (devLog && codigos != null) {
+            codigos.forEach((pedidoId, codigo) -> log.info("[CORREO-DEV] Código de retiro del pedido {}: {}", pedidoId, codigo));
+        }
         usuarioRepository.findById(compra.getClienteId()).ifPresent(c -> enviar(c.getCorreo(), "Comprobante de tu compra - DriveMaster",
                 EmailServicioBuilder.clienteCompraPagada(c.getNombre(), compra, pedidos, codigos, pago.getReferencia(),
                         pago.getTransactionId(), pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now())));
@@ -223,6 +229,7 @@ public class AvisosSolicitudServicio {
 
     /** Código de retiro nuevo: se envía al titular de la compra (nunca se muestra en pantalla). */
     public void codigoRetiroNuevo(PedidoTienda pedido, String codigo) {
+        if (devLog) log.info("[CORREO-DEV] Código de retiro del pedido {}: {}", pedido.getId(), codigo);
         usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(), "Tu nuevo código de retiro",
                 EmailServicioBuilder.clienteCodigoRetiroNuevo(c.getNombre(), pedido, codigo)));
     }
