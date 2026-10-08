@@ -5,15 +5,15 @@
   max-width: 640px;
   margin: var(--sp-xl) auto;
   padding: var(--sp-xl);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
   border-left: 4px solid var(--en-acento);
-  border-radius: var(--r-lg);
-  color: var(--text);
+  border-radius: var(--ui-r-lg);
+  color: var(--ui-text);
 }
 
-.estado-negocio--rechazado { --en-acento: var(--error); }
-.estado-negocio--inactivo  { --en-acento: var(--warning); }
+.estado-negocio--rechazado { --en-acento: var(--ui-error); }
+.estado-negocio--inactivo  { --en-acento: var(--ui-aviso); }
 
 .estado-negocio__eyebrow {
   display: inline-block;
@@ -21,7 +21,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--ui-muted);
   margin-bottom: var(--sp-sm);
 }
 
@@ -37,7 +37,7 @@
 }
 
 .estado-negocio__detalle {
-  color: var(--text-muted);
+  color: var(--ui-muted);
   line-height: 1.6;
   font-size: 0.9rem;
 }
@@ -47,7 +47,7 @@
   padding: var(--sp-md);
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: var(--r-md);
+  border-radius: var(--ui-r-lg);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -63,19 +63,19 @@
 .estado-negocio__paso {
   flex: 1 1 140px;
   padding: var(--sp-sm) var(--sp-md);
-  border-top: 3px solid var(--border);
+  border-top: 3px solid var(--ui-line);
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: var(--ui-muted);
 }
 
 .estado-negocio__paso--hecho {
-  border-top-color: var(--success);
-  color: var(--text);
+  border-top-color: var(--ui-ok);
+  color: var(--ui-text);
 }
 
 .estado-negocio__paso--actual {
   border-top-color: var(--en-acento);
-  color: var(--text);
+  color: var(--ui-text);
   font-weight: 600;
 }
 

@@ -5,26 +5,30 @@
    ───────────────────────────────────────────────────────────────────────────── */
 
 .tp-root {
-  --tp-superficie: var(--surface, #1a1a1a);
-  --tp-linea: var(--border, #2a2a2a);
-  --tp-texto: var(--text, #f1f5f9);
-  --tp-texto-2: #a6adba;
-  --tp-acento: var(--primary, #ff3d00);
-  --tp-info: #5b97d6;
-  --tp-ok: #3fbf7f;
-  --tp-aviso: #f5a524;
-  --tp-malo: #ef6b6b;
-  --tp-sombra: 0 1px 2px rgba(8, 18, 36, 0.35), 0 8px 24px -12px rgba(8, 18, 36, 0.55);
-  --tp-ease: cubic-bezier(0.23, 1, 0.32, 1);
-}
+  /* Alias del sistema común (global.css): siguen el tema claro y oscuro solos */
+  --tp-superficie: var(--ui-surface);
+  --tp-linea: var(--ui-line);
+  --tp-texto: var(--ui-text);
+  --tp-texto-2: var(--ui-muted);
+  --tp-acento: var(--primary);
+  --tp-info: var(--ui-info);
+  --tp-ok: var(--ui-ok);
+  --tp-aviso: var(--ui-aviso);
+  --tp-malo: var(--ui-error);
+  --tp-sombra: var(--ui-sombra-1);
+  --tp-ease: var(--ui-ease);
 
-html[data-theme="light"] .tp-root {
-  --tp-texto-2: #4b5563;
-  --tp-info: #18487a;
-  --tp-ok: #15803d;
-  --tp-aviso: #b45309;
-  --tp-malo: #b91c1c;
-  --tp-sombra: 0 1px 2px rgba(12, 34, 64, 0.08), 0 8px 24px -14px rgba(12, 34, 64, 0.22);
+  /* Las hojas que el taller comparte con el cliente y la tienda (servicios.css,
+     solicitud-servicio.css, cotizacion.css) usan los tokens viejos: dentro del
+     panel del taller apuntan al sistema común, fuera de él no cambian. */
+  --bg: var(--ui-bg); --surface: var(--ui-surface); --surface2: var(--ui-surface-2); --surface3: var(--ui-surface-2);
+  --border: var(--ui-line); --border2: var(--ui-line);
+  --text: var(--ui-text); --text-primary: var(--ui-text);
+  --text-muted: var(--ui-muted); --text-secondary: var(--ui-muted); --muted: var(--ui-muted); --muted2: var(--ui-muted);
+  --success: var(--ui-ok); --green: var(--ui-ok); --error: var(--ui-error); --red: var(--ui-error);
+  --warning: var(--ui-aviso); --amber: var(--ui-aviso); --amber-text: var(--ui-aviso); --blue: var(--ui-info); --purple: var(--ui-info);
+  --r-sm: var(--ui-r-md); --r-md: var(--ui-r-lg); --r-lg: var(--ui-r-lg);
+  color: var(--ui-text);
 }
 
 /* ── Tarjetas de Inicio ───────────────────────────────────────────────────── */
@@ -45,7 +49,7 @@ html[data-theme="light"] .tp-root {
   color: var(--tp-texto);
   background: var(--tp-superficie);
   border: 1px solid var(--tp-linea);
-  border-radius: 14px;
+  border-radius: var(--ui-r-lg);
   box-shadow: var(--tp-sombra);
   cursor: pointer;
   font: inherit;
@@ -63,7 +67,7 @@ html[data-theme="light"] .tp-root {
 .tp-tarjeta:hover .tp-tarjeta__flecha { transform: translateX(3px); }
 
 .tp-tarjeta--accion { border-color: color-mix(in srgb, var(--tp-acento) 60%, var(--tp-linea)); }
-.tp-tarjeta--accion .tp-tarjeta__valor { color: var(--tp-acento); }
+.tp-tarjeta--accion .tp-tarjeta__valor { color: var(--primary-text); }
 .tp-tarjeta--vivo .tp-tarjeta__valor { color: var(--tp-info); }
 
 /* ── Aviso de órdenes anteriores ──────────────────────────────────────────── */
@@ -79,7 +83,7 @@ html[data-theme="light"] .tp-root {
   color: var(--tp-texto);
   background: color-mix(in srgb, var(--tp-aviso) 12%, var(--tp-superficie));
   border: 1px solid color-mix(in srgb, var(--tp-aviso) 55%, var(--tp-linea));
-  border-radius: 12px;
+  border-radius: var(--ui-r-lg);
   cursor: pointer;
   transition: transform .18s var(--tp-ease);
 }
@@ -94,7 +98,7 @@ html[data-theme="light"] .tp-root {
   padding: 1.1rem 1.2rem;
   background: var(--tp-superficie);
   border: 1px solid var(--tp-linea);
-  border-radius: 14px;
+  border-radius: var(--ui-r-lg);
 }
 .tp-bloque__titulo { margin: 0 0 .8rem; font-size: 1rem; }
 .tp-bloque__vacio { margin: 0; color: var(--tp-texto-2); font-size: .9rem; max-width: 44ch; text-wrap: pretty; }
@@ -107,7 +111,7 @@ html[data-theme="light"] .tp-root {
 .tp-lista__meta--limite { color: var(--tp-aviso); }
 
 .tp-proxima { display: flex; flex-direction: column; gap: .35rem; align-items: flex-start; }
-.tp-proxima__foto { width: 100%; max-height: 150px; object-fit: cover; border-radius: 10px; }
+.tp-proxima__foto { width: 100%; max-height: 150px; object-fit: cover; border-radius: var(--ui-r-lg); }
 .tp-proxima__cuando { font-size: 1.15rem; }
 
 /* ── Estado vacío y carga ─────────────────────────────────────────────────── */
@@ -116,14 +120,14 @@ html[data-theme="light"] .tp-root {
   text-align: center;
   background: var(--tp-superficie);
   border: 1px dashed var(--tp-linea);
-  border-radius: 14px;
+  border-radius: var(--ui-r-lg);
 }
 .tp-vacio h2 { margin: 0 0 .4rem; }
 .tp-vacio p { margin: 0 auto 1.1rem; max-width: 52ch; color: var(--tp-texto-2); text-wrap: pretty; }
 
 .tp-esqueleto__fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .tp-esqueleto__tarjeta, .tp-esqueleto__bloque {
-  border-radius: 14px;
+  border-radius: var(--ui-r-lg);
   background: linear-gradient(100deg, var(--tp-superficie) 30%, color-mix(in srgb, var(--tp-linea) 70%, var(--tp-superficie)) 50%, var(--tp-superficie) 70%);
   background-size: 200% 100%;
   animation: tp-brillo 1.4s linear infinite;
@@ -154,7 +158,7 @@ html[data-theme="light"] .tp-root {
   color: var(--tp-texto);
   background: var(--tp-superficie);
   border: 1px solid var(--tp-linea);
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   transition: border-color .18s var(--tp-ease);
 }
 .tp-busqueda:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 1px; border-color: var(--tp-info); }
@@ -165,7 +169,7 @@ html[data-theme="light"] .tp-root {
   display: flex; flex-direction: column; gap: .3rem; padding: 0; text-align: left;
   font: inherit; color: inherit; background: none; border: 0; cursor: pointer;
 }
-.tp-trabajo__abrir:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 3px; border-radius: 8px; }
+.tp-trabajo__abrir:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 3px; border-radius: var(--ui-r-lg); }
 .tp-trabajo__acciones { display: flex; flex-wrap: wrap; gap: .6rem; }
 .tp-trabajo__acciones .sv-btn, .tp-trabajo__acciones .sv-btn-outline { transition: transform .18s var(--tp-ease); }
 .tp-trabajo__acciones .sv-btn:active, .tp-trabajo__acciones .sv-btn-outline:active { transform: scale(.97); }
@@ -188,7 +192,7 @@ html[data-theme="light"] .tp-root {
 
 /* ── Cotizaciones ─────────────────────────────────────────────────────────── */
 .tp-cotiz { list-style: none; margin: 1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
-.tp-cotiz__item { background: var(--tp-superficie); border: 1px solid var(--tp-linea); border-radius: 12px; overflow: hidden; }
+.tp-cotiz__item { background: var(--tp-superficie); border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); overflow: hidden; }
 .tp-cotiz__fila {
   display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .5rem 1rem;
   width: 100%; padding: .85rem 1rem; text-align: left; font: inherit; color: var(--tp-texto);
@@ -205,18 +209,17 @@ html[data-theme="light"] .tp-root {
 @media (prefers-reduced-motion: reduce) { .tp-cotiz__fila { transition: none; } .tp-cotiz__detalle { animation: none; } }
 
 /* ── Informes ─────────────────────────────────────────────────────────────── */
-.tp-segmentos { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--tp-linea); border-radius: 10px; background: var(--tp-superficie); }
+.tp-segmentos { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); background: var(--tp-superficie); }
 .tp-segmentos__opcion {
   padding: .4rem .8rem; font: inherit; font-size: .85rem; color: var(--tp-texto-2); background: none; border: 0;
-  border-radius: 8px; cursor: pointer; transition: background .18s var(--tp-ease), color .18s var(--tp-ease), transform .18s var(--tp-ease);
+  border-radius: var(--ui-r-lg); cursor: pointer; transition: background .18s var(--tp-ease), color .18s var(--tp-ease), transform .18s var(--tp-ease);
 }
 .tp-segmentos__opcion:active { transform: scale(.97); }
 .tp-segmentos__opcion:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 1px; }
-.tp-segmentos__opcion--activa { background: var(--tp-info); color: #fff; font-weight: 700; }
-html[data-theme="light"] .tp-segmentos__opcion--activa { background: #18487a; }
+.tp-segmentos__opcion--activa { background: var(--primary); color: var(--on-primary); font-weight: 700; }
 
 .tp-resumenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
-.tp-resumen { display: flex; flex-direction: column; gap: .25rem; padding: 1rem 1.15rem; background: var(--tp-superficie); border: 1px solid var(--tp-linea); border-radius: 14px; box-shadow: var(--tp-sombra); }
+.tp-resumen { display: flex; flex-direction: column; gap: .25rem; padding: 1rem 1.15rem; background: var(--tp-superficie); border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); box-shadow: var(--tp-sombra); }
 .tp-resumen__titulo { font-size: .76rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tp-texto-2); }
 .tp-resumen__valor { font-size: 1.9rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .tp-resumen__pie { font-size: .82rem; color: var(--tp-texto-2); }
@@ -252,7 +255,7 @@ html[data-theme="light"] .tp-segmentos__opcion--activa { background: #18487a; }
 .tp-nota-grande { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; }
 .tp-nota-grande strong { font-size: 2.4rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .tp-nota-grande > span:last-child { font-size: .85rem; color: var(--tp-texto-2); }
-.tp-estrellas { letter-spacing: .1em; color: var(--tp-linea); }
+.tp-estrellas { letter-spacing: .1em; color: var(--ui-muted); }
 .tp-estrellas__on { color: var(--tp-aviso); }
 .tp-comentarios { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
 .tp-comentarios li { padding-top: .6rem; border-top: 1px solid var(--tp-linea); }
@@ -265,13 +268,24 @@ html[data-theme="light"] .tp-segmentos__opcion--activa { background: #18487a; }
 }
 
 /* ── Editar tarifa y horario ──────────────────────────────────────────────── */
-.tp-edicion { display: grid; gap: 1rem; margin-top: 1.25rem; padding: 1.1rem 1.25rem; background: var(--tp-superficie); border: 1px solid var(--tp-linea); border-radius: 12px; max-width: 34rem; }
+.tp-edicion { display: grid; gap: 1rem; margin-top: 1.25rem; padding: 1.1rem 1.25rem; background: var(--tp-superficie); border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); max-width: 34rem; }
 .tp-edicion h3 { font-size: 1rem; margin: 0; }
 .tp-edicion__campo { display: grid; gap: .35rem; }
 .tp-edicion__campo label { font-weight: 600; font-size: .9rem; }
-.tp-edicion__campo input, .tp-edicion__campo textarea { font: inherit; padding: .55rem .7rem; color: var(--tp-texto); background: transparent; border: 1px solid var(--tp-linea); border-radius: 8px; }
+.tp-edicion__campo input, .tp-edicion__campo textarea { font: inherit; padding: .55rem .7rem; color: var(--tp-texto); background: transparent; border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); }
 .tp-edicion__campo textarea { min-height: 4.5rem; resize: vertical; }
 .tp-edicion__campo input:focus-visible, .tp-edicion__campo textarea:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 1px; }
 .tp-edicion__ayuda { font-size: .8rem; color: var(--tp-texto-2); margin: 0; }
 .tp-edicion__botones { display: flex; flex-wrap: wrap; gap: .6rem; }
 .tp-edicion__ok { color: var(--tp-texto); font-size: .85rem; margin: .5rem 0 0; }
+
+/* ── Hojas compartidas dentro del panel del taller ──────────────────────────
+   Texto oscuro sobre el naranja, como en el resto del panel (fuera del taller no cambian). */
+.tp-root .sv-btn,
+.tp-root .ss-filtro__conteo { color: var(--on-primary); }
+.tp-root .sv-btn:active:not(:disabled) { transform: scale(0.98); }
+.tp-root .sv-btn:focus-visible,
+.tp-root .sv-btn-outline:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+/* En móvil la etiqueta de estado ocupa su ancho, no toda la fila */
+.tp-cotiz__fila .ss-estado { justify-self: start; }
