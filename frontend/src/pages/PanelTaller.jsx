@@ -80,7 +80,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         {seccion === "cotizaciones" && <TallerCotizaciones />}
         {seccion === "informes" && <TallerInformes />}
         {seccion === "mitaller" && (
-          <TallerMiTaller taller={taller} ordenes={ordenes} token={token} />
+          <TallerMiTaller taller={taller} ordenes={ordenes} token={token} onActualizado={setTaller} />
         )}
         {seccion === "anteriores" && (
           <OrdenesAnteriores ordenes={ordenes} cargando={cargando} error={error} onRecargar={cargar} />

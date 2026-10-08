@@ -49,6 +49,7 @@ class PermisosPanelPlataformaTest {
             // Solo SUPERADMIN: usuarios, reportes, finanzas, proveedores y configuración
             ruta(HttpMethod.GET, "/api/cotizaciones/taller", "TALLER"),
             ruta(HttpMethod.GET, "/api/talleres/mi-taller/informes", "TALLER"),
+            ruta(HttpMethod.PATCH, "/api/talleres/mi-taller/datos", "TALLER"),
             ruta(HttpMethod.GET, "/api/usuarios", "SUPERADMIN"),
             ruta(HttpMethod.POST, "/api/usuarios", "SUPERADMIN"),
             ruta(HttpMethod.PUT, "/api/usuarios/u1", "SUPERADMIN"),

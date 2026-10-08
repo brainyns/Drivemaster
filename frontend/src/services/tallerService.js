@@ -120,3 +120,14 @@ export async function activarDesactivarTaller(token, id, activo) {
   });
   return handle(res, "Error al cambiar el estado del taller");
 }
+
+/** El taller cambia su tarifa por hora y su horario. Solo viajan esos dos campos. */
+export async function actualizarDatosTaller(token, { tarifaHora, horario }) {
+  const res = await apiFetch(`${BASE}/mi-taller/datos`, {
+    method: "PATCH",
+    headers: headers(token),
+    body: JSON.stringify({ tarifaHora, horario }),
+  });
+  if (res.status === 403) throw new Error("Tu taller aún no está aprobado, así que todavía no puedes editar estos datos.");
+  return handle(res, "No se pudieron guardar los cambios");
+}
