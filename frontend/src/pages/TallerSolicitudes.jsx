@@ -14,7 +14,7 @@ import CotizacionForm from "../components/servicio/CotizacionForm";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
 import Etiqueta from "../components/servicio/Etiqueta";
 import {
-  ESTADOS_EN_CURSO, ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
+  ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
@@ -24,15 +24,65 @@ const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.la
 
 const porResponder = (s) => s.estado === "ASIGNADA_A_TALLER" && !s.aceptadaPorTaller;
 const agendada = (s) => (s.estado === "ASIGNADA_A_TALLER" && s.aceptadaPorTaller) || s.estado === "EN_REVISION";
-const enCurso = (s) => ESTADOS_EN_CURSO.includes(s.estado);
 
-const FILTROS = [
+const esperaRepuestos = (s) => s.estado === "PAGADA" || s.estado === "REPUESTOS_PEDIDOS";
+const enTaller = (s) => ["REPUESTOS_RECIBIDOS", "EN_INSTALACION", "LISTA"].includes(s.estado);
+
+// Solicitudes: del primer aviso hasta el diagnóstico. La cotización y lo que sigue tienen su propia sección.
+const FILTROS_SOLICITUDES = [
   { key: "responder", label: "Por responder", filtro: porResponder },
   { key: "agendadas", label: "Agendadas", filtro: agendada },
   { key: "diagnosticadas", label: "Diagnosticadas", filtro: (s) => s.estado === "DIAGNOSTICADA" },
-  { key: "encurso", label: "En curso", filtro: enCurso },
-  { key: "historial", label: "Historial", filtro: (s) => !porResponder(s) && !agendada(s) && !enCurso(s) && s.estado !== "DIAGNOSTICADA" },
+  { key: "cerradas", label: "Cerradas", filtro: (s) => ["CANCELADA", "RECHAZADA", "REASIGNADA"].includes(s.estado) },
 ];
+
+// Trabajos: de la espera de repuestos hasta la entrega.
+const FILTROS_TRABAJOS = [
+  { key: "repuestos", label: "Esperando repuestos", filtro: esperaRepuestos },
+  { key: "entaller", label: "En el taller", filtro: enTaller },
+  { key: "entregados", label: "Entregados", filtro: (s) => s.estado === "ENTREGADA" },
+];
+
+const TEXTOS = {
+  solicitudes: {
+    volver: "← Solicitudes",
+    vacio: {
+      responder: "No tienes solicitudes nuevas. Te avisaremos por correo cuando llegue una.",
+      agendadas: "No tienes revisiones agendadas. Al aceptar una solicitud eliges la fecha y la hora.",
+      diagnosticadas: "Ninguna solicitud espera cotización. Aparecen aquí cuando registras el diagnóstico.",
+      cerradas: "No hay solicitudes cerradas.",
+    },
+  },
+  trabajos: {
+    volver: "← Trabajos",
+    vacio: {
+      repuestos: "No esperas repuestos. Cuando un cliente pague una cotización, el pedido a las tiendas aparece aquí.",
+      entaller: "No hay vehículos en el taller. Pasan aquí al confirmar que los repuestos llegaron.",
+      entregados: "Todavía no has entregado trabajos.",
+    },
+  },
+};
+
+const PASOS_TRABAJO = ["Repuestos", "Instalación", "Pruebas", "Lista", "Entregada"];
+
+/** Paso actual de un trabajo en el taller (0 = repuestos recibidos … 4 = entregada), o -1 si aún espera repuestos. */
+function pasoDeTrabajo(s) {
+  if (s.estado === "REPUESTOS_RECIBIDOS") return 0;
+  if (s.estado === "EN_INSTALACION") return s.subestado === "EN_PRUEBAS" ? 2 : 1;
+  if (s.estado === "LISTA") return 3;
+  if (s.estado === "ENTREGADA") return 4;
+  return -1;
+}
+
+/** Texto corto de cuánto lleva la solicitud en su estado actual, según el último evento. */
+function enEstadoDesde(s) {
+  const fechas = (s.eventos || []).map((e) => new Date(e.fecha).getTime()).filter(Number.isFinite);
+  if (!fechas.length) return "";
+  const min = Math.max(0, Math.round((Date.now() - Math.max(...fechas)) / 60000));
+  if (min < 60) return `hace ${Math.max(min, 1)} min`;
+  if (min < 1440) return `hace ${Math.round(min / 60)} h`;
+  return `hace ${Math.round(min / 1440)} d`;
+}
 
 /** Cotizaciones emitidas, pedidos a tiendas y recepción de repuestos. */
 function SeguimientoTaller({ token, solicitud, onCambio }) {
@@ -116,13 +166,17 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
  * Bandeja de solicitudes de diagnóstico del taller: responder (aceptar con cita o
  * rechazar), asignar mecánico, registrar el diagnóstico y elegir repuestos.
  */
-export default function TallerSolicitudes({ filtroInicial = "responder" }) {
+export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial }) {
   const token = getToken();
+  const FILTROS = modo === "trabajos" ? FILTROS_TRABAJOS : FILTROS_SOLICITUDES;
+  const textos = TEXTOS[modo];
   const [solicitudes, setSolicitudes] = useState([]);
   const [mecanicos, setMecanicos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [filtro, setFiltro] = useState(FILTROS.some((f) => f.key === filtroInicial) ? filtroInicial : "responder");
+  const [filtro, setFiltro] = useState(FILTROS.some((f) => f.key === filtroInicial) ? filtroInicial : FILTROS[0].key);
+  const [busqueda, setBusqueda] = useState("");
+  const [lineaAbierta, setLineaAbierta] = useState(null);
   const [seleccionadaId, setSeleccionadaId] = useState(null);
 
   const [fechaRevision, setFechaRevision] = useState("");
@@ -150,13 +204,20 @@ export default function TallerSolicitudes({ filtroInicial = "responder" }) {
     }
   }, [token]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    const id = setTimeout(cargar, 0);
+    return () => clearTimeout(id);
+  }, [cargar]);
 
   const conteo = useMemo(
     () => Object.fromEntries(FILTROS.map((f) => [f.key, solicitudes.filter(f.filtro).length])),
-    [solicitudes]
+    [solicitudes, FILTROS]
   );
-  const visibles = solicitudes.filter(FILTROS.find((f) => f.key === filtro).filtro);
+  const termino = busqueda.trim().toLowerCase();
+  const visibles = solicitudes
+    .filter(FILTROS.find((f) => f.key === filtro).filtro)
+    .filter((s) => !termino || [s.vehiculoDescripcion, s.vehiculoPlaca, s.clienteNombre, refSolicitud(s.id)]
+      .some((t) => t && String(t).toLowerCase().includes(termino)));
   const seleccionada = solicitudes.find((s) => s.id === seleccionadaId) || null;
   const mecanicosActivos = mecanicos.filter((m) => m.activo !== false);
 
@@ -221,7 +282,7 @@ export default function TallerSolicitudes({ filtroInicial = "responder" }) {
             <h2 className="sv-title">{s.vehiculoDescripcion}</h2>
             <p className="sv-subtitle">{s.vehiculoPlaca ? `Placa ${s.vehiculoPlaca} · ` : ""}<EstadoServicio estado={s.estado} />{s.estado === "EN_INSTALACION" && s.subestado === "EN_PRUEBAS" ? " · En pruebas" : ""}</p>
           </div>
-          <button className="sv-volver" onClick={() => setSeleccionadaId(null)}>← Solicitudes</button>
+          <button className="sv-volver" onClick={() => setSeleccionadaId(null)}>{textos.volver}</button>
         </div>
 
         {error && <p className="ss-alerta" role="alert">{error}</p>}
@@ -440,28 +501,94 @@ export default function TallerSolicitudes({ filtroInicial = "responder" }) {
   }
 
   // ─── Lista ──────────────────────────────────────────────────────────────
+  /** Acción que corresponde a este trabajo, para resolverla sin abrir el detalle. */
+  const accionRapida = (s) => {
+    if (s.estado === "REPUESTOS_PEDIDOS") return {
+      texto: "Confirmar repuestos recibidos",
+      ejecutar: async () => { await confirmarRepuestosRecibidos(token, s.id); await cargar(); },
+    };
+    if (s.estado === "REPUESTOS_RECIBIDOS") return { texto: "Iniciar instalación", ejecutar: async () => reemplazar(await iniciarInstalacion(token, s.id)) };
+    if (s.estado === "EN_INSTALACION") return { texto: "Marcar lista", ejecutar: async () => reemplazar(await marcarLista(token, s.id)) };
+    if (s.estado === "LISTA") return { texto: "Marcar entregada", ejecutar: async () => reemplazar(await marcarEntregada(token, s.id)) };
+    return null;
+  };
+
+  const tarjetaTrabajo = (s) => {
+    const paso = pasoDeTrabajo(s);
+    const accion = accionRapida(s);
+    const abierta = lineaAbierta === s.id;
+    return (
+      <article key={s.id} className="ss-tarjeta tp-trabajo">
+        <button className="tp-trabajo__abrir" onClick={() => abrir(s)}>
+          <div className="ss-tarjeta__cabecera">
+            <span className="ss-eyebrow">#{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
+            <EstadoServicio estado={s.estado} />
+          </div>
+          <strong className="ss-tarjeta__titulo">{s.vehiculoDescripcion}{s.vehiculoPlaca ? ` · ${s.vehiculoPlaca}` : ""}</strong>
+          <span className="ss-meta">
+            {s.clienteNombre ? `${s.clienteNombre} · ` : ""}
+            {s.mecanicoNombre ? `Mecánico: ${s.mecanicoNombre}` : "Sin mecánico asignado"}
+            {enEstadoDesde(s) && ` · en este estado ${enEstadoDesde(s)}`}
+          </span>
+        </button>
+
+        {paso >= 0 ? (
+          <ol className="tp-pasos" aria-label="Avance del trabajo">
+            {PASOS_TRABAJO.map((nombre, n) => (
+              <li key={nombre} className={`tp-pasos__paso${n < paso ? " tp-pasos__paso--hecho" : ""}${n === paso ? " tp-pasos__paso--actual" : ""}`}
+                aria-current={n === paso ? "step" : undefined}>
+                <span className="tp-pasos__marca" aria-hidden="true" />
+                <span className="tp-pasos__nombre">{nombre}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="ss-meta">
+            {s.estado === "PAGADA" ? "Pagada: el pedido a las tiendas está por salir." : "Pedido a las tiendas en camino."}
+          </p>
+        )}
+
+        <div className="tp-trabajo__acciones">
+          {accion && (
+            <button className="sv-btn" disabled={procesando} onClick={() => ejecutar(accion.ejecutar)}>{accion.texto}</button>
+          )}
+          <button className="sv-btn-outline" aria-expanded={abierta} onClick={() => setLineaAbierta(abierta ? null : s.id)}>
+            {abierta ? "Ocultar avance" : "Ver avance"}
+          </button>
+        </div>
+        {abierta && <div className="tp-trabajo__linea"><LineaTiempo eventos={s.eventos} /></div>}
+      </article>
+    );
+  };
+
   return (
     <div className="ss-panel">
       {error && <p className="ss-alerta" role="alert">{error}</p>}
 
-      <nav className="ss-filtros" aria-label="Solicitudes por estado">
-        {FILTROS.map((f) => (
-          <button key={f.key} className={`ss-filtro${filtro === f.key ? " ss-filtro--activo" : ""}`}
-            aria-current={filtro === f.key ? "page" : undefined} onClick={() => setFiltro(f.key)}>
-            {f.label}
-            {conteo[f.key] > 0 && <span className="ss-filtro__conteo">{conteo[f.key]}</span>}
-          </button>
-        ))}
-      </nav>
+      <div className="tp-barra">
+        <nav className="ss-filtros" aria-label={modo === "trabajos" ? "Trabajos por etapa" : "Solicitudes por estado"}>
+          {FILTROS.map((f) => (
+            <button key={f.key} className={`ss-filtro${filtro === f.key ? " ss-filtro--activo" : ""}`}
+              aria-current={filtro === f.key ? "page" : undefined} onClick={() => setFiltro(f.key)}>
+              {f.label}
+              {conteo[f.key] > 0 && <span className="ss-filtro__conteo">{conteo[f.key]}</span>}
+            </button>
+          ))}
+        </nav>
+        <input className="tp-busqueda" type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por vehículo, placa o cliente" aria-label="Buscar" />
+      </div>
 
-      {mecanicosActivos.length === 0 && (
-        <p className="ss-aviso">Registra a tus mecánicos en la pestaña “Mi taller” para asignarlos a las solicitudes.</p>
+      {modo === "solicitudes" && mecanicosActivos.length === 0 && (
+        <p className="ss-aviso">Registra a tus mecánicos en “Mi taller” para asignarlos a las solicitudes.</p>
       )}
 
       {visibles.length === 0 ? (
         <p className="sv-empty">
-          {filtro === "responder" ? "No tienes solicitudes nuevas. Te avisaremos por correo cuando llegue una." : "No hay solicitudes en esta lista."}
+          {termino ? `Nada coincide con “${busqueda.trim()}”. Prueba con la placa o el nombre del cliente.` : textos.vacio[filtro]}
         </p>
+      ) : modo === "trabajos" ? (
+        <div className="sv-list">{visibles.map(tarjetaTrabajo)}</div>
       ) : (
         <div className="sv-list">
           {visibles.map((s) => (
