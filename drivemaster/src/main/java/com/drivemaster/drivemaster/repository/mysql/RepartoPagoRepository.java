@@ -17,7 +17,17 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> 
     boolean existsByPagoIdAndBeneficiarioTipo(Long pagoId, String beneficiarioTipo);
     long countByEstado(String estado);
 
-    /** Comisión registrada (líneas informativas de la plataforma). */
+    boolean existsByPagoIdAndBeneficiarioTipoAndReferenciaLiquidacion(Long pagoId, String beneficiarioTipo, String referencia);
+
+    /** Comisión vigente de un pago: la registrada menos lo anulado por reembolsos. */
+    @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.pagoId = :pagoId and r.beneficiarioTipo = 'PLATAFORMA'")
+    double sumaComisionDePago(@Param("pagoId") Long pagoId);
+
+    /** Comisión originalmente registrada de un pago (sin descontar anulaciones). */
+    @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.pagoId = :pagoId and r.beneficiarioTipo = 'PLATAFORMA' and r.monto > 0")
+    double sumaComisionBruta(@Param("pagoId") Long pagoId);
+
+    /** Comisión registrada (líneas informativas de la plataforma, ya sin lo anulado por reembolsos). */
     @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA'")
     double sumaComisionRegistrada();
 

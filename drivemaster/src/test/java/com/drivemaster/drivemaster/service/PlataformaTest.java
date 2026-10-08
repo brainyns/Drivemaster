@@ -89,6 +89,97 @@ class PlataformaTest {
         assertDoesNotThrow(() -> ComisionPlataforma.registrar(repartos, pago(), new BigDecimal("50000"), 10));
     }
 
+    // ─── Anulación por reembolso ─────────────────────────────────────────────
+
+    /** Repositorio en memoria con la comisión registrada de un pago de 100.000 (comisión 8.403 = 10% de 84.034). */
+    private static RepartoPagoRepository conComision(List<RepartoPago> lineas) {
+        RepartoPagoRepository repartos = mock(RepartoPagoRepository.class);
+        lineas.add(RepartoPago.builder().pagoId(7L).beneficiarioTipo(RepartoPago.PLATAFORMA).estado(RepartoPago.INFORMATIVA).monto(8_403.0).build());
+        when(repartos.sumaComisionDePago(7L)).thenAnswer(i -> lineas.stream()
+                .filter(l -> RepartoPago.PLATAFORMA.equals(l.getBeneficiarioTipo())).mapToDouble(RepartoPago::getMonto).sum());
+        when(repartos.sumaComisionBruta(7L)).thenAnswer(i -> lineas.stream()
+                .filter(l -> RepartoPago.PLATAFORMA.equals(l.getBeneficiarioTipo()) && l.getMonto() > 0).mapToDouble(RepartoPago::getMonto).sum());
+        when(repartos.existsByPagoIdAndBeneficiarioTipoAndReferenciaLiquidacion(eq(7L), anyString(), anyString())).thenAnswer(i ->
+                lineas.stream().anyMatch(l -> i.getArgument(2).equals(l.getReferenciaLiquidacion())));
+        when(repartos.save(any(RepartoPago.class))).thenAnswer(i -> {
+            lineas.add(i.getArgument(0));
+            return i.getArgument(0);
+        });
+        return repartos;
+    }
+
+    private static PagoEntity pagoDe100mil() {
+        PagoEntity p = pago();
+        p.setMonto(100_000.0);
+        return p;
+    }
+
+    private static double comisionNeta(List<RepartoPago> lineas) {
+        return lineas.stream().mapToDouble(RepartoPago::getMonto).sum();
+    }
+
+    @Test
+    void unReembolsoTotalAnulaTodaLaComisionDelPago() {
+        List<RepartoPago> lineas = new java.util.ArrayList<>();
+        RepartoPagoRepository repartos = conComision(lineas);
+
+        ComisionPlataforma.anular(repartos, pagoDe100mil(), 100_000.0, 31L, null);
+
+        assertEquals(0.0, comisionNeta(lineas));
+        RepartoPago ajuste = lineas.get(1);
+        assertEquals(-8_403.0, ajuste.getMonto());
+        assertEquals(RepartoPago.INFORMATIVA, ajuste.getEstado());
+        assertEquals("REEMBOLSO-31", ajuste.getReferenciaLiquidacion());
+        assertEquals(8_403.0, lineas.get(0).getMonto(), "la línea original no se toca: queda el rastro");
+    }
+
+    @Test
+    void unReembolsoParcialAnulaSoloLaParteDeEsaTienda() {
+        List<RepartoPago> lineas = new java.util.ArrayList<>();
+        RepartoPagoRepository repartos = conComision(lineas);
+
+        // La tienda A recibió 40.000 del pago de 100.000: se reembolsa solo su parte
+        ComisionPlataforma.anular(repartos, pagoDe100mil(), 40_000.0, 31L, "pedA");
+        assertEquals(8_403.0 - 3_361.0, comisionNeta(lineas)); // 40% de 8.403 = 3.361
+
+        // La tienda B (60.000) se reembolsa después: el total queda exactamente en cero
+        ComisionPlataforma.anular(repartos, pagoDe100mil(), 60_000.0, 32L, "pedB");
+        assertEquals(0.0, comisionNeta(lineas));
+    }
+
+    @Test
+    void cadaReembolsoAnulaUnaSolaVez() {
+        List<RepartoPago> lineas = new java.util.ArrayList<>();
+        RepartoPagoRepository repartos = conComision(lineas);
+
+        ComisionPlataforma.anular(repartos, pagoDe100mil(), 40_000.0, 31L, "pedA");
+        ComisionPlataforma.anular(repartos, pagoDe100mil(), 40_000.0, 31L, "pedA"); // mismo reembolso, reintento
+
+        assertEquals(2, lineas.size());
+        assertEquals(8_403.0 - 3_361.0, comisionNeta(lineas));
+    }
+
+    @Test
+    void sinComisionRegistradaOYaAnuladaNoHaceNada() {
+        RepartoPagoRepository sin = mock(RepartoPagoRepository.class); // sumaComisionDePago = 0
+        ComisionPlataforma.anular(sin, pagoDe100mil(), 100_000.0, 1L, null);
+        verify(sin, never()).save(any());
+
+        List<RepartoPago> lineas = new java.util.ArrayList<>();
+        RepartoPagoRepository repartos = conComision(lineas);
+        ComisionPlataforma.anular(repartos, pagoDe100mil(), 100_000.0, 31L, null);
+        ComisionPlataforma.anular(repartos, pagoDe100mil(), 100_000.0, 32L, null); // otro reembolso, ya sin comisión
+        assertEquals(2, lineas.size());
+        assertEquals(0.0, comisionNeta(lineas));
+    }
+
+    @Test
+    void unFalloAlAnularLaComisionNuncaRompeElReembolso() {
+        RepartoPagoRepository repartos = mock(RepartoPagoRepository.class);
+        when(repartos.sumaComisionDePago(anyLong())).thenThrow(new RuntimeException("base caída"));
+        assertDoesNotThrow(() -> ComisionPlataforma.anular(repartos, pagoDe100mil(), 100_000.0, 1L, null));
+    }
+
     // ─── Liquidaciones: la comisión no es algo por pagar ─────────────────────
 
     @Test

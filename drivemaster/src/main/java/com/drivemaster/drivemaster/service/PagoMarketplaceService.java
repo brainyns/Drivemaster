@@ -419,7 +419,7 @@ public class PagoMarketplaceService {
 
     /** Registra un reembolso pendiente (lo hace el ADMIN a mano en Wompi). */
     public Reembolso registrarReembolso(PagoEntity pago, String pedidoTiendaId, double monto, String motivo) {
-        return reembolsoRepository.save(Reembolso.builder()
+        Reembolso guardado = reembolsoRepository.save(Reembolso.builder()
                 .pagoId(pago.getId())
                 .ordenServicioId(pago.getOrdenServicioId())
                 .compraCatalogoId(pago.getCompraCatalogoId())
@@ -432,6 +432,9 @@ public class PagoMarketplaceService {
                 .estado(Reembolso.PENDIENTE)
                 .fechaCreacion(LocalDateTime.now())
                 .build());
+        // La comisión del dinero devuelto deja de contar
+        ComisionPlataforma.anular(repartoRepository, pago, monto, guardado != null ? guardado.getId() : null, pedidoTiendaId);
+        return guardado;
     }
 
     private void noAplicado(PagoEntity pago, OrdenServicio orden, String motivo) {
