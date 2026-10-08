@@ -283,6 +283,7 @@
    Texto oscuro sobre el naranja, como en el resto del panel (fuera del taller no cambian). */
 .tp-root .sv-btn,
 .tp-root .ss-filtro__conteo { color: var(--on-primary); }
+.tp-root .ss-estado--proceso { background: var(--ui-info-bg); color: var(--ui-info); }
 .tp-root .sv-btn:active:not(:disabled) { transform: scale(0.98); }
 .tp-root .sv-btn:focus-visible,
 .tp-root .sv-btn-outline:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }

@@ -150,7 +150,7 @@ function validarFormulario(form, productosExistentes, esEdicion, id) {
 
 function FieldError({ msg }) {
   if (!msg) return null;
-  return <span className="pf-field-error">{msg}</span>;
+  return <span className="prf-field-error">{msg}</span>;
 }
 
 const COMPAT_VACIA = { marca: "", modelo: "", anoDesde: "", anoHasta: "", motor: "" };
@@ -316,52 +316,52 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
   const compatErrores = errores.compatibilidad || [];
 
   return (
-    <div className="pf-page">
+    <div className="prf-page">
 
       {/* ── El topbar fue eliminado: el TopBar global en App.jsx lo reemplaza ── */}
 
-      <div className="pf-tabs">
-        <button type="button" className="pf-tab pf-tab--active">
+      <div className="prf-tabs">
+        <button type="button" className="prf-tab prf-tab--active">
           {esEdicion ? "Editar Producto" : "Nuevo Producto"}
         </button>
-        <button type="button" className="pf-tab" onClick={onVolver}>
+        <button type="button" className="prf-tab" onClick={onVolver}>
           Ver Productos
         </button>
       </div>
 
-      {serverError && <p className="pf-error">{serverError}</p>}
+      {serverError && <p className="prf-error">{serverError}</p>}
 
-      <form onSubmit={handleSubmit} noValidate className="pf-layout">
+      <form onSubmit={handleSubmit} noValidate className="prf-layout">
 
         {/* ─── COLUMNA IZQUIERDA ─── */}
-        <div className="pf-left">
+        <div className="prf-left">
 
           {/* Informacion General */}
-          <div className="pf-section">
-            <div className="pf-section-header">
+          <div className="prf-section">
+            <div className="prf-section-header">
               <h3>Informacion General</h3>
             </div>
 
-            <div className="pf-field pf-field--full">
+            <div className="prf-field prf-field--full">
               <label>Nombre del Producto</label>
               <input
                 name="nombre"
                 value={form.nombre}
                 onChange={handleChange}
                 placeholder="Ej. Pastillas de Freno Ceramicas Brembo"
-                className={errores.nombre ? "pf-input--error" : ""}
+                className={errores.nombre ? "prf-input--error" : ""}
               />
               <FieldError msg={errores.nombre} />
             </div>
 
-            <div className="pf-row">
-              <div className="pf-field">
+            <div className="prf-row">
+              <div className="prf-field">
                 <label>Categoria</label>
                 <select
                   name="categoria"
                   value={form.categoria}
                   onChange={handleChange}
-                  className={errores.categoria ? "pf-input--error" : ""}
+                  className={errores.categoria ? "prf-input--error" : ""}
                 >
                   <option value="">Seleccionar categoria</option>
                   {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
@@ -369,26 +369,26 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 <FieldError msg={errores.categoria} />
               </div>
 
-              <div className="pf-field">
+              <div className="prf-field">
                 <label>SKU / Codigo</label>
                 <input
                   name="codigo"
                   value={form.codigo}
                   onChange={handleChange}
                   placeholder="Ej. KNT-BRK-001"
-                  className={errores.codigo ? "pf-input--error" : ""}
+                  className={errores.codigo ? "prf-input--error" : ""}
                 />
                 <FieldError msg={errores.codigo} />
               </div>
             </div>
 
-            <div className="pf-field pf-field--full">
+            <div className="prf-field prf-field--full">
               <label>Marca del Repuesto</label>
               <select
                 name="marca"
                 value={form.marca}
                 onChange={handleChange}
-                className={errores.marca ? "pf-input--error" : ""}
+                className={errores.marca ? "prf-input--error" : ""}
               >
                 <option value="">Seleccionar marca</option>
                 {MARCAS_REPUESTO.map(m => <option key={m} value={m}>{m}</option>)}
@@ -396,8 +396,8 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
               <FieldError msg={errores.marca} />
             </div>
 
-            <div className="pf-row">
-              <div className="pf-field">
+            <div className="prf-row">
+              <div className="prf-field">
                 <label>Referencia del fabricante</label>
                 <input
                   name="referencia"
@@ -407,7 +407,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 />
               </div>
 
-              <div className="pf-field">
+              <div className="prf-field">
                 <label>Ubicación en bodega</label>
                 <input
                   name="ubicacion"
@@ -420,7 +420,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
           </div>
 
           {/* Tipo de producto */}
-          <div className="pf-field pf-field--full">
+          <div className="prf-field prf-field--full">
             <label>Tipo de Producto</label>
             <select name="tipo" value={form.tipo} onChange={handleChange}>
               <option value="STOCK">Stock (compra inmediata)</option>
@@ -430,7 +430,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
           </div>
 
           {form.tipo === "ENCARGO" && (
-            <div className="pf-field pf-field--full">
+            <div className="prf-field prf-field--full">
               <label>Días estimados de entrega</label>
               <input
                 type="number"
@@ -440,19 +440,19 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 value={form.diasEntregaEncargo}
                 onChange={handleChange}
                 placeholder="Ej. 5"
-                className={errores.diasEntregaEncargo ? "pf-input--error" : ""}
+                className={errores.diasEntregaEncargo ? "prf-input--error" : ""}
               />
               <FieldError msg={errores.diasEntregaEncargo} />
             </div>
           )}
 
           {/* Modelos Compatibles */}
-          <div className="pf-section">
-            <div className="pf-section-header">
+          <div className="prf-section">
+            <div className="prf-section-header">
               <h3>Modelos Compatibles</h3>
             </div>
 
-            <label className="pf-universal">
+            <label className="prf-universal">
               <input
                 type="checkbox"
                 checked={!!form.compatibilidadUniversal}
@@ -469,28 +469,28 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
               const modelosDisponibles = comp.marca ? (MARCAS_VEHICULO[comp.marca] || []) : [];
               const ce = compatErrores[index] || {};
               return (
-                <div key={index} className="pf-compat-block">
-                  <div className="pf-compat-header">
-                    <span className="pf-compat-num">Vehiculo {index + 1}</span>
+                <div key={index} className="prf-compat-block">
+                  <div className="prf-compat-header">
+                    <span className="prf-compat-num">Vehiculo {index + 1}</span>
                     {form.modelosCompatibles.length > 1 && (
                       <button
                         type="button"
                         onClick={() => eliminarCompatibilidad(index)}
-                        className="pf-compat-del"
+                        className="prf-compat-del"
                       >
                         Eliminar
                       </button>
                     )}
                   </div>
 
-                  <div className="pf-compat-grid">
-                    <div className="pf-field">
+                  <div className="prf-compat-grid">
+                    <div className="prf-field">
                       <label>Marca del Vehiculo</label>
                       <select
                         name="marca"
                         value={comp.marca}
                         onChange={e => handleCompatibilidadChange(index, e)}
-                        className={ce.marca ? "pf-input--error" : ""}
+                        className={ce.marca ? "prf-input--error" : ""}
                       >
                         <option value="">Seleccionar marca</option>
                         {MARCAS_VEHICULO_LISTA.map(m => (
@@ -500,14 +500,14 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                       <FieldError msg={ce.marca} />
                     </div>
 
-                    <div className="pf-field">
+                    <div className="prf-field">
                       <label>Modelo</label>
                       <select
                         name="modelo"
                         value={comp.modelo}
                         onChange={e => handleCompatibilidadChange(index, e)}
                         disabled={!comp.marca}
-                        className={ce.modelo ? "pf-input--error" : ""}
+                        className={ce.modelo ? "prf-input--error" : ""}
                       >
                         <option value="">
                           {comp.marca ? "Seleccionar modelo" : "Primero seleccione marca"}
@@ -519,7 +519,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                       <FieldError msg={ce.modelo} />
                     </div>
 
-                    <div className="pf-field">
+                    <div className="prf-field">
                       <label>Ano Desde</label>
                       <input
                         type="number"
@@ -529,12 +529,12 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                         placeholder="Ej. 2015"
                         min="1900"
                         max={ANO_ACTUAL + 1}
-                        className={ce.anoDesde ? "pf-input--error" : ""}
+                        className={ce.anoDesde ? "prf-input--error" : ""}
                       />
                       <FieldError msg={ce.anoDesde} />
                     </div>
 
-                    <div className="pf-field">
+                    <div className="prf-field">
                       <label>Ano Hasta</label>
                       <input
                         type="number"
@@ -544,12 +544,12 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                         placeholder="Ej. 2023"
                         min="1900"
                         max={ANO_ACTUAL + 2}
-                        className={ce.anoHasta ? "pf-input--error" : ""}
+                        className={ce.anoHasta ? "prf-input--error" : ""}
                       />
                       <FieldError msg={ce.anoHasta} />
                     </div>
 
-                    <div className="pf-field pf-field--full">
+                    <div className="prf-field prf-field--full">
                       <label>Motor</label>
                       <input
                         name="motor"
@@ -566,7 +566,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
             <button
               type="button"
               onClick={agregarCompatibilidad}
-              className="pf-add-compat"
+              className="prf-add-compat"
             >
               + Agregar vehiculo compatible
             </button>
@@ -575,15 +575,15 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
         </div>
 
         {/* ─── COLUMNA DERECHA ─── */}
-        <div className="pf-right">
-          <div className="pf-section">
-            <div className="pf-section-header">
+        <div className="prf-right">
+          <div className="prf-section">
+            <div className="prf-section-header">
               <h3>Precio e Inventario</h3>
             </div>
 
-            <div className="pf-field pf-field--full">
+            <div className="prf-field prf-field--full">
               <label>Precio de Compra</label>
-              <div className={`pf-money-input${errores.precioCompra ? " pf-money-input--error" : ""}`}>
+              <div className={`prf-money-input${errores.precioCompra ? " prf-money-input--error" : ""}`}>
                 <span>$</span>
                 <input
                   name="precioCompra"
@@ -597,9 +597,9 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
               <FieldError msg={errores.precioCompra} />
             </div>
 
-            <div className="pf-field pf-field--full">
+            <div className="prf-field prf-field--full">
               <label>Precio de Venta</label>
-              <div className={`pf-money-input${errores.precioVenta ? " pf-money-input--error" : ""}`}>
+              <div className={`prf-money-input${errores.precioVenta ? " prf-money-input--error" : ""}`}>
                 <span>$</span>
                 <input
                   name="precioVenta"
@@ -614,16 +614,16 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
             </div>
 
             {margen !== null && (
-              <div className={`pf-margen ${Number(margen) >= 0 ? "pf-margen--pos" : "pf-margen--neg"}`}>
+              <div className={`prf-margen ${Number(margen) >= 0 ? "prf-margen--pos" : "prf-margen--neg"}`}>
                 <span>Margen de ganancia</span>
                 <strong>{margen}%</strong>
               </div>
             )}
 
-            <div className="pf-row">
-              <div className="pf-field">
+            <div className="prf-row">
+              <div className="prf-field">
                 <label>Stock Real</label>
-                <div className={`pf-stock-input${errores.stockActual ? " pf-stock-input--error" : ""}`}>
+                <div className={`prf-stock-input${errores.stockActual ? " prf-stock-input--error" : ""}`}>
                   <input
                     name="stockActual"
                     type="text"
@@ -637,9 +637,9 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 <FieldError msg={errores.stockActual} />
               </div>
 
-              <div className="pf-field">
+              <div className="prf-field">
                 <label>Stock Minimo</label>
-                <div className={`pf-stock-input${errores.stockMinimo ? " pf-stock-input--error" : ""}`}>
+                <div className={`prf-stock-input${errores.stockMinimo ? " prf-stock-input--error" : ""}`}>
                   <input
                     name="stockMinimo"
                     type="text"
@@ -656,17 +656,17 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
           </div>
 
           {/* ─── IMAGEN ─── */}
-          <div className="pf-section">
-            <div className="pf-section-header">
+          <div className="prf-section">
+            <div className="prf-section-header">
               <h3>Imagen del Producto</h3>
             </div>
-            <div className="pf-imagen-upload">
+            <div className="prf-imagen-upload">
               {imagenPreview ? (
-                <div className="pf-imagen-preview">
+                <div className="prf-imagen-preview">
                   <img src={imagenPreview} alt="Preview" />
                   <button
                     type="button"
-                    className="pf-imagen-remove"
+                    className="prf-imagen-remove"
                     onClick={eliminarImagenSeleccionada}
                   >
                     Eliminar imagen
@@ -674,7 +674,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 </div>
               ) : (
                 <div
-                  className="pf-imagen-placeholder"
+                  className="prf-imagen-placeholder"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -693,27 +693,27 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 style={{ display: "none" }}
               />
               {subiendoImagen && (
-                <p className="pf-imagen-uploading">Subiendo imagen...</p>
+                <p className="prf-imagen-uploading">Subiendo imagen...</p>
               )}
             </div>
           </div>
 
           {submitted && Object.keys(errores).length > 0 && (
-            <div className="pf-validation-summary">
+            <div className="prf-validation-summary">
               Revise los campos marcados antes de continuar.
             </div>
           )}
 
-          <button type="submit" className="pf-btn-save" disabled={loading}>
+          <button type="submit" className="prf-btn-save" disabled={loading}>
             {loading ? "Guardando..." : esEdicion ? "Actualizar Producto" : "Guardar Producto"}
           </button>
-          <button type="button" onClick={onVolver} className="pf-btn-cancel">
+          <button type="button" onClick={onVolver} className="prf-btn-cancel">
             Descartar Cambios
           </button>
 
-          <div className="pf-info-card">
-            <p className="pf-info-title">Sincronizacion Automatica</p>
-            <p className="pf-info-text">
+          <div className="prf-info-card">
+            <p className="prf-info-title">Sincronizacion Automatica</p>
+            <p className="prf-info-text">
               Los productos guardados se sincronizaran automaticamente con el inventario
               y estaran disponibles para facturacion inmediata.
             </p>

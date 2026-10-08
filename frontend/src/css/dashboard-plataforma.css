@@ -155,7 +155,8 @@
 /* ── Liquidaciones y Problemas de envío (SUPERADMIN y ADMIN) ─────────────────
    Usan estilos del flujo de servicio (ss-, sv-) que comparten con el taller y el
    cliente: aquí solo se les da margen de página y se apuntan sus tokens a --ui-*. */
-.ss-panel--plataforma {
+.ss-panel--plataforma,
+.ss-panel--tienda {
   --bg: var(--ui-bg); --surface: var(--ui-surface); --surface2: var(--ui-surface-2); --surface3: var(--ui-surface-2);
   --border: var(--ui-line); --border2: var(--ui-line);
   --text: var(--ui-text); --text-primary: var(--ui-text);
@@ -166,5 +167,13 @@
   color: var(--ui-text);
 }
 .ss-panel--plataforma > .ss-meta,
-.ss-panel--plataforma > .ss-ayuda { max-width: 75ch; margin-bottom: 1rem; color: var(--ui-muted); font-size: .875rem; line-height: 1.55; }
-@media (max-width: 640px) { .ss-panel--plataforma { padding: 1rem 1rem 2rem; } }
+.ss-panel--plataforma > .ss-ayuda,
+.ss-panel--tienda > .ss-meta,
+.ss-panel--tienda > .ss-ayuda { max-width: 75ch; margin-bottom: 1rem; color: var(--ui-muted); font-size: .875rem; line-height: 1.55; }
+@media (max-width: 640px) { .ss-panel--plataforma, .ss-panel--tienda { padding: 1rem 1rem 2rem; } }
+
+/* Texto oscuro sobre el naranja en las hojas compartidas, dentro de estos paneles */
+.ss-panel--plataforma .sv-btn, .ss-panel--plataforma .ss-filtro__conteo,
+.ss-panel--tienda .sv-btn, .ss-panel--tienda .ss-filtro__conteo { color: var(--on-primary); }
+.ss-panel--plataforma .ss-estado--proceso,
+.ss-panel--tienda .ss-estado--proceso { background: var(--ui-info-bg); color: var(--ui-info); }
