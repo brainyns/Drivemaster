@@ -6,7 +6,9 @@ export const MAX_CANTIDAD = 99;
 function cargar() {
   try {
     const guardado = JSON.parse(localStorage.getItem(CLAVE));
-    return Array.isArray(guardado) ? guardado : [];
+    // Un carrito guardado de antes puede traer productos de la antigua tienda propia de DriveMaster
+    // (esPlataforma): esa tienda ya no existe y esos productos no se pueden comprar, así que se descartan.
+    return Array.isArray(guardado) ? guardado.filter((x) => x?.producto && !x.producto.esPlataforma) : [];
   } catch {
     return [];
   }
@@ -23,10 +25,8 @@ export function limitarCantidad(cantidad, producto) {
  * Carrito del catálogo marketplace. Se guarda en localStorage (solo qué y cuánto, más lo necesario
  * para mostrarlo): el precio, el IVA y el envío los calcula siempre el backend al pagar.
  *
- * Dos grupos que se pagan por separado:
- *  - "catalogo": productos de las tiendas (un solo pago de Wompi, un pedido por tienda).
- *  - "plataforma": productos "Vendido por DriveMaster" (esPlataforma), que se pagan por la compra normal.
- * Agregar de un grupo nunca quita ni bloquea lo del otro.
+ * DriveMaster es la aplicación, no una tienda: todos los productos son de una tienda y se pagan juntos
+ * (un solo pago de Wompi, un pedido por tienda).
  */
 export function useCarrito() {
   const [items, setItems] = useState(cargar);
@@ -63,18 +63,11 @@ export function useCarrito() {
 
   const vaciar = useCallback(() => setItems([]), []);
 
-  const derivados = useMemo(() => {
-    const catalogo = items.filter((x) => !x.producto.esPlataforma);
-    const plataforma = items.filter((x) => x.producto.esPlataforma);
-    const total = (lista) => lista.reduce((s, x) => s + (x.producto.precio || 0) * x.cantidad, 0);
-    const unidades = (lista) => lista.reduce((s, x) => s + x.cantidad, 0);
-    return {
-      catalogo, plataforma,
-      subtotalCatalogo: total(catalogo), subtotalPlataforma: total(plataforma),
-      cantidad: unidades(items),
-      mezclados: catalogo.length > 0 && plataforma.length > 0,
-    };
-  }, [items]);
+  const derivados = useMemo(() => ({
+    catalogo: items,
+    subtotalCatalogo: items.reduce((s, x) => s + (x.producto.precio || 0) * x.cantidad, 0),
+    cantidad: items.reduce((s, x) => s + x.cantidad, 0),
+  }), [items]);
 
   return { items, agregar, cambiarCantidad, quitar, quitarVarios, vaciar, ...derivados };
 }

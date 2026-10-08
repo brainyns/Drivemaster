@@ -37,7 +37,7 @@ class CatalogoServiceTest {
     private static Tienda tienda(String id, String ciudad, String direccion, String horario, Double envio) {
         return Tienda.builder().id(id).nombre("Tienda " + id).ciudad(ciudad).direccion(direccion).horario(horario)
                 .costoEnvio(envio).nit("900-NIT-" + id).telefono("300" + id).correoContacto(id + "@secreto.com")
-                .estadoAprobacion(EstadoAprobacion.APROBADO).activo(true).plataforma(false).build();
+                .estadoAprobacion(EstadoAprobacion.APROBADO).activo(true).build();
     }
 
     private static Producto producto(String id, String tiendaId, String nombre, String referencia, double precio, int stock) {
@@ -77,10 +77,9 @@ class CatalogoServiceTest {
         pendiente.setEstadoAprobacion(EstadoAprobacion.PENDIENTE);
         Tienda inactiva = tienda("F", "Bogotá", "Cra 7", "L-S", null);
         inactiva.setActivo(false);
-        Tienda plataformaSinDatos = tienda("G", "Bogotá", "Cra 7", null, null);
-        plataformaSinDatos.setPlataforma(true);
+        Tienda sinHorarioNulo = tienda("G", "Bogotá", "Cra 7", null, null);
 
-        for (Tienda t : List.of(sinHorario, sinDireccion, sinCiudad, pendiente, inactiva, plataformaSinDatos)) {
+        for (Tienda t : List.of(sinHorario, sinDireccion, sinCiudad, pendiente, inactiva, sinHorarioNulo)) {
             assertFalse(CatalogoService.tiendaVisible(t), t.getId());
         }
         assertFalse(CatalogoService.tiendaVisible(null));
@@ -329,54 +328,38 @@ class CatalogoServiceTest {
         assertTrue(q.getValue().getQueryObject().toString().contains("\\Q.*(\\E"), q.getValue().getQueryObject().toString());
     }
 
-    // ─── Etapa 1 de la unificación: la tienda propia aparece como "Vendido por DriveMaster" ───
+    // ─── DriveMaster es la aplicación, no una tienda ─────────────────────────
 
     @Test
-    void laTiendaPropiaConDatosCompletosEsVisibleYSeEtiqueta() {
-        Tienda propia = tienda("tP", "Bogotá", "Cra 7", "L-S", null);
-        propia.setPlataforma(true);
-        assertTrue(CatalogoService.tiendaVisible(propia));
-
-        ProductoCatalogoDTO d = CatalogoService.aDTO(producto("p1", "tP", "Filtro", "F1", 10_000, 5), propia, null);
-        assertTrue(d.esPlataforma());
-        assertTrue(d.tienda().esPlataforma());
-        assertFalse(CatalogoService.aDTO(producto("p2", "tA", "Filtro", "F1", 10_000, 5),
-                tienda("tA", "Bogotá", "Cra 7", "L-S", null), null).esPlataforma());
+    void ningunaRespuestaDelCatalogoLlevaMarcaDeTiendaPropiaDeDriveMaster() {
+        for (Class<?> dto : new Class<?>[]{ProductoCatalogoDTO.class, com.drivemaster.drivemaster.dto.catalogo.TiendaCatalogoDTO.class}) {
+            for (var campo : dto.getRecordComponents()) {
+                assertFalse(campo.getName().toLowerCase().contains("plataforma"), dto.getSimpleName() + "." + campo.getName());
+            }
+        }
     }
 
     @Test
-    void laTiendaPropiaSinDatosCompletosNoSeMuestraHastaCompletarlos() {
-        // La migración la crea sin ciudad, dirección ni horario: el ADMIN debe completarlos
-        Tienda propia = Tienda.builder().id("tP").nombre("DriveMaster").plataforma(true)
-                .estadoAprobacion(EstadoAprobacion.APROBADO).activo(true).build();
-        assertFalse(CatalogoService.tiendaVisible(propia));
-    }
-
-    @Test
-    void losProductosDeDriveMasterConviven_conLosDeOtrasTiendasYSePuedenComparar() {
-        Tienda propia = tienda("tP", "Bogotá", "Cra 7", "L-S", null);
-        propia.setPlataforma(true);
-        when(tiendaRepository.findAll()).thenReturn(List.of(propia, tienda("tB", "Medellín", "Cll 10", "L-V", 8000.0)));
-        Producto base = producto("p1", "tP", "Filtro de aceite", "FA-100", 20_000, 5);
+    void losProductosDeVariasTiendasConviven_yElMismoRepuestoSePuedeComparar() {
+        when(tiendaRepository.findAll()).thenReturn(List.of(tienda("tA", "Bogotá", "Cra 7", "L-S", null),
+                tienda("tB", "Medellín", "Cll 10", "L-V", 8000.0)));
+        Producto base = producto("p1", "tA", "Filtro de aceite", "FA-100", 20_000, 5);
         when(mongoTemplate.findById("p1", Producto.class)).thenReturn(base);
         when(mongoTemplate.find(any(Query.class), eq(Producto.class))).thenReturn(List.of(
                 base, producto("p2", "tB", "Filtro de aceite", "FA-100", 18_000, 5)));
 
         ProductoCatalogoDTO d = service.detalle("p1", null, null);
 
-        assertTrue(d.esPlataforma());
+        assertEquals("Tienda tA", d.tienda().nombre());
         assertEquals(1, d.otrasTiendas().size());
-        assertFalse(d.otrasTiendas().get(0).esPlataforma());
         assertEquals("Tienda tB", d.otrasTiendas().get(0).tienda().nombre());
     }
 
-    // ─── La vitrina global muestra la tienda propia solo con datos completos ──
-
     @Test
-    void losProductosDeDriveMasterSoloSeConsultanSiSuTiendaTieneDatosCompletos() {
-        Tienda propiaIncompleta = Tienda.builder().id("tP").nombre("DriveMaster").plataforma(true)
+    void unaTiendaSinDatosCompletosNoSeConsultaHastaCompletarlos() {
+        Tienda incompleta = Tienda.builder().id("tI").nombre("Tienda nueva")
                 .estadoAprobacion(EstadoAprobacion.APROBADO).activo(true).build();
-        when(tiendaRepository.findAll()).thenReturn(List.of(propiaIncompleta, tienda("tA", "Bogotá", "Cra 7", "L-S", null)));
+        when(tiendaRepository.findAll()).thenReturn(List.of(incompleta, tienda("tA", "Bogotá", "Cra 7", "L-S", null)));
         when(mongoTemplate.find(any(Query.class), eq(Producto.class)))
                 .thenReturn(List.of(producto("p1", "tA", "Filtro", "F1", 10_000, 5)));
 
@@ -386,29 +369,20 @@ class CatalogoServiceTest {
         verify(mongoTemplate).find(q.capture(), eq(Producto.class));
         String consulta = q.getValue().getQueryObject().toString();
         assertTrue(consulta.contains("tA"), consulta);
-        assertFalse(consulta.contains("tP"), "sin ciudad, dirección y horario la tienda propia no se consulta: " + consulta);
+        assertFalse(consulta.contains("tI"), "sin ciudad, dirección y horario la tienda no se consulta: " + consulta);
         assertEquals(1, service.filtros().tiendas().size(), "ni aparece en el filtro de tiendas");
 
-        // El ADMIN completa los datos: ahora sí entra, con la etiqueta
-        propiaIncompleta.setCiudad("Bogotá");
-        propiaIncompleta.setDireccion("Cra 7 # 45-10");
-        propiaIncompleta.setHorario("L-S 8-6");
+        // Al completar sus datos entra al catálogo y a los filtros
+        incompleta.setCiudad("Cali");
+        incompleta.setDireccion("Cra 7 # 45-10");
+        incompleta.setHorario("L-S 8-6");
         reset(mongoTemplate);
         when(mongoTemplate.find(any(Query.class), eq(Producto.class)))
-                .thenReturn(List.of(producto("p2", "tP", "Aceite", "AC1", 40_000, 9)));
-        PaginaCatalogoDTO pagina = service.buscar(null, null, null, null, null, null, null, null, null);
+                .thenReturn(List.of(producto("p2", "tI", "Aceite", "AC1", 40_000, 9)));
+        service.buscar(null, null, null, null, null, null, null, null, null);
         verify(mongoTemplate).find(q.capture(), eq(Producto.class));
-        assertTrue(q.getValue().getQueryObject().toString().contains("tP"));
-        assertTrue(pagina.items().get(0).esPlataforma());
+        assertTrue(q.getValue().getQueryObject().toString().contains("tI"));
         assertEquals(2, service.filtros().tiendas().size());
-        assertTrue(service.filtros().tiendas().stream().anyMatch(t -> t.esPlataforma()));
-    }
-
-    @Test
-    void unaVezCompletaLaTiendaPropiaEntraEnLosFiltrosDeCiudad() {
-        Tienda propia = tienda("tP", "Bogotá", "Cra 7", "L-S", null);
-        propia.setPlataforma(true);
-        when(tiendaRepository.findAll()).thenReturn(List.of(propia));
-        assertEquals(List.of("Bogotá"), service.filtros().ciudades());
+        assertEquals(List.of("Bogotá", "Cali"), service.filtros().ciudades());
     }
 }

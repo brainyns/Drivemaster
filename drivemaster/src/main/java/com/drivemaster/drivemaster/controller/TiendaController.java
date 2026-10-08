@@ -42,12 +42,6 @@ public class TiendaController {
 
     // ─── Administración (rol ADMIN/SUPERADMIN) ───────────────
 
-    /** Completa ciudad, dirección, horario y envío de la tienda propia de DriveMaster. */
-    @PutMapping("/plataforma/datos")
-    public ResponseEntity<TiendaDTO> actualizarPlataforma(@RequestBody RegistroNegocioRequest request) {
-        return ResponseEntity.ok(tiendaService.actualizarPlataforma(request));
-    }
-
     @GetMapping
     public ResponseEntity<List<TiendaDTO>> listar(@RequestParam(required = false) String estado) {
         return ResponseEntity.ok(tiendaService.listar(estado));

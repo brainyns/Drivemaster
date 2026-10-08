@@ -19,10 +19,7 @@ public interface ProductoRepository extends MongoRepository<Producto, String> {
 
     List<Producto> findByTiendaId(String tiendaId);
 
-    // Catálogo de compra directa: productos de la tienda de la plataforma.
-    // Incluye los que aún no tienen tienda (antes de que corra la migración).
-    @Query("{ '$or': [ { 'tiendaId': ?0 }, { 'tiendaId': null } ] }")
-    List<Producto> findCatalogoPlataforma(String tiendaPlataformaId);
+    List<Producto> findByTiendaIdIn(java.util.Collection<String> tiendaIds);
 
     List<Producto> findByCategoria(String categoria);
     

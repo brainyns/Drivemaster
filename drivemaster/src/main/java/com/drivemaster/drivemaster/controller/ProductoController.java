@@ -30,7 +30,7 @@ public class ProductoController {
         this.alcanceTienda = alcanceTienda;
     }
 
-    // LISTAR: catálogo público de compra directa (solo la tienda de DriveMaster)
+    // LISTAR: productos activos de las tiendas visibles (público, sin datos internos)
     @GetMapping
     public List<Producto> listar() {
         return productoService.listarCatalogoPublico();

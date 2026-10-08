@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarTalleres, resolverAprobacionTaller, activarDesactivarTaller } from "../services/tallerService";
 import { listarTiendas, resolverAprobacionTienda, activarDesactivarTienda } from "../services/tiendaService";
 import { listarPlanes, activarPlan } from "../services/suscripcionService";
-import DatosTiendaPropia from "../components/DatosTiendaPropia";
 import "../css/aprobaciones.css";
 
 const FILTROS = [
@@ -22,9 +21,8 @@ const formatFecha = (f) => (f ? new Date(f).toLocaleDateString("es-CO", { day: "
 const estadoDe = (n) => n.estadoAprobacion || "APROBADO";
 
 /** Panel del ADMIN para validar y activar talleres y tiendas, y asignarles un plan. */
-export default function Aprobaciones({ token, onTiendaPropiaIncompleta }) {
+export default function Aprobaciones({ token }) {
   const [negocios, setNegocios] = useState([]);
-  const [tiendaPropia, setTiendaPropia] = useState(null);
   const [planes, setPlanes] = useState([]);
   const [filtro, setFiltro] = useState("PENDIENTE");
   const [tipo, setTipo] = useState("TODOS");
@@ -44,13 +42,9 @@ export default function Aprobaciones({ token, onTiendaPropiaIncompleta }) {
         listarTiendas(token),
         listarPlanes(token),
       ]);
-      const propia = tiendas.find((t) => t.plataforma) || null;
-      setTiendaPropia(propia);
-      onTiendaPropiaIncompleta?.(!!propia && propia.datosCompletos === false);
       setNegocios([
         ...talleres.map((t) => ({ ...t, tipo: "TALLER" })),
-        // La tienda propia de DriveMaster no pasa por aprobación.
-        ...tiendas.filter((t) => !t.plataforma).map((t) => ({ ...t, tipo: "TIENDA" })),
+        ...tiendas.map((t) => ({ ...t, tipo: "TIENDA" })),
       ]);
       setPlanes(planesData.filter((p) => p.activo));
     } catch (e) {
@@ -58,7 +52,7 @@ export default function Aprobaciones({ token, onTiendaPropiaIncompleta }) {
     } finally {
       setCargando(false);
     }
-  }, [token, onTiendaPropiaIncompleta]);
+  }, [token]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -156,8 +150,6 @@ export default function Aprobaciones({ token, onTiendaPropiaIncompleta }) {
           </select>
         </label>
       </div>
-
-      {tiendaPropia && <DatosTiendaPropia key={tiendaPropia.id} token={token} tienda={tiendaPropia} onGuardado={cargar} />}
 
       {error && <p className="ap-alerta ap-alerta--error" role="alert">{error}</p>}
       {aviso && <p className="ap-alerta ap-alerta--ok" role="status">{aviso}</p>}

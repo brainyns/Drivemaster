@@ -64,7 +64,7 @@ function CabeceraTienda({ tienda }) {
       <div className="mk-tienda-card__quien">
         <span className="mk-tienda-card__avatar" aria-hidden="true"><IconoTienda size={20} /></span>
         <div>
-          <h3>{tienda.esPlataforma ? "DriveMaster" : tienda.nombre}</h3>
+          <h3>{tienda.nombre}</h3>
           <span className="mk-tienda-card__ciudad"><IconoPin size={13} /> {tienda.ciudad}</span>
         </div>
       </div>
@@ -94,7 +94,7 @@ function OtrasTiendas({ producto, otras, onVer }) {
           return (
             <li key={o.id}>
               <div className="mk-otras__tienda">
-                <strong>{o.esPlataforma ? "DriveMaster" : o.tienda.nombre}</strong>
+                <strong>{o.tienda.nombre}</strong>
                 <span>{o.tienda.ciudad} · {o.tienda.ofreceEnvio ? `envío ${formatPrecio(o.tienda.costoEnvio)}` : "solo retiro"}</span>
               </div>
               <div className="mk-otras__precio">
@@ -175,18 +175,14 @@ function TarjetaTienda({ grupo, otras, onCambiar, onQuitar, onVer }) {
 
 /**
  * Carrito del catálogo marketplace. Los productos de las tiendas se pagan juntos (un solo pago, un
- * pedido por tienda); los de "Vendido por DriveMaster" se pagan por la compra normal. Si hay de los
- * dos, se avisa y cada grupo se paga por separado sin perder el otro. Los precios, el IVA y el envío
- * los calcula siempre el backend en el siguiente paso: aquí solo se muestran subtotales de referencia.
+ * pedido por tienda). Los precios, el IVA y el envío los calcula siempre el backend en el siguiente
+ * paso: aquí solo se muestran subtotales de referencia.
  */
-export default function CarritoMarketplace({
-  header, carrito, onVolver, onVerProducto, onContinuarCatalogo, onPagarPlataforma, onIrLogin,
-  pendientesCompraNormal = 0, onIrCompraNormal,
-}) {
+export default function CarritoMarketplace({ header, carrito, onVolver, onVerProducto, onContinuarCatalogo, onIrLogin }) {
   const user = getUser();
   const esCliente = user?.rol === "CLIENTE";
-  const { catalogo, plataforma, mezclados } = carrito;
-  const vacio = catalogo.length === 0 && plataforma.length === 0;
+  const { catalogo } = carrito;
+  const vacio = catalogo.length === 0;
   const tiendas = porTienda(catalogo);
   const otras = useOtrasTiendas(carrito.items.map((x) => x.producto));
 
@@ -220,11 +216,6 @@ export default function CarritoMarketplace({
       clave: "tiendas", titulo: "Productos de las tiendas", detalle: `${tiendas.length} ${tiendas.length === 1 ? "tienda" : "tiendas"} · un solo pago`,
       cantidad: unidades(catalogo), subtotal: carrito.subtotalCatalogo, texto: "Continuar con el pago", onPagar: onContinuarCatalogo,
     },
-    plataforma.length > 0 && {
-      clave: "driveMaster", titulo: "Vendido por DriveMaster", detalle: "Se paga por la compra normal",
-      cantidad: unidades(plataforma), subtotal: carrito.subtotalPlataforma, texto: "Pagar productos de DriveMaster",
-      onPagar: () => onPagarPlataforma(plataforma),
-    },
   ].filter(Boolean);
 
   return (
@@ -252,49 +243,19 @@ export default function CarritoMarketplace({
             <h2>Tu carrito está vacío</h2>
             <p>Busca el repuesto que necesitas y compara precios entre tiendas de tu ciudad.</p>
             <button className="dm-btn dm-btn--primary" onClick={onVolver}>Ver el catálogo</button>
-            {pendientesCompraNormal > 0 && onIrCompraNormal && (
-              <p className="mk-vacio__ayuda">
-                Tienes {pendientesCompraNormal === 1 ? "un producto guardado" : `${pendientesCompraNormal} productos guardados`} en la compra normal.{" "}
-                <button className="mk-enlace" onClick={onIrCompraNormal}>Continuarla</button>
-              </p>
-            )}
           </div>
         ) : (
           <div className="mk-carrito">
             <div className="mk-carrito__lista">
-              {mezclados && (
-                <div className="mk-aviso mk-aviso--aviso" role="status">
-                  <strong>Estos productos se pagan por separado.</strong>{" "}
-                  Los de las tiendas con un solo pago; los «Vendido por DriveMaster» por la compra normal.
-                  Paga un grupo y el otro se queda aquí.
-                </div>
-              )}
-
-              {pendientesCompraNormal > 0 && (
-                <div className="mk-aviso mk-aviso--aviso" role="status">
-                  Tienes {pendientesCompraNormal === 1 ? "un producto guardado" : `${pendientesCompraNormal} productos guardados`} de una compra
-                  anterior en la <strong>compra normal</strong> de DriveMaster.{" "}
-                  {onIrCompraNormal && <button className="mk-enlace" onClick={onIrCompraNormal}>Continuar la compra normal</button>}
-                </div>
-              )}
-
               {catalogo.length > 0 && (
                 <section className="mk-seccion" aria-labelledby="mk-grupo-tiendas">
-                  <h2 id="mk-grupo-tiendas">{mezclados && <span className="mk-grupo__paso">Pago 1</span>} Productos de las tiendas</h2>
+                  <h2 id="mk-grupo-tiendas">Productos de las tiendas</h2>
                   {tiendas.map((g) => (
                     <TarjetaTienda key={g.tienda.id} grupo={g} otras={otras} onCambiar={carrito.cambiarCantidad} onQuitar={quitar} onVer={onVerProducto} />
                   ))}
                 </section>
               )}
 
-              {plataforma.length > 0 && (
-                <section className="mk-seccion" aria-labelledby="mk-grupo-driveMaster">
-                  <h2 id="mk-grupo-driveMaster">{mezclados && <span className="mk-grupo__paso">Pago 2</span>} Vendido por DriveMaster</h2>
-                  {porTienda(plataforma).map((g) => (
-                    <TarjetaTienda key={g.tienda.id} grupo={g} otras={otras} onCambiar={carrito.cambiarCantidad} onQuitar={quitar} onVer={onVerProducto} />
-                  ))}
-                </section>
-              )}
             </div>
 
             <aside className="mk-resumen" aria-label="Resumen del carrito">

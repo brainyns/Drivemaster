@@ -82,8 +82,6 @@ export default function ProductCard({ producto, onClick }) {
           </div>
         )}
 
-        {producto.esPlataforma && <span className="dm-card__top">Vendido por DriveMaster</span>}
-
         <span className="dm-card__open">
           <Icon name="plus" size={18} />
         </span>
@@ -91,7 +89,7 @@ export default function ProductCard({ producto, onClick }) {
 
       <div className="dm-card__info">
         <div className="dm-card__brand">
-          <span>{marca || tienda?.nombre || "DriveMaster"}</span>
+          <span>{marca || tienda?.nombre}</span>
           {producto.referencia && <em>REF. {producto.referencia}</em>}
         </div>
 
@@ -99,7 +97,7 @@ export default function ProductCard({ producto, onClick }) {
 
         {tienda && (
           <p className="dm-card__store">
-            {producto.esPlataforma ? "DriveMaster" : tienda.nombre} · {tienda.ciudad}
+            {tienda.nombre} · {tienda.ciudad}
           </p>
         )}
 

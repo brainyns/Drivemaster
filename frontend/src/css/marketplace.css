@@ -55,7 +55,6 @@
   padding: 3px 8px; border-radius: 999px; border: 1px solid var(--dm-line);
   background: var(--dm-surface-2); color: var(--dm-muted);
 }
-.mk-etiqueta--plataforma { background: var(--dm-orange); border-color: var(--dm-orange); color: var(--dm-on-accent); }
 .mk-etiqueta--ok { color: var(--dm-green); border-color: rgba(69, 118, 89, 0.6); background: rgba(69, 118, 89, 0.12); }
 .mk-etiqueta--error { color: var(--dm-red); border-color: rgba(201, 47, 47, 0.6); background: rgba(201, 47, 47, 0.1); }
 .mk-etiqueta--aviso { color: var(--dm-orange); border-color: rgba(242, 140, 40, 0.6); background: var(--dm-orange-soft); }

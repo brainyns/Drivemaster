@@ -32,9 +32,8 @@ import java.util.stream.Collectors;
  * Catálogo marketplace: los productos de TODAS las tiendas visibles, con su tienda, ciudad
  * y precio. Una tienda es visible si está aprobada, activa y tiene dirección, ciudad y
  * horario; las demás (incluidas las anteriores a la 4-A sin esos datos, marcadas "completar
- * datos") no muestran sus productos hasta completarlos. La tienda propia de DriveMaster entra con
- * la etiqueta "Vendido por DriveMaster" (esPlataforma), pero sus productos se siguen comprando por
- * la compra normal: el carrito del catálogo no los cobra (ver CompraCatalogoService).
+ * datos") no muestran sus productos hasta completarlos. DriveMaster es la aplicación, no una
+ * tienda: todos los productos son de una tienda y se compran con el carrito del catálogo.
  *
  * El mismo repuesto en varias tiendas se puede comparar (detalle → otrasTiendas). La
  * compatibilidad con el vehículo del cliente solo avisa y ordena: nunca oculta productos.
@@ -63,7 +62,7 @@ public class CatalogoService {
 
     // ─── Tiendas visibles ────────────────────────────────────────────────────
 
-    /** Aprobada, activa y con dirección, ciudad y horario. Incluye la tienda propia de DriveMaster. */
+    /** Aprobada, activa y con dirección, ciudad y horario. */
     public static boolean tiendaVisible(Tienda t) {
         return t != null
                 && EstadoAprobacion.estaAprobado(t.getEstadoAprobacion())
@@ -193,12 +192,12 @@ public class CatalogoService {
         return new ProductoCatalogoDTO(p.getId(), p.getNombre(), p.getMarca(), p.getCategoria(), p.getReferencia(),
                 p.getImagenUrl(), p.getPrecioVenta(), encargo ? "ENCARGO" : "STOCK", encargo || stock > 0,
                 encargo ? null : Math.min(stock, STOCK_VISIBLE_MAX), encargo ? p.getDiasEntregaEncargo() : null,
-                compatibilidad, aviso, aTiendaDTO(tienda), Boolean.TRUE.equals(tienda.getPlataforma()), null);
+                compatibilidad, aviso, aTiendaDTO(tienda), null);
     }
 
     public static TiendaCatalogoDTO aTiendaDTO(Tienda t) {
         return new TiendaCatalogoDTO(t.getId(), t.getNombre(), t.getCiudad(), t.getBarrio(), t.getDireccion(),
-                t.getHorario(), t.getCostoEnvio() != null, t.getCostoEnvio(), Boolean.TRUE.equals(t.getPlataforma()));
+                t.getHorario(), t.getCostoEnvio() != null, t.getCostoEnvio());
     }
 
     /** Mismo repuesto = misma referencia; sin referencia, mismo nombre. Sin distinguir mayúsculas ni tildes. */

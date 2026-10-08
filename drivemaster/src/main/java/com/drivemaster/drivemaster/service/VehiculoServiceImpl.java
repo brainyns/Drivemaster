@@ -5,6 +5,7 @@ import com.drivemaster.drivemaster.dto.CrearVehiculoRequest;
 import com.drivemaster.drivemaster.dto.RepuestoCompatibleDTO;
 import com.drivemaster.drivemaster.dto.VehiculoDTO;
 import com.drivemaster.drivemaster.model.Producto;
+import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.Vehiculo;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -90,16 +92,16 @@ public class VehiculoServiceImpl implements VehiculoService {
 
         List<Producto> candidatos = productoRepository.findByModeloCompatible(vehiculo.getModelo());
 
-        // Flujo de servicio V1: DriveMaster vende el repuesto, así que solo se ofrecen
-        // productos de su propia tienda. Las demás tiendas entran por el flujo marketplace.
-        String tiendaPlataformaId = tiendaService.obtenerPlataforma().getId();
+        // Se ofrecen los repuestos de TODAS las tiendas visibles (aprobadas, activas y con sus datos completos)
+        Map<String, Tienda> visibles = tiendaService.listarVisibles().stream()
+                .collect(Collectors.toMap(Tienda::getId, t -> t, (a, b) -> a));
 
         return candidatos.stream()
-                .filter(p -> p.getTiendaId() == null || tiendaPlataformaId.equals(p.getTiendaId()))
+                .filter(p -> p.getTiendaId() != null && visibles.containsKey(p.getTiendaId()))
                 .filter(p -> Boolean.TRUE.equals(p.getActivo()))
                 .filter(p -> p.getStockActual() != null && p.getStockActual() > 0)
                 .filter(p -> CompatibilidadVehiculo.esCompatible(p, vehiculo))
-                .map(this::toRepuestoDTO)
+                .map(p -> toRepuestoDTO(p, visibles.get(p.getTiendaId())))
                 .collect(Collectors.toList());
     }
 
@@ -113,9 +115,10 @@ public class VehiculoServiceImpl implements VehiculoService {
         return vehiculo;
     }
 
-    private RepuestoCompatibleDTO toRepuestoDTO(Producto p) {
+    private RepuestoCompatibleDTO toRepuestoDTO(Producto p, Tienda tienda) {
         return new RepuestoCompatibleDTO(p.getId(), p.getCodigo(), p.getNombre(), p.getCategoria(),
-                p.getMarca(), p.getPrecioVenta(), p.getStockActual(), p.getImagenUrl());
+                p.getMarca(), p.getPrecioVenta(), p.getStockActual(), p.getImagenUrl(),
+                tienda.getId(), tienda.getNombre(), tienda.getCiudad());
     }
 
     private VehiculoDTO toDTO(Vehiculo v) {

@@ -55,7 +55,7 @@ export default function CatalogFilters({
             <option value="">Todas</option>
             {tiendas.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.esPlataforma ? "DriveMaster" : t.nombre} · {t.ciudad}
+                {t.nombre} · {t.ciudad}
               </option>
             ))}
           </select>

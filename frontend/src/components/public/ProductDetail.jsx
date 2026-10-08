@@ -54,8 +54,7 @@ function BloqueCompatibilidad({ producto, vehiculo, onIrVehiculo }) {
 
 /**
  * Ficha de un producto del catálogo global: la tienda que lo vende (ciudad, dirección, horario y envío)
- * y el mismo repuesto en otras tiendas para comparar. Se agrega al carrito del catálogo; los productos
- * "Vendido por DriveMaster" se pagan por la compra normal, por separado de los de las demás tiendas.
+ * y el mismo repuesto en otras tiendas para comparar. Se agrega al carrito del catálogo.
  */
 export default function ProductDetail({
   producto: inicial,
@@ -65,7 +64,6 @@ export default function ProductDetail({
   onIrCarrito,
   onIrVehiculo,
   onAbrirProducto,
-  carritoMezclado = false,
 }) {
   const [cantidad, setCantidad] = useState(1);
   const [agregado, setAgregado] = useState(false);
@@ -117,13 +115,13 @@ export default function ProductDetail({
             </div>
           )}
           <span className="dm-detail__note">
-            {producto.esPlataforma ? "Vendido por DriveMaster" : `Vendido por ${tienda?.nombre}`}
+            Vendido por {tienda?.nombre}
           </span>
         </div>
 
         <div className="dm-detail__copy">
           <div className="dm-card__brand">
-            <span>{marca || tienda?.nombre || "DriveMaster"}</span>
+            <span>{marca || tienda?.nombre}</span>
             {producto.referencia && <em>REF. {producto.referencia}</em>}
           </div>
 
@@ -146,7 +144,7 @@ export default function ProductDetail({
             </div>
             {tienda && (
               <>
-                <div><dt>Tienda</dt><dd>{producto.esPlataforma ? "DriveMaster" : tienda.nombre} · {tienda.ciudad}</dd></div>
+                <div><dt>Tienda</dt><dd>{tienda.nombre} · {tienda.ciudad}</dd></div>
                 <div><dt>Retiro</dt><dd>{tienda.direccion} · {tienda.horario}</dd></div>
                 <div><dt>Envío</dt><dd>{tienda.ofreceEnvio ? `${formatPrecio(tienda.costoEnvio)} · solo dentro de ${tienda.ciudad}` : "Solo retiro en la tienda"}</dd></div>
               </>
@@ -196,13 +194,6 @@ export default function ProductDetail({
           {agregado && (
             <div className="dm-detail__msg" role="status">
               ¡Agregado al carrito!{" "}
-              {(carritoMezclado || producto.esPlataforma) && (
-                <span className="dm-detail__sep">
-                  {carritoMezclado
-                    ? "Estos productos se pagan por separado: los de DriveMaster por la compra normal y los de las demás tiendas con un solo pago."
-                    : "Los productos de DriveMaster se pagan por la compra normal, aparte de los de otras tiendas."}
-                </span>
-              )}
               <button className="dm-detail__go" onClick={onIrCarrito}>
                 Ir al carrito <Icon name="arrow" size={14} />
               </button>
@@ -214,7 +205,7 @@ export default function ProductDetail({
       <div className="dm-alternatives">
         <h3>El mismo repuesto en otras tiendas</h3>
         {otras.length === 0 ? (
-          <p>Por ahora solo lo vende {producto.esPlataforma ? "DriveMaster" : tienda?.nombre}.</p>
+          <p>Por ahora solo lo vende {tienda?.nombre}.</p>
         ) : (
           <>
             <p>Compara precio, ciudad y envío.</p>
@@ -224,7 +215,7 @@ export default function ProductDetail({
                   {a.imagenUrl ? <img src={a.imagenUrl} alt="" /> : <span className="dm-alternatives__ph"><Icon name="box" size={26} /></span>}
                   <span>
                     <small>
-                      {a.esPlataforma ? "Vendido por DriveMaster" : a.tienda.nombre} · {a.tienda.ciudad}
+                      {a.tienda.nombre} · {a.tienda.ciudad}
                       {a.tienda.ofreceEnvio ? ` · envío ${formatPrecio(a.tienda.costoEnvio)}` : " · solo retiro"}
                     </small>
                     <strong>{a.nombre}</strong>

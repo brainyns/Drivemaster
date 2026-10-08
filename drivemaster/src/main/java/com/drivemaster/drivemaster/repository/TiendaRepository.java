@@ -10,7 +10,5 @@ public interface TiendaRepository extends MongoRepository<Tienda, String> {
 
     Optional<Tienda> findByUsuarioId(String usuarioId);
 
-    Optional<Tienda> findFirstByPlataformaTrue();
-
     List<Tienda> findByEstadoAprobacion(String estadoAprobacion);
 }

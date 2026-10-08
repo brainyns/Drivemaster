@@ -144,12 +144,6 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
           <p>Elige cómo recibir el pedido de cada tienda. Pagas una sola vez con Wompi.</p>
         </div>
 
-        {carrito.plataforma.length > 0 && (
-          <p className="mk-aviso mk-aviso--aviso" role="status">
-            Tienes productos «Vendido por DriveMaster» en el carrito: se pagan por separado y siguen guardados.
-          </p>
-        )}
-
         {grupos.map((g) => {
           const t = g.tienda;
           const tipo = tipoDe(t.id);

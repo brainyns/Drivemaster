@@ -74,7 +74,7 @@ public class PlataformaNegociosService {
         Map<String, PlanActual> planes = planesActivos();
         List<NegocioFila> filas = new ArrayList<>();
         if (conTiendas) {
-            List<Tienda> tiendas = mongo.find(Query.query(filtro(Criteria.where("plataforma").ne(true), e, q, "ciudad")), Tienda.class);
+            List<Tienda> tiendas = mongo.find(Query.query(filtro(new Criteria(), e, q, "ciudad")), Tienda.class);
             Map<String, Long> total = conteoPor(Producto.class, "tiendaId", null);
             Map<String, Long> activos = conteoPor(Producto.class, "tiendaId", Criteria.where("activo").ne(false));
             for (Tienda x : tiendas) {
@@ -117,7 +117,7 @@ public class PlataformaNegociosService {
     public List<NegocioPendiente> pendientes() {
         List<NegocioPendiente> r = new ArrayList<>();
         Criteria pendiente = Criteria.where("estadoAprobacion").is(EstadoAprobacion.PENDIENTE);
-        for (Tienda x : mongo.find(Query.query(new Criteria().andOperator(Criteria.where("plataforma").ne(true), pendiente)), Tienda.class)) {
+        for (Tienda x : mongo.find(Query.query(new Criteria().andOperator(new Criteria(), pendiente)), Tienda.class)) {
             r.add(new NegocioPendiente(TIENDA, x.getId(), x.getNombre(), x.getCiudad(), x.getDireccion(), x.getNit(),
                     x.getFechaRegistro(), faltantesTienda(x)));
         }
@@ -175,7 +175,7 @@ public class PlataformaNegociosService {
     private Map<String, Long> conteos() {
         Map<String, Long> r = new LinkedHashMap<>();
         for (String e : List.of(EstadoAprobacion.PENDIENTE, EstadoAprobacion.APROBADO, EstadoAprobacion.RECHAZADO)) {
-            r.put(e, mongo.count(Query.query(filtro(Criteria.where("plataforma").ne(true), e, null, "ciudad")), Tienda.class)
+            r.put(e, mongo.count(Query.query(filtro(new Criteria(), e, null, "ciudad")), Tienda.class)
                     + mongo.count(Query.query(filtro(new Criteria(), e, null, "ciudad")), Taller.class));
         }
         return r;

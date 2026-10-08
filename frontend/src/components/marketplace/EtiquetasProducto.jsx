@@ -22,8 +22,6 @@ export function AvisoCompatibilidad({ producto }) {
 }
 
 export function EtiquetaVendedor({ producto }) {
-  return producto.esPlataforma
-    ? <span className="mk-etiqueta mk-etiqueta--plataforma">Vendido por DriveMaster</span>
-    : <span className="mk-etiqueta">{producto.tienda?.nombre}</span>;
+  return <span className="mk-etiqueta">{producto.tienda?.nombre}</span>;
 }
 

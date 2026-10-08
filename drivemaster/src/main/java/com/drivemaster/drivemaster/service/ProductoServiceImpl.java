@@ -38,9 +38,10 @@ public class ProductoServiceImpl implements ProductoService {
     @Override
     public Producto crearProducto(Producto producto) {
 
-        // Sin tienda indicada (alta desde el panel interno) es de la tienda de DriveMaster.
+        // DriveMaster no es una tienda: todo producto pertenece a una tienda y quien lo crea tiene que indicarla
         if (producto.getTiendaId() == null || producto.getTiendaId().isBlank()) {
-            producto.setTiendaId(tiendaService.obtenerPlataforma().getId());
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "El producto necesita una tienda: los productos los crea cada tienda desde su panel");
         }
 
         producto.setFechaCreacion(java.time.LocalDateTime.now());
@@ -97,7 +98,35 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     public List<Producto> listarCatalogoPublico() {
-        return productoRepository.findCatalogoPlataforma(tiendaService.obtenerPlataforma().getId());
+        // Productos activos de las tiendas visibles, sin datos internos (costo, proveedor, ubicación)
+        java.util.Set<String> visibles = tiendaService.listarVisibles().stream().map(com.drivemaster.drivemaster.model.Tienda::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        if (visibles.isEmpty()) return List.of();
+        return productoRepository.findByTiendaIdIn(visibles).stream()
+                .filter(p -> !Boolean.FALSE.equals(p.getActivo()))
+                .map(ProductoServiceImpl::sinDatosInternos)
+                .toList();
+    }
+
+    /** Copia pública del producto: nunca expone precio de compra, proveedor, ubicación ni stock mínimo. */
+    static Producto sinDatosInternos(Producto p) {
+        Producto c = new Producto();
+        c.setId(p.getId());
+        c.setCodigo(p.getCodigo());
+        c.setNombre(p.getNombre());
+        c.setCategoria(p.getCategoria());
+        c.setMarca(p.getMarca());
+        c.setModelosCompatibles(p.getModelosCompatibles());
+        c.setPrecioVenta(p.getPrecioVenta());
+        c.setStockActual(p.getStockActual());
+        c.setTipo(p.getTipo());
+        c.setActivo(p.getActivo());
+        c.setImagenUrl(p.getImagenUrl());
+        c.setTiendaId(p.getTiendaId());
+        c.setReferencia(p.getReferencia());
+        c.setDiasEntregaEncargo(p.getDiasEntregaEncargo());
+        c.setCompatibilidadUniversal(p.getCompatibilidadUniversal());
+        return c;
     }
 
     @Override

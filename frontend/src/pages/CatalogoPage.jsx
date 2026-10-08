@@ -344,15 +344,6 @@ export default function CatalogoPage({
                     </div>
                   ) : (
                     <>
-                      {carrito?.mezclados && (
-                        <p className="dm-aviso" role="status">
-                          <span>
-                            <strong>Estos productos se pagan por separado.</strong> Tu carrito tiene productos de DriveMaster
-                            (compra normal) y de otras tiendas (un solo pago): paga cada grupo sin perder el otro.
-                          </span>
-                          <button onClick={onIrCarrito}>Ver carrito</button>
-                        </p>
-                      )}
                       <ProductList
                         productos={filtrados}
                         titulo="No encontramos repuestos con estos filtros."
@@ -400,7 +391,6 @@ export default function CatalogoPage({
           onIrCarrito={() => { setProductoSeleccionado(null); onIrCarrito?.(); }}
           onIrVehiculo={() => { setProductoSeleccionado(null); irAlVehiculo(); }}
           onAbrirProducto={abrirProducto}
-          carritoMezclado={!!carrito?.mezclados}
         />
       )}
     </div>
