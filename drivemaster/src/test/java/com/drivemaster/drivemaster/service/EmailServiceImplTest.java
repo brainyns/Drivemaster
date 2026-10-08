@@ -59,7 +59,11 @@ class EmailServiceImplTest {
     }
 
     private EmailServiceImpl servicio(String clave, boolean devLog) {
-        return new EmailServiceImpl(rest, clave, "remitente@drivemaster.co", "DriveMaster", devLog);
+        return servicio(clave, devLog, false);
+    }
+
+    private EmailServiceImpl servicio(String clave, boolean devLog, boolean omitirEnvio) {
+        return new EmailServiceImpl(rest, clave, "remitente@drivemaster.co", "DriveMaster", devLog, omitirEnvio);
     }
 
     private String todoElLog() {
@@ -132,39 +136,80 @@ class EmailServiceImplTest {
         assertTrue(todoElLog().contains("sin conexión con Brevo"));
     }
 
-    // ─── Modo solo desarrollo ────────────────────────────────────────────────
+    // ─── Variables solo para desarrollo (independientes y apagadas por defecto) ──
 
     @Test
-    void enModoDesarrolloNoSeEnviaNadaYSeRegistraAsuntoYDestinatario() {
-        EmailServiceImpl s = servicio(CLAVE, true);
+    void mailDevLogRegistraAsuntoYDestinatarioPeroSigueEnviando() {
+        brevo.expect(requestTo(URL)).andExpect(jsonPath("$.to[0].email").value("steven@demo.com"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        servicio(CLAVE, true, false).enviarEmail("steven@demo.com", "Tu comprobante", CONTENIDO);
+
+        brevo.verify(); // sí llamó a Brevo
+        String log = todoElLog();
+        assertTrue(log.contains("steven@demo.com") && log.contains("Tu comprobante"));
+        assertFalse(log.contains("ZZTOP-9999"), "el contenido del correo no se registra");
+        assertFalse(log.contains(CLAVE));
+    }
+
+    @Test
+    void mailDevSkipSendOmiteElEnvioSinRegistrarElDestinatario() {
+        EmailServiceImpl s = servicio(CLAVE, false, true);
 
         s.enviarEmail("steven@demo.com", "Tu comprobante", CONTENIDO);
         s.enviarEmailConAdjunto("ana@demo.com", "Factura", CONTENIDO, new byte[]{1, 2}, "f.pdf");
 
         brevo.verify(); // sin llamadas a Brevo
         String log = todoElLog();
-        assertTrue(log.contains("steven@demo.com") && log.contains("Tu comprobante"));
-        assertTrue(log.contains("ana@demo.com") && log.contains("Factura"));
-        assertFalse(log.contains("ZZTOP-9999"), "el contenido del correo no se registra");
+        assertTrue(log.contains("MAIL_DEV_SKIP_SEND"));
+        assertFalse(log.contains("steven@demo.com") || log.contains("ana@demo.com"),
+                "sin MAIL_DEV_LOG no se registran destinatarios");
     }
 
     @Test
-    void elModoDesarrolloVieneApagadoPorDefecto() throws Exception {
+    void conAmbasActivasSeRegistraYNoSeEnvia() {
+        servicio(CLAVE, true, true).enviarEmail("steven@demo.com", "Tu comprobante", CONTENIDO);
+
+        brevo.verify();
+        String log = todoElLog();
+        assertTrue(log.contains("steven@demo.com") && log.contains("Tu comprobante") && log.contains("NO se envía"));
+    }
+
+    @Test
+    void ambasVariablesVienenApagadasPorDefecto() throws Exception {
         var props = new java.util.Properties();
         try (var in = getClass().getResourceAsStream("/application.properties")) {
             props.load(in);
         }
         assertEquals("${MAIL_DEV_LOG:false}", props.getProperty("mail.dev-log"));
+        assertEquals("${MAIL_DEV_SKIP_SEND:false}", props.getProperty("mail.dev-skip-send"));
+    }
+
+    @Test
+    void brevoTieneTimeoutsDeConexionYLectura() {
+        var brevoRest = new com.drivemaster.drivemaster.config.RestTemplateConfig().brevoRestTemplate();
+        var fabrica = brevoRest.getRequestFactory();
+        assertEquals(com.drivemaster.drivemaster.config.RestTemplateConfig.BREVO_CONNECT_TIMEOUT_MS,
+                ReflectionTestUtils.getField(fabrica, "connectTimeout"));
+        assertEquals(com.drivemaster.drivemaster.config.RestTemplateConfig.BREVO_READ_TIMEOUT_MS,
+                ReflectionTestUtils.getField(fabrica, "readTimeout"));
+        assertTrue(com.drivemaster.drivemaster.config.RestTemplateConfig.BREVO_CONNECT_TIMEOUT_MS > 0
+                && com.drivemaster.drivemaster.config.RestTemplateConfig.BREVO_READ_TIMEOUT_MS > 0);
     }
 
     // ─── Código de retiro: solo en modo desarrollo y solo en el log ──────────
 
     private AvisosSolicitudServicio avisos(boolean devLog, EmailsService correo) {
+        return avisos(devLog, "pub_test_abc", correo);
+    }
+
+    private AvisosSolicitudServicio avisos(boolean devLog, String llavePublica, EmailsService correo) {
         UsuarioRepository usuarios = mock(UsuarioRepository.class);
         when(usuarios.findById("u1")).thenReturn(Optional.of(Usuario.builder().id("u1").nombre("Ana").correo("ana@demo.com").build()));
         AvisosSolicitudServicio a = new AvisosSolicitudServicio(correo, usuarios, mock(TallerRepository.class),
                 mock(TiendaRepository.class), "http://localhost:5173");
         ReflectionTestUtils.setField(a, "devLog", devLog);
+        ReflectionTestUtils.setField(a, "wompiPublicKey", llavePublica);
         return a;
     }
 
@@ -194,6 +239,18 @@ class EmailServiceImplTest {
 
         // En ambos casos el correo real sigue el camino normal (el código viaja solo en el correo)
         verify(correo, times(2)).enviarEmail(eq("ana@demo.com"), anyString(), any());
+    }
+
+    @Test
+    void conLlavesDeProduccionElCodigoNuncaVaAlLogAunConMailDevLog() {
+        PedidoTienda pedido = PedidoTienda.builder().id("ped-1").clienteId("u1").tiendaNombre("T").build();
+        EmailsService correo = mock(EmailsService.class);
+
+        for (String llave : new String[]{"pub_prod_abc", "", null}) {
+            List<String> log = logDeAvisos(() -> avisos(true, llave, correo).codigoRetiroNuevo(pedido, "ABCD-1234"));
+            assertTrue(log.stream().noneMatch(m -> m.contains("ABCD-1234")), "llave " + llave);
+        }
+        verify(correo, times(3)).enviarEmail(eq("ana@demo.com"), anyString(), any());
     }
 
     @Test
