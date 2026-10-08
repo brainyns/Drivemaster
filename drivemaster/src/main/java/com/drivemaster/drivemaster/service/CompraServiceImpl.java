@@ -5,12 +5,15 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.drivemaster.drivemaster.model.Compra;
 import com.drivemaster.drivemaster.model.DetalleCompra;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Proveedor;
+import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.repository.CompraRepository;
 import com.drivemaster.drivemaster.util.PdfCompraBuilder;
 
@@ -39,12 +42,30 @@ public class CompraServiceImpl implements CompraService {
     }
 
     @Override
-    public Compra registrarCompra(Compra compra) {
+    public Compra registrarCompra(Compra compra, Tienda tienda) {
+        if (tienda == null || tienda.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Falta la tienda dueña");
+        }
+        if (compra.getProductos() == null || compra.getProductos().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La compra necesita al menos un producto");
+        }
+        // El proveedor tiene que ser de esta tienda (404 si es de otra: no se revela que existe)
+        proveedorService.obtenerDeTienda(compra.getProveedorId(), tienda.getId());
+
+        compra.setId(null); // siempre es nueva
+        compra.setTiendaId(tienda.getId());
+        compra.setUsuarioId(tienda.getUsuarioId()); // el usuario sale de la sesión, no del cuerpo de la petición
         compra.setFecha(LocalDateTime.now());
 
         double total = 0;
         for (DetalleCompra detalle : compra.getProductos()) {
+            if (detalle.getCantidad() == null || detalle.getCantidad() <= 0 || detalle.getCosto() == null || detalle.getCosto() < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cada producto necesita una cantidad mayor que cero y un costo válido");
+            }
             Producto producto = productoService.obtenerPorId(detalle.getProductoId());
+            if (!tienda.getId().equals(producto.getTiendaId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Este producto no pertenece a tu tienda");
+            }
             double subtotal   = detalle.getCosto() * detalle.getCantidad();
             detalle.setNombre(producto.getNombre());
             detalle.setSubtotal(subtotal);
@@ -69,7 +90,7 @@ public class CompraServiceImpl implements CompraService {
                         .substring(Math.max(0, compraGuardada.getId().length() - 5))
                         .toUpperCase();
                 String html = "<div style='font-family:sans-serif;max-width:600px;margin:0 auto'>"
-                        + "<h2 style='color:#E8450A'>DriveMaster</h2>"
+                        + "<h2 style='color:#E8450A'>" + org.springframework.web.util.HtmlUtils.htmlEscape(tienda.getNombre() != null ? tienda.getNombre() : "DriveMaster") + "</h2>"
                         + "<p>Estimado proveedor <strong>" + prov.getNombre() + "</strong>,</p>"
                         + "<p>Adjunto encontrará la orden de compra <strong>" + poId + "</strong> registrada en nuestro sistema.</p>"
                         + "<table style='width:100%;border-collapse:collapse;margin:1rem 0'>"
@@ -93,6 +114,27 @@ public class CompraServiceImpl implements CompraService {
         }
 
         return compraGuardada;
+    }
+
+    @Override
+    public Compra obtenerDeTienda(String id, String tiendaId) {
+        return compraRepository.findById(id)
+                .filter(c -> tiendaId != null && tiendaId.equals(c.getTiendaId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Compra no encontrada"));
+    }
+
+    @Override
+    public List<Compra> listarDeTienda(String tiendaId) {
+        if (tiendaId == null || tiendaId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Falta la tienda dueña");
+        }
+        return compraRepository.findByTiendaIdOrderByFechaDesc(tiendaId);
+    }
+
+    @Override
+    public byte[] generarPdfDeTienda(String id, String tiendaId) {
+        obtenerDeTienda(id, tiendaId); // 404 si no es suya
+        return generarPdf(id);
     }
 
     @Override

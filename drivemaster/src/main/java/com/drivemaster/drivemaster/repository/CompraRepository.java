@@ -16,4 +16,5 @@ public interface CompraRepository extends MongoRepository<Compra, String> {
     List<Compra> findByProveedorId(String proveedorId);
 
     List<Compra> findByUsuarioId(String usuarioId);
+    List<Compra> findByTiendaIdOrderByFechaDesc(String tiendaId);
 }

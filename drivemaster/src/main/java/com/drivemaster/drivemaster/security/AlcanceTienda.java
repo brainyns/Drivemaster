@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.security;
 
 import com.drivemaster.drivemaster.model.Producto;
+import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.service.ProductoService;
 import com.drivemaster.drivemaster.service.TiendaService;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,17 @@ public class AlcanceTienda {
     /** Id de la tienda del usuario TIENDA; null para el personal interno (sin restricción). */
     public String tiendaId(Authentication auth) {
         return esTienda(auth) ? tiendaService.obtenerOperativaPorUsuario(auth.getName()).getId() : null;
+    }
+
+    /**
+     * La tienda del usuario, ya aprobada y operativa. 403 si quien llama no es una TIENDA: compras, proveedores e
+     * inventario son de cada tienda y no tienen vista de personal interno.
+     */
+    public Tienda tienda(Authentication auth) {
+        if (!esTienda(auth)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo la tienda dueña puede ver y gestionar esta información");
+        }
+        return tiendaService.obtenerOperativaPorUsuario(auth.getName());
     }
 
     /** Carga el producto y verifica que el usuario pueda gestionarlo (403 si es de otra tienda). */
