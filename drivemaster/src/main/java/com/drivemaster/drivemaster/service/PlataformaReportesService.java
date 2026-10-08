@@ -212,13 +212,15 @@ public class PlataformaReportesService {
     ComisionNeta comisionNeta(int meses, YearMonth hasta, LocalDateTime ahora) {
         int m = meses(meses);
         List<String> lista = mesesHasta(hasta, m);
-        LocalDateTime desde = hasta.minusMonths(m - 1L).atDay(1).atStartOfDay();
+        // Inicio del primer mes en hora de Colombia, expresado en la hora del servidor (así se guardan las fechas)
+        LocalDateTime desde = hasta.minusMonths(m - 1L).atDay(1).atStartOfDay(ZONA)
+                .withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
         Map<String, double[]> porMes = new TreeMap<>(); // [registrada, anulada]
         lista.forEach(mes -> porMes.put(mes, new double[2]));
         Map<String, Double> porConcepto = new TreeMap<>();
         for (RepartoPago r : repartoRepository.comisionDesde(desde)) {
             if (r.getFechaCreacion() == null || r.getMonto() == null) continue;
-            String mes = YearMonth.from(r.getFechaCreacion()).toString();
+            String mes = mesEnColombia(r.getFechaCreacion()).toString();
             double[] acumulado = porMes.get(mes);
             if (acumulado == null) continue;
             if (r.getMonto() >= 0) acumulado[0] += r.getMonto();
@@ -234,6 +236,14 @@ public class PlataformaReportesService {
     }
 
     // ─── Utilidades ──────────────────────────────────────────────────────────
+
+    /**
+     * Mes calendario en hora de Colombia (UTC-5) de una fecha guardada en la hora del servidor. Sin esta conversión,
+     * un servidor en UTC pasaría al mes siguiente una compra hecha a las 7 p. m. del último día.
+     */
+    static YearMonth mesEnColombia(LocalDateTime fechaDelServidor) {
+        return YearMonth.from(fechaDelServidor.atZone(ZoneId.systemDefault()).withZoneSameInstant(ZONA));
+    }
 
     /** "Ana Pérez Gómez" → "Ana P." */
     static String abreviar(String nombre) {

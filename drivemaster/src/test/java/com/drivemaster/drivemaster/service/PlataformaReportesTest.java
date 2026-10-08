@@ -88,6 +88,92 @@ class PlataformaReportesTest {
         assertFalse(p.toLowerCase().contains("venta\""), "no se calcula sobre Venta");
     }
 
+    // ─── Zona horaria de Colombia (UTC-5) ────────────────────────────────────
+
+    private Document etapa(Aggregation a, String operador) {
+        return a.toPipeline(Aggregation.DEFAULT_CONTEXT).stream().filter(d -> d.containsKey(operador)).findFirst().orElseThrow();
+    }
+
+    @Test
+    void elAgrupadoPorMesDeLasVentasUsaLaHoraDeColombiaYElInicioDelPeriodoTambien() {
+        AggregationResults<Document> vacio = resultado();
+        when(mongo.aggregate(any(Aggregation.class), eq("pedidos_tienda"), eq(Document.class))).thenReturn(vacio);
+
+        reportes.ventasPorTienda(1, OCT_2026);
+
+        ArgumentCaptor<Aggregation> agg = ArgumentCaptor.forClass(Aggregation.class);
+        verify(mongo).aggregate(agg.capture(), eq("pedidos_tienda"), eq(Document.class));
+
+        // 1. El mes se calcula con $dateToString en America/Bogota
+        Document mes = (Document) ((Document) ((Document) etapa(agg.getValue(), "$project").get("$project")).get("mes")).get("$dateToString");
+        assertEquals("America/Bogota", mes.getString("timezone"));
+        assertEquals("%Y-%m", mes.getString("format"));
+        java.time.ZoneId zona = java.time.ZoneId.of(mes.getString("timezone"));
+        java.time.format.DateTimeFormatter formato = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM");
+
+        // Compra a las 11 p. m. del 31 de octubre en Colombia = 1 de noviembre 04:00 UTC: sigue siendo octubre
+        Instant onceDeLaNoche = Instant.parse("2026-11-01T04:00:00Z");
+        assertEquals("2026-10", formato.format(onceDeLaNoche.atZone(zona)), "cae en el mes en que se hizo");
+        assertEquals("2026-11", formato.format(onceDeLaNoche.atZone(java.time.ZoneOffset.UTC)), "en UTC habría caído en el siguiente");
+        // Un minuto después de la medianoche de Colombia ya es noviembre
+        assertEquals("2026-11", formato.format(Instant.parse("2026-11-01T05:00:00Z").atZone(zona)));
+
+        // 2. El período arranca a las 00:00 de Colombia del primer mes (05:00 UTC), no a las 00:00 UTC
+        Document filtro = (Document) etapa(agg.getValue(), "$match").get("$match");
+        java.util.Date gte = (java.util.Date) ((Document) filtro.get("fechaCreacion")).get("$gte");
+        assertEquals(Instant.parse("2026-10-01T05:00:00Z"), gte.toInstant());
+    }
+
+    private ComisionNeta comisionConServidorEn(String zonaDelServidor, List<RepartoPago> lineas, YearMonth hasta, int meses) {
+        java.util.TimeZone original = java.util.TimeZone.getDefault();
+        try {
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone(zonaDelServidor));
+            when(repartos.comisionDesde(any())).thenReturn(lineas);
+            return reportes.comisionNeta(meses, hasta, LocalDateTime.of(2026, 11, 5, 9, 0));
+        } finally {
+            java.util.TimeZone.setDefault(original);
+        }
+    }
+
+    @Test
+    void laComisionDeUnaCompraDeLas11PMDelUltimoDiaCaeEnSuMesAunqueElServidorEsteEnUTC() {
+        // Servidor en UTC (como Render): una compra a las 11 p. m. del 31 de octubre en Colombia se guarda como 01-nov 04:00
+        ComisionNeta utc = comisionConServidorEn("UTC", List.of(
+                linea(LocalDateTime.of(2026, 11, 1, 4, 0), 7_000, "CATALOGO"),   // 23:00 del 31-oct en Colombia
+                linea(LocalDateTime.of(2026, 11, 1, 5, 0), 3_000, "CATALOGO")),  // 00:00 del 1-nov en Colombia
+                OCT_2026.plusMonths(1), 2);
+
+        assertEquals(List.of("2026-10", "2026-11"), utc.meses().stream().map(m -> m.mes()).toList());
+        assertEquals(7_000.0, utc.meses().get(0).neta(), "las 11 p. m. del 31 de octubre son de octubre");
+        assertEquals(3_000.0, utc.meses().get(1).neta(), "la medianoche de Colombia ya es noviembre");
+
+        // Servidor en hora de Colombia: la misma compra se guarda como 31-oct 23:00 y da el mismo resultado
+        ComisionNeta bogota = comisionConServidorEn("America/Bogota", List.of(
+                linea(LocalDateTime.of(2026, 10, 31, 23, 0), 7_000, "CATALOGO"),
+                linea(LocalDateTime.of(2026, 11, 1, 0, 0), 3_000, "CATALOGO")),
+                OCT_2026.plusMonths(1), 2);
+        assertEquals(7_000.0, bogota.meses().get(0).neta());
+        assertEquals(3_000.0, bogota.meses().get(1).neta());
+    }
+
+    @Test
+    void laComisionPideDesdeElInicioDelPrimerMesEnColombiaYNoDesdeLasCeroDelServidor() {
+        java.util.TimeZone original = java.util.TimeZone.getDefault();
+        try {
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("UTC"));
+            when(repartos.comisionDesde(any())).thenReturn(List.of());
+
+            reportes.comisionNeta(1, OCT_2026, LocalDateTime.of(2026, 10, 10, 9, 0));
+
+            ArgumentCaptor<LocalDateTime> desde = ArgumentCaptor.forClass(LocalDateTime.class);
+            verify(repartos).comisionDesde(desde.capture());
+            // 1-oct 00:00 en Colombia = 05:00 en un servidor UTC
+            assertEquals(LocalDateTime.of(2026, 10, 1, 5, 0), desde.getValue());
+        } finally {
+            java.util.TimeZone.setDefault(original);
+        }
+    }
+
     // ─── Productos más vendidos ──────────────────────────────────────────────
 
     @Test
