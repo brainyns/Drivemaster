@@ -116,6 +116,7 @@ const TITULOS = {
   "taller-panel":    "Inicio del taller",
   "taller-inicio":   "Inicio del taller",
   "taller-solicitudes": "Solicitudes",
+  "taller-trabajos": "Trabajos",
   "taller-mitaller": "Mi taller",
   "taller-anteriores": "Órdenes anteriores",
   "admin-talleres":  "Servicios",
@@ -142,6 +143,7 @@ const PAGINAS_MARKETPLACE = ["producto-marketplace", "carrito-marketplace"];
 const SECCION_TALLER = {
   "taller-inicio":      "inicio",
   "taller-solicitudes": "solicitudes",
+  "taller-trabajos":    "trabajos",
   "taller-mitaller":    "mitaller",
   "taller-anteriores":  "anteriores",
 };

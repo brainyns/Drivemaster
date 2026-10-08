@@ -85,13 +85,13 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
               valor={datos.enTaller.length}
               pie={datos.enTaller.length > 0 ? "Vehículos con los repuestos ya en el taller" : "Ningún vehículo en el taller ahora"}
               tono={datos.enTaller.length > 0 ? "vivo" : undefined}
-              onClick={() => irA("taller-solicitudes", "encurso")}
+              onClick={() => irA("taller-trabajos", "entaller")}
             />
             <Tarjeta
               titulo="Pendientes de repuestos"
               valor={datos.repuestos.length}
               pie={datos.repuestos.length > 0 ? "Confirma la recepción cuando lleguen" : "No esperas ningún pedido"}
-              onClick={() => irA("taller-solicitudes", "encurso")}
+              onClick={() => irA("taller-trabajos", "repuestos")}
             />
           </div>
 

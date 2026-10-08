@@ -55,6 +55,7 @@ const menu = [
 const MENU_TALLER = [
   { key: "taller-inicio",      label: "Inicio",      icon: "dashboard" },
   { key: "taller-solicitudes", label: "Solicitudes", icon: "aprobaciones" },
+  { key: "taller-trabajos",    label: "Trabajos",    icon: "taller" },
   { key: "taller-mitaller",    label: "Mi taller",   icon: "admin" },
   { key: "taller-anteriores",  label: "Órdenes anteriores", icon: "ventas" },
 ];

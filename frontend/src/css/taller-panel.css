@@ -140,3 +140,48 @@ html[data-theme="light"] .tp-root {
   .tp-tarjeta, .tp-tarjeta__flecha, .tp-aviso { transition: none; }
   .tp-esqueleto__tarjeta, .tp-esqueleto__bloque { animation: none; }
 }
+
+/* ── Barra de filtros y búsqueda ──────────────────────────────────────────── */
+.tp-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1rem; margin-bottom: 1rem; }
+.tp-barra .ss-filtros { margin-bottom: 0; }
+
+.tp-busqueda {
+  flex: 1 1 220px;
+  max-width: 340px;
+  padding: .55rem .8rem;
+  font: inherit;
+  font-size: .9rem;
+  color: var(--tp-texto);
+  background: var(--tp-superficie);
+  border: 1px solid var(--tp-linea);
+  border-radius: 10px;
+  transition: border-color .18s var(--tp-ease);
+}
+.tp-busqueda:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 1px; border-color: var(--tp-info); }
+
+/* ── Tarjeta de trabajo ───────────────────────────────────────────────────── */
+.tp-trabajo { display: flex; flex-direction: column; gap: .8rem; cursor: default; }
+.tp-trabajo__abrir {
+  display: flex; flex-direction: column; gap: .3rem; padding: 0; text-align: left;
+  font: inherit; color: inherit; background: none; border: 0; cursor: pointer;
+}
+.tp-trabajo__abrir:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 3px; border-radius: 8px; }
+.tp-trabajo__acciones { display: flex; flex-wrap: wrap; gap: .6rem; }
+.tp-trabajo__acciones .sv-btn, .tp-trabajo__acciones .sv-btn-outline { transition: transform .18s var(--tp-ease); }
+.tp-trabajo__acciones .sv-btn:active, .tp-trabajo__acciones .sv-btn-outline:active { transform: scale(.97); }
+.tp-trabajo__linea { padding-top: .6rem; border-top: 1px solid var(--tp-linea); animation: tp-despliegue .25s var(--tp-ease) both; }
+@keyframes tp-despliegue { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* Avance por pasos: lo hecho en azul, el paso actual con el acento */
+.tp-pasos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 0; padding: 0; list-style: none; }
+.tp-pasos__paso { display: flex; flex-direction: column; gap: .35rem; font-size: .74rem; color: var(--tp-texto-2); }
+.tp-pasos__marca { height: 5px; border-radius: 999px; background: var(--tp-linea); transition: background .25s var(--tp-ease); }
+.tp-pasos__paso--hecho .tp-pasos__marca { background: var(--tp-info); }
+.tp-pasos__paso--actual { color: var(--tp-texto); font-weight: 700; }
+.tp-pasos__paso--actual .tp-pasos__marca { background: var(--tp-acento); }
+
+@media (max-width: 520px) { .tp-pasos__nombre { font-size: .68rem; } }
+@media (prefers-reduced-motion: reduce) {
+  .tp-trabajo__linea { animation: none; }
+  .tp-pasos__marca, .tp-busqueda, .tp-trabajo__acciones .sv-btn, .tp-trabajo__acciones .sv-btn-outline { transition: none; }
+}
