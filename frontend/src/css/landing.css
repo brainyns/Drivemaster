@@ -326,6 +326,55 @@
   max-width: 236px;
 }
 
+/* ── Entrega de repuestos: dos casos, cada uno con su texto ─────────────── */
+.dm-entrega {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1.25fr;
+  gap: 0;
+  margin-bottom: 49px;
+  background: var(--dm-surface);
+  border: 1px solid var(--dm-line);
+  border-radius: 6px;
+}
+
+.dm-entrega__titulo {
+  padding: 26px 26px 26px 28px;
+  border-right: 1px solid var(--dm-line);
+}
+
+.dm-entrega__titulo > svg {
+  color: var(--dm-orange-hover);
+  margin-bottom: 15px;
+  stroke-width: 1.4;
+}
+
+.dm-entrega__titulo h3 {
+  font-size: 19px;
+  letter-spacing: -0.6px;
+}
+
+.dm-entrega__titulo h3 > span { color: var(--dm-orange); }
+
+.dm-entrega__caso {
+  padding: 26px 28px;
+}
+
+.dm-entrega__caso + .dm-entrega__caso { border-left: 1px solid var(--dm-line); }
+
+.dm-entrega__caso h4 {
+  font-size: 14px;
+  letter-spacing: -0.2px;
+  margin-bottom: 8px;
+}
+
+.dm-entrega__caso p {
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--dm-muted);
+  max-width: 44ch;
+  text-wrap: pretty;
+}
+
 /* ── Métricas ───────────────────────────────────────────────────────────── */
 .dm-metrics {
   background: var(--dm-surface);
@@ -549,6 +598,9 @@
 }
 
 @media (max-width: 1000px) {
+  .dm-entrega { grid-template-columns: 1fr 1fr; }
+  .dm-entrega__titulo { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--dm-line); }
+  .dm-entrega__caso:nth-child(2) { border-left: 0; }
   .dm-marcas { padding-right: 0; gap: 18px; }
   .dm-marcas__label { font-size: 9px; letter-spacing: 1px; }
   .dm-marcas__logo { font-size: 18px; }
@@ -620,6 +672,10 @@
   .dm-eco__copy > p { font-size: 11px; max-width: 100%; margin-bottom: 21px; }
 
   .dm-benefits { grid-template-columns: 1fr 1fr; gap: 29px 25px; margin-top: 30px; margin-bottom: 34px; }
+  .dm-entrega { grid-template-columns: 1fr; margin-bottom: 34px; }
+  .dm-entrega__titulo { border-right: 0; border-bottom: 1px solid var(--dm-line); padding: 20px; }
+  .dm-entrega__caso { padding: 20px; }
+  .dm-entrega__caso + .dm-entrega__caso { border-left: 0; border-top: 1px solid var(--dm-line); }
   .dm-benefit { padding: 0; border: 0; }
   .dm-benefit > svg { width: 24px; margin-bottom: 11px; }
   .dm-benefit h3 { font-size: 19px; }

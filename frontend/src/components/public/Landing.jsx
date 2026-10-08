@@ -65,7 +65,7 @@ export function Pasos({ onSolicitarDiagnostico, onIrServicios }) {
     {
       icon: "box",
       title: "Repuestos de tiendas",
-      text: "El taller compara el inventario de todas las tiendas registradas y elige por disponibilidad, cercanía y precio.",
+      text: "El taller compara el inventario de las tiendas registradas y elige por disponibilidad, cercanía y precio. Cada tienda despacha los repuestos directo al taller.",
       action: "MEJOR OPCIÓN",
       onClick: onIrServicios,
     },
@@ -300,6 +300,29 @@ export function Beneficios({ productos = [], onIrVehiculo }) {
             <p>{b.text}</p>
           </div>
         ))}
+      </div>
+
+      <div className="dm-entrega">
+        <div className="dm-entrega__titulo">
+          <Icon name="box" size={25} />
+          <h3>
+            Cómo llegan los repuestos<span>.</span>
+          </h3>
+        </div>
+        <div className="dm-entrega__caso">
+          <h4>Si pides un diagnóstico</h4>
+          <p>
+            Las tiendas envían los repuestos de tu cotización al taller. El taller confirma que llegaron
+            antes de empezar la instalación. Tú no recoges nada.
+          </p>
+        </div>
+        <div className="dm-entrega__caso">
+          <h4>Si compras directo en el catálogo</h4>
+          <p>
+            Eliges envío a tu dirección, cuando la tienda lo ofrece, o retiro en la tienda con un código
+            de un solo uso que te llega al pagar.
+          </p>
+        </div>
       </div>
 
       <div className="dm-metrics">
