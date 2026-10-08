@@ -74,6 +74,7 @@ class PermisosPanelPlataformaTest {
 
             // Operación diaria: SUPERADMIN y ADMIN
             ruta(HttpMethod.GET, "/api/plataforma/operacion", "SUPERADMIN", "ADMIN"),
+            ruta(HttpMethod.GET, "/api/plataforma/pedidos", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.GET, "/api/tiendas", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.PATCH, "/api/tiendas/t1/aprobacion", "SUPERADMIN", "ADMIN"),
             ruta(HttpMethod.GET, "/api/talleres", "SUPERADMIN", "ADMIN"),
@@ -125,7 +126,7 @@ class PermisosPanelPlataformaTest {
                     || r.url().startsWith("/api/productos") || r.url().startsWith("/api/movimientos")
                     || r.url().startsWith("/api/proveedores") || r.url().startsWith("/api/config")
                     || r.url().equals("/api/solicitudes")
-                    || (r.url().startsWith("/api/plataforma/") && !r.url().endsWith("/operacion"));
+                    || (r.url().startsWith("/api/plataforma/") && !r.url().endsWith("/operacion") && !r.url().endsWith("/pedidos"));
             if (!financieraOComercial) continue;
             int status = mvc.perform(peticion(r).with(user("admin@demo.com").roles("ADMIN")))
                     .andReturn().getResponse().getStatus();

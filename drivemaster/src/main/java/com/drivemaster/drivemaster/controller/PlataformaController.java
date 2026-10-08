@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ClientesRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Operacion;
+import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.DashboardPlataformaDTO;
 import com.drivemaster.drivemaster.service.PlataformaConsultasService;
@@ -37,6 +38,18 @@ public class PlataformaController {
     @GetMapping("/operacion")
     public ResponseEntity<Operacion> operacion() {
         return ResponseEntity.ok(dashboardService.operacion());
+    }
+
+    /** ADMIN y SUPERADMIN: monitor de pedidos y envíos de las tiendas (sin datos del cliente). */
+    @GetMapping("/pedidos")
+    public ResponseEntity<PedidosRespuesta> pedidos(
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String tiendaId,
+            @RequestParam(required = false) String entrega,
+            @RequestParam(defaultValue = "false") boolean atrasados,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "20") int tamano) {
+        return ResponseEntity.ok(consultas.pedidos(estado, tiendaId, entrega, atrasados, pagina, tamano));
     }
 
     /** Catálogo global de solo lectura, con filtros por tienda, nuevos, estado y búsqueda. */
