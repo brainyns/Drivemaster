@@ -34,6 +34,12 @@ export async function operacionPlataforma(token) {
   return leer(await apiFetch(`${BASE}/operacion`, { headers: headers(token) }), "No se pudo cargar tu resumen.");
 }
 
+/** Monitor de pedidos y envíos (ADMIN y SUPERADMIN). Filtros: estado, tiendaId, entrega, atrasados, pagina, tamano. */
+export async function pedidosPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/pedidos${consulta(filtros)}`, { headers: headers(token) }),
+    "No se pudieron cargar los pedidos.");
+}
+
 /** Catálogo global de solo lectura. Filtros: q, tiendaId, nuevosDias (7|30), estado, pagina, tamano. */
 export async function productosPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/productos${consulta(filtros)}`, { headers: headers(token) }),

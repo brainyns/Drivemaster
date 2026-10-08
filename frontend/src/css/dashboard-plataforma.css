@@ -92,3 +92,18 @@
 .dp-etiqueta--no { color: var(--muted); }
 
 .dp-paginacion { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; font-size: .82rem; color: var(--muted); }
+
+/* ── Pedidos y envíos ──────────────────────────────────────── */
+.dp-pestanas { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1rem 0 .25rem; }
+.dp-pestana {
+  border: 1px solid var(--border); background: transparent; color: var(--text);
+  border-radius: 999px; padding: .35rem .85rem; font: inherit; font-size: .8rem; cursor: pointer;
+}
+.dp-pestana:hover { border-color: var(--accent, #ff3d00); }
+.dp-pestana--activa { border-color: var(--accent, #ff3d00); font-weight: 700; }
+.dp-pestana__n { margin-left: .25rem; color: var(--muted); font-weight: 600; }
+.dp-alerta--activa { background: rgba(214, 69, 69, .12); }
+.dp-campo--check { display: flex; align-items: center; gap: .45rem; min-width: 0; padding-bottom: .5rem; }
+.dp-campo--check input { width: auto; }
+.dp-fila--alerta td:first-child { box-shadow: inset 3px 0 0 #d64545; }
+.dp-etiqueta--alerta { color: #d64545; border-color: #d64545; }

@@ -117,8 +117,7 @@ export default function ProblemasEnvios() {
             </dl>
 
             <div className="ct-pedido__entrega">
-              Destino: <strong>{p.envioReceptor}</strong> · {[p.envioDireccion, p.envioCiudad].filter(Boolean).join(", ")}
-              {p.envioTelefono && <> · Tel. {p.envioTelefono}</>}
+              Ciudad de destino: <strong>{p.envioCiudad || "—"}</strong>
             </div>
             <p className="ss-alerta" role="note">Lo que dijo el cliente: «{p.problemaDetalle}»</p>
 

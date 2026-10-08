@@ -45,6 +45,7 @@ import RegistroNegocio       from "./pages/RegistroNegocio";
 import SolicitarDiagnostico  from "./pages/SolicitarDiagnostico";
 import MisServicios          from "./pages/MisServicios";
 import CotizacionPublica     from "./pages/CotizacionPublica";
+import PedidosEnvios         from "./pages/PedidosEnvios";
 import PedidosTienda         from "./pages/PedidosTienda";
 import Liquidaciones         from "./pages/Liquidaciones";
 import ChatWidget            from "./components/chat/ChatWidget";
@@ -113,6 +114,7 @@ const TITULOS = {
   "pedidos-tienda":  "Pedidos",
   "liquidaciones":   "Liquidaciones y reembolsos",
   "problemas-envios": "Problemas de envío",
+  "pedidos-envios":  "Pedidos y envíos",
   "mi-tienda":       "Mi tienda",
 };
 
@@ -336,7 +338,7 @@ function App() {
     ],
     // ADMIN: solo la operación diaria (el panel de plataforma completo es del SUPERADMIN)
     ADMIN: [
-      "dashboard-main",
+      "dashboard-main", "pedidos-envios",
       "aprobaciones", "admin-talleres", "problemas-envios",
       "mi-perfil",
     ],
@@ -351,6 +353,7 @@ function App() {
       "movimientos",
       "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
       "usuarios",
+      "pedidos-envios",
       "admin-talleres", "aprobaciones", "liquidaciones", "problemas-envios",
       "mi-perfil",
     ],
@@ -617,8 +620,8 @@ function App() {
 
     // SUPERADMIN: panel de la plataforma. ADMIN: su resumen operativo. El dashboard de ventas queda para el VENDEDOR.
     if (pagina === "dashboard-main") {
-      if (user?.rol === "SUPERADMIN") return <DashboardPlataforma token={token} onIr={(p) => irA(p)} />;
-      if (user?.rol === "ADMIN") return <DashboardOperacion token={token} onIr={(p) => irA(p)} />;
+      if (user?.rol === "SUPERADMIN") return <DashboardPlataforma token={token} onIr={(p, id) => irA(p, id)} />;
+      if (user?.rol === "ADMIN") return <DashboardOperacion token={token} onIr={(p, id) => irA(p, id)} />;
       return <DashboardMain token={token} />;
     }
 
@@ -657,6 +660,7 @@ function App() {
     if (pagina === "liquidaciones")    return <Liquidaciones        />;
     if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
     if (pagina === "problemas-envios") return <ProblemasEnvios      />;
+    if (pagina === "pedidos-envios")   return <PedidosEnvios key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado} />;
     if (pagina === "mi-tienda")        return <DatosMiTienda        token={token} onGuardado={(t) => setTiendaIncompleta(!t.datosCompletos)} />;
 
     if (pagina === "inv-clientes")     return <InventarioClientes   token={token} />;

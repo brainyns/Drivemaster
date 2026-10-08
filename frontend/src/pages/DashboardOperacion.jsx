@@ -52,7 +52,7 @@ export default function DashboardOperacion({ token, onIr }) {
     {
       n: d.despachosAtrasados, titulo: "Pedidos atrasados",
       detalle: "Pedidos pagados que la tienda no despachó dentro del plazo. Contacta a la tienda.",
-      critica: true,
+      ir: "pedidos-envios", preset: "atrasados", accion: "Ver pedidos atrasados", critica: true,
     },
   ];
 
@@ -86,7 +86,7 @@ export default function DashboardOperacion({ token, onIr }) {
             <h2 className="dp-tarea__titulo">{t.titulo}</h2>
             <p className="dp-tarea__detalle">{t.detalle}</p>
             {t.ir && t.n > 0 && (
-              <button type="button" className="dp-btn" onClick={() => onIr?.(t.ir)}>{t.accion}</button>
+              <button type="button" className="dp-btn" onClick={() => onIr?.(t.ir, t.preset)}>{t.accion}</button>
             )}
           </article>
         ))}

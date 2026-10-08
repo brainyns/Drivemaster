@@ -87,7 +87,7 @@ export default function DashboardPlataforma({ token, onIr }) {
   const a = d.alertas;
   const alertas = [
     { n: a.negociosPorAprobar, texto: "negocios por aprobar", ir: "aprobaciones" },
-    { n: a.despachosAtrasados, texto: "despachos atrasados", ir: "problemas-envios" },
+    { n: a.despachosAtrasados, texto: "despachos atrasados", ir: "pedidos-envios", preset: "atrasados" },
     { n: a.problemasEnvioAbiertos, texto: "problemas de envío abiertos", ir: "problemas-envios" },
     { n: a.liquidacionesPendientes, texto: "liquidaciones por pagar", ir: "liquidaciones" },
     { n: a.liquidacionesFallidas, texto: "liquidaciones fallidas", ir: "liquidaciones", critica: true },
@@ -129,7 +129,7 @@ export default function DashboardPlataforma({ token, onIr }) {
           <p className="dp-alertas__ok">Sin alertas: no hay despachos atrasados, problemas abiertos ni pagos pendientes.</p>
         ) : alertas.map((x) => (
           <button key={x.texto} type="button" className={`dp-alerta${x.critica ? " dp-alerta--critica" : ""}`}
-            onClick={() => onIr?.(x.ir)}>
+            onClick={() => onIr?.(x.ir, x.preset)}>
             <strong>{num(x.n)}</strong> {x.texto}
           </button>
         ))}
