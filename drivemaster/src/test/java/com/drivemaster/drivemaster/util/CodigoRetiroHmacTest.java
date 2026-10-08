@@ -89,8 +89,15 @@ class CodigoRetiroHmacTest {
 
     // ─── Aviso al arrancar ───────────────────────────────────────────────────
 
+    private static final String LLAVE_PRUEBA = "pub_test_abc";
+    private static final String LLAVE_PRODUCCION = "pub_prod_abc";
+
     private List<String> arrancarConClave(String clave) {
-        CodigoRetiroConfig config = new CodigoRetiroConfig(clave);
+        return arrancarConClave(clave, LLAVE_PRUEBA);
+    }
+
+    private List<String> arrancarConClave(String clave, String llaveWompi) {
+        CodigoRetiroConfig config = new CodigoRetiroConfig(clave, llaveWompi);
         return LogsCapturados.de(() -> ReflectionTestUtils.invokeMethod(config, "configurar"));
     }
 
@@ -114,5 +121,56 @@ class CodigoRetiroHmacTest {
         assertTrue(larga.stream().noneMatch(m -> m.contains("RETIRO_CODIGO_SECRET")), "una clave larga no genera avisos: " + larga);
         assertTrue(larga.stream().noneMatch(m -> m.contains(CLAVE)), "la clave nunca se escribe en el log");
         assertTrue(CodigoRetiro.configurado());
+    }
+
+    // ─── Producción: sin clave válida el backend no arranca ──────────────────
+
+    private void exigeQueNoArranque(String clave, String llave) {
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> arrancarConClave(clave, llave),
+                "con llave " + llave + " y clave '" + clave + "' debe abortar el arranque");
+        assertTrue(e.getMessage().contains("RETIRO_CODIGO_SECRET"));
+        assertFalse(CodigoRetiro.configurado(), "no queda configurada una clave inválida");
+        if (clave != null && !clave.isBlank()) assertFalse(e.getMessage().contains(clave), "el mensaje no escribe la clave");
+    }
+
+    @Test
+    void enProduccionSinClaveOConClaveCortaElBackendNoArranca() {
+        for (String llave : new String[]{LLAVE_PRODUCCION, "pub_live_x", "", null, "cualquier-cosa"}) {
+            exigeQueNoArranque(null, llave);
+            exigeQueNoArranque("", llave);
+            exigeQueNoArranque("   ", llave);
+            exigeQueNoArranque("solo-31-caracteres-aaaaaaaaaaa", llave);
+        }
+    }
+
+    @Test
+    void enProduccionUnaClaveDe32CaracteresOMasSiArranca() {
+        String justa = "a".repeat(32);
+        assertEquals(32, justa.length());
+        assertDoesNotThrow(() -> arrancarConClave(justa, LLAVE_PRODUCCION));
+        assertTrue(CodigoRetiro.configurado());
+        assertDoesNotThrow(() -> arrancarConClave(CLAVE, LLAVE_PRODUCCION));
+    }
+
+    @Test
+    void enDesarrolloSinClaveSoloAvisaYSigue() {
+        for (String falta : new String[]{null, "", "corta"}) {
+            assertDoesNotThrow(() -> arrancarConClave(falta, LLAVE_PRUEBA));
+        }
+    }
+
+    @Test
+    void elContextoDeSpringFallaAlArrancarEnProduccionSinClave() {
+        var runner = new org.springframework.boot.test.context.runner.ApplicationContextRunner()
+                .withUserConfiguration(CodigoRetiroConfig.class);
+
+        runner.withPropertyValues("wompi.public_key=pub_prod_abc").run(ctx -> {
+            assertNotNull(ctx.getStartupFailure(), "el contexto no debe levantar");
+            assertTrue(String.valueOf(org.springframework.core.NestedExceptionUtils.getMostSpecificCause(ctx.getStartupFailure()).getMessage()).contains("RETIRO_CODIGO_SECRET"));
+        });
+        runner.withPropertyValues("wompi.public_key=pub_prod_abc", "retiro.codigo.secret=" + "z".repeat(32))
+                .run(ctx -> assertNull(ctx.getStartupFailure()));
+        runner.withPropertyValues("wompi.public_key=pub_test_abc")
+                .run(ctx -> assertNull(ctx.getStartupFailure(), "en desarrollo sin clave solo avisa"));
     }
 }
