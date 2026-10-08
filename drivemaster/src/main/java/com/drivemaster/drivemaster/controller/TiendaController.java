@@ -53,11 +53,14 @@ public class TiendaController {
     }
 
     @PatchMapping("/{id}/aprobacion")
-    public ResponseEntity<TiendaDTO> resolverAprobacion(@PathVariable String id,
-                                                        @RequestBody AprobacionRequest request,
-                                                        Authentication auth) {
+    public ResponseEntity<Object> resolverAprobacion(@PathVariable String id,
+                                                     @RequestBody AprobacionRequest request,
+                                                     Authentication auth) {
         com.drivemaster.drivemaster.security.PermisosAprobacion.validarPlan(auth, request);
-        return ResponseEntity.ok(tiendaService.resolverAprobacion(id, request, auth.getName()));
+        TiendaDTO resultado = tiendaService.resolverAprobacion(id, request, auth.getName());
+        // El ADMIN recibe solo lo mínimo (sin teléfono, correos ni coordenadas); el SUPERADMIN, el DTO completo
+        return ResponseEntity.ok(com.drivemaster.drivemaster.security.PermisosAprobacion.esSuperadmin(auth)
+                ? resultado : com.drivemaster.drivemaster.dto.plataforma.RespuestasAdminDTO.ResultadoAprobacion.de(resultado));
     }
 
     @PatchMapping("/{id}/activo")

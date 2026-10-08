@@ -174,11 +174,11 @@ public class PlataformaConsultasService {
 
     // ─── Usuarios del sistema ────────────────────────────────────────────────
 
-    /** Roles de cuentas del sistema; los clientes tienen su propia pantalla. */
-    static final Set<String> ROLES_USUARIOS = Set.of("SUPERADMIN", "ADMIN", "VENDEDOR", "TIENDA", "TALLER", "MECANICO");
+    /** Todos los roles. VENDEDOR ya no se crea, pero las cuentas que quedan se siguen listando para poder reasignarlas. */
+    static final Set<String> ROLES_USUARIOS = Set.of("SUPERADMIN", "ADMIN", "VENDEDOR", "TIENDA", "TALLER", "MECANICO", "CLIENTE");
 
     /**
-     * Lista de usuarios con filtros por rol y estado y búsqueda, con el correo enmascarado. Cambiar el rol o
+     * Lista de todos los usuarios (cualquier rol) con filtros por rol y estado y búsqueda, con el correo enmascarado. Cambiar el rol o
      * activar o desactivar sigue siendo solo del SUPERADMIN (PUT /api/usuarios/{id}).
      *
      * @param rol uno de ROLES_USUARIOS (vacío = todos); un rol desconocido no devuelve nada

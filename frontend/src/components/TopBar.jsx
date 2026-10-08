@@ -1,4 +1,3 @@
-import { apiFetch } from "../services/http";
 import { useState, useEffect, useRef, useCallback } from "react";
 import NotificationDropdown from "./NotificationDropdown";
 import { getToken } from "../services/authService";
@@ -206,14 +205,8 @@ function TopBar({
 
   const refreshCount = useCallback(async () => {
     try {
-      const sols = await apiFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/solicitudes`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
-      }).then(r => r.json());
-      const pending = (sols || []).filter(s => s.estado === "PENDIENTE" || s.estado === "PENDIENTE_PAGO" || s.estado === "PAGO_VERIFICADO").length;
-      setNotifCount(pending);
+      // La pantalla de Solicitudes (flujo anterior) está oculta: ya no hay un conteo que mostrar
+      setNotifCount(0);
     } catch { /* ignore */ }
   }, []);
 

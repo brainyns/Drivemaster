@@ -9,8 +9,33 @@ const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api
 const ROL_CONFIG = {
   SUPERADMIN: { label: "SUPER ADMIN", className: "us-badge--superadmin" },
   ADMIN: { label: "ADMIN", className: "us-badge--admin" },
-  VENDEDOR: { label: "SELLER", className: "us-badge--vendedor" },
+  TIENDA: { label: "TIENDA", className: "us-badge--tienda" },
+  TALLER: { label: "TALLER", className: "us-badge--taller" },
+  CLIENTE: { label: "CLIENTE", className: "us-badge--cliente" },
+  MECANICO: { label: "MECÁNICO", className: "us-badge--taller" },
+  // Rol retirado: las cuentas que quedan se siguen listando para poder reasignarlas o desactivarlas
+  VENDEDOR: { label: "VENDEDOR (RETIRADO)", className: "us-badge--vendedor" },
 };
+
+// Solo estos roles se crean o se asignan desde aquí. Las tiendas y los talleres se registran con
+// "Registra tu negocio" y se aprueban en Aprobaciones, porque necesitan perfil y aprobación.
+const ROLES_DEL_EQUIPO = ["ADMIN", "SUPERADMIN"];
+
+const IconoTarjeta = {
+  TIENDA: <path d="M3 9l1.5-5h15L21 9M4 9v11h16V9M3 9a3 3 0 006 0 3 3 0 006 0 3 3 0 006 0M10 20v-5h4v5" />,
+  TALLER: <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />,
+  CLIENTE: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></>,
+  ADMIN: <><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></>,
+  SUPERADMIN: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+};
+
+const TARJETAS = [
+  { rol: "TIENDA", titulo: "Tiendas" },
+  { rol: "TALLER", titulo: "Talleres" },
+  { rol: "CLIENTE", titulo: "Clientes" },
+  { rol: "ADMIN", titulo: "Administradores" },
+  { rol: "SUPERADMIN", titulo: "Super Admins" },
+];
 
 const AVATAR_COLORS = ["#E8450A", "#7C3AED", "#0EA5E9", "#10B981", "#F59E0B"];
 
@@ -36,7 +61,7 @@ export default function Usuarios({ token }) {
     nombre: "",
     correo: "",
     password: "",
-    rol: "VENDEDOR",
+    rol: "ADMIN",
   });
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -67,7 +92,7 @@ export default function Usuarios({ token }) {
     setSuccess(false);
     try {
       await crearUsuario(nuevoUsuario, token);
-      setNuevoUsuario({ nombre: "", correo: "", password: "", rol: "VENDEDOR" });
+      setNuevoUsuario({ nombre: "", correo: "", password: "", rol: "ADMIN" });
       recargar();
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -78,7 +103,7 @@ export default function Usuarios({ token }) {
 
   const handleEditClick = (u) => {
     setEditando(u);
-    setEditForm({ nombre: u.nombre || "", rol: u.rol || "VENDEDOR", password: "" });
+    setEditForm({ nombre: u.nombre || "", rol: u.rol || "", password: "" });
     setEditError(null);
     setEditSuccess(null);
   };
@@ -140,11 +165,10 @@ export default function Usuarios({ token }) {
   };
 
   // Los conteos de las tarjetas vienen del servidor (no dependen de la página que se ve)
-  const conteo = {
-    SUPERADMIN: lista.porRol.SUPERADMIN || 0,
-    ADMIN: lista.porRol.ADMIN || 0,
-    VENDEDOR: lista.porRol.VENDEDOR || 0,
-  };
+  const conteo = lista.porRol;
+  // Cambiar el rol solo aplica a cuentas del equipo (ADMIN, SUPERADMIN) y al vendedor retirado, que se reasigna
+  const rolEditable = editando && (ROLES_DEL_EQUIPO.includes(editando.rol) || editando.rol === "VENDEDOR");
+  const elegirTarjeta = (rol) => { setPagina(0); setFilterRol(filterRol === rol ? "TODOS" : rol); };
 
   const usuariosFiltrados = usuarios;
   const total = lista.usuarios?.total || 0;
@@ -161,35 +185,26 @@ export default function Usuarios({ token }) {
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
-      <div className="us-stats">
-        <div className="us-stat us-stat--superadmin">
-          <div className="us-stat__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-          </div>
-          <span className="us-stat__priority">PRIORIDAD ALTA</span>
-          <p className="us-stat__label">Super Admins</p>
-          <p className="us-stat__value">{String(conteo.SUPERADMIN).padStart(2, "0")}</p>
-          <div className="us-stat__bar us-stat__bar--superadmin" />
-        </div>
-
-        <div className="us-stat us-stat--admin">
-          <div className="us-stat__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>
-          </div>
-          <p className="us-stat__label">Administradores</p>
-          <p className="us-stat__value">{String(conteo.ADMIN).padStart(2, "0")}</p>
-          <div className="us-stat__bar us-stat__bar--admin" />
-        </div>
-
-        <div className="us-stat us-stat--vendedor">
-          <div className="us-stat__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 0-4 0v2" /></svg>
-          </div>
-          <p className="us-stat__label">Vendedores</p>
-          <p className="us-stat__value">{String(conteo.VENDEDOR).padStart(2, "0")}</p>
-          <div className="us-stat__bar us-stat__bar--vendedor" />
-        </div>
+      {/* ── Tarjetas por rol: también son filtros de la lista ── */}
+      <div className="us-stats" role="group" aria-label="Usuarios por rol">
+        {TARJETAS.map((t) => (
+          <button
+            key={t.rol}
+            type="button"
+            className={`us-stat us-stat--${t.rol.toLowerCase()}${filterRol === t.rol ? " is-activa" : ""}`}
+            aria-pressed={filterRol === t.rol}
+            onClick={() => elegirTarjeta(t.rol)}
+          >
+            <span className="us-stat__icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                {IconoTarjeta[t.rol]}
+              </svg>
+            </span>
+            <span className="us-stat__label">{t.titulo}</span>
+            <span className="us-stat__value">{lista.usuarios ? (conteo[t.rol] ?? 0) : "–"}</span>
+            <span className={`us-stat__bar us-stat__bar--${t.rol.toLowerCase()}`} />
+          </button>
+        ))}
       </div>
 
       {/* ── Main layout ── */}
@@ -207,11 +222,11 @@ export default function Usuarios({ token }) {
                 onChange={(e) => { setPagina(0); setFilterRol(e.target.value); }}
               >
                 <option value="TODOS">Todos los roles</option>
-                <option value="SUPERADMIN">Super Admin</option>
-                <option value="ADMIN">Admin</option>
-                <option value="VENDEDOR">Vendedor</option>
-                <option value="TIENDA">Tienda</option>
-                <option value="TALLER">Taller</option>
+                <option value="TIENDA">Tiendas</option>
+                <option value="TALLER">Talleres</option>
+                <option value="CLIENTE">Clientes</option>
+                <option value="ADMIN">Administradores</option>
+                <option value="SUPERADMIN">Super Admins</option>
               </select>
               <select
                 className="us-filter__select"
@@ -386,7 +401,6 @@ export default function Usuarios({ token }) {
                   value={nuevoUsuario.rol}
                   onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, rol: e.target.value })}
                 >
-                  <option value="VENDEDOR">Vendedor</option>
                   <option value="ADMIN">Administrador</option>
                   <option value="SUPERADMIN">Superadmin</option>
                 </select>
@@ -399,7 +413,8 @@ export default function Usuarios({ token }) {
             </button>
 
             <p className="us-hint">
-              Se enviará un correo de invitación al usuario para activar su cuenta y establecer su contraseña definitiva.
+              Aquí solo se crean cuentas del equipo (administrador o superadmin). Las tiendas y los talleres se registran
+              desde «Registra tu negocio» y se aprueban en Aprobaciones, porque necesitan perfil y aprobación.
             </p>
           </form>
         </div>
@@ -455,15 +470,25 @@ export default function Usuarios({ token }) {
                   <select
                     className="us-select"
                     value={editForm.rol}
+                    disabled={!rolEditable}
                     onChange={(e) => setEditForm({ ...editForm, rol: e.target.value })}
                   >
-                    <option value="VENDEDOR">Vendedor</option>
+                    {!ROLES_DEL_EQUIPO.includes(editando.rol) && (
+                      <option value={editando.rol} disabled>{(ROL_CONFIG[editando.rol] || { label: editando.rol }).label}</option>
+                    )}
                     <option value="ADMIN">Administrador</option>
                     <option value="SUPERADMIN">Superadmin</option>
                   </select>
                   <svg className="us-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                 </div>
               </div>
+
+              {!rolEditable && (
+                <p className="us-hint">El rol de un cliente, una tienda o un taller no se cambia: su perfil depende de él.</p>
+              )}
+              {editando.rol === "VENDEDOR" && (
+                <p className="us-hint">El rol de vendedor se retiró. Reasígnalo a administrador o superadmin, o desactiva la cuenta.</p>
+              )}
 
               {editError && <div className="us-error">{editError}</div>}
               {editSuccess && <div className="us-toast us-toast--success">{editSuccess}</div>}

@@ -37,26 +37,6 @@ export default function NotificationDropdown({ onClose, onNavigate }) {
     try {
       const items = [];
 
-      // Pending solicitudes
-      try {
-        const sols = await apiFetch(`${API_BASE}/solicitudes`, { headers: authHeaders(token) }).then(r => r.json());
-        const pending = (sols || []).filter(s => s.estado === "PENDIENTE" || s.estado === "PENDIENTE_PAGO" || s.estado === "PAGO_VERIFICADO");
-        pending.forEach(s => {
-          items.push({
-            id: `sol-${s.id}`,
-            type: "solicitud",
-            label: "Nueva solicitud pendiente",
-            detail: s.clienteNombre
-              ? `${s.clienteNombre} realizó un pedido`
-              : "Solicitud de encargo pendiente",
-            time: s.fechaCreacion,
-            link: "solicitudes",
-            linkId: s.id,
-            color: "orange",
-          });
-        });
-      } catch { /* ignore */ }
-
       // Low stock
       try {
         const prods = await apiFetch(`${API_BASE}/productos`, { headers: authHeaders(token) }).then(r => r.json());

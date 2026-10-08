@@ -16,6 +16,10 @@ public final class PermisosAprobacion {
     private PermisosAprobacion() {
     }
 
+    public static boolean esSuperadmin(Authentication auth) {
+        return auth != null && auth.getAuthorities().stream().anyMatch(a -> "ROLE_SUPERADMIN".equals(a.getAuthority()));
+    }
+
     public static void validarPlan(Authentication auth, AprobacionRequest request) {
         if (request == null || request.getPlanCodigo() == null || request.getPlanCodigo().isBlank()) return;
         boolean superadmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> "ROLE_SUPERADMIN".equals(a.getAuthority()));
