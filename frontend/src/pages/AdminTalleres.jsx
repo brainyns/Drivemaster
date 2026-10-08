@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getToken } from "../services/authService";
+import { getToken, getUser } from "../services/authService";
 import { listarTalleres, crearTaller, actualizarTaller, activarDesactivarTaller } from "../services/tallerService";
 import { ordenesPorTallerAdmin } from "../services/ordenServicioService";
 import "../css/admin-talleres.css";
@@ -61,6 +61,8 @@ function BadgeOrden({ estado }) {
 }
 
 export default function AdminTalleres() {
+  // Crear, editar y pausar talleres es del SUPERADMIN; el ADMIN solo los ve y revisa sus servicios
+  const puedeGestionar = getUser()?.rol === "SUPERADMIN";
   const token = getToken();
   const [talleres, setTalleres] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -201,12 +203,14 @@ export default function AdminTalleres() {
             tarifa de mano de obra y revisas los servicios que le hicieron.
           </p>
         </div>
-        <button className="at-btn" onClick={abrirNuevo}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Nuevo taller
-        </button>
+        {puedeGestionar && (
+          <button className="at-btn" onClick={abrirNuevo}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Nuevo taller
+          </button>
+        )}
       </header>
 
       {error && <p className="at-error">{error}</p>}
@@ -289,7 +293,7 @@ export default function AdminTalleres() {
               : "Prueba con otro nombre, ciudad o especialidad, o cambia el filtro de estado."}
           </p>
           {talleres.length === 0 ? (
-            <button className="at-btn" onClick={abrirNuevo}>Registrar primer taller</button>
+            puedeGestionar && <button className="at-btn" onClick={abrirNuevo}>Registrar primer taller</button>
           ) : (
             <button className="at-btn-outline" onClick={() => { setBusqueda(""); setFiltro("todos"); }}>
               Limpiar filtros
@@ -347,12 +351,16 @@ export default function AdminTalleres() {
                     </td>
                     <td className="at-acciones">
                       <button className="at-link" onClick={() => verPedidos(t)}>Servicios</button>
-                      <span className="at-sep" />
-                      <button className="at-link" onClick={() => abrirEditar(t)}>Editar</button>
-                      <span className="at-sep" />
-                      <button className="at-link at-link--warn" onClick={() => handleToggleActivo(t)}>
-                        {t.activo ? "Pausar" : "Activar"}
-                      </button>
+                      {puedeGestionar && (
+                        <>
+                          <span className="at-sep" />
+                          <button className="at-link" onClick={() => abrirEditar(t)}>Editar</button>
+                          <span className="at-sep" />
+                          <button className="at-link at-link--warn" onClick={() => handleToggleActivo(t)}>
+                            {t.activo ? "Pausar" : "Activar"}
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

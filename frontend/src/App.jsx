@@ -46,6 +46,8 @@ import SolicitarDiagnostico  from "./pages/SolicitarDiagnostico";
 import MisServicios          from "./pages/MisServicios";
 import CotizacionPublica     from "./pages/CotizacionPublica";
 import ReportesPlataforma     from "./pages/ReportesPlataforma";
+import NegociosPlataforma     from "./pages/NegociosPlataforma";
+import AprobacionesAdmin     from "./pages/AprobacionesAdmin";
 import PedidosEnvios         from "./pages/PedidosEnvios";
 import PedidosTienda         from "./pages/PedidosTienda";
 import Liquidaciones         from "./pages/Liquidaciones";
@@ -113,6 +115,7 @@ const TITULOS = {
   "taller-panel":    "Panel de taller",
   "admin-talleres":  "Servicios",
   "aprobaciones":    "Aprobaciones",
+  "negocios":        "Tiendas y talleres",
   "pedidos-tienda":  "Pedidos",
   "liquidaciones":   "Liquidaciones y reembolsos",
   "problemas-envios": "Problemas de envío",
@@ -356,7 +359,7 @@ function App() {
       "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios", "reportes-plataforma",
       "usuarios",
       "pedidos-envios",
-      "admin-talleres", "aprobaciones", "liquidaciones", "problemas-envios",
+      "admin-talleres", "aprobaciones", "negocios", "liquidaciones", "problemas-envios",
       "mi-perfil",
     ],
     CLIENTE: ["catalogo", ...PAGINAS_CLIENTE],
@@ -365,7 +368,7 @@ function App() {
   };
   const esTienda = user?.rol === "TIENDA";
 
-  const esAdmin = user?.rol === "ADMIN" || user?.rol === "SUPERADMIN";
+  const esAdmin = user?.rol === "SUPERADMIN";
   useEffect(() => {
     if (!esAdmin) return undefined;
     let vivo = true;
@@ -658,7 +661,10 @@ function App() {
     if (pagina === "mi-perfil")        return <PerfilAdmin          />;
     if (pagina === "taller-panel")     return <PanelTaller          />;
     if (pagina === "admin-talleres")   return <AdminTalleres        />;
+    // ADMIN: solo aprueba o rechaza; SUPERADMIN: gestión completa (y la lista unificada "Tiendas y talleres")
+    if (pagina === "aprobaciones" && user?.rol === "ADMIN") return <AprobacionesAdmin token={token} />;
     if (pagina === "aprobaciones")     return <Aprobaciones         token={token} onTiendaPropiaIncompleta={setPlataformaIncompleta} />;
+    if (pagina === "negocios")         return <NegociosPlataforma   token={token} />;
     if (pagina === "liquidaciones")    return <Liquidaciones        />;
     if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
     if (pagina === "problemas-envios") return <ProblemasEnvios      />;

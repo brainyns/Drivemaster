@@ -67,6 +67,16 @@ export async function usuariosPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/usuarios${consulta(filtros)}`, { headers: headers(token) }), "No se pudieron cargar los usuarios.");
 }
 
+/** Tiendas y talleres en una lista (solo SUPERADMIN). Filtros: tipo, estado, q, pagina, tamano. */
+export async function negociosPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/negocios${consulta(filtros)}`, { headers: headers(token) }), "No se pudieron cargar los negocios.");
+}
+
+/** Negocios por revisar, con lo mínimo para decidir (ADMIN y SUPERADMIN). */
+export async function negociosPendientes(token) {
+  return leer(await apiFetch(`${BASE}/negocios/pendientes`, { headers: headers(token) }), "No se pudieron cargar las aprobaciones.");
+}
+
 /** Catálogo global de solo lectura. Filtros: q, tiendaId, nuevosDias (7|30), estado, pagina, tamano. */
 export async function productosPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/productos${consulta(filtros)}`, { headers: headers(token) }),
