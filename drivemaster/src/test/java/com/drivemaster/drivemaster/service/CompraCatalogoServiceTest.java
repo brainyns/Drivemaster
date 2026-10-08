@@ -781,6 +781,25 @@ class CompraCatalogoServiceTest {
     }
 
     @Test
+    void al_emitir_y_renovar_un_codigo_ni_el_codigo_ni_su_hash_van_al_log() {
+        java.util.List<String> logs = com.drivemaster.drivemaster.testutil.LogsCapturados.de(() -> {
+            PedidoTienda retiro = pedidoDeRetiro();
+            when(mongoTemplate.findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class)))
+                    .thenReturn(retiro);
+            service.nuevoCodigoRetiro(CORREO, retiro.getId());
+        });
+
+        ArgumentCaptor<Map<String, String>> codigos = ArgumentCaptor.forClass(Map.class);
+        verify(avisos).compraPagada(any(CompraCatalogo.class), anyList(), codigos.capture(), any());
+        PedidoTienda retiro = pedidos.values().stream().filter(p -> PedidoTienda.RETIRO.equals(p.getEntrega())).findFirst().orElseThrow();
+        String emitido = codigos.getValue().get(retiro.getId());
+
+        String todo = String.join("\n", logs);
+        assertFalse(todo.contains(retiro.getCodigoRetiroHash()), "el hash no debe aparecer en el log");
+        assertFalse(todo.contains(emitido) || todo.contains(emitido.replace("-", "")), "el código no debe aparecer en el log");
+    }
+
+    @Test
     void unCodigoYaUsadoOUnPedidoRetiradoNoAdmiteCodigoNuevo() {
         PedidoTienda retiro = pedidoDeRetiro();
         // La escritura condicional no encuentra el pedido (ya retirado)

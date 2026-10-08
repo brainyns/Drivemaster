@@ -359,6 +359,26 @@ class PedidoTiendaServiceTest {
     }
 
     @Test
+    void ni_el_codigo_ni_su_hash_se_escriben_nunca_en_los_logs() {
+        PedidoTienda p = catalogo(PedidoTienda.RETIRO, PedidoTienda.LISTO_PARA_RETIRAR, "ABCD-1234");
+        mongoEnMemoria(p);
+        String hash = p.getCodigoRetiroHash();
+
+        java.util.List<String> logs = com.drivemaster.drivemaster.testutil.LogsCapturados.de(() -> {
+            assertThrows(ResponseStatusException.class, () -> service.validarRetiro(CORREO_TIENDA, "ped1", "ZZZZ-0000")); // incorrecto
+            assertThrows(ResponseStatusException.class, () -> service.validarRetiro(CORREO_TIENDA, "ped1", "basura"));
+            service.validarRetiro(CORREO_TIENDA, "ped1", "ABCD-1234");                                                    // correcto
+            assertThrows(ResponseStatusException.class, () -> service.validarRetiro(CORREO_TIENDA, "ped1", "ABCD-1234")); // reuso
+        });
+
+        String todo = String.join("\n", logs);
+        assertFalse(todo.contains(hash), "el hash no debe aparecer en el log");
+        for (String codigo : new String[]{"ABCD-1234", "ABCD1234", "ZZZZ-0000", "ZZZZ0000"}) {
+            assertFalse(todo.contains(codigo), "el código (" + codigo + ") no debe aparecer en el log");
+        }
+    }
+
+    @Test
     void elCodigoEsDeUnSoloUso() {
         PedidoTienda p = catalogo(PedidoTienda.RETIRO, PedidoTienda.LISTO_PARA_RETIRAR, "ABCD-1234");
         mongoEnMemoria(p);
