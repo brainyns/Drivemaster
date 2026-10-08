@@ -17,7 +17,7 @@
 .dm-page.mk-pagina h2 { font-size: 1.15rem; line-height: 1.3; letter-spacing: 0; font-weight: 700; }
 .dm-page.mk-pagina h3 { letter-spacing: 0; }
 
-.mk-header__activo { color: var(--dm-orange); }
+.mk-header__activo { color: var(--dm-orange-text); }
 
 /* ── Títulos y textos ─────────────────────────────────────────────────── */
 .mk-titulo { margin-bottom: 20px; }
@@ -29,10 +29,10 @@
 .mk-volver { margin-bottom: 8px; }
 
 .mk-enlace {
-  background: none; border: none; padding: 0; color: var(--dm-orange); cursor: pointer;
+  background: none; border: none; padding: 0; color: var(--dm-orange-text); cursor: pointer;
   font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px;
 }
-.mk-enlace:hover { color: var(--dm-orange-hover); }
+.mk-enlace:hover { color: var(--dm-orange-text-hover); }
 .mk-enlace--peligro { color: var(--dm-red); }
 .mk-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -57,7 +57,7 @@
 }
 .mk-etiqueta--ok { color: var(--dm-green); border-color: rgba(69, 118, 89, 0.6); background: rgba(69, 118, 89, 0.12); }
 .mk-etiqueta--error { color: var(--dm-red); border-color: rgba(201, 47, 47, 0.6); background: rgba(201, 47, 47, 0.1); }
-.mk-etiqueta--aviso { color: var(--dm-orange); border-color: rgba(242, 140, 40, 0.6); background: var(--dm-orange-soft); }
+.mk-etiqueta--aviso { color: var(--dm-orange-text); border-color: rgba(242, 140, 40, 0.6); background: var(--dm-orange-soft); }
 
 /* ── Formularios ──────────────────────────────────────────────────────── */
 .mk-campo { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
@@ -98,11 +98,11 @@
 .mk-tarjeta__etiquetas { display: flex; flex-wrap: wrap; gap: 6px; }
 .mk-tarjeta__nombre { font-size: 1rem; margin: 0; line-height: 1.3; }
 .mk-tarjeta__nombre .mk-enlace { color: var(--dm-text); text-decoration: none; }
-.mk-tarjeta__nombre .mk-enlace:hover { color: var(--dm-orange); }
+.mk-tarjeta__nombre .mk-enlace:hover { color: var(--dm-orange-text); }
 .mk-tarjeta__meta { color: var(--dm-muted); font-size: 0.82rem; margin: 0; }
 .mk-tarjeta__aviso { font-size: 0.8rem; margin: 2px 0; line-height: 1.4; }
 .mk-tarjeta__aviso--error { color: var(--dm-red); }
-.mk-tarjeta__aviso--aviso { color: var(--dm-orange); }
+.mk-tarjeta__aviso--aviso { color: var(--dm-orange-text); }
 .mk-tarjeta__pie { margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
 .mk-tarjeta__precio { display: block; font-size: 1.15rem; }
 .mk-tarjeta__stock { font-size: 0.78rem; color: var(--dm-muted); }
@@ -185,7 +185,7 @@
 .mk-pedido p { margin: 6px 0 0; }
 .mk-pedido__acciones { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
 .mk-compra__detalle { margin-top: 14px; font-size: 0.9rem; }
-.mk-compra__detalle summary { cursor: pointer; color: var(--dm-orange); }
+.mk-compra__detalle summary { cursor: pointer; color: var(--dm-orange-text); }
 
 .mk-modal {
   position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
@@ -236,7 +236,7 @@
 .mk-tienda-card__quien { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .mk-tienda-card__avatar {
   width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  background: var(--dm-orange-soft); color: var(--dm-orange);
+  background: var(--dm-orange-soft); color: var(--dm-orange-text);
 }
 .mk-tienda-card__quien h3 { margin: 0; font-size: 1rem; line-height: 1.25; }
 .mk-tienda-card__ciudad { display: inline-flex; align-items: center; gap: 4px; color: var(--dm-muted); font-size: 0.8rem; }
@@ -257,11 +257,11 @@
 .mk-linea__foto:hover .mk-imagen { border-color: var(--dm-orange); }
 .mk-linea__info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .mk-linea__nombre { font-weight: 700; color: var(--dm-text); text-decoration: none; line-height: 1.3; font-size: 0.98rem; }
-.mk-linea__nombre:hover { color: var(--dm-orange); text-decoration: underline; }
+.mk-linea__nombre:hover { color: var(--dm-orange-text); text-decoration: underline; }
 .mk-linea__meta { color: var(--dm-muted); font-size: 0.82rem; }
 .mk-linea__estado { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; color: var(--dm-green); }
 .mk-linea__estado i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.mk-linea__estado--pocas { color: var(--dm-orange); }
+.mk-linea__estado--pocas { color: var(--dm-orange-text); }
 .mk-linea__estado--agotado { color: var(--dm-red); }
 
 .mk-linea__compra { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 150px; }
@@ -274,7 +274,7 @@
 
 .mk-paso { display: inline-flex; align-items: stretch; border: 1px solid var(--dm-line); border-radius: 6px; overflow: hidden; background: var(--dm-surface); }
 .mk-paso button { width: 34px; height: 34px; border: none; background: var(--dm-surface-2); color: var(--dm-text); font-size: 1.1rem; line-height: 1; cursor: pointer; }
-.mk-paso button:hover:not(:disabled) { background: var(--dm-orange-soft); color: var(--dm-orange); }
+.mk-paso button:hover:not(:disabled) { background: var(--dm-orange-soft); color: var(--dm-orange-text); }
 .mk-paso button:disabled { opacity: 0.4; cursor: not-allowed; }
 .mk-paso output { min-width: 40px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
 
@@ -311,7 +311,7 @@
 
 /* Carrito vacío */
 .mk-vacio--carrito { background: var(--dm-surface); border: 1px dashed var(--dm-line); border-radius: 12px; padding: 56px 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.mk-vacio__icono { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--dm-orange-soft); color: var(--dm-orange); margin-bottom: 6px; }
+.mk-vacio__icono { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--dm-orange-soft); color: var(--dm-orange-text); margin-bottom: 6px; }
 .mk-vacio--carrito h2 { margin: 0; color: var(--dm-text); }
 .mk-vacio--carrito p { margin: 0 0 10px; }
 .mk-vacio__ayuda { font-size: 0.85rem; }

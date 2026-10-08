@@ -10,7 +10,7 @@
   font-weight: 600; padding: 0.5rem 1rem 0.8rem; cursor: pointer; transition: all 0.15s;
 }
 .pf-tab:hover { color: var(--text); }
-.pf-tab--active { color: var(--primary); border-bottom-color: var(--primary); }
+.pf-tab--active { color: var(--primary-text); border-bottom-color: var(--primary); }
 
 /* ── ERROR ── */
 .pf-error {
@@ -133,7 +133,7 @@ html[data-theme="light"] {
   font-family: 'Inter',sans-serif; font-size: 0.82rem; cursor: pointer;
   transition: all 0.18s; margin-top: 0.3rem;
 }
-.pf-add-compat:hover { border-color: var(--primary); color: var(--primary); }
+.pf-add-compat:hover { border-color: var(--primary); color: var(--primary-text); }
 
 /* ── MONEY INPUT ── */
 .pf-money-input {
@@ -237,7 +237,7 @@ html[data-theme="light"] {
 }
 .pf-info-title {
   font-family: 'Barlow Condensed',sans-serif; font-weight: 800;
-  color: var(--primary); font-size: 0.88rem; margin-bottom: 0.5rem;
+  color: var(--primary-text); font-size: 0.88rem; margin-bottom: 0.5rem;
 }
 .pf-info-text { font-size: 0.78rem; color: var(--text-muted); line-height: 1.6; }
 
@@ -255,7 +255,7 @@ html[data-theme="light"] {
 }
 .pf-imagen-placeholder:hover {
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
   background: rgba(255,61,0,0.04);
 }
 .pf-imagen-placeholder span {

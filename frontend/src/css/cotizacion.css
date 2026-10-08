@@ -137,7 +137,7 @@
 
 .ct-opcion--activa {
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── Página pública del enlace ── */
@@ -162,7 +162,7 @@
   color: var(--text);
 }
 
-.ct-publica__marca span { color: var(--primary); }
+.ct-publica__marca span { color: var(--primary-text); }
 
 /* ── Pedidos de tienda y liquidaciones ── */
 .ct-tabla-wrap {

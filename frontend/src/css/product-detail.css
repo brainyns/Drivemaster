@@ -229,7 +229,7 @@
   padding: 6px 0;
 }
 
-.dm-detail__go:hover { color: var(--dm-orange-hover); }
+.dm-detail__go:hover { color: var(--dm-orange-text-hover); }
 
 .dm-detail__msg {
   margin-top: 12px;

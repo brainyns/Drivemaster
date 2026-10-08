@@ -105,7 +105,7 @@
 .db-alerta--warn {
   background: rgba(245, 158, 11, .08);
   border-color: rgba(245, 158, 11, .2);
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .db-alerta--danger {
@@ -209,7 +209,7 @@
 }
 
 .db-kpi-val.orange {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .db-kpi-val.blue {
@@ -249,7 +249,7 @@
 }
 
 .db-hl-ico {
-  color: var(--primary);
+  color: var(--primary-text);
   display: flex;
   flex-shrink: 0;
 }
@@ -266,7 +266,7 @@
 .db-hl-val {
   font-size: .95rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── Cards genéricas ────────────────────────────────────────── */
@@ -539,7 +539,7 @@
 .db-total {
   text-align: right;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .db-metodo {
@@ -572,7 +572,7 @@
 
 .st-pendiente {
   background: rgba(245, 158, 11, .12);
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .st-cancelada {

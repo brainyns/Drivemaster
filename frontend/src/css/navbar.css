@@ -44,7 +44,7 @@
 }
 
 .dm-logo__dot {
-  color: var(--dm-orange);
+  color: var(--dm-orange-text);
 }
 
 /* ── Nav ────────────────────────────────────────────────────────────────── */
@@ -121,7 +121,7 @@
   transition: color 0.2s;
 }
 .dm-header__login:hover {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
 }
 
 .dm-header__cart {
@@ -229,7 +229,7 @@
   border-top: 1px solid var(--dm-line-soft);
 }
 .dm-header__vehicle svg {
-  color: var(--dm-orange);
+  color: var(--dm-orange-text);
 }
 
 /* ── Menú móvil ─────────────────────────────────────────────────────────── */
@@ -258,7 +258,7 @@
 }
 
 .dm-mobile-nav > button:hover {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
 }
 
 @keyframes dm-nav-in {

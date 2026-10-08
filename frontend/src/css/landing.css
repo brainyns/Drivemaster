@@ -124,7 +124,7 @@
 
 .dm-step__number > span {
   font-size: 26px;
-  color: var(--dm-orange);
+  color: var(--dm-orange-text);
   padding-left: 7px;
   font-weight: 500;
 }
@@ -162,7 +162,7 @@
 }
 
 .dm-step__bottom > svg {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
   transition: transform 0.2s;
 }
 
@@ -232,7 +232,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
   position: absolute;
 }
 
@@ -306,7 +306,7 @@
 .dm-benefit:last-child { border: 0; padding-right: 0; }
 
 .dm-benefit > svg {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
   margin-bottom: 15px;
   stroke-width: 1.4;
 }
@@ -317,7 +317,7 @@
   margin-bottom: 9px;
 }
 
-.dm-benefit h3 > span { color: var(--dm-orange); }
+.dm-benefit h3 > span { color: var(--dm-orange-text); }
 
 .dm-benefit > p {
   font-size: 10px;
@@ -343,7 +343,7 @@
 }
 
 .dm-entrega__titulo > svg {
-  color: var(--dm-orange-hover);
+  color: var(--dm-orange-text-hover);
   margin-bottom: 15px;
   stroke-width: 1.4;
 }
@@ -353,7 +353,7 @@
   letter-spacing: -0.6px;
 }
 
-.dm-entrega__titulo h3 > span { color: var(--dm-orange); }
+.dm-entrega__titulo h3 > span { color: var(--dm-orange-text); }
 
 .dm-entrega__caso {
   padding: 26px 28px;
@@ -419,7 +419,7 @@
   font-family: var(--dm-font);
   font-size: 15px;
   margin-top: 4px;
-  color: var(--dm-orange);
+  color: var(--dm-orange-text);
 }
 
 .dm-metrics > div:not(:first-child) > p {
@@ -453,7 +453,7 @@
   white-space: nowrap;
 }
 
-.dm-catalog-note > button:hover { color: var(--dm-orange-hover); }
+.dm-catalog-note > button:hover { color: var(--dm-orange-text-hover); }
 
 /* ── Banner de cierre ───────────────────────────────────────────────────── */
 .dm-cierre {
@@ -531,7 +531,7 @@
 }
 
 .dm-negocios__card:nth-child(2) .dm-negocios__head { background: #18487A; }
-.dm-negocios__head > svg { color: var(--dm-orange); stroke-width: 1.5; }
+.dm-negocios__head > svg { color: var(--dm-orange-text); stroke-width: 1.5; }
 
 .dm-negocios__card h3 {
   font-size: 22px;
@@ -636,6 +636,7 @@
   --surface: var(--dm-surface);
   --bg: var(--dm-bg);
   --primary: var(--dm-orange);
+  --primary-text: var(--dm-orange-text);
   padding: 22px 24px;
   background: var(--dm-surface);
   border: 1px solid var(--dm-line);

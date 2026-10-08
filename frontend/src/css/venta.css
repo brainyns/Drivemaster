@@ -96,7 +96,7 @@ html[data-theme="light"] {
 .vt-brand {
   font-weight: 800;
   font-size: .95rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .vt-div {
@@ -132,7 +132,7 @@ html[data-theme="light"] {
 }
 
 .vt-tab.active {
-  color: var(--primary);
+  color: var(--primary-text);
   border-bottom-color: var(--primary);
 }
 
@@ -306,7 +306,7 @@ html[data-theme="light"] {
 
 .vt-toggle.active {
   background: var(--surface3);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── TABLE CARD ── */
@@ -395,7 +395,7 @@ table.vt-table tr:last-child td {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   font-size: .78rem;
-  color: var(--primary);
+  color: var(--primary-text);
   letter-spacing: .03em;
 }
 
@@ -461,7 +461,7 @@ table.vt-table tr:last-child td {
 
 .vt-badge.pendiente {
   background: rgba(245, 158, 11, .1);
-  color: var(--amber);
+  color: var(--amber-text);
   border: 1px solid rgba(245, 158, 11, .2);
 }
 
@@ -501,7 +501,7 @@ table.vt-table tr:last-child td {
 
 .vt-badge.en-camino {
   background: rgba(245, 158, 11, .1);
-  color: var(--amber);
+  color: var(--amber-text);
   border: 1px solid rgba(245, 158, 11, .2);
 }
 
@@ -568,7 +568,7 @@ table.vt-table tr:last-child td {
 }
 
 .vt-action-btn.ver {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .vt-action-btn.ver:hover {
@@ -581,12 +581,12 @@ table.vt-table tr:last-child td {
 }
 
 .vt-action-btn.enviar {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .vt-action-btn.enviar:hover {
   background: rgba(245, 158, 11, .12);
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .vt-action-btn.entregar {
@@ -738,7 +738,7 @@ table.vt-table tr:last-child td {
 }
 
 .vt-stat-val.orange {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .vt-stat-val.red {
@@ -865,7 +865,7 @@ table.vt-table tr:last-child td {
 .vd-resumen-monto {
   font-weight: 800;
   font-size: 2rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .vd-resumen-ico {
@@ -986,7 +986,7 @@ table.vd-table tr:last-child td {
 
 .vd-prod-cat {
   font-size: .7rem;
-  color: var(--primary);
+  color: var(--primary-text);
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: .05em;
@@ -994,7 +994,7 @@ table.vd-table tr:last-child td {
 }
 
 .vd-subtotal-orange {
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 700;
 }
 
@@ -1024,7 +1024,7 @@ table.vd-table tr:last-child td {
 .vd-totals-row.final .vd-totals-val {
   font-weight: 800;
   font-size: 1rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .vd-totals-label {
@@ -1291,7 +1291,7 @@ table.vd-table tr:last-child td {
 
 .vf-open-catalog-btn:hover {
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
   background: var(--primary-soft);
 }
 
@@ -1352,7 +1352,7 @@ table.vd-table tr:last-child td {
 
 .vf-scan-add:hover {
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
   background: var(--primary-soft);
 }
 
@@ -1394,7 +1394,7 @@ table.vd-table tr:last-child td {
 .vf-metodo-btn.active {
   border-color: var(--primary);
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 /* ── MODAL CATÁLOGO ── */
@@ -1549,7 +1549,7 @@ table.vd-table tr:last-child td {
 .vf-catalog-item-price {
   font-weight: 800;
   font-size: .85rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .vf-catalog-modal-footer {
@@ -1763,7 +1763,7 @@ table.vd-table tr:last-child td {
 .vf-total-val {
   font-weight: 800;
   font-size: 2rem;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .vf-btn-registrar {

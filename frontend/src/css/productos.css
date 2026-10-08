@@ -147,7 +147,7 @@
 .kp-alerta--warn {
   background: rgba(245, 158, 11, .08);
   border-color: rgba(245, 158, 11, .2);
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .kp-alerta--danger {
@@ -258,7 +258,7 @@
 }
 
 .kp-stat-value.orange {
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .kp-stat-value.blue {
@@ -380,7 +380,7 @@
 .kp-filter-btn--medio.activo {
   background: rgba(245, 158, 11, .15);
   border-color: var(--amber);
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .kp-filter-btn--critico.activo {
@@ -455,7 +455,7 @@
 /* ── CELDAS ─────────────────────────────────────────────────── */
 .kp-id {
   font-size: .73rem;
-  color: var(--primary);
+  color: var(--primary-text);
   font-weight: 700;
   font-family: monospace;
   white-space: nowrap;
@@ -555,7 +555,7 @@
 }
 
 .kp-stock-num--medio {
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .kp-stock-num--critico {
@@ -581,7 +581,7 @@
 
 .kp-estado--medio {
   background: rgba(245, 158, 11, .12);
-  color: var(--amber);
+  color: var(--amber-text);
 }
 
 .kp-estado--critico {
@@ -738,7 +738,7 @@
 
 .btn-agregar:hover {
   border-color: var(--primary);
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .form-actions {
@@ -805,7 +805,7 @@
 .kp-stat-icon svg {
   width: 20px;
   height: 20px;
-  color: var(--primary);
+  color: var(--primary-text);
 }
 
 .kp-stat-icon--alert svg { color: #ef4444; }
