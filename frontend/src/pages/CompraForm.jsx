@@ -114,7 +114,7 @@ function CompraForm({ onVolver, token }) {
             <div className="cp-panel-head">
               <span className="cp-panel-ico">{IcTruck}</span>
               <div>
-                <p className="cp-panel-title">1. Supplier Entity</p>
+                <p className="cp-panel-title">1. Proveedor</p>
                 <p className="cp-panel-sub">Selecciona el proveedor activo</p>
               </div>
             </div>
@@ -162,7 +162,7 @@ function CompraForm({ onVolver, token }) {
                     <p className="cp-prov-info-val">{proveedorActivo.telefono || "—"}</p>
                   </div>
                   <div>
-                    <p className="cp-prov-info-label">Email</p>
+                    <p className="cp-prov-info-label">Correo</p>
                     <p className="cp-prov-info-val">{proveedorActivo.correo || "—"}</p>
                   </div>
                 </div>
@@ -175,7 +175,7 @@ function CompraForm({ onVolver, token }) {
             <div className="cp-panel-head">
               <span className="cp-panel-ico">{IcBox}</span>
               <div>
-                <p className="cp-panel-title">2. Line Item Entry</p>
+                <p className="cp-panel-title">2. Productos de la compra</p>
                 <p className="cp-panel-sub">Busca y agrega productos al registro</p>
               </div>
             </div>
@@ -226,7 +226,7 @@ function CompraForm({ onVolver, token }) {
             </div>
 
             <button className="cp-btn-add-item" onClick={agregarItem} disabled={!prodSel}>
-              {IcPlus} Add Item to Registry
+              {IcPlus} Agregar a la compra
             </button>
           </div>
         </div>
@@ -234,7 +234,7 @@ function CompraForm({ onVolver, token }) {
         {/* Carrito */}
         <div className="cp-basket">
           <div className="cp-basket-header">
-            <span className="cp-basket-title">Purchase Basket</span>
+            <span className="cp-basket-title">Resumen de la compra</span>
             {items.length > 0 && <span className="cp-basket-count">{items.length} ITEMS</span>}
           </div>
 
@@ -250,8 +250,8 @@ function CompraForm({ onVolver, token }) {
                   <p className="cp-basket-item-name">{it.nombre}</p>
                   <p className="cp-basket-item-sku">SKU: {it.sku}</p>
                   <div className="cp-basket-item-meta">
-                    <span>QTY <strong>{it.cantidad}</strong></span>
-                    <span>UNIT <strong>${it.costo.toLocaleString()}</strong></span>
+                    <span>CANT. <strong>{it.cantidad}</strong></span>
+                    <span>C/U <strong>${it.costo.toLocaleString()}</strong></span>
                   </div>
                 </div>
                 <div className="cp-basket-item-right">
@@ -278,7 +278,7 @@ function CompraForm({ onVolver, token }) {
             onClick={() => setShowConfirm(true)}
             disabled={!proveedorId || items.length === 0}
           >
-            Register Purchase
+            Registrar compra
           </button>
 
           <div className="cp-basket-note">
@@ -326,7 +326,7 @@ function CompraForm({ onVolver, token }) {
               </table>
 
               <div className="cp-modal-total">
-                <span>TOTAL DUE</span>
+                <span>TOTAL A PAGAR</span>
                 <span>${total.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
