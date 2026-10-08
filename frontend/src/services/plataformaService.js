@@ -40,6 +40,33 @@ export async function pedidosPlataforma(token, filtros) {
     "No se pudieron cargar los pedidos.");
 }
 
+// ─── Reportes de la plataforma (solo SUPERADMIN) ───────────────────────────
+
+export async function reporteVentasPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/reportes/ventas${consulta(filtros)}`, { headers: headers(token) }), "No se pudo cargar el reporte de ventas.");
+}
+
+export async function reporteProductosPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/reportes/productos${consulta(filtros)}`, { headers: headers(token) }), "No se pudo cargar el reporte de productos.");
+}
+
+export async function reporteClientesPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/reportes/clientes${consulta(filtros)}`, { headers: headers(token) }), "No se pudo cargar el reporte de clientes.");
+}
+
+export async function reporteServiciosPlataforma(token) {
+  return leer(await apiFetch(`${BASE}/reportes/servicios`, { headers: headers(token) }), "No se pudo cargar el reporte de servicios.");
+}
+
+export async function reporteComisionPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/reportes/comision${consulta(filtros)}`, { headers: headers(token) }), "No se pudo cargar el reporte de comisión.");
+}
+
+/** Usuarios del sistema (correo enmascarado). Filtros: q, rol, estado, pagina, tamano. */
+export async function usuariosPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/usuarios${consulta(filtros)}`, { headers: headers(token) }), "No se pudieron cargar los usuarios.");
+}
+
 /** Catálogo global de solo lectura. Filtros: q, tiendaId, nuevosDias (7|30), estado, pagina, tamano. */
 export async function productosPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/productos${consulta(filtros)}`, { headers: headers(token) }),

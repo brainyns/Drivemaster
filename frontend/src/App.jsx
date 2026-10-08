@@ -45,6 +45,7 @@ import RegistroNegocio       from "./pages/RegistroNegocio";
 import SolicitarDiagnostico  from "./pages/SolicitarDiagnostico";
 import MisServicios          from "./pages/MisServicios";
 import CotizacionPublica     from "./pages/CotizacionPublica";
+import ReportesPlataforma     from "./pages/ReportesPlataforma";
 import PedidosEnvios         from "./pages/PedidosEnvios";
 import PedidosTienda         from "./pages/PedidosTienda";
 import Liquidaciones         from "./pages/Liquidaciones";
@@ -99,6 +100,7 @@ const TITULOS = {
   "inv-productos":   "Inventario Productos",
   "rep-productos":   "Reportes Productos",
   "rep-servicios":   "Reporte de Servicios",
+  "reportes-plataforma": "Reportes de la plataforma",
   "mis-solicitudes": "Mis Solicitudes",
   "pago-resultado":  "Resultado del pago",
   "mis-pedidos":     "Historial de compras",
@@ -351,7 +353,7 @@ function App() {
       "compras", "compraNueva", "compraDetalle",
       "proveedores", "proveedorNuevo", "proveedorEditar",
       "movimientos",
-      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
+      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios", "reportes-plataforma",
       "usuarios",
       "pedidos-envios",
       "admin-talleres", "aprobaciones", "liquidaciones", "problemas-envios",
@@ -663,10 +665,22 @@ function App() {
     if (pagina === "pedidos-envios")   return <PedidosEnvios key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado} />;
     if (pagina === "mi-tienda")        return <DatosMiTienda        token={token} onGuardado={(t) => setTiendaIncompleta(!t.datosCompletos)} />;
 
-    if (pagina === "inv-clientes")     return <InventarioClientes   token={token} />;
-    if (pagina === "rep-clientes")     return <ReportesClientes     token={token} />;
-    if (pagina === "inv-productos")    return <InventarioProductos  token={token} />;
-    if (pagina === "rep-productos")    return <ReportesProductos    token={token} />;
+    // Historial anterior: reportes sobre las ventas del flujo viejo, de solo lectura y etiquetados
+    const conAvisoHistorial = (contenido) => (
+      <>
+        <div className="dp-historial" role="note">
+          <strong>Historial anterior · solo lectura</strong>
+          Estos datos salen de las ventas del flujo anterior (compra normal de DriveMaster) y no incluyen las compras
+          del catálogo nuevo. Para esas usa «Reportes de plataforma».
+        </div>
+        {contenido}
+      </>
+    );
+    if (pagina === "reportes-plataforma") return <ReportesPlataforma token={token} />;
+    if (pagina === "inv-clientes")     return conAvisoHistorial(<InventarioClientes   token={token} />);
+    if (pagina === "rep-clientes")     return conAvisoHistorial(<ReportesClientes     token={token} />);
+    if (pagina === "inv-productos")    return conAvisoHistorial(<InventarioProductos  token={token} />);
+    if (pagina === "rep-productos")    return conAvisoHistorial(<ReportesProductos    token={token} />);
   if (pagina === "rep-servicios")     return <ReportesServicios    token={token} />;
 
     return <div style={{ padding: "40px" }}>Seleccione una sección válida.</div>;

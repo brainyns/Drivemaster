@@ -33,11 +33,18 @@ const menu = [
   {
     key: "reportes", label: "Reportes", icon: "reportes",
     subItems: [
+      { key: "reportes-plataforma", label: "Reportes de plataforma", icon: "repProductos" },
+      { key: "rep-servicios",       label: "Reporte Servicios",      icon: "repServicios" },
+    ],
+  },
+  // Reportes sobre las ventas del flujo anterior (Venta): solo lectura, hasta que se decida retirarlos
+  {
+    key: "historial-anterior", label: "Historial anterior", icon: "reportes",
+    subItems: [
       { key: "inv-clientes",  label: "Inventario Clientes",  icon: "invClientes"  },
       { key: "rep-clientes",  label: "Reportes Clientes",    icon: "repClientes"  },
       { key: "inv-productos", label: "Inventario Productos", icon: "invProductos" },
       { key: "rep-productos", label: "Reportes Productos",   icon: "repProductos" },
-      { key: "rep-servicios", label: "Reporte Servicios",    icon: "repServicios" },
     ],
   },
   { key: "usuarios", label: "Usuarios", icon: "admin" },

@@ -107,3 +107,11 @@
 .dp-campo--check input { width: auto; }
 .dp-fila--alerta td:first-child { box-shadow: inset 3px 0 0 #d64545; }
 .dp-etiqueta--alerta { color: #d64545; border-color: #d64545; }
+
+/* ── Reportes e historial ──────────────────────────────────── */
+.dp-nota { margin: 0; flex: 1 1 320px; font-size: .78rem; color: var(--muted); line-height: 1.45; padding-bottom: .5rem; }
+.dp-historial {
+  border: 1px solid var(--border); border-left: 4px solid #e0a100; border-radius: 8px;
+  padding: .7rem 1rem; margin: 1rem 1.75rem 0; font-size: .82rem; line-height: 1.45;
+}
+.dp-historial strong { display: block; margin-bottom: .15rem; }

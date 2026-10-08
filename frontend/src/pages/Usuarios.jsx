@@ -1,6 +1,7 @@
 import { apiFetch } from "../services/http";
 import { useEffect, useState } from "react";
-import { crearUsuario, listarUsuarios, eliminarUsuario, getUser } from "../services/authService";
+import { crearUsuario, eliminarUsuario, getUser } from "../services/authService";
+import { usuariosPlataforma } from "../services/plataformaService";
 import "../css/Usuarios.css";
 
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
@@ -23,7 +24,14 @@ function getInitials(nombre) {
 }
 
 export default function Usuarios({ token }) {
-  const [usuarios, setUsuarios] = useState([]);
+  const [lista, setLista] = useState({ usuarios: null, porRol: {} });
+  const [version, setVersion] = useState(0); // al subir, la lista se vuelve a pedir
+  const [busqueda, setBusqueda] = useState("");
+  const [q, setQ] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("");
+  const [pagina, setPagina] = useState(0);
+  const usuarios = lista.usuarios?.items || [];
+  const recargar = () => setVersion((v) => v + 1);
   const [nuevoUsuario, setNuevoUsuario] = useState({
     nombre: "",
     correo: "",
@@ -34,6 +42,7 @@ export default function Usuarios({ token }) {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [filterRol, setFilterRol] = useState("TODOS");
+  const TAMANO = 20;
 
   const currentUser = getUser();
   const isSuperadmin = currentUser?.rol === "SUPERADMIN";
@@ -44,11 +53,13 @@ export default function Usuarios({ token }) {
   const [editSuccess, setEditSuccess] = useState(null);
 
   useEffect(() => {
-    if (!token) return;
-    listarUsuarios(token)
-      .then(setUsuarios)
-      .catch((err) => setError(err.message));
-  }, [token]);
+    if (!token) return undefined;
+    let vivo = true;
+    usuariosPlataforma(token, { q, rol: filterRol === "TODOS" ? "" : filterRol, estado: filtroEstado, pagina, tamano: TAMANO })
+      .then((r) => { if (vivo) { setLista({ usuarios: r.usuarios, porRol: r.porRol }); setError(null); } })
+      .catch((err) => { if (vivo) setError(err.message); });
+    return () => { vivo = false; };
+  }, [token, q, filterRol, filtroEstado, pagina, version]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,8 +68,7 @@ export default function Usuarios({ token }) {
     try {
       await crearUsuario(nuevoUsuario, token);
       setNuevoUsuario({ nombre: "", correo: "", password: "", rol: "VENDEDOR" });
-      const updated = await listarUsuarios(token);
-      setUsuarios(updated);
+      recargar();
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -94,8 +104,7 @@ export default function Usuarios({ token }) {
         throw new Error(data.error || data.message || "Error al actualizar");
       }
       setEditSuccess("Usuario actualizado correctamente");
-      const updated = await listarUsuarios(token);
-      setUsuarios(updated);
+      recargar();
       setTimeout(() => { setEditando(null); setEditSuccess(null); }, 1500);
     } catch (err) {
       setEditError(err.message);
@@ -106,22 +115,40 @@ export default function Usuarios({ token }) {
     if (!window.confirm("¿Desactivar este usuario? Esta acción no se puede deshacer.")) return;
     try {
       await eliminarUsuario(id);
-      const updated = await listarUsuarios(token);
-      setUsuarios(updated);
+      recargar();
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const conteo = {
-    SUPERADMIN: usuarios.filter((u) => u.rol === "SUPERADMIN").length,
-    ADMIN: usuarios.filter((u) => u.rol === "ADMIN").length,
-    VENDEDOR: usuarios.filter((u) => u.rol === "VENDEDOR").length,
+  // Volver a activar una cuenta desactivada (solo SUPERADMIN: lo valida el backend)
+  const handleActivar = async (id) => {
+    try {
+      const res = await apiFetch(`${API_BASE}/usuarios/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ activo: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || data.message || "No se pudo activar el usuario");
+      }
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
-  const usuariosFiltrados =
-    (filterRol === "TODOS" ? usuarios : usuarios.filter((u) => u.rol === filterRol))
-      .filter((u) => u.rol !== "CLIENTE");
+  // Los conteos de las tarjetas vienen del servidor (no dependen de la página que se ve)
+  const conteo = {
+    SUPERADMIN: lista.porRol.SUPERADMIN || 0,
+    ADMIN: lista.porRol.ADMIN || 0,
+    VENDEDOR: lista.porRol.VENDEDOR || 0,
+  };
+
+  const usuariosFiltrados = usuarios;
+  const total = lista.usuarios?.total || 0;
+  const paginas = Math.max(1, Math.ceil(total / TAMANO));
 
   return (
     <>
@@ -175,16 +202,41 @@ export default function Usuarios({ token }) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
               <select
                 className="us-filter__select"
+                aria-label="Filtrar por rol"
                 value={filterRol}
-                onChange={(e) => setFilterRol(e.target.value)}
+                onChange={(e) => { setPagina(0); setFilterRol(e.target.value); }}
               >
-                <option value="TODOS">Filtrar por rol</option>
+                <option value="TODOS">Todos los roles</option>
                 <option value="SUPERADMIN">Super Admin</option>
                 <option value="ADMIN">Admin</option>
                 <option value="VENDEDOR">Vendedor</option>
+                <option value="TIENDA">Tienda</option>
+                <option value="TALLER">Taller</option>
+              </select>
+              <select
+                className="us-filter__select"
+                aria-label="Filtrar por estado"
+                value={filtroEstado}
+                onChange={(e) => { setPagina(0); setFiltroEstado(e.target.value); }}
+              >
+                <option value="">Todos los estados</option>
+                <option value="activos">Activos</option>
+                <option value="inactivos">Inactivos</option>
               </select>
             </div>
           </div>
+
+          <form className="us-search" role="search" onSubmit={(e) => { e.preventDefault(); setPagina(0); setQ(busqueda.trim()); }}>
+            <input
+              className="us-input"
+              type="search"
+              placeholder="Buscar por nombre o correo"
+              aria-label="Buscar usuarios"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
+            <button type="submit" className="us-btn-submit us-btn-submit--sm">Buscar</button>
+          </form>
 
           {error && <p className="us-error">{error}</p>}
 
@@ -232,11 +284,17 @@ export default function Usuarios({ token }) {
                                 <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                               </svg>
                             </button>
-                            <button className="us-action-btn us-action-btn--delete" title="Desactivar" onClick={() => handleDelete(u.id)}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                              </svg>
-                            </button>
+                            {u.activo ? (
+                              <button className="us-action-btn us-action-btn--delete" title="Desactivar" onClick={() => handleDelete(u.id)}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                </svg>
+                              </button>
+                            ) : (
+                              <button className="us-action-btn us-action-btn--edit" title="Activar" onClick={() => handleActivar(u.id)}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}
@@ -245,7 +303,17 @@ export default function Usuarios({ token }) {
                 })}
               </tbody>
             </table>
+            {lista.usuarios && usuariosFiltrados.length === 0 && (
+              <p className="us-cell--muted" style={{ padding: "1rem" }}>Ningún usuario coincide con los filtros.</p>
+            )}
           </div>
+          {total > TAMANO && (
+            <div className="us-pager" style={{ display: "flex", justifyContent: "center", gap: "1rem", padding: ".75rem" }}>
+              <button type="button" className="us-action-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
+              <span className="us-cell--muted">Página {pagina + 1} de {paginas}</span>
+              <button type="button" className="us-action-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
+            </div>
+          )}
         </div>
 
         {/* ── Formulario ── */}
