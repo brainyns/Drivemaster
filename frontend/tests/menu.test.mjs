@@ -57,3 +57,21 @@ test("el ADMIN no entra a reportes, usuarios ni clientes", () => {
     assert.ok(!ADMIN.includes(p), `ADMIN no debería abrir ${p}`);
   }
 });
+
+test("el taller ve su menú nuevo y ya no tiene el Panel de taller único", () => {
+  assert.ok(!sidebar.includes('key: "taller-panel"'), "el ítem único del panel salió del menú");
+  const i = sidebar.indexOf("const MENU_TALLER");
+  assert.ok(i > 0, "existe el menú del taller");
+  const bloque = sidebar.slice(i, sidebar.indexOf("];", i));
+  const claves = [...bloque.matchAll(/key: "([^"]+)"/g)].map((x) => x[1]);
+  assert.deepEqual(claves.slice(0, 3), ["taller-inicio", "taller-solicitudes", "taller-mitaller"]);
+});
+
+test("las páginas del taller están permitidas solo para TALLER", () => {
+  const roles = paginasPermitidas();
+  assert.ok(roles.TALLER.includes("taller-panel"), "el alias antiguo sigue funcionando");
+  for (const [rol, paginas] of Object.entries(roles)) {
+    if (rol === "TALLER") continue;
+    assert.ok(!paginas.some((p) => p.startsWith("taller-")), `${rol} no debería abrir páginas del taller`);
+  }
+});
