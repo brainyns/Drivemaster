@@ -219,7 +219,7 @@ function TopBar({
 
   useEffect(() => {
     // Las solicitudes pendientes son del personal interno; talleres y tiendas no tienen acceso.
-    if (!user || !["SUPERADMIN", "ADMIN", "VENDEDOR"].includes(user.rol)) return;
+    if (!user || !["SUPERADMIN", "VENDEDOR"].includes(user.rol)) return;
     const tok = getToken();
     if (!tok) return;
     connectNotifications(tok);

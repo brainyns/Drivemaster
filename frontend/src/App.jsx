@@ -126,6 +126,7 @@ const INICIO_POR_ROL = {
   CLIENTE: "catalogo",
   TALLER:  "taller-panel",
   TIENDA:  "productos",
+  ADMIN:   "aprobaciones",
 };
 
 const DEFAULT_IVA = 0.19;
@@ -329,17 +330,9 @@ function App() {
       "solicitudes",
       "mi-perfil",
     ],
+    // ADMIN: solo la operación diaria (el panel de plataforma completo es del SUPERADMIN)
     ADMIN: [
-      "dashboard-main",
-      "productos", "productoNuevo", "productoEditar",
-      "clientes", "clienteNuevo", "clienteEditar",
-      "ventas", "ventaNueva", "ventaDetalle",
-      "solicitudes",
-      "compras", "compraNueva", "compraDetalle",
-      "proveedores", "proveedorNuevo", "proveedorEditar",
-      "movimientos",
-      "inv-clientes", "rep-clientes", "inv-productos", "rep-productos", "rep-servicios",
-      "admin-talleres", "aprobaciones", "liquidaciones", "problemas-envios",
+      "aprobaciones", "admin-talleres", "problemas-envios",
       "mi-perfil",
     ],
     SUPERADMIN: [
@@ -467,7 +460,7 @@ function App() {
         vistaInicial={vistaCatalogo}
         onVistaConsumida={() => setVistaCatalogo("inicio")}
         onIrLogin={() => setPagina("login")}
-        onIrAdmin={() => setPagina(user?.rol === "TALLER" || user?.rol === "TIENDA" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
+        onIrAdmin={() => setPagina(INICIO_POR_ROL[user?.rol] && user.rol !== "CLIENTE" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
         onIrSolicitud={(p) => setPagina(p || "checkout")}
         onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         onRegistroNegocio={() => setPagina("registro-negocio")}

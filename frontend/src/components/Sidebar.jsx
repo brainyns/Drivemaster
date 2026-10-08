@@ -52,6 +52,9 @@ const menu = [
 // Tienda del marketplace: sus pedidos, su catálogo y los movimientos de su inventario.
 const MENU_TIENDA = ["pedidos-tienda", "productos", "movimientos", "mi-tienda"];
 
+// Operación diaria del ADMIN: aprobar tiendas y talleres, servicios y problemas de envío.
+const MENU_ADMIN = ["aprobaciones", "admin-talleres", "problemas-envios"];
+
 function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
   const [abiertos, setAbiertos] = useState([]);
 
@@ -70,9 +73,11 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar }) {
     if (userRole === "TALLER") return item.key === "taller-panel";
     if (userRole === "TIENDA") return MENU_TIENDA.includes(item.key);
     if (item.key === "taller-panel" || item.key === "pedidos-tienda" || item.key === "mi-tienda") return false;
-    if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "liquidaciones" || item.key === "problemas-envios") return userRole === "SUPERADMIN" || userRole === "ADMIN";
+    // ADMIN: solo la operación diaria; el resto del panel es del SUPERADMIN
+    if (userRole === "ADMIN") return MENU_ADMIN.includes(item.key);
+    if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "liquidaciones" || item.key === "problemas-envios") return userRole === "SUPERADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
-    if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "ADMIN" || userRole === "VENDEDOR";
+    if (item.key === "solicitudes") return userRole === "SUPERADMIN" || userRole === "VENDEDOR";
     if (userRole === "VENDEDOR") return ["dashboard-main", "clientes", "ventas", "solicitudes"].includes(item.key);
     return true;
   });

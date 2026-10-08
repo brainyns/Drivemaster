@@ -67,31 +67,32 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/google").permitAll()
                         .requestMatchers("/api/auth/login-interno").permitAll()
                         .requestMatchers("/api/auth/logout").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios", "/api/usuarios/**").hasAnyRole("SUPERADMIN", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/usuarios/**").hasAnyRole("SUPERADMIN", "ADMIN")
-                        .requestMatchers("/api/usuarios/**").hasRole("SUPERADMIN")
+                        // Panel de plataforma: la gestión de usuarios es solo del SUPERADMIN.
+                        // El ADMIN queda con la operación diaria (aprobaciones, servicios y problemas de envío).
+                        .requestMatchers("/api/usuarios", "/api/usuarios/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/productos", "/api/productos/").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/productos/mi-tienda").hasRole("TIENDA")
                         // TIENDA solo gestiona sus productos: lo verifica AlcanceTienda en el controlador
-                        .requestMatchers("/api/productos/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR", "TIENDA")
+                        .requestMatchers("/api/productos/**").hasAnyRole("SUPERADMIN", "VENDEDOR", "TIENDA")
                         .requestMatchers(HttpMethod.GET, "/api/clientes", "/api/clientes/").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/clientes/**").authenticated()
                          .requestMatchers(HttpMethod.GET, "/api/clientes/mi-perfil").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR", "CLIENTE")
-                        .requestMatchers("/api/clientes/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
+                        .requestMatchers("/api/clientes/**").hasAnyRole("SUPERADMIN", "VENDEDOR")
                         .requestMatchers(HttpMethod.GET, "/api/ventas/mis-ventas").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/ventas/compra-inmediata").authenticated()
-                        .requestMatchers("/api/ventas/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/compras/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/proveedores/**").hasAnyRole("SUPERADMIN", "ADMIN")
-                        .requestMatchers("/api/reportes/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers("/api/ventas/**").hasAnyRole("SUPERADMIN", "VENDEDOR")
+                        .requestMatchers("/api/compras/**").hasAnyRole("SUPERADMIN", "VENDEDOR")
+                        .requestMatchers("/api/proveedores/**").hasRole("SUPERADMIN")
+                        // Reportes financieros y de plataforma: solo SUPERADMIN
+                        .requestMatchers("/api/reportes/**").hasRole("SUPERADMIN")
                         // Inventario: antes los movimientos eran públicos y cualquier usuario con
                         // sesión podía ajustar stock. TIENDA queda limitada a su inventario.
-                        .requestMatchers("/api/movimientos", "/api/movimientos/**").hasAnyRole("SUPERADMIN", "ADMIN", "TIENDA")
-                        .requestMatchers("/inventario/**").hasAnyRole("SUPERADMIN", "ADMIN", "TIENDA")
+                        .requestMatchers("/api/movimientos", "/api/movimientos/**").hasAnyRole("SUPERADMIN", "TIENDA")
+                        .requestMatchers("/inventario/**").hasAnyRole("SUPERADMIN", "TIENDA")
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes/mis-solicitudes").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/solicitudes").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/solicitudes/**").hasAnyRole("SUPERADMIN", "ADMIN", "VENDEDOR")
+                        .requestMatchers(HttpMethod.GET, "/api/solicitudes").hasAnyRole("SUPERADMIN", "VENDEDOR")
+                        .requestMatchers("/api/solicitudes/**").hasAnyRole("SUPERADMIN", "VENDEDOR")
                         .requestMatchers("/api/pagos/webhook").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pagos/verificar/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pagos/confirmar-redirect").permitAll()
@@ -158,13 +159,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/orden/*/recibidos").hasRole("TALLER")
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/orden/*").authenticated()
                         .requestMatchers("/api/pedidos-tienda/**").denyAll()
-                        .requestMatchers("/api/liquidaciones/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        // Finanzas: liquidaciones solo SUPERADMIN
+                        .requestMatchers("/api/liquidaciones/**").hasRole("SUPERADMIN")
 
                         // Marketplace: tiendas y suscripciones
                         .requestMatchers(HttpMethod.POST, "/api/tiendas/registro").permitAll()
                         .requestMatchers("/api/tiendas/mi-tienda").hasRole("TIENDA")
                         .requestMatchers("/api/tiendas", "/api/tiendas/**").hasAnyRole("SUPERADMIN", "ADMIN")
+                        // Los planes se editan solo desde la plataforma; activar uno hace parte de aprobar un negocio
+                        .requestMatchers(HttpMethod.PUT, "/api/suscripciones/planes/*").hasRole("SUPERADMIN")
                         .requestMatchers("/api/suscripciones", "/api/suscripciones/**").hasAnyRole("SUPERADMIN", "ADMIN")
+
+                        // Configuración: se puede leer con sesión o sin ella (ver más abajo), pero escribir
+                        // (comisión, tarifas, métodos de pago) es solo del SUPERADMIN
+                        .requestMatchers(HttpMethod.POST, "/api/config/**").hasRole("SUPERADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/config/**").hasRole("SUPERADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/config/**").hasRole("SUPERADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/vehiculos/mantenimiento/enviar-recordatorios").hasRole("SUPERADMIN")
             .requestMatchers("/api/vehiculos/**").authenticated()
