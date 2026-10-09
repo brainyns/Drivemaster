@@ -96,3 +96,10 @@ test("Mi perfil es una página nueva solo para CLIENTE y no toca el perfil de lo
   assert.ok(perfil.includes("<EditarNombre"), "reutiliza la ventana de editar nombre");
   assert.ok(!perfil.includes("/api/"), "usa los servicios existentes, sin endpoints nuevos");
 });
+
+test("Soporte y cotizaciones del pie lleva a Solicitar diagnóstico sin pasar el evento del clic", () => {
+  const footer = readFileSync(new URL("../src/components/public/Footer.jsx", import.meta.url), "utf8");
+  const linea = footer.split("\n").find((l) => l.includes("dm-footer__wsp"));
+  assert.ok(linea.includes("onClick={() => onSolicitarDiagnostico?.()}"), linea);
+  assert.ok(!footer.includes("onClick={onIrSolicitud}"));
+});
