@@ -51,3 +51,33 @@ test("el menú de la cuenta y el menú móvil usan la misma lista", () => {
     assert.ok(menu.includes(atributo), `el menú debería tener ${atributo}`);
   }
 });
+
+test("Servicios anteriores: las órdenes en curso primero y solo las citas futuras", async () => {
+  const { ordenarOrdenesAnteriores, tieneCitaProxima } = await import("../src/components/servicio/ordenesAnteriores.js");
+  const ordenes = [
+    { id: "a", estado: "FINALIZADA", fechaCreacion: "2025-05-01T10:00:00" },
+    { id: "b", estado: "EN_PROCESO", fechaCreacion: "2025-01-01T10:00:00" },
+    { id: "c", estado: "PAGADA", fechaCreacion: "2025-03-01T10:00:00" },
+  ];
+  assert.deepEqual(ordenarOrdenesAnteriores(ordenes).map((o) => o.id), ["c", "b", "a"]);
+  const ahora = Date.parse("2025-06-01T00:00:00");
+  assert.equal(tieneCitaProxima({ estado: "PAGADA", fechaProgramada: "2025-06-03T09:00:00" }, ahora), true);
+  assert.equal(tieneCitaProxima({ estado: "PAGADA", fechaProgramada: "2025-05-03T09:00:00" }, ahora), false);
+  assert.equal(tieneCitaProxima({ estado: "CANCELADA", fechaProgramada: "2025-06-03T09:00:00" }, ahora), false);
+});
+
+test("el aviso cuenta solo las solicitudes viejas sin cerrar", async () => {
+  const { solicitudesSinCerrar } = await import("../src/components/marketplace/clasificarCompras.js");
+  const estados = ["PENDIENTE", "APROBADO", "PAGADO", "EN_CAMINO", "RECHAZADO", "ENTREGADO", "COMPLETADA"];
+  assert.equal(solicitudesSinCerrar(estados.map((estado, i) => ({ id: i, estado }))).length, 4);
+});
+
+test("Historial de compras y Mis solicitudes salen del menú pero sus pantallas siguen y se llega desde otras", () => {
+  const opciones = readFileSync(new URL("../src/components/public/opcionesCliente.js", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  const lista = opciones.slice(opciones.indexOf("["), opciones.indexOf("];"));
+  assert.ok(!lista.includes('"mis-pedidos"') && !lista.includes('"mis-solicitudes"'));
+  assert.ok(app.includes('pagina === "mis-pedidos"') && app.includes('pagina === "mis-solicitudes"'), "las pantallas siguen");
+  assert.ok(app.includes('onIrSolicitudes={() => setPagina("mis-solicitudes")}'), "el aviso de Mis compras lleva a Mis solicitudes");
+  assert.ok(app.includes('onIrHistorial={() => setPagina("mis-pedidos")}'), "Mis compras y Mis servicios enlazan al historial");
+});

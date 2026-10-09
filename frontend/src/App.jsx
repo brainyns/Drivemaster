@@ -424,6 +424,8 @@ function App() {
           header={cabeceraMarketplace("compras")}
           onVolver={() => setPagina("catalogo")}
           onIrCatalogo={() => irAlCatalogoGlobal()}
+          onIrSolicitudes={() => setPagina("mis-solicitudes")}
+          onIrHistorial={() => setPagina("mis-pedidos")}
         />
       );
       return (
@@ -553,6 +555,7 @@ function App() {
           onSolicitar={() => irA("solicitar-diagnostico")}
           avisoCotizacion={vieneDeCotizacion ? user.correo : null}
           onCerrarAviso={() => setVieneDeCotizacion(false)}
+          onIrHistorial={() => setPagina("mis-pedidos")}
         />
       );
       return (

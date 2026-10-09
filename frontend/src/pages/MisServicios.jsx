@@ -4,6 +4,7 @@ import { misSolicitudesServicio, cancelarSolicitudServicio } from "../services/s
 import { cotizacionesDeOrden, responderCotizacion } from "../services/cotizacionService";
 import { pagarDiagnostico, pagarCotizacion } from "../services/pagoMarketplaceService";
 import { pedidosDeOrden } from "../services/pedidoTiendaService";
+import { misOrdenes } from "../services/ordenServicioService";
 import EstadoServicio from "../components/servicio/EstadoServicio";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
@@ -14,6 +15,7 @@ import ConfirmarRecepcion from "../components/servicio/ConfirmarRecepcion";
 import {
   ESTADOS_CANCELABLES_CLIENTE, ESTADOS_PEDIDO, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
+import { ESTADOS_ORDEN_ANTERIOR, ordenarOrdenesAnteriores, tieneCitaProxima } from "../components/servicio/ordenesAnteriores";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
@@ -118,8 +120,48 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
   );
 }
 
+/**
+ * Órdenes de taller del flujo anterior, solo consulta (lo que el Historial de compras mostraba
+ * como "Servicios de taller" y "Citas agendadas"). Las que siguen en curso van primero, con su estado.
+ */
+function ServiciosAnteriores({ ordenes, ahora, onIrHistorial }) {
+  if (ordenes.length === 0) return null;
+  return (
+    <section className="sv-anteriores" aria-labelledby="sv-anteriores-titulo">
+      <h2 id="sv-anteriores-titulo" className="sv-anteriores__titulo">Servicios anteriores</h2>
+      <p className="ss-meta">Órdenes de taller del sistema anterior. Aquí solo puedes consultarlas.</p>
+      <div className="sv-list">
+        {ordenarOrdenesAnteriores(ordenes).map((o) => (
+          <article key={o.id} className="sv-anterior">
+            <div className="ss-tarjeta__cabecera">
+              <span className="ss-eyebrow">#{refSolicitud(o.id)}{o.fechaCreacion ? ` · ${formatFecha(o.fechaCreacion)}` : ""}</span>
+              <Etiqueta estado={o.estado} catalogo={ESTADOS_ORDEN_ANTERIOR} />
+            </div>
+            <strong className="ss-tarjeta__titulo">{o.vehiculoDescripcion}</strong>
+            <span className="ss-meta">{[o.tallerNombre, o.productoNombre].filter(Boolean).join(" · ")}</span>
+            {tieneCitaProxima(o, ahora) && (
+              <span className="sv-anterior__cita">Cita agendada: {formatFechaHora(o.fechaProgramada)}</span>
+            )}
+            <span className="ss-meta">
+              Total {formatPrecio(o.total)}
+              {o.fechaInicio ? ` · Iniciado: ${formatFechaHora(o.fechaInicio)}` : ""}
+              {o.fechaFinalizacion ? ` · Finalizado: ${formatFechaHora(o.fechaFinalizacion)}` : ""}
+            </span>
+            {o.observaciones && <span className="ss-meta">{o.observaciones}</span>}
+          </article>
+        ))}
+      </div>
+      {onIrHistorial && (
+        <p className="ss-meta">
+          <button className="sv-anteriores__enlace" onClick={onIrHistorial}>Ver el historial anterior completo</button>
+        </p>
+      )}
+    </section>
+  );
+}
+
 /** Solicitudes de diagnóstico del cliente y el avance de cada una. */
-export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso }) {
+export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso, onIrHistorial }) {
   const token = getToken();
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -144,6 +186,17 @@ export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = 
   }, [token]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Órdenes del flujo anterior: aparte, para que un fallo no afecte las solicitudes actuales
+  const [ordenesAnteriores, setOrdenesAnteriores] = useState([]);
+  const [ahora] = useState(() => Date.now());
+  useEffect(() => {
+    let vivo = true;
+    misOrdenes(token)
+      .then((o) => { if (vivo) setOrdenesAnteriores(Array.isArray(o) ? o : []); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, [token]);
 
   const seleccionada = solicitudes.find((s) => s.id === seleccionadaId) || null;
 
@@ -383,6 +436,8 @@ export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = 
           ))}
         </div>
       )}
+
+      <ServiciosAnteriores ordenes={ordenesAnteriores} ahora={ahora} onIrHistorial={onIrHistorial} />
     </div>
   );
 }

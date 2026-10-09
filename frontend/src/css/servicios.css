@@ -125,3 +125,41 @@ body:has(.sv-root) { background: var(--dm-bg); }
 .sv-manto-error { display: block; margin-top: 6px; color: var(--ui-error); font-size: 0.82rem; }
 
 .sv-section-title { font-family: var(--ui-font); font-size: 1.4rem; margin: var(--sp-xl) 0 var(--sp-md); }
+/* ── Servicios anteriores (órdenes del flujo anterior, solo consulta) ── */
+.sv-anteriores {
+  display: grid;
+  gap: var(--ui-sp-3);
+  margin-top: var(--ui-sp-7);
+  padding-top: var(--ui-sp-5);
+  border-top: 1px solid var(--ui-line);
+}
+.sv-anteriores__titulo { margin: 0; font-family: var(--ui-font); font-size: 1.15rem; color: var(--ui-text); }
+.sv-anterior {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--sp-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.sv-anterior__cita {
+  align-self: flex-start;
+  padding: 3px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ui-text);
+  background: var(--ui-hover);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--ui-r-sm);
+}
+.sv-anteriores__enlace {
+  padding: 0;
+  font: inherit;
+  color: var(--dm-orange-text);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sv-anteriores__enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }

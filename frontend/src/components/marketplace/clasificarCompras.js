@@ -34,7 +34,15 @@ export function estadoVentaAnterior(v) {
   return ESTADO_VENTA_ANTERIOR[(v.estado || "").toUpperCase()] || { label: v.estado || "Sin estado", tono: "aviso", enCurso: false };
 }
 
-const fechaCompra = (c) => new Date(c.fechaPago || c.fechaCreacion || 0).getTime();
+/**
+ * Solicitudes del carrito anterior (/api/solicitudes/mis-solicitudes) que aún no se cierran:
+ * ni rechazadas ni entregadas. Su pago y seguimiento siguen en la pantalla Mis solicitudes.
+ */
+export function solicitudesSinCerrar(solicitudes = []) {
+  return solicitudes.filter((s) => !["RECHAZADO", "ENTREGADO", "COMPLETADA"].includes(s.estado));
+}
+
+const fechaCompra =(c) => new Date(c.fechaPago || c.fechaCreacion || 0).getTime();
 const fechaVenta = (v) => new Date(v.fecha || 0).getTime();
 
 /**

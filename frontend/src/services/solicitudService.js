@@ -18,6 +18,13 @@ export function getWompiRedirectUrl() {
   return `${api}/api/pagos/confirmar-redirect`;
 }
 
+/** Solicitudes del cliente con sesión (la misma consulta de la pantalla Mis solicitudes). Solo lectura. */
+export async function misSolicitudes(token) {
+  const res = await apiFetch(`${BASE}/mis-solicitudes`, { headers: headers(token) });
+  if (!res.ok) throw new Error("No se pudieron cargar tus solicitudes");
+  return res.json();
+}
+
 export async function crearSolicitud(token, productos, metodoPago) {
   const res = await apiFetch(BASE, {
     method: "POST",

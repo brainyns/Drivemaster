@@ -49,6 +49,21 @@
 
 .mc-vacio { margin: var(--ui-sp-5) 0; color: var(--ui-muted); }
 
+/* Aviso discreto: solicitudes del sistema anterior sin cerrar */
+.mc-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0 0 var(--ui-sp-4);
+  padding: 10px 14px;
+  font-size: 0.875rem;
+  color: var(--ui-text);
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+}
+
 /* Etiqueta discreta de las compras del flujo anterior */
 .mc-origen {
   display: inline-block;

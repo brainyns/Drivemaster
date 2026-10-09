@@ -6,7 +6,8 @@ export const OPCIONES_CLIENTE = [
   { destino: "mis-compras", label: "Mis compras", icono: "box" },
   { destino: "mis-servicios", label: "Mis servicios", icono: "tool" },
   { destino: "mis-vehiculos", label: "Mis vehículos", icono: "car" },
-  // Flujo anterior: salen del menú cuando su contenido quede cubierto en Mis compras y Mis servicios
-  { destino: "mis-pedidos", label: "Historial de compras", icono: "layers" },
-  { destino: "mis-solicitudes", label: "Mis solicitudes", icono: "message" },
 ];
+// Fuera del menú, pero las pantallas siguen y se llega desde otras:
+// - "Historial de compras" (mis-pedidos): sus ventas están en Mis compras > Anteriores y sus
+//   órdenes de taller en Mis servicios > Servicios anteriores; ambas enlazan al historial.
+// - "Mis solicitudes" (mis-solicitudes): el aviso de Mis compras > En curso lleva a ella.

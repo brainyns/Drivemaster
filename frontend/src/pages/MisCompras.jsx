@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getToken } from "../services/authService";
 import { misCompras, pedirCodigoRetiro, confirmarRecepcion, reportarProblema } from "../services/catalogoService";
 import { misVentas } from "../services/ventaService";
+import { misSolicitudes } from "../services/solicitudService";
 import { formatFechaHora, formatPrecio } from "../components/servicio/estadosServicio";
 import { ESTADO_COMPRA, ESTADOS_CON_CODIGO, estadoPedido } from "../components/marketplace/estadosCompra";
-import { clasificarCompras, estadoVentaAnterior } from "../components/marketplace/clasificarCompras";
+import { clasificarCompras, estadoVentaAnterior, solicitudesSinCerrar } from "../components/marketplace/clasificarCompras";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import "../css/marketplace.css";
 import "../css/mis-compras.css";
@@ -19,18 +20,20 @@ const PESTANAS = [
 /**
  * Compras del cliente en dos pestañas: "En curso" y "Anteriores". Une las compras del catálogo
  * (pedidos por tienda) con las ventas del flujo anterior que mostraba el Historial de compras,
- * marcadas como "Sistema anterior" (ver clasificarCompras.js).
+ * marcadas como "Sistema anterior" (ver clasificarCompras.js). Si quedan solicitudes del carrito
+ * anterior sin cerrar, "En curso" avisa y lleva a Mis solicitudes, donde siguen su pago y estado.
  *
  * El código de retiro NUNCA se muestra aquí: llega por correo y, si se pierde, se pide uno nuevo
  * (que reemplaza al anterior). "Ya lo recibí" y "Reportar un problema" piden confirmación.
  */
-export default function MisCompras({ header, onVolver, onIrCatalogo }) {
+export default function MisCompras({ header, onVolver, onIrCatalogo, onIrSolicitudes, onIrHistorial }) {
   const token = getToken();
   const [compras, setCompras] = useState(null);
   const [error, setError] = useState(null);
   // Ventas del flujo anterior: si fallan, el resto de la pantalla sigue funcionando
   const [ventas, setVentas] = useState([]);
   const [errorVentas, setErrorVentas] = useState(false);
+  const [solicitudesAbiertas, setSolicitudesAbiertas] = useState(0);
   const [pestana, setPestana] = useState("enCurso");
   const [aviso, setAviso] = useState(null);
   const [accion, setAccion] = useState(null); // { tipo: "codigo"|"recibido"|"problema", pedido }
@@ -55,6 +58,10 @@ export default function MisCompras({ header, onVolver, onIrCatalogo }) {
     misVentas(token)
       .then((v) => { if (vivo) setVentas(Array.isArray(v) ? v : []); })
       .catch(() => { if (vivo) setErrorVentas(true); });
+    // Solo para el aviso: si falla, no se muestra
+    misSolicitudes(token)
+      .then((s) => { if (vivo) setSolicitudesAbiertas(solicitudesSinCerrar(Array.isArray(s) ? s : []).length); })
+      .catch(() => {});
     return () => { vivo = false; };
   }, [token]);
 
@@ -237,6 +244,17 @@ export default function MisCompras({ header, onVolver, onIrCatalogo }) {
 
   const lista = grupos ? grupos[pestana] : [];
   const actual = PESTANAS.find((t) => t.id === pestana);
+  const hayVentasAnteriores = grupos?.anteriores.some((x) => x.origen === "anterior");
+
+  const avisoSolicitudes = solicitudesAbiertas > 0 && (
+    <p className="mc-aviso" role="status">
+      <span>
+        Tienes {solicitudesAbiertas} {solicitudesAbiertas === 1 ? "solicitud" : "solicitudes"} del sistema anterior
+      </span>
+      <span aria-hidden="true">·</span>
+      <button className="mk-enlace" onClick={onIrSolicitudes}>Ver</button>
+    </p>
+  );
 
   return (
     <div className="dm-page mk-pagina">
@@ -252,6 +270,7 @@ export default function MisCompras({ header, onVolver, onIrCatalogo }) {
         {error && <p className="mk-aviso mk-aviso--error" role="alert">{error}</p>}
         {!compras && !error && <p className="mk-conteo">Cargando...</p>}
 
+        {sinNada && avisoSolicitudes}
         {sinNada && (
           <div className="mk-vacio">
             <p>Aún no has comprado en las tiendas del catálogo.</p>
@@ -272,8 +291,15 @@ export default function MisCompras({ header, onVolver, onIrCatalogo }) {
             </div>
 
             <div id="mc-panel" role="tabpanel" aria-labelledby={`mc-tab-${pestana}`} className="mc-panel">
+              {pestana === "enCurso" && avisoSolicitudes}
               {lista.length === 0 && <p className="mc-vacio">{actual.vacio}</p>}
               {lista.map((x) => (x.origen === "catalogo" ? renderCompra(x.dato) : renderVentaAnterior(x.dato)))}
+              {pestana === "anteriores" && hayVentasAnteriores && onIrHistorial && (
+                <p className="mk-nota">
+                  ¿Buscas el detalle con el seguimiento de envío del sistema anterior?{" "}
+                  <button className="mk-enlace" onClick={onIrHistorial}>Ver el historial anterior</button>
+                </p>
+              )}
               {errorVentas && (
                 <p className="mk-nota" role="status">No pudimos cargar tus compras del sistema anterior. Intenta de nuevo más tarde.</p>
               )}
