@@ -72,13 +72,16 @@ body:has(.sv-root) { background: var(--dm-bg); }
 
 .sv-empty { color: var(--text-muted); padding: var(--sp-lg) 0; text-align: center; }
 
-.sv-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-md); margin-bottom: var(--sp-lg); }
+/* minmax(0, 1fr): con 1fr cada columna medía al menos el ancho intrínseco del <input> y a 360 px
+   la segunda se salía por la derecha (Barrio en Solicitar diagnóstico). Una columna en pantallas angostas. */
+.sv-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-md); margin-bottom: var(--sp-lg); }
+@media (max-width: 480px) { .sv-form { grid-template-columns: minmax(0, 1fr); } }
 .sv-form-full { grid-column: 1 / -1; }
-.sv-field { display: flex; flex-direction: column; gap: 4px; }
+.sv-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .sv-field label { font-size: 0.85rem; color: var(--text-muted); }
 .sv-field input, .sv-field select, .sv-field textarea {
   background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-  border-radius: var(--r-sm); padding: 10px 12px; font-family: inherit;
+  border-radius: var(--r-sm); padding: 10px 12px; font-family: inherit; min-width: 0;
 }
 
 .sv-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-full); font-size: 0.8rem; font-weight: 600; }
