@@ -381,6 +381,8 @@ function App() {
       onIrLogin={() => setPagina("login")}
       onLogout={handleLogout}
       onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
+      onIr={(p) => irA(p)}
+      onIrAdmin={() => setPagina(INICIO_POR_ROL[user?.rol] && user.rol !== "CLIENTE" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
       theme={theme}
       onToggleTheme={toggleTheme}
     />

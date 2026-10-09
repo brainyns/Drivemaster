@@ -1,6 +1,7 @@
 import Logo from "../public/Logo";
 import Icon from "../public/Icon";
 import ThemeToggle from "../ThemeToggle";
+import MenuUsuario from "../public/MenuUsuario";
 import { getUser } from "../../services/authService";
 import "../../css/navbar.css";
 import "../../css/marketplace.css";
@@ -12,6 +13,7 @@ import "../../css/marketplace.css";
 export default function MarketHeader({
   activo, cantidadCarrito = 0,
   onIrInicio, onIrCatalogo, onIrCarrito, onIrMisCompras, onIrLogin, onLogout, onSolicitarDiagnostico,
+  onIr, onIrAdmin,
   theme, onToggleTheme,
 }) {
   const user = getUser();
@@ -41,7 +43,7 @@ export default function MarketHeader({
             {cantidadCarrito > 0 && <span className="dm-header__cart-badge">{cantidadCarrito}</span>}
           </button>
           {user ? (
-            <button className="dm-header__login" onClick={() => onLogout?.()}>Cerrar sesión</button>
+            <MenuUsuario onIr={onIr} onIrAdmin={onIrAdmin} onLogout={onLogout} />
           ) : (
             <button className="dm-header__login" onClick={() => onIrLogin?.()}>
               Iniciar sesión <Icon name="user" size={16} />

@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Logo from "./Logo";
 import Icon from "./Icon";
 import ThemeToggle from "../ThemeToggle";
-import { getUser, actualizarMiNombre } from "../../services/authService";
+import MenuUsuario from "./MenuUsuario";
+import { OPCIONES_CLIENTE } from "./opcionesCliente";
+import { getUser } from "../../services/authService";
 import "../../css/navbar.css";
 
 /**
@@ -29,20 +31,7 @@ export default function Navbar({
   vehiculoActivo,
 }) {
   const user = getUser();
-  const [menuAbierto, setMenuAbierto] = useState(false);
   const [mobileAbierto, setMobileAbierto] = useState(false);
-  const [editandoNombre, setEditandoNombre] = useState(false);
-  const [nuevoNombre, setNuevoNombre] = useState(user?.nombre || "");
-  const [mensaje, setMensaje] = useState(null);
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    const onClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuAbierto(false);
-    };
-    if (menuAbierto) document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [menuAbierto]);
 
   useEffect(() => {
     document.body.style.overflow = mobileAbierto ? "hidden" : "";
@@ -51,26 +40,15 @@ export default function Navbar({
     };
   }, [mobileAbierto]);
 
+  // Accesos de la cuenta: Mis compras y Mis servicios tienen su propio manejo (sesión y retorno)
   const irA = (destino) => {
-    setMenuAbierto(false);
     setMobileAbierto(false);
-    if (typeof destino === "string") onIrSolicitud?.(destino);
-    else onIrCatalogo?.();
+    if (destino === "mis-compras") onIrMisCompras?.();
+    else if (destino === "mis-servicios") onIrMisServicios?.();
+    else onIrSolicitud?.(destino);
   };
 
-  const handleGuardarNombre = async () => {
-    try {
-      await actualizarMiNombre(nuevoNombre);
-      setEditandoNombre(false);
-      setMensaje("Nombre actualizado");
-      setTimeout(() => setMensaje(null), 2000);
-    } catch (e) {
-      setMensaje("Error: " + e.message);
-      setTimeout(() => setMensaje(null), 3000);
-    }
-  };
-
-  const cerrarY = (accion) => () => { setMenuAbierto(false); setMobileAbierto(false); accion?.(); };
+  const cerrarY = (accion) => () => { setMobileAbierto(false); accion?.(); };
 
   const enlaces = [
     { label: "Inicio", onClick: cerrarY(() => onIrInicio?.()) },
@@ -105,43 +83,7 @@ export default function Navbar({
             </button>
 
             {user ? (
-              <div className="dm-header__user" ref={menuRef}>
-                <button
-                  className="dm-header__user-btn"
-                  onClick={() => setMenuAbierto(!menuAbierto)}
-                  aria-expanded={menuAbierto}
-                >
-                  <Icon name="user" size={16} />
-                  <span>{user.nombre?.split(" ")[0] || "Cuenta"}</span>
-                  <Icon name="chevron" size={14} />
-                </button>
-
-                {menuAbierto && (
-                  <div className="dm-header__dropdown">
-                    {user.rol === "CLIENTE" && (
-                      <>
-                        <button onClick={cerrarY(onIrMisServicios)}>Mis servicios</button>
-                        <button onClick={cerrarY(onIrMisCompras)}>Mis compras en tiendas</button>
-                        <button onClick={() => irA("mis-pedidos")}>Historial de compras</button>
-                        <button onClick={() => irA("mis-solicitudes")}>Mis solicitudes</button>
-                        <button onClick={() => irA("mis-vehiculos")}>Mis vehículos</button>
-                        <button onClick={() => { setMenuAbierto(false); setEditandoNombre(true); setNuevoNombre(user.nombre); }}>
-                          Editar nombre de usuario
-                        </button>
-                      </>
-                    )}
-                    {user.rol !== "CLIENTE" && (
-                      <button onClick={() => { setMenuAbierto(false); onIrAdmin?.(); }}>
-                        {user.rol === "TALLER" ? "Panel de taller" : user.rol === "TIENDA" ? "Panel de tienda" : "Panel de administración"}
-                      </button>
-                    )}
-                    <div className="dm-header__dropdown-divider" />
-                    <button className="is-danger" onClick={() => { setMenuAbierto(false); onLogout?.(); }}>
-                      Cerrar sesión
-                    </button>
-                  </div>
-                )}
-              </div>
+              <MenuUsuario onIr={irA} onIrAdmin={onIrAdmin} onLogout={onLogout} />
             ) : (
               <button className="dm-header__login" onClick={onIrLogin || onIrAdmin}>
                 Iniciar sesión <Icon name="user" size={16} />
@@ -179,50 +121,21 @@ export default function Navbar({
 
       {mobileAbierto && (
         <nav className="dm-mobile-nav" aria-label="Navegación móvil">
-          {enlacesVisibles.map((e) => (
+          {/* Los accesos de la cuenta van abajo, con la misma lista del menú de usuario */}
+          {enlacesVisibles.filter((e) => !e.soloCliente).map((e) => (
             <button key={e.label} onClick={e.onClick}>{e.label}</button>
           ))}
           {user ? (
             <>
-              {user.rol === "CLIENTE" && (
-                <>
-                  <button onClick={() => irA("mis-vehiculos")}>Mis vehículos</button>
-                  <button onClick={() => irA("mis-pedidos")}>Historial de compras</button>
-                </>
-              )}
+              {user.rol === "CLIENTE" && OPCIONES_CLIENTE.map((o) => (
+                <button key={o.destino} onClick={() => irA(o.destino)}>{o.label}</button>
+              ))}
               <button onClick={() => { setMobileAbierto(false); onLogout?.(); }}>Cerrar sesión</button>
             </>
           ) : (
             <button onClick={() => { setMobileAbierto(false); onIrLogin?.(); }}>Iniciar sesión</button>
           )}
         </nav>
-      )}
-
-      {editandoNombre && (
-        <div className="dm-modal-overlay" onClick={() => setEditandoNombre(false)}>
-          <div className="dm-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="dm-modal-header">
-              <span className="dm-eyebrow">DRIVEMASTER / PERFIL</span>
-              <button className="dm-icon-btn" onClick={() => setEditandoNombre(false)} aria-label="Cerrar">
-                <Icon name="close" />
-              </button>
-            </div>
-            <h2>Editar nombre de usuario</h2>
-            <label className="dm-form-label">
-              Nombre
-              <input
-                type="text"
-                value={nuevoNombre}
-                onChange={(e) => setNuevoNombre(e.target.value)}
-                autoFocus
-              />
-            </label>
-            {mensaje && <p className="dm-form-error">{mensaje}</p>}
-            <button className="dm-btn dm-btn--primary dm-btn--full" onClick={handleGuardarNombre}>
-              Guardar
-            </button>
-          </div>
-        </div>
       )}
     </>
   );
