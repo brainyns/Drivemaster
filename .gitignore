@@ -12,3 +12,5 @@ frontend/preview-b1.html
 frontend/preview-movil.html
 frontend/src/__preview_b1.jsx
 capturas/
+# Informes locales (lista de CSS sin uso del bloque 6, etc.)
+informes/
