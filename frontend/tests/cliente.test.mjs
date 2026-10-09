@@ -1,0 +1,53 @@
+// Pruebas de la cuenta del CLIENTE: reparto de Mis compras y accesos del menú (sin dependencias: node --test)
+import { readFileSync } from "node:fs";
+import test from "node:test";
+import assert from "node:assert/strict";
+import { clasificarCompras, compraEnCurso, estadoVentaAnterior } from "../src/components/marketplace/clasificarCompras.js";
+
+const compra = (id, estado, pedidos, dias = 1) => ({ id, estado, pedidos: pedidos.map((e, i) => ({ id: `${id}-${i}`, estado: e })),
+  fechaCreacion: new Date(Date.now() - dias * 86400000).toISOString() });
+
+test("una compra que espera el pago o con algún pedido activo está en curso", () => {
+  assert.equal(compraEnCurso(compra("a", "PENDIENTE_PAGO", [])), true);
+  for (const activo of ["PENDIENTE", "EN_PREPARACION", "DESPACHADO", "LISTO_PARA_RETIRAR"]) {
+    assert.equal(compraEnCurso(compra("b", "PAGADA", ["ENTREGADO", activo])), true, activo);
+  }
+});
+
+test("reembolsos y compras cerradas van a Anteriores", () => {
+  assert.equal(compraEnCurso(compra("c", "NO_APLICADA", [])), false);
+  assert.equal(compraEnCurso(compra("d", "PAGADA", ["ENTREGADO", "RETIRADO"])), false);
+  assert.equal(compraEnCurso(compra("e", "PAGADA", ["NO_DESPACHADO"])), false);
+  assert.equal(compraEnCurso(compra("f", "PAGADA", ["NO_ENTREGADO", "ENTREGADO"])), false);
+});
+
+test("las ventas viejas se reparten por su estado, sin las de taller, y todo queda ordenado por fecha", () => {
+  const ventas = [
+    { id: "v1", tipoVenta: "WEB", estado: "ENTREGADO", fecha: "2025-01-10T10:00:00" },
+    { id: "v2", tipoVenta: "WEB", estado: "EN_CAMINO", fecha: "2025-03-10T10:00:00" },
+    { id: "v3", tipoVenta: "TALLER", estado: "PAGADA", fecha: "2025-03-11T10:00:00" },
+    { id: "v4", tipoVenta: "POS", estado: "ANULADA", fecha: "2025-02-10T10:00:00" },
+  ];
+  const { enCurso, anteriores } = clasificarCompras([compra("c1", "PAGADA", ["DESPACHADO"]), compra("c2", "PAGADA", ["ENTREGADO"], 3)], ventas);
+  assert.deepEqual(enCurso.map((x) => x.id), ["c1", "v2"]);
+  assert.deepEqual(anteriores.map((x) => x.id), ["c2", "v4", "v1"]);
+  assert.equal(anteriores.find((x) => x.id === "v1").origen, "anterior");
+  assert.ok(![...enCurso, ...anteriores].some((x) => x.id === "v3"), "las ventas de taller van en Mis servicios");
+  assert.equal(estadoVentaAnterior({ estado: "RARO" }).enCurso, false);
+});
+
+test("sin compras ni ventas no hay nada en ninguna pestaña", () => {
+  const { enCurso, anteriores } = clasificarCompras([], []);
+  assert.equal(enCurso.length + anteriores.length, 0);
+});
+
+test("el menú de la cuenta y el menú móvil usan la misma lista", () => {
+  const navbar = readFileSync(new URL("../src/components/public/Navbar.jsx", import.meta.url), "utf8");
+  const menu = readFileSync(new URL("../src/components/public/MenuUsuario.jsx", import.meta.url), "utf8");
+  const market = readFileSync(new URL("../src/components/marketplace/MarketHeader.jsx", import.meta.url), "utf8");
+  assert.ok(navbar.includes("OPCIONES_CLIENTE") && menu.includes("OPCIONES_CLIENTE"));
+  assert.ok(navbar.includes("<MenuUsuario") && market.includes("<MenuUsuario"), "un solo componente en las dos cabeceras");
+  for (const atributo of ['aria-haspopup="menu"', 'role="menu"', 'role="menuitem"', "Escape", "ArrowDown", "ArrowUp"]) {
+    assert.ok(menu.includes(atributo), `el menú debería tener ${atributo}`);
+  }
+});

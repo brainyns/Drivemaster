@@ -1,0 +1,61 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Mis compras: pestañas "En curso" y "Anteriores" (BEM, prefijo mc-). Las tarjetas
+   siguen siendo las de marketplace.css (mk-). Tokens --ui-*, los dos temas.
+───────────────────────────────────────────────────────────────────────────── */
+.mc-pestanas {
+  display: flex;
+  gap: var(--ui-sp-5);
+  margin: 4px 0 var(--ui-sp-4);
+  border-bottom: 1px solid var(--ui-line);
+  overflow-x: auto;
+}
+
+.mc-pestana {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 2px;
+  font-family: var(--ui-font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ui-muted);
+  background: transparent;
+  border: 0;
+  box-shadow: inset 0 -2px 0 transparent;
+  cursor: pointer;
+}
+
+.mc-pestana[aria-selected="true"] { color: var(--ui-text); box-shadow: inset 0 -2px 0 var(--primary); }
+.mc-pestana:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
+
+.mc-pestana__contador {
+  min-width: 1.5rem;
+  padding: 1px 7px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--ui-muted);
+  background: var(--ui-hover);
+  border-radius: 999px;
+}
+
+.mc-pestana[aria-selected="true"] .mc-pestana__contador { color: var(--on-primary); background: var(--primary); }
+
+@media (hover: hover) and (pointer: fine) {
+  .mc-pestana:hover { color: var(--ui-text); }
+}
+
+.mc-vacio { margin: var(--ui-sp-5) 0; color: var(--ui-muted); }
+
+/* Etiqueta discreta de las compras del flujo anterior */
+.mc-origen {
+  display: inline-block;
+  padding: 1px 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ui-muted);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-sm);
+}
