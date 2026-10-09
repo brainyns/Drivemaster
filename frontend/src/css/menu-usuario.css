@@ -5,7 +5,7 @@
 ───────────────────────────────────────────────────────────────────────────── */
 .um { position: relative; }
 
-.um__boton {
+.um .um__boton {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -72,7 +72,7 @@
 
 .um__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 
-.um__item {
+.um .um__item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -95,7 +95,7 @@
 
 .um__item:active { transform: scale(0.98); }
 .um__item:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; background: var(--ui-hover); }
-.um__item--salir { color: var(--ui-error); }
+.um .um__item--salir { color: var(--ui-error); }
 .um__item--salir .um__icono { color: currentColor; }
 
 .um__divisor { height: 1px; margin: 4px 6px; background: var(--ui-line); }
@@ -107,7 +107,7 @@
 
 /* En móvil el botón queda solo con el ícono */
 @media (max-width: 760px) {
-  .um__boton { padding: 7px; }
+  .um .um__boton { padding: 7px; }
   .um__boton-nombre { display: none; }
 }
 

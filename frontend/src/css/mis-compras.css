@@ -10,7 +10,7 @@
   overflow-x: auto;
 }
 
-.mc-pestana {
+.mc-pestanas .mc-pestana {
   display: inline-flex;
   align-items: center;
   gap: 8px;

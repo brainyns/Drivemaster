@@ -1,7 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import Icon from "./Icon";
-import EditarNombre from "./EditarNombre";
 import { getUser } from "../../services/authService";
 import { OPCIONES_CLIENTE } from "./opcionesCliente";
 import "../../css/menu-usuario.css";
@@ -18,7 +16,6 @@ const ETIQUETA_PANEL = { TALLER: "Panel de taller", TIENDA: "Panel de tienda" };
 export default function MenuUsuario({ onIr, onIrAdmin, onLogout }) {
   const user = getUser();
   const [abierto, setAbierto] = useState(false);
-  const [editandoNombre, setEditandoNombre] = useState(false);
   const raizRef = useRef(null);
   const botonRef = useRef(null);
   const menuRef = useRef(null);
@@ -100,14 +97,6 @@ export default function MenuUsuario({ onIr, onIrAdmin, onLogout }) {
                 </button>
               </li>
             ))}
-            {esCliente && (
-              <li role="none">
-                <button role="menuitem" tabIndex={-1} className="um__item" onClick={elegir(() => setEditandoNombre(true))}>
-                  <Icon name="user" size={17} className="um__icono" />
-                  Editar nombre de usuario
-                </button>
-              </li>
-            )}
             {!esCliente && (
               <li role="none">
                 <button role="menuitem" tabIndex={-1} className="um__item" onClick={elegir(onIrAdmin)}>
@@ -125,12 +114,6 @@ export default function MenuUsuario({ onIr, onIrAdmin, onLogout }) {
             </li>
           </ul>
         </div>
-      )}
-
-      {/* Fuera de la cabecera: su backdrop-filter recortaría la ventana fija */}
-      {editandoNombre && createPortal(
-        <EditarNombre nombreInicial={user.nombre} onCerrar={() => setEditandoNombre(false)} />,
-        document.body,
       )}
     </div>
   );

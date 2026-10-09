@@ -3,6 +3,7 @@
 // Archivo sin componentes para no romper Fast Refresh.
 
 export const OPCIONES_CLIENTE = [
+  { destino: "perfil-cliente", label: "Mi perfil", icono: "user" },
   { destino: "mis-compras", label: "Mis compras", icono: "box" },
   { destino: "mis-servicios", label: "Mis servicios", icono: "tool" },
   { destino: "mis-vehiculos", label: "Mis vehículos", icono: "car" },

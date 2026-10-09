@@ -60,6 +60,7 @@ import DetalleProductoMarketplace from "./pages/DetalleProductoMarketplace";
 import CarritoMarketplace from "./pages/CarritoMarketplace";
 import CheckoutMarketplace from "./pages/CheckoutMarketplace";
 import MisCompras from "./pages/MisCompras";
+import PerfilCliente from "./pages/PerfilCliente";
 import ProblemasEnvios from "./pages/ProblemasEnvios";
 import DatosMiTienda from "./pages/DatosMiTienda";
 import { miTienda } from "./services/tiendaService";
@@ -112,6 +113,7 @@ const TITULOS = {
   "solicitar-diagnostico": "Solicitar diagnóstico",
   "mis-servicios":   "Mis servicios",
   "mis-compras":     "Mis compras",
+  "perfil-cliente":  "Mi perfil",
   "checkout-marketplace": "Entrega y pago",
   "taller-panel":    "Inicio del taller",
   "taller-inicio":   "Inicio del taller",
@@ -135,7 +137,7 @@ const TITULOS = {
 // Páginas del cliente que se muestran sin el panel lateral.
 const PAGINAS_CLIENTE = [
   "checkout", "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo",
-  "solicitar-diagnostico", "mis-servicios", "checkout-marketplace", "mis-compras",
+  "solicitar-diagnostico", "mis-servicios", "checkout-marketplace", "mis-compras", "perfil-cliente",
 ];
 
 // Catálogo marketplace: se consulta sin sesión y no usa el panel lateral aunque haya una.
@@ -434,6 +436,20 @@ function App() {
           carrito={carrito}
           onVolverCarrito={() => setPagina("carrito-marketplace")}
           onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); setPagina("mis-compras"); }}
+        />
+      );
+    }
+
+    // Mi perfil del cliente (distinto de "mi-perfil", el perfil de los roles internos)
+    if (pagina === "perfil-cliente") {
+      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
+      if (user.rol !== "CLIENTE") return <div style={{ padding: "40px" }}>Esta sección es para clientes.</div>;
+      return (
+        <PerfilCliente
+          header={cabeceraMarketplace("perfil")}
+          onIr={(p) => irA(p)}
+          onIrCatalogo={() => irAlCatalogoGlobal()}
+          onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         />
       );
     }

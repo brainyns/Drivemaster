@@ -81,3 +81,18 @@ test("Historial de compras y Mis solicitudes salen del menú pero sus pantallas 
   assert.ok(app.includes('onIrSolicitudes={() => setPagina("mis-solicitudes")}'), "el aviso de Mis compras lleva a Mis solicitudes");
   assert.ok(app.includes('onIrHistorial={() => setPagina("mis-pedidos")}'), "Mis compras y Mis servicios enlazan al historial");
 });
+
+test("menú final: Mi perfil, Mis compras, Mis servicios y Mis vehículos", async () => {
+  const { OPCIONES_CLIENTE } = await import("../src/components/public/opcionesCliente.js");
+  assert.deepEqual(OPCIONES_CLIENTE.map((o) => o.destino), ["perfil-cliente", "mis-compras", "mis-servicios", "mis-vehiculos"]);
+});
+
+test("Mi perfil es una página nueva solo para CLIENTE y no toca el perfil de los roles internos", () => {
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  const perfil = readFileSync(new URL("../src/pages/PerfilCliente.jsx", import.meta.url), "utf8");
+  const bloque = app.slice(app.indexOf('if (pagina === "perfil-cliente")'), app.indexOf('if (pagina === "catalogo")'));
+  assert.ok(bloque.includes("if (!user)") && bloque.includes('user.rol !== "CLIENTE"'), "pide sesión de CLIENTE");
+  assert.ok(app.includes('if (pagina === "mi-perfil")        return <PerfilAdmin'), "mi-perfil sigue siendo de los roles internos");
+  assert.ok(perfil.includes("<EditarNombre"), "reutiliza la ventana de editar nombre");
+  assert.ok(!perfil.includes("/api/"), "usa los servicios existentes, sin endpoints nuevos");
+});
