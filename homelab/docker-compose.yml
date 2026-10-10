@@ -1,4 +1,4 @@
-# DriveMaster en el HomeLab (VM Linux dentro de Proxmox).
+# DriveMaster en el HomeLab (VM Linux dentro de Proxmox), desplegado como stack de Portainer.
 #
 #   Internet ─► Cloudflare ─► cloudflared ─► frontend (nginx :80) ─┬─► /            archivos de React
 #                                                                   ├─► /api/...     backend :8080
@@ -8,7 +8,13 @@
 # Solo nginx publica un puerto en la VM (para probar desde la LAN). Mongo, Postgres y el backend
 # quedan en la red interna de Docker: nadie de fuera puede conectarse a ellos.
 #
-# Uso (desde esta carpeta):  docker compose --env-file .env up -d --build
+# Pensado para Portainer (Stacks → Add stack → Repository, Compose path: homelab/docker-compose.yml):
+#   - Las variables se cargan en el editor de variables de Portainer (ver .env.example). No se usa
+#     env_file: en un stack de Git el .env no existe (no está en el repositorio).
+#   - nginx.conf va dentro de la imagen del frontend (homelab/frontend.Dockerfile), porque Portainer CE
+#     no permite montar archivos del repositorio con rutas relativas.
+#
+# También funciona sin Portainer, desde esta carpeta:  docker compose --env-file .env up -d --build
 
 name: drivemaster
 
@@ -49,14 +55,36 @@ services:
 
   backend:
     build: ../drivemaster
+    image: drivemaster-backend:latest
     restart: unless-stopped
-    env_file: .env
     environment:
-      # Se arman aquí para que las contraseñas se escriban una sola vez en .env.
+      # Se arman aquí para que las contraseñas se escriban una sola vez.
       SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DB:-drivemasterDB}?authSource=admin
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-drivemaster}
       DB_USERNAME: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+      FRONTEND_URL: ${FRONTEND_URL}
+      SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET}
+      RETIRO_CODIGO_SECRET: ${RETIRO_CODIGO_SECRET:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-DriveMaster}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      WOMPI_PUBLIC_KEY: ${WOMPI_PUBLIC_KEY}
+      WOMPI_INTEGRITY_KEY: ${WOMPI_INTEGRITY_KEY}
+      WOMPI_API_URL: ${WOMPI_API_URL:-https://sandbox.wompi.co/v1}
+      WOMPI_REDIRECT_URL: ${WOMPI_REDIRECT_URL}
+      DISPERSION_MODO: ${DISPERSION_MODO:-SIMULADO}
+      DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-false}
+      PAGO_SIMULADO_ENABLED: ${PAGO_SIMULADO_ENABLED:-false}
+      PAGO_VERIFICACION_MANUAL_ENABLED: ${PAGO_VERIFICACION_MANUAL_ENABLED:-false}
+      MAIL_DEV_LOG: ${MAIL_DEV_LOG:-false}
+      MAIL_DEV_SKIP_SEND: ${MAIL_DEV_SKIP_SEND:-false}
       # La JVM usa como máximo el 75 % del límite de memoria del contenedor.
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
       TZ: America/Bogota
@@ -69,13 +97,14 @@ services:
 
   frontend:
     build:
-      context: ../frontend
+      # Contexto = raíz del repo, para que la imagen incluya también homelab/nginx.conf.
+      context: ..
+      dockerfile: homelab/frontend.Dockerfile
       args:
         # Mismo dominio público: nginx reenvía /api y /ws al backend, así no hay CORS entre dominios.
         VITE_API_URL: ${PUBLIC_URL}
+    image: drivemaster-frontend:latest
     restart: unless-stopped
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       # Acceso de prueba desde la LAN: http://IP-DE-LA-VM:8088
       - "${LAN_PORT:-8088}:80"
@@ -84,14 +113,14 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
+    # Sin CLOUDFLARE_TUNNEL_TOKEN el contenedor se cierra y se reintenta cada pocos segundos; no
+    # afecta al resto. Hasta la fase del túnel puedes detenerlo desde Portainer.
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
     depends_on:
       - frontend
-    # Solo arranca con:  docker compose --profile tunnel up -d
-    profiles: ["tunnel"]
 
 volumes:
   mongo-data:

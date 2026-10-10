@@ -1,0 +1,10 @@
+# Lo usa BuildKit solo para homelab/frontend.Dockerfile (contexto = raíz del repo).
+# Deja fuera todo lo que la imagen del frontend no necesita.
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+.git
+drivemaster
+homelab/backups
+frontend/preview-*.html
