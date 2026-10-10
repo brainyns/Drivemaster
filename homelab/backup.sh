@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Respaldo de MongoDB y PostgreSQL de DriveMaster.
+# Respaldo de las bases de datos de DriveMaster en la nube: MongoDB Atlas y Supabase (PostgreSQL).
 #
 # Uso:      ./backup.sh [carpeta_destino]          (por defecto ./backups, junto al script)
 # Con cron: 0 3 * * * /opt/drivemaster/backup.sh /mnt/nas/backups/drivemaster
 #
-# Funciona con el stack desplegado desde Portainer: no necesita el .env ni el docker-compose.yml.
-# Busca los contenedores por las etiquetas que pone Docker Compose (nombre del stack + servicio) y
-# usa el usuario y la contraseña que ya tienen dentro (MONGO_INITDB_ROOT_*, POSTGRES_*).
+# No necesita .env: lee SPRING_DATA_MONGODB_URI, DB_URL, DB_USERNAME y DB_PASSWORD del contenedor del
+# backend del stack (Portainer). Ejecuta mongodump y pg_dump en contenedores temporales (--rm), así que
+# no hay que instalar nada en la VM.
 # Si tu stack en Portainer no se llama "drivemaster":  STACK=otro_nombre ./backup.sh
 #
+# Importante: el plan gratuito de Atlas (M0) NO tiene backups automáticos. Este script es tu respaldo.
 # Guarda un .archive.gz de Mongo y un .sql.gz de Postgres con fecha, y borra los de más de 14 días.
 # Recuerda tu plan: "Almacenamiento ≠ Backup". Lleva esta carpeta a OTRO equipo (NAS, G52, disco externo).
 
@@ -19,32 +20,42 @@ DESTINO="${1:-$DIR_SCRIPT/backups}"
 STACK="${STACK:-drivemaster}"
 DIAS_RETENCION=14
 FECHA="$(date +%Y-%m-%d_%H%M)"
+# pg_dump debe ser de la misma versión mayor que el servidor de Supabase, o más nueva.
+IMAGEN_PG="postgres:17-alpine"
+IMAGEN_MONGO="mongo:7.0"
 
-contenedor() {
-  local id
-  id="$(docker ps -q \
-    --filter "label=com.docker.compose.project=$STACK" \
-    --filter "label=com.docker.compose.service=$1")"
-  if [ -z "$id" ]; then
-    echo "No encontré el contenedor '$1' del stack '$STACK' en ejecución." >&2
-    exit 1
-  fi
-  echo "$id"
-}
+BACKEND="$(docker ps -q \
+  --filter "label=com.docker.compose.project=$STACK" \
+  --filter "label=com.docker.compose.service=backend")"
+if [ -z "$BACKEND" ]; then
+  echo "No encontré el backend del stack '$STACK' en ejecución." >&2
+  exit 1
+fi
 
-MONGO="$(contenedor mongo)"
-POSTGRES="$(contenedor postgres)"
+variable() { docker exec "$BACKEND" printenv "$1"; }
+
+MONGO_URI="$(variable SPRING_DATA_MONGODB_URI)"
+DB_URL="$(variable DB_URL)"
+PGUSER="$(variable DB_USERNAME)"
+PGPASSWORD="$(variable DB_PASSWORD)"
+# JDBC (jdbc:postgresql://host:puerto/base?opciones) → URI de libpq. Se quitan las opciones propias de
+# JDBC (pg_dump no las entiende) y se exige SSL, que Supabase requiere.
+PG_URI="${DB_URL#jdbc:}"
+PG_URI="${PG_URI%%\?*}?sslmode=require"
+export MONGO_URI PG_URI PGUSER PGPASSWORD
+
 mkdir -p "$DESTINO"
 
-echo "[$(date)] Respaldando MongoDB..."
-# Comillas simples: las variables se expanden DENTRO del contenedor, no aquí.
-docker exec "$MONGO" sh -c 'mongodump \
-  --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" \
-  --authenticationDatabase admin --db "$MONGO_INITDB_DATABASE" --archive --gzip --quiet' \
+# Las credenciales viajan como variables de entorno (-e NOMBRE), no en la línea de comandos,
+# para que no aparezcan en la lista de procesos.
+echo "[$(date)] Respaldando MongoDB Atlas..."
+docker run --rm -e MONGO_URI "$IMAGEN_MONGO" \
+  sh -c 'mongodump --uri "$MONGO_URI" --archive --gzip --quiet' \
   > "$DESTINO/mongo_${FECHA}.archive.gz"
 
-echo "[$(date)] Respaldando PostgreSQL..."
-docker exec "$POSTGRES" sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+echo "[$(date)] Respaldando Supabase (PostgreSQL)..."
+docker run --rm -e PG_URI -e PGUSER -e PGPASSWORD "$IMAGEN_PG" \
+  sh -c 'pg_dump --no-owner --no-privileges --schema=public "$PG_URI"' \
   | gzip > "$DESTINO/postgres_${FECHA}.sql.gz"
 
 find "$DESTINO" -name 'mongo_*.archive.gz' -mtime +"$DIAS_RETENCION" -delete
