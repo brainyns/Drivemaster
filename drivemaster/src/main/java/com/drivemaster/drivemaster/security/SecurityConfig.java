@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.security;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,11 @@ public class SecurityConfig {
 
     @Value("${security.session.max-inactive-minutes:30}")
     private int maxInactiveMinutes;
+
+    // URL pública del frontend (FRONTEND_URL). Se suma a los orígenes permitidos para que un
+    // despliegue propio (p. ej. el HomeLab) funcione sin tocar esta lista.
+    @Value("${frontend.url:}")
+    private String frontendUrl;
 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
                           JwtAuthenticationFilter jwtAuthenticationFilter) {
@@ -239,7 +245,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://localhost:5174", "https://drivermaster.onrender.com", "https://drivemaster-orcin.vercel.app"));
+        List<String> origenes = new ArrayList<>(List.of("http://localhost:5173", "http://localhost:5174", "https://drivermaster.onrender.com", "https://drivemaster-orcin.vercel.app"));
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            origenes.add(frontendUrl.strip().replaceAll("/+$", ""));
+        }
+        configuration.setAllowedOriginPatterns(origenes);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "Cookie"));
         configuration.setAllowCredentials(true);

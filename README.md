@@ -314,6 +314,7 @@ Referencias de despliegue usadas en el proyecto (ver `.env.example`):
 - **MongoDB**: Atlas.
 - **PostgreSQL**: Supabase.
 - **Wompi**: apuntar `WOMPI_API_URL` y `WOMPI_REDIRECT_URL` a los endpoints de producción (`production.wompi.co/v1`).
+- **HomeLab propio** (Proxmox + Docker, MongoDB y PostgreSQL locales, Cloudflare Tunnel): ver [`homelab/README.md`](homelab/README.md).
 
 ---
 

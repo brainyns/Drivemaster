@@ -1,0 +1,98 @@
+# DriveMaster en el HomeLab (VM Linux dentro de Proxmox).
+#
+#   Internet ─► Cloudflare ─► cloudflared ─► frontend (nginx :80) ─┬─► /            archivos de React
+#                                                                   ├─► /api/...     backend :8080
+#                                                                   └─► /ws/...      backend :8080 (WebSocket)
+#                                            backend ─► mongo :27017  y  postgres :5432
+#
+# Solo nginx publica un puerto en la VM (para probar desde la LAN). Mongo, Postgres y el backend
+# quedan en la red interna de Docker: nadie de fuera puede conectarse a ellos.
+#
+# Uso (desde esta carpeta):  docker compose --env-file .env up -d --build
+
+name: drivemaster
+
+services:
+
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    # Limita la caché de WiredTiger: por defecto usa ~50 % de la RAM de la VM.
+    command: ["--wiredTigerCacheSizeGB", "0.5"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-drivemasterDB}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-drivemaster}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ../drivemaster
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Se arman aquí para que las contraseñas se escriban una sola vez en .env.
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DB:-drivemasterDB}?authSource=admin
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-drivemaster}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # La JVM usa como máximo el 75 % del límite de memoria del contenedor.
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
+      TZ: America/Bogota
+    mem_limit: 1g
+    depends_on:
+      mongo:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        # Mismo dominio público: nginx reenvía /api y /ws al backend, así no hay CORS entre dominios.
+        VITE_API_URL: ${PUBLIC_URL}
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      # Acceso de prueba desde la LAN: http://IP-DE-LA-VM:8088
+      - "${LAN_PORT:-8088}:80"
+    depends_on:
+      - backend
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+    # Solo arranca con:  docker compose --profile tunnel up -d
+    profiles: ["tunnel"]
+
+volumes:
+  mongo-data:
+  postgres-data:
