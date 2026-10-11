@@ -52,6 +52,11 @@ public class SolicitudServicioDTO {
     private LocalDateTime fechaAsignacion;
     private LocalDateTime fechaLimiteRespuesta;
 
+    // Taller elegido por el cliente en el mapa y si lo rechazó (o no respondió) y se reasignó
+    private String tallerElegidoId;
+    private String tallerElegidoNombre;
+    private Boolean tallerElegidoNoAcepto;
+
     // Aceptación y cita de revisión
     private Boolean aceptadaPorTaller;
     private LocalDateTime fechaRevision;

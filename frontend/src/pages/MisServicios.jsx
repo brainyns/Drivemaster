@@ -262,10 +262,20 @@ export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = 
               <p className="ss-meta">{[s.barrio, s.ciudad].filter(Boolean).join(", ")} · {s.preferenciaHorario}</p>
             </section>
 
+            {s.tallerElegidoNoAcepto && (
+              <p className="ss-aviso" role="status">
+                <strong>{s.tallerElegidoNombre}</strong>, el taller que elegiste, no aceptó tu solicitud o no respondió a tiempo.{" "}
+                {s.tallerNombre
+                  ? <>La reasignamos automáticamente a <strong>{s.tallerNombre}</strong>.</>
+                  : "Estamos buscando otro taller cercano."}
+              </p>
+            )}
+
             {s.tallerNombre && (
               <section className="ss-bloque">
                 <h2 className="ss-bloque__titulo">Taller</h2>
                 <p className="ss-texto"><strong>{s.tallerNombre}</strong></p>
+                {s.tallerElegidoId && s.tallerElegidoId === s.tallerId && <p className="ss-meta">Lo elegiste en el mapa.</p>}
                 {s.tallerDireccion && <p className="ss-meta">{s.tallerDireccion}</p>}
                 {s.aceptadaPorTaller && s.tallerTelefono && <p className="ss-meta">Teléfono: {s.tallerTelefono}</p>}
                 {!s.aceptadaPorTaller && s.estado === "ASIGNADA_A_TALLER" && (
@@ -430,6 +440,7 @@ export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = 
               <span className="ss-meta ss-tarjeta__sintomas">{s.sintomas}</span>
               <span className="ss-meta">
                 {s.tallerNombre ? `Taller: ${s.tallerNombre}` : "Buscando taller"}
+                {s.tallerElegidoNoAcepto ? " · Reasignada: tu taller elegido no aceptó" : ""}
                 {s.fechaRevision ? ` · Revisión: ${formatFechaHora(s.fechaRevision)}` : ""}
               </span>
             </button>

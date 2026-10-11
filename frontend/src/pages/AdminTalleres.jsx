@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getToken, getUser } from "../services/authService";
 import { listarTalleres, crearTaller, actualizarTaller, activarDesactivarTaller } from "../services/tallerService";
 import { ordenesPorTallerAdmin } from "../services/ordenServicioService";
+import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
 import "../css/admin-talleres.css";
 
 const ESTADO_LABEL = {
@@ -113,8 +114,13 @@ export default function AdminTalleres() {
 
   const handleGuardar = async (e) => {
     e.preventDefault();
-    setGuardando(true);
     setError(null);
+    // Un taller nuevo debe quedar en el mapa; los anteriores pueden seguir sin ubicación
+    if (!editandoId && (form.latitud === "" || form.longitud === "")) {
+      setError("Marca la ubicación del taller en el mapa.");
+      return;
+    }
+    setGuardando(true);
     try {
       const payload = {
         nombre: form.nombre,
@@ -468,16 +474,12 @@ export default function AdminTalleres() {
 
               <fieldset className="at-group">
                 <legend className="at-group-legend">Ubicación en el mapa</legend>
-                <div className="at-field-row">
-                  <div className="at-field">
-                    <label htmlFor="at-lat">Latitud</label>
-                    <input id="at-lat" type="number" step="any" value={form.latitud} onChange={e => setForm({ ...form, latitud: e.target.value })} />
-                  </div>
-                  <div className="at-field">
-                    <label htmlFor="at-lng">Longitud</label>
-                    <input id="at-lng" type="number" step="any" value={form.longitud} onChange={e => setForm({ ...form, longitud: e.target.value })} />
-                  </div>
-                </div>
+                <SelectorUbicacion
+                  id="at-mapa"
+                  ciudad={form.ciudad}
+                  value={form.latitud === "" || form.longitud === "" ? null : { latitud: Number(form.latitud), longitud: Number(form.longitud) }}
+                  onChange={({ latitud, longitud }) => setForm((f) => ({ ...f, latitud, longitud }))}
+                />
                 <div className="at-field">
                   <label htmlFor="at-rating">Rating inicial</label>
                   <input id="at-rating" type="number" step="0.1" min="0" max="5" value={form.rating} onChange={e => setForm({ ...form, rating: e.target.value })} />
@@ -500,6 +502,7 @@ export default function AdminTalleres() {
                   </div>
                 </fieldset>
               )}
+              {error && <p className="at-error" role="alert">{error}</p>}
             </div>
 
             <div className="at-modal-foot">

@@ -4,6 +4,7 @@ import com.drivemaster.drivemaster.dto.AprobacionRequest;
 import com.drivemaster.drivemaster.dto.CrearTallerRequest;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
 import com.drivemaster.drivemaster.dto.TallerDTO;
+import com.drivemaster.drivemaster.dto.TallerMapaDTO;
 import com.drivemaster.drivemaster.model.Mecanico;
 import com.drivemaster.drivemaster.service.TallerService;
 import org.springframework.http.HttpStatus;
@@ -32,6 +33,12 @@ public class TallerController {
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng) {
         return ResponseEntity.ok(tallerService.listarActivos(ciudad, lat, lng));
+    }
+
+    // Mapa de la solicitud de diagnóstico: talleres aprobados y con ubicación.
+    @GetMapping("/mapa")
+    public ResponseEntity<List<TallerMapaDTO>> mapa() {
+        return ResponseEntity.ok(tallerService.listarParaMapa());
     }
 
     // Registro público de un taller; queda PENDIENTE de aprobación.

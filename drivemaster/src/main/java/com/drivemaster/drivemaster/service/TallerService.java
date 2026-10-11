@@ -4,6 +4,7 @@ import com.drivemaster.drivemaster.dto.AprobacionRequest;
 import com.drivemaster.drivemaster.dto.CrearTallerRequest;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
 import com.drivemaster.drivemaster.dto.TallerDTO;
+import com.drivemaster.drivemaster.dto.TallerMapaDTO;
 import com.drivemaster.drivemaster.model.Mecanico;
 import com.drivemaster.drivemaster.model.Taller;
 
@@ -20,6 +21,8 @@ public interface TallerService {
     List<TallerDTO> listarTodos(String estadoAprobacion);
 
     List<TallerDTO> listarActivos(String ciudad, Double lat, Double lng);
+
+    List<TallerMapaDTO> listarParaMapa();
 
     Taller obtenerEntidad(String id);
 

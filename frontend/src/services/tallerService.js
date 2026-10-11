@@ -131,3 +131,9 @@ export async function actualizarDatosTaller(token, { tarifaHora, horario }) {
   if (res.status === 403) throw new Error("Tu taller aún no está aprobado, así que todavía no puedes editar estos datos.");
   return handle(res, "No se pudieron guardar los cambios");
 }
+
+/** Talleres aprobados con ubicación, para elegir uno en el mapa al pedir un diagnóstico. */
+export async function talleresMapa(token) {
+  const res = await apiFetch(`${BASE}/mapa`, { headers: headers(token) });
+  return handle(res, "No se pudieron cargar los talleres del mapa");
+}

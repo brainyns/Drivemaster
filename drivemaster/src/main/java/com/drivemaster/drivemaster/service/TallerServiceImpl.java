@@ -4,6 +4,7 @@ import com.drivemaster.drivemaster.dto.AprobacionRequest;
 import com.drivemaster.drivemaster.dto.CrearTallerRequest;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
 import com.drivemaster.drivemaster.dto.TallerDTO;
+import com.drivemaster.drivemaster.dto.TallerMapaDTO;
 import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.Mecanico;
 import com.drivemaster.drivemaster.model.Taller;
@@ -12,6 +13,7 @@ import com.drivemaster.drivemaster.model.mysql.Suscripcion;
 import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
+import com.drivemaster.drivemaster.util.Coordenadas;
 import com.drivemaster.drivemaster.util.HaversineUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,7 @@ public class TallerServiceImpl implements TallerService {
     /** Alta directa por el ADMIN: el taller queda aprobado y activo de inmediato. */
     @Override
     public TallerDTO crear(CrearTallerRequest request) {
+        Coordenadas.validar(request.getLatitud(), request.getLongitud(), true);
         String usuarioId = request.getUsuarioId();
 
         if (usuarioId == null || usuarioId.isBlank()) {
@@ -85,6 +88,8 @@ public class TallerServiceImpl implements TallerService {
 
     @Override
     public TallerDTO actualizar(String id, CrearTallerRequest request) {
+        // Los talleres anteriores al mapa pueden seguir sin ubicación; si se envía, debe ser válida
+        Coordenadas.validar(request.getLatitud(), request.getLongitud(), false);
         Taller taller = obtenerEntidad(id);
         taller.setNombre(request.getNombre());
         taller.setCiudad(request.getCiudad());
@@ -137,6 +142,17 @@ public class TallerServiceImpl implements TallerService {
                 .collect(Collectors.toList());
     }
 
+    /** Talleres que el cliente ve en el mapa: aprobados, activos y con ubicación. */
+    @Override
+    public List<TallerMapaDTO> listarParaMapa() {
+        return tallerRepository.findByActivoTrue().stream()
+                .filter(t -> EstadoAprobacion.estaAprobado(t.getEstadoAprobacion()))
+                .filter(t -> t.getLatitud() != null && t.getLongitud() != null)
+                .map(t -> new TallerMapaDTO(t.getId(), t.getNombre(), t.getDireccion(), t.getCiudad(),
+                        t.getTelefono(), t.getLatitud(), t.getLongitud()))
+                .toList();
+    }
+
     @Override
     public Taller obtenerEntidad(String id) {
         return tallerRepository.findById(id)
@@ -158,6 +174,7 @@ public class TallerServiceImpl implements TallerService {
     @Override
     public TallerDTO registrar(RegistroNegocioRequest r) {
         cuentaNegocioService.validarRegistro(r);
+        Coordenadas.validar(r.getLatitud(), r.getLongitud(), true);
 
         Usuario usuario = cuentaNegocioService.crearUsuario(
                 r.getNombreContacto() != null && !r.getNombreContacto().isBlank() ? r.getNombreContacto() : r.getNombreNegocio(),

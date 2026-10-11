@@ -119,6 +119,10 @@
   margin: 0 0 4px;
 }
 
+.ss-bloque__ayuda {
+  margin: 0 0 4px;
+}
+
 .ss-vacio {
   text-align: center;
   padding: var(--sp-xl) var(--sp-lg);

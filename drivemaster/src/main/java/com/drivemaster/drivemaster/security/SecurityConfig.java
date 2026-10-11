@@ -103,6 +103,8 @@ public class SecurityConfig {
                         // Módulo de servicios (Taller)
                         .requestMatchers(HttpMethod.GET, "/api/talleres/activos").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/talleres/registro").permitAll()
+                        // Mapa para elegir taller al pedir un diagnóstico (antes de la regla general /api/talleres/**)
+                        .requestMatchers(HttpMethod.GET, "/api/talleres/mapa").hasAnyRole("CLIENTE", "SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/talleres/mi-taller", "/api/talleres/mi-taller/**").hasRole("TALLER")
                         // El ADMIN solo ve la lista de talleres y los aprueba o rechaza; crear, editar y pausar es del SUPERADMIN
                         .requestMatchers(HttpMethod.PATCH, "/api/talleres/*/aprobacion").hasAnyRole("SUPERADMIN", "ADMIN")
