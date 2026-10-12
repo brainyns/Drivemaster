@@ -38,7 +38,13 @@ services:
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
       BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-DriveMaster}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # Chat IA: el backend solo reenvía a n8n. La API key de Gemini va en las credenciales de n8n.
+      # Los dos secretos son obligatorios: sin ellos el despliegue falla en vez de usar un valor
+      # conocido (los que había por defecto están publicados en el repositorio).
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/chat-drivemaster}
+      N8N_CHAT_SECRET: ${N8N_CHAT_SECRET:?Define N8N_CHAT_SECRET en las variables del stack}
+      N8N_TOOLS_SECRET: ${N8N_TOOLS_SECRET:?Define N8N_TOOLS_SECRET en las variables del stack}
+      N8N_CHAT_RATE_MAX: ${N8N_CHAT_RATE_MAX:-15}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
@@ -76,6 +82,32 @@ services:
     depends_on:
       - backend
 
+  # Chat IA: agente en n8n (modelo Gemini/Groq, memoria y herramientas). El puerto 5678 solo
+  # se publica en localhost de la VM: ábrelo por túnel SSH (ssh -L 5678:localhost:5678), nunca
+  # con Funnel ni Cloudflare. Importa n8n/workflows/chat-drivemaster.json desde el editor.
+  n8n:
+    # Fija N8N_VERSION en Portainer con la versión que ya corre (Settings → About en n8n):
+    # con "latest", un "Pull and redeploy" puede subir de versión mayor sin aviso.
+    image: docker.n8n.io/n8nio/n8n:${N8N_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - GENERIC_TIMEZONE=America/Bogota
+      - N8N_DIAGNOSTICS_ENABLED=false
+      # El workflow lee secretos y URLs con $env; desde n8n 2.0 eso está bloqueado por defecto.
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - N8N_CHAT_SECRET=${N8N_CHAT_SECRET:?Define N8N_CHAT_SECRET en las variables del stack}
+      - N8N_TOOLS_SECRET=${N8N_TOOLS_SECRET:?Define N8N_TOOLS_SECRET en las variables del stack}
+      - N8N_TOOLS_BASE_URL=http://backend:8080
+      # Sin el prefijo "models/" (por ejemplo gemini-2.5-flash).
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - backend
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     # Sin CLOUDFLARE_TUNNEL_TOKEN el contenedor se cierra y se reintenta cada pocos segundos; no
@@ -86,3 +118,7 @@ services:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
     depends_on:
       - frontend
+
+volumes:
+  # Workflows, ejecuciones y credenciales de n8n. Se respalda con homelab/backup.sh.
+  n8n_data:

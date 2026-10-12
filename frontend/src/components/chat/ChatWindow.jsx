@@ -2,16 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
 
-const ChatWindow = ({ onClose, onMinimize, isClosing }) => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: '¡Hola! Soy tu asesor virtual de Drivemaster. ¿En qué puedo ayudarte hoy?',
-      isUser: false,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
-  const [isTyping, setIsTyping] = useState(false);
+// La conversación (mensajes, envío y sessionId) la maneja useChat en ChatWidget.
+const ChatWindow = ({ messages, isTyping, onSend, onNuevaConversacion, onClose, onMinimize, isClosing }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef(null);
 
@@ -19,51 +11,10 @@ const ChatWindow = ({ onClose, onMinimize, isClosing }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async (text) => {
-    if (!text.trim()) return;
-
-    const userMessage = {
-      id: Date.now(),
-      text: text,
-      isUser: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+  const handleSendMessage = (text) => {
+    if (!text.trim() || isTyping) return;
     setInputValue('');
-    setIsTyping(true);
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensaje: text })
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      const data = await response.json();
-
-      setTimeout(() => {
-        const botMessage = {
-          id: Date.now() + 1,
-          text: data.respuesta,
-          isUser: false,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, botMessage]);
-        setIsTyping(false);
-      }, 800);
-    } catch (error) {
-      console.error('Error:', error);
-      setIsTyping(false);
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        text: 'Lo siento, hubo un error. Por favor intenta de nuevo.',
-        isUser: false,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }]);
-    }
+    onSend(text);
   };
 
   return (
@@ -93,6 +44,11 @@ const ChatWindow = ({ onClose, onMinimize, isClosing }) => {
             </div>
           </div>
           <div className="chat-header-actions">
+            <button className="header-icon-btn" onClick={onNuevaConversacion} title="Nueva conversación" aria-label="Nueva conversación">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+              </svg>
+            </button>
             <button className="header-icon-btn" onClick={onMinimize} title="Minimizar">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 13H5v-2h14v2z"/>

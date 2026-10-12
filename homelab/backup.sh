@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Respaldo de las bases de datos de DriveMaster en la nube: MongoDB Atlas y Supabase (PostgreSQL).
+# Respaldo de las bases de datos de DriveMaster en la nube (MongoDB Atlas y Supabase/PostgreSQL)
+# y del volumen de n8n (workflows del chat IA, ejecuciones y credenciales).
 #
 # Uso:      ./backup.sh [carpeta_destino]          (por defecto ./backups, junto al script)
 # Con cron: 0 3 * * * /opt/drivemaster/backup.sh /mnt/nas/backups/drivemaster
@@ -58,8 +59,17 @@ docker run --rm -e PG_URI -e PGUSER -e PGPASSWORD "$IMAGEN_PG" \
   sh -c 'pg_dump --no-owner --no-privileges --schema=public "$PG_URI"' \
   | gzip > "$DESTINO/postgres_${FECHA}.sql.gz"
 
+echo "[$(date)] Respaldando n8n (workflows, ejecuciones y credenciales)..."
+if docker volume ls -q | grep -qx "${STACK}_n8n_data"; then
+  docker run --rm -v "${STACK}_n8n_data:/data:ro" -v "$DESTINO:/backup" alpine:3.20 \
+    sh -c "tar czf /backup/n8n_${FECHA}.tar.gz -C /data ."
+else
+  echo "Volumen ${STACK}_n8n_data no encontrado; omito el respaldo de n8n."
+fi
+
 find "$DESTINO" -name 'mongo_*.archive.gz' -mtime +"$DIAS_RETENCION" -delete
 find "$DESTINO" -name 'postgres_*.sql.gz'  -mtime +"$DIAS_RETENCION" -delete
+find "$DESTINO" -name 'n8n_*.tar.gz'       -mtime +"$DIAS_RETENCION" -delete
 
 echo "[$(date)] Listo en $DESTINO"
 ls -lh "$DESTINO" | tail -n 4

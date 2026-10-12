@@ -31,11 +31,13 @@ Todo es **un solo stack de Portainer** llamado `drivemaster`, creado desde la ra
 | Contenedor | Qué hace | ¿Accesible desde fuera de la VM? |
 | --- | --- | --- |
 | `frontend` | nginx: entrega el React compilado y reenvía `/api` y `/ws` al backend | Puerto `8088` (LAN y Funnel) |
-| `backend` | La API Spring Boot (se compila desde `drivemaster/Dockerfile`) | No |
+| `backend` | La API Spring Boot (se compila desde `drivemaster/Dockerfile`). El chat IA solo lo reenvía a n8n | No |
+| `n8n` | Agente del chat IA (modelo Gemini/Groq, memoria y herramientas). Editor en `localhost:5678` de la VM (túnel SSH) | No (no publica puertos fuera de localhost) |
 | `cloudflared` | Túnel de Cloudflare. Detenido hasta tener dominio | No (no escucha puertos) |
 
-**Servicios en la nube**: MongoDB Atlas, Supabase, Wompi (pagos), Brevo (correo), Gemini (chat IA),
-Cloudinary (imágenes) y Google (inicio de sesión).
+**Servicios en la nube**: MongoDB Atlas, Supabase, Wompi (pagos), Brevo (correo), Cloudinary (imágenes) y
+Google (inicio de sesión). El chat IA usa Gemini o Groq con la API key guardada como **credencial dentro
+de n8n** (no en las variables del stack).
 
 ### Qué cambia por usar Portainer
 
@@ -137,7 +139,10 @@ líneas de comentario** y complétalo:
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Las de Render (Supabase) |
 | `SECURITY_JWT_SECRET`, `RETIRO_CODIGO_SECRET` | **Las mismas de Render**: así las sesiones y los códigos de retiro ya emitidos siguen siendo válidos |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | **Obligatorios** (vacíos = el backend no arranca) |
-| `GEMINI_API_KEY`, `CLOUDINARY_*`, `BREVO_*`, `WOMPI_*` | Las de Render |
+| `N8N_CHAT_SECRET` / `N8N_TOOLS_SECRET` | Secretos compartidos backend ↔ n8n (genera dos con `openssl rand -hex 32`). **Obligatorios**: sin ellos el stack no se despliega. La API key de Gemini va como credencial dentro de n8n, no aquí |
+| `N8N_VERSION` | La versión de n8n que ya corre (n8n → Settings → About). Vacía = `latest`. Nunca una anterior a la actual |
+| `GEMINI_MODEL`, `N8N_CHAT_RATE_MAX` | Opcionales: modelo de Gemini sin `models/` (`gemini-2.5-flash`) y mensajes de chat por minuto por IP (`15`) |
+| `CLOUDINARY_*`, `BREVO_*`, `WOMPI_*` | Las de Render |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Vacío hasta tener dominio |
 
 > ⚠️ Pega **valores**, no comandos: algo como `$(openssl rand -hex 32)` Portainer lo toma como texto y
@@ -150,6 +155,33 @@ líneas de comentario** y complétalo:
 
 Pulsa **Deploy the stack**. La primera compilación tarda 10–20 minutos; si el navegador da *timeout*, no
 lo repitas.
+
+### 5.1 Configurar n8n (chat IA)
+
+1. Desde tu PC: `ssh -L 5678:localhost:5678 tu_usuario@IP-VM` y abre `http://localhost:5678`
+   (el editor de n8n **no** debe quedar accesible desde fuera de la VM).
+2. Crea el usuario del editor. Si ya habías importado una versión anterior del workflow,
+   desactívala y bórrala. Luego importa `n8n/workflows/chat-drivemaster.json`
+   (**Workflows → Import from File**).
+3. Crea las credenciales: **Google Gemini(PaLM) API** con la API key de Gemini y, para la memoria,
+   **Postgres** con los datos de Supabase (el *Session pooler*). Asígnalas a los nodos
+   `Modelo Gemini` y `Memoria (Postgres)`. El webhook no necesita credencial: el workflow valida
+   `X-Chat-Secret` contra `N8N_CHAT_SECRET`.
+4. Activa el workflow. Prueba desde la VM. El backend no publica el puerto 8080, así que entra por
+   nginx en el 8088:
+
+   ```bash
+   curl -X POST http://localhost:8088/api/chat -H "Content-Type: application/json" \
+     -d '{"mensaje":"Hola, me llamo Ana","sessionId":"prueba-1"}'
+   curl -X POST http://localhost:8088/api/chat -H "Content-Type: application/json" \
+     -d '{"mensaje":"¿Cómo me llamo?","sessionId":"prueba-1"}'
+   ```
+
+   La segunda respuesta debe decir "Ana".
+5. Anota en tu gestor de contraseñas la clave de cifrado de n8n (`docker exec drivemaster-n8n-1 cat
+   /home/node/.n8n/config`). Sin ella, un backup del volumen no puede descifrar las credenciales.
+
+Detalles, pruebas y cómo añadir herramientas: [`n8n/README.md`](../n8n/README.md).
 
 ---
 
@@ -211,8 +243,9 @@ activar HTTPS y Funnel en la cuenta de Tailscale. Para quitarlo: `sudo tailscale
 > restauraciones que puedas descargar. `backup.sh` es tu respaldo.
 
 `backup.sh` lee las conexiones del contenedor del backend y ejecuta `mongodump` y `pg_dump` en
-contenedores temporales (no hay que instalar nada). Guarda `mongo_FECHA.archive.gz` y
-`postgres_FECHA.sql.gz` y borra los de más de 14 días.
+contenedores temporales (no hay que instalar nada). También empaqueta el volumen de n8n
+(`drivemaster_n8n_data`: workflows del chat IA, ejecuciones y credenciales). Guarda
+`mongo_FECHA.archive.gz`, `postgres_FECHA.sql.gz` y `n8n_FECHA.tar.gz`, y borra los de más de 14 días.
 
 ### 9.1 Copiar el script a la VM
 
@@ -261,6 +294,13 @@ gunzip -c /opt/drivemaster/backups/postgres_FECHA.sql.gz \
     docker run --rm -i -e PG_URI postgres:17-alpine sh -c 'psql "$PG_URI"'
 ```
 
+Para n8n: detén el stack (Portainer → Stacks → drivemaster → Stop) y restaura el volumen:
+
+```bash
+docker run --rm -v drivemaster_n8n_data:/data -v /opt/drivemaster/backups:/backup alpine:3.20 \
+  sh -c 'rm -rf /data/* && tar xzf /backup/n8n_FECHA.tar.gz -C /data'
+```
+
 `--drop` borra cada colección antes de restaurarla: úsalo solo cuando de verdad quieras volver atrás.
 
 ---
@@ -285,6 +325,7 @@ cambiar solo una variable). Las capas que no cambiaron se reutilizan, así que t
 | Ver si todo corre | **Stacks → drivemaster** |
 | Log del backend | **Containers → drivemaster-backend-1 → Logs** |
 | Reiniciar el backend | **Containers → drivemaster-backend-1 → Restart** |
+| Abrir el editor de n8n | Túnel SSH (`ssh -L 5678:localhost:5678 ...`) → `http://localhost:5678` |
 | CPU y RAM | **Containers → (contenedor) → Stats** |
 | Cambiar una variable | **Stacks → drivemaster → Environment variables → Update the stack** |
 | Liberar disco | **Images** → borrar las *Unused* |
@@ -301,6 +342,8 @@ cambiar solo una variable). Las capas que no cambiaron se reutilizan, así que t
 | La web carga pero el login falla | `PUBLIC_URL` distinta de la dirección que abres | Corrige y **Update the stack** |
 | Notificaciones o tareas duplicadas | Render sigue encendido | Suspende Render (paso 6) |
 | `429 Too Many Requests` al compilar | Límite de Docker Hub | Espera y redespliega |
+| Al desplegar: *Define N8N_CHAT_SECRET…* | Faltan los secretos del chat | Agrega `N8N_CHAT_SECRET` y `N8N_TOOLS_SECRET` en las variables del stack |
+| El chat siempre dice "el asistente no está disponible" | Workflow inactivo, secreto distinto entre backend y n8n, o n8n caído | Log de `drivemaster-backend-1` (`Error llamando a n8n`) y **Executions** en n8n |
 | La VM se congela al compilar | Falta RAM | Sube la RAM de la VM |
 
 ## 13. Seguridad: lista mínima

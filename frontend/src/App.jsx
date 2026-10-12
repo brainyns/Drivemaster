@@ -53,6 +53,7 @@ import PedidosEnvios         from "./pages/PedidosEnvios";
 import PedidosTienda         from "./pages/PedidosTienda";
 import Liquidaciones         from "./pages/Liquidaciones";
 import ChatWidget            from "./components/chat/ChatWidget";
+import { reiniciarChat }     from "./components/chat/chatSesion";
 import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
 import { useCarrito } from "./hooks/useCarrito";
 import MarketHeader from "./components/marketplace/MarketHeader";
@@ -298,6 +299,8 @@ function App() {
 
   const handleLogout = async () => {
     await logout();
+    // El chat guarda la conversación en el navegador: quien entre después no debe heredarla.
+    reiniciarChat();
     limpiarDestinoPostLogin();
     setVieneDeCotizacion(false);
     setUser(null); setToken(null);

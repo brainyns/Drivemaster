@@ -77,6 +77,9 @@ public class SecurityConfig {
                         // El ADMIN queda con la operación diaria (aprobaciones, servicios y problemas de envío).
                         .requestMatchers("/api/usuarios", "/api/usuarios/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/productos", "/api/productos/").permitAll()
+                        // Herramientas del agente IA (n8n): público aquí, pero exige el token de
+                        // servicio X-Service-Token en ProductoController.
+                        .requestMatchers(HttpMethod.GET, "/api/productos/buscar").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/productos/mi-tienda").hasRole("TIENDA")
                         // TIENDA solo gestiona sus productos: lo verifica AlcanceTienda en el controlador
                         .requestMatchers("/api/productos/**").hasAnyRole("SUPERADMIN", "VENDEDOR", "TIENDA")

@@ -1,0 +1,290 @@
+{
+  "name": "DriveMaster - Chat tienda",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-drivemaster",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4f7b2a1c-1111-4a11-9a11-000000000001",
+      "name": "Webhook chat",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-440, 0],
+      "webhookId": "4f7b2a1c-9999-4a99-9a99-000000000009"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "4f7b2a1c-bb01-4b01-9b01-000000000001",
+              "leftValue": "={{ !!$env.N8N_CHAT_SECRET && $json.headers['x-chat-secret'] === $env.N8N_CHAT_SECRET }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4f7b2a1c-aaaa-4aaa-9aaa-00000000000a",
+      "name": "Validar secreto",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-220, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"error\": \"No autorizado\"}",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "4f7b2a1c-bbbb-4bbb-9bbb-00000000000b",
+      "name": "Rechazar (403)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [0, 220]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4f7b2a1c-aa01-4a01-9a01-000000000001",
+              "name": "chatInput",
+              "value": "={{ $json.body.mensaje }}",
+              "type": "string"
+            },
+            {
+              "id": "4f7b2a1c-aa02-4a02-9a02-000000000002",
+              "name": "sessionId",
+              "value": "={{ $json.body.sessionId || 'anon' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4f7b2a1c-2222-4a22-9a22-000000000002",
+      "name": "Preparar mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "Eres \"DriveMaster IA\", el asesor virtual de DriveMaster, una plataforma colombiana de repuestos automotrices y servicios de taller.\n\nReglas:\n1. Responde siempre en español, con un tono cercano y profesional.\n2. Para preguntas sobre productos (filtros, frenos, aceite, baterías, amortiguadores, etc.), precios, stock, marcas o compatibilidad, usa SIEMPRE la herramienta \"Buscar productos\" y responde solo con los datos que ella devuelva. Nunca inventes productos, precios, stock ni compatibilidades.\n3. Al usar la herramienta, envía como términos el tipo de repuesto y, si el cliente los mencionó, la marca y el modelo del vehículo (por ejemplo: pastillas,freno,mazda). Los resultados llegan ordenados del más al menos relevante.\n4. Compatibilidad: revisa \"modelosCompatibles\" (marca, modelo, años y motor) y \"compatibilidadUniversal\". Si el producto no trae datos de compatibilidad para el vehículo del cliente, dilo y recomienda confirmarlo con la tienda o con un taller.\n5. Disponibilidad: si \"tipo\" es ENCARGO, no lo presentes como agotado; di que se pide por encargo y, si viene \"diasEntregaEncargo\", cuántos días tarda. Si es STOCK con \"stockActual\" 0, dilo como agotado. Menciona la tienda (\"tienda\") que lo vende.\n6. Si la búsqueda no devuelve resultados, dilo con honestidad y sugiere probar otra categoría, marca o término.\n7. En comparativas o recomendaciones explica calidad, duración y precio en máximo 3 párrafos.\n8. Para temas fuera del negocio (clima, política, código, etc.), responde amablemente que solo ayudas con repuestos, vehículos, inventario, precios y servicios de DriveMaster.\n9. No pidas datos personales ni contraseñas.\n10. Escribe en texto plano, sin Markdown: no uses asteriscos, almohadillas ni tablas. Para listas empieza cada línea con un guion. Precios en pesos colombianos, por ejemplo $120.000."
+        }
+      },
+      "id": "4f7b2a1c-3333-4a33-9a33-000000000003",
+      "name": "Agente DriveMaster",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "modelName": "=models/{{ $env.GEMINI_MODEL || 'gemini-2.5-flash' }}",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "4f7b2a1c-4444-4a44-9a44-000000000004",
+      "name": "Modelo Gemini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [120, 240]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Preparar mensaje').item.json.sessionId }}",
+        "tableName": "drivemaster_chat_memory",
+        "contextWindowLength": 20
+      },
+      "id": "4f7b2a1c-5555-4a55-9a55-000000000005",
+      "name": "Memoria (Postgres)",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [280, 240]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Busca productos reales del catálogo de DriveMaster por tipo de repuesto, categoría, marca del producto o marca/modelo del vehículo compatible. Devuelve una lista JSON (máximo 10, de más a menos relevante) con nombre, marca, categoría, precioVenta, stockActual, tipo (STOCK o ENCARGO), diasEntregaEncargo, modelosCompatibles, compatibilidadUniversal y la tienda que lo vende. Úsala para TODA consulta de productos, precios, disponibilidad o compatibilidad.",
+        "url": "={{ $env.N8N_TOOLS_BASE_URL || 'http://backend:8080' }}/api/productos/buscar",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "terminos",
+              "value": "={{ $fromAI('terminos', 'Palabras clave separadas por coma, sin espacios: tipo de repuesto y, si se conocen, marca y modelo del vehículo. Ejemplo: pastillas,freno,mazda', 'string') }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Service-Token",
+              "value": "={{ $env.N8N_TOOLS_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4f7b2a1c-6666-4a66-9a66-000000000006",
+      "name": "Buscar productos",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [440, 240]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Arma la respuesta con el contrato que espera el frontend: { respuesta, productos }.\n// El agente deja el texto final en $json.output.\nconst salida = $json && $json.output ? String($json.output).trim()\n  : 'Lo siento, no pude procesar tu consulta. Inténtalo de nuevo.';\n\nreturn {\n  json: {\n    respuesta: salida,\n    productos: []\n  }\n};\n"
+      },
+      "id": "4f7b2a1c-7777-4a77-9a77-000000000007",
+      "name": "Formar respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "4f7b2a1c-8888-4a88-9a88-000000000008",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [800, 0]
+    }
+  ],
+  "connections": {
+    "Webhook chat": {
+      "main": [
+        [
+          {
+            "node": "Validar secreto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar secreto": {
+      "main": [
+        [
+          {
+            "node": "Preparar mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rechazar (403)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar mensaje": {
+      "main": [
+        [
+          {
+            "node": "Agente DriveMaster",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente DriveMaster": {
+      "main": [
+        [
+          {
+            "node": "Formar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente DriveMaster",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria (Postgres)": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente DriveMaster",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar productos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente DriveMaster",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formar respuesta": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2a1e6f5d-4d4c-4e9b-8a2f-9b3c7d8e0f1a",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {},
+  "tags": []
+}

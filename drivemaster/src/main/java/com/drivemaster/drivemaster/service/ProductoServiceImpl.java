@@ -10,12 +10,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.drivemaster.drivemaster.dto.ProductoDTO;
 import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 import com.drivemaster.drivemaster.model.Producto;
+import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
 
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ProductoServiceImpl implements ProductoService {
@@ -127,6 +134,71 @@ public class ProductoServiceImpl implements ProductoService {
         c.setDiasEntregaEncargo(p.getDiasEntregaEncargo());
         c.setCompatibilidadUniversal(p.getCompatibilidadUniversal());
         return c;
+    }
+
+    /** Palabras que el modelo a veces manda como términos y que coinciden con casi todo el catálogo. */
+    private static final Set<String> PALABRAS_VACIAS = Set.of(
+            "de", "del", "la", "las", "el", "los", "un", "una", "para", "con", "por", "en", "y", "o");
+
+    @Override
+    public List<ProductoDTO> buscarParaAgente(List<String> terminos) {
+        if (terminos == null || terminos.isEmpty()) return List.of();
+        List<String> limpios = terminos.stream()
+                .map(t -> t == null ? "" : t.trim().toLowerCase())
+                .filter(t -> t.length() >= 2 && !PALABRAS_VACIAS.contains(t))
+                .distinct()
+                .limit(10)
+                .toList();
+        if (limpios.isEmpty()) return List.of();
+
+        // Mismo alcance que el catálogo público: solo tiendas visibles (aprobadas, activas y con datos completos).
+        Map<String, String> tiendasVisibles = new HashMap<>();
+        for (Tienda t : tiendaService.listarVisibles()) {
+            tiendasVisibles.put(t.getId(), t.getNombre());
+        }
+        if (tiendasVisibles.isEmpty()) return List.of();
+
+        // Relevancia: cuántos términos coinciden con cada producto. Con "pastillas,freno,mazda",
+        // las pastillas compatibles con Mazda salen antes que cualquier otro repuesto de frenos.
+        Map<String, Producto> porId = new LinkedHashMap<>();
+        Map<String, Integer> coincidencias = new HashMap<>();
+        for (String termino : limpios) {
+            for (Producto p : productoRepository.searchByTerm(escaparRegex(termino))) {
+                porId.putIfAbsent(p.getId(), p);
+                coincidencias.merge(p.getId(), 1, Integer::sum);
+            }
+        }
+
+        return porId.values().stream()
+                .filter(p -> !Boolean.FALSE.equals(p.getActivo()))
+                .filter(p -> p.getTiendaId() != null && tiendasVisibles.containsKey(p.getTiendaId()))
+                .sorted(Comparator.comparingInt((Producto p) -> coincidencias.get(p.getId())).reversed())
+                .limit(10)
+                .map(p -> paraAgente(p, tiendasVisibles.get(p.getTiendaId())))
+                .toList();
+    }
+
+    /** El término es texto del usuario (vía el modelo), no una expresión regular: "c++" o "(" no deben romper Mongo. */
+    static String escaparRegex(String texto) {
+        return texto.replaceAll("[\\\\^$.|?*+()\\[\\]{}]", "\\\\$0");
+    }
+
+    private static ProductoDTO paraAgente(Producto p, String nombreTienda) {
+        ProductoDTO dto = new ProductoDTO();
+        dto.setId(p.getId());
+        dto.setCodigo(p.getCodigo());
+        dto.setNombre(p.getNombre());
+        dto.setCategoria(p.getCategoria());
+        dto.setMarca(p.getMarca());
+        dto.setPrecioVenta(p.getPrecioVenta());
+        dto.setStockActual(p.getStockActual());
+        dto.setImagenUrl(p.getImagenUrl());
+        dto.setTipo(p.getTipo());
+        dto.setDiasEntregaEncargo(p.getDiasEntregaEncargo());
+        dto.setCompatibilidadUniversal(p.getCompatibilidadUniversal());
+        dto.setModelosCompatibles(p.getModelosCompatibles());
+        dto.setTienda(nombreTienda);
+        return dto;
     }
 
     @Override

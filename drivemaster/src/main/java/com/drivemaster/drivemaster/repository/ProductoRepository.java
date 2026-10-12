@@ -6,7 +6,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
 import com.drivemaster.drivemaster.model.Producto;
-import java.util.stream.Collectors;
 
 public interface ProductoRepository extends MongoRepository<Producto, String> {
 
@@ -41,10 +40,14 @@ public interface ProductoRepository extends MongoRepository<Producto, String> {
     @Query("{ 'modelosCompatibles.modelo': ?0 }")
     List<Producto> findByModeloCompatible(String modelo);
     
+    // Búsqueda del chat: el término llega ya escapado (es texto, no una expresión regular).
+    // Incluye la compatibilidad para que "mazda" o "corolla" encuentren los repuestos de ese vehículo.
     @Query("{ '$or': [ " +
            "{ 'nombre': { '$regex': ?0, '$options': 'i' } }, " +
            "{ 'categoria': { '$regex': ?0, '$options': 'i' } }, " +
-           "{ 'marca': { '$regex': ?0, '$options': 'i' } } " +
+           "{ 'marca': { '$regex': ?0, '$options': 'i' } }, " +
+           "{ 'modelosCompatibles.marca': { '$regex': ?0, '$options': 'i' } }, " +
+           "{ 'modelosCompatibles.modelo': { '$regex': ?0, '$options': 'i' } } " +
            "] }")
     List<Producto> searchByTerm(String term);
 
@@ -53,11 +56,4 @@ public interface ProductoRepository extends MongoRepository<Producto, String> {
     List<Producto> findByTipoAndActivo(String tipo, Boolean activo);
 
     List<Producto> findByActivoTrue();
-    
-    default List<Producto> searchByTerms(List<String> terms) {
-        return terms.stream()
-                .flatMap(t -> this.searchByTerm(t).stream())
-                .distinct()
-                .collect(Collectors.toList());
-    }
 }
