@@ -5,6 +5,7 @@ import {
 } from "../services/plataformaService";
 import "../css/dashboard.css";
 import "../css/dashboard-plataforma.css";
+import "../css/admin-base.css";
 
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
@@ -32,17 +33,17 @@ const PESTANAS = [
 ];
 
 function Tabla({ columnas, filas, vacio, pie }) {
-  if (filas.length === 0) return <p className="db-empty">{vacio}</p>;
+  if (filas.length === 0) return <p className="adm-vacio">{vacio}</p>;
   return (
-    <div className="db-table-wrap">
-      <table className="db-table">
-        <thead><tr>{columnas.map((c) => <th key={c.t} className={c.der ? "dp-der" : ""}>{c.t}</th>)}</tr></thead>
+    <div className="adm-tabla-wrap">
+      <table className="adm-tabla adm-tabla--tarjetas">
+        <thead><tr>{columnas.map((c) => <th key={c.t} className={c.der ? "adm-tabla__der" : ""}>{c.t}</th>)}</tr></thead>
         <tbody>
           {filas.map((f, i) => (
-            <tr key={f.id ?? i}>{columnas.map((c) => <td key={c.t} className={c.der ? "dp-der" : ""}>{c.f(f)}</td>)}</tr>
+            <tr key={f.id ?? i}>{columnas.map((c) => <td key={c.t} className={c.der ? "adm-tabla__der" : ""} data-label={c.t}>{c.f(f)}</td>)}</tr>
           ))}
         </tbody>
-        {pie && <tfoot><tr>{pie.map((c, i) => <td key={i} className={c.der ? "dp-der" : ""}><strong>{c.v}</strong></td>)}</tr></tfoot>}
+        {pie && <tfoot><tr>{pie.map((c, i) => <td key={i} className={c.der ? "adm-tabla__der" : ""}><strong>{c.v}</strong></td>)}</tr></tfoot>}
       </table>
     </div>
   );
@@ -131,24 +132,24 @@ export default function ReportesPlataforma({ token }) {
   const cargando = estado.clave !== clave;
 
   return (
-    <div className="db-root dp-root">
-      <header className="db-header">
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
         <div>
-          <h1 className="db-h1">Reportes de la plataforma</h1>
-          <p className="db-sub">Calculados sobre los pedidos de las tiendas, los pagos y las órdenes de servicio.</p>
+          <h1 className="adm-encabezado__titulo">Reportes de la plataforma</h1>
+          <p className="adm-encabezado__sub">Calculados sobre los pedidos de las tiendas, los pagos y las órdenes de servicio.</p>
         </div>
       </header>
 
-      <div className="dp-pestanas" role="tablist" aria-label="Reportes">
+      <div className="adm-pestanas" role="tablist" aria-label="Reportes">
         {PESTANAS.map((p) => (
           <button key={p.id} type="button" role="tab" aria-selected={pestana === p.id}
-            className={`dp-pestana${pestana === p.id ? " dp-pestana--activa" : ""}`} onClick={() => setPestana(p.id)}>{p.titulo}</button>
+            className={`adm-pestana${pestana === p.id ? " adm-pestana--activa" : ""}`} onClick={() => setPestana(p.id)}>{p.titulo}</button>
         ))}
       </div>
 
-      <div className="dp-filtros">
+      <div className="adm-filtros">
         {def.periodo && (
-          <label className="dp-campo">
+          <label className="adm-campo">
             <span>Período</span>
             <select value={meses} onChange={(e) => setMeses(Number(e.target.value))}>
               <option value={3}>Últimos 3 meses</option>
@@ -161,11 +162,11 @@ export default function ReportesPlataforma({ token }) {
         <p className="dp-nota">{def.nota}</p>
       </div>
 
-      {estado.error && !cargando && <div className="db-error" role="alert">{estado.error}</div>}
+      {estado.error && !cargando && <div className="adm-alerta adm-alerta--error" role="alert">{estado.error}</div>}
 
-      <div className="db-card dp-lista" aria-busy={cargando}>
+      <div className="adm-tarjeta" aria-busy={cargando}>
         {cargando ? (
-          <div className="db-loading"><div className="db-spinner" /> Calculando…</div>
+          <div className="adm-cargando">Calculando…</div>
         ) : estado.datos ? <Contenido id={pestana} datos={estado.datos} /> : null}
       </div>
     </div>

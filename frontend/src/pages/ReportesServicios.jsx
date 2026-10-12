@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { getReportesServicios } from "../services/reporteService";
+import "../css/reportes.css";
+import "../css/dashboard-plataforma.css";
+import "../css/admin-base.css";
 
 const PERIODOS = [
   { k: "dia", l: "Hoy" },
@@ -33,7 +36,7 @@ export default function ReportesServicios({ token }) {
     setPeriodo(k);
   };
 
-  if (error) return <div className="rp-root rp-root--servicios"><p className="rp-error">{error}</p></div>;
+  if (error) return <div className="adm-pagina rp-root--servicios"><p className="adm-alerta adm-alerta--error" role="alert">{error}</p></div>;
 
   const sinOrdenes = data && data.totalOrdenes === 0;
   const tasaCierre = data && data.ordenesFacturadas > 0
@@ -47,30 +50,32 @@ export default function ReportesServicios({ token }) {
   const maxProductos = Math.max(...barrasProductos.map((p) => p.ordenes), 1);
 
   return (
-    <div className="rp-root rp-root--servicios">
-      <div className="rp-page-header">
+    <div className="adm-pagina rp-root--servicios">
+      <header className="adm-encabezado">
         <div>
-          <h1 className="rp-h">Reporte de servicios</h1>
-          <p className="rp-sub">Órdenes de taller facturadas y estado del trabajo en cada una.</p>
+          <h1 className="adm-encabezado__titulo">Reporte de servicios</h1>
+          <p className="adm-encabezado__sub">Órdenes de taller facturadas y estado del trabajo en cada una.</p>
         </div>
-        <div className="rp-period-tabs">
+        <nav className="adm-pestanas" aria-label="Periodo">
           {PERIODOS.map((p) => (
             <button
               key={p.k}
-              className={`rp-period-tab${periodo === p.k ? " active" : ""}`}
+              type="button"
+              aria-pressed={periodo === p.k}
+              className={`adm-pestana${periodo === p.k ? " adm-pestana--activa" : ""}`}
               onClick={() => cambiarPeriodo(p.k)}
             >
               {p.l}
             </button>
           ))}
-        </div>
-      </div>
+        </nav>
+      </header>
 
       {cargando ? (
-        <div className="rp-loading"><div className="rp-spinner" />Cargando...</div>
+        <div className="adm-tarjeta"><div className="adm-cargando">Cargando…</div></div>
       ) : sinOrdenes ? (
-        <div className="rp-chart-empty-box">
-          No se registraron servicios de taller en este período.
+        <div className="adm-tarjeta">
+          <p className="adm-vacio">No se registraron servicios de taller en este período.</p>
         </div>
       ) : (
         <>
@@ -123,14 +128,14 @@ export default function ReportesServicios({ token }) {
           </div>
 
           <div className="rp-two-col" style={{ marginTop: "1.25rem" }}>
-            <div className="rp-panel">
-              <div className="rp-panel-header">
-                <span className="rp-panel-title">Talleres con más servicios</span>
-                <span className="rp-badge nuevo">Órdenes vigentes</span>
+            <section className="adm-tarjeta">
+              <div className="adm-tarjeta__cabecera">
+                <h2 className="adm-tarjeta__titulo">Talleres con más servicios</h2>
+                <span className="adm-badge adm-badge--neutro">Órdenes vigentes</span>
               </div>
               <div className="rp-chart">
                 {barrasTalleres.length === 0 ? (
-                  <p className="rp-empty">Sin datos</p>
+                  <p className="adm-vacio">Sin datos</p>
                 ) : barrasTalleres.map((t) => (
                   <div className="rp-chart-row" key={t.tallerId || t.nombre}>
                     <span className="rp-chart-label" title={t.nombre}>{t.nombre || "—"}</span>
@@ -145,16 +150,16 @@ export default function ReportesServicios({ token }) {
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
 
-            <div className="rp-panel">
-              <div className="rp-panel-header">
-                <span className="rp-panel-title">Repuestos más solicitados</span>
-                <span className="rp-badge nuevo">Por orden</span>
+            <section className="adm-tarjeta">
+              <div className="adm-tarjeta__cabecera">
+                <h2 className="adm-tarjeta__titulo">Repuestos más solicitados</h2>
+                <span className="adm-badge adm-badge--neutro">Por orden</span>
               </div>
               <div className="rp-chart">
                 {barrasProductos.length === 0 ? (
-                  <p className="rp-empty">Sin datos</p>
+                  <p className="adm-vacio">Sin datos</p>
                 ) : barrasProductos.map((p) => (
                   <div className="rp-chart-row" key={p.productoId || p.nombre}>
                     <span className="rp-chart-label" title={p.nombre}>{p.nombre || "—"}</span>
@@ -169,7 +174,7 @@ export default function ReportesServicios({ token }) {
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           </div>
         </>
       )}

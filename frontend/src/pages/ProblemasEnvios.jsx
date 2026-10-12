@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken } from "../services/authService";
 import { problemasDeEnvio, resolverProblemaEnvio } from "../services/pedidoTiendaService";
-import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import { formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
-import "../css/marketplace.css";
-import "../css/servicios.css";
-import "../css/solicitud-servicio.css";
+import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
+import { capitalizar } from "../utils/formato";
+import "../css/admin-base.css";
 
 const abierto = (p) => p.estado === "DESPACHADO" && !p.resolucionProblema;
 const RESOLUCION = {
@@ -25,6 +24,9 @@ export default function ProblemasEnvios() {
   const [aviso, setAviso] = useState(null);
   const [ver, setVer] = useState("ABIERTOS");
   const [decision, setDecision] = useState(null); // { pedido, resolucion }
+  const [motivo, setMotivo] = useState("");
+  const [resolviendo, setResolviendo] = useState(false);
+  const [errorDecision, setErrorDecision] = useState(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -47,14 +49,25 @@ export default function ProblemasEnvios() {
   const resueltos = useMemo(() => (problemas || []).filter((p) => !abierto(p)), [problemas]);
   const visibles = ver === "ABIERTOS" ? abiertos : resueltos;
 
-  const resolver = async (motivo) => {
+  const pedir = (pedido, resolucion) => {
+    setMotivo("");
+    setErrorDecision(null);
+    setDecision({ pedido, resolucion });
+  };
+
+  const resolver = async () => {
     const { pedido, resolucion } = decision;
+    setResolviendo(true);
+    setErrorDecision(null);
     try {
-      await resolverProblemaEnvio(token, pedido.id, resolucion, motivo);
+      await resolverProblemaEnvio(token, pedido.id, resolucion, motivo.trim());
     } catch (e) {
+      setErrorDecision(e.message);
+      setResolviendo(false);
       await cargar(); // si otra persona ya lo resolvió, la lista lo refleja
-      throw e;
+      return;
     }
+    setResolviendo(false);
     setDecision(null);
     setAviso(resolucion === "REEMBOLSAR"
       ? `Registramos el reembolso de ${formatPrecio(pedido.total)}. Recuerda hacerlo en el panel de Wompi y marcarlo en Liquidaciones y reembolsos.`
@@ -67,84 +80,130 @@ export default function ProblemasEnvios() {
       titulo: "Confirmar que el pedido sí se entregó",
       mensaje: `El pedido de ${decision.pedido.tiendaNombre} quedará como entregado y se habilitará el pago de ${formatPrecio(decision.pedido.total)} a la tienda. Avisaremos al cliente. Esta decisión no se puede deshacer.`,
       textoConfirmar: "Confirmar entrega",
+      variante: "primario",
     },
     REEMBOLSAR: {
       titulo: "Reembolsar al cliente",
       mensaje: `Se anulará el pago a ${decision.pedido.tiendaNombre} y quedará pendiente un reembolso de ${formatPrecio(decision.pedido.total)} para el cliente (lo haces tú en el panel de Wompi). Esta decisión no se puede deshacer.`,
       textoConfirmar: "Reembolsar",
-      peligro: true,
+      variante: "peligro",
     },
   }[decision.resolucion];
 
   return (
-    <div className="ss-panel ss-panel--plataforma">
-      <p className="ss-ayuda">
-        Envíos del catálogo en los que el cliente dijo que algo salió mal. Mientras no los resuelvas, la tienda no cobra ese pedido.
-      </p>
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
+        <div>
+          <h1 className="adm-encabezado__titulo">Problemas de envío</h1>
+          <p className="adm-encabezado__sub">
+            Envíos del catálogo en los que el cliente dijo que algo salió mal. Mientras no los resuelvas, la tienda no cobra ese pedido.
+          </p>
+        </div>
+        {problemas && <span className="adm-encabezado__dato">{abiertos.length} {abiertos.length === 1 ? "abierto" : "abiertos"}</span>}
+      </header>
 
-      {error && <p className="ss-alerta" role="alert">{error}</p>}
-      {aviso && <p className="ss-exito" role="status">{aviso} <button className="sv-btn-outline" onClick={() => setAviso(null)}>Cerrar</button></p>}
-
-      <nav className="ss-filtros" aria-label="Problemas por estado">
-        <button className={`ss-filtro${ver === "ABIERTOS" ? " ss-filtro--activo" : ""}`} onClick={() => setVer("ABIERTOS")}
-          aria-current={ver === "ABIERTOS" ? "page" : undefined}>
-          Abiertos{abiertos.length > 0 && <span className="ss-filtro__conteo">{abiertos.length}</span>}
-        </button>
-        <button className={`ss-filtro${ver === "RESUELTOS" ? " ss-filtro--activo" : ""}`} onClick={() => setVer("RESUELTOS")}
-          aria-current={ver === "RESUELTOS" ? "page" : undefined}>
-          Resueltos
-        </button>
-      </nav>
-
-      {!problemas && !error && <p className="sv-empty">Cargando...</p>}
-      {problemas && visibles.length === 0 && (
-        <p className="sv-empty">{ver === "ABIERTOS" ? "No hay problemas de envío abiertos." : "Aún no has resuelto ningún problema."}</p>
+      {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
+      {aviso && (
+        <p className="adm-alerta adm-alerta--exito" role="status">
+          {aviso}{" "}
+          <button type="button" className="adm-btn adm-btn--chico adm-btn--sutil" onClick={() => setAviso(null)}>Cerrar</button>
+        </p>
       )}
 
-      <div className="sv-list">
-        {visibles.map((p) => (
-          <section key={p.id} className="ss-bloque ss-bloque--destacado" aria-labelledby={`prob-${p.id}`}>
-            <div className="ct-detalle__cabecera">
-              <span className="ss-eyebrow" id={`prob-${p.id}`}>Pedido #{refSolicitud(p.id)} · {p.tiendaNombre}</span>
-              <strong>{formatPrecio(p.total)}</strong>
-            </div>
+      <div className="adm-filtros">
+        <nav className="adm-pestanas" aria-label="Problemas por estado">
+          <button type="button" className={`adm-pestana${ver === "ABIERTOS" ? " adm-pestana--activa" : ""}`}
+            aria-pressed={ver === "ABIERTOS"} onClick={() => setVer("ABIERTOS")}>
+            Abiertos<span className="adm-pestana__n">{abiertos.length}</span>
+          </button>
+          <button type="button" className={`adm-pestana${ver === "RESUELTOS" ? " adm-pestana--activa" : ""}`}
+            aria-pressed={ver === "RESUELTOS"} onClick={() => setVer("RESUELTOS")}>
+            Resueltos<span className="adm-pestana__n">{resueltos.length}</span>
+          </button>
+        </nav>
+      </div>
 
-            <dl className="ct-totales">
-              <div className="ct-totales__fila"><dt>Monto del pedido</dt><dd>{formatPrecio(p.total)}</dd></div>
-              <div className="ct-totales__fila"><dt>Despachado</dt><dd>{formatFechaHora(p.fechaDespacho)}</dd></div>
-              <div className="ct-totales__fila"><dt>Problema reportado</dt><dd>{formatFechaHora(p.fechaProblema)}</dd></div>
-              {p.notaDespacho && <div className="ct-totales__fila"><dt>Guía / información</dt><dd>{p.notaDespacho}</dd></div>}
-            </dl>
-
-            <div className="ct-pedido__entrega">
-              Ciudad de destino: <strong>{p.envioCiudad || "—"}</strong>
-            </div>
-            <p className="ss-alerta" role="note">Lo que dijo el cliente: «{p.problemaDetalle}»</p>
-
-            {abierto(p) ? (
-              <div className="ss-acciones">
-                <button className="sv-btn-outline" onClick={() => setDecision({ pedido: p, resolucion: "CONFIRMAR_ENTREGA" })}>
-                  Sí se entregó
-                </button>
-                <button className="sv-btn ss-btn-peligro" onClick={() => setDecision({ pedido: p, resolucion: "REEMBOLSAR" })}>
-                  Reembolsar al cliente
-                </button>
-              </div>
-            ) : (
-              <p className="ss-exito" role="status">
-                {RESOLUCION[p.resolucionProblema] || p.resolucionProblema}
-                {p.fechaResolucionProblema ? ` · ${formatFechaHora(p.fechaResolucionProblema)}` : ""}
-                {p.resueltoPor ? ` · por ${p.resueltoPor}` : ""}
-                {p.motivoResolucion ? ` · Motivo: ${p.motivoResolucion}` : ""}
-              </p>
-            )}
-          </section>
-        ))}
+      <div className="adm-tarjeta" aria-busy={!problemas && !error}>
+        {!problemas && !error ? (
+          <div className="adm-cargando">Cargando…</div>
+        ) : problemas && visibles.length === 0 ? (
+          <p className="adm-vacio">{ver === "ABIERTOS" ? "No hay problemas de envío abiertos." : "Aún no has resuelto ningún problema."}</p>
+        ) : problemas && (
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
+              <thead>
+                <tr>
+                  <th>Pedido</th><th>Destino</th><th className="adm-tabla__der">Monto</th><th>Despacho</th>
+                  <th>Reclamo del cliente</th><th>{ver === "ABIERTOS" ? "Reportado" : "Resolución"}</th>
+                  {ver === "ABIERTOS" && <th className="adm-tabla__der">Acciones</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {visibles.map((p) => (
+                  <tr key={p.id} className={abierto(p) ? "adm-tabla__fila--alerta" : ""}>
+                    <td data-label="Pedido">
+                      <strong>#{refSolicitud(p.id)}</strong>
+                      <span className="adm-tabla__sub">{p.tiendaNombre}</span>
+                    </td>
+                    <td data-label="Destino">{capitalizar(p.envioCiudad) || "—"}</td>
+                    <td className="adm-tabla__der" data-label="Monto">{formatPrecio(p.total)}</td>
+                    <td data-label="Despacho">
+                      {formatFechaHora(p.fechaDespacho)}
+                      {p.notaDespacho && <span className="adm-tabla__sub">{p.notaDespacho}</span>}
+                    </td>
+                    <td data-label="Reclamo del cliente" className="adm-tabla__celda--ancha">«{p.problemaDetalle}»</td>
+                    {abierto(p) ? (
+                      <>
+                        <td data-label="Reportado" className="adm-tabla__nowrap">{formatFechaHora(p.fechaProblema)}</td>
+                        <td className="adm-tabla__der adm-tabla__celda--ancha">
+                          <div className="adm-tabla__acciones">
+                            <button type="button" className="adm-btn adm-btn--chico" onClick={() => pedir(p, "CONFIRMAR_ENTREGA")}>
+                              Sí se entregó
+                            </button>
+                            <button type="button" className="adm-btn adm-btn--chico adm-btn--peligro" onClick={() => pedir(p, "REEMBOLSAR")}>
+                              Reembolsar
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <td data-label="Resolución">
+                        <span className={`adm-badge ${p.resolucionProblema === "REEMBOLSO" ? "adm-badge--peligro" : "adm-badge--exito"}`}>
+                          {RESOLUCION[p.resolucionProblema] || p.resolucionProblema || "Resuelto"}
+                        </span>
+                        <span className="adm-tabla__sub">
+                          {[p.fechaResolucionProblema && formatFechaHora(p.fechaResolucionProblema),
+                            p.resueltoPor && `por ${p.resueltoPor}`,
+                            p.motivoResolucion && `Motivo: ${p.motivoResolucion}`].filter(Boolean).join(" · ")}
+                        </span>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {decision && (
-        <ConfirmarAccion {...textos} pedirMotivo etiquetaMotivo="Motivo de tu decisión"
-          ayudaMotivo="Queda registrado con tu nombre y fecha." onConfirmar={resolver} onCancelar={() => setDecision(null)} />
+        <ConfirmacionAdmin
+          titulo={textos.titulo}
+          texto={textos.mensaje}
+          confirmar={textos.textoConfirmar}
+          variante={textos.variante}
+          cargando={resolviendo}
+          deshabilitado={!motivo.trim()}
+          onConfirmar={resolver}
+          onCancelar={() => setDecision(null)}
+        >
+          <label className="adm-campo adm-campo--bloque">
+            <span>Motivo de tu decisión</span>
+            <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} required />
+            <span className="adm-campo__ayuda">Queda registrado con tu nombre y fecha.</span>
+          </label>
+          {errorDecision && <p className="adm-alerta adm-alerta--error" role="alert">{errorDecision}</p>}
+        </ConfirmacionAdmin>
       )}
     </div>
   );

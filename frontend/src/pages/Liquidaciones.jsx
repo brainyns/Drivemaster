@@ -2,9 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { getToken } from "../services/authService";
 import { listarRepartos, liquidarReparto, listarReembolsos, marcarReembolsado, obtenerModo } from "../services/liquidacionService";
 import { formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
-import "../css/servicios.css";
-import "../css/solicitud-servicio.css";
-import "../css/cotizacion.css";
+import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
+import "../css/admin-base.css";
 
 const VISTAS = [
   { key: "repartos", label: "Liquidaciones a talleres y tiendas" },
@@ -26,6 +25,16 @@ const ETIQUETA_ESTADO = {
   LIQUIDADO: "Liquidado",
   FALLIDO: "Fallido",
   ANULADO: "Anulado",
+};
+
+// Variante del badge de cada estado (admin-base.css)
+const VARIANTE_REPARTO = {
+  PENDIENTE: "neutro",
+  POR_LIQUIDAR: "pendiente",
+  PROCESANDO: "info",
+  LIQUIDADO: "exito",
+  FALLIDO: "peligro",
+  ANULADO: "neutro",
 };
 
 /** Una línea nueva (regla por evento) en PENDIENTE espera su evento; las anteriores a la Fase 4-B se pagan desde PENDIENTE. */
@@ -101,11 +110,28 @@ export default function Liquidaciones() {
   const pendientes = filas.filter((f) => (vista === "repartos"
     ? ["PENDIENTE", "POR_LIQUIDAR", "FALLIDO"].includes(f.estado) : f.estado === "PENDIENTE"));
   const totalPendiente = pendientes.reduce((s, f) => s + (f.monto || 0), 0);
+  const marcando = filas.find((f) => f.id === marcandoId) || null;
+
+  const textoAccion = (f) => (vista !== "repartos" ? "Marcar reembolsado"
+    : f.estado === "FALLIDO" ? "Reintentar"
+    : esManual ? "Registrar pago" : "Liquidar (simulado)");
+
+  const abrirMarcar = (f) => { setMarcandoId(f.id); setNota(""); setNumero(""); setError(null); };
 
   return (
-    <div className="ss-panel ss-panel--plataforma">
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
+        <div>
+          <h1 className="adm-encabezado__titulo">Liquidaciones y reembolsos</h1>
+          <p className="adm-encabezado__sub">
+            Pagos pendientes a talleres y tiendas, y reembolsos a clientes. Cada pago queda registrado con su referencia.
+          </p>
+        </div>
+        {!cargando && <span className="adm-encabezado__dato">Pendiente en esta lista: {formatPrecio(totalPendiente)}</span>}
+      </header>
+
       {vista === "repartos" && modo && (
-        <p className={modo.modo === "SIMULADO" ? "ss-aviso" : "ss-meta"} role="status" data-testid="modo-liquidacion">
+        <p className={`adm-alerta ${modo.modo === "SIMULADO" ? "adm-alerta--aviso" : ""}`} role="status" data-testid="modo-liquidacion">
           <strong>Modo de liquidación: {modo.modo}.</strong>{" "}
           {modo.modo === "SIMULADO"
             ? "Solo desarrollo: las liquidaciones se hacen solas y NO mueven dinero (referencias SIM-…)."
@@ -113,111 +139,131 @@ export default function Liquidaciones() {
         </p>
       )}
 
-      <nav className="ss-filtros" aria-label="Tipo">
-        {VISTAS.map((v) => (
-          <button key={v.key} className={`ss-filtro${vista === v.key ? " ss-filtro--activo" : ""}`}
-            aria-current={vista === v.key ? "page" : undefined} onClick={() => cambiarVista(v.key)}>
-            {v.label}
-          </button>
-        ))}
-      </nav>
-
-      <div className="ct-resumen">
-        <div className="ct-resumen__dato">
-          <span className="ss-meta">Pendiente en esta lista</span>
-          <span className="ct-resumen__valor">{formatPrecio(totalPendiente)}</span>
-        </div>
-        <div className="sv-field">
-          <label htmlFor="lq-estado">Estado</label>
-          <select id="lq-estado" value={estado} onChange={(e) => setEstado(e.target.value)}>
+      <div className="adm-filtros" role="search" aria-label="Filtros de liquidaciones">
+        <nav className="adm-pestanas" aria-label="Tipo">
+          {VISTAS.map((v) => (
+            <button key={v.key} type="button" className={`adm-pestana${vista === v.key ? " adm-pestana--activa" : ""}`}
+              aria-pressed={vista === v.key} onClick={() => cambiarVista(v.key)}>
+              {v.label}
+            </button>
+          ))}
+        </nav>
+        <span className="adm-filtros__separador" />
+        <label className="adm-campo">
+          <span>Estado</span>
+          <select value={estado} onChange={(e) => setEstado(e.target.value)}>
             {ESTADOS[vista].map(([valor, label]) => <option key={valor || "todos"} value={valor}>{label}</option>)}
           </select>
-        </div>
+        </label>
       </div>
 
-      {error && <p className="ss-alerta" role="alert">{error}</p>}
+      {error && !marcando && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
 
-      {cargando ? <p className="sv-empty">Cargando...</p> : filas.length === 0 ? (
-        <p className="sv-empty">No hay registros en esta lista.</p>
-      ) : (
-        <div className="ct-tabla-wrap">
-          <table className="ct-tabla">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Solicitud</th>
-                {vista === "repartos" ? <><th>Beneficiario</th><th>Concepto</th></> : <><th>Pago</th><th>Motivo</th></>}
-                <th className="ct-tabla__monto">Monto</th>
-                <th>Estado</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filas.map((f) => (
-                <tr key={f.id}>
-                  <td>{formatFechaHora(f.fechaCreacion)}</td>
-                  <td>#{refSolicitud(f.ordenServicioId)}</td>
-                  {vista === "repartos" ? (
-                    <>
-                      <td>{f.beneficiarioNombre || f.beneficiarioId}<span className="ss-meta">{f.beneficiarioTipo === "TALLER" ? "Taller" : "Tienda"}</span></td>
-                      <td>{f.concepto === "DIAGNOSTICO" ? "Diagnóstico" : "Cotización"}</td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{f.referenciaPago}<span className="ss-meta">{f.transactionId}</span></td>
-                      <td>{f.motivo}</td>
-                    </>
-                  )}
-                  <td className="ct-tabla__monto">{formatPrecio(f.monto)}</td>
-                  <td>
-                    {vista === "repartos" ? (ETIQUETA_ESTADO[f.estado] || f.estado) : f.estado}
-                    {vista === "repartos" && f.estado === "LIQUIDADO" && (
-                      <span className="ss-meta">
-                        {f.modoLiquidacion === "SIMULADO" ? "SIMULADO (sin dinero real)" : f.modoLiquidacion || ""}
-                        {f.referenciaLiquidacion ? ` · Ref. ${f.referenciaLiquidacion}` : ""}
-                        {f.liquidadoPor ? ` · ${f.liquidadoPor}` : ""}
-                        {f.fechaLiquidacion ? ` · ${formatFechaHora(f.fechaLiquidacion)}` : ""}
-                      </span>
-                    )}
-                    {vista === "repartos" && f.eventoListo && <span className="ss-meta">Evento: {f.eventoListo}</span>}
-                    {vista === "repartos" && f.estado === "FALLIDO" && f.motivoFallo && (
-                      <span className="ss-error">{f.motivoFallo}</span>
-                    )}
-                    {f.nota && <span className="ss-meta">{f.nota}</span>}
-                  </td>
-                  <td>
-                    {(vista === "repartos" ? sePuedePagar(f) : f.estado === "PENDIENTE") && (marcandoId === f.id ? (
-                      <div className="ct-respuesta">
-                        {vista === "repartos" && esManual && (
-                          <input className="ss-input" placeholder="N.º de transferencia (obligatorio)" maxLength={80} required
-                            aria-label="Número de transferencia" value={numero} onChange={(e) => setNumero(e.target.value)} />
-                        )}
-                        <input className="ss-input" placeholder="Nota (opcional)" maxLength={300}
-                          aria-label="Nota" value={nota} onChange={(e) => setNota(e.target.value)} />
-                        <div className="ss-acciones">
-                          <button className="sv-btn" onClick={() => marcar(f.id)}
-                            disabled={procesando || (vista === "repartos" && esManual && !numero.trim())}>
-                            {procesando ? "Guardando..." : "Confirmar"}
-                          </button>
-                          <button className="sv-btn-outline" onClick={() => setMarcandoId(null)} disabled={procesando}>Cancelar</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button className="sv-btn-outline" onClick={() => { setMarcandoId(f.id); setNota(""); setNumero(""); }}>
-                        {vista !== "repartos" ? "Marcar reembolsado"
-                          : f.estado === "FALLIDO" ? "Reintentar"
-                          : esManual ? "Registrar pago" : "Liquidar (simulado)"}
-                      </button>
-                    ))}
-                    {vista === "repartos" && f.estado === "PENDIENTE" && f.liquidacionPorEvento && (
-                      <span className="ss-meta">Se habilita al confirmarse la recepción o la entrega</span>
-                    )}
-                  </td>
+      <div className="adm-tarjeta" aria-busy={cargando}>
+        {cargando ? <div className="adm-cargando">Cargando…</div> : filas.length === 0 ? (
+          <p className="adm-vacio">No hay registros en esta lista.</p>
+        ) : (
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Solicitud</th>
+                  {vista === "repartos" ? <><th>Beneficiario</th><th>Concepto</th></> : <><th>Pago</th><th>Motivo</th></>}
+                  <th className="adm-tabla__der">Monto</th>
+                  <th>Estado</th>
+                  <th className="adm-tabla__der">Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filas.map((f) => {
+                  const badge = vista === "repartos"
+                    ? (VARIANTE_REPARTO[f.estado] || "neutro")
+                    : (f.estado === "REALIZADO" ? "exito" : f.estado === "PENDIENTE" ? "pendiente" : "neutro");
+                  return (
+                    <tr key={f.id} className={f.estado === "FALLIDO" ? "adm-tabla__fila--alerta" : ""}>
+                      <td data-label="Fecha" className="adm-tabla__nowrap">{formatFechaHora(f.fechaCreacion)}</td>
+                      <td data-label="Solicitud"><span className="adm-mono">#{refSolicitud(f.ordenServicioId)}</span></td>
+                      {vista === "repartos" ? (
+                        <>
+                          <td data-label="Beneficiario">
+                            <span className="adm-tabla__nombre">
+                              <strong>{f.beneficiarioNombre || f.beneficiarioId}</strong>
+                              <span className="adm-badge adm-badge--chico adm-badge--info">{f.beneficiarioTipo === "TALLER" ? "Taller" : "Tienda"}</span>
+                            </span>
+                          </td>
+                          <td data-label="Concepto">{f.concepto === "DIAGNOSTICO" ? "Diagnóstico" : "Cotización"}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td data-label="Pago">{f.referenciaPago}<span className="adm-tabla__sub">{f.transactionId}</span></td>
+                          <td data-label="Motivo">{f.motivo}</td>
+                        </>
+                      )}
+                      <td className="adm-tabla__der" data-label="Monto">{formatPrecio(f.monto)}</td>
+                      <td data-label="Estado">
+                        <span className={`adm-badge adm-badge--${badge}`}>
+                          {vista === "repartos" ? (ETIQUETA_ESTADO[f.estado] || f.estado) : (f.estado === "REALIZADO" ? "Realizado" : f.estado === "PENDIENTE" ? "Pendiente" : f.estado)}
+                        </span>
+                        {vista === "repartos" && f.estado === "LIQUIDADO" && (
+                          <span className="adm-tabla__sub">
+                            {f.modoLiquidacion === "SIMULADO" ? "SIMULADO (sin dinero real)" : f.modoLiquidacion || ""}
+                            {f.referenciaLiquidacion ? ` · Ref. ${f.referenciaLiquidacion}` : ""}
+                            {f.liquidadoPor ? ` · ${f.liquidadoPor}` : ""}
+                            {f.fechaLiquidacion ? ` · ${formatFechaHora(f.fechaLiquidacion)}` : ""}
+                          </span>
+                        )}
+                        {vista === "repartos" && f.eventoListo && <span className="adm-tabla__sub">Evento: {f.eventoListo}</span>}
+                        {vista === "repartos" && f.estado === "FALLIDO" && f.motivoFallo && (
+                          <span className="adm-tabla__sub adm-tabla__sub--error">{f.motivoFallo}</span>
+                        )}
+                        {f.nota && <span className="adm-tabla__sub">{f.nota}</span>}
+                      </td>
+                      <td className="adm-tabla__der adm-tabla__celda--ancha">
+                        <div className="adm-tabla__acciones">
+                          {(vista === "repartos" ? sePuedePagar(f) : f.estado === "PENDIENTE") && (
+                            <button type="button" className="adm-btn adm-btn--chico adm-btn--primario" onClick={() => abrirMarcar(f)}>
+                              {textoAccion(f)}
+                            </button>
+                          )}
+                        </div>
+                        {vista === "repartos" && f.estado === "PENDIENTE" && f.liquidacionPorEvento && (
+                          <span className="adm-tabla__sub">Se habilita al confirmarse la recepción o la entrega</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {marcando && (
+        <ConfirmacionAdmin
+          titulo={`${textoAccion(marcando)} · ${formatPrecio(marcando.monto)}`}
+          texto={vista === "repartos"
+            ? `${marcando.beneficiarioNombre || "Beneficiario"} · solicitud #${refSolicitud(marcando.ordenServicioId)}.`
+            : `Reembolso de la solicitud #${refSolicitud(marcando.ordenServicioId)}. Hazlo primero en el panel de Wompi.`}
+          confirmar="Confirmar"
+          cargando={procesando}
+          deshabilitado={vista === "repartos" && esManual && !numero.trim()}
+          onConfirmar={() => marcar(marcando.id)}
+          onCancelar={() => { setMarcandoId(null); setError(null); }}
+        >
+          {vista === "repartos" && esManual && (
+            <label className="adm-campo adm-campo--bloque">
+              <span>N.º de transferencia (obligatorio)</span>
+              <input maxLength={80} required value={numero} onChange={(e) => setNumero(e.target.value)} />
+            </label>
+          )}
+          <label className="adm-campo adm-campo--bloque">
+            <span>Nota (opcional)</span>
+            <input maxLength={300} value={nota} onChange={(e) => setNota(e.target.value)} />
+          </label>
+          {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
+        </ConfirmacionAdmin>
       )}
     </div>
   );

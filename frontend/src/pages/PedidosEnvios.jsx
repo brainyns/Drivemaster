@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { pedidosPlataforma } from "../services/plataformaService";
 import "../css/dashboard.css";
 import "../css/dashboard-plataforma.css";
+import "../css/admin-base.css";
 
 const TAMANO = 20;
 const REFRESCO_MS = 30000;
@@ -56,19 +57,19 @@ export default function PedidosEnvios({ token, filtroInicial }) {
   const poner = (cambio) => { setPagina(0); setFiltros((f) => ({ ...f, ...cambio })); };
 
   return (
-    <div className="db-root dp-root">
-      <header className="db-header">
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
         <div>
-          <h1 className="db-h1">Pedidos y envíos</h1>
-          <p className="db-sub">Lo que se vende en las tiendas y los envíos y retiros en curso. Se actualiza cada 30 segundos.</p>
+          <h1 className="adm-encabezado__titulo">Pedidos y envíos</h1>
+          <p className="adm-encabezado__sub">Lo que se vende en las tiendas y los envíos y retiros en curso. Se actualiza cada 30 segundos.</p>
         </div>
-        <div className="db-header-right dp-acciones">
+        <div className="adm-encabezado__lado dp-acciones">
           {actualizado && (
-            <span className="db-date">
+            <span className="adm-encabezado__dato">
               Actualizado {actualizado.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </span>
           )}
-          <button type="button" className="dp-btn" onClick={cargar} disabled={cargando}>{cargando ? "Actualizando…" : "Actualizar"}</button>
+          <button type="button" className="adm-btn" onClick={cargar} disabled={cargando}>{cargando ? "Actualizando…" : "Actualizar"}</button>
         </div>
       </header>
 
@@ -90,27 +91,27 @@ export default function PedidosEnvios({ token, filtroInicial }) {
       )}
 
       {datos && (
-        <div className="dp-pestanas" role="tablist" aria-label="Estado del pedido">
-          <button type="button" role="tab" aria-selected={filtros.estado === ""} className={`dp-pestana${filtros.estado === "" ? " dp-pestana--activa" : ""}`}
+        <div className="adm-pestanas" role="tablist" aria-label="Estado del pedido">
+          <button type="button" role="tab" aria-selected={filtros.estado === ""} className={`adm-pestana${filtros.estado === "" ? " adm-pestana--activa" : ""}`}
             onClick={() => poner({ estado: "" })}>Todos</button>
           {PESTANAS.filter((e) => datos.porEstado[e]).map((e) => (
             <button key={e} type="button" role="tab" aria-selected={filtros.estado === e}
-              className={`dp-pestana${filtros.estado === e ? " dp-pestana--activa" : ""}`} onClick={() => poner({ estado: e })}>
-              {ESTADOS[e]} <span className="dp-pestana__n">{datos.porEstado[e]}</span>
+              className={`adm-pestana${filtros.estado === e ? " adm-pestana--activa" : ""}`} onClick={() => poner({ estado: e })}>
+              {ESTADOS[e]} <span className="adm-pestana__n">{datos.porEstado[e]}</span>
             </button>
           ))}
         </div>
       )}
 
-      <form className="dp-filtros" onSubmit={(e) => e.preventDefault()} aria-label="Filtros de pedidos">
-        <label className="dp-campo">
+      <form className="adm-filtros" onSubmit={(e) => e.preventDefault()} aria-label="Filtros de pedidos">
+        <label className="adm-campo">
           <span>Tienda</span>
           <select value={filtros.tiendaId} onChange={(e) => poner({ tiendaId: e.target.value })}>
             <option value="">Todas</option>
             {(datos?.tiendas || []).map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
           </select>
         </label>
-        <label className="dp-campo">
+        <label className="adm-campo">
           <span>Entrega</span>
           <select value={filtros.entrega} onChange={(e) => poner({ entrega: e.target.value })}>
             <option value="">Envío y retiro</option>
@@ -118,49 +119,49 @@ export default function PedidosEnvios({ token, filtroInicial }) {
             <option value="RETIRO">Retiro en tienda</option>
           </select>
         </label>
-        <label className="dp-campo dp-campo--check">
+        <label className="adm-campo adm-campo--check">
           <input type="checkbox" checked={filtros.atrasados} onChange={(e) => poner({ atrasados: e.target.checked })} />
           <span>Solo atrasados</span>
         </label>
         {hayFiltros && (
-          <div className="dp-filtros__acciones">
-            <button type="button" className="dp-btn dp-btn--sutil" onClick={() => poner(FILTROS_INICIALES)}>Limpiar</button>
+          <div className="adm-filtros__acciones">
+            <button type="button" className="adm-btn adm-btn--sutil" onClick={() => poner(FILTROS_INICIALES)}>Limpiar</button>
           </div>
         )}
       </form>
 
-      {error && <div className="db-error" role="alert">{error}{datos ? " (se muestran los últimos datos)" : ""}</div>}
+      {error && <div className="adm-alerta adm-alerta--error" role="alert">{error}{datos ? " (se muestran los últimos datos)" : ""}</div>}
 
-      <div className="db-card dp-lista" aria-busy={cargando}>
+      <div className="adm-tarjeta" aria-busy={cargando}>
         {!lista && !error ? (
-          <div className="db-loading"><div className="db-spinner" /> Cargando pedidos…</div>
+          <div className="adm-cargando">Cargando pedidos…</div>
         ) : lista && lista.items.length === 0 ? (
-          <p className="db-empty">{hayFiltros ? "Ningún pedido coincide con los filtros." : "Todavía no hay pedidos."}</p>
+          <p className="adm-vacio">{hayFiltros ? "Ningún pedido coincide con los filtros." : "Todavía no hay pedidos."}</p>
         ) : lista && (
-          <div className="db-table-wrap">
-            <table className="db-table">
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
               <thead>
                 <tr>
                   <th>Pedido</th><th>Tienda</th><th>Estado</th><th>Entrega</th><th>Destino</th>
-                  <th className="dp-der">Artículos</th><th className="dp-der">Días desde el pago</th><th>Alerta</th>
+                  <th className="adm-tabla__der">Artículos</th><th className="adm-tabla__der">Días desde el pago</th><th>Alerta</th>
                 </tr>
               </thead>
               <tbody>
                 {lista.items.map((p) => (
-                  <tr key={p.id} className={p.atrasado || p.problemaAbierto ? "dp-fila--alerta" : ""}>
-                    <td>
+                  <tr key={p.id} className={p.atrasado || p.problemaAbierto ? "adm-tabla__fila--alerta" : ""}>
+                    <td data-label="Pedido">
                       <strong>#{String(p.id).slice(-6).toUpperCase()}</strong>
-                      <span className="dp-sub-celda">{p.origen === "TALLER" ? "Cotización de taller" : "Compra del catálogo"} · {fecha(p.fechaPago)}</span>
+                      <span className="adm-tabla__sub">{p.origen === "TALLER" ? "Cotización de taller" : "Compra del catálogo"} · {fecha(p.fechaPago)}</span>
                     </td>
-                    <td>{p.tienda || "—"}</td>
-                    <td><span className="dp-etiqueta">{ESTADOS[p.estado] || p.estado}</span></td>
-                    <td>{p.entrega === "ENVIO" ? "Envío" : p.entrega === "RETIRO" ? "Retiro" : "—"}</td>
-                    <td>{p.destino || "—"}</td>
-                    <td className="dp-der">{p.articulos}</td>
-                    <td className="dp-der">{p.diasDesdePago}</td>
-                    <td>
-                      {p.atrasado && <span className="dp-etiqueta dp-etiqueta--alerta">Atrasado · plazo {fecha(p.plazoDespacho)}</span>}
-                      {p.problemaAbierto && <span className="dp-etiqueta dp-etiqueta--alerta">Problema de envío</span>}
+                    <td data-label="Tienda">{p.tienda || "—"}</td>
+                    <td data-label="Estado"><span className="adm-badge adm-badge--neutro">{ESTADOS[p.estado] || p.estado}</span></td>
+                    <td data-label="Entrega">{p.entrega === "ENVIO" ? "Envío" : p.entrega === "RETIRO" ? "Retiro" : "—"}</td>
+                    <td data-label="Destino">{p.destino || "—"}</td>
+                    <td className="adm-tabla__der" data-label="Artículos">{p.articulos}</td>
+                    <td className="adm-tabla__der" data-label="Días desde el pago">{p.diasDesdePago}</td>
+                    <td data-label="Alerta">
+                      {p.atrasado && <span className="adm-badge adm-badge--peligro">Atrasado · plazo {fecha(p.plazoDespacho)}</span>}
+                      {p.problemaAbierto && <span className="adm-badge adm-badge--peligro">Problema de envío</span>}
                       {!p.atrasado && !p.problemaAbierto && "—"}
                     </td>
                   </tr>
@@ -172,10 +173,10 @@ export default function PedidosEnvios({ token, filtroInicial }) {
       </div>
 
       {lista && lista.total > lista.tamano && (
-        <nav className="dp-paginacion" aria-label="Paginación">
-          <button type="button" className="dp-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
+        <nav className="adm-paginacion" aria-label="Paginación">
+          <button type="button" className="adm-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
           <span>Página {pagina + 1} de {paginas}</span>
-          <button type="button" className="dp-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
+          <button type="button" className="adm-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
         </nav>
       )}
     </div>

@@ -3,7 +3,11 @@ import { getToken, getUser } from "../services/authService";
 import { listarTalleres, crearTaller, actualizarTaller, activarDesactivarTaller } from "../services/tallerService";
 import { ordenesPorTallerAdmin } from "../services/ordenServicioService";
 import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
+import DrawerAdmin from "../components/admin/DrawerAdmin";
+import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
+import { capitalizar } from "../utils/formato";
 import "../css/admin-talleres.css";
+import "../css/admin-base.css";
 
 const ESTADO_LABEL = {
   SOLICITADA: "Solicitada", COTIZADA: "Cotizada", PAGADA: "Pagada",
@@ -20,17 +24,12 @@ const VACIO = {
 const FILTROS = [
   { k: "todos", l: "Todos" },
   { k: "activos", l: "Activos" },
-  { k: "inactivos", l: "Inactivos" },
+  { k: "inactivos", l: "Pausados" },
 ];
 
 function formatPrecio(v) {
   if (v == null) return "—";
   return v.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
-}
-
-function monograma(nombre) {
-  if (!nombre) return "??";
-  return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join("").toUpperCase();
 }
 
 function Estrellas({ valor }) {
@@ -51,14 +50,14 @@ function Estrellas({ valor }) {
 }
 
 function BadgeOrden({ estado }) {
-  const clase = {
-    FINALIZADA: "at-pill--ok",
-    EN_PROCESO: "at-pill--info",
-    PAGADA: "at-pill--warn",
-    COTIZADA: "at-pill--muted",
-    CANCELADA: "at-pill--bad",
-  }[estado] || "at-pill--muted";
-  return <span className={`at-pill ${clase}`}>{ESTADO_LABEL[estado] || estado}</span>;
+  const variante = {
+    FINALIZADA: "exito",
+    EN_PROCESO: "info",
+    PAGADA: "pendiente",
+    COTIZADA: "neutro",
+    CANCELADA: "peligro",
+  }[estado] || "neutro";
+  return <span className={`adm-badge adm-badge--${variante}`}>{ESTADO_LABEL[estado] || estado}</span>;
 }
 
 export default function AdminTalleres() {
@@ -196,30 +195,43 @@ export default function AdminTalleres() {
     });
   }, [talleres, busqueda, filtro]);
 
+  const conteoFiltro = { todos: resumen.total, activos: resumen.activos, inactivos: resumen.inactivos };
+
+  // Pausar un taller pide confirmación; activarlo no
+  const [pausando, setPausando] = useState(null);
+  const [pausandoEnCurso, setPausandoEnCurso] = useState(false);
+  const confirmarPausa = async () => {
+    setPausandoEnCurso(true);
+    await handleToggleActivo(pausando);
+    setPausandoEnCurso(false);
+    setPausando(null);
+  };
+
   const cerrarForm = () => { if (!guardando) setFormAbierto(false); };
 
   return (
-    <div className="at-root">
-      <header className="at-header">
-        <div className="at-header-txt">
-          <span className="at-eyebrow">Red de talleres</span>
-          <h1 className="at-title">Servicios</h1>
-          <p className="at-subtitle">
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
+        <div>
+          <h1 className="adm-encabezado__titulo">Servicios</h1>
+          <p className="adm-encabezado__sub">
             Talleres aliados conectados a DriveMaster. Desde aquí los activas, editas su
-            tarifa de mano de obra y revisas los servicios que le hicieron.
+            tarifa de mano de obra y revisas los servicios que les hicieron.
           </p>
         </div>
-        {puedeGestionar && (
-          <button className="at-btn" onClick={abrirNuevo}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Nuevo taller
-          </button>
-        )}
+        <div className="adm-encabezado__lado">
+          {!cargando && (
+            <span className="adm-encabezado__dato">
+              {visibles.length} de {talleres.length} taller{talleres.length === 1 ? "" : "es"}
+            </span>
+          )}
+          {puedeGestionar && (
+            <button type="button" className="adm-btn adm-btn--primario" onClick={abrirNuevo}>Nuevo taller</button>
+          )}
+        </div>
       </header>
 
-      {error && <p className="at-error">{error}</p>}
+      {error && !formAbierto && !pedidosDe && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
 
       <section className="at-stats" aria-label="Resumen de talleres">
         <div className="at-stat">
@@ -242,277 +254,241 @@ export default function AdminTalleres() {
         </div>
       </section>
 
-      <div className="at-toolbar">
-        <div className="at-search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="7" /><line x1="20" y1="20" x2="16.5" y2="16.5" />
-          </svg>
-          <input
-            type="search"
-            placeholder="Buscar por nombre, ciudad o especialidad"
-            value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
-            aria-label="Buscar talleres"
-          />
-        </div>
-        <div className="at-seg" role="tablist" aria-label="Filtrar por estado">
+      <div className="adm-filtros" role="search" aria-label="Filtros de talleres">
+        <nav className="adm-pestanas" aria-label="Filtrar por estado">
           {FILTROS.map(f => (
             <button
               key={f.k}
-              role="tab"
-              aria-selected={filtro === f.k}
-              className={`at-seg-btn${filtro === f.k ? " is-active" : ""}`}
+              type="button"
+              aria-pressed={filtro === f.k}
+              className={`adm-pestana${filtro === f.k ? " adm-pestana--activa" : ""}`}
               onClick={() => setFiltro(f.k)}
             >
               {f.l}
+              <span className="adm-pestana__n">{conteoFiltro[f.k]}</span>
             </button>
           ))}
-        </div>
+        </nav>
+        <span className="adm-filtros__separador" />
+        <label className="adm-campo adm-campo--ancho">
+          <span>Buscar</span>
+          <input
+            type="search"
+            placeholder="Nombre, ciudad o especialidad"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+          />
+        </label>
       </div>
 
-      {cargando ? (
-        <div className="at-skel-wrap">
-          {[0, 1, 2, 3].map(i => (
-            <div className="at-skel-row" key={i}>
-              <div className="at-skel at-skel--mono" />
-              <div className="at-skel" />
-              <div className="at-skel" />
-              <div className="at-skel" />
-            </div>
-          ))}
-        </div>
-      ) : visibles.length === 0 ? (
-        <div className="at-empty-state">
-          <div className="at-empty-ico">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-              <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
-            </svg>
+      <div className="adm-tarjeta" aria-busy={cargando}>
+        {cargando ? (
+          <div className="adm-cargando">Cargando talleres…</div>
+        ) : visibles.length === 0 ? (
+          <div className="adm-vacio">
+            <p>
+              {talleres.length === 0
+                ? "Todavía no hay talleres. Registra el primer taller aliado para que los clientes puedan cotizar servicios."
+                : "Ningún taller coincide con la búsqueda. Prueba con otro nombre, ciudad o especialidad, o cambia el filtro."}
+            </p>
+            {talleres.length === 0 ? (
+              puedeGestionar && <button type="button" className="adm-btn adm-btn--primario" onClick={abrirNuevo}>Registrar primer taller</button>
+            ) : (
+              <button type="button" className="adm-btn" onClick={() => { setBusqueda(""); setFiltro("todos"); }}>
+                Limpiar filtros
+              </button>
+            )}
           </div>
-          <h3>
-            {talleres.length === 0
-              ? "Todavía no hay talleres"
-              : "Ningún taller coincide con la búsqueda"}
-          </h3>
-          <p>
-            {talleres.length === 0
-              ? "Registra el primer taller aliado para que los clientes puedan cotizar servicios de taller."
-              : "Prueba con otro nombre, ciudad o especialidad, o cambia el filtro de estado."}
-          </p>
-          {talleres.length === 0 ? (
-            puedeGestionar && <button className="at-btn" onClick={abrirNuevo}>Registrar primer taller</button>
-          ) : (
-            <button className="at-btn-outline" onClick={() => { setBusqueda(""); setFiltro("todos"); }}>
-              Limpiar filtros
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="at-table-wrap">
-            <table className="at-table">
+        ) : (
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
               <thead>
                 <tr>
                   <th>Taller</th>
-                  <th>Ubicación</th>
+                  <th>Ciudad</th>
                   <th>Especialidades</th>
-                  <th className="num">Mano de obra</th>
+                  <th className="adm-tabla__der">Mano de obra</th>
                   <th>Calificación</th>
                   <th>Estado</th>
-                  <th className="acciones-col">Acciones</th>
+                  <th className="adm-tabla__der">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {visibles.map(t => (
-                  <tr key={t.id} className={t.activo ? "" : "is-off"}>
+                  <tr key={t.id}>
                     <td data-label="Taller">
-                      <div className="at-td-name">
-                        <span className="at-mono">{monograma(t.nombre)}</span>
-                        <div>
-                          <strong>{t.nombre}</strong>
-                          {t.direccion && <span className="at-td-sub">{t.direccion}</span>}
-                        </div>
-                      </div>
+                      <strong>{t.nombre}</strong>
+                      {t.direccion && <span className="adm-tabla__sub">{t.direccion}</span>}
                     </td>
-                    <td data-label="Ubicación">{t.ciudad || "—"}</td>
+                    <td data-label="Ciudad">{capitalizar(t.ciudad) || "—"}</td>
                     <td data-label="Especialidades">
-                      <div className="at-tags">
-                        {(t.especialidades || []).length === 0
-                          ? <span className="at-td-sub">—</span>
-                          : (t.especialidades || []).slice(0, 2).map(s => (
-                              <span className="at-tag" key={s}>{s}</span>
-                            ))}
-                        {(t.especialidades || []).length > 2 && (
-                          <span className="at-tag at-tag--more">
-                            +{(t.especialidades || []).length - 2}
-                          </span>
-                        )}
-                      </div>
+                      {(t.especialidades || []).length === 0 ? "—" : (
+                        <span className="adm-badges">
+                          {(t.especialidades || []).slice(0, 2).map(s => (
+                            <span className="adm-badge adm-badge--neutro" key={s}>{s}</span>
+                          ))}
+                          {(t.especialidades || []).length > 2 && (
+                            <span className="adm-badge adm-badge--neutro">+{(t.especialidades || []).length - 2}</span>
+                          )}
+                        </span>
+                      )}
                     </td>
-                    <td data-label="Mano de obra" className="num mono">{formatPrecio(t.precioManoObra)}</td>
+                    <td data-label="Mano de obra" className="adm-tabla__der">{formatPrecio(t.precioManoObra)}</td>
                     <td data-label="Calificación"><Estrellas valor={t.rating} /></td>
                     <td data-label="Estado">
-                      <span className={`at-pill ${t.activo ? "at-pill--ok" : "at-pill--muted"}`}>
-                        {t.activo ? "Activo" : "Inactivo"}
+                      <span className={`adm-badge ${t.activo ? "adm-badge--exito" : "adm-badge--neutro"}`}>
+                        {t.activo ? "Activo" : "Pausado"}
                       </span>
                     </td>
-                    <td className="at-acciones">
-                      <button className="at-link" onClick={() => verPedidos(t)}>Servicios</button>
-                      {puedeGestionar && (
-                        <>
-                          <span className="at-sep" />
-                          <button className="at-link" onClick={() => abrirEditar(t)}>Editar</button>
-                          <span className="at-sep" />
-                          <button className="at-link at-link--warn" onClick={() => handleToggleActivo(t)}>
-                            {t.activo ? "Pausar" : "Activar"}
-                          </button>
-                        </>
-                      )}
+                    <td className="adm-tabla__der adm-tabla__celda--ancha">
+                      <div className="adm-tabla__acciones">
+                        <button type="button" className="adm-btn adm-btn--chico" onClick={() => verPedidos(t)}>Servicios</button>
+                        {puedeGestionar && (
+                          <>
+                            <button type="button" className="adm-btn adm-btn--chico" onClick={() => abrirEditar(t)}>Editar</button>
+                            {t.activo ? (
+                              <button type="button" className="adm-btn adm-btn--chico adm-btn--peligro" onClick={() => setPausando(t)}>Pausar</button>
+                            ) : (
+                              <button type="button" className="adm-btn adm-btn--chico adm-btn--primario" onClick={() => handleToggleActivo(t)}>Activar</button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="at-count">
-            {visibles.length} de {talleres.length} taller{talleres.length === 1 ? "" : "es"}
-          </p>
-        </>
-      )}
+        )}
+      </div>
 
       {pedidosDe && (
-        <div className="at-overlay" onClick={() => setPedidosDe(null)}>
-          <div className="at-modal at-modal--wide" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-            <div className="at-modal-head">
-              <div>
-                <span className="at-eyebrow">Historial del taller</span>
-                <h2 className="at-modal-title">{pedidosDe.nombre}</h2>
-              </div>
-              <button className="at-x" onClick={() => setPedidosDe(null)} aria-label="Cerrar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
+        <DrawerAdmin
+          titulo={pedidosDe.nombre}
+          encabezado={<span className="adm-badge adm-badge--chico adm-badge--info">Historial del taller</span>}
+          onCerrar={() => setPedidosDe(null)}
+        >
+          {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
+          {cargandoPedidos ? (
+            <div className="adm-cargando">Cargando servicios…</div>
+          ) : pedidos.length === 0 ? (
+            <p className="adm-vacio">Este taller todavía no tiene servicios registrados.</p>
+          ) : (
+            <div className="adm-tarjeta">
+              <table className="adm-tabla adm-tabla--tarjetas">
+                <thead>
+                  <tr>
+                    <th>Vehículo</th>
+                    <th>Repuesto</th>
+                    <th className="adm-tabla__der">Total</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pedidos.map(p => (
+                    <tr key={p.id}>
+                      <td data-label="Vehículo">{p.vehiculoDescripcion || "—"}</td>
+                      <td data-label="Repuesto">{p.productoNombre || "—"}</td>
+                      <td data-label="Total" className="adm-tabla__der">{formatPrecio(p.total)}</td>
+                      <td data-label="Estado"><BadgeOrden estado={p.estado} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="at-modal-body">
-              {cargandoPedidos ? (
-                <div className="at-skel-wrap">
-                  {[0, 1, 2].map(i => <div className="at-skel" key={i} />)}
-                </div>
-              ) : pedidos.length === 0 ? (
-                <p className="at-empty">Este taller todavía no tiene servicios registrados.</p>
-              ) : (
-                <div className="at-table-wrap">
-                  <table className="at-table at-table--inner">
-                    <thead>
-                      <tr>
-                        <th>Vehículo</th>
-                        <th>Repuesto</th>
-                        <th className="num">Total</th>
-                        <th>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pedidos.map(p => (
-                        <tr key={p.id}>
-                          <td data-label="Vehículo">{p.vehiculoDescripcion || "—"}</td>
-                          <td data-label="Repuesto">{p.productoNombre || "—"}</td>
-                          <td data-label="Total" className="num mono">{formatPrecio(p.total)}</td>
-                          <td data-label="Estado"><BadgeOrden estado={p.estado} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+          )}
+        </DrawerAdmin>
       )}
 
       {formAbierto && (
-        <div className="at-overlay" onClick={cerrarForm}>
-          <form className="at-modal" onClick={e => e.stopPropagation()} onSubmit={handleGuardar} role="dialog" aria-modal="true">
-            <div className="at-modal-head">
-              <div>
-                <span className="at-eyebrow">{editandoId ? "Editar" : "Nuevo"}</span>
-                <h2 className="at-modal-title">{editandoId ? "Datos del taller" : "Registrar taller aliado"}</h2>
-              </div>
-              <button type="button" className="at-x" onClick={cerrarForm} aria-label="Cerrar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="at-modal-body">
-              <fieldset className="at-group">
-                <legend className="at-group-legend">Identidad</legend>
-                <div className="at-field">
-                  <label htmlFor="at-nombre">Nombre</label>
-                  <input id="at-nombre" required autoFocus value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
-                </div>
-                <div className="at-field-row">
-                  <div className="at-field">
-                    <label htmlFor="at-ciudad">Ciudad</label>
-                    <input id="at-ciudad" required value={form.ciudad} onChange={e => setForm({ ...form, ciudad: e.target.value })} />
-                  </div>
-                  <div className="at-field">
-                    <label htmlFor="at-mano">Precio mano de obra</label>
-                    <input id="at-mano" type="number" step="any" required value={form.precioManoObra} onChange={e => setForm({ ...form, precioManoObra: e.target.value })} />
-                  </div>
-                </div>
-                <div className="at-field">
-                  <label htmlFor="at-dir">Dirección</label>
-                  <input id="at-dir" value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} />
-                </div>
-                <div className="at-field">
-                  <label htmlFor="at-esp">Especialidades</label>
-                  <input id="at-esp" placeholder="Frenos, suspensión, electrical" value={form.especialidades} onChange={e => setForm({ ...form, especialidades: e.target.value })} />
-                  <span className="at-hint">Sepáralas con comas.</span>
-                </div>
-              </fieldset>
-
-              <fieldset className="at-group">
-                <legend className="at-group-legend">Ubicación en el mapa</legend>
-                <SelectorUbicacion
-                  id="at-mapa"
-                  ciudad={form.ciudad}
-                  value={form.latitud === "" || form.longitud === "" ? null : { latitud: Number(form.latitud), longitud: Number(form.longitud) }}
-                  onChange={({ latitud, longitud }) => setForm((f) => ({ ...f, latitud, longitud }))}
-                />
-                <div className="at-field">
-                  <label htmlFor="at-rating">Rating inicial</label>
-                  <input id="at-rating" type="number" step="0.1" min="0" max="5" value={form.rating} onChange={e => setForm({ ...form, rating: e.target.value })} />
-                </div>
-              </fieldset>
-
-              {!editandoId && (
-                <fieldset className="at-group">
-                  <legend className="at-group-legend">Acceso del taller</legend>
-                  <p className="at-hint">Se crea el usuario con el que el taller iniciará sesión.</p>
-                  <div className="at-field-row">
-                    <div className="at-field">
-                      <label htmlFor="at-correo">Correo</label>
-                      <input id="at-correo" type="email" required value={form.correoUsuario} onChange={e => setForm({ ...form, correoUsuario: e.target.value })} />
-                    </div>
-                    <div className="at-field">
-                      <label htmlFor="at-pass">Contraseña</label>
-                      <input id="at-pass" type="password" required value={form.passwordUsuario} onChange={e => setForm({ ...form, passwordUsuario: e.target.value })} />
-                    </div>
-                  </div>
-                </fieldset>
-              )}
-              {error && <p className="at-error" role="alert">{error}</p>}
-            </div>
-
-            <div className="at-modal-foot">
-              <button type="button" className="at-btn-outline" onClick={cerrarForm}>Cancelar</button>
-              <button type="submit" className="at-btn" disabled={guardando}>
+        <DrawerAdmin
+          titulo={editandoId ? "Datos del taller" : "Registrar taller aliado"}
+          encabezado={<span className="adm-badge adm-badge--chico adm-badge--info">{editandoId ? "Editar" : "Nuevo"}</span>}
+          onCerrar={cerrarForm}
+          pie={(
+            <>
+              <button type="button" className="adm-btn" onClick={cerrarForm} disabled={guardando}>Cancelar</button>
+              <button type="submit" form="at-form" className={`adm-btn adm-btn--primario${guardando ? " adm-btn--cargando" : ""}`}
+                disabled={guardando} aria-busy={guardando}>
                 {guardando ? "Guardando…" : editandoId ? "Guardar cambios" : "Crear taller"}
               </button>
-            </div>
+            </>
+          )}
+        >
+          <form id="at-form" onSubmit={handleGuardar} className="adm-drawer__form">
+            <section className="adm-drawer__bloque">
+              <h3 className="adm-drawer__subtitulo">Identidad</h3>
+              <label className="adm-campo adm-campo--bloque">
+                <span>Nombre</span>
+                <input required value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
+              </label>
+              <div className="adm-drawer__fila">
+                <label className="adm-campo">
+                  <span>Ciudad</span>
+                  <input required value={form.ciudad} onChange={e => setForm({ ...form, ciudad: e.target.value })} />
+                </label>
+                <label className="adm-campo">
+                  <span>Precio mano de obra</span>
+                  <input type="number" step="any" required value={form.precioManoObra} onChange={e => setForm({ ...form, precioManoObra: e.target.value })} />
+                </label>
+              </div>
+              <label className="adm-campo adm-campo--bloque">
+                <span>Dirección</span>
+                <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} />
+              </label>
+              <label className="adm-campo adm-campo--bloque">
+                <span>Especialidades</span>
+                <input placeholder="Frenos, suspensión, eléctrico" value={form.especialidades} onChange={e => setForm({ ...form, especialidades: e.target.value })} />
+                <span className="adm-campo__ayuda">Sepáralas con comas.</span>
+              </label>
+            </section>
+
+            <section className="adm-drawer__bloque">
+              <h3 className="adm-drawer__subtitulo">Ubicación en el mapa</h3>
+              <SelectorUbicacion
+                id="at-mapa"
+                ciudad={form.ciudad}
+                value={form.latitud === "" || form.longitud === "" ? null : { latitud: Number(form.latitud), longitud: Number(form.longitud) }}
+                onChange={({ latitud, longitud }) => setForm((f) => ({ ...f, latitud, longitud }))}
+              />
+              <label className="adm-campo adm-campo--bloque">
+                <span>Rating inicial</span>
+                <input type="number" step="0.1" min="0" max="5" value={form.rating} onChange={e => setForm({ ...form, rating: e.target.value })} />
+              </label>
+            </section>
+
+            {!editandoId && (
+              <section className="adm-drawer__bloque">
+                <h3 className="adm-drawer__subtitulo">Acceso del taller</h3>
+                <p className="adm-encabezado__sub adm-campo__ayuda">Se crea el usuario con el que el taller iniciará sesión.</p>
+                <div className="adm-drawer__fila">
+                  <label className="adm-campo">
+                    <span>Correo</span>
+                    <input type="email" required value={form.correoUsuario} onChange={e => setForm({ ...form, correoUsuario: e.target.value })} />
+                  </label>
+                  <label className="adm-campo">
+                    <span>Contraseña</span>
+                    <input type="password" required value={form.passwordUsuario} onChange={e => setForm({ ...form, passwordUsuario: e.target.value })} />
+                  </label>
+                </div>
+              </section>
+            )}
+            {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
           </form>
-        </div>
+        </DrawerAdmin>
+      )}
+
+      {pausando && (
+        <ConfirmacionAdmin
+          titulo={`Pausar ${pausando.nombre}`}
+          texto="El taller dejará de recibir solicitudes nuevas hasta que lo actives otra vez."
+          confirmar="Pausar"
+          variante="peligro"
+          cargando={pausandoEnCurso}
+          onConfirmar={confirmarPausa}
+          onCancelar={() => setPausando(null)}
+        />
       )}
     </div>
   );
