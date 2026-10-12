@@ -40,7 +40,7 @@ services:
       - N8N_CHAT_SECRET=${N8N_CHAT_SECRET:-cambiar-este-secreto}
       - N8N_TOOLS_SECRET=${N8N_TOOLS_SECRET:-cambiar-este-secreto-tools}
       - N8N_TOOLS_BASE_URL=http://backend:8080
-      - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-120b}
+      - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-20b}
     volumes:
       - n8n_data:/home/node/.n8n
 

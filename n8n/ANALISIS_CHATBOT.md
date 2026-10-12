@@ -15,7 +15,7 @@ los [problemas que se encontraron y cómo se resolvieron](#8-problemas-encontrad
 - Spring Boot **no tiene lógica de IA**: limita a 15 mensajes por minuto por IP (la IP real, resuelta por
   Tomcat), valida que el mensaje no venga vacío y lo reenvía al webhook de n8n con el header
   `X-Chat-Secret`.
-- n8n valida el secreto y ejecuta un **AI Agent** con Groq (`openai/gpt-oss-120b`), memoria en Postgres
+- n8n valida el secreto y ejecuta un **AI Agent** con Groq (`openai/gpt-oss-20b`), memoria en Postgres
   (Supabase) por `sessionId` y una herramienta, `Buscar productos`, que consulta
   `GET /api/productos/buscar` con el header `X-Service-Token`.
 - n8n responde `{ respuesta, productos: [] }`. El backend lo pasa tal cual al widget, que muestra
@@ -204,26 +204,18 @@ Webhook chat ─► Validar secreto ─(sí)─► Preparar mensaje ─► Agent
 | **Rechazar (403)** | `respondToWebhook` (v1.1) | `403 {"error": "No autorizado"}` |
 | **Preparar mensaje** | `set` (v3.4) | `chatInput = body.mensaje`, `sessionId = body.sessionId \|\| 'anon'` |
 | **Agente DriveMaster** | `agent` (v1.6) | *Prompt* = `{{ $json.chatInput }}`; reglas en *System Message* |
-| **Modelo Groq** | `lmChatGroq` (v1) | `model = {{ $env.GROQ_MODEL \|\| 'openai/gpt-oss-120b' }}`, temperatura 0.3 |
+| **Modelo Groq** | `lmChatGroq` (v1) | `model = {{ $env.GROQ_MODEL \|\| 'openai/gpt-oss-20b' }}`, temperatura 0.3 |
 | **Memoria (Postgres)** | `memoryPostgresChat` (v1.3) | Clave `{{ $('Preparar mensaje').item.json.sessionId }}`, tabla `drivemaster_chat_memory`, 8 mensajes |
 | **Buscar productos** | `httpRequestTool` (v4.2) | `GET $env.N8N_TOOLS_BASE_URL/api/productos/buscar?terminos=$fromAI(...)` + `X-Service-Token: $env.N8N_TOOLS_SECRET` |
 | **Formar respuesta** | `code` (v2, por ítem) | Devuelve **un objeto** `{ json: { respuesta, productos: [] } }` |
 | **Responder** | `respondToWebhook` (v1.1) | Devuelve el JSON anterior |
 
-Reglas del *System Message*:
+El *System Message* está en cuatro bloques cortos, pensados para un modelo pequeño como `gpt-oss-20b`:
 
-1. Español, con un tono cercano.
-2. Usar **siempre** la herramienta para productos, precios, stock y compatibilidad, sin inventar nada.
-3. Enviar como términos el tipo de repuesto + marca/modelo del vehículo.
-4. Confirmar la compatibilidad con `modelosCompatibles` y `compatibilidadUniversal`, o recomendar
-   verificarla con la tienda o un taller.
-5. Productos `ENCARGO`: no presentarlos como agotados; decir que se piden por encargo y cuántos días
-   tardan. Mencionar la tienda que vende cada producto.
-6. Ser honesto si no hay resultados.
-7. Comparativas en máximo 3 párrafos.
-8. Rechazar con amabilidad los temas fuera del negocio.
-9. No pedir datos personales.
-10. Escribir en texto plano, sin Markdown, con listas de guiones y precios en pesos colombianos.
+- **Objetivo**: ayudar a encontrar el repuesto correcto dentro del catálogo.
+- **Herramienta**: usarla siempre para productos y precios, con 1 a 4 términos cortos (repuesto + marca/modelo del vehículo); si no hay resultados, reintentar una vez con otro nombre; nunca inventar datos.
+- **Cómo responder**: máximo 6 líneas y 3 productos (nombre, precio, disponibilidad, tienda); ENCARGO no es "agotado"; compatibilidad solo si viene en los datos; pedir marca, modelo y año si falta información; texto plano; responder siempre.
+- **Límites**: solo temas de DriveMaster; no pedir datos personales ni de pago; no inventar envíos, garantías ni horarios.
 
 ### 3.5 Memoria conversacional
 
@@ -387,7 +379,7 @@ Edita en el editor y prueba con `/webhook-test/chat-drivemaster`. Luego **Downlo
 | 14 | 🟡 | **Memoria compartida entre usuarios:** el `sessionId` sobrevivía al logout. Además, por HTTP (LAN) el id era `Date.now()`, que puede repetirse. | Botón **Nueva conversación**, reinicio en el logout e id aleatorio con `getRandomValues`. | `chatSesion.js`, `ChatWindow.jsx`, `App.jsx` |
 | 15 | 🟢 | **Detalles del widget:** el 429 se mostraba como "hubo un error"; la respuesta se demoraba 800 ms a propósito; sin timeout; saltos de línea y Markdown mal mostrados. | Muestra el motivo del 429/400, sin espera artificial, timeout de 95 s, `white-space: pre-wrap` y el prompt pide texto plano. | `useChat.js`, `chat.css`, `chat-drivemaster.json` |
 | 16 | 🟢 | **Guías desactualizadas:** la prueba usaba `localhost:8080` (no publicado en el HomeLab) y faltaban pasos y variables. | `n8n/README.md`, `homelab/README.md` y `.env.example` actualizados. | docs |
-| 17 | 🔴 | **Cuota de Gemini agotada.** Google retiró `gemini-2.5-flash` para cuentas nuevas y el plan gratuito de su reemplazo permite 20 llamadas al día (cada mensaje del chat gasta 2 o más). | El modelo pasa a **Groq** (nodo `lmChatGroq`, `GROQ_MODEL`, por defecto `openai/gpt-oss-120b`). | `chat-drivemaster.json`, compose, `.env.example`, guías |
+| 17 | 🔴 | **Cuota de Gemini agotada.** Google retiró `gemini-2.5-flash` para cuentas nuevas y el plan gratuito de su reemplazo permite 20 llamadas al día (cada mensaje del chat gasta 2 o más). | El modelo pasa a **Groq** (nodo `lmChatGroq`, `GROQ_MODEL`, por defecto `openai/gpt-oss-20b`). | `chat-drivemaster.json`, compose, `.env.example`, guías |
 | 18 | 🟡 | **"¿Tienen rodamientos?" no encontraba la "Balinera delantera Ford Escape"** y el modelo respondía vacío ("no pude procesar tu consulta"): la búsqueda era literal y la herramienta devolvía `[]`. | Búsqueda tolerante a tildes, plurales y sinónimos (`PatronBusqueda`), respuesta `{total, productos, mensaje}` y reglas en el prompt para reintentar con otro nombre y responder siempre. Tests nuevos. | `PatronBusqueda.java`, `ResultadoBusquedaDTO.java`, `ProductoController.java`, `ProductoServiceImpl.java`, workflow |
 
 ### Verificación hecha
