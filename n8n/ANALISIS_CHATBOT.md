@@ -15,7 +15,7 @@ los [problemas que se encontraron y cómo se resolvieron](#8-problemas-encontrad
 - Spring Boot **no tiene lógica de IA**: limita a 15 mensajes por minuto por IP (la IP real, resuelta por
   Tomcat), valida que el mensaje no venga vacío y lo reenvía al webhook de n8n con el header
   `X-Chat-Secret`.
-- n8n valida el secreto y ejecuta un **AI Agent** con Gemini (`gemini-2.5-flash`), memoria en Postgres
+- n8n valida el secreto y ejecuta un **AI Agent** con Groq (`llama-3.3-70b-versatile`), memoria en Postgres
   (Supabase) por `sessionId` y una herramienta, `Buscar productos`, que consulta
   `GET /api/productos/buscar` con el header `X-Service-Token`.
 - n8n responde `{ respuesta, productos: [] }`. El backend lo pasa tal cual al widget, que muestra
@@ -50,7 +50,7 @@ Internet ─HTTPS─► Tailscale Funnel / Cloudflare Tunnel
                                                   │
                          ┌────────────────────────┼────────────────────────┐
                          ▼                        ▼                        ▼
-                  Google Gemini API      Supabase (Postgres)        MongoDB Atlas
+                  Groq API               Supabase (Postgres)        MongoDB Atlas
                   (credencial en n8n)    tabla drivemaster_chat_    (productos que lee
                                          memory (credencial en n8n)  el backend)
 ```
@@ -75,7 +75,7 @@ sequenceDiagram
     participant B as Spring Boot (backend)
     participant W as n8n · Webhook + Validar secreto
     participant A as n8n · Agente
-    participant G as Gemini
+    participant G as Groq
     participant M as Postgres (memoria)
 
     U->>N: POST /api/chat {mensaje, sessionId} (timeout 95 s)
@@ -187,7 +187,7 @@ Archivo: [`workflows/chat-drivemaster.json`](workflows/chat-drivemaster.json) (s
 Webhook chat ─► Validar secreto ─(sí)─► Preparar mensaje ─► Agente DriveMaster ─► Formar respuesta ─► Responder
                       └─(no)─► Rechazar (403)                 ▲      ▲      ▲
                                                 ai_languageModel  ai_memory  ai_tool
-                                                Modelo Gemini   Memoria     Buscar productos
+                                                Modelo Groq     Memoria     Buscar productos
 ```
 
 | Nodo | Tipo (versión) | Configuración clave |
@@ -197,7 +197,7 @@ Webhook chat ─► Validar secreto ─(sí)─► Preparar mensaje ─► Agent
 | **Rechazar (403)** | `respondToWebhook` (v1.1) | `403 {"error": "No autorizado"}` |
 | **Preparar mensaje** | `set` (v3.4) | `chatInput = body.mensaje`, `sessionId = body.sessionId \|\| 'anon'` |
 | **Agente DriveMaster** | `agent` (v1.6) | *Prompt* = `{{ $json.chatInput }}`; reglas en *System Message* |
-| **Modelo Gemini** | `lmChatGoogleGemini` (v1) | `modelName = models/{{ $env.GEMINI_MODEL \|\| 'gemini-2.5-flash' }}`, temperatura 0.3 |
+| **Modelo Groq** | `lmChatGroq` (v1) | `model = {{ $env.GROQ_MODEL \|\| 'llama-3.3-70b-versatile' }}`, temperatura 0.3 |
 | **Memoria (Postgres)** | `memoryPostgresChat` (v1.3) | Clave `{{ $('Preparar mensaje').item.json.sessionId }}`, tabla `drivemaster_chat_memory`, 20 mensajes |
 | **Buscar productos** | `httpRequestTool` (v4.2) | `GET $env.N8N_TOOLS_BASE_URL/api/productos/buscar?terminos=$fromAI(...)` + `X-Service-Token: $env.N8N_TOOLS_SECRET` |
 | **Formar respuesta** | `code` (v2, por ítem) | Devuelve **un objeto** `{ json: { respuesta, productos: [] } }` |
@@ -234,12 +234,12 @@ Reglas del *System Message*:
 | `N8N_CHAT_SECRET` | Variables del stack (obligatoria) → `backend` y `n8n` | Backend: header `X-Chat-Secret`. n8n: nodo `Validar secreto` |
 | `N8N_TOOLS_SECRET` | Variables del stack (obligatoria) → `backend` y `n8n` | n8n: header `X-Service-Token`. Backend: lo valida |
 | `N8N_TOOLS_BASE_URL` | Fijo en el compose: `http://backend:8080` | Herramienta `Buscar productos` |
-| `GEMINI_MODEL` | Variable opcional del stack (sin `models/`) | Nodo `Modelo Gemini` |
+| `GROQ_MODEL` | Variable opcional del stack | Nodo `Modelo Groq` |
 | `N8N_VERSION` | Variable del stack: la versión que ya corre | Imagen de n8n |
 | `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` | Fijo en el compose | Permite `$env` en el workflow (n8n 2.x lo bloquea por defecto) |
 | `N8N_CHAT_RATE_MAX` | Variable opcional del stack | Backend |
 | `N8N_WEBHOOK_URL` | Variable opcional del stack | Backend |
-| API key de Gemini | **Credencial en n8n** | `Modelo Gemini` |
+| API key de Groq | **Credencial en n8n** | `Modelo Groq` |
 | Conexión Postgres (Supabase) | **Credencial en n8n** | `Memoria (Postgres)` |
 | Clave de cifrado de n8n | `/home/node/.n8n/config` en el volumen | Descifra las credenciales. Guárdala en tu gestor de contraseñas |
 
@@ -309,7 +309,7 @@ El backend corta primero (90 s) y su mensaje amable llega antes de que el widget
    `N8N_VERSION` con la versión de n8n que ya corre. **Pull and redeploy**.
 2. Editor de n8n: `ssh -L 5678:localhost:5678 usuario@IP-VM` → `http://localhost:5678`.
 3. Si había un workflow importado antes: desactívalo y bórralo. Importa `n8n/workflows/chat-drivemaster.json`.
-4. Credenciales: *Google Gemini(PaLM) API* → `Modelo Gemini`; *Postgres* (Supabase, Session pooler, SSL)
+4. Credenciales: *Groq* → `Modelo Groq`; *Postgres* (Supabase, Session pooler, SSL)
    → `Memoria (Postgres)`. El webhook no necesita credencial.
 5. Activa el workflow.
 
@@ -346,7 +346,7 @@ curl -s -H "X-Service-Token: TU_N8N_TOOLS_SECRET" "http://localhost:8088/api/pro
 | Widget: "el asistente no está disponible" | Logs de `drivemaster-backend-1` → `Error llamando a n8n` | `404`: workflow inactivo · `403`: secreto distinto · `500`: falla un nodo (ver Executions) · timeout |
 | Widget: "Has enviado demasiados mensajes…" | — | Límite de 15/min por IP |
 | Nunca encuentra productos | n8n → Executions → `Buscar productos` | `403` por `N8N_TOOLS_SECRET` distinto, o `$env` bloqueado (falta `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`) |
-| Error del modelo (*model not found*) | n8n → Executions → `Modelo Gemini` | `GEMINI_MODEL` con prefijo `models/` o un modelo retirado |
+| Error del modelo (*model not found / decommissioned*) | n8n → Executions → `Modelo Groq` | `GROQ_MODEL` retirado por Groq: elige otro con soporte de herramientas |
 | Falla la memoria | n8n → Executions → `Memoria (Postgres)` | Credencial sin asignar o Supabase inaccesible (usar Session pooler) |
 
 ### 7.4 Cambiar el workflow sin perderlo
@@ -376,6 +376,7 @@ Edita en el editor y prueba con `/webhook-test/chat-drivemaster`. Luego **Downlo
 | 14 | 🟡 | **Memoria compartida entre usuarios:** el `sessionId` sobrevivía al logout. Además, por HTTP (LAN) el id era `Date.now()`, que puede repetirse. | Botón **Nueva conversación**, reinicio en el logout e id aleatorio con `getRandomValues`. | `chatSesion.js`, `ChatWindow.jsx`, `App.jsx` |
 | 15 | 🟢 | **Detalles del widget:** el 429 se mostraba como "hubo un error"; la respuesta se demoraba 800 ms a propósito; sin timeout; saltos de línea y Markdown mal mostrados. | Muestra el motivo del 429/400, sin espera artificial, timeout de 95 s, `white-space: pre-wrap` y el prompt pide texto plano. | `useChat.js`, `chat.css`, `chat-drivemaster.json` |
 | 16 | 🟢 | **Guías desactualizadas:** la prueba usaba `localhost:8080` (no publicado en el HomeLab) y faltaban pasos y variables. | `n8n/README.md`, `homelab/README.md` y `.env.example` actualizados. | docs |
+| 17 | 🔴 | **Cuota de Gemini agotada.** Google retiró `gemini-2.5-flash` para cuentas nuevas y el plan gratuito de su reemplazo permite 20 llamadas al día (cada mensaje del chat gasta 2 o más). | El modelo pasa a **Groq** (nodo `lmChatGroq`, `GROQ_MODEL`, por defecto `llama-3.3-70b-versatile`). | `chat-drivemaster.json`, compose, `.env.example`, guías |
 
 ### Verificación hecha
 

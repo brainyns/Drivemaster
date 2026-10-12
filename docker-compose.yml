@@ -22,7 +22,7 @@ services:
     depends_on:
       - backend
 
-  # Chat IA: agente orquestado en n8n (modelo Gemini/Groq, memoria y herramientas).
+  # Chat IA: agente orquestado en n8n (modelo de Groq, memoria y herramientas).
   # El editor se abre en http://localhost:5678; el puerto se publica solo en localhost:
   # n8n jamás debe quedar expuesto a Internet.
   n8n:
@@ -40,7 +40,7 @@ services:
       - N8N_CHAT_SECRET=${N8N_CHAT_SECRET:-cambiar-este-secreto}
       - N8N_TOOLS_SECRET=${N8N_TOOLS_SECRET:-cambiar-este-secreto-tools}
       - N8N_TOOLS_BASE_URL=http://backend:8080
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
     volumes:
       - n8n_data:/home/node/.n8n
 

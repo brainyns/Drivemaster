@@ -7,7 +7,7 @@ agente, modelo, herramientas y memoria.
 
 ```
 Frontend (widget React) ─► Spring Boot (/api/chat, proxy + rate limit) ─► n8n (este workflow)
-                                                                          ├─ Modelo Gemini
+                                                                          ├─ Modelo de Groq
                                                                           ├─ Memoria Postgres (por sessionId)
                                                                           └─ Herramienta: GET /api/productos/buscar
 ```
@@ -30,13 +30,13 @@ Al importar, dos nodos quedan sin credencial. Créalas en **Credentials → Add 
 
 | Nodo | Credencial | Dato que pide |
 | --- | --- | --- |
-| `Modelo Gemini` | **Google Gemini(PaLM) API** | La API key de Gemini |
+| `Modelo Groq` | **Groq** | La API key de Groq (`gsk_…`, en console.groq.com → API Keys) |
 | `Memoria (Postgres)` | **Postgres** | Host/base/usuario/clave de Supabase (el *Session pooler*, con SSL). La tabla `drivemaster_chat_memory` se crea sola. |
 
 El webhook **no** necesita credencial: el nodo `Validar secreto` compara el header `X-Chat-Secret`
 con la variable de entorno `N8N_CHAT_SECRET` y responde `403` si no coincide.
 
-> ⚠️ La API key de Gemini **no va en las variables del backend** ni en el `.env` de Spring: vive solo
+> ⚠️ La API key de Groq **no va en las variables del backend** ni en el `.env` de Spring: vive solo
 > como credencial dentro de n8n.
 
 ## 3. Variables de entorno del contenedor n8n
@@ -48,7 +48,7 @@ Las definen `docker-compose.yml` (raíz) y `homelab/docker-compose.yml`:
 | `N8N_CHAT_SECRET` | Secreto del header `X-Chat-Secret` con el que el backend llama al webhook. **Obligatorio**: sin él, el workflow rechaza todo. |
 | `N8N_TOOLS_SECRET` | Token `X-Service-Token` con el que la herramienta consume `/api/productos/buscar`. **Obligatorio**: sin él, el backend responde `403`. |
 | `N8N_TOOLS_BASE_URL` | URL base del backend de Spring (dentro de Docker: `http://backend:8080`). |
-| `GEMINI_MODEL` | Modelo de Gemini **sin** el prefijo `models/` (por defecto `gemini-2.5-flash`). |
+| `GROQ_MODEL` | Modelo de Groq; debe soportar herramientas (por defecto `llama-3.3-70b-versatile`). Si Groq lo retira, el error lo indica: cámbialo aquí o elige otro en el nodo. |
 | `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` | Permite que el workflow lea las variables anteriores con `$env` (desde n8n 2.0 está bloqueado por defecto). |
 | `N8N_VERSION` | Versión de la imagen de n8n. Fíjala en la que ya corre (vacía = `latest`). |
 

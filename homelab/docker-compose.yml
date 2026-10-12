@@ -38,7 +38,7 @@ services:
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
       BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-DriveMaster}
-      # Chat IA: el backend solo reenvía a n8n. La API key de Gemini va en las credenciales de n8n.
+      # Chat IA: el backend solo reenvía a n8n. La API key de Groq va en las credenciales de n8n.
       # Los dos secretos son obligatorios: sin ellos el despliegue falla en vez de usar un valor
       # conocido (los que había por defecto están publicados en el repositorio).
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/chat-drivemaster}
@@ -82,7 +82,7 @@ services:
     depends_on:
       - backend
 
-  # Chat IA: agente en n8n (modelo Gemini/Groq, memoria y herramientas). El puerto 5678 solo
+  # Chat IA: agente en n8n (modelo de Groq, memoria y herramientas). El puerto 5678 solo
   # se publica en localhost de la VM: ábrelo por túnel SSH (ssh -L 5678:localhost:5678), nunca
   # con Funnel ni Cloudflare. Importa n8n/workflows/chat-drivemaster.json desde el editor.
   n8n:
@@ -101,8 +101,8 @@ services:
       - N8N_CHAT_SECRET=${N8N_CHAT_SECRET:?Define N8N_CHAT_SECRET en las variables del stack}
       - N8N_TOOLS_SECRET=${N8N_TOOLS_SECRET:?Define N8N_TOOLS_SECRET en las variables del stack}
       - N8N_TOOLS_BASE_URL=http://backend:8080
-      # Sin el prefijo "models/" (por ejemplo gemini-2.5-flash).
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      # Modelo de Groq (debe soportar herramientas / tool use).
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
