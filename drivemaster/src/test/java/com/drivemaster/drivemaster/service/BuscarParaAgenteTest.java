@@ -7,7 +7,9 @@ import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
+import com.drivemaster.drivemaster.dto.ResultadoBusquedaDTO;
 import com.drivemaster.drivemaster.security.AlcanceTienda;
+import com.drivemaster.drivemaster.util.PatronBusqueda;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -59,7 +61,7 @@ class BuscarParaAgenteTest {
 
     @Test
     void soloDevuelveProductosActivosDeTiendasVisiblesConSuTiendaYSuTipo() {
-        when(productoRepository.searchByTerm("freno")).thenReturn(List.of(
+        when(productoRepository.searchByTerm(PatronBusqueda.aRegex("freno"))).thenReturn(List.of(
                 producto("visible", "tA", true),
                 producto("inactivo", "tA", false),
                 producto("tiendaOculta", "tOculta", true),
@@ -80,8 +82,8 @@ class BuscarParaAgenteTest {
     void ordenaPorCuantosTerminosCoinciden() {
         Producto soloFreno = producto("soloFreno", "tA", true);
         Producto frenoMazda = producto("frenoMazda", "tA", true);
-        when(productoRepository.searchByTerm("freno")).thenReturn(List.of(soloFreno, frenoMazda));
-        when(productoRepository.searchByTerm("mazda")).thenReturn(List.of(frenoMazda));
+        when(productoRepository.searchByTerm(PatronBusqueda.aRegex("freno"))).thenReturn(List.of(soloFreno, frenoMazda));
+        when(productoRepository.searchByTerm(PatronBusqueda.aRegex("mazda"))).thenReturn(List.of(frenoMazda));
 
         List<ProductoDTO> r = servicio.buscarParaAgente(List.of("freno", "Mazda"));
 
@@ -92,7 +94,7 @@ class BuscarParaAgenteTest {
     void devuelveComoMaximoDiezProductos() {
         List<Producto> muchos = new ArrayList<>();
         for (int i = 0; i < 25; i++) muchos.add(producto("p" + i, "tA", true));
-        when(productoRepository.searchByTerm("filtro")).thenReturn(muchos);
+        when(productoRepository.searchByTerm(PatronBusqueda.aRegex("filtro"))).thenReturn(muchos);
 
         assertEquals(10, servicio.buscarParaAgente(List.of("filtro")).size());
     }
@@ -102,8 +104,8 @@ class BuscarParaAgenteTest {
         servicio.buscarParaAgente(List.of("c++", "(aceite)"));
 
         verify(productoRepository).searchByTerm("c\\+\\+");
-        verify(productoRepository).searchByTerm("\\(aceite\\)");
-        assertEquals("1\\.6", ProductoServiceImpl.escaparRegex("1.6"));
+        verify(productoRepository).searchByTerm(PatronBusqueda.aRegex("(aceite)"));
+        assertTrue(PatronBusqueda.aRegex("(aceite)").startsWith("\\("), "el paréntesis queda escapado");
     }
 
     @Test
@@ -149,7 +151,9 @@ class BuscarParaAgenteTest {
         assertThrows(ResponseStatusException.class, () -> c.buscarParaChat(List.of("freno"), "otro"));
         verifyNoInteractions(productoService);
 
-        c.buscarParaChat(List.of("freno"), "secreto-tools");
+        ResultadoBusquedaDTO r = c.buscarParaChat(List.of("freno"), "secreto-tools");
         verify(productoService).buscarParaAgente(List.of("freno"));
+        assertEquals(0, r.getTotal());
+        assertTrue(r.getMensaje().contains("No hay productos"), "sin resultados el modelo recibe un mensaje, no una lista vacía a secas");
     }
 }

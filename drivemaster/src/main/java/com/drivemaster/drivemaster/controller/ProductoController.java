@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.dto.ProductoDTO;
+import com.drivemaster.drivemaster.dto.ResultadoBusquedaDTO;
 import com.drivemaster.drivemaster.model.MovimientoInventario;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.security.AlcanceTienda;
@@ -42,11 +43,18 @@ public class ProductoController {
     // BUSCAR para las herramientas del agente IA (n8n). Es público en Spring Security pero
     // exige el token de servicio X-Service-Token: solo n8n debe consumirlo. Devuelve DTOs
     // (sin datos internos como precioCompra), solo productos activos de tiendas visibles.
+    // Siempre incluye un mensaje: con una lista vacía a secas, el modelo a veces no contestaba nada.
     @GetMapping("/buscar")
-    public List<ProductoDTO> buscarParaChat(@RequestParam(name = "terminos", required = false) List<String> terminos,
-                                            @RequestHeader(name = "X-Service-Token", required = false) String token) {
+    public ResultadoBusquedaDTO buscarParaChat(@RequestParam(name = "terminos", required = false) List<String> terminos,
+                                               @RequestHeader(name = "X-Service-Token", required = false) String token) {
         validarTokenServicios(token);
-        return productoService.buscarParaAgente(terminos);
+        List<ProductoDTO> productos = productoService.buscarParaAgente(terminos);
+        String buscado = terminos == null ? "" : String.join(", ", terminos);
+        String mensaje = productos.isEmpty()
+                ? "No hay productos en el catálogo que coincidan con: " + buscado + ". Díselo al cliente con "
+                  + "amabilidad y pídele otro nombre del repuesto o la marca, modelo y año de su vehículo."
+                : "Productos encontrados, ordenados del más al menos relevante.";
+        return new ResultadoBusquedaDTO(productos.size(), productos, mensaje);
     }
 
     // LISTAR: productos activos de las tiendas visibles (público, sin datos internos)

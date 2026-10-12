@@ -15,6 +15,7 @@ import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
+import com.drivemaster.drivemaster.util.PatronBusqueda;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -144,7 +145,7 @@ public class ProductoServiceImpl implements ProductoService {
     public List<ProductoDTO> buscarParaAgente(List<String> terminos) {
         if (terminos == null || terminos.isEmpty()) return List.of();
         List<String> limpios = terminos.stream()
-                .map(t -> t == null ? "" : t.trim().toLowerCase())
+                .map(t -> t == null ? "" : PatronBusqueda.normalizar(t))
                 .filter(t -> t.length() >= 2 && !PALABRAS_VACIAS.contains(t))
                 .distinct()
                 .limit(10)
@@ -160,10 +161,11 @@ public class ProductoServiceImpl implements ProductoService {
 
         // Relevancia: cuántos términos coinciden con cada producto. Con "pastillas,freno,mazda",
         // las pastillas compatibles con Mazda salen antes que cualquier otro repuesto de frenos.
+        // Cada término tolera tildes, plurales y sinónimos (rodamiento = balinera): ver PatronBusqueda.
         Map<String, Producto> porId = new LinkedHashMap<>();
         Map<String, Integer> coincidencias = new HashMap<>();
         for (String termino : limpios) {
-            for (Producto p : productoRepository.searchByTerm(escaparRegex(termino))) {
+            for (Producto p : productoRepository.searchByTerm(PatronBusqueda.aRegex(termino))) {
                 porId.putIfAbsent(p.getId(), p);
                 coincidencias.merge(p.getId(), 1, Integer::sum);
             }
@@ -176,11 +178,6 @@ public class ProductoServiceImpl implements ProductoService {
                 .limit(10)
                 .map(p -> paraAgente(p, tiendasVisibles.get(p.getTiendaId())))
                 .toList();
-    }
-
-    /** El término es texto del usuario (vía el modelo), no una expresión regular: "c++" o "(" no deben romper Mongo. */
-    static String escaparRegex(String texto) {
-        return texto.replaceAll("[\\\\^$.|?*+()\\[\\]{}]", "\\\\$0");
     }
 
     private static ProductoDTO paraAgente(Producto p, String nombreTienda) {

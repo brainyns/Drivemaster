@@ -40,7 +40,8 @@ public interface ProductoRepository extends MongoRepository<Producto, String> {
     @Query("{ 'modelosCompatibles.modelo': ?0 }")
     List<Producto> findByModeloCompatible(String modelo);
     
-    // Búsqueda del chat: el término llega ya escapado (es texto, no una expresión regular).
+    // Búsqueda del chat: el término llega como expresión ya armada por PatronBusqueda (escapada,
+    // tolerante a tildes y plurales, con sinónimos).
     // Incluye la compatibilidad para que "mazda" o "corolla" encuentren los repuestos de ese vehículo.
     @Query("{ '$or': [ " +
            "{ 'nombre': { '$regex': ?0, '$options': 'i' } }, " +

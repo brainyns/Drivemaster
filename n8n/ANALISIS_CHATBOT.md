@@ -169,15 +169,22 @@ Flujo de `ChatProxyController.chat()`:
 - **Términos**: `terminos=pastillas,freno,mazda` → minúsculas, sin vacíos, de 2 o más caracteres, sin
   palabras vacías (`de`, `para`, `con`…), sin duplicados, máximo 10. Cada término se **escapa** antes de
   usarlo como `$regex`, así que `c++` o `(` ya no rompen la consulta de Mongo.
+- **Tolerancia** ([`PatronBusqueda`](../drivemaster/src/main/java/com/drivemaster/drivemaster/util/PatronBusqueda.java)):
+  cada término se busca sin importar tildes ni plurales y con sinónimos de repuestos usados en Colombia
+  (rodamiento = balinera = cojinete, batería = acumulador, correa = banda…). Un grupo de sinónimos cuenta
+  como un solo término para la relevancia.
 - **Consulta** ([`ProductoRepository.searchByTerm`](../drivemaster/src/main/java/com/drivemaster/drivemaster/repository/ProductoRepository.java)):
   busca sin distinguir mayúsculas en `nombre`, `categoria`, `marca`, `modelosCompatibles.marca` y
   `modelosCompatibles.modelo`.
 - **Alcance**: solo productos activos de **tiendas visibles**, el mismo criterio que el catálogo público.
 - **Relevancia**: se ordena por cuántos términos coinciden con cada producto y se devuelven 10.
-- **Respuesta** (`ProductoDTO`): `id, codigo, nombre, categoria, marca, precioVenta, stockActual,
-  imagenUrl, tipo, diasEntregaEncargo, compatibilidadUniversal, modelosCompatibles, tienda`. Nunca
-  incluye `precioCompra`, proveedor, ubicación ni stock mínimo.
-- Tests: [`BuscarParaAgenteTest.java`](../drivemaster/src/test/java/com/drivemaster/drivemaster/service/BuscarParaAgenteTest.java).
+- **Respuesta**: `{ total, productos, mensaje }`. Si no hay resultados, `mensaje` le dice al modelo que
+  lo comunique y pida otro nombre o el vehículo (con una lista vacía a secas, `gpt-oss` a veces terminaba
+  sin contestar). Cada producto (`ProductoDTO`): `id, codigo, nombre, categoria, marca, precioVenta,
+  stockActual, imagenUrl, tipo, diasEntregaEncargo, compatibilidadUniversal, modelosCompatibles, tienda`.
+  Nunca incluye `precioCompra`, proveedor, ubicación ni stock mínimo.
+- Tests: [`BuscarParaAgenteTest.java`](../drivemaster/src/test/java/com/drivemaster/drivemaster/service/BuscarParaAgenteTest.java)
+  y [`PatronBusquedaTest.java`](../drivemaster/src/test/java/com/drivemaster/drivemaster/util/PatronBusquedaTest.java).
 
 ### 3.4 Workflow de n8n: `DriveMaster - Chat tienda`
 
@@ -268,12 +275,16 @@ X-Service-Token: <N8N_TOOLS_SECRET>
 ```
 
 ```json
-[{ "id": "…", "codigo": "…", "nombre": "Pastillas de freno …", "categoria": "Frenos", "marca": "…",
-   "precioVenta": 120000.0, "stockActual": 0, "imagenUrl": "https://…", "tipo": "ENCARGO",
-   "diasEntregaEncargo": 3, "compatibilidadUniversal": false,
-   "modelosCompatibles": [{ "marca": "Mazda", "modelo": "3", "anoDesde": 2014, "anoHasta": 2018, "motor": null }],
-   "tienda": "Repuestos Norte" }]
+{ "total": 1,
+  "mensaje": "Productos encontrados, ordenados del más al menos relevante.",
+  "productos": [{ "id": "…", "codigo": "…", "nombre": "Pastillas de freno …", "categoria": "Frenos", "marca": "…",
+     "precioVenta": 120000.0, "stockActual": 0, "imagenUrl": "https://…", "tipo": "ENCARGO",
+     "diasEntregaEncargo": 3, "compatibilidadUniversal": false,
+     "modelosCompatibles": [{ "marca": "Mazda", "modelo": "3", "anoDesde": 2014, "anoHasta": 2018, "motor": null }],
+     "tienda": "Repuestos Norte" }] }
 ```
+
+Sin resultados: `{ "total": 0, "productos": [], "mensaje": "No hay productos en el catálogo que coincidan con: … Díselo al cliente…" }`.
 
 ```json
 { "respuesta": "Tenemos estas opciones…", "productos": [] }
@@ -377,6 +388,7 @@ Edita en el editor y prueba con `/webhook-test/chat-drivemaster`. Luego **Downlo
 | 15 | 🟢 | **Detalles del widget:** el 429 se mostraba como "hubo un error"; la respuesta se demoraba 800 ms a propósito; sin timeout; saltos de línea y Markdown mal mostrados. | Muestra el motivo del 429/400, sin espera artificial, timeout de 95 s, `white-space: pre-wrap` y el prompt pide texto plano. | `useChat.js`, `chat.css`, `chat-drivemaster.json` |
 | 16 | 🟢 | **Guías desactualizadas:** la prueba usaba `localhost:8080` (no publicado en el HomeLab) y faltaban pasos y variables. | `n8n/README.md`, `homelab/README.md` y `.env.example` actualizados. | docs |
 | 17 | 🔴 | **Cuota de Gemini agotada.** Google retiró `gemini-2.5-flash` para cuentas nuevas y el plan gratuito de su reemplazo permite 20 llamadas al día (cada mensaje del chat gasta 2 o más). | El modelo pasa a **Groq** (nodo `lmChatGroq`, `GROQ_MODEL`, por defecto `openai/gpt-oss-120b`). | `chat-drivemaster.json`, compose, `.env.example`, guías |
+| 18 | 🟡 | **"¿Tienen rodamientos?" no encontraba la "Balinera delantera Ford Escape"** y el modelo respondía vacío ("no pude procesar tu consulta"): la búsqueda era literal y la herramienta devolvía `[]`. | Búsqueda tolerante a tildes, plurales y sinónimos (`PatronBusqueda`), respuesta `{total, productos, mensaje}` y reglas en el prompt para reintentar con otro nombre y responder siempre. Tests nuevos. | `PatronBusqueda.java`, `ResultadoBusquedaDTO.java`, `ProductoController.java`, `ProductoServiceImpl.java`, workflow |
 
 ### Verificación hecha
 
