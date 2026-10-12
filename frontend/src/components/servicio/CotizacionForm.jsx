@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { previsualizarCotizacion, emitirCotizacion } from "../../services/cotizacionService";
 import CotizacionDetalle from "./CotizacionDetalle";
+import AlertaPrediccionCotizacion from "./AlertaPrediccionCotizacion";
 import { formatPrecio } from "./estadosServicio";
 import "../../css/cotizacion.css";
 
@@ -124,6 +125,9 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
 
       {vista && (
         <div className="ct-previa">
+          {vista.prediccionAprobacion && (
+            <AlertaPrediccionCotizacion prediccion={vista.prediccionAprobacion} />
+          )}
           <CotizacionDetalle cotizacion={vista} mostrarComision sinEstado />
           <div className="ss-acciones">
             <button className="sv-btn" onClick={emitir} disabled={procesando}>

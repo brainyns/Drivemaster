@@ -74,9 +74,10 @@ class CotizacionServiceTest {
         VehiculoService vehiculoService = mock(VehiculoService.class);
         ProductoService productoService = mock(ProductoService.class);
         BuscadorRepuestosService buscador = mock(BuscadorRepuestosService.class);
+        PredictorCotizacionService predictor = mock(PredictorCotizacionService.class);
 
         service = new CotizacionService(cotizacionRepository, ordenRepository, mongoTemplate, transiciones,
-                tallerService, usuarioService, vehiculoService, productoService, buscador, parametros, avisos, liquidacion);
+                tallerService, usuarioService, vehiculoService, productoService, buscador, parametros, avisos, liquidacion, predictor);
 
         taller = Taller.builder().id("t1").nombre("AutoMax").activo(true).tarifaHora(60_000.0)
                 .estadoAprobacion(EstadoAprobacion.APROBADO).build();

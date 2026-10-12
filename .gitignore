@@ -12,3 +12,10 @@ frontend/preview-b1.html
 frontend/preview-movil.html
 frontend/src/__preview_b1.jsx
 capturas/
+
+# Python / Machine Learning
+ml/venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
