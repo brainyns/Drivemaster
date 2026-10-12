@@ -3,10 +3,11 @@
 #   Internet ─► Tailscale Funnel / Cloudflare ─► frontend (nginx :80) ─┬─► /         archivos de React
 #                                                                       ├─► /api/...  backend :8080
 #                                                                       └─► /ws/...   backend :8080 (WebSocket)
-#                                               backend ─► MongoDB Atlas  y  Supabase (PostgreSQL), en la nube
+#                                               backend ─► mongo :27017  y  postgres :5432 (en este stack)
 #
-# Las bases de datos NO corren aquí: el backend se conecta a Atlas y Supabase (las mismas que usaba Render).
-# Solo nginx publica un puerto en la VM; el backend queda en la red interna de Docker.
+# MODO PRUEBAS: Mongo y Postgres corren aquí, vacíos, para probar sin tocar Atlas ni Supabase.
+# Para volver a las bases en la nube se revierte el commit "HomeLab: bases locales para pruebas".
+# Solo nginx publica un puerto en la VM; Mongo, Postgres y el backend quedan en la red interna de Docker.
 #
 # Pensado para Portainer (Stacks → Add stack → Repository, Compose path: homelab/docker-compose.yml):
 #   - Las variables se cargan en el editor de variables de Portainer (ver .env.example). No se usa
@@ -20,6 +21,42 @@ name: drivemaster
 
 services:
 
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    # Limita la caché de WiredTiger: por defecto usa ~50 % de la RAM de la VM.
+    # Mongo 5+ necesita AVX: en Proxmox, tipo de CPU "host".
+    command: ["--wiredTigerCacheSizeGB", "0.5"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?Define MONGO_USER en las variables del stack}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Define MONGO_PASSWORD en las variables del stack}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-drivemasterDB}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # También guarda la memoria del chat (tabla drivemaster_chat_memory): en n8n, la credencial
+  # Postgres apunta a host "postgres", puerto 5432, base POSTGRES_DB, sin SSL.
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Define POSTGRES_USER en las variables del stack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en las variables del stack}
+      POSTGRES_DB: ${POSTGRES_DB:-drivemaster}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   backend:
     build: ../drivemaster
     image: drivemaster-backend:latest
@@ -27,11 +64,11 @@ services:
     pull_policy: build
     restart: unless-stopped
     environment:
-      # MongoDB Atlas y Supabase: los mismos valores que tenías en Render.
-      SPRING_DATA_MONGODB_URI: ${SPRING_DATA_MONGODB_URI}
-      DB_URL: ${DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
+      # Bases locales del stack. Se arman aquí para que las contraseñas se escriban una sola vez.
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DB:-drivemasterDB}?authSource=admin
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-drivemaster}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       FRONTEND_URL: ${FRONTEND_URL}
       SECURITY_JWT_SECRET: ${SECURITY_JWT_SECRET}
       RETIRO_CODIGO_SECRET: ${RETIRO_CODIGO_SECRET:-}
@@ -64,6 +101,11 @@ services:
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75
       TZ: America/Bogota
     mem_limit: 1g
+    depends_on:
+      mongo:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
 
   frontend:
     build:
@@ -122,3 +164,6 @@ services:
 volumes:
   # Workflows, ejecuciones y credenciales de n8n. Se respalda con homelab/backup.sh.
   n8n_data:
+  # Bases locales de pruebas (se borran con: Portainer → Volumes, tras quitar el stack).
+  mongo-data:
+  postgres-data:
