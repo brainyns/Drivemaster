@@ -15,7 +15,7 @@ los [problemas que se encontraron y cómo se resolvieron](#8-problemas-encontrad
 - Spring Boot **no tiene lógica de IA**: limita a 15 mensajes por minuto por IP (la IP real, resuelta por
   Tomcat), valida que el mensaje no venga vacío y lo reenvía al webhook de n8n con el header
   `X-Chat-Secret`.
-- n8n valida el secreto y ejecuta un **AI Agent** con Groq (`llama-3.3-70b-versatile`), memoria en Postgres
+- n8n valida el secreto y ejecuta un **AI Agent** con Groq (`openai/gpt-oss-120b`), memoria en Postgres
   (Supabase) por `sessionId` y una herramienta, `Buscar productos`, que consulta
   `GET /api/productos/buscar` con el header `X-Service-Token`.
 - n8n responde `{ respuesta, productos: [] }`. El backend lo pasa tal cual al widget, que muestra
@@ -197,7 +197,7 @@ Webhook chat ─► Validar secreto ─(sí)─► Preparar mensaje ─► Agent
 | **Rechazar (403)** | `respondToWebhook` (v1.1) | `403 {"error": "No autorizado"}` |
 | **Preparar mensaje** | `set` (v3.4) | `chatInput = body.mensaje`, `sessionId = body.sessionId \|\| 'anon'` |
 | **Agente DriveMaster** | `agent` (v1.6) | *Prompt* = `{{ $json.chatInput }}`; reglas en *System Message* |
-| **Modelo Groq** | `lmChatGroq` (v1) | `model = {{ $env.GROQ_MODEL \|\| 'llama-3.3-70b-versatile' }}`, temperatura 0.3 |
+| **Modelo Groq** | `lmChatGroq` (v1) | `model = {{ $env.GROQ_MODEL \|\| 'openai/gpt-oss-120b' }}`, temperatura 0.3 |
 | **Memoria (Postgres)** | `memoryPostgresChat` (v1.3) | Clave `{{ $('Preparar mensaje').item.json.sessionId }}`, tabla `drivemaster_chat_memory`, 20 mensajes |
 | **Buscar productos** | `httpRequestTool` (v4.2) | `GET $env.N8N_TOOLS_BASE_URL/api/productos/buscar?terminos=$fromAI(...)` + `X-Service-Token: $env.N8N_TOOLS_SECRET` |
 | **Formar respuesta** | `code` (v2, por ítem) | Devuelve **un objeto** `{ json: { respuesta, productos: [] } }` |
@@ -376,7 +376,7 @@ Edita en el editor y prueba con `/webhook-test/chat-drivemaster`. Luego **Downlo
 | 14 | 🟡 | **Memoria compartida entre usuarios:** el `sessionId` sobrevivía al logout. Además, por HTTP (LAN) el id era `Date.now()`, que puede repetirse. | Botón **Nueva conversación**, reinicio en el logout e id aleatorio con `getRandomValues`. | `chatSesion.js`, `ChatWindow.jsx`, `App.jsx` |
 | 15 | 🟢 | **Detalles del widget:** el 429 se mostraba como "hubo un error"; la respuesta se demoraba 800 ms a propósito; sin timeout; saltos de línea y Markdown mal mostrados. | Muestra el motivo del 429/400, sin espera artificial, timeout de 95 s, `white-space: pre-wrap` y el prompt pide texto plano. | `useChat.js`, `chat.css`, `chat-drivemaster.json` |
 | 16 | 🟢 | **Guías desactualizadas:** la prueba usaba `localhost:8080` (no publicado en el HomeLab) y faltaban pasos y variables. | `n8n/README.md`, `homelab/README.md` y `.env.example` actualizados. | docs |
-| 17 | 🔴 | **Cuota de Gemini agotada.** Google retiró `gemini-2.5-flash` para cuentas nuevas y el plan gratuito de su reemplazo permite 20 llamadas al día (cada mensaje del chat gasta 2 o más). | El modelo pasa a **Groq** (nodo `lmChatGroq`, `GROQ_MODEL`, por defecto `llama-3.3-70b-versatile`). | `chat-drivemaster.json`, compose, `.env.example`, guías |
+| 17 | 🔴 | **Cuota de Gemini agotada.** Google retiró `gemini-2.5-flash` para cuentas nuevas y el plan gratuito de su reemplazo permite 20 llamadas al día (cada mensaje del chat gasta 2 o más). | El modelo pasa a **Groq** (nodo `lmChatGroq`, `GROQ_MODEL`, por defecto `openai/gpt-oss-120b`). | `chat-drivemaster.json`, compose, `.env.example`, guías |
 
 ### Verificación hecha
 

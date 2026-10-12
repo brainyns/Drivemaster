@@ -102,7 +102,7 @@ services:
       - N8N_TOOLS_SECRET=${N8N_TOOLS_SECRET:?Define N8N_TOOLS_SECRET en las variables del stack}
       - N8N_TOOLS_BASE_URL=http://backend:8080
       # Modelo de Groq (debe soportar herramientas / tool use).
-      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-120b}
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:

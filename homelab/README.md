@@ -141,7 +141,7 @@ líneas de comentario** y complétalo:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | **Obligatorios** (vacíos = el backend no arranca) |
 | `N8N_CHAT_SECRET` / `N8N_TOOLS_SECRET` | Secretos compartidos backend ↔ n8n (genera dos con `openssl rand -hex 32`). **Obligatorios**: sin ellos el stack no se despliega. La API key de Groq va como credencial dentro de n8n, no aquí |
 | `N8N_VERSION` | La versión de n8n que ya corre (n8n → Settings → About). Vacía = `latest`. Nunca una anterior a la actual |
-| `GROQ_MODEL`, `N8N_CHAT_RATE_MAX` | Opcionales: modelo de Groq (`llama-3.3-70b-versatile`) y mensajes de chat por minuto por IP (`15`) |
+| `GROQ_MODEL`, `N8N_CHAT_RATE_MAX` | Opcionales: modelo de Groq (`openai/gpt-oss-120b`) y mensajes de chat por minuto por IP (`15`) |
 | `CLOUDINARY_*`, `BREVO_*`, `WOMPI_*` | Las de Render |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Vacío hasta tener dominio |
 

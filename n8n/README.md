@@ -48,7 +48,7 @@ Las definen `docker-compose.yml` (raíz) y `homelab/docker-compose.yml`:
 | `N8N_CHAT_SECRET` | Secreto del header `X-Chat-Secret` con el que el backend llama al webhook. **Obligatorio**: sin él, el workflow rechaza todo. |
 | `N8N_TOOLS_SECRET` | Token `X-Service-Token` con el que la herramienta consume `/api/productos/buscar`. **Obligatorio**: sin él, el backend responde `403`. |
 | `N8N_TOOLS_BASE_URL` | URL base del backend de Spring (dentro de Docker: `http://backend:8080`). |
-| `GROQ_MODEL` | Modelo de Groq; debe soportar herramientas (por defecto `llama-3.3-70b-versatile`). Si Groq lo retira, el error lo indica: cámbialo aquí o elige otro en el nodo. |
+| `GROQ_MODEL` | Modelo de Groq; debe soportar herramientas (por defecto `openai/gpt-oss-120b`). Si Groq lo retira, el error lo indica: cámbialo aquí o elige otro en el nodo. |
 | `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` | Permite que el workflow lea las variables anteriores con `$env` (desde n8n 2.0 está bloqueado por defecto). |
 | `N8N_VERSION` | Versión de la imagen de n8n. Fíjala en la que ya corre (vacía = `latest`). |
 
