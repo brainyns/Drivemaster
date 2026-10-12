@@ -66,7 +66,8 @@ public class TiendaServiceImpl implements TiendaService {
                 .fechaRegistro(LocalDateTime.now())
                 .build();
 
-        return toDTO(tiendaRepository.save(tienda));
+        // Si falla guardar la tienda, la cuenta recién creada se borra (ver CuentaNegocioService)
+        return toDTO(cuentaNegocioService.conCuentaNueva(usuario, () -> tiendaRepository.save(tienda)));
     }
 
     @Override

@@ -188,7 +188,8 @@ class SinTiendaDriveMasterTest {
         TallerRepository talleres = mock(TallerRepository.class);
         when(talleres.findAll()).thenReturn(List.of());
 
-        new MarketplaceMigration(mongo, talleres, mock(SuscripcionService.class)).run();
+        new MarketplaceMigration(mongo, talleres, mock(SuscripcionService.class),
+                mock(com.drivemaster.drivemaster.repository.UsuarioRepository.class)).run();
 
         verify(mongo, never()).save(any());
         verify(mongo, never()).insert(any(Object.class));

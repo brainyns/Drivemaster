@@ -49,6 +49,7 @@ public class TallerServiceImpl implements TallerService {
     public TallerDTO crear(CrearTallerRequest request) {
         Coordenadas.validar(request.getLatitud(), request.getLongitud(), true);
         String usuarioId = request.getUsuarioId();
+        Usuario cuentaNueva = null;
 
         if (usuarioId == null || usuarioId.isBlank()) {
             if (request.getCorreoUsuario() == null || request.getCorreoUsuario().isBlank()
@@ -56,10 +57,13 @@ public class TallerServiceImpl implements TallerService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Debe indicar correoUsuario y passwordUsuario para crear el usuario del taller");
             }
-            Usuario usuario = cuentaNegocioService.crearUsuario(request.getNombre(),
+            cuentaNueva = cuentaNegocioService.crearUsuario(request.getNombre(),
                     request.getCorreoUsuario(), request.getPasswordUsuario(),
                     request.getTelefono(), request.getCiudad(), RolPermisos.TALLER);
-            usuarioId = usuario.getId();
+            usuarioId = cuentaNueva.getId();
+        } else {
+            usuarioId = usuarioId.trim();
+            validarCuentaParaTallerNuevo(usuarioId);
         }
 
         Taller taller = Taller.builder()
@@ -82,8 +86,26 @@ public class TallerServiceImpl implements TallerService {
                 .activo(true)
                 .build();
 
-        taller = tallerRepository.save(taller);
-        return toDTOCompleto(taller);
+        // Si se creó la cuenta aquí y falla guardar el taller, la cuenta se borra (ver CuentaNegocioService)
+        Taller guardado = cuentaNueva != null
+                ? cuentaNegocioService.conCuentaNueva(cuentaNueva, () -> tallerRepository.save(taller))
+                : tallerRepository.save(taller);
+        return toDTOCompleto(guardado);
+    }
+
+    /**
+     * Un usuarioId que llega en el alta debe ser una cuenta TALLER existente y sin taller: si no, el taller
+     * quedaría apuntando a nadie, a una cuenta de otro tipo o compartiendo dueño con otro taller.
+     */
+    private void validarCuentaParaTallerNuevo(String usuarioId) {
+        Usuario cuenta = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario indicado no existe"));
+        if (!RolPermisos.TALLER.equals(cuenta.getRol())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario indicado no es una cuenta de taller");
+        }
+        if (tallerRepository.findByUsuarioId(usuarioId).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ese usuario ya tiene un taller");
+        }
     }
 
     @Override
@@ -199,7 +221,8 @@ public class TallerServiceImpl implements TallerService {
                 .activo(false)
                 .build();
 
-        return toDTOCompleto(tallerRepository.save(taller));
+        // Si falla guardar el taller, la cuenta recién creada se borra (ver CuentaNegocioService)
+        return toDTOCompleto(cuentaNegocioService.conCuentaNueva(usuario, () -> tallerRepository.save(taller)));
     }
 
     @Override
