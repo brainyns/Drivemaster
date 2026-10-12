@@ -135,7 +135,7 @@
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Preparar mensaje').item.json.sessionId }}",
         "tableName": "drivemaster_chat_memory",
-        "contextWindowLength": 20
+        "contextWindowLength": 8
       },
       "id": "4f7b2a1c-5555-4a55-9a55-000000000005",
       "name": "Memoria (Postgres)",
@@ -149,7 +149,7 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Busca productos reales del catálogo de DriveMaster por tipo de repuesto, categoría, marca del producto o marca/modelo del vehículo compatible. Tolera tildes, plurales y sinónimos comunes. Devuelve un JSON {total, productos, mensaje}: productos (máximo 10, de más a menos relevante) trae nombre, marca, categoría, precioVenta, stockActual, tipo (STOCK o ENCARGO), diasEntregaEncargo, modelosCompatibles, compatibilidadUniversal y la tienda que lo vende; mensaje explica el resultado. Úsala para TODA consulta de productos, precios, disponibilidad o compatibilidad.",
+        "toolDescription": "Busca productos reales del catálogo de DriveMaster por tipo de repuesto, categoría, marca del producto o marca/modelo del vehículo compatible. Tolera tildes, plurales y sinónimos comunes. Devuelve un JSON {total, productos, mensaje}: productos (máximo 6, de más a menos relevante) trae nombre, marca, categoría, precioVenta, stockActual, tipo (STOCK o ENCARGO), diasEntregaEncargo (si aplica), modelosCompatibles, compatibilidadUniversal y la tienda que lo vende; mensaje explica el resultado. Úsala para TODA consulta de productos, precios, disponibilidad o compatibilidad.",
         "url": "={{ $env.N8N_TOOLS_BASE_URL || 'http://backend:8080' }}/api/productos/buscar",
         "sendQuery": true,
         "queryParameters": {

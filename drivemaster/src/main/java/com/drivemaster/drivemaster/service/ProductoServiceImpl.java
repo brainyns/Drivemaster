@@ -137,6 +137,12 @@ public class ProductoServiceImpl implements ProductoService {
         return c;
     }
 
+    /**
+     * Productos que recibe el agente por búsqueda. Cada producto ocupa tokens en cada llamada al modelo y
+     * el plan gratis de Groq permite 8.000 tokens por minuto: con 10 un solo mensaje podía agotarlo.
+     */
+    static final int MAX_PRODUCTOS_AGENTE = 6;
+
     /** Palabras que el modelo a veces manda como términos y que coinciden con casi todo el catálogo. */
     private static final Set<String> PALABRAS_VACIAS = Set.of(
             "de", "del", "la", "las", "el", "los", "un", "una", "para", "con", "por", "en", "y", "o");
@@ -175,11 +181,12 @@ public class ProductoServiceImpl implements ProductoService {
                 .filter(p -> !Boolean.FALSE.equals(p.getActivo()))
                 .filter(p -> p.getTiendaId() != null && tiendasVisibles.containsKey(p.getTiendaId()))
                 .sorted(Comparator.comparingInt((Producto p) -> coincidencias.get(p.getId())).reversed())
-                .limit(10)
+                .limit(MAX_PRODUCTOS_AGENTE)
                 .map(p -> paraAgente(p, tiendasVisibles.get(p.getTiendaId())))
                 .toList();
     }
 
+    // Sin imagenUrl: el modelo no la usa y cada URL de Cloudinary son decenas de tokens.
     private static ProductoDTO paraAgente(Producto p, String nombreTienda) {
         ProductoDTO dto = new ProductoDTO();
         dto.setId(p.getId());
@@ -189,7 +196,6 @@ public class ProductoServiceImpl implements ProductoService {
         dto.setMarca(p.getMarca());
         dto.setPrecioVenta(p.getPrecioVenta());
         dto.setStockActual(p.getStockActual());
-        dto.setImagenUrl(p.getImagenUrl());
         dto.setTipo(p.getTipo());
         dto.setDiasEntregaEncargo(p.getDiasEntregaEncargo());
         dto.setCompatibilidadUniversal(p.getCompatibilidadUniversal());

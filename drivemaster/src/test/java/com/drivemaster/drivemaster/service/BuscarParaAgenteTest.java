@@ -76,6 +76,7 @@ class BuscarParaAgenteTest {
         assertEquals("ENCARGO", dto.getTipo(), "el agente debe saber que no está agotado");
         assertEquals(3, dto.getDiasEntregaEncargo());
         assertEquals("Mazda", dto.getModelosCompatibles().get(0).getMarca());
+        assertNull(dto.getImagenUrl(), "la URL de la imagen no se le envía al modelo");
     }
 
     @Test
@@ -91,12 +92,12 @@ class BuscarParaAgenteTest {
     }
 
     @Test
-    void devuelveComoMaximoDiezProductos() {
+    void devuelveComoMaximoSeisProductos() {
         List<Producto> muchos = new ArrayList<>();
         for (int i = 0; i < 25; i++) muchos.add(producto("p" + i, "tA", true));
         when(productoRepository.searchByTerm(PatronBusqueda.aRegex("filtro"))).thenReturn(muchos);
 
-        assertEquals(10, servicio.buscarParaAgente(List.of("filtro")).size());
+        assertEquals(ProductoServiceImpl.MAX_PRODUCTOS_AGENTE, servicio.buscarParaAgente(List.of("filtro")).size());
     }
 
     @Test

@@ -205,7 +205,7 @@ Webhook chat ─► Validar secreto ─(sí)─► Preparar mensaje ─► Agent
 | **Preparar mensaje** | `set` (v3.4) | `chatInput = body.mensaje`, `sessionId = body.sessionId \|\| 'anon'` |
 | **Agente DriveMaster** | `agent` (v1.6) | *Prompt* = `{{ $json.chatInput }}`; reglas en *System Message* |
 | **Modelo Groq** | `lmChatGroq` (v1) | `model = {{ $env.GROQ_MODEL \|\| 'openai/gpt-oss-120b' }}`, temperatura 0.3 |
-| **Memoria (Postgres)** | `memoryPostgresChat` (v1.3) | Clave `{{ $('Preparar mensaje').item.json.sessionId }}`, tabla `drivemaster_chat_memory`, 20 mensajes |
+| **Memoria (Postgres)** | `memoryPostgresChat` (v1.3) | Clave `{{ $('Preparar mensaje').item.json.sessionId }}`, tabla `drivemaster_chat_memory`, 8 mensajes |
 | **Buscar productos** | `httpRequestTool` (v4.2) | `GET $env.N8N_TOOLS_BASE_URL/api/productos/buscar?terminos=$fromAI(...)` + `X-Service-Token: $env.N8N_TOOLS_SECRET` |
 | **Formar respuesta** | `code` (v2, por ítem) | Devuelve **un objeto** `{ json: { respuesta, productos: [] } }` |
 | **Responder** | `respondToWebhook` (v1.1) | Devuelve el JSON anterior |
@@ -229,7 +229,7 @@ Reglas del *System Message*:
 
 - La tabla `drivemaster_chat_memory` la crea sola el nodo, en la misma base de Supabase que usa el
   backend; `homelab/backup.sh` (pg_dump del esquema `public`) la respalda.
-- La clave es el `sessionId` del navegador. El agente recuerda los últimos 20 mensajes de esa sesión.
+- La clave es el `sessionId` del navegador. El agente recuerda los últimos 8 mensajes de esa sesión (menos tokens por llamada: el plan gratis de Groq da 8.000 por minuto).
 - La tabla no se limpia sola (ver [pendientes](#9-pendientes)).
 
 ---
@@ -304,8 +304,8 @@ disponible" ante cualquier fallo de n8n. n8n responde `403` sin el secreto corre
 | nginx → backend | `proxy_read_timeout 120s` |
 | Backend → n8n | conexión 5 s, lectura 90 s |
 | Rate limit | 15 mensajes/min por IP (`N8N_CHAT_RATE_MAX`), en memoria |
-| Búsqueda | máx. 10 términos y 10 productos |
-| Memoria | últimos 20 mensajes por sesión; widget guarda los últimos 50 |
+| Búsqueda | máx. 10 términos y 6 productos (sin URL de imagen) |
+| Memoria | últimos 8 mensajes por sesión; widget guarda los últimos 50 |
 
 El backend corta primero (90 s) y su mensaje amable llega antes de que el widget (95 s), Cloudflare
 (100 s) o nginx (120 s) corten la conexión.

@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.dto;
 
 import com.drivemaster.drivemaster.model.Compatibilidad;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,8 +10,10 @@ import java.util.List;
 
 /**
  * Producto tal como lo ve el agente del chat (herramienta /api/productos/buscar).
- * Sin datos internos (costo, proveedor, ubicación ni stock mínimo).
+ * Sin datos internos (costo, proveedor, ubicación ni stock mínimo). Los campos vacíos no se envían:
+ * todo lo que va en la respuesta gasta tokens del modelo.
  */
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
