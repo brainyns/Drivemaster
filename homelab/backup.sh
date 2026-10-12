@@ -40,26 +40,22 @@ DB_URL="$(variable DB_URL)"
 PGUSER="$(variable DB_USERNAME)"
 PGPASSWORD="$(variable DB_PASSWORD)"
 # JDBC (jdbc:postgresql://host:puerto/base?opciones) → URI de libpq. Se quitan las opciones propias de
-# JDBC (pg_dump no las entiende). Supabase exige SSL; el Postgres local del stack (host "postgres") no lo tiene.
+# JDBC (pg_dump no las entiende) y se exige SSL, que Supabase requiere.
 PG_URI="${DB_URL#jdbc:}"
-case "$PG_URI" in
-  postgresql://postgres:*) PG_URI="${PG_URI%%\?*}?sslmode=disable" ;;
-  *)                       PG_URI="${PG_URI%%\?*}?sslmode=require" ;;
-esac
+PG_URI="${PG_URI%%\?*}?sslmode=require"
 export MONGO_URI PG_URI PGUSER PGPASSWORD
 
 mkdir -p "$DESTINO"
 
 # Las credenciales viajan como variables de entorno (-e NOMBRE), no en la línea de comandos,
-# para que no aparezcan en la lista de procesos. --network container:backend: los contenedores
-# temporales ven lo mismo que el backend, sean las bases locales del stack (mongo, postgres) o las de la nube.
-echo "[$(date)] Respaldando MongoDB..."
-docker run --rm --network "container:$BACKEND" -e MONGO_URI "$IMAGEN_MONGO" \
+# para que no aparezcan en la lista de procesos.
+echo "[$(date)] Respaldando MongoDB Atlas..."
+docker run --rm -e MONGO_URI "$IMAGEN_MONGO" \
   sh -c 'mongodump --uri "$MONGO_URI" --archive --gzip --quiet' \
   > "$DESTINO/mongo_${FECHA}.archive.gz"
 
-echo "[$(date)] Respaldando PostgreSQL..."
-docker run --rm --network "container:$BACKEND" -e PG_URI -e PGUSER -e PGPASSWORD "$IMAGEN_PG" \
+echo "[$(date)] Respaldando Supabase (PostgreSQL)..."
+docker run --rm -e PG_URI -e PGUSER -e PGPASSWORD "$IMAGEN_PG" \
   sh -c 'pg_dump --no-owner --no-privileges --schema=public "$PG_URI"' \
   | gzip > "$DESTINO/postgres_${FECHA}.sql.gz"
 

@@ -8,57 +8,6 @@ abrir puertos del router: hoy con **Tailscale Funnel** y, cuando haya dominio pr
 El HomeLab **reemplaza al backend de Render**: usa las mismas bases de datos, así que Render debe quedar
 suspendido (ver paso 6).
 
-> 🧪 **Modo pruebas (estado actual de la rama `homelab`)**: el stack trae su propio **MongoDB y
-> PostgreSQL**, vacíos, y no toca Atlas ni Supabase. Render puede seguir encendido mientras tanto: las
-> bases son distintas. Ver [Modo pruebas](#modo-pruebas-bases-locales). Esta guía describe el modo
-> final, con las bases en la nube.
-
----
-
-## Modo pruebas: bases locales
-
-**Variables del stack** (en lugar de `SPRING_DATA_MONGODB_URI` y `DB_*`): `MONGO_USER`,
-`MONGO_PASSWORD`, `MONGO_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` y `POSTGRES_DB` (ver
-[`.env.example`](.env.example)). Las contraseñas, con `openssl rand -hex 32`. El backend arma solo sus
-URIs hacia `mongo:27017` y `postgres:5432`. Ninguna de las dos bases publica puertos.
-
-**Esquema y datos**: Postgres crea sus tablas al arrancar (`ddl-auto=update`). Mongo empieza vacío: no
-hay administradores, tiendas ni productos.
-
-**Primer SUPERADMIN**: regístrate normalmente en la web y luego, en la VM, cambia el rol de esa cuenta:
-
-```bash
-docker exec -it drivemaster-mongo-1 mongosh -u drivemaster -p --authenticationDatabase admin drivemasterDB --eval '
-db.usuarios.updateOne({ correo: "TU_CORREO" }, { $set: { rol: "SUPERADMIN", permisos: [
-  "USUARIOS_READ","USUARIOS_WRITE","USUARIOS_DELETE","PRODUCTOS_READ","PRODUCTOS_WRITE","PRODUCTOS_DELETE",
-  "CLIENTES_READ","CLIENTES_WRITE","CLIENTES_DELETE","VENTAS_READ","VENTAS_WRITE","VENTAS_DELETE",
-  "COMPRAS_READ","COMPRAS_WRITE","COMPRAS_DELETE","PROVEEDORES_READ","PROVEEDORES_WRITE","PROVEEDORES_DELETE",
-  "MOVIMIENTOS_READ","MOVIMIENTOS_WRITE","AJUSTES_READ","AJUSTES_WRITE" ] } })'
-```
-
-(`-u` es tu `MONGO_USER`, `drivemasterDB` tu `MONGO_DB`; `-p` sin valor pide la contraseña,
-`MONGO_PASSWORD`.) Cierra sesión y vuelve a entrar.
-
-**Productos para probar el chat**: registra una tienda (**Registra tu negocio**), apruébala con el
-SUPERADMIN, completa sus datos (ciudad, dirección y horario) y crea productos. El chat solo encuentra
-productos de tiendas visibles. `DEMO_SEED_ENABLED=true` crea un cliente y 3 talleres con contraseñas
-conocidas, pero sus productos no tienen tienda: no aparecen en el chat. Si lo activas, no publiques el
-sitio con Funnel.
-
-**n8n**: la credencial **Postgres** de la memoria apunta al Postgres del stack: host `postgres`, puerto
-`5432`, base `POSTGRES_DB`, usuario `POSTGRES_USER`, contraseña `POSTGRES_PASSWORD`, **SSL desactivado**.
-
-**Volver a Atlas y Supabase**:
-1. Revertir el commit "HomeLab: bases locales para pruebas" y hacer push.
-2. En las variables del stack, quitar `MONGO_*` y `POSTGRES_*`. Poner `SPRING_DATA_MONGODB_URI`, `DB_URL`,
-   `DB_USERNAME` y `DB_PASSWORD` (las de Render) y los `SECURITY_JWT_SECRET` y `RETIRO_CODIGO_SECRET` de
-   Render.
-3. Cambiar la credencial Postgres de n8n a Supabase (Session pooler, con SSL).
-4. **Pull and redeploy** y suspender Render (paso 6).
-5. Cuando todo funcione, borrar los volúmenes `drivemaster_mongo-data` y `drivemaster_postgres-data`.
-
-Los datos de prueba no se migran.
-
 ---
 
 ## 1. Qué se va a montar
