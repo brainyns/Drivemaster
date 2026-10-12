@@ -563,6 +563,17 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
 
   return (
     <div className="ss-panel">
+      <header className="pt-header tp-cabecera">
+        <div>
+          <h1 className="pt-title">{modo === "trabajos" ? "Trabajos" : "Solicitudes"}</h1>
+          <p className="pt-subtitle">
+            {modo === "trabajos"
+              ? "Vehículos con cotización aprobada: repuestos, instalación, pruebas y entrega."
+              : "Diagnósticos que te asignan: respóndelos, agenda la revisión y registra lo que encuentres."}
+          </p>
+        </div>
+      </header>
+
       {error && <p className="ss-alerta" role="alert">{error}</p>}
 
       <div className="tp-barra">

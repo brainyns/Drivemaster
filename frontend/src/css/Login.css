@@ -23,7 +23,7 @@
   background: var(--dm-bg);
   color: var(--dm-text);
   font-family: var(--dm-font);
-  font-size: 14px;
+  font-size: 1rem;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -97,7 +97,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 10px;
+  font-size: var(--fs-etiqueta);
   font-weight: 700;
   letter-spacing: 1.7px;
   color: var(--dm-orange-text);
@@ -115,7 +115,7 @@
 
 .auth-aside__title {
   font-family: var(--dm-display);
-  font-size: 44px;
+  font-size: 2.75rem;
   font-weight: 700;
   line-height: 1.08;
   letter-spacing: -1.9px;
@@ -123,7 +123,7 @@
 }
 
 .auth-aside__lead {
-  font-size: 13px;
+  font-size: 1.0625rem;
   line-height: 1.8;
   color: rgba(245, 245, 243, 0.64);
   max-width: 360px;
@@ -142,7 +142,7 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  font-size: 11px;
+  font-size: var(--fs-texto);
   line-height: 1.5;
   color: rgba(245, 245, 243, 0.78);
 }
@@ -174,7 +174,7 @@
   border-radius: 999px;
   background: rgba(13, 14, 16, 0.44);
   backdrop-filter: blur(6px);
-  font-size: 10px;
+  font-size: var(--fs-etiqueta);
   font-weight: 600;
   letter-spacing: 0.4px;
   color: rgba(245, 245, 243, 0.88);
@@ -189,7 +189,7 @@
 }
 
 .auth-aside__signoff {
-  font-size: 9px;
+  font-size: var(--fs-etiqueta);
   font-weight: 700;
   letter-spacing: 2.6px;
   color: rgba(245, 245, 243, 0.62);
@@ -257,7 +257,7 @@
 
 .auth-brand-name {
   font-family: var(--dm-display);
-  font-size: 21px;
+  font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: 2px;
   color: var(--dm-text);
@@ -269,7 +269,7 @@
 }
 
 .auth-brand-sub {
-  font-size: 9px;
+  font-size: var(--fs-etiqueta);
   letter-spacing: 3.4px;
   color: var(--dm-muted);
   text-transform: uppercase;
@@ -290,7 +290,7 @@
 /* ── Heading ─────────────────────────────────────────────────────────────── */
 .auth-card h2 {
   font-family: var(--dm-display);
-  font-size: 29px;
+  font-size: var(--fs-display);
   font-weight: 700;
   letter-spacing: -1.1px;
   color: var(--dm-text);
@@ -298,7 +298,7 @@
 }
 
 .auth-subtitle {
-  font-size: 12px;
+  font-size: 1rem;
   line-height: 1.7;
   color: var(--dm-muted);
   margin-bottom: 28px;
@@ -315,7 +315,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 11px;
+  font-size: var(--fs-texto);
   font-weight: 500;
   color: var(--dm-text);
 }
@@ -356,7 +356,7 @@
   border-radius: var(--radius-input);
   color: var(--dm-text);
   font-family: var(--dm-font);
-  font-size: 13px;
+  font-size: 1rem;
   font-weight: 400;
   padding: 13px 42px;
   outline: none;
@@ -371,7 +371,7 @@
 .auth-card input::placeholder {
   color: var(--dm-muted);
   opacity: 0.72;
-  font-size: 12px;
+  font-size: 1rem;
 }
 
 .auth-card input:focus {
@@ -413,7 +413,7 @@
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  font-size: 11px;
+  font-size: var(--fs-texto);
   line-height: 1.6;
   color: var(--dm-red);
   background: rgba(201, 47, 47, 0.09);
@@ -448,7 +448,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-input);
   font-family: var(--dm-font);
-  font-size: 12px;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.2s;
@@ -485,7 +485,7 @@
   align-items: center;
   gap: 13px;
   margin: 22px 0 15px;
-  font-size: 10px;
+  font-size: var(--fs-etiqueta);
   letter-spacing: 0.6px;
   color: var(--dm-muted);
 }
@@ -508,7 +508,7 @@
 /* ── Footer links ────────────────────────────────────────────────────────── */
 .auth-footer {
   text-align: center;
-  font-size: 11px;
+  font-size: var(--fs-texto);
   line-height: 1.7;
   color: var(--dm-muted);
   margin-top: 20px;
@@ -525,7 +525,7 @@
   color: var(--dm-orange-text);
   cursor: pointer;
   font-family: var(--dm-font);
-  font-size: 11px;
+  font-size: var(--fs-texto);
   font-weight: 600;
   transition: color 0.2s;
 }
@@ -547,7 +547,7 @@
   border-radius: var(--radius-input);
   color: var(--dm-muted);
   font-family: var(--dm-font);
-  font-size: 11px;
+  font-size: var(--fs-texto);
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
@@ -575,7 +575,7 @@
   gap: 7px;
   margin-top: 12px;
   font-family: var(--dm-font);
-  font-size: 10px;
+  font-size: var(--fs-texto);
   letter-spacing: 0.4px;
   color: var(--dm-muted-2);
   background: none;
@@ -605,7 +605,7 @@
 
 .auth-version {
   text-align: center;
-  font-size: 9px;
+  font-size: var(--fs-etiqueta);
   color: var(--dm-muted-2);
   margin-top: 18px;
   letter-spacing: 0.3px;
@@ -641,7 +641,7 @@
   }
 
   .auth-card h2 {
-    font-size: 27px;
+    font-size: var(--fs-titulo);
   }
 
   .auth-main {

@@ -625,29 +625,45 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 
 .ss-confirmar__check input { margin-top: 3px; accent-color: var(--primary); }
 
-/* ── Ventana del buscador ── */
+/* ── Ventana del buscador ──
+   Se dibuja en <body> (portal) y queda centrada con 32px de margen arriba y abajo.
+   Cabecera y filtros fijos arriba, pie fijo abajo: solo hace scroll la zona de tarjetas. */
 .ss-modal {
+  /* Fuera del panel del taller: mismos tokens que .tp-root para que se vea igual */
+  --bg: var(--ui-bg); --surface: var(--ui-surface); --surface2: var(--ui-surface-2); --surface3: var(--ui-surface-2);
+  --border: var(--ui-line); --border2: var(--ui-line);
+  --text: var(--ui-text); --text-muted: var(--ui-muted); --muted: var(--ui-muted);
+  --success: var(--ui-ok); --green: var(--ui-ok); --error: var(--ui-error); --red: var(--ui-error);
+  --warning: var(--ui-aviso); --amber: var(--ui-aviso); --amber-text: var(--ui-aviso); --blue: var(--ui-info);
+  --r-sm: var(--ui-r-md); --r-md: var(--ui-r-lg); --r-lg: var(--ui-r-lg);
+
   position: fixed;
   inset: 0;
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--sp-lg);
+  padding: 32px 24px;
+  overflow: hidden;
   background: rgba(8, 15, 28, 0.72);
+  font-family: var(--ui-font);
   animation: ssModalFondo var(--dur-med) var(--ease-out);
 }
 
 .ss-modal__ventana {
   width: min(1080px, 100%);
-  max-height: calc(100vh - 2 * var(--sp-lg));
+  /* 100vh de respaldo; 100dvh descuenta las barras del navegador en móvil */
+  max-height: calc(100vh - 64px);
+  max-height: calc(100dvh - 64px);
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-line);
   border-top: 4px solid #18487A;
-  border-radius: var(--r-lg);
+  border-radius: var(--ui-r-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   animation: ssModalVentana var(--dur-med) var(--ease-out);
 }
@@ -656,46 +672,70 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 @keyframes ssModalVentana { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
 .ss-modal__cabecera {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--sp-md);
-  padding: var(--sp-lg) var(--sp-lg) var(--sp-md);
+  padding: 20px 24px 12px;
 }
 
 .ss-modal__titulo {
-  font-size: 1.6rem;
-  line-height: 1.1;
+  font-size: var(--fs-titulo);
+  line-height: 1.15;
   margin: 0 0 4px;
 }
 
 .ss-modal__filtros {
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 100px auto auto;
   gap: var(--sp-sm) var(--sp-md);
   align-items: end;
-  padding: 0 var(--sp-lg) var(--sp-md);
-  border-bottom: 1px solid var(--border);
+  padding: 0 24px 16px;
+  border-bottom: 1px solid var(--ui-line);
 }
 
 .ss-modal__cuerpo {
-  flex: 1;
+  flex: 1 1 auto;
+  /* min-height: 0 deja que el cuerpo haga scroll en vez de empujar el pie fuera de la ventana */
+  min-height: 0;
   overflow-y: auto;
-  padding: var(--sp-md) var(--sp-lg);
+  overscroll-behavior: contain;
+  padding: 16px 24px 24px;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-lg);
+  gap: var(--sp-md);
 }
 
 .ss-modal__cuerpo[aria-busy="true"] { opacity: 0.6; }
 
+/* Sin esto las secciones se encogían para caber y las tarjetas salían cortadas */
+.ss-modal__cuerpo > * { flex-shrink: 0; }
+
 .ss-modal__pie {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: var(--sp-md);
-  padding: var(--sp-md) var(--sp-lg);
-  border-top: 1px solid var(--border);
+  padding: 12px 24px;
+  border-top: 1px solid var(--ui-line);
+  background: var(--ui-surface);
+}
+
+.ss-modal__contador { font-size: var(--fs-texto); color: var(--ui-muted); }
+.ss-modal__contador strong { color: var(--ui-text); font-size: var(--fs-subtitulo); font-variant-numeric: tabular-nums; }
+
+/* Pantallas bajas (laptops de 768px o menos de alto): cabecera y filtros más compactos
+   para que la zona de tarjetas tenga espacio */
+@media (max-height: 760px) and (min-width: 561px) {
+  .ss-modal { padding-top: 16px; padding-bottom: 16px; }
+  .ss-modal__ventana { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); }
+  .ss-modal__cabecera { padding-top: 14px; padding-bottom: 8px; }
+  .ss-modal__titulo { font-size: var(--fs-subtitulo); }
+  .ss-modal__filtros { padding-bottom: 12px; }
+  .ss-oferta__foto { height: 96px; }
 }
 
 /* Interruptor "Solo compatibles" */
@@ -739,81 +779,143 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 .ss-switch input:checked + .ss-switch__pista::after { transform: translateX(16px); background: #fff; }
 .ss-switch input:focus-visible + .ss-switch__pista { box-shadow: 0 0 0 3px var(--primary-glow); }
 
-/* Pieza y sus ofertas por tienda */
-.ss-pieza { display: flex; flex-direction: column; gap: var(--sp-sm); }
-
-.ss-pieza__cabecera {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-left: var(--sp-sm);
-  border-left: 3px solid #18487A;
+/* Ofertas de las tiendas: una sola rejilla de tarjetas de altura uniforme.
+   Cada tarjeta: imagen con el estado de compatibilidad, datos, y abajo precio y botón. */
+.ss-ofertas__resumen {
+  margin: 0;
+  font-size: var(--fs-etiqueta);
+  color: var(--ui-muted);
 }
-
-.ss-pieza__resumen { font-size: 0.78rem; color: var(--text-muted); }
 
 .ss-ofertas {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: var(--sp-md);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--ui-sp-4);
+  align-items: stretch;
 }
 
 .ss-oferta {
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
+  min-width: 0;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-1);
   overflow: hidden;
-  transition: border-color var(--dur-fast);
+  transition: border-color var(--ui-dur) var(--ui-ease);
 }
 
-.ss-oferta:hover { border-color: var(--border2); }
+.ss-oferta:hover { border-color: var(--ui-muted); }
+.ss-oferta--elegida { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
 .ss-oferta--bloqueada { opacity: 0.72; }
 
 .ss-oferta__foto {
-  height: 120px;
+  position: relative;
+  flex-shrink: 0;
+  height: 128px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface2);
+  background: var(--ui-surface-2);
+  border-bottom: 1px solid var(--ui-line);
   font-size: 2rem;
 }
 
 .ss-oferta__foto img { width: 100%; height: 100%; object-fit: cover; }
 
+/* Badge de compatibilidad sobre la imagen */
+.ss-oferta__compat {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  background: var(--ui-surface);
+  box-shadow: var(--ui-sombra-1);
+}
+
 .ss-oferta__cuerpo {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: var(--sp-sm) var(--sp-md);
+  gap: 3px;
+  min-width: 0;
+  padding: var(--ui-sp-3) var(--ui-sp-4);
 }
 
-.ss-oferta__cuerpo .ss-estado { align-self: flex-start; margin-bottom: 4px; }
-.ss-oferta__nombre { font-size: 0.95rem; line-height: 1.3; }
-.ss-oferta__tienda { font-size: 0.875rem; font-weight: 600; margin-top: 4px; }
+.ss-oferta__nombre {
+  font-size: var(--fs-texto);
+  font-weight: 650;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
+.ss-oferta__ref,
+.ss-oferta__dato {
+  font-size: var(--fs-etiqueta);
+  line-height: 1.4;
+  color: var(--ui-muted);
+  overflow-wrap: anywhere;
+}
+
+.ss-oferta__tienda {
+  margin-top: var(--ui-sp-2);
+  font-size: var(--fs-texto);
+  font-weight: 600;
+}
+
+.ss-oferta__etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--ui-sp-2);
+}
+
+.ss-oferta__stock {
+  display: inline-block;
+  padding: .1rem .5rem;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-sm);
+  font-size: var(--fs-pequeno);
+  font-weight: 700;
+  color: var(--ui-muted);
+  white-space: nowrap;
+}
+
+.ss-oferta__stock--agotado { color: var(--ui-error); border-color: var(--ui-error); }
+
+/* Precio y botón siempre al fondo y alineados entre tarjetas */
 .ss-oferta__pie {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px var(--sp-sm);
-  padding: var(--sp-sm) var(--sp-md);
-  border-top: 1px solid var(--border);
+  gap: 6px var(--ui-sp-2);
+  padding: var(--ui-sp-3) var(--ui-sp-4);
+  border-top: 1px solid var(--ui-line);
+  background: var(--ui-surface);
 }
 
-.ss-oferta__precio { font-size: 1.05rem; }
+.ss-oferta__precio {
+  font-size: var(--fs-subtitulo);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .ss-btn-elegir { padding: 7px 16px; white-space: nowrap; }
 
 .ss-oferta__motivo {
-  grid-column: 1 / -1;
-  font-size: 0.78rem;
+  margin-top: auto;
+  padding-top: var(--ui-sp-2);
+  font-size: var(--fs-etiqueta);
   line-height: 1.4;
-  color: var(--error);
+  color: var(--ui-error);
 }
 
-.ss-oferta__motivo--aviso { color: var(--amber-text); }
+.ss-oferta__motivo--aviso { color: var(--ui-aviso); }
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
@@ -827,7 +929,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 @media (max-width: 560px) {
   .ss-bloque { padding: var(--sp-md); }
   .ss-modal { padding: 0; align-items: stretch; }
-  .ss-modal__ventana { max-height: 100vh; border-radius: 0; }
+  .ss-modal__ventana { height: 100vh; height: 100dvh; max-height: none; border: none; border-radius: 0; }
   .ss-modal__cabecera,
   .ss-modal__filtros,
   .ss-modal__cuerpo,

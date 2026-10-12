@@ -68,7 +68,7 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  font-family: Arial, sans-serif;
+  font-family: var(--ui-font);
   font-size: 21px;
   font-weight: 800;
   letter-spacing: -0.8px;
@@ -117,7 +117,8 @@
 }
 
 .dm-step__number {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
+  font-variant-numeric: tabular-nums;
   font-size: 36px;
   font-weight: 600;
   letter-spacing: -1px;
@@ -407,7 +408,8 @@
 }
 
 .dm-metrics strong {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
+  font-variant-numeric: tabular-nums;
   font-size: 43px;
   font-weight: 600;
   line-height: 1;

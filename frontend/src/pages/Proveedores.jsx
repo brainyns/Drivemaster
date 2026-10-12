@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { listarProveedores, eliminarProveedor, exportarProveedores } from "../services/proveedorService";
 import "../css/proveedores.css";
+import "../css/admin-base.css";
+import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 
 // ── Iconos SVG inline ──────────────────────────────────────────────────────────
 const IconTruck = () => (
@@ -14,11 +16,6 @@ const IconShield = () => (
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
   </svg>
 );
-const IconDollar = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-  </svg>
-);
 const IconPlus = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -29,49 +26,16 @@ const IconSearch = () => (
     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
   </svg>
 );
-const IconEdit = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>
-);
-const IconTrash = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-    <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-  </svg>
-);
-const IconFilter = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-  </svg>
-);
 const IconDownload = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
     <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
   </svg>
 );
-const IconChevronLeft = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="15 18 9 12 15 6"/>
-  </svg>
-);
-const IconChevronRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <polyline points="9 18 15 12 9 6"/>
-  </svg>
-);
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function getInitials(nombre) {
   return (nombre || "").split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-}
-function getCategoryColor(nombre = "") {
-  const colors = ["#e85d2f", "#7c6af7", "#2fb8e8", "#2fe875", "#e8c12f", "#e82fa8"];
-  let h = 0;
-  for (let i = 0; i < nombre.length; i++) h = (h * 31 + nombre.charCodeAt(i)) % colors.length;
-  return colors[h];
 }
 
 const ITEMS_PER_PAGE = 8;
@@ -121,169 +85,129 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
     }
   };
 
-  const gastoMensual = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(12450);
+  // Resumen con datos reales de la lista (antes eran cifras fijas: "98% OTD", "Premium", un gasto en MXN)
+  const conNit = proveedores.filter((p) => p.nit).length;
+  const conCorreo = proveedores.filter((p) => p.correo).length;
+  const desdeN = filtrados.length === 0 ? 0 : (pagina - 1) * ITEMS_PER_PAGE + 1;
+  const hastaN = Math.min(pagina * ITEMS_PER_PAGE, filtrados.length);
+  const aEliminar = proveedores.find((p) => p.id === confirmId);
 
   return (
-    <>
-      <div className="kv-prov">
-        {/* Header */}
-        <div className="kv-prov-header">
-          <div>
-            <div className="kv-prov-title">Directorio de Proveedores</div>
-            <div className="kv-prov-subtitle">Gestiona y monitorea el rendimiento de tus socios comerciales</div>
-          </div>
-          <div className="kv-prov-actions">
-            <button className="kv-btn-report" onClick={handleExportar} disabled={exportando}>
-              <IconDownload /> {exportando ? "Generando..." : "Descargar Reporte"}
-            </button>
-            <button className="kv-btn-nuevo" onClick={onNuevo}><IconPlus /> Nuevo Proveedor</button>
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
+        <div>
+          <h1 className="adm-encabezado__titulo">Proveedores</h1>
+          <p className="adm-encabezado__sub">Directorio de los proveedores a los que le compras para surtir tu inventario.</p>
+        </div>
+        <div className="adm-encabezado__lado">
+          <button type="button" className={`adm-btn${exportando ? " adm-btn--cargando" : ""}`} onClick={handleExportar}
+            disabled={exportando} aria-busy={exportando}>
+            {!exportando && <IconDownload />} {exportando ? "Generando…" : "Descargar reporte"}
+          </button>
+          <button type="button" className="adm-btn adm-btn--primario" onClick={onNuevo}><IconPlus /> Nuevo proveedor</button>
+        </div>
+      </header>
+
+      <section className="adm-kpis" aria-label="Resumen de proveedores">
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono" aria-hidden="true"><IconTruck /></span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Proveedores registrados</span>
+            <p className="adm-kpi__valor">{proveedores.length}</p>
           </div>
         </div>
-
-        {/* Stats */}
-        <div className="kv-stats">
-          <div className="kv-stat orange">
-            <div className="kv-stat-top">
-              <div className="kv-stat-icon"><IconTruck /></div>
-              <span className="kv-stat-badge">98% OTD</span>
-            </div>
-            <div className="kv-stat-label">Entregas a Tiempo</div>
-            <div className="kv-stat-value">{proveedores.length} Activos</div>
-          </div>
-          <div className="kv-stat purple">
-            <div className="kv-stat-top">
-              <div className="kv-stat-icon"><IconShield /></div>
-              <span className="kv-stat-badge">Top Tier</span>
-            </div>
-            <div className="kv-stat-label">Calidad de Repuestos</div>
-            <div className="kv-stat-value">Premium</div>
-          </div>
-          <div className="kv-stat teal">
-            <div className="kv-stat-top">
-              <div className="kv-stat-icon"><IconDollar /></div>
-              <span className="kv-stat-badge">−12% Var</span>
-            </div>
-            <div className="kv-stat-label">Gasto Mensual</div>
-            <div className="kv-stat-value">{gastoMensual}</div>
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono" aria-hidden="true"><IconShield /></span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Con NIT registrado</span>
+            <p className="adm-kpi__valor">{conNit}</p>
           </div>
         </div>
-
-        {/* Table */}
-        <div className="kv-table-wrap">
-          <div className="kv-table-toolbar">
-            <div className="kv-table-info">
-              Catálogo de Socios Comerciales
-              <span>Mostrando {filtrados.length} de {proveedores.length} registrados</span>
-            </div>
-            <div className="kv-table-controls">
-              <div className="kv-search">
-                <IconSearch />
-                <input
-                  placeholder="Buscar por nombre, contacto o correo..."
-                  value={busqueda}
-                  onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
-                />
-              </div>
-             
-            </div>
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono" aria-hidden="true"><IconSearch /></span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Con correo de contacto</span>
+            <p className="adm-kpi__valor">{conCorreo}</p>
           </div>
+        </div>
+      </section>
 
-          {loading ? (
-            <div className="kv-empty"><div className="kv-empty-text">Cargando proveedores...</div></div>
-          ) : error ? (
-            <div className="kv-error">Error: {error}</div>
-          ) : filtrados.length === 0 ? (
-            <div className="kv-empty">
-              <div className="kv-empty-icon">🏭</div>
-              <div className="kv-empty-text">
-                {busqueda ? "Sin resultados para tu búsqueda." : "No hay proveedores registrados."}
-              </div>
-            </div>
-          ) : (
-            <table className="kv-table">
+      <div className="adm-filtros" role="search" aria-label="Buscar proveedores">
+        <label className="adm-campo adm-campo--ancho">
+          <span>Buscar</span>
+          <input type="search" placeholder="Nombre, contacto o correo" value={busqueda}
+            onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }} />
+        </label>
+      </div>
+
+      {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
+
+      <div className="adm-tarjeta" aria-busy={loading}>
+        {loading ? (
+          <div className="adm-cargando">Cargando proveedores…</div>
+        ) : filtrados.length === 0 ? (
+          <p className="adm-vacio">{busqueda ? "Sin resultados para tu búsqueda." : "No hay proveedores registrados."}</p>
+        ) : (
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
               <thead>
                 <tr>
-                  <th>Nombre del Proveedor</th>
-                  <th>Nit</th>
+                  <th>Proveedor</th>
+                  <th>NIT</th>
                   <th>Teléfono</th>
-                  <th>Correo Electrónico</th>
-                  <th>Acciones</th>
+                  <th>Correo</th>
+                  <th className="adm-tabla__der">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {paginados.map((p) => {
-                  const color = getCategoryColor(p.nombre);
-                  return (
-                    <tr key={p.id}>
-                      <td>
-                        <div className="kv-cell-prov">
-                          <div className="kv-avatar" style={{ background: color }}>
-                            {getInitials(p.nombre)}
-                          </div>
-                          <div>
-                            <div className="kv-prov-name">{p.nombre}</div>
-                            {p.categoria && <div className="kv-prov-cat">{p.categoria}</div>}
-                          </div>
+                {paginados.map((p) => (
+                  <tr key={p.id}>
+                    <td data-label="Proveedor">
+                      <div className="adm-celda-producto">
+                        <span className="adm-miniatura" aria-hidden="true">{getInitials(p.nombre)}</span>
+                        <div>
+                          <strong>{p.nombre}</strong>
+                          {p.categoria && <span className="adm-tabla__sub">{p.categoria}</span>}
                         </div>
-                      </td>
-                      <td><span className="kv-cell-text">{p.nit || "—"}</span></td>
-                      <td><span className="kv-cell-mono">{p.telefono || "—"}</span></td>
-                      <td><span className="kv-cell-email">{p.correo || "—"}</span></td>
-                      <td>
-                        <div className="kv-cell-actions">
-                          <button className="kv-btn-edit" title="Editar" onClick={() => onEditar(p.id)}>
-                            <IconEdit />
-                          </button>
-                          <button className="kv-btn-del" title="Eliminar" onClick={() => setConfirmId(p.id)}>
-                            <IconTrash />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      </div>
+                    </td>
+                    <td data-label="NIT">{p.nit || "—"}</td>
+                    <td data-label="Teléfono" className="adm-tabla__nowrap">{p.telefono || "—"}</td>
+                    <td data-label="Correo">{p.correo || "—"}</td>
+                    <td className="adm-tabla__der adm-tabla__celda--ancha">
+                      <div className="adm-tabla__acciones">
+                        <button type="button" className="adm-btn adm-btn--chico" onClick={() => onEditar(p.id)}>Editar</button>
+                        <button type="button" className="adm-btn adm-btn--chico adm-btn--peligro" onClick={() => setConfirmId(p.id)}>Eliminar</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-          )}
-
-          {/* Pagination */}
-          {totalPaginas > 1 && (
-            <div className="kv-pagination">
-              <div className="kv-pag-info">
-                Página {pagina} de {totalPaginas}
-              </div>
-              <div className="kv-pag-controls">
-                <button className="kv-pag-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>
-                  <IconChevronLeft />
-                </button>
-                {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
-                  <button key={n} className={`kv-pag-btn ${n === pagina ? "active" : ""}`} onClick={() => setPagina(n)}>
-                    {n}
-                  </button>
-                ))}
-                <button className="kv-pag-btn" disabled={pagina === totalPaginas} onClick={() => setPagina(p => p + 1)}>
-                  <IconChevronRight />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Modal de confirmación */}
+      <nav className="adm-paginacion" aria-label="Paginación">
+        {totalPaginas > 1 && (
+          <button type="button" className="adm-btn" disabled={pagina === 1} onClick={() => setPagina((n) => n - 1)}>Anterior</button>
+        )}
+        <span>Mostrando {desdeN}–{hastaN} de {filtrados.length} proveedores</span>
+        {totalPaginas > 1 && (
+          <button type="button" className="adm-btn" disabled={pagina === totalPaginas} onClick={() => setPagina((n) => n + 1)}>Siguiente</button>
+        )}
+      </nav>
+
       {confirmId && (
-        <div className="kv-overlay" onClick={() => setConfirmId(null)}>
-          <div className="kv-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="kv-modal-icon">⚠️</div>
-            <h3>¿Eliminar proveedor?</h3>
-            <p>Esta acción es permanente y no se puede deshacer. Se perderán todos los datos del proveedor.</p>
-            <div className="kv-modal-btns">
-              <button className="kv-modal-cancel" onClick={() => setConfirmId(null)}>Cancelar</button>
-              <button className="kv-modal-confirm" onClick={() => handleEliminar(confirmId)}>Sí, eliminar</button>
-            </div>
-          </div>
-        </div>
+        <ConfirmacionAdmin
+          titulo={`Eliminar ${aEliminar?.nombre || "proveedor"}`}
+          texto="Esta acción es permanente y no se puede deshacer. Se perderán todos los datos del proveedor."
+          confirmar="Sí, eliminar"
+          variante="peligro"
+          onConfirmar={() => handleEliminar(confirmId)}
+          onCancelar={() => setConfirmId(null)}
+        />
       )}
-    </>
+    </div>
   );
 }

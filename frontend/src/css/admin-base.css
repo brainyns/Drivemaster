@@ -25,7 +25,7 @@
 }
 
 .adm-encabezado__titulo {
-  font-size: 1.5rem;
+  font-size: var(--fs-titulo);
   font-weight: 650;
   letter-spacing: -0.01em;
   line-height: 1.2;
@@ -34,7 +34,7 @@
 }
 
 .adm-encabezado__sub {
-  font-size: .875rem;
+  font-size: var(--fs-texto);
   line-height: 1.55;
   max-width: 65ch;
   color: var(--ui-muted);
@@ -88,7 +88,7 @@
   display: grid;
   gap: .3rem;
   min-width: 150px;
-  font-size: .75rem;
+  font-size: var(--fs-etiqueta);
   font-weight: 600;
   color: var(--ui-muted);
 }
@@ -112,7 +112,7 @@
   border-radius: var(--ui-r-lg);
   padding: .5rem .65rem;
   font: inherit;
-  font-size: .85rem;
+  font-size: var(--fs-texto);
   font-weight: 400;
   transition: border-color var(--ui-dur) var(--ui-ease);
 }
@@ -187,7 +187,7 @@
   border-radius: 999px;
   padding: .4rem .9rem;
   font: inherit;
-  font-size: .8rem;
+  font-size: var(--fs-boton);
   font-weight: 500;
   cursor: pointer;
   transition: border-color var(--ui-dur) var(--ui-ease), background var(--ui-dur) var(--ui-ease);
@@ -237,7 +237,7 @@
   border-radius: var(--ui-r-lg);
   padding: .45rem .9rem;
   font: inherit;
-  font-size: .8rem;
+  font-size: var(--fs-boton);
   font-weight: 600;
   line-height: 1.3;
   white-space: nowrap;
@@ -292,6 +292,11 @@
   color: var(--ui-muted);
 }
 
+/* Botón que abre un panel y lo tiene abierto */
+.adm-btn--activo {
+  border-color: var(--primary);
+}
+
 .adm-btn--chico {
   padding: .3rem .65rem;
   font-size: .75rem;
@@ -331,7 +336,7 @@
   border: 1px solid var(--ui-line);
   border-radius: var(--ui-r-sm);
   padding: .15rem .55rem;
-  font-size: .72rem;
+  font-size: var(--fs-pequeno);
   font-weight: 700;
   line-height: 1.4;
   white-space: nowrap;
@@ -616,7 +621,7 @@
 
 .adm-drawer__titulo {
   margin: .35rem 0 0;
-  font-size: 1.15rem;
+  font-size: var(--fs-subtitulo);
   font-weight: 650;
   line-height: 1.25;
 }
@@ -883,4 +888,95 @@
 
 .adm-vacio p {
   margin: 0 0 .75rem;
+}
+
+/* ── Tarjetas de resumen (KPI) ──────────────────────────────────────────── */
+.adm-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--ui-sp-4);
+  margin-bottom: 1.25rem;
+}
+
+.adm-kpi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-1);
+}
+
+.adm-kpi--alerta { box-shadow: inset 3px 0 0 var(--ui-error), var(--ui-sombra-1); }
+
+.adm-kpi__icono {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--ui-r-md);
+  background: var(--ui-surface-2);
+  color: var(--ui-muted);
+}
+
+.adm-kpi__icono svg { width: 20px; height: 20px; }
+.adm-kpi__icono--exito     { background: var(--ui-ok-bg);    color: var(--ui-ok); }
+.adm-kpi__icono--peligro   { background: var(--ui-error-bg); color: var(--ui-error); }
+.adm-kpi__icono--pendiente { background: var(--ui-aviso-bg); color: var(--ui-aviso); }
+.adm-kpi__icono--info      { background: var(--ui-info-bg);  color: var(--ui-info); }
+
+.adm-kpi__texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.adm-kpi__etiqueta { font-size: var(--fs-etiqueta); font-weight: 600; color: var(--ui-muted); }
+
+.adm-kpi__valor {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text);
+  overflow-wrap: anywhere;
+}
+
+.adm-kpi__sub { font-size: var(--fs-pequeno); color: var(--ui-muted); }
+
+/* ── Barra de nivel (stock) ─────────────────────────────────────────────── */
+.adm-nivel { display: flex; align-items: center; gap: .6rem; min-width: 110px; }
+.adm-nivel__pista { flex: 1; height: 6px; border-radius: 99px; background: var(--ui-surface-2); overflow: hidden; }
+.adm-nivel__relleno { display: block; height: 100%; border-radius: 99px; background: var(--ui-ok); }
+.adm-nivel__relleno--pendiente { background: var(--ui-aviso); }
+.adm-nivel__relleno--peligro { background: var(--ui-error); }
+.adm-nivel__num { min-width: 2ch; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Miniatura con inicial (productos sin foto en tablas) */
+.adm-miniatura {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--ui-r-md);
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-line);
+  font-weight: 700;
+  font-size: var(--fs-etiqueta);
+  color: var(--ui-muted);
+}
+
+.adm-celda-producto { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+
+/* En móvil los resúmenes van de a dos y más compactos, para que la tabla quede cerca */
+@media (max-width: 720px) {
+  .adm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ui-sp-2); }
+  .adm-kpi { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+  .adm-kpi__icono { width: 32px; height: 32px; }
+  .adm-kpi__icono svg { width: 16px; height: 16px; }
+  .adm-kpi__valor { font-size: 1.2rem; }
 }

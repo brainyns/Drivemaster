@@ -44,7 +44,6 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
     <>
       <header className="pt-header tp-cabecera">
         <div>
-          <span className="pt-eyebrow">Taller aliado</span>
           <h1 className="pt-title">{taller?.nombre || "Panel del taller"}</h1>
           <p className="pt-subtitle">Lo que necesita tu atención hoy: solicitudes por responder, trabajos en curso y repuestos que esperas.</p>
         </div>

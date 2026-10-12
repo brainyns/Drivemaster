@@ -17,7 +17,7 @@
     bottom: 20px;
     right: 20px;
     z-index: 1000;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--ui-font);
 }
 
 /* Toggle Button */

@@ -62,7 +62,6 @@ export default function TallerCotizaciones() {
     <div className="ss-panel tp-cotizaciones">
       <header className="pt-header tp-cabecera">
         <div>
-          <span className="pt-eyebrow">Taller aliado</span>
           <h1 className="pt-title">Cotizaciones</h1>
           <p className="pt-subtitle">
             {conteo.emitidas > 0

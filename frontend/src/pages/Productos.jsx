@@ -3,6 +3,7 @@ import { listarProductos, listarProductosMiTienda, eliminarProducto } from "../s
 import { miTienda } from "../services/tiendaService";
 import EstadoNegocio from "../components/EstadoNegocio";
 import "../css/productos.css";
+import "../css/admin-base.css";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const IconBox = () => (
@@ -101,152 +102,153 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
     return Math.min((p.stockActual / max) * 100, 100);
   };
 
-  if (loading) return <div className="page-loading">Cargando productos...</div>;
+  // Etiqueta y variante de cada nivel de stock (admin-base.css)
+  const NIVEL = {
+    activo:  { label: "Normal", badge: "exito", barra: "" },
+    medio:   { label: "Medio",  badge: "pendiente", barra: " adm-nivel__relleno--pendiente" },
+    critico: { label: "Bajo",   badge: "peligro", barra: " adm-nivel__relleno--peligro" },
+  };
+  const FILTROS = [
+    { k: "todos",   l: "Todos" },
+    { k: "activo",  l: "Normal" },
+    { k: "medio",   l: "Medio" },
+    { k: "critico", l: "Bajo" },
+  ];
+  const conteoFiltro = (k) => (k === "todos" ? productos.length : productos.filter(p => getEstado(p) === k).length);
+
+  if (loading) return <div className="adm-pagina"><div className="adm-cargando">Cargando productos…</div></div>;
 
   return (
     <EstadoNegocio negocio={tienda} tipo="tienda">
-    {error ? <div className="page-loading error">{error}</div> : (
-    <div className="kp-page">
+    {error ? <div className="adm-pagina"><p className="adm-alerta adm-alerta--error" role="alert">{error}</p></div> : (
+    <div className="adm-pagina">
 
-      <div className="kp-page-header">
+      <header className="adm-encabezado">
         <div>
-          <h1 className="kp-page-title">{tienda ? `Productos de ${tienda.nombre}` : "Gestion de Productos"}</h1>
-          <p className="kp-page-sub">
+          <h1 className="adm-encabezado__titulo">{tienda ? `Productos de ${tienda.nombre}` : "Gestión de productos"}</h1>
+          <p className="adm-encabezado__sub">
             {tienda
               ? "Catálogo e inventario de tu tienda. Los talleres ven tu precio, disponibilidad y ubicación."
               : "Inventario centralizado de refacciones y consumibles automotrices."}
           </p>
         </div>
-        <div className="kp-page-actions">
-          <button className="kp-btn kp-btn--outline" onClick={onNuevo}>Ver Productos</button>
-          <button className="kp-btn kp-btn--primary" onClick={onNuevo}>Agregar Producto</button>
+        <div className="adm-encabezado__lado">
+          <button type="button" className="adm-btn adm-btn--primario" onClick={onNuevo}>Agregar producto</button>
         </div>
-      </div>
+      </header>
 
-      <div className="kp-stats">
-        <div className="kp-stat">
-          <div className="kp-stat-icon"><IconBox /></div>
-          <p className="kp-stat-label">Total Refacciones</p>
-          <p className="kp-stat-value">{productos.length}</p>
-        </div>
-
-        <div className={`kp-stat${stockCritico > 0 ? " kp-stat--critico" : ""}`}>
-          <div className="kp-stat-icon kp-stat-icon--alert"><IconAlert /></div>
-          <p className="kp-stat-label">Stock Critico</p>
-          <p className="kp-stat-value">
-            {stockCritico}
-            {stockCritico > 0 && <span className="kp-revisar">Revisar</span>}
-          </p>
-        </div>
-
-        <div className="kp-stat">
-          <div className="kp-stat-icon kp-stat-icon--tag"><IconTag /></div>
-          <p className="kp-stat-label">Categorias</p>
-          <p className="kp-stat-value">{categorias}</p>
-        </div>
-
-        <div className="kp-stat">
-          <div className="kp-stat-icon kp-stat-icon--dollar"><IconDollar /></div>
-          <p className="kp-stat-label">Valor Inventario</p>
-          <p className="kp-stat-value kp-stat-value--primary">
-            ${valorTotal.toLocaleString("es-CO")}
-          </p>
-        </div>
-      </div>
-
-      <div className="kp-card">
-        <div className="kp-card-header">
-          <div className="kp-card-title">
-            <span className="kp-accent-bar" />
-            Catalogo de Existencias
-          </div>
-          <div className="kp-card-tools">
-            <div className="kp-filters">
-              {[
-                { k: "todos",   l: "Todos" },
-                { k: "activo",  l: "Normal" },
-                { k: "medio",   l: "Medio" },
-                { k: "critico", l: "Bajo" },
-              ].map(f => (
-                <button
-                  key={f.k}
-                  onClick={() => setFiltro(f.k)}
-                  className={`kp-filter-btn kp-filter-btn--${f.k}${filtro === f.k ? " activo" : ""}`}
-                >{f.l}</button>
-              ))}
-            </div>
-            <input
-              className="kp-search"
-              placeholder="Buscar producto..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-            />
+      <section className="adm-kpis" aria-label="Resumen del catálogo">
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono" aria-hidden="true"><IconBox /></span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Total de repuestos</span>
+            <p className="adm-kpi__valor">{productos.length}</p>
           </div>
         </div>
-
-        <div className="kp-table-wrap">
-          <table className="kp-table">
-            <thead>
-              <tr>
-                <th>Codigo</th>
-                <th>Producto</th>
-                <th>Categoria</th>
-                <th>Precio Venta</th>
-                <th>Stock</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.length === 0 ? (
-                <tr><td colSpan="7" className="kp-empty">No se encontraron productos</td></tr>
-              ) : filtrados.map((p, i) => {
-                const estado = getEstado(p);
-                const pct    = getStockPct(p);
-                return (
-                  <tr key={p.id} className="kp-row">
-                    <td className="kp-id">#{p.codigo || String(i + 1).padStart(4, "0")}</td>
-                    <td>
-                      <div className="kp-product-cell">
-                        <div className="kp-product-thumb">{p.nombre?.[0]?.toUpperCase()}</div>
-                        <div>
-                          <p className="kp-product-name">{p.nombre}</p>
-                          <p className="kp-product-sub">{p.marca || "Sin marca"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td><span className="kp-cat-badge">{p.categoria || "Sin categoria"}</span></td>
-                    <td className="kp-price">${p.precioVenta?.toLocaleString("es-CO")}</td>
-                    <td>
-                      <div className="kp-stock-cell">
-                        <div className="kp-stock-bar-bg">
-                          <div className={`kp-stock-bar kp-stock-bar--${estado}`} style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className={`kp-stock-num kp-stock-num--${estado}`}>{p.stockActual}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`kp-estado kp-estado--${estado}`}>
-                        {estado === "activo" ? "ACTIVO" : estado === "medio" ? "MEDIO" : "BAJO"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="kp-actions">
-                        <button onClick={() => onEditar(p.id)} className="kp-action-btn" title="Editar">&#9998;</button>
-                        <button onClick={() => handleEliminar(p.id)} className="kp-action-btn kp-action-btn--del" title="Eliminar">&#128465;</button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className={`adm-kpi${stockCritico > 0 ? " adm-kpi--alerta" : ""}`}>
+          <span className={`adm-kpi__icono${stockCritico > 0 ? " adm-kpi__icono--peligro" : ""}`} aria-hidden="true"><IconAlert /></span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Stock crítico</span>
+            <p className="adm-kpi__valor">
+              {stockCritico}
+              {stockCritico > 0 && <span className="adm-badge adm-badge--peligro">Revisar</span>}
+            </p>
+          </div>
         </div>
-
-        <div className="kp-table-footer">
-          Mostrando <strong>1-{filtrados.length}</strong> de <strong>{productos.length}</strong> productos
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono" aria-hidden="true"><IconTag /></span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Categorías</span>
+            <p className="adm-kpi__valor">{categorias}</p>
+          </div>
         </div>
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono" aria-hidden="true"><IconDollar /></span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Valor del inventario</span>
+            <p className="adm-kpi__valor">${valorTotal.toLocaleString("es-CO")}</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="adm-filtros" role="search" aria-label="Filtros de productos">
+        <nav className="adm-pestanas" aria-label="Nivel de stock">
+          {FILTROS.map(f => (
+            <button key={f.k} type="button" aria-pressed={filtro === f.k}
+              className={`adm-pestana${filtro === f.k ? " adm-pestana--activa" : ""}`}
+              onClick={() => setFiltro(f.k)}>
+              {f.l}<span className="adm-pestana__n">{conteoFiltro(f.k)}</span>
+            </button>
+          ))}
+        </nav>
+        <span className="adm-filtros__separador" />
+        <label className="adm-campo adm-campo--ancho">
+          <span>Buscar</span>
+          <input type="search" placeholder="Nombre, código o categoría" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+        </label>
       </div>
+
+      <div className="adm-tarjeta">
+        {filtrados.length === 0 ? (
+          <p className="adm-vacio">No se encontraron productos.</p>
+        ) : (
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Código</th>
+                  <th>Categoría</th>
+                  <th className="adm-tabla__der">Precio de venta</th>
+                  <th>Stock</th>
+                  <th>Estado</th>
+                  <th className="adm-tabla__der">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtrados.map((p, i) => {
+                  const estado = getEstado(p);
+                  const nivel = NIVEL[estado];
+                  return (
+                    <tr key={p.id}>
+                      <td data-label="Producto">
+                        <div className="adm-celda-producto">
+                          <span className="adm-miniatura" aria-hidden="true">{p.nombre?.[0]?.toUpperCase()}</span>
+                          <div>
+                            <strong>{p.nombre}</strong>
+                            <span className="adm-tabla__sub">{p.marca || "Sin marca"}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td data-label="Código"><span className="adm-mono">{p.codigo || String(i + 1).padStart(4, "0")}</span></td>
+                      <td data-label="Categoría"><span className="adm-badge adm-badge--neutro">{p.categoria || "Sin categoría"}</span></td>
+                      <td data-label="Precio de venta" className="adm-tabla__der adm-tabla__nowrap">${p.precioVenta?.toLocaleString("es-CO")}</td>
+                      <td data-label="Stock">
+                        <div className="adm-nivel">
+                          <span className="adm-nivel__pista" aria-hidden="true">
+                            <span className={`adm-nivel__relleno${nivel.barra}`} style={{ width: `${getStockPct(p)}%` }} />
+                          </span>
+                          <span className="adm-nivel__num">{p.stockActual}</span>
+                        </div>
+                      </td>
+                      <td data-label="Estado"><span className={`adm-badge adm-badge--${nivel.badge}`}>{nivel.label}</span></td>
+                      <td className="adm-tabla__der adm-tabla__celda--ancha">
+                        <div className="adm-tabla__acciones">
+                          <button type="button" onClick={() => onEditar(p.id)} className="adm-btn adm-btn--chico">Editar</button>
+                          <button type="button" onClick={() => handleEliminar(p.id)} className="adm-btn adm-btn--chico adm-btn--peligro">Eliminar</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <p className="adm-paginacion">
+        Mostrando {filtrados.length} de {productos.length} productos
+      </p>
     </div>
     )}
     </EstadoNegocio>
