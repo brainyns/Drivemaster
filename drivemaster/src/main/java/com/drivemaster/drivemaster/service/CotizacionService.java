@@ -70,6 +70,7 @@ public class CotizacionService {
     private final ParametrosMarketplace parametros;
     private final AvisosSolicitudServicio avisos;
     private final LiquidacionService liquidacion;
+    private final PredictorCotizacionService predictor;
 
     public CotizacionService(CotizacionRepository cotizacionRepository,
                              OrdenServicioRepository ordenRepository,
@@ -82,8 +83,10 @@ public class CotizacionService {
                              BuscadorRepuestosService buscador,
                              ParametrosMarketplace parametros,
                              AvisosSolicitudServicio avisos,
-                             LiquidacionService liquidacion) {
+                             LiquidacionService liquidacion,
+                             PredictorCotizacionService predictor) {
         this.liquidacion = liquidacion;
+        this.predictor = predictor;
         this.cotizacionRepository = cotizacionRepository;
         this.ordenRepository = ordenRepository;
         this.mongoTemplate = mongoTemplate;
@@ -99,11 +102,48 @@ public class CotizacionService {
 
     // ─── Taller ──────────────────────────────────────────────────────────────
 
-    /** Calcula la cotización sin guardarla (para que el taller revise los totales). */
+    /** Calcula la cotización sin guardarla (para que el taller revise los totales) y genera predicción de aprobación con ML. */
     public CotizacionDTO previsualizar(String correoTaller, String ordenId, CrearCotizacionRequest r) {
         Taller taller = tallerOperativo(correoTaller);
         OrdenServicio orden = ordenCotizable(taller, ordenId);
-        return CotizacionDTO.completa(armar(taller, orden, r));
+        Cotizacion cotizacion = armar(taller, orden, r);
+        CotizacionDTO dto = CotizacionDTO.completa(cotizacion);
+        dto.setPrediccionAprobacion(calcularPrediccion(taller, orden, cotizacion));
+        return dto;
+    }
+
+    private com.drivemaster.drivemaster.dto.PrediccionAprobacionDTO calcularPrediccion(Taller taller, OrdenServicio orden, Cotizacion cot) {
+        try {
+            Vehiculo vehiculo = orden.getVehiculoId() != null ? vehiculoService.obtenerEntidad(orden.getVehiculoId()) : null;
+
+            java.util.Map<String, Object> p = new java.util.HashMap<>();
+            p.put("monto_repuestos", cot.getSubtotalRepuestos() != null ? cot.getSubtotalRepuestos() : 0.0);
+            p.put("monto_mano_obra", cot.getSubtotalManoObra() != null ? cot.getSubtotalManoObra() : 0.0);
+            p.put("total_con_iva", cot.getTotal() != null ? cot.getTotal() : 0.0);
+
+            long cantRepuestos = cot.getItems() != null ? cot.getItems().stream().filter(i -> CotizacionItem.REPUESTO.equals(i.getTipo())).count() : 0;
+            long numTiendas = cot.getItems() != null ? cot.getItems().stream().filter(i -> CotizacionItem.REPUESTO.equals(i.getTipo()) && i.getTiendaId() != null).map(CotizacionItem::getTiendaId).distinct().count() : 0;
+
+            p.put("cantidad_repuestos", cantRepuestos);
+            p.put("num_tiendas", numTiendas);
+            p.put("tipo_servicio", orden.getProductoNombre() != null ? orden.getProductoNombre() : "MANTENIMIENTO_PREVENTIVO");
+            p.put("marca_vehiculo", vehiculo != null && vehiculo.getMarca() != null ? vehiculo.getMarca() : "Chevrolet");
+            p.put("anio_vehiculo", vehiculo != null && vehiculo.getAnio() != null ? vehiculo.getAnio() : 2018);
+            p.put("distancia_km", 5.0); // distancia estimada
+
+            // Tiempo de respuesta: horas desde la creación de la orden hasta hoy
+            double horas = 2.0;
+            if (orden.getFechaCreacion() != null) {
+                horas = Math.max(0.5, java.time.Duration.between(orden.getFechaCreacion(), LocalDateTime.now()).toMinutes() / 60.0);
+            }
+            p.put("tiempo_respuesta_horas", Math.round(horas * 10.0) / 10.0);
+            p.put("calificacion_taller", taller.getRating() != null ? taller.getRating() : 4.6);
+
+            return predictor.predecir(p);
+        } catch (Exception e) {
+            log.warn("No se pudo calcular predicción de cotización: {}", e.getMessage());
+            return null;
+        }
     }
 
     /** Emite la cotización: la guarda, pasa la orden a COTIZADA y envía el correo al cliente. */
