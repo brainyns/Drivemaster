@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.util;
 
+import com.drivemaster.drivemaster.config.BrandConfig;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
@@ -13,7 +14,9 @@ import com.lowagie.text.pdf.PdfWriter;
 
 public class PdfProveedorBuilder {
 
-    private static final Color ORANGE    = new Color(232, 69, 10);
+    // Color principal de la marca (franjas y bordes) y su variante oscura para texto: ver BrandConfig
+    private static final Color ORANGE    = BrandConfig.colorPrimarioAwt();
+    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioTextoAwt();
     private static final Color BG_PAGE   = new Color(243, 244, 246);
     private static final Color BG_WHITE  = new Color(255, 255, 255);
     private static final Color BG_STRIPE = new Color(249, 250, 251);
@@ -52,7 +55,7 @@ public class PdfProveedorBuilder {
             cb.setColorFill(TEXT_DARK);
             cb.setTextMatrix(PAD, pageH - headerH + 38);
             cb.showText("Drive");
-            cb.setColorFill(ORANGE);
+            cb.setColorFill(ORANGE_TEXT);
             cb.showText("Master");
             cb.endText();
 
@@ -65,7 +68,7 @@ public class PdfProveedorBuilder {
 
             String title = "REPORTE DE PROVEEDORES";
             float tw = bfBold.getWidthPoint(title, 10);
-            cb.beginText(); cb.setFontAndSize(bfBold, 10); cb.setColorFill(ORANGE);
+            cb.beginText(); cb.setFontAndSize(bfBold, 10); cb.setColorFill(ORANGE_TEXT);
             cb.setTextMatrix(PW - PAD - tw, pageH - headerH + 42); cb.showText(title); cb.endText();
 
             String count = proveedores.size() + " registros";

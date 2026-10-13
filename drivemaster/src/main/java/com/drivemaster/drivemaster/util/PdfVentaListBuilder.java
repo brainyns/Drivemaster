@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.util;
 
+import com.drivemaster.drivemaster.config.BrandConfig;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.text.NumberFormat;
@@ -15,7 +16,9 @@ import com.lowagie.text.pdf.PdfWriter;
 
 public class PdfVentaListBuilder {
 
-    private static final Color ORANGE    = new Color(232, 69, 10);
+    // Color principal de la marca (franjas y bordes) y su variante oscura para texto: ver BrandConfig
+    private static final Color ORANGE    = BrandConfig.colorPrimarioAwt();
+    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioTextoAwt();
     private static final Color BG_PAGE   = new Color(243, 244, 246);
     private static final Color BG_WHITE  = new Color(255, 255, 255);
     private static final Color BG_STRIPE = new Color(249, 250, 251);
@@ -54,14 +57,14 @@ public class PdfVentaListBuilder {
 
             cb.beginText(); cb.setFontAndSize(bfBold, 22); cb.setColorFill(TEXT_DARK);
             cb.setTextMatrix(PAD, pageH - headerH + 38); cb.showText("Drive");
-            cb.setColorFill(ORANGE); cb.showText("Master"); cb.endText();
+            cb.setColorFill(ORANGE_TEXT); cb.showText("Master"); cb.endText();
 
             cb.beginText(); cb.setFontAndSize(bf, 7); cb.setColorFill(TEXT_MUTED);
             cb.setTextMatrix(PAD, pageH - headerH + 22); cb.showText("VENTAS"); cb.endText();
 
             String title = "REPORTE DE VENTAS";
             float tw = bfBold.getWidthPoint(title, 10);
-            cb.beginText(); cb.setFontAndSize(bfBold, 10); cb.setColorFill(ORANGE);
+            cb.beginText(); cb.setFontAndSize(bfBold, 10); cb.setColorFill(ORANGE_TEXT);
             cb.setTextMatrix(PW - PAD - tw, pageH - headerH + 42); cb.showText(title); cb.endText();
 
             String count = ventas.size() + " registros";
@@ -100,7 +103,7 @@ public class PdfVentaListBuilder {
                 drawText(cb, bf, 7, fecha, x + 2, rowY - 14, TEXT_BODY); x += colW[2];
                 drawText(cb, bf, 7, metodo, x + 2, rowY - 14, TEXT_BODY); x += colW[3];
                 drawText(cb, bf, 7, safe(v.getEstado()), x + 2, rowY - 14, TEXT_BODY); x += colW[4];
-                drawTextRight(cb, bfBold, 8, fmt.format(v.getTotal() != null ? v.getTotal() : 0), x + colW[5] - 2, rowY - 14, ORANGE);
+                drawTextRight(cb, bfBold, 8, fmt.format(v.getTotal() != null ? v.getTotal() : 0), x + colW[5] - 2, rowY - 14, ORANGE_TEXT);
                 rowY -= rowH;
                 odd = !odd;
             }
@@ -109,7 +112,7 @@ public class PdfVentaListBuilder {
             double totalGeneral = ventas.stream().mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0).sum();
             String totalStr = "TOTAL GENERAL: " + fmt.format(totalGeneral);
             float totW = bfBold.getWidthPoint(totalStr, 9);
-            cb.beginText(); cb.setFontAndSize(bfBold, 9); cb.setColorFill(ORANGE);
+            cb.beginText(); cb.setFontAndSize(bfBold, 9); cb.setColorFill(ORANGE_TEXT);
             cb.setTextMatrix(PW - PAD - totW, rowY - 16); cb.showText(totalStr); cb.endText();
 
             float footY = rowY - gap - 12;

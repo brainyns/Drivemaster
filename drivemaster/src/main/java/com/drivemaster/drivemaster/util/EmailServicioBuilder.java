@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.util;
 
+import com.drivemaster.drivemaster.config.BrandConfig;
 import com.drivemaster.drivemaster.model.Cotizacion;
 import com.drivemaster.drivemaster.model.CotizacionItem;
 import com.drivemaster.drivemaster.model.PedidoTienda;
@@ -89,7 +90,7 @@ public final class EmailServicioBuilder {
             filas.append("<tr><td style=\"padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;\">")
                     .append(cantidad).append(e(i.getDescripcion()))
                     .append("<br/><span style=\"color:#9ca3af;font-size:12px;\">").append(detalle).append("</span></td>")
-                    .append("<td align=\"right\" style=\"padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#0C2240;white-space:nowrap;\">")
+                    .append("<td align=\"right\" style=\"padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;white-space:nowrap;\">")
                     .append(moneda(i.getSubtotal())).append("</td></tr>");
         }
         String totales = linea("Subtotal", c.getSubtotal())
@@ -97,9 +98,7 @@ public final class EmailServicioBuilder {
                 + linea("Total", c.getTotal())
                 + (c.getAnticipoDiagnostico() != null && c.getAnticipoDiagnostico() > 0
                     ? linea("Diagnóstico ya pagado", -c.getAnticipoDiagnostico()) : "")
-                + "<tr><td style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">Total a pagar</td>"
-                + "<td align=\"right\" style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">"
-                + moneda(c.getTotalAPagar()) + "</td></tr>";
+                + filaTotal("Total a pagar", moneda(c.getTotalAPagar()));
 
         String extras = (c.getTiempoEstimadoHoras() != null ? "Tiempo estimado del trabajo: " + c.getTiempoEstimadoHoras() + " h<br/>" : "")
                 + (c.getDiasEntregaRepuestos() != null ? "Entrega de repuestos por encargo: hasta " + c.getDiasEntregaRepuestos() + " días<br/>" : "")
@@ -114,9 +113,9 @@ public final class EmailServicioBuilder {
                 + totales + "</table>"
                 + recuadro(extras)
                 + "<p style=\"margin:20px 0 8px;\">"
-                + boton("Revisar y aprobar", enlaceBase + "&accion=aprobar", "#E8450A")
-                + boton("Pedir cambios", enlaceBase + "&accion=cambios", "#18487A")
-                + boton("Rechazar", enlaceBase + "&accion=rechazar", "#6b7280")
+                + PlantillaCorreo.boton("Revisar y aprobar", enlaceBase + "&accion=aprobar")
+                + PlantillaCorreo.botonContorno("Pedir cambios", enlaceBase + "&accion=cambios")
+                + PlantillaCorreo.botonContorno("Rechazar", enlaceBase + "&accion=rechazar")
                 + "</p>"
                 + parrafo("<span style=\"font-size:12px;color:#9ca3af;\">El enlace es personal y sirve una sola vez. "
                         + "Para pagar te pediremos iniciar sesión.</span>"));
@@ -136,9 +135,8 @@ public final class EmailServicioBuilder {
                 + parrafo("Recibimos tu pago de <strong>" + e(concepto) + "</strong> para tu <strong>" + e(vehiculo) + "</strong>.")
                 + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 16px;\">"
                 + detalle
-                + "<tr><td style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">Total pagado</td>"
-                + "<td align=\"right\" style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">"
-                + moneda(monto) + "</td></tr></table>"
+                + filaTotal("Total pagado", moneda(monto))
+                + "</table>"
                 + recuadro("Referencia: <strong>" + e(referencia) + "</strong><br/>"
                         + (transaccion != null ? "Transacción Wompi: " + e(transaccion) + "<br/>" : "")
                         + "Fecha: " + e(formatoFecha(fecha)))
@@ -215,7 +213,7 @@ public final class EmailServicioBuilder {
                                              String referencia, String transaccion, LocalDateTime fecha) {
         StringBuilder detalle = new StringBuilder();
         for (PedidoTienda p : pedidos) {
-            detalle.append("<p style=\"margin:14px 0 4px;font-size:14px;font-weight:700;color:#0C2240;\">")
+            detalle.append("<p style=\"margin:14px 0 4px;font-size:14px;font-weight:700;color:#111827;\">")
                     .append(e(p.getTiendaNombre())).append(" · ").append(moneda(p.getTotal())).append("</p>");
             if (p.getItems() != null) {
                 for (CotizacionItem i : p.getItems()) {
@@ -243,9 +241,8 @@ public final class EmailServicioBuilder {
                 + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:8px 0 16px;\">"
                 + linea("Repuestos", compra.getSubtotal()) + linea("IVA", compra.getIva())
                 + linea("Envío", compra.getCostoEnvio())
-                + "<tr><td style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">Total pagado</td>"
-                + "<td align=\"right\" style=\"padding:10px 0 0;font-size:15px;font-weight:700;color:#0C2240;\">"
-                + moneda(compra.getTotal()) + "</td></tr></table>"
+                + filaTotal("Total pagado", moneda(compra.getTotal()))
+                + "</table>"
                 + recuadro("Referencia: <strong>" + e(referencia) + "</strong><br/>"
                         + (transaccion != null ? "Transacción Wompi: " + e(transaccion) + "<br/>" : "")
                         + "Fecha: " + e(formatoFecha(fecha)))
@@ -419,57 +416,7 @@ public final class EmailServicioBuilder {
     // ─── Plantilla ───────────────────────────────────────────────────────────
 
     private static String plantilla(String etiqueta, String titulo, String cuerpo) {
-        return """
-                <!DOCTYPE html>
-                <html lang="es">
-                <head>
-                  <meta charset="UTF-8"/>
-                  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-                  <title>%s</title>
-                </head>
-                <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;">
-                  <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 0;">
-                    <tr><td align="center">
-                      <table width="620" cellpadding="0" cellspacing="0"
-                             style="background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.07);">
-                        <tr>
-                          <td style="background:#0C2240;padding:28px 36px;border-bottom:3px solid #E8450A;">
-                            <table width="100%%" cellpadding="0" cellspacing="0"><tr>
-                              <td>
-                                <span style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
-                                  Drive<span style="color:#E8450A;">Master</span>
-                                </span><br/>
-                                <span style="font-size:11px;color:#9fb3c8;letter-spacing:2px;text-transform:uppercase;">
-                                  Talleres y autopartes
-                                </span>
-                              </td>
-                              <td align="right">
-                                <span style="font-size:11px;color:#E8450A;letter-spacing:2px;text-transform:uppercase;font-weight:700;">
-                                  %s
-                                </span>
-                              </td>
-                            </tr></table>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding:32px 36px;">
-                            <h1 style="margin:0 0 16px;font-size:20px;color:#0C2240;">%s</h1>
-                            %s
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding:18px 36px;background:#f9fafb;border-top:1px solid #e5e7eb;">
-                            <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.6;">
-                              Este es un mensaje automático de DriveMaster. Puedes ver el avance de tus servicios en tu panel.
-                            </p>
-                          </td>
-                        </tr>
-                      </table>
-                    </td></tr>
-                  </table>
-                </body>
-                </html>
-                """.formatted(e(etiqueta), e(etiqueta), e(titulo), cuerpo);
+        return PlantillaCorreo.documento(etiqueta, titulo, cuerpo, PlantillaCorreo.PIE_POR_DEFECTO);
     }
 
     private static String saludo(String nombre) {
@@ -477,12 +424,11 @@ public final class EmailServicioBuilder {
     }
 
     private static String parrafo(String html) {
-        return "<p style=\"margin:0 0 12px;font-size:14px;line-height:1.6;color:#374151;\">" + html + "</p>";
+        return PlantillaCorreo.parrafo(html);
     }
 
     private static String recuadro(String html) {
-        return "<div style=\"margin:0 0 16px;padding:14px 16px;background:#f3f6fa;border-left:4px solid #18487A;"
-                + "border-radius:4px;font-size:14px;line-height:1.6;color:#0C2240;\">" + html + "</div>";
+        return PlantillaCorreo.recuadro(html);
     }
 
     private static String linea(String concepto, Double valor) {
@@ -490,10 +436,12 @@ public final class EmailServicioBuilder {
                 + "<td align=\"right\" style=\"padding:4px 0;font-size:13px;color:#374151;\">" + moneda(valor) + "</td></tr>";
     }
 
-    private static String boton(String texto, String url, String color) {
-        return "<a href=\"" + HtmlUtils.htmlEscape(url) + "\" style=\"display:inline-block;margin:0 8px 8px 0;padding:11px 18px;"
-                + "background:" + color + ";color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:600;\">"
-                + e(texto) + "</a>";
+    /** Fila del total: línea del color principal encima y el monto en naranja de texto. */
+    private static String filaTotal(String concepto, String monto) {
+        String borde = "border-top:2px solid " + BrandConfig.colorPrimario() + ";";
+        return "<tr><td style=\"padding:10px 0 0;" + borde + "font-size:15px;font-weight:700;color:#111827;\">" + e(concepto) + "</td>"
+                + "<td align=\"right\" style=\"padding:10px 0 0;" + borde + "font-size:15px;font-weight:700;color:"
+                + BrandConfig.colorPrimarioTexto() + ";\">" + monto + "</td></tr>";
     }
 
     private static String formatoPct(Double pct) {

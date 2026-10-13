@@ -401,6 +401,15 @@ function App() {
     />
   );
 
+  // Vistas de cliente sin cabecera propia: llevan la del marketplace (con el logo). El header
+  // necesita el scope .dm-page para sus estilos; se aplica solo a él para no cambiar la vista.
+  const conCabecera = (vista) => (
+    <>
+      <div className="dm-page dm-page--solo-cabecera">{cabeceraMarketplace(null)}</div>
+      {vista}
+    </>
+  );
+
   const renderPagina = () => {
     // Ficha completa y carrito del catálogo: públicos
     if (pagina === "producto-marketplace") return (
@@ -522,9 +531,9 @@ function App() {
       );
     }
 
-    if (pagina === "mis-solicitudes") return <MisSolicitudes onVolver={() => setPagina("catalogo")} />;
+    if (pagina === "mis-solicitudes") return conCabecera(<MisSolicitudes onVolver={() => setPagina("catalogo")} />);
 
-    if (pagina === "pago-resultado") return (
+    if (pagina === "pago-resultado") return conCabecera(
       <PagoResultado
         onPagoExitoso={() => setSolicitudItems([])}
         onIrSolicitudes={() => setPagina("mis-solicitudes")}
@@ -549,12 +558,12 @@ function App() {
 
     if (pagina === "mis-pedidos") {
       if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      return <MisPedidos onVolver={() => setPagina("catalogo")} />;
+      return conCabecera(<MisPedidos onVolver={() => setPagina("catalogo")} />);
     }
 
     if (pagina === "mis-vehiculos") {
       if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      return (
+      return conCabecera(
         <MisVehiculos
           onVolver={() => setPagina("catalogo")}
           onVerServicio={(id) => irA("servicio-vehiculo", id)}
@@ -564,7 +573,7 @@ function App() {
 
     if (pagina === "servicio-vehiculo") {
       if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      return (
+      return conCabecera(
         <VehiculoServicio
           vehiculoId={idSeleccionado}
           onVolver={() => setPagina("mis-vehiculos")}
@@ -579,11 +588,10 @@ function App() {
       if (user.rol !== "CLIENTE") return (
         <div style={{ padding: "40px" }}>Esta sección es para clientes. Ingresa con una cuenta de cliente para solicitar un diagnóstico.</div>
       );
-      if (pagina === "mis-servicios") return (
+      if (pagina === "mis-servicios") return conCabecera(
         <MisServicios
           key={idSeleccionado || "mis-servicios"}
           solicitudInicial={idSeleccionado}
-          onAbrirAviso={irA}
           onVolver={() => { setVieneDeCotizacion(false); setPagina("catalogo"); }}
           onSolicitar={() => irA("solicitar-diagnostico")}
           avisoCotizacion={vieneDeCotizacion ? user.correo : null}
@@ -591,7 +599,7 @@ function App() {
           onIrHistorial={() => setPagina("mis-pedidos")}
         />
       );
-      return (
+      return conCabecera(
         <SolicitarDiagnostico
           key={idSeleccionado || "nueva"}
           vehiculoIdInicial={idSeleccionado}

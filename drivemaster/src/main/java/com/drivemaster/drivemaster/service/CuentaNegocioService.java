@@ -6,6 +6,7 @@ import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.repository.TiendaRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
+import com.drivemaster.drivemaster.util.PlantillaCorreo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -144,8 +145,9 @@ public class CuentaNegocioService {
                           + " Ya puedes iniciar sesión y empezar a operar.</p>"
                         : "<p>Revisamos la solicitud de <strong>" + nombre + "</strong> y por ahora no fue aprobada.</p>"
                           + "<p><strong>Motivo:</strong> " + HtmlUtils.htmlEscape(motivo != null ? motivo : "—") + "</p>";
-                String html = "<div style=\"font-family:Arial,sans-serif;color:#0C2240;max-width:560px\">"
-                        + "<h2 style=\"color:#18487A\">DriveMaster</h2>" + cuerpo + "</div>";
+                String html = PlantillaCorreo.documento("Registro de negocio",
+                        aprobado ? "Tu cuenta fue aprobada" : "Resultado de tu registro", cuerpo,
+                        "Este es un mensaje automático de DriveMaster.");
                 emailsService.enviarEmail(usuario.getCorreo(),
                         aprobado ? "Tu cuenta en DriveMaster fue aprobada" : "Resultado de tu registro en DriveMaster",
                         html);

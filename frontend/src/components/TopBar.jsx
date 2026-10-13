@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Logo from "./Logo";
 import NotificationDropdown from "./NotificationDropdown";
 import useNoLeidas from "../hooks/useNoLeidas";
 import { tieneCampanita, textoContador } from "../services/notificacionesUtil";
@@ -184,8 +185,10 @@ function TopBar({
             </svg>
           </button>
         )}
-        <span className="tb-brand">DriveMaster</span>
-        <span className="tb-divider">|</span>
+        {/* En escritorio el logo ya está en el sidebar: aquí solo se ve en móvil */}
+        <span className="tb-logo">
+          <Logo size="sm" onClick={onNavigate ? () => onNavigate("catalogo") : undefined} />
+        </span>
         <span className="tb-breadcrumb">{titulo}</span>
       </div>
 

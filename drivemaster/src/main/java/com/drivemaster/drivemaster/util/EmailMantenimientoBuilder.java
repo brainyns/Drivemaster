@@ -23,16 +23,11 @@ public class EmailMantenimientoBuilder {
         return v.getMarca() + " " + v.getModelo() + (v.getAnio() != null ? " " + v.getAnio() : "");
     }
 
-    private static String envolver(String titulo, String cuerpo) {
-        return "<div style=\"font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;"
-                + "background:#0d1117;color:#e6edf3;padding:32px;border-radius:12px\">"
-                + "<h1 style=\"color:#f97316;margin:0 0 8px;font-size:22px\">DriveMaster</h1>"
-                + "<h2 style=\"margin:0 0 20px;font-size:19px\">" + titulo + "</h2>"
-                + cuerpo
-                + "<p style=\"color:#8b949e;font-size:12px;margin-top:28px\">"
-                + "Este es un mensaje automático de DriveMaster. Si no deseas recibir recordatorios "
-                + "de mantenimiento, puedes desactivarlos en el perfil de tu vehículo.</p>"
-                + "</div>";
+    private static final String PIE = "Este es un mensaje automático de DriveMaster. Si no deseas recibir recordatorios "
+            + "de mantenimiento, puedes desactivarlos en el perfil de tu vehículo.";
+
+    private static String envolver(String etiqueta, String titulo, String cuerpo) {
+        return PlantillaCorreo.documento(etiqueta, titulo, cuerpo, PIE);
     }
 
     /** Aviso de que el vehículo se acerca o superó el intervalo de mantenimiento. */
@@ -60,7 +55,7 @@ public class EmailMantenimientoBuilder {
                 + "<p>Un mantenimiento al día evita averías-costosas. Agenda tu cita desde la "
                 + "sección de Mis Vehículos.</p>";
 
-        return envolver(titulo, cuerpo);
+        return envolver("Mantenimiento", titulo, cuerpo);
     }
 
     /** Aviso de la fecha y hora en que el vehículo ingresará al taller. */
@@ -79,7 +74,7 @@ public class EmailMantenimientoBuilder {
                 + "<p>Te recomendamos llegar unos minutos antes. Si necesitas reprogramar, "
                 + "responde a este correo o escríbenos por WhatsApp.</p>";
 
-        return envolver(titulo, cuerpo);
+        return envolver("Cita en el taller", titulo, cuerpo);
     }
 
     /** Aviso de que el mantenimiento quedó registrado al finalizar el servicio. */
@@ -100,13 +95,13 @@ public class EmailMantenimientoBuilder {
                 + "</table>"
                 + "<p>Te avisaremos de nuevo cuando se acerque el momento.</p>";
 
-        return envolver(titulo, cuerpo);
+        return envolver("Mantenimiento", titulo, cuerpo);
     }
 
     private static String fila(String etiqueta, String valor) {
         return "<tr>"
-                + "<td style=\"padding:6px 18px 6px 0;color:#8b949e\">" + etiqueta + "</td>"
-                + "<td style=\"padding:6px 0\">" + valor + "</td>"
+                + "<td style=\"padding:6px 18px 6px 0;color:#6b7280\">" + etiqueta + "</td>"
+                + "<td style=\"padding:6px 0;color:#111827\">" + valor + "</td>"
                 + "</tr>";
     }
 
@@ -124,7 +119,7 @@ public class EmailMantenimientoBuilder {
                 + fila("Inicio del servicio", fecha(LocalDateTime.now(), FECHA_HORA))
                 + "</table>"
                 + "<p>Te avisaremos apenas tu vehículo esté listo para retirarlo.</p>";
-        return envolver(titulo, cuerpo);
+        return envolver("Servicio", titulo, cuerpo);
     }
 
     /** Aviso de que el vehículo ya está listo para retirar. */
@@ -143,7 +138,7 @@ public class EmailMantenimientoBuilder {
                 + fila("Total", "$ " + String.format("%,.0f", orden.getTotal() != null ? orden.getTotal() : 0.0))
                 + "</table>"
                 + "<p>Gracias por confiar en DriveMaster.</p>";
-        return envolver(titulo, cuerpo);
+        return envolver("Servicio", titulo, cuerpo);
     }
 
     private EmailMantenimientoBuilder() {

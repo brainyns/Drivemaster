@@ -26,18 +26,9 @@
   flex-shrink: 0;
 }
 
-.tb-brand {
-  font-family: var(--ui-font);
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--primary-text);
-  letter-spacing: 0.02em;
-}
-
-.tb-divider {
-  color: var(--ui-muted);
-  font-size: 1rem;
-}
+/* Logo: oculto en escritorio (lo muestra el sidebar), visible en móvil */
+.tb-logo { display: none; }
+.tb-logo .dm-logo { color: var(--ui-text); }
 
 .tb-breadcrumb {
   font-size: 0.82rem;
@@ -495,6 +486,8 @@
     gap: 0.5rem;
   }
 
+  .tb-logo { display: inline-flex; }
+
   .tb-breadcrumb { display: none; }
 
   .tb-tabs { justify-content: flex-start; overflow-x: auto; }
@@ -518,6 +511,6 @@
 }
 
 @media (max-width: 480px) {
-  .tb-brand { font-size: 0.78rem; }
+  .tb-logo .dm-logo__nombre { display: none; }
   .tb-perfil-correo { max-width: 110px; }
 }

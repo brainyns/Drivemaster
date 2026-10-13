@@ -222,50 +222,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   margin-bottom: 28px;
 }
 
 .auth-aside .auth-brand {
   align-items: flex-start;
   margin-bottom: 0;
-}
-
-.auth-brand-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.auth-brand-icon {
-  width: 36px;
-  height: 36px;
-  background: var(--dm-orange);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.auth-brand-icon svg {
-  width: 19px;
-  height: 19px;
-  fill: none;
-  stroke: var(--dm-on-accent);
-}
-
-.auth-brand-name {
-  font-family: var(--dm-display);
-  font-size: 1.375rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--dm-text);
-  text-transform: uppercase;
-}
-
-.auth-aside .auth-brand-name {
-  color: #F5F5F3;
 }
 
 .auth-brand-sub {

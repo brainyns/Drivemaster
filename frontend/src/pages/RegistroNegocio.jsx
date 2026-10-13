@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { registrarTaller } from "../services/tallerService";
 import { registrarTienda } from "../services/tiendaService";
+import Logo from "../components/Logo";
 import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
 import "../css/Login.css";
 import "../css/registro-negocio.css";
@@ -150,6 +151,7 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
     return (
       <div className="auth-page">
         <div className="rn-card rn-card--exito">
+          <Logo onClick={onVolver} className="rn-logo" />
           <span className="rn-eyebrow">Registro enviado</span>
           <h1 className="rn-titulo">¡Listo, {registrado.nombre}!</h1>
           <p className="rn-texto">
@@ -170,6 +172,7 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
   return (
     <div className="auth-page">
       <div className="rn-card">
+        <Logo onClick={onVolver} className="rn-logo" />
         <span className="rn-eyebrow">DriveMaster para negocios</span>
         <h1 className="rn-titulo">Registra tu negocio</h1>
         <p className="rn-texto">

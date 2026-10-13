@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getToken } from "../services/authService";
 import { subscribeNotifications } from "../services/websocketService";
-import CampanitaCliente from "../components/CampanitaCliente";
 import { misSolicitudesServicio, cancelarSolicitudServicio } from "../services/solicitudServicioService";
 import { cotizacionesDeOrden, responderCotizacion } from "../services/cotizacionService";
 import { pagarDiagnostico, pagarCotizacion } from "../services/pagoMarketplaceService";
@@ -165,7 +164,7 @@ function ServiciosAnteriores({ ordenes, ahora, onIrHistorial }) {
 /** Solicitudes de diagnóstico del cliente y el avance de cada una. */
 export default function MisServicios({
   onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso, onIrHistorial,
-  solicitudInicial = null, onAbrirAviso,
+  solicitudInicial = null,
 }) {
   const token = getToken();
   const [solicitudes, setSolicitudes] = useState([]);
@@ -273,7 +272,6 @@ export default function MisServicios({
             <p className="sv-subtitle">{s.vehiculoPlaca ? `Placa ${s.vehiculoPlaca} · ` : ""}<EstadoServicio estado={s.estado} />{s.estado === "EN_INSTALACION" && s.subestado === "EN_PRUEBAS" ? " · En pruebas" : ""}</p>
           </div>
           <div className="ss-acciones">
-            <CampanitaCliente variante="panel" onAbrir={onAbrirAviso} />
             <button className="sv-volver" onClick={() => { setSeleccionadaId(null); setCancelando(false); }}>← Mis servicios</button>
           </div>
         </div>
@@ -435,7 +433,6 @@ export default function MisServicios({
           <p className="sv-subtitle">Tus solicitudes de diagnóstico y el avance de cada una.</p>
         </div>
         <div className="ss-acciones">
-          <CampanitaCliente variante="panel" onAbrir={onAbrirAviso} />
           {onSolicitar && <button className="sv-btn" onClick={onSolicitar}>Solicitar diagnóstico</button>}
           {onVolver && <button className="sv-volver" onClick={onVolver}>← Volver</button>}
         </div>

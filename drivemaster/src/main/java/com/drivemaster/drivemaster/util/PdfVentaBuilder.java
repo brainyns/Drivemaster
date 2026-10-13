@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.util;
 
+import com.drivemaster.drivemaster.config.BrandConfig;
 import com.drivemaster.drivemaster.model.DetalleVenta;
 import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Usuario;
@@ -19,7 +20,9 @@ import java.util.Locale;
 public class PdfVentaBuilder {
 
     // ── Paleta blanca / profesional ───────────────────────────────────────────
-    private static final Color ORANGE      = new Color(232, 69, 10);
+    // Color principal de la marca (franjas y bordes) y su variante oscura para texto: ver BrandConfig
+    private static final Color ORANGE      = BrandConfig.colorPrimarioAwt();
+    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioTextoAwt();
     private static final Color BG_PAGE     = new Color(243, 244, 246);  // gris claro de página
     private static final Color BG_WHITE    = new Color(255, 255, 255);  // fondo principal
     private static final Color BG_SURFACE  = new Color(249, 250, 251);  // filas alternas / paneles
@@ -94,27 +97,30 @@ public class PdfVentaBuilder {
             drawRect(cb, 0, pageH - 3, PW, 3, ORANGE);
             drawLine(cb, 0, headerY, PW, BORDER);
 
-            cb.beginText();
-            cb.setFontAndSize(bfBold, 22);
-            cb.setColorFill(TEXT_DARK);
-            cb.setTextMatrix(PAD, headerY + 38);
-            cb.showText("Drive");
-            cb.setColorFill(ORANGE);
-            cb.showText("Master");
-            cb.endText();
+            // Logo en la zona blanca (bajo la franja del color principal); sin logo, el nombre en texto
+            if (!PdfMarca.dibujarLogo(cb, PAD, headerY + (headerH - 3) / 2, 130f, 50f)) {
+                cb.beginText();
+                cb.setFontAndSize(bfBold, 22);
+                cb.setColorFill(TEXT_DARK);
+                cb.setTextMatrix(PAD, headerY + 38);
+                cb.showText("Drive");
+                cb.setColorFill(ORANGE_TEXT);
+                cb.showText("Master");
+                cb.endText();
 
-            cb.beginText();
-            cb.setFontAndSize(bf, 7);
-            cb.setColorFill(TEXT_LIGHT);
-            cb.setTextMatrix(PAD, headerY + 22);
-            cb.showText("REPUESTOS AUTOMOTRICES");
-            cb.endText();
+                cb.beginText();
+                cb.setFontAndSize(bf, 7);
+                cb.setColorFill(TEXT_LIGHT);
+                cb.setTextMatrix(PAD, headerY + 22);
+                cb.showText("REPUESTOS AUTOMOTRICES");
+                cb.endText();
+            }
 
             String labelFactura = "FACTURA DE VENTA";
             float lwLabel = bfBold.getWidthPoint(labelFactura, 8);
             cb.beginText();
             cb.setFontAndSize(bfBold, 8);
-            cb.setColorFill(ORANGE);
+            cb.setColorFill(ORANGE_TEXT);
             cb.setTextMatrix(PW - PAD - lwLabel, headerY + 52);
             cb.showText(labelFactura);
             cb.endText();
@@ -177,7 +183,7 @@ public class PdfVentaBuilder {
                     drawText(cb, bf,     9, safe(d.getNombre()),                      PAD,                          rowY - 15, TEXT_BODY);
                     drawTextCenter(cb, bf, 9, String.valueOf(d.getCantidad()),         PAD + wNom + wCant * 0.5f,   rowY - 15, TEXT_MUTED);
                     drawTextRight(cb, bf,  9, fmt.format(d.getPrecioUnitario()),       PAD + wNom + wCant + wPU,    rowY - 15, TEXT_MUTED);
-                    drawTextRight(cb, bfBold, 9, fmt.format(d.getSubtotal()),          PW - PAD,                   rowY - 15, ORANGE);
+                    drawTextRight(cb, bfBold, 9, fmt.format(d.getSubtotal()),          PW - PAD,                   rowY - 15, ORANGE_TEXT);
 
                     rowY -= rowH;
                     odd = !odd;
@@ -221,7 +227,7 @@ public class PdfVentaBuilder {
             totY2 -= 18;
             drawText(cb, bfBold, 12, "Total", panX + 12, totY2, TEXT_DARK);
             drawTextRight(cb, bfBold, 14, fmt.format(venta.getTotal()),
-                    panX + halfW - 10, totY2, ORANGE);
+                    panX + halfW - 10, totY2, ORANGE_TEXT);
 
             // ── FOOTER ──
             float footY = botY - botH - gap;

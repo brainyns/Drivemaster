@@ -155,14 +155,7 @@
   gap: var(--sp-lg);
 }
 
-.ct-publica__marca {
-  font-family: var(--ui-font);
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--text);
-}
-
-.ct-publica__marca span { color: var(--primary-text); }
+.ct-publica__marca .dm-logo { color: var(--text); }
 
 /* ── Pedidos de tienda y liquidaciones ── */
 .ct-tabla-wrap {

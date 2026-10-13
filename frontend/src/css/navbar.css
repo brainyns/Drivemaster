@@ -20,32 +20,7 @@
   gap: 30px;
 }
 
-/* ── Logotipo ───────────────────────────────────────────────────────────── */
-.dm-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  font-family: var(--dm-font);
-  font-size: 23px;
-  font-weight: 800;
-  letter-spacing: -1.15px;
-  white-space: nowrap;
-  color: var(--dm-text);
-  cursor: pointer;
-}
-
-.dm-logo--light {
-  color: #fff;
-}
-
-.dm-logo__master {
-  font-weight: 550;
-}
-
-.dm-logo__dot {
-  color: var(--dm-orange-text);
-}
+/* El logotipo tiene sus estilos en logo.css (componente Logo). */
 
 /* ── Nav ────────────────────────────────────────────────────────────────── */
 .dm-header__nav {
@@ -276,8 +251,6 @@
   .dm-header__nav > button:nth-child(2),
   .dm-header__nav > button:nth-child(3) { display: none; }
   .dm-header__actions { gap: 14px; }
-  .dm-logo { font-size: 21px; }
-  .dm-logo svg { width: 28px; height: 24px; }
   .dm-header__actions .dm-btn { font-size: 9px; padding: 10px 12px; gap: 8px; }
   .dm-header__login { font-size: 10px; }
 }
@@ -294,14 +267,15 @@
   .dm-header__nav { display: none; }
   .dm-header__actions { gap: 10px; }
   .dm-header__toggle { display: inline-flex; }
-  .dm-header__actions .dm-btn--dark,
-  .dm-header__cta { min-height: 35px; padding: 8px 10px; font-size: 9px; gap: 8px; }
-  .dm-header__cta svg { width: 13px; }
+  .dm-header__actions .dm-btn--dark { min-height: 35px; padding: 8px 10px; font-size: 9px; gap: 8px; }
+  /* No cabe junto al logo y los íconos: "Solicitar diagnóstico" sigue en el menú móvil */
+  .dm-header__actions .dm-header__cta { display: none; }
   .dm-header__user-btn span { display: none; }
   .dm-header__user-btn { padding: 7px; }
   .dm-mobile-nav { inset-block-start: 68px; }
 }
 
-@media (max-width: 380px) {
-  .dm-header__cta { display: none; }
+/* Con sesión hay más íconos (campanita y menú de usuario): en pantallas angostas queda solo la "D" */
+@media (max-width: 440px) {
+  .dm-header .dm-logo__nombre { display: none; }
 }

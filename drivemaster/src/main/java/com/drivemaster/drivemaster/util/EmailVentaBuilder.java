@@ -4,6 +4,7 @@ import java.text.NumberFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+import com.drivemaster.drivemaster.config.BrandConfig;
 import com.drivemaster.drivemaster.model.DetalleVenta;
 import com.drivemaster.drivemaster.model.Pago;
 import com.drivemaster.drivemaster.model.Usuario;
@@ -86,26 +87,7 @@ public class EmailVentaBuilder {
                              style="background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.07);">
 
                         <!-- ── HEADER ── -->
-                        <tr>
-                          <td style="background:#ffffff;padding:28px 36px;border-bottom:3px solid #E8450A;">
-                            <table width="100%%" cellpadding="0" cellspacing="0"><tr>
-                              <td>
-                                <span style="font-size:26px;font-weight:800;color:#111827;letter-spacing:-0.5px;">
-                                  Drive<span style="color:#E8450A;">Master</span>
-                                </span><br/>
-                                <span style="font-size:11px;color:#9ca3af;letter-spacing:2px;text-transform:uppercase;">
-                                  Repuestos Automotrices
-                                </span>
-                              </td>
-                              <td align="right">
-                                <span style="font-size:11px;color:#E8450A;letter-spacing:2px;text-transform:uppercase;font-weight:700;">
-                                  Factura de Venta
-                                </span><br/>
-                                <span style="font-size:20px;font-weight:700;color:#111827;">#%s</span>
-                              </td>
-                            </tr></table>
-                          </td>
-                        </tr>
+                        %s
 
                         <!-- ── META CLIENTE / FECHA ── -->
                         <tr>
@@ -163,7 +145,7 @@ public class EmailVentaBuilder {
                               <!-- Resumen totales -->
                               <td style="width:50%%;vertical-align:top;">
                                 <table width="100%%" cellpadding="0" cellspacing="0"
-                                       style="background:#f9fafb;border-radius:6px;padding:16px;border:1px solid #e5e7eb;border-left:3px solid #E8450A;">
+                                       style="background:#f9fafb;border-radius:6px;padding:16px;border:1px solid #e5e7eb;border-left:3px solid {{PRIMARIO}};">
                                   <tr>
                                     <td style="padding:4px 0;color:#6b7280;font-size:12px;">Subtotal</td>
                                     <td style="padding:4px 0;color:#374151;font-size:12px;text-align:right;">%s</td>
@@ -173,8 +155,8 @@ public class EmailVentaBuilder {
                                     <td style="padding:4px 0;color:#374151;font-size:12px;text-align:right;">%s</td>
                                   </tr>
                                   <tr>
-                                    <td style="padding:10px 0 4px;border-top:1px solid #e5e7eb;color:#111827;font-size:15px;font-weight:700;">Total</td>
-                                    <td style="padding:10px 0 4px;border-top:1px solid #e5e7eb;color:#E8450A;font-size:15px;font-weight:700;text-align:right;">%s</td>
+                                    <td style="padding:10px 0 4px;border-top:2px solid {{PRIMARIO}};color:#111827;font-size:15px;font-weight:700;">Total</td>
+                                    <td style="padding:10px 0 4px;border-top:2px solid {{PRIMARIO}};color:{{PRIMARIO_TEXTO}};font-size:15px;font-weight:700;text-align:right;">%s</td>
                                   </tr>
                                 </table>
                               </td>
@@ -201,11 +183,16 @@ public class EmailVentaBuilder {
 
                 </body>
                 </html>
-                """.formatted(
+                """
+                .replace("{{PRIMARIO}}", BrandConfig.colorPrimario())
+                .replace("{{PRIMARIO_TEXTO}}", BrandConfig.colorPrimarioTexto())
+                .formatted(
                 // <title>
                 idCorto,
-                // header #ID
-                idCorto,
+                // encabezado con logo y #ID
+                PlantillaCorreo.encabezado(PlantillaCorreo.etiquetaHtml("Factura de venta")
+                        + "<br/><span style=\"display:inline-block;margin-top:6px;font-size:20px;font-weight:700;color:#111827;\">#"
+                        + PlantillaCorreo.e(idCorto) + "</span>"),
                 // usuario nombre, correo, identificacion
                 usuario.getNombre(),
                 usuario.getCorreo(),

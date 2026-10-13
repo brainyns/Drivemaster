@@ -20,6 +20,11 @@
   border-top-color: var(--dm-green);
 }
 
+.rn-logo {
+  align-self: flex-start;
+  margin-bottom: 22px;
+}
+
 .rn-eyebrow {
   font-size: 10px;
   font-weight: 600;

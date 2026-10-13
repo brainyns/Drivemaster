@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { loginInterno } from "../services/authService";
+import Logo from "../components/Logo";
 import "../css/Login.css";
 
 export default function AdminLogin({ onLogin, onVolver }) {
@@ -26,16 +27,8 @@ export default function AdminLogin({ onLogin, onVolver }) {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <div className="auth-brand-row">
-            <div className="auth-brand-icon">
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <rect x="3" y="11" width="18" height="11" rx="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-            </div>
-            <span className="auth-brand-name">ACCESO INTERNO</span>
-          </div>
-          <span className="auth-brand-sub">Personal autorizado</span>
+          <Logo size="lg" onClick={onVolver} />
+          <span className="auth-brand-sub">Acceso interno · Personal autorizado</span>
         </div>
 
         <h2>Iniciar sesión</h2>

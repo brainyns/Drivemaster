@@ -1,4 +1,4 @@
-import Logo from "../public/Logo";
+import Logo from "../Logo";
 import Icon from "../public/Icon";
 import ThemeToggle from "../ThemeToggle";
 import MenuUsuario from "../public/MenuUsuario";

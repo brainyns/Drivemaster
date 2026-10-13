@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Logo from "./Logo";
+import Logo from "../Logo";
 import Icon from "./Icon";
 import ThemeToggle from "../ThemeToggle";
 import MenuUsuario from "./MenuUsuario";

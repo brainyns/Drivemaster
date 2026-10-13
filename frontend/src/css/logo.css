@@ -1,0 +1,69 @@
+/* ── Logo de DriveMaster (src/components/Logo.jsx) ────────────────────────
+   El archivo del logo (public/images/Drivemaster_logo.jpg, 1024×559) trae fondo
+   claro y mucho margen. La placa muestra solo la "D" (zona x 270–746, y 140–430
+   del original): la imagen va a altura fija con ancho automático y se desplaza
+   dentro de la placa, así nunca se deforma. El brillo lleva el gris del fondo a
+   blanco para que la placa se funda con el header claro. */
+
+.dm-logo {
+  --logo-h: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  font-family: var(--dm-font);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--dm-text);
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dm-logo:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.dm-logo--sm { --logo-h: 30px; font-size: 15px; letter-spacing: -0.5px; gap: 8px; }
+.dm-logo--md { --logo-h: 40px; font-size: 21px; }
+.dm-logo--lg { --logo-h: 56px; font-size: 26px; gap: 12px; }
+
+.dm-logo__placa {
+  position: relative;
+  display: block;
+  height: var(--logo-h);
+  width: calc(var(--logo-h) * 476 / 290);
+  overflow: hidden;
+  background: #fff;
+  border-radius: calc(var(--logo-h) * 0.18);
+  flex-shrink: 0;
+}
+
+/* Doble clase para ganarle a reglas genéricas como ".dm-page img { max-width: 100% }" */
+.dm-logo .dm-logo__img {
+  position: absolute;
+  top: calc(var(--logo-h) * -140 / 290);
+  left: calc(var(--logo-h) * -270 / 290);
+  height: calc(var(--logo-h) * 559 / 290);
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+  filter: brightness(1.05);
+}
+
+.dm-logo--light { color: #fff; }
+
+.dm-logo__master { font-weight: 550; }
+
+.dm-logo__dot { color: var(--dm-orange-text); }
+
+@media (max-width: 760px) {
+  .dm-logo--sm { --logo-h: 26px; font-size: 14px; }
+  .dm-logo--md { --logo-h: 34px; font-size: 18px; }
+  .dm-logo--lg { --logo-h: 46px; font-size: 22px; }
+}

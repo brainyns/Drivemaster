@@ -13,11 +13,7 @@
   gap: 40px;
 }
 
-.dm-footer .dm-logo {
-  font-size: 22px;
-  cursor: default;
-}
-.dm-footer .dm-logo svg { width: 28px; height: 23px; }
+.dm-footer .dm-logo { font-size: 22px; }
 
 .dm-footer__top > div > p {
   color: #9B9E9C;

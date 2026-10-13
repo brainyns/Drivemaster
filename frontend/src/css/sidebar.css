@@ -42,26 +42,11 @@
   flex-shrink: 0;
 }
 
-.sidebar-brand-icon {
-  width: 36px; height: 36px;
-  /* Detalle de marca: #0C2240, con un filo claro para que se lea también en tema oscuro */
-  background: var(--ui-brand);
-  color: #F5F5F3;
-  border-radius: var(--ui-r-lg);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1rem; flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(143, 179, 224, 0.28), var(--ui-sombra-1);
-}
-
-.sidebar-brand-name {
-  font-family: var(--ui-font);
-  font-size: 1rem; font-weight: 700;
-  color: var(--ui-text); letter-spacing: -0.01em; line-height: 1.1;
-}
-
-.sidebar-brand-sub {
-  font-size: 0.58rem; color: var(--ui-muted);
-  text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+/* Logo un punto más grande que "sm" para llenar el ancho del panel (220px) */
+.sidebar-brand .dm-logo {
+  --logo-h: 36px;
+  font-size: 17px;
+  color: var(--ui-text);
 }
 
 .sidebar-nav {

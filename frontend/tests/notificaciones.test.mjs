@@ -44,10 +44,12 @@ test("la conexión en vivo se abre una sola vez en App, no en cada barra o cabec
   }
 });
 
-test("la campanita del cliente está en la cabecera pública y en Mis servicios, solo para clientes", () => {
+test("la campanita del cliente está en la cabecera pública y en la del marketplace, solo para clientes", () => {
   assert.ok(navbar.includes("<CampanitaCliente") && navbar.includes("user?.rol === \"CLIENTE\" && <CampanitaCliente"), "Navbar");
   assert.ok(marketHeader.includes("esCliente && <CampanitaCliente"), "MarketHeader");
-  assert.ok(misServicios.includes("<CampanitaCliente"), "Mis servicios");
+  // Mis servicios no repite la campanita: la recibe del header del marketplace (conCabecera en App)
+  assert.ok(!misServicios.includes("<CampanitaCliente"), "Mis servicios sin campanita propia");
+  assert.ok(/conCabecera\(\s*<MisServicios/.test(app), "Mis servicios con cabecera");
   assert.ok(campanitaCliente.includes("rol === \"CLIENTE\"") && campanitaCliente.includes("if (!esCliente) return null"),
     "el componente no se muestra a otros roles");
 });

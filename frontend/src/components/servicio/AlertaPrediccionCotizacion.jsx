@@ -13,7 +13,6 @@ export default function AlertaPrediccionCotizacion({ prediccion }) {
     probabilidadAprobacion,
     probabilidadRechazo,
     nivelRiesgo,
-    prediccion: resultadoTexto,
     recomendaciones,
     origen
   } = prediccion;

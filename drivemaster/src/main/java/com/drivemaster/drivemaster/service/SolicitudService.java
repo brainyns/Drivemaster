@@ -22,11 +22,13 @@ import com.drivemaster.drivemaster.repository.SolicitudRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.repository.mysql.ParametroRepository;
 import com.drivemaster.drivemaster.util.EmailSolicitudBuilder;
+import com.drivemaster.drivemaster.util.PlantillaCorreo;
 
 @Service
 public class SolicitudService {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SolicitudService.class);
+    private static final String PIE_CORREO = "DriveMaster — Automotive Engine. © 2026 DriveMaster. Todos los derechos reservados.";
 
     private final SolicitudRepository solicitudRepository;
     private final UsuarioRepository usuarioRepository;
@@ -265,32 +267,12 @@ public class SolicitudService {
         SolicitudDTO dto = toDTO(solicitudRepository.save(solicitud));
 
         usuarioRepository.findById(solicitud.getClienteId()).ifPresent(usuario -> {
-            String html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"
-                    + "body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}"
-                    + ".container{max-width:600px;margin:20px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)}"
-                    + ".header{background:#e05a2b;padding:24px;text-align:center}"
-                    + ".header h1{color:#fff;margin:0;font-size:22px;letter-spacing:2px;text-transform:uppercase}"
-                    + ".body{padding:32px 24px;color:#333}"
-                    + ".body h2{color:#e05a2b;font-size:18px;margin:0 0 16px}"
-                    + ".body p{font-size:14px;line-height:1.6;color:#555;margin:0 0 12px}"
-                    + ".motivo{background:#fff5f5;border:1px solid #ffcaca;border-radius:6px;padding:16px;margin:16px 0;font-size:14px;color:#c00}"
-                    + ".footer{background:#fafafa;padding:20px 24px;text-align:center;border-top:1px solid #eee}"
-                    + ".footer p{font-size:12px;color:#999;margin:0}"
-                    + ".footer .brand{color:#e05a2b;font-weight:700;letter-spacing:1px}"
-                    + "</style></head><body>"
-                    + "<div class='container'>"
-                    + "<div class='header'><h1>DriveMaster</h1></div>"
-                    + "<div class='body'>"
-                    + "<h2>Actualización de tu pedido</h2>"
-                    + "<p>Hola <strong>" + usuario.getNombre() + "</strong>,</p>"
-                    + "<p>Lamentablemente tu pedido no pudo ser procesado correctamente por el siguiente motivo:</p>"
-                    + "<div class='motivo'>" + motivo + "</div>"
-                    + "<p>Si tienes dudas, contáctanos por WhatsApp al 573015335263.</p>"
-                    + "</div>"
-                    + "<div class='footer'>"
-                    + "<p class='brand'>DriveMaster — Automotive Engine</p>"
-                    + "<p>© 2026 DriveMaster. Todos los derechos reservados.</p>"
-                    + "</div></div></body></html>";
+            String html = PlantillaCorreo.documento("Pedido", "Actualización de tu pedido",
+                    PlantillaCorreo.parrafo("Hola <strong>" + PlantillaCorreo.e(usuario.getNombre()) + "</strong>,")
+                    + PlantillaCorreo.parrafo("Lamentablemente tu pedido no pudo ser procesado correctamente por el siguiente motivo:")
+                    + PlantillaCorreo.recuadro(PlantillaCorreo.e(motivo))
+                    + PlantillaCorreo.parrafo("Si tienes dudas, contáctanos por WhatsApp al 573015335263."),
+                    PIE_CORREO);
             enviarCorreo(usuario.getCorreo(),
                     "Actualización de tu pedido en DriveMaster", html);
         });
@@ -302,37 +284,15 @@ public class SolicitudService {
 
     private String construirHtmlLinkPago(Usuario usuario, double total, String urlPago) {
         String totalFmt = String.format("%,.0f", total);
-        return "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>"
-                + "body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}"
-                + ".container{max-width:600px;margin:20px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1)}"
-                + ".header{background:#e05a2b;padding:24px;text-align:center}"
-                + ".header h1{color:#fff;margin:0;font-size:22px;letter-spacing:2px;text-transform:uppercase}"
-                + ".body{padding:32px 24px;color:#333}"
-                + ".body h2{color:#e05a2b;font-size:18px;margin:0 0 16px}"
-                + ".body p{font-size:14px;line-height:1.6;color:#555;margin:0 0 12px}"
-                + ".total{background:#fff7f0;border:1px solid #f5d9c8;border-radius:6px;padding:16px;margin:16px 0;text-align:center;font-size:20px;color:#e05a2b;font-weight:700}"
-                + ".boton{display:block;width:100%;max-width:320px;margin:24px auto;text-align:center}"
-                + ".boton a{display:block;background:#e05a2b;color:#fff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 24px;border-radius:6px;letter-spacing:.5px}"
-                + ".nota{font-size:12px;color:#999;text-align:center;word-break:break-all}"
-                + ".footer{background:#fafafa;padding:20px 24px;text-align:center;border-top:1px solid #eee}"
-                + ".footer p{font-size:12px;color:#999;margin:0}"
-                + ".footer .brand{color:#e05a2b;font-weight:700;letter-spacing:1px}"
-                + "</style></head><body>"
-                + "<div class='container'>"
-                + "<div class='header'><h1>DriveMaster</h1></div>"
-                + "<div class='body'>"
-                + "<h2>Tu pedido fue aprobado</h2>"
-                + "<p>Hola <strong>" + usuario.getNombre() + "</strong>,</p>"
-                + "<p>Tu pedido ha sido aprobado. Para completar tu compra por un total de:</p>"
-                + "<div class='total'>$" + totalFmt + "</div>"
-                + "<p>Haz clic en el siguiente botón para realizar el pago de forma segura:</p>"
-                + "<div class='boton'><a href='" + urlPago + "'>Pagar ahora</a></div>"
-                + "<p class='nota'>Si el botón no funciona, copia y pega este enlace en tu navegador:<br/>" + urlPago + "</p>"
-                + "</div>"
-                + "<div class='footer'>"
-                + "<p class='brand'>DriveMaster — Automotive Engine</p>"
-                + "<p>© 2025 DriveMaster. Todos los derechos reservados.</p>"
-                + "</div></div></body></html>";
+        return PlantillaCorreo.documento("Pago pendiente", "Tu pedido fue aprobado",
+                PlantillaCorreo.parrafo("Hola <strong>" + PlantillaCorreo.e(usuario.getNombre()) + "</strong>,")
+                + PlantillaCorreo.parrafo("Tu pedido ha sido aprobado. Para completar tu compra por un total de:")
+                + PlantillaCorreo.montoDestacado("$" + totalFmt)
+                + PlantillaCorreo.parrafo("Haz clic en el siguiente botón para realizar el pago de forma segura:")
+                + "<p style=\"margin:20px 0;\">" + PlantillaCorreo.boton("Pagar ahora", urlPago) + "</p>"
+                + "<p style=\"margin:0;font-size:12px;color:#9ca3af;word-break:break-all;\">"
+                + "Si el botón no funciona, copia y pega este enlace en tu navegador:<br/>" + PlantillaCorreo.e(urlPago) + "</p>",
+                PIE_CORREO);
     }
 
     // ─── DTO ─────────────────────────────────────────────────

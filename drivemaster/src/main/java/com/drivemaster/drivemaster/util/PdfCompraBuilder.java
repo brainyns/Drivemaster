@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.util;
 
+import com.drivemaster.drivemaster.config.BrandConfig;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.text.NumberFormat;
@@ -16,7 +17,9 @@ import com.lowagie.text.pdf.PdfWriter;
 public class PdfCompraBuilder {
 
     // ── Paleta blanca / profesional ───────────────────────────────────────────
-    private static final Color ORANGE      = new Color(232, 69, 10);
+    // Color principal de la marca (franjas y bordes) y su variante oscura para texto: ver BrandConfig
+    private static final Color ORANGE      = BrandConfig.colorPrimarioAwt();
+    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioTextoAwt();
     private static final Color BG_PAGE     = new Color(243, 244, 246);  // fondo gris muy claro
     private static final Color BG_WHITE    = new Color(255, 255, 255);  // secciones principales
     private static final Color BG_SURFACE  = new Color(249, 250, 251);  // filas alternas / paneles
@@ -90,27 +93,30 @@ public class PdfCompraBuilder {
             drawRect(cb, 0, pageH - 3, PW, 3, ORANGE);
             drawLine(cb, 0, headerY, PW, BORDER);
 
-            cb.beginText();
-            cb.setFontAndSize(bfBold, 22);
-            cb.setColorFill(TEXT_DARK);
-            cb.setTextMatrix(PAD, headerY + 38);
-            cb.showText("Drive");
-            cb.setColorFill(ORANGE);
-            cb.showText("Master");
-            cb.endText();
+            // Logo en la zona blanca (bajo la franja del color principal); sin logo, el nombre en texto
+            if (!PdfMarca.dibujarLogo(cb, PAD, headerY + (headerH - 3) / 2, 130f, 50f)) {
+                cb.beginText();
+                cb.setFontAndSize(bfBold, 22);
+                cb.setColorFill(TEXT_DARK);
+                cb.setTextMatrix(PAD, headerY + 38);
+                cb.showText("Drive");
+                cb.setColorFill(ORANGE_TEXT);
+                cb.showText("Master");
+                cb.endText();
 
-            cb.beginText();
-            cb.setFontAndSize(bf, 7);
-            cb.setColorFill(TEXT_LIGHT);
-            cb.setTextMatrix(PAD, headerY + 22);
-            cb.showText("REPUESTOS AUTOMOTRICES");
-            cb.endText();
+                cb.beginText();
+                cb.setFontAndSize(bf, 7);
+                cb.setColorFill(TEXT_LIGHT);
+                cb.setTextMatrix(PAD, headerY + 22);
+                cb.showText("REPUESTOS AUTOMOTRICES");
+                cb.endText();
+            }
 
             String labelOI = "OFFICIAL INVOICE";
             float lwOI = bfBold.getWidthPoint(labelOI, 8);
             cb.beginText();
             cb.setFontAndSize(bfBold, 8);
-            cb.setColorFill(ORANGE);
+            cb.setColorFill(ORANGE_TEXT);
             cb.setTextMatrix(PW - PAD - lwOI, headerY + 52);
             cb.showText(labelOI);
             cb.endText();
@@ -131,7 +137,7 @@ public class PdfCompraBuilder {
             drawLine(cb, 0, secY - secH, PW, BORDER);
 
             drawSmallLabel(cb, bf, "SUPPLIER INFORMATION", PAD, secY - 14, TEXT_MUTED);
-            drawText(cb, bfBold, 11, safe(proveedorNombre), PAD, secY - 30, ORANGE);
+            drawText(cb, bfBold, 11, safe(proveedorNombre), PAD, secY - 30, ORANGE_TEXT);
             if (proveedorNit != null && !proveedorNit.isBlank())
                 drawText(cb, bf, 8, "NIT: " + proveedorNit, PAD, secY - 44, TEXT_MUTED);
             if (proveedorCorreo != null && !proveedorCorreo.isBlank())
@@ -184,7 +190,7 @@ public class PdfCompraBuilder {
                         PAD + wNom + wCant + wCost, rowY - 17, TEXT_MUTED);
                 drawTextRight(cb, bfBold, 9,
                         fmt.format(d.getSubtotal() != null ? d.getSubtotal() : 0),
-                        PW - PAD, rowY - 17, ORANGE);
+                        PW - PAD, rowY - 17, ORANGE_TEXT);
 
                 rowY -= rowH;
                 odd = !odd;
@@ -206,7 +212,7 @@ public class PdfCompraBuilder {
             drawText(cb, bfBold, 12, "TOTAL DUE", totX + 12, totY - 46, TEXT_DARK);
             drawTextRight(cb, bfBold, 13,
                     fmt.format(compra.getTotal() != null ? compra.getTotal() : subtotal),
-                    totX + totW - 10, totY - 46, ORANGE);
+                    totX + totW - 10, totY - 46, ORANGE_TEXT);
 
             // ── FOOTER ──
             float footY = totY - totH - gap;

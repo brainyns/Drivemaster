@@ -1,4 +1,4 @@
-import Logo from "./Logo";
+import Logo from "../Logo";
 import Icon from "./Icon";
 import "../../css/footer.css";
 
@@ -12,7 +12,7 @@ export default function Footer({
     <footer className="dm-footer">
       <div className="dm-container dm-footer__top">
         <div>
-          <Logo light as="div" />
+          <Logo light onClick={() => onIrInicio?.()} />
           <p>
             Diagnóstico, repuestos e instalación.
             <br />
