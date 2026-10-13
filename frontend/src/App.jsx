@@ -403,9 +403,9 @@ function App() {
 
   // Vistas de cliente sin cabecera propia: llevan la del marketplace (con el logo). El header
   // necesita el scope .dm-page para sus estilos; se aplica solo a él para no cambiar la vista.
-  const conCabecera = (vista) => (
+  const conCabecera = (vista, activo = null) => (
     <>
-      <div className="dm-page dm-page--solo-cabecera">{cabeceraMarketplace(null)}</div>
+      <div className="dm-page dm-page--solo-cabecera">{cabeceraMarketplace(activo)}</div>
       {vista}
     </>
   );
@@ -597,7 +597,8 @@ function App() {
           avisoCotizacion={vieneDeCotizacion ? user.correo : null}
           onCerrarAviso={() => setVieneDeCotizacion(false)}
           onIrHistorial={() => setPagina("mis-pedidos")}
-        />
+        />,
+        "servicios"
       );
       return conCabecera(
         <SolicitarDiagnostico
@@ -606,7 +607,8 @@ function App() {
           onVolver={() => setPagina("catalogo")}
           onVerServicios={() => irA("mis-servicios")}
           onIrVehiculos={() => irA("mis-vehiculos")}
-        />
+        />,
+        "diagnostico"
       );
     }
 

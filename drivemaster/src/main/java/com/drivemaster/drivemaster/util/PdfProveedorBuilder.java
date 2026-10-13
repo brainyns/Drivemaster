@@ -14,13 +14,13 @@ import com.lowagie.text.pdf.PdfWriter;
 
 public class PdfProveedorBuilder {
 
-    // Color principal de la marca (franjas y bordes) y su variante oscura para texto: ver BrandConfig
+    // Blanco y naranja: el color principal de la marca en franjas, títulos, totales y montos (ver BrandConfig)
     private static final Color ORANGE    = BrandConfig.colorPrimarioAwt();
-    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioTextoAwt();
+    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioAwt();
     private static final Color BG_PAGE   = new Color(243, 244, 246);
     private static final Color BG_WHITE  = new Color(255, 255, 255);
     private static final Color BG_STRIPE = new Color(249, 250, 251);
-    private static final Color TEXT_DARK = new Color(17, 24, 39);
+    private static final Color TEXT_STRONG = new Color(55,  65,  81);   // datos destacados: gris, sin negro
     private static final Color TEXT_BODY = new Color(55, 65, 81);
     private static final Color TEXT_MUTED= new Color(107, 114, 128);
     private static final Color BORDER    = new Color(229, 231, 235);
@@ -50,14 +50,7 @@ public class PdfProveedorBuilder {
             drawRect(cb, 0, pageH - 3, PW, 3, ORANGE);
             drawLine(cb, 0, pageH - headerH, PW, BORDER);
 
-            cb.beginText();
-            cb.setFontAndSize(bfBold, 22);
-            cb.setColorFill(TEXT_DARK);
-            cb.setTextMatrix(PAD, pageH - headerH + 38);
-            cb.showText("Drive");
-            cb.setColorFill(ORANGE_TEXT);
-            cb.showText("Master");
-            cb.endText();
+            PdfMarca.dibujarNombre(cb, bfBold, 22, PAD, pageH - headerH + 38);
 
             cb.beginText();
             cb.setFontAndSize(bf, 7);
@@ -98,7 +91,7 @@ public class PdfProveedorBuilder {
                 drawRect(cb, 0, rowY - rowH, PW, rowH, odd ? BG_WHITE : BG_STRIPE);
                 drawLine(cb, 0, rowY - rowH, PW, BORDER_ROW);
                 x = PAD;
-                drawText(cb, bfBold, 8, safe(p.getNombre()), x + 4, rowY - 14, TEXT_DARK); x += colW[0];
+                drawText(cb, bfBold, 8, safe(p.getNombre()), x + 4, rowY - 14, TEXT_STRONG); x += colW[0];
                 drawText(cb, bf, 8, safe(p.getNit()), x + 4, rowY - 14, TEXT_BODY); x += colW[1];
                 drawText(cb, bf, 8, safe(p.getTelefono()), x + 4, rowY - 14, TEXT_BODY); x += colW[2];
                 drawText(cb, bf, 8, safe(p.getCorreo()), x + 4, rowY - 14, TEXT_BODY);

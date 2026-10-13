@@ -1,14 +1,18 @@
 import "../css/logo.css";
 
-const LOGO_SRC = "/images/Drivemaster_logo.jpg";
+// Logo con fondo transparente. La variante "fondo-oscuro" tiene la carretera y la flecha en blanco
+// (en el original son negras y desaparecen sobre fondos oscuros).
+const LOGO_FONDO_CLARO = "/images/Drivemaster_logo.png";
+const LOGO_FONDO_OSCURO = "/images/Drivemaster_logo-fondo-oscuro.png";
 
 /**
- * Logo de DriveMaster: la imagen de la marca (recortada a la "D" sobre una placa blanca, porque
- * el archivo trae fondo claro y mucho margen) más el nombre. Siempre lleva al inicio.
+ * Logo de DriveMaster: la "D" (recortada del margen transparente del archivo) más el nombre.
+ * Muestra la variante del logo que se lee sobre el fondo del tema actual. Siempre lleva al inicio.
  *
  * - size: "sm" | "md" | "lg" (más pequeño en móvil).
- * - conNombre: muestra "DriveMaster" junto a la imagen.
- * - light: nombre en blanco, para fondos oscuros.
+ * - conNombre: muestra "DriveMaster." junto a la imagen.
+ * - light: para fondos que son oscuros en cualquier tema (footer, panel del login): nombre en
+ *   blanco y la variante del logo para fondo oscuro.
  * - onClick: navegación interna al inicio; sin él, el enlace recarga "/".
  */
 export default function Logo({ size = "md", conNombre = true, light = false, onClick, className = "" }) {
@@ -22,8 +26,11 @@ export default function Logo({ size = "md", conNombre = true, light = false, onC
 
   return (
     <a href="/" className={clases} onClick={irAlInicio} aria-label="DriveMaster, ir al inicio">
-      <span className="dm-logo__placa">
-        <img className="dm-logo__img" src={LOGO_SRC} alt="DriveMaster" width="1024" height="559" decoding="async" />
+      <span className="dm-logo__marca">
+        <img className="dm-logo__img dm-logo__img--fondo-oscuro" src={LOGO_FONDO_OSCURO} alt="DriveMaster"
+          width="320" height="175" decoding="async" />
+        <img className="dm-logo__img dm-logo__img--fondo-claro" src={LOGO_FONDO_CLARO} alt="DriveMaster"
+          width="320" height="175" decoding="async" />
       </span>
       {conNombre && (
         <span className="dm-logo__nombre" aria-hidden="true">

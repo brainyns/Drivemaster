@@ -203,6 +203,7 @@ export default function CatalogoPage({
         theme={theme}
         onToggleTheme={onToggleTheme}
         vehiculoActivo={vehiculo}
+        activo={vista}
       />
 
       <main className="dm-view-shell">

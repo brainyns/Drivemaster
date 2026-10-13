@@ -41,7 +41,7 @@ public class EmailVentaBuilder {
                       <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151;font-size:13px;">%s</td>
                       <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151;font-size:13px;text-align:center;">%d</td>
                       <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151;font-size:13px;text-align:right;">%s</td>
-                      <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#111827;font-size:13px;text-align:right;font-weight:600;">%s</td>
+                      <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151;font-size:13px;text-align:right;font-weight:600;">%s</td>
                     </tr>
                     """.formatted(
                     d.getNombre(),
@@ -57,7 +57,7 @@ public class EmailVentaBuilder {
             filasPagos.append("""
                     <tr>
                       <td style="padding:6px 0;color:#6b7280;font-size:13px;">%s</td>
-                      <td style="padding:6px 0;color:#111827;font-size:13px;text-align:right;">%s</td>
+                      <td style="padding:6px 0;color:#374151;font-size:13px;text-align:right;">%s</td>
                     </tr>
                     """.formatted(p.getMetodo(), fmt.format(p.getMonto())));
         }
@@ -78,6 +78,7 @@ public class EmailVentaBuilder {
                   <meta charset="UTF-8"/>
                   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
                   <title>Factura DriveMaster #%s</title>
+                  %s
                 </head>
                 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;">
 
@@ -95,7 +96,7 @@ public class EmailVentaBuilder {
                             <table width="100%%" cellpadding="0" cellspacing="0"><tr>
                               <td style="width:50%%;vertical-align:top;">
                                 <p style="margin:0 0 4px;font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:1.5px;">Cliente</p>
-                                <p style="margin:0 0 2px;font-size:15px;color:#111827;font-weight:600;">%s</p>
+                                <p style="margin:0 0 2px;font-size:15px;color:#374151;font-weight:600;">%s</p>
                                 <p style="margin:0 0 2px;font-size:12px;color:#6b7280;">%s</p>
                                 %s
                               </td>
@@ -155,8 +156,8 @@ public class EmailVentaBuilder {
                                     <td style="padding:4px 0;color:#374151;font-size:12px;text-align:right;">%s</td>
                                   </tr>
                                   <tr>
-                                    <td style="padding:10px 0 4px;border-top:2px solid {{PRIMARIO}};color:#111827;font-size:15px;font-weight:700;">Total</td>
-                                    <td style="padding:10px 0 4px;border-top:2px solid {{PRIMARIO}};color:{{PRIMARIO_TEXTO}};font-size:15px;font-weight:700;text-align:right;">%s</td>
+                                    <td style="padding:10px 0 4px;border-top:2px solid {{PRIMARIO}};color:{{PRIMARIO}};font-size:15px;font-weight:700;">Total</td>
+                                    <td style="padding:10px 0 4px;border-top:2px solid {{PRIMARIO}};color:{{PRIMARIO}};font-size:15px;font-weight:700;text-align:right;">%s</td>
                                   </tr>
                                 </table>
                               </td>
@@ -185,13 +186,14 @@ public class EmailVentaBuilder {
                 </html>
                 """
                 .replace("{{PRIMARIO}}", BrandConfig.colorPrimario())
-                .replace("{{PRIMARIO_TEXTO}}", BrandConfig.colorPrimarioTexto())
                 .formatted(
                 // <title>
                 idCorto,
+                // estilos para el celular
+                PlantillaCorreo.ESTILOS_MOVIL,
                 // encabezado con logo y #ID
                 PlantillaCorreo.encabezado(PlantillaCorreo.etiquetaHtml("Factura de venta")
-                        + "<br/><span style=\"display:inline-block;margin-top:6px;font-size:20px;font-weight:700;color:#111827;\">#"
+                        + "<br/><span style=\"display:inline-block;margin-top:6px;font-size:20px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">#"
                         + PlantillaCorreo.e(idCorto) + "</span>"),
                 // usuario nombre, correo, identificacion
                 usuario.getNombre(),

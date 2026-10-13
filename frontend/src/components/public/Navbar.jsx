@@ -31,6 +31,7 @@ export default function Navbar({
   theme,
   onToggleTheme,
   vehiculoActivo,
+  activo,
 }) {
   const user = getUser();
   const [mobileAbierto, setMobileAbierto] = useState(false);
@@ -52,14 +53,18 @@ export default function Navbar({
 
   const cerrarY = (accion) => () => { setMobileAbierto(false); accion?.(); };
 
+  // clave: la vista con la que se marca como activa (aria-current); secundario: se oculta en pantallas medianas
   const enlaces = [
-    { label: "Inicio", onClick: cerrarY(() => onIrInicio?.()) },
-    { label: "Solicitar diagnóstico", onClick: cerrarY(onSolicitarDiagnostico) },
-    { label: "Cómo funciona", onClick: cerrarY(() => onIrInicio?.("dm-pasos")) },
-    { label: "Catálogo", onClick: cerrarY(onIrCatalogo) },
-    { label: "Registra tu negocio", onClick: cerrarY(onRegistroNegocio), destacado: true },
-    { label: "Mis servicios", onClick: cerrarY(onIrMisServicios), soloCliente: true },
+    { label: "Inicio", clave: "inicio", onClick: cerrarY(() => onIrInicio?.()) },
+    { label: "Solicitar diagnóstico", clave: "diagnostico", onClick: cerrarY(onSolicitarDiagnostico), secundario: true },
+    { label: "Cómo funciona", onClick: cerrarY(() => onIrInicio?.("dm-pasos")), secundario: true },
+    { label: "Catálogo", clave: "catalogo", onClick: cerrarY(onIrCatalogo) },
+    { label: "Registra tu negocio", clave: "negocio", onClick: cerrarY(onRegistroNegocio), destacado: true },
+    { label: "Mis servicios", clave: "servicios", onClick: cerrarY(onIrMisServicios), soloCliente: true },
   ];
+  const actual = (e) => (e.clave && e.clave === activo ? "page" : undefined);
+  const claseEnlace = (e) => [e.destacado && "dm-header__nav-negocio", e.secundario && "dm-header__nav-secundario"]
+    .filter(Boolean).join(" ") || undefined;
 
   const enlacesVisibles = enlaces.filter((e) => !e.soloCliente || user?.rol === "CLIENTE");
 
@@ -71,7 +76,7 @@ export default function Navbar({
 
           <nav className="dm-header__nav" aria-label="Navegación principal">
             {enlacesVisibles.map((e) => (
-              <button key={e.label} onClick={e.onClick} className={e.destacado ? "dm-header__nav-negocio" : undefined}>{e.label}</button>
+              <button key={e.label} onClick={e.onClick} className={claseEnlace(e)} aria-current={actual(e)}>{e.label}</button>
             ))}
           </nav>
 
@@ -127,7 +132,7 @@ export default function Navbar({
         <nav className="dm-mobile-nav" aria-label="Navegación móvil">
           {/* Los accesos de la cuenta van abajo, con la misma lista del menú de usuario */}
           {enlacesVisibles.filter((e) => !e.soloCliente).map((e) => (
-            <button key={e.label} onClick={e.onClick}>{e.label}</button>
+            <button key={e.label} onClick={e.onClick} aria-current={actual(e)}>{e.label}</button>
           ))}
           {user ? (
             <>

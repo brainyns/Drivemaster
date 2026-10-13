@@ -90,7 +90,7 @@ public final class EmailServicioBuilder {
             filas.append("<tr><td style=\"padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;\">")
                     .append(cantidad).append(e(i.getDescripcion()))
                     .append("<br/><span style=\"color:#9ca3af;font-size:12px;\">").append(detalle).append("</span></td>")
-                    .append("<td align=\"right\" style=\"padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#111827;white-space:nowrap;\">")
+                    .append("<td align=\"right\" style=\"padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;white-space:nowrap;\">")
                     .append(moneda(i.getSubtotal())).append("</td></tr>");
         }
         String totales = linea("Subtotal", c.getSubtotal())
@@ -213,7 +213,7 @@ public final class EmailServicioBuilder {
                                              String referencia, String transaccion, LocalDateTime fecha) {
         StringBuilder detalle = new StringBuilder();
         for (PedidoTienda p : pedidos) {
-            detalle.append("<p style=\"margin:14px 0 4px;font-size:14px;font-weight:700;color:#111827;\">")
+            detalle.append("<p style=\"margin:14px 0 4px;font-size:14px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">")
                     .append(e(p.getTiendaNombre())).append(" · ").append(moneda(p.getTotal())).append("</p>");
             if (p.getItems() != null) {
                 for (CotizacionItem i : p.getItems()) {
@@ -439,9 +439,9 @@ public final class EmailServicioBuilder {
     /** Fila del total: línea del color principal encima y el monto en naranja de texto. */
     private static String filaTotal(String concepto, String monto) {
         String borde = "border-top:2px solid " + BrandConfig.colorPrimario() + ";";
-        return "<tr><td style=\"padding:10px 0 0;" + borde + "font-size:15px;font-weight:700;color:#111827;\">" + e(concepto) + "</td>"
+        return "<tr><td style=\"padding:10px 0 0;" + borde + "font-size:15px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">" + e(concepto) + "</td>"
                 + "<td align=\"right\" style=\"padding:10px 0 0;" + borde + "font-size:15px;font-weight:700;color:"
-                + BrandConfig.colorPrimarioTexto() + ";\">" + monto + "</td></tr>";
+                + BrandConfig.colorPrimario() + ";\">" + monto + "</td></tr>";
     }
 
     private static String formatoPct(Double pct) {

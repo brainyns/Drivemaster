@@ -17,13 +17,13 @@ import com.lowagie.text.pdf.PdfWriter;
 public class PdfCompraBuilder {
 
     // ── Paleta blanca / profesional ───────────────────────────────────────────
-    // Color principal de la marca (franjas y bordes) y su variante oscura para texto: ver BrandConfig
+    // Blanco y naranja: el color principal de la marca en franjas, títulos, totales y montos (ver BrandConfig)
     private static final Color ORANGE      = BrandConfig.colorPrimarioAwt();
-    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioTextoAwt();
+    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioAwt();
     private static final Color BG_PAGE     = new Color(243, 244, 246);  // fondo gris muy claro
     private static final Color BG_WHITE    = new Color(255, 255, 255);  // secciones principales
     private static final Color BG_SURFACE  = new Color(249, 250, 251);  // filas alternas / paneles
-    private static final Color TEXT_DARK   = new Color(17,  24,  39);   // títulos
+    private static final Color TEXT_STRONG   = new Color(55,  65,  81);   // datos destacados: gris, sin negro
     private static final Color TEXT_BODY   = new Color(55,  65,  81);   // texto normal
     private static final Color TEXT_MUTED  = new Color(107, 114, 128);  // etiquetas
     private static final Color TEXT_LIGHT  = new Color(156, 163, 175);  // notas / copyright
@@ -93,24 +93,17 @@ public class PdfCompraBuilder {
             drawRect(cb, 0, pageH - 3, PW, 3, ORANGE);
             drawLine(cb, 0, headerY, PW, BORDER);
 
-            // Logo en la zona blanca (bajo la franja del color principal); sin logo, el nombre en texto
-            if (!PdfMarca.dibujarLogo(cb, PAD, headerY + (headerH - 3) / 2, 130f, 50f)) {
-                cb.beginText();
-                cb.setFontAndSize(bfBold, 22);
-                cb.setColorFill(TEXT_DARK);
-                cb.setTextMatrix(PAD, headerY + 38);
-                cb.showText("Drive");
-                cb.setColorFill(ORANGE_TEXT);
-                cb.showText("Master");
-                cb.endText();
+            // Marca en la zona blanca (bajo la franja): logo y a su derecha el nombre; sin logo, solo el nombre
+            float anchoLogo = PdfMarca.dibujarLogo(cb, PAD, headerY + (headerH - 3) / 2, 130f, 50f);
+            float xNombre = anchoLogo > 0 ? PAD + anchoLogo + 12 : PAD;
+            PdfMarca.dibujarNombre(cb, bfBold, 20, xNombre, headerY + 38);
 
-                cb.beginText();
-                cb.setFontAndSize(bf, 7);
-                cb.setColorFill(TEXT_LIGHT);
-                cb.setTextMatrix(PAD, headerY + 22);
-                cb.showText("REPUESTOS AUTOMOTRICES");
-                cb.endText();
-            }
+            cb.beginText();
+            cb.setFontAndSize(bf, 7);
+            cb.setColorFill(TEXT_LIGHT);
+            cb.setTextMatrix(xNombre, headerY + 24);
+            cb.showText("REPUESTOS AUTOMOTRICES");
+            cb.endText();
 
             String labelOI = "OFFICIAL INVOICE";
             float lwOI = bfBold.getWidthPoint(labelOI, 8);
@@ -125,7 +118,7 @@ public class PdfCompraBuilder {
             float lwId = bfBold.getWidthPoint(idText, 15);
             cb.beginText();
             cb.setFontAndSize(bfBold, 15);
-            cb.setColorFill(TEXT_DARK);
+            cb.setColorFill(ORANGE_TEXT);
             cb.setTextMatrix(PW - PAD - lwId, headerY + 30);
             cb.showText(idText);
             cb.endText();
@@ -145,7 +138,7 @@ public class PdfCompraBuilder {
 
             float col2X = PW * 0.42f;
             drawSmallLabel(cb, bf, "SHIP TO",           col2X, secY - 14, TEXT_MUTED);
-            drawText(cb, bfBold, 10, "DriveMaster",     col2X, secY - 30, TEXT_DARK);
+            drawText(cb, bfBold, 10, "DriveMaster",     col2X, secY - 30, TEXT_STRONG);
             drawText(cb, bf,      8, "Almacén Central", col2X, secY - 44, TEXT_MUTED);
             drawText(cb, bf,      8, "Colombia",        col2X, secY - 57, TEXT_MUTED);
 
@@ -175,7 +168,7 @@ public class PdfCompraBuilder {
                 drawRect(cb, 0, rowY - rowH, PW, rowH, rowBg);
                 drawLine(cb, 0, rowY - rowH, PW, BORDER_ROW);
 
-                drawText(cb, bfBold, 9, safe(d.getNombre()), PAD, rowY - 12, TEXT_DARK);
+                drawText(cb, bfBold, 9, safe(d.getNombre()), PAD, rowY - 12, TEXT_STRONG);
                 String sku = d.getProductoId() != null
                         ? "SKU: " + d.getProductoId().substring(
                             Math.max(0, d.getProductoId().length() - 8)).toUpperCase()
@@ -209,7 +202,7 @@ public class PdfCompraBuilder {
             drawText(cb, bf, 9, "Subtotal", totX + 12, totY - 16, TEXT_MUTED);
             drawTextRight(cb, bf, 9, fmt.format(subtotal), totX + totW - 10, totY - 16, TEXT_BODY);
             drawLine(cb, totX + 10, totY - 30, totW - 20, BORDER);
-            drawText(cb, bfBold, 12, "TOTAL DUE", totX + 12, totY - 46, TEXT_DARK);
+            drawText(cb, bfBold, 12, "TOTAL DUE", totX + 12, totY - 46, ORANGE_TEXT);
             drawTextRight(cb, bfBold, 13,
                     fmt.format(compra.getTotal() != null ? compra.getTotal() : subtotal),
                     totX + totW - 10, totY - 46, ORANGE_TEXT);

@@ -98,10 +98,10 @@ public class CompraServiceImpl implements CompraService {
                         + PlantillaCorreo.parrafo("Adjunto encontrará la orden de compra <strong>" + poId + "</strong> registrada en nuestro sistema.")
                         + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:8px 0 16px;\">"
                         + "<tr><td style=\"" + filaEstilo + "color:#6b7280;\">Fecha</td>"
-                        + "<td align=\"right\" style=\"" + filaEstilo + "color:#111827;\">"
+                        + "<td align=\"right\" style=\"" + filaEstilo + "color:#374151;\">"
                         + compraGuardada.getFecha().toString().replace("T", " ").substring(0, 16) + "</td></tr>"
-                        + "<tr><td style=\"padding:10px 0 0;border-top:2px solid " + BrandConfig.colorPrimario() + ";font-size:15px;font-weight:700;color:#111827;\">Total</td>"
-                        + "<td align=\"right\" style=\"padding:10px 0 0;border-top:2px solid " + BrandConfig.colorPrimario() + ";font-size:15px;font-weight:700;color:" + BrandConfig.colorPrimarioTexto() + ";\">$"
+                        + "<tr><td style=\"padding:10px 0 0;border-top:2px solid " + BrandConfig.colorPrimario() + ";font-size:15px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">Total</td>"
+                        + "<td align=\"right\" style=\"padding:10px 0 0;border-top:2px solid " + BrandConfig.colorPrimario() + ";font-size:15px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">$"
                         + String.format("%,.0f", compraGuardada.getTotal()) + "</td></tr>"
                         + "</table>",
                         "DriveMaster · Repuestos Automotrices · 2026");

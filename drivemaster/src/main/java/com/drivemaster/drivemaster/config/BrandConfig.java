@@ -37,22 +37,25 @@ public class BrandConfig {
 
     private static volatile String nombre = "DriveMaster";
     private static volatile String colorPrimario = "#F28C28";
-    private static volatile String colorPrimarioTexto = "#A84A00";
-    private static volatile String colorSobrePrimario = "#17191C";
+    private static volatile String colorSobrePrimario = "#FFFFFF";
+    private static volatile String colorTexto = "#17191C";
     private static volatile String logoUrl = "";
+    private static volatile int logoAncho = 160;
 
     private static volatile byte[] logoBytes;
     private static volatile long ultimoFalloLogo;
 
     public BrandConfig(@Value("${brand.name:DriveMaster}") String nombre,
                        @Value("${brand.color.primary:#F28C28}") String colorPrimario,
-                       @Value("${brand.color.primary-text:#A84A00}") String colorPrimarioTexto,
-                       @Value("${brand.color.on-primary:#17191C}") String colorSobrePrimario,
-                       @Value("${brand.logo-url:}") String logoUrl) {
+                       @Value("${brand.color.on-primary:#FFFFFF}") String colorSobrePrimario,
+                       @Value("${brand.color.text:#17191C}") String colorTexto,
+                       @Value("${brand.logo-url:}") String logoUrl,
+                       @Value("${brand.logo-width:160}") String logoAncho) {
+        BrandConfig.logoAncho = anchoValido(logoAncho);
         if (nombre != null && !nombre.isBlank()) BrandConfig.nombre = nombre.trim();
         BrandConfig.colorPrimario = hexValido(colorPrimario, BrandConfig.colorPrimario);
-        BrandConfig.colorPrimarioTexto = hexValido(colorPrimarioTexto, BrandConfig.colorPrimarioTexto);
         BrandConfig.colorSobrePrimario = hexValido(colorSobrePrimario, BrandConfig.colorSobrePrimario);
+        BrandConfig.colorTexto = hexValido(colorTexto, BrandConfig.colorTexto);
         String url = logoUrl != null ? logoUrl.trim() : "";
         if (!url.isEmpty() && !url.startsWith("https://") && !url.startsWith("http://")) {
             log.warn("BRAND_LOGO_URL no es una URL http(s); los correos mostrarán el nombre en texto.");
@@ -60,6 +63,18 @@ public class BrandConfig {
         }
         BrandConfig.logoUrl = url;
         BrandConfig.logoBytes = null;
+    }
+
+    /** Ancho del logo en el correo entre 40 y 300 px; vacío o inválido: 160. */
+    private static int anchoValido(String valor) {
+        try {
+            int ancho = Integer.parseInt(valor == null ? "" : valor.trim());
+            if (ancho >= 40 && ancho <= 300) return ancho;
+        } catch (NumberFormatException e) {
+            // se usa el valor por defecto
+        }
+        if (valor != null && !valor.isBlank()) log.warn("BRAND_LOGO_WIDTH inválido '{}'; se usa 160.", valor);
+        return 160;
     }
 
     private static String hexValido(String valor, String porDefecto) {
@@ -73,11 +88,13 @@ public class BrandConfig {
     /** Color principal (--primary): encabezados, botones, franjas y líneas. */
     public static String colorPrimario() { return colorPrimario; }
 
-    /** Naranja oscuro (--primary-text) para texto sobre fondo blanco: totales y etiquetas. */
-    public static String colorPrimarioTexto() { return colorPrimarioTexto; }
-
-    /** Texto sobre el color principal (--dm-on-accent). */
+    /** Texto sobre el color principal: blanco. */
     public static String colorSobrePrimario() { return colorSobrePrimario; }
+
+    /** Texto oscuro del nombre de la marca en los encabezados (como el texto de la página). */
+    public static String colorTexto() { return colorTexto; }
+
+    public static Color colorTextoAwt() { return Color.decode(colorTexto); }
 
     /** Tinte muy claro del color principal para fondos de recuadros. */
     public static String colorPrimarioSuave() {
@@ -91,10 +108,11 @@ public class BrandConfig {
 
     public static Color colorPrimarioAwt() { return Color.decode(colorPrimario); }
 
-    public static Color colorPrimarioTextoAwt() { return Color.decode(colorPrimarioTexto); }
-
     /** URL pública del logo; vacía si no está configurada. */
     public static String logoUrl() { return logoUrl; }
+
+    /** Ancho del logo en el correo (px). */
+    public static int logoAncho() { return logoAncho; }
 
     /**
      * Imagen del logo para los PDF, descargada una vez de BRAND_LOGO_URL y guardada en memoria.

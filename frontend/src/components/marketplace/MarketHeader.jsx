@@ -19,21 +19,24 @@ export default function MarketHeader({
 }) {
   const user = getUser();
   const esCliente = user?.rol === "CLIENTE";
+  const actual = (clave) => (activo === clave ? "page" : undefined);
 
   return (
     <header className="dm-header mk-header">
       <div className="dm-header__inner">
         <Logo onClick={() => onIrInicio?.()} />
 
+        {/* La opción de la vista actual lleva aria-current: la línea naranja queda fija (navbar.css) */}
         <nav className="dm-header__nav" aria-label="Navegación del catálogo">
           <button onClick={() => onIrInicio?.()}>Inicio</button>
-          <button className={activo === "catalogo" ? "mk-header__activo" : ""} aria-current={activo === "catalogo" ? "page" : undefined}
-            onClick={() => onIrCatalogo?.()}>Catálogo</button>
+          <button aria-current={actual("catalogo")} onClick={() => onIrCatalogo?.()}>Catálogo</button>
           {esCliente && (
-            <button className={activo === "compras" ? "mk-header__activo" : ""} aria-current={activo === "compras" ? "page" : undefined}
-              onClick={() => onIrMisCompras?.()}>Mis compras</button>
+            <button aria-current={actual("compras")} onClick={() => onIrMisCompras?.()}>Mis compras</button>
           )}
-          <button onClick={() => onSolicitarDiagnostico?.()}>Solicitar diagnóstico</button>
+          <button aria-current={actual("diagnostico")} onClick={() => onSolicitarDiagnostico?.()}>Solicitar diagnóstico</button>
+          {esCliente && (
+            <button aria-current={actual("servicios")} onClick={() => onIr?.("mis-servicios")}>Mis servicios</button>
+          )}
         </nav>
 
         <div className="dm-header__actions">

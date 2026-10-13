@@ -26,6 +26,7 @@ public final class PlantillaCorreo {
                   <meta charset="UTF-8"/>
                   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
                   <title>%s</title>
+                  %s
                 </head>
                 <body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;">
                   <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:40px 0;">
@@ -35,7 +36,7 @@ public final class PlantillaCorreo {
                         %s
                         <tr>
                           <td style="padding:32px 36px;font-size:14px;line-height:1.6;color:#374151;">
-                            <h1 style="margin:0 0 16px;font-size:20px;color:#111827;">%s</h1>
+                            <h1 style="margin:0 0 16px;font-size:20px;color:%s;">%s</h1>
                             %s
                           </td>
                         </tr>
@@ -49,39 +50,67 @@ public final class PlantillaCorreo {
                   </table>
                 </body>
                 </html>
-                """.formatted(e(etiqueta), encabezado(etiquetaHtml(etiqueta)), e(titulo), cuerpo,
+                """.formatted(e(etiqueta), ESTILOS_MOVIL, encabezado(etiquetaHtml(etiqueta)), BrandConfig.colorPrimario(), e(titulo), cuerpo,
                 e(pie != null ? pie : PIE_POR_DEFECTO));
     }
 
     /**
-     * Filas del encabezado: zona blanca con el logo a la izquierda y {@code derechaHtml} a la
-     * derecha, y debajo la franja del color principal (nunca detrás del logo, que tiene fondo claro).
+     * Ajustes para pantallas angostas (va en el head de cada correo): la etiqueta baja debajo de la
+     * marca y el logo se achica, para que el encabezado no se desarme en el celular.
+     */
+    public static final String ESTILOS_MOVIL = """
+            <style>
+              @media only screen and (max-width:480px) {
+                .dm-encabezado { padding:18px 20px 14px !important; }
+                .dm-col { display:block !important; width:100% !important; text-align:left !important; }
+                .dm-col-etiqueta { padding-top:12px !important; }
+                .dm-logo-img { max-width:110px !important; }
+                .dm-nombre { font-size:19px !important; }
+              }
+            </style>""";
+
+    /**
+     * Filas del encabezado: zona blanca con la marca (logo y nombre) a la izquierda y
+     * {@code derechaHtml} a la derecha, y debajo la franja del color principal (nunca detrás del logo).
      */
     public static String encabezado(String derechaHtml) {
         return """
                 <tr>
-                  <td style="background:#ffffff;padding:22px 36px 18px;">
+                  <td class="dm-encabezado" style="background:#ffffff;padding:22px 36px 18px;">
                     <table role="presentation" width="100%%" cellpadding="0" cellspacing="0"><tr>
-                      <td valign="middle">%s</td>
-                      <td align="right" valign="middle">%s</td>
+                      <td class="dm-col" valign="middle" style="vertical-align:middle;">%s</td>
+                      <td class="dm-col dm-col-etiqueta" align="right" valign="middle" style="vertical-align:middle;">%s</td>
                     </tr></table>
                   </td>
                 </tr>
                 <tr>
                   <td style="background:%s;height:4px;line-height:4px;font-size:0;">&nbsp;</td>
                 </tr>
-                """.formatted(logo(), derechaHtml != null ? derechaHtml : "", BrandConfig.colorPrimario());
+                """.formatted(marca(), derechaHtml != null ? derechaHtml : "", BrandConfig.colorPrimario());
     }
 
-    /** Logo como imagen remota; si BRAND_LOGO_URL está vacía, el nombre de la marca en texto. */
+    /** Logo (si hay BRAND_LOGO_URL) y a su derecha el nombre, centrados en altura. */
+    public static String marca() {
+        String url = BrandConfig.logoUrl();
+        String logo = url.isEmpty() ? ""
+                : "<td valign=\"middle\" style=\"vertical-align:middle;padding-right:12px;\">" + logo() + "</td>";
+        return "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>" + logo
+                + "<td valign=\"middle\" style=\"vertical-align:middle;\">" + nombre() + "</td></tr></table>";
+    }
+
+    /** Logo como imagen remota (vacío si no hay BRAND_LOGO_URL). */
     public static String logo() {
         String url = BrandConfig.logoUrl();
-        if (url.isEmpty()) {
-            return "<span style=\"font-size:26px;font-weight:800;color:#111827;letter-spacing:-0.5px;\">"
-                    + e(BrandConfig.nombre()) + "</span>";
-        }
-        return "<img src=\"" + HtmlUtils.htmlEscape(url) + "\" alt=\"" + e(BrandConfig.nombre())
-                + "\" width=\"160\" style=\"display:block;border:0;height:auto;\">";
+        if (url.isEmpty()) return "";
+        return "<img class=\"dm-logo-img\" src=\"" + HtmlUtils.htmlEscape(url) + "\" alt=\"" + e(BrandConfig.nombre())
+                + "\" width=\"" + BrandConfig.logoAncho() + "\" style=\"display:block;border:0;height:auto;\">";
+    }
+
+    /** Nombre como en la página: "DriveMaster" en oscuro con el punto naranja. */
+    public static String nombre() {
+        return "<span class=\"dm-nombre\" style=\"font-family:'Segoe UI',Arial,sans-serif;font-size:24px;font-weight:800;"
+                + "letter-spacing:-0.5px;white-space:nowrap;color:" + BrandConfig.colorTexto() + ";\">"
+                + e(BrandConfig.nombre()) + "<span style=\"color:" + BrandConfig.colorPrimario() + ";\">.</span></span>";
     }
 
     /** Etiqueta del encabezado: píldora del color principal. */
@@ -110,7 +139,7 @@ public final class PlantillaCorreo {
     public static String recuadro(String html) {
         return "<div style=\"margin:0 0 16px;padding:14px 16px;background:" + BrandConfig.colorPrimarioSuave()
                 + ";border-left:4px solid " + BrandConfig.colorPrimario()
-                + ";border-radius:4px;font-size:14px;line-height:1.6;color:#111827;\">" + html + "</div>";
+                + ";border-radius:4px;font-size:14px;line-height:1.6;color:#374151;\">" + html + "</div>";
     }
 
     public static String parrafo(String html) {
@@ -119,7 +148,7 @@ public final class PlantillaCorreo {
 
     /** Monto destacado (total a pagar o pagado). */
     public static String montoDestacado(String monto) {
-        return "<p style=\"margin:0 0 16px;font-size:24px;font-weight:700;color:" + BrandConfig.colorPrimarioTexto()
+        return "<p style=\"margin:0 0 16px;font-size:24px;font-weight:700;color:" + BrandConfig.colorPrimario()
                 + ";\">" + e(monto) + "</p>";
     }
 

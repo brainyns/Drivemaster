@@ -20,14 +20,14 @@ import java.util.Locale;
 public class PdfVentaBuilder {
 
     // ── Paleta blanca / profesional ───────────────────────────────────────────
-    // Color principal de la marca (franjas y bordes) y su variante oscura para texto: ver BrandConfig
+    // Blanco y naranja: el color principal de la marca en franjas, títulos, totales y montos (ver BrandConfig)
     private static final Color ORANGE      = BrandConfig.colorPrimarioAwt();
-    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioTextoAwt();
+    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioAwt();
     private static final Color BG_PAGE     = new Color(243, 244, 246);  // gris claro de página
     private static final Color BG_WHITE    = new Color(255, 255, 255);  // fondo principal
     private static final Color BG_SURFACE  = new Color(249, 250, 251);  // filas alternas / paneles
     private static final Color BG_HEADER   = new Color(255, 255, 255);  // cabecera
-    private static final Color TEXT_DARK   = new Color(17,  24,  39);   // títulos
+    private static final Color TEXT_STRONG   = new Color(55,  65,  81);   // datos destacados: gris, sin negro
     private static final Color TEXT_BODY   = new Color(55,  65,  81);   // texto normal
     private static final Color TEXT_MUTED  = new Color(107, 114, 128);  // etiquetas / notas
     private static final Color TEXT_LIGHT  = new Color(156, 163, 175);  // placeholders
@@ -97,24 +97,17 @@ public class PdfVentaBuilder {
             drawRect(cb, 0, pageH - 3, PW, 3, ORANGE);
             drawLine(cb, 0, headerY, PW, BORDER);
 
-            // Logo en la zona blanca (bajo la franja del color principal); sin logo, el nombre en texto
-            if (!PdfMarca.dibujarLogo(cb, PAD, headerY + (headerH - 3) / 2, 130f, 50f)) {
-                cb.beginText();
-                cb.setFontAndSize(bfBold, 22);
-                cb.setColorFill(TEXT_DARK);
-                cb.setTextMatrix(PAD, headerY + 38);
-                cb.showText("Drive");
-                cb.setColorFill(ORANGE_TEXT);
-                cb.showText("Master");
-                cb.endText();
+            // Marca en la zona blanca (bajo la franja): logo y a su derecha el nombre; sin logo, solo el nombre
+            float anchoLogo = PdfMarca.dibujarLogo(cb, PAD, headerY + (headerH - 3) / 2, 130f, 50f);
+            float xNombre = anchoLogo > 0 ? PAD + anchoLogo + 12 : PAD;
+            PdfMarca.dibujarNombre(cb, bfBold, 20, xNombre, headerY + 38);
 
-                cb.beginText();
-                cb.setFontAndSize(bf, 7);
-                cb.setColorFill(TEXT_LIGHT);
-                cb.setTextMatrix(PAD, headerY + 22);
-                cb.showText("REPUESTOS AUTOMOTRICES");
-                cb.endText();
-            }
+            cb.beginText();
+            cb.setFontAndSize(bf, 7);
+            cb.setColorFill(TEXT_LIGHT);
+            cb.setTextMatrix(xNombre, headerY + 24);
+            cb.showText("REPUESTOS AUTOMOTRICES");
+            cb.endText();
 
             String labelFactura = "FACTURA DE VENTA";
             float lwLabel = bfBold.getWidthPoint(labelFactura, 8);
@@ -129,7 +122,7 @@ public class PdfVentaBuilder {
             float lwId = bfBold.getWidthPoint(idText, 20);
             cb.beginText();
             cb.setFontAndSize(bfBold, 20);
-            cb.setColorFill(TEXT_DARK);
+            cb.setColorFill(ORANGE_TEXT);
             cb.setTextMatrix(PW - PAD - lwId, headerY + 28);
             cb.showText(idText);
             cb.endText();
@@ -142,7 +135,7 @@ public class PdfVentaBuilder {
 
             drawSmallLabel(cb, bf, "CLIENTE", PAD, secY - 14, TEXT_MUTED);
             drawText(cb, bfBold, 11, usuario.getNombre() != null ? usuario.getNombre() : "—",
-                    PAD, secY - 30, TEXT_DARK);
+                    PAD, secY - 30, TEXT_STRONG);
             drawText(cb, bf, 8, usuario.getCorreo() != null ? usuario.getCorreo() : "",
                     PAD, secY - 44, TEXT_MUTED);
             if (usuario.getIdentificacion() != null && !usuario.getIdentificacion().isBlank())
@@ -205,7 +198,7 @@ public class PdfVentaBuilder {
                 for (Pago p : venta.getPagos()) {
                     drawText(cb, bf, 9, safe(p.getMetodo()), PAD + 12, pagoY, TEXT_MUTED);
                     drawTextRight(cb, bfBold, 9, fmt.format(p.getMonto()),
-                            PAD + halfW - 10, pagoY, TEXT_DARK);
+                            PAD + halfW - 10, pagoY, TEXT_STRONG);
                     pagoY -= 18;
                 }
             }
@@ -225,7 +218,7 @@ public class PdfVentaBuilder {
             totY2 -= 8;
             drawLine(cb, panX + 10, totY2, halfW - 20, BORDER);
             totY2 -= 18;
-            drawText(cb, bfBold, 12, "Total", panX + 12, totY2, TEXT_DARK);
+            drawText(cb, bfBold, 12, "Total", panX + 12, totY2, ORANGE_TEXT);
             drawTextRight(cb, bfBold, 14, fmt.format(venta.getTotal()),
                     panX + halfW - 10, totY2, ORANGE_TEXT);
 

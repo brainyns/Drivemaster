@@ -1,9 +1,10 @@
 /* ── Logo de DriveMaster (src/components/Logo.jsx) ────────────────────────
-   El archivo del logo (public/images/Drivemaster_logo.jpg, 1024×559) trae fondo
-   claro y mucho margen. La placa muestra solo la "D" (zona x 270–746, y 140–430
-   del original): la imagen va a altura fija con ancho automático y se desplaza
-   dentro de la placa, así nunca se deforma. El brillo lleva el gris del fondo a
-   blanco para que la placa se funda con el header claro. */
+   public/images/Drivemaster_logo.png (320×175, fondo transparente) trae margen
+   alrededor de la "D". La caja .dm-logo__marca muestra solo la "D" (zona
+   x 87–230, y 45–133 del archivo): la imagen va a altura fija con ancho
+   automático y se desplaza dentro de la caja, así nunca se deforma.
+   Variantes: --fondo-oscuro (carretera blanca) en tema oscuro y en zonas que
+   son oscuras en cualquier tema (.dm-logo--light); --fondo-claro en tema claro. */
 
 .dm-logo {
   --logo-h: 40px;
@@ -31,30 +32,36 @@
 
 .dm-logo--sm { --logo-h: 30px; font-size: 15px; letter-spacing: -0.5px; gap: 8px; }
 .dm-logo--md { --logo-h: 40px; font-size: 21px; }
-.dm-logo--lg { --logo-h: 56px; font-size: 26px; gap: 12px; }
+.dm-logo--lg { --logo-h: 52px; font-size: 26px; gap: 12px; }
 
-.dm-logo__placa {
+.dm-logo__marca {
   position: relative;
   display: block;
   height: var(--logo-h);
-  width: calc(var(--logo-h) * 476 / 290);
+  width: calc(var(--logo-h) * 144 / 89);
   overflow: hidden;
-  background: #fff;
-  border-radius: calc(var(--logo-h) * 0.18);
   flex-shrink: 0;
 }
 
 /* Doble clase para ganarle a reglas genéricas como ".dm-page img { max-width: 100% }" */
 .dm-logo .dm-logo__img {
   position: absolute;
-  top: calc(var(--logo-h) * -140 / 290);
-  left: calc(var(--logo-h) * -270 / 290);
-  height: calc(var(--logo-h) * 559 / 290);
+  top: calc(var(--logo-h) * -45 / 89);
+  left: calc(var(--logo-h) * -87 / 89);
+  height: calc(var(--logo-h) * 175 / 89);
   width: auto;
   max-width: none;
   object-fit: contain;
-  filter: brightness(1.05);
 }
+
+/* Tema oscuro (por defecto): variante con la carretera blanca */
+.dm-logo .dm-logo__img--fondo-claro { display: none; }
+
+/* Tema claro: el logo original, salvo en zonas oscuras (footer, panel del login) */
+html[data-theme="light"] .dm-logo .dm-logo__img--fondo-claro { display: block; }
+html[data-theme="light"] .dm-logo .dm-logo__img--fondo-oscuro { display: none; }
+html[data-theme="light"] .dm-logo--light .dm-logo__img--fondo-claro { display: none; }
+html[data-theme="light"] .dm-logo--light .dm-logo__img--fondo-oscuro { display: block; }
 
 .dm-logo--light { color: #fff; }
 
@@ -65,5 +72,5 @@
 @media (max-width: 760px) {
   .dm-logo--sm { --logo-h: 26px; font-size: 14px; }
   .dm-logo--md { --logo-h: 34px; font-size: 18px; }
-  .dm-logo--lg { --logo-h: 46px; font-size: 22px; }
+  .dm-logo--lg { --logo-h: 44px; font-size: 22px; }
 }

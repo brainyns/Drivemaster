@@ -16,13 +16,13 @@ import com.lowagie.text.pdf.PdfWriter;
 
 public class PdfVentaListBuilder {
 
-    // Color principal de la marca (franjas y bordes) y su variante oscura para texto: ver BrandConfig
+    // Blanco y naranja: el color principal de la marca en franjas, títulos, totales y montos (ver BrandConfig)
     private static final Color ORANGE    = BrandConfig.colorPrimarioAwt();
-    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioTextoAwt();
+    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioAwt();
     private static final Color BG_PAGE   = new Color(243, 244, 246);
     private static final Color BG_WHITE  = new Color(255, 255, 255);
     private static final Color BG_STRIPE = new Color(249, 250, 251);
-    private static final Color TEXT_DARK = new Color(17, 24, 39);
+    private static final Color TEXT_STRONG = new Color(55,  65,  81);   // datos destacados: gris, sin negro
     private static final Color TEXT_BODY = new Color(55, 65, 81);
     private static final Color TEXT_MUTED= new Color(107, 114, 128);
     private static final Color BORDER    = new Color(229, 231, 235);
@@ -55,9 +55,7 @@ public class PdfVentaListBuilder {
             drawRect(cb, 0, pageH - 3, PW, 3, ORANGE);
             drawLine(cb, 0, pageH - headerH, PW, BORDER);
 
-            cb.beginText(); cb.setFontAndSize(bfBold, 22); cb.setColorFill(TEXT_DARK);
-            cb.setTextMatrix(PAD, pageH - headerH + 38); cb.showText("Drive");
-            cb.setColorFill(ORANGE_TEXT); cb.showText("Master"); cb.endText();
+            PdfMarca.dibujarNombre(cb, bfBold, 22, PAD, pageH - headerH + 38);
 
             cb.beginText(); cb.setFontAndSize(bf, 7); cb.setColorFill(TEXT_MUTED);
             cb.setTextMatrix(PAD, pageH - headerH + 22); cb.showText("VENTAS"); cb.endText();
@@ -98,7 +96,7 @@ public class PdfVentaListBuilder {
                 String fecha = v.getFecha() != null ? v.getFecha().toLocalDate().toString() : "\u2014";
                 String metodo = v.getPagos() != null && !v.getPagos().isEmpty() ? v.getPagos().get(0).getMetodo() : "\u2014";
                 x = PAD;
-                drawText(cb, bfBold, 7, idCorto, x + 2, rowY - 14, TEXT_DARK); x += colW[0];
+                drawText(cb, bfBold, 7, idCorto, x + 2, rowY - 14, TEXT_STRONG); x += colW[0];
                 drawText(cb, bf, 7, safe(v.getClienteId()), x + 2, rowY - 14, TEXT_BODY); x += colW[1];
                 drawText(cb, bf, 7, fecha, x + 2, rowY - 14, TEXT_BODY); x += colW[2];
                 drawText(cb, bf, 7, metodo, x + 2, rowY - 14, TEXT_BODY); x += colW[3];

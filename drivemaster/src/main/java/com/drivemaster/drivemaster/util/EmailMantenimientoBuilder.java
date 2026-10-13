@@ -101,7 +101,7 @@ public class EmailMantenimientoBuilder {
     private static String fila(String etiqueta, String valor) {
         return "<tr>"
                 + "<td style=\"padding:6px 18px 6px 0;color:#6b7280\">" + etiqueta + "</td>"
-                + "<td style=\"padding:6px 0;color:#111827\">" + valor + "</td>"
+                + "<td style=\"padding:6px 0;color:#374151\">" + valor + "</td>"
                 + "</tr>";
     }
 
