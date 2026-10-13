@@ -763,7 +763,7 @@ function App() {
         {renderPagina()}
       </main>
 
-      <ChatWidget />
+      <ChatWidget onVerProducto={(id) => irA("producto-marketplace", id)} />
     </div>
   );
 }

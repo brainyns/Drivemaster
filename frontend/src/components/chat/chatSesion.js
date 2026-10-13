@@ -3,6 +3,7 @@
 
 const CLAVE_SESION = 'dm-chat-session';
 const CLAVE_MENSAJES = 'dm-chat-mensajes';
+const CLAVE_VISTO = 'dm-chat-visto';
 const MAX_MENSAJES = 50;
 
 export const EVENTO_REINICIO = 'chat:reiniciar';
@@ -45,6 +46,14 @@ export function cargarMensajes() {
 
 export function guardarMensajes(mensajes) {
   escribir(CLAVE_MENSAJES, JSON.stringify(mensajes.slice(-MAX_MENSAJES)));
+}
+
+// Si el cliente ya abrió el chat alguna vez, el botón deja de llamar la atención (ondas e invitación).
+export function chatVisto() {
+  return leer(CLAVE_VISTO) === '1';
+}
+export function marcarChatVisto() {
+  escribir(CLAVE_VISTO, '1');
 }
 
 /**

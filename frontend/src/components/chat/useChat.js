@@ -6,24 +6,40 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const TIMEOUT_MS = 95_000;
 const MSG_ERROR = 'Lo siento, hubo un error. Por favor intenta de nuevo.';
 const MSG_TIMEOUT = 'El asistente está tardando demasiado. Por favor intenta de nuevo en unos segundos.';
+// El reloj del mensaje del cliente pasa a check tras este tiempo: es una señal visual de "enviado".
+const MS_ENVIADO = 450;
 
 const hora = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-const mensaje = (text, isUser) => ({
-  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+const nuevoId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const mensaje = (text, isUser, extra = {}) => ({
+  id: nuevoId(),
   text,
   isUser,
-  timestamp: hora()
+  timestamp: hora(),
+  ...extra
 });
 
-const saludo = () => mensaje('¡Hola! Soy tu asesor virtual de Drivemaster. ¿En qué puedo ayudarte hoy?', false);
+// El saludo aparece completo, sin el efecto de escritura.
+const saludo = () => mensaje('¡Hola! Soy tu asesor virtual de Drivemaster. ¿En qué puedo ayudarte hoy?', false, { saludo: true });
+
+// Un mensaje guardado "enviando" (se recargó la página a mitad del envío) se muestra como enviado.
+function mensajesIniciales() {
+  const guardados = cargarMensajes();
+  if (!guardados) return [saludo()];
+  return guardados.map(m => (m.estado === 'enviando' ? { ...m, estado: 'enviado' } : m));
+}
 
 /**
  * Estado del chat. Vive en ChatWidget (siempre montado), no en ChatWindow: la ventana se
  * desmonta al minimizar o cerrar, y antes eso borraba la conversación y perdía la respuesta en curso.
+ *
+ * Mensajes del cliente: estado 'enviando' | 'enviado'. Mensajes del bot: productos (tarjeta) o
+ * error: true con el texto a reenviar en "reintento".
  */
 export function useChat() {
-  const [messages, setMessages] = useState(() => cargarMensajes() || [saludo()]);
+  const [messages, setMessages] = useState(mensajesIniciales);
   const [isTyping, setIsTyping] = useState(false);
   const peticionRef = useRef(null);
   // Cambia con cada conversación nueva: una respuesta que llega tarde no se mezcla con la siguiente.
@@ -46,16 +62,13 @@ export function useChat() {
     return () => window.removeEventListener(EVENTO_REINICIO, alReiniciar);
   }, [alReiniciar]);
 
-  const enviar = useCallback(async (texto) => {
-    if (!texto.trim() || peticionRef.current) return;
-
+  // Pide la respuesta de un texto ya mostrado en la conversación (envío nuevo o reintento).
+  const pedir = useCallback(async (texto) => {
     const conversacion = conversacionRef.current;
     const controller = new AbortController();
     peticionRef.current = controller;
     let porTimeout = false;
     const timer = setTimeout(() => { porTimeout = true; controller.abort(); }, TIMEOUT_MS);
-
-    setMessages(prev => [...prev, mensaje(texto, true)]);
     setIsTyping(true);
 
     let respuesta;
@@ -67,21 +80,46 @@ export function useChat() {
         signal: controller.signal
       });
       const data = await res.json().catch(() => null);
-      // 429 (demasiados mensajes) trae el motivo en "error"; 400 (mensaje vacío) en "respuesta".
-      respuesta = res.ok && data?.respuesta ? data.respuesta : (data?.error || data?.respuesta || MSG_ERROR);
+      if (res.ok && data?.respuesta) {
+        respuesta = mensaje(data.respuesta, false, {
+          productos: Array.isArray(data.productos) ? data.productos : []
+        });
+      } else {
+        // 429 (demasiados mensajes) trae el motivo en "error"; 400 (mensaje vacío) en "respuesta".
+        respuesta = mensaje(data?.error || data?.respuesta || MSG_ERROR, false, { error: true, reintento: texto });
+      }
     } catch (error) {
       // AbortError sin timeout = el usuario empezó una conversación nueva: no es un fallo.
       if (error?.name !== 'AbortError') console.error('Error en el chat:', error);
-      respuesta = porTimeout ? MSG_TIMEOUT : MSG_ERROR;
+      respuesta = mensaje(porTimeout ? MSG_TIMEOUT : MSG_ERROR, false, { error: true, reintento: texto });
     } finally {
       clearTimeout(timer);
       if (peticionRef.current === controller) peticionRef.current = null;
     }
 
     if (conversacion !== conversacionRef.current) return;
-    setMessages(prev => [...prev, mensaje(respuesta, false)]);
+    setMessages(prev => [...prev, respuesta]);
     setIsTyping(false);
   }, []);
 
-  return { messages, isTyping, enviar, nuevaConversacion: reiniciarChat };
+  const enviar = useCallback((texto) => {
+    if (!texto.trim() || peticionRef.current) return;
+    const nuevo = mensaje(texto, true, { estado: 'enviando' });
+    setMessages(prev => [...prev, nuevo]);
+    setTimeout(() => {
+      setMessages(prev => prev.map(m => (m.id === nuevo.id ? { ...m, estado: 'enviado' } : m)));
+    }, MS_ENVIADO);
+    pedir(texto);
+  }, [pedir]);
+
+  // Quita la burbuja de error y vuelve a pedir el mismo mensaje, sin que el cliente lo escriba otra vez.
+  const reintentar = useCallback((idError) => {
+    if (peticionRef.current) return;
+    const error = messages.find(m => m.id === idError);
+    if (!error?.reintento) return;
+    setMessages(prev => prev.filter(m => m.id !== idError));
+    pedir(error.reintento);
+  }, [messages, pedir]);
+
+  return { messages, isTyping, enviar, reintentar, nuevaConversacion: reiniciarChat };
 }
