@@ -12,10 +12,10 @@ los [problemas que se encontraron y cómo se resolvieron](#8-problemas-encontrad
 
 - El usuario escribe en un widget flotante de React. El widget hace `POST /api/chat` al backend con
   `{ mensaje, sessionId }`, sin JWT: el chat es anónimo.
-- Spring Boot **no tiene lógica de IA**: limita a 15 mensajes por minuto por IP (la IP real, resuelta por
-  Tomcat), valida que el mensaje no venga vacío y lo reenvía al webhook de n8n con el header
+- Spring Boot **no tiene lógica de IA**: limita los mensajes por IP (6 por minuto y 60 por día; la IP real, resuelta por
+  Tomcat) y en total (400 por día), valida que el mensaje no venga vacío ni pase de 500 caracteres y lo reenvía al webhook de n8n con el header
   `X-Chat-Secret`.
-- n8n valida el secreto y ejecuta un **AI Agent** con Groq (`openai/gpt-oss-20b`), memoria en Postgres
+- n8n valida el secreto y ejecuta un **AI Agent** con Claude Haiku 5.5 vía OpenRouter (`anthropic/claude-haiku-5.5`), memoria en Postgres
   (Supabase) por `sessionId` y una herramienta, `Buscar productos`, que consulta
   `GET /api/productos/buscar` con el header `X-Service-Token`.
 - n8n responde `{ respuesta, productos: [] }`. El backend lo pasa tal cual al widget, que muestra
@@ -50,7 +50,7 @@ Internet ─HTTPS─► Tailscale Funnel / Cloudflare Tunnel
                                                   │
                          ┌────────────────────────┼────────────────────────┐
                          ▼                        ▼                        ▼
-                  Groq API               Supabase (Postgres)        MongoDB Atlas
+                  OpenRouter             Supabase (Postgres)        MongoDB Atlas
                   (credencial en n8n)    tabla drivemaster_chat_    (productos que lee
                                          memory (credencial en n8n)  el backend)
 ```
@@ -75,12 +75,12 @@ sequenceDiagram
     participant B as Spring Boot (backend)
     participant W as n8n · Webhook + Validar secreto
     participant A as n8n · Agente
-    participant G as Groq
+    participant G as OpenRouter
     participant M as Postgres (memoria)
 
     U->>N: POST /api/chat {mensaje, sessionId} (timeout 95 s)
     N->>B: proxy_pass http://backend:8080 (timeout 120 s)
-    B->>B: ChatRateLimiter.consumir(getRemoteAddr()) → 429 si pasa de 15/min
+    B->>B: ChatRateLimiter.consumir(getRemoteAddr()) → 429 si pasa el cupo (minuto, día por IP o día global)
     B->>B: mensaje vacío → 400 "Escribe un mensaje..."
     B->>W: POST http://n8n:5678/webhook/chat-drivemaster<br/>X-Chat-Secret · {mensaje, sessionId} (timeout 90 s)
     W->>W: X-Chat-Secret ≠ $env.N8N_CHAT_SECRET → 403
@@ -157,7 +157,10 @@ Flujo de `ChatProxyController.chat()`:
 | `n8n.webhook.url` | `N8N_WEBHOOK_URL` | `http://localhost:5678/webhook/chat-drivemaster` | `http://n8n:5678/webhook/chat-drivemaster` |
 | `n8n.chat.secret` | `N8N_CHAT_SECRET` | vacío | **obligatoria** |
 | `n8n.tools.secret` | `N8N_TOOLS_SECRET` | vacío → la herramienta responde 403 | **obligatoria** |
-| `n8n.chat.rate.max-por-minuto` | `N8N_CHAT_RATE_MAX` | `15` | variable opcional del stack |
+| `n8n.chat.rate.max-por-minuto` | `N8N_CHAT_RATE_MAX` | `6` | variable opcional del stack |
+| `n8n.chat.rate.max-por-dia-ip` | `N8N_CHAT_RATE_DIA_IP` | `60` | variable opcional del stack |
+| `n8n.chat.rate.max-por-dia-global` | `N8N_CHAT_RATE_DIA_GLOBAL` | `400` | variable opcional del stack (acota el gasto diario) |
+| `n8n.chat.max-caracteres` | `N8N_CHAT_MAX_CARACTERES` | `500` | — |
 
 ### 3.3 Herramienta del agente: `GET /api/productos/buscar`
 
@@ -194,7 +197,7 @@ Archivo: [`workflows/chat-drivemaster.json`](workflows/chat-drivemaster.json) (s
 Webhook chat ─► Validar secreto ─(sí)─► Preparar mensaje ─► Agente DriveMaster ─► Formar respuesta ─► Responder
                       └─(no)─► Rechazar (403)                 ▲      ▲      ▲
                                                 ai_languageModel  ai_memory  ai_tool
-                                                Modelo Groq     Memoria     Buscar productos
+                                                Modelo OpenRouter Memoria   Buscar productos
 ```
 
 | Nodo | Tipo (versión) | Configuración clave |
@@ -204,13 +207,13 @@ Webhook chat ─► Validar secreto ─(sí)─► Preparar mensaje ─► Agent
 | **Rechazar (403)** | `respondToWebhook` (v1.1) | `403 {"error": "No autorizado"}` |
 | **Preparar mensaje** | `set` (v3.4) | `chatInput = body.mensaje`, `sessionId = body.sessionId \|\| 'anon'` |
 | **Agente DriveMaster** | `agent` (v1.6) | *Prompt* = `{{ $json.chatInput }}`; reglas en *System Message* |
-| **Modelo Groq** | `lmChatGroq` (v1) | `model = {{ $env.GROQ_MODEL \|\| 'openai/gpt-oss-20b' }}`, temperatura 0.3 |
+| **Modelo OpenRouter** | `lmChatOpenRouter` (v1) | `model = {{ $env.OPENROUTER_MODEL \|\| 'anthropic/claude-haiku-5.5' }}`, temperatura 0.3, máx. 400 tokens de salida |
 | **Memoria (Postgres)** | `memoryPostgresChat` (v1.3) | Clave `{{ $('Preparar mensaje').item.json.sessionId }}`, tabla `drivemaster_chat_memory`, 8 mensajes |
 | **Buscar productos** | `httpRequestTool` (v4.2) | `GET $env.N8N_TOOLS_BASE_URL/api/productos/buscar?terminos=$fromAI(...)` + `X-Service-Token: $env.N8N_TOOLS_SECRET` |
 | **Formar respuesta** | `code` (v2, por ítem) | Devuelve **un objeto** `{ json: { respuesta, productos: [] } }` |
 | **Responder** | `respondToWebhook` (v1.1) | Devuelve el JSON anterior |
 
-El *System Message* está en cuatro bloques cortos, pensados para un modelo pequeño como `gpt-oss-20b`:
+El *System Message* está en cuatro bloques cortos, cortos a propósito: el prompt se paga en cada llamada al modelo:
 
 - **Objetivo**: ayudar a encontrar el repuesto correcto dentro del catálogo.
 - **Herramienta**: usarla siempre para productos y precios, con 1 a 4 términos cortos (repuesto + marca/modelo del vehículo); si no hay resultados, reintentar una vez con otro nombre; nunca inventar datos.
@@ -221,7 +224,7 @@ El *System Message* está en cuatro bloques cortos, pensados para un modelo pequ
 
 - La tabla `drivemaster_chat_memory` la crea sola el nodo, en la misma base de Supabase que usa el
   backend; `homelab/backup.sh` (pg_dump del esquema `public`) la respalda.
-- La clave es el `sessionId` del navegador. El agente recuerda los últimos 8 mensajes de esa sesión (menos tokens por llamada: el plan gratis de Groq da 8.000 por minuto).
+- La clave es el `sessionId` del navegador. El agente recuerda las últimas 4 interacciones de esa sesión (menos tokens por llamada: cada token se paga en OpenRouter).
 - La tabla no se limpia sola (ver [pendientes](#9-pendientes)).
 
 ---
@@ -233,12 +236,12 @@ El *System Message* está en cuatro bloques cortos, pensados para un modelo pequ
 | `N8N_CHAT_SECRET` | Variables del stack (obligatoria) → `backend` y `n8n` | Backend: header `X-Chat-Secret`. n8n: nodo `Validar secreto` |
 | `N8N_TOOLS_SECRET` | Variables del stack (obligatoria) → `backend` y `n8n` | n8n: header `X-Service-Token`. Backend: lo valida |
 | `N8N_TOOLS_BASE_URL` | Fijo en el compose: `http://backend:8080` | Herramienta `Buscar productos` |
-| `GROQ_MODEL` | Variable opcional del stack | Nodo `Modelo Groq` |
+| `OPENROUTER_MODEL` | Variable opcional del stack | Nodo `Modelo OpenRouter` |
 | `N8N_VERSION` | Variable del stack: la versión que ya corre | Imagen de n8n |
 | `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` | Fijo en el compose | Permite `$env` en el workflow (n8n 2.x lo bloquea por defecto) |
 | `N8N_CHAT_RATE_MAX` | Variable opcional del stack | Backend |
 | `N8N_WEBHOOK_URL` | Variable opcional del stack | Backend |
-| API key de Groq | **Credencial en n8n** | `Modelo Groq` |
+| API key de OpenRouter (con límite de crédito) | **Credencial en n8n** | `Modelo OpenRouter` |
 | Conexión Postgres (Supabase) | **Credencial en n8n** | `Memoria (Postgres)` |
 | Clave de cifrado de n8n | `/home/node/.n8n/config` en el volumen | Descifra las credenciales. Guárdala en tu gestor de contraseñas |
 
@@ -295,9 +298,9 @@ disponible" ante cualquier fallo de n8n. n8n responde `403` sin el secreto corre
 | Cloudflare Tunnel (cuando se use) | ~100 s por petición |
 | nginx → backend | `proxy_read_timeout 120s` |
 | Backend → n8n | conexión 5 s, lectura 90 s |
-| Rate limit | 15 mensajes/min por IP (`N8N_CHAT_RATE_MAX`), en memoria |
-| Búsqueda | máx. 10 términos y 6 productos (sin URL de imagen) |
-| Memoria | últimos 8 mensajes por sesión; widget guarda los últimos 50 |
+| Rate limit | 6 mensajes/min y 60/día por IP, 400/día en total, en memoria |
+| Búsqueda | máx. 10 términos y 4 productos (sin URL de imagen) |
+| Memoria | últimas 4 interacciones por sesión; widget guarda los últimos 50 |
 
 El backend corta primero (90 s) y su mensaje amable llega antes de que el widget (95 s), Cloudflare
 (100 s) o nginx (120 s) corten la conexión.
@@ -312,7 +315,7 @@ El backend corta primero (90 s) y su mensaje amable llega antes de que el widget
    `N8N_VERSION` con la versión de n8n que ya corre. **Pull and redeploy**.
 2. Editor de n8n: `ssh -L 5678:localhost:5678 usuario@IP-VM` → `http://localhost:5678`.
 3. Si había un workflow importado antes: desactívalo y bórralo. Importa `n8n/workflows/chat-drivemaster.json`.
-4. Credenciales: *Groq* → `Modelo Groq`; *Postgres* (Supabase, Session pooler, SSL)
+4. Credenciales: *OpenRouter* → `Modelo OpenRouter`; *Postgres* (Supabase, Session pooler, SSL)
    → `Memoria (Postgres)`. El webhook no necesita credencial.
 5. Activa el workflow.
 
@@ -347,9 +350,9 @@ curl -s -H "X-Service-Token: TU_N8N_TOOLS_SECRET" "http://localhost:8088/api/pro
 | --- | --- | --- |
 | El stack no se despliega: *Define N8N_CHAT_SECRET…* | Portainer | Faltan los secretos obligatorios |
 | Widget: "el asistente no está disponible" | Logs de `drivemaster-backend-1` → `Error llamando a n8n` | `404`: workflow inactivo · `403`: secreto distinto · `500`: falla un nodo (ver Executions) · timeout |
-| Widget: "Has enviado demasiados mensajes…" | — | Límite de 15/min por IP |
+| Widget: "Has enviado demasiados mensajes…" | — | Límite por IP (6/min, 60/día) |
 | Nunca encuentra productos | n8n → Executions → `Buscar productos` | `403` por `N8N_TOOLS_SECRET` distinto, o `$env` bloqueado (falta `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`) |
-| Error del modelo (*model not found / decommissioned*) | n8n → Executions → `Modelo Groq` | `GROQ_MODEL` retirado por Groq: elige otro con soporte de herramientas |
+| Error del modelo (*model not found / decommissioned*) | n8n → Executions → `Modelo OpenRouter` | `OPENROUTER_MODEL` mal escrito o retirado: elige otro con soporte de herramientas en openrouter.ai/models |
 | Falla la memoria | n8n → Executions → `Memoria (Postgres)` | Credencial sin asignar o Supabase inaccesible (usar Session pooler) |
 
 ### 7.4 Cambiar el workflow sin perderlo
@@ -381,6 +384,7 @@ Edita en el editor y prueba con `/webhook-test/chat-drivemaster`. Luego **Downlo
 | 16 | 🟢 | **Guías desactualizadas:** la prueba usaba `localhost:8080` (no publicado en el HomeLab) y faltaban pasos y variables. | `n8n/README.md`, `homelab/README.md` y `.env.example` actualizados. | docs |
 | 17 | 🔴 | **Cuota de Gemini agotada.** Google retiró `gemini-2.5-flash` para cuentas nuevas y el plan gratuito de su reemplazo permite 20 llamadas al día (cada mensaje del chat gasta 2 o más). | El modelo pasa a **Groq** (nodo `lmChatGroq`, `GROQ_MODEL`, por defecto `openai/gpt-oss-20b`). | `chat-drivemaster.json`, compose, `.env.example`, guías |
 | 18 | 🟡 | **"¿Tienen rodamientos?" no encontraba la "Balinera delantera Ford Escape"** y el modelo respondía vacío ("no pude procesar tu consulta"): la búsqueda era literal y la herramienta devolvía `[]`. | Búsqueda tolerante a tildes, plurales y sinónimos (`PatronBusqueda`), respuesta `{total, productos, mensaje}` y reglas en el prompt para reintentar con otro nombre y responder siempre. Tests nuevos. | `PatronBusqueda.java`, `ResultadoBusquedaDTO.java`, `ProductoController.java`, `ProductoServiceImpl.java`, workflow |
+| 19 | 🔴 | **Límite de Groq gratis:** 8.000 tokens/min y 200.000/día para todos los modelos con herramientas; un mensaje gastaba ~6.500 tokens (≈1 mensaje/min, ≈30/día). | El modelo pasa a **OpenRouter** de pago (`lmChatOpenRouter`, `OPENROUTER_MODEL`, por defecto `anthropic/claude-haiku-5.5`, ~US$0,001 por mensaje). Para gastar menos: prompt y descripción de la herramienta más cortos, memoria de 8 a 4, 4 productos por búsqueda, `maxIterations` 4 y 400 tokens de salida. En el backend: 6/min y 60/día por IP, 400/día en total y mensajes de máx. 500 caracteres. | `chat-drivemaster.json`, `ChatRateLimiter.java`, `ChatProxyController.java`, `ProductoServiceImpl.java`, `ChatInput.jsx`, compose, `.env.example`, guías |
 
 ### Verificación hecha
 
@@ -401,7 +405,7 @@ Edita en el editor y prueba con `/webhook-test/chat-drivemaster`. Luego **Downlo
 - **Retención**: n8n guarda cada ejecución con el mensaje del usuario y `drivemaster_chat_memory` crece
   sin límite. Valorar `EXECUTIONS_DATA_MAX_AGE` corto y una limpieza periódica de la tabla.
 - **Funnel**: comprobar qué IP ve el backend detrás de Tailscale Funnel. Si todos los clientes llegan con
-  la misma IP, comparten el cupo de 15/min.
+  la misma IP, comparten el cupo por IP (6/min, 60/día).
 - **`productos`**: el widget podría mostrar tarjetas de producto si *Formar respuesta* armara el array con
   los datos de la herramienta.
 - **Más herramientas**: estado de orden de servicio, talleres activos, agendar cita.

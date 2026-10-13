@@ -44,15 +44,18 @@ public class ChatProxyController {
     private final String n8nWebhookUrl;
     private final String n8nChatSecret;
     private final RestTemplate chatRestTemplate;
+    private final int maxCaracteres;
 
     public ChatProxyController(ChatRateLimiter chatRateLimiter,
                                ObjectMapper objectMapper,
                                @Value("${n8n.webhook.url:http://localhost:5678/webhook/chat-drivemaster}") String n8nWebhookUrl,
-                               @Value("${n8n.chat.secret:}") String n8nChatSecret) {
+                               @Value("${n8n.chat.secret:}") String n8nChatSecret,
+                               @Value("${n8n.chat.max-caracteres:500}") int maxCaracteres) {
         this.chatRateLimiter = chatRateLimiter;
         this.objectMapper = objectMapper;
         this.n8nWebhookUrl = n8nWebhookUrl;
         this.n8nChatSecret = n8nChatSecret;
+        this.maxCaracteres = Math.max(1, maxCaracteres);
 
         // El agente de n8n (modelo + herramientas) puede tardar: conecta pronto, lee con holgura.
         SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
@@ -68,11 +71,17 @@ public class ChatProxyController {
         // (RemoteIpValve) ya resuelve la IP real recorriendo la cabecera desde los proxies internos
         // (nginx, cloudflared), así que getRemoteAddr() es la IP del cliente.
         String ip = http.getRemoteAddr();
-        chatRateLimiter.consumir(ip);
 
         if (request == null || request.getMensaje() == null || request.getMensaje().isBlank()) {
             return ResponseEntity.badRequest().body(new ChatResponse(MSG_VACIO, Collections.emptyList()));
         }
+        // Un mensaje enorme se paga en cada llamada al modelo y queda en la memoria de la sesión.
+        if (request.getMensaje().length() > maxCaracteres) {
+            return ResponseEntity.badRequest().body(new ChatResponse(
+                    "Tu mensaje es muy largo. Escríbelo en máximo " + maxCaracteres + " caracteres.", Collections.emptyList()));
+        }
+        // Se cuenta después de validar: un mensaje rechazado no gasta el cupo.
+        chatRateLimiter.consumir(ip);
 
         try {
             HttpHeaders headers = new HttpHeaders();

@@ -138,10 +138,10 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     /**
-     * Productos que recibe el agente por búsqueda. Cada producto ocupa tokens en cada llamada al modelo y
-     * el plan gratis de Groq permite 8.000 tokens por minuto: con 10 un solo mensaje podía agotarlo.
+     * Productos que recibe el agente por búsqueda. Cada producto ocupa tokens en cada llamada al modelo
+     * (se pagan por token en OpenRouter) y el agente solo muestra 3: 4 deja margen para elegir.
      */
-    static final int MAX_PRODUCTOS_AGENTE = 6;
+    static final int MAX_PRODUCTOS_AGENTE = 4;
 
     /** Palabras que el modelo a veces manda como términos y que coinciden con casi todo el catálogo. */
     private static final Set<String> PALABRAS_VACIAS = Set.of(

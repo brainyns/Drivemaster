@@ -50,7 +50,7 @@ Plataforma integral de comercio de repuestos automotrices y servicios de taller:
 - Compatibilidad de repuestos por vehículo (marca, modelo y año) y control de stock.
 - Carrito de compras con **compra inmediata** y flujo de **solicitud de pedido**.
 - Imágenes de productos y vehículos alojadas en **Cloudinary**.
-- Chat con **asistente IA** integrado en la tienda: agente orquestado en **n8n** (modelo Gemini o Groq) con memoria por sesión y herramientas que consultan el catálogo en vivo.
+- Chat con **asistente IA** integrado en la tienda: agente orquestado en **n8n** (Claude Haiku vía OpenRouter) con memoria por sesión y herramientas que consultan el catálogo en vivo.
 
 ### Pagos
 - **Wompi**: checkout con tarjeta, webhook de confirmación y redirección de verificación.
@@ -101,7 +101,7 @@ Plataforma integral de comercio de repuestos automotrices y servicios de taller:
 | Spring Data JPA (PostgreSQL) | Registro transaccional de pagos y parámetros |
 | Google OAuth2 | Inicio de sesión con Google |
 | Wompi API | Pasarela de pagos con tarjeta |
-| n8n (agente IA con Gemini / Groq) | Asistente conversacional de la tienda: webhook, herramientas y memoria |
+| n8n (agente IA vía OpenRouter) | Asistente conversacional de la tienda: webhook, herramientas y memoria |
 | Brevo API / SMTP | Envío de correos transaccionales |
 | Cloudinary | Almacenamiento de imágenes |
 | Bucket4j + Caffeine | Rate limiting y caché |
@@ -137,7 +137,7 @@ flowchart TD
     MONGO[("MongoDB Atlas<br/>dominio")]
     PG[("PostgreSQL Supabase<br/>pagos, config y memoria del chat")]
     EXT["Servicios externos<br/>Wompi · Brevo/SMTP · Cloudinary · Google OAuth2"]
-    IA["Gemini / Groq<br/>(credenciales en n8n)"]
+    IA["OpenRouter (Claude Haiku)<br/>(credenciales en n8n)"]
 
     FE -- "HTTP/JSON (Bearer JWT)" --> BE
     MOB -. "HTTP/JSON" .-> BE
@@ -195,7 +195,7 @@ drivemaster (repo)
 | Maven | 3.9 (o usa `./mvnw`) |
 | Node.js | 20+ |
 | Docker + Docker Compose | Opcional (para levantar todo junto) |
-| Cuentas externas | MongoDB Atlas, PostgreSQL, Wompi, Gemini (o Groq), Brevo/SMTP, Cloudinary, Google OAuth2 |
+| Cuentas externas | MongoDB Atlas, PostgreSQL, Wompi, OpenRouter, Brevo/SMTP, Cloudinary, Google OAuth2 |
 
 > **Nota:** la base de datos es **dual**. Sin credenciales de ambas no arranca la aplicación completa.
 
@@ -212,7 +212,7 @@ Copia `.env.example` a `.env` y completa los valores. El `.env` **no** se sube a
 | `SECURITY_JWT_SECRET` | Secreto largo y aleatorio (mín. 32 caracteres) |
 | `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | Correo remitente / SMTP |
 | `BREVO_API_KEY` | API Key de Brevo (envío transaccional) |
-| `N8N_CHAT_SECRET` / `N8N_TOOLS_SECRET` | Secretos compartidos backend ↔ n8n (webhook del chat y herramientas). La API key de Gemini/Groq se configura como **credencial dentro de n8n** (ver [`n8n/README.md`](n8n/README.md)) |
+| `N8N_CHAT_SECRET` / `N8N_TOOLS_SECRET` | Secretos compartidos backend ↔ n8n (webhook del chat y herramientas). La API key de OpenRouter se configura como **credencial dentro de n8n** (ver [`n8n/README.md`](n8n/README.md)) |
 | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Almacenamiento de imágenes |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth2 de Google |
 | `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_KEY` / `WOMPI_API_URL` / `WOMPI_REDIRECT_URL` | Integración de pagos Wompi (sandbox/producción) |
