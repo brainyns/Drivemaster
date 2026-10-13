@@ -4,6 +4,7 @@ import com.drivemaster.drivemaster.controller.UsuarioController;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.service.CuentaNegocioService;
+import com.drivemaster.drivemaster.service.NotificacionService;
 import com.drivemaster.drivemaster.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ class DesactivarCuentaPausaNegocioWebTest {
     @MockBean private UsuarioRepository usuarioRepository;
     @MockBean private PasswordEncoder passwordEncoder;
     @MockBean private CuentaNegocioService cuentaNegocioService;
+    @MockBean private NotificacionService notificacionService;
     @MockBean private JwtUtil jwtUtil;
     @MockBean private CustomUserDetailsService customUserDetailsService;
 
@@ -61,6 +63,7 @@ class DesactivarCuentaPausaNegocioWebTest {
 
         assertFalse(taller.getActivo());
         verify(cuentaNegocioService).pausarNegocioDe(taller);
+        verify(notificacionService).cerrarConexionesDe("u-taller");
     }
 
     @Test
@@ -71,6 +74,7 @@ class DesactivarCuentaPausaNegocioWebTest {
 
         assertFalse(taller.getActivo());
         verify(cuentaNegocioService).pausarNegocioDe(taller);
+        verify(notificacionService).cerrarConexionesDe("u-taller");
     }
 
     @Test
@@ -83,6 +87,7 @@ class DesactivarCuentaPausaNegocioWebTest {
 
         assertTrue(taller.getActivo());
         verify(cuentaNegocioService, never()).pausarNegocioDe(any());
+        verify(notificacionService, never()).cerrarConexionesDe(any());
     }
 
     @Test

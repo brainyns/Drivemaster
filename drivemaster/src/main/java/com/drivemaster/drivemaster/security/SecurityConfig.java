@@ -30,6 +30,10 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /** Orígenes del frontend: los usan el CORS de la API y el WebSocket de notificaciones. */
+    public static final List<String> ORIGENES_PERMITIDOS = List.of("http://localhost:5173", "http://localhost:5174",
+            "https://drivermaster.onrender.com", "https://drivemaster-orcin.vercel.app");
+
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -241,7 +245,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://localhost:5174", "https://drivermaster.onrender.com", "https://drivemaster-orcin.vercel.app"));
+        configuration.setAllowedOriginPatterns(ORIGENES_PERMITIDOS);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "Cookie"));
         configuration.setAllowCredentials(true);

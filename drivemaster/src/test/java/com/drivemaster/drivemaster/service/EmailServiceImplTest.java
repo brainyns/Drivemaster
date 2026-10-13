@@ -207,7 +207,7 @@ class EmailServiceImplTest {
         UsuarioRepository usuarios = mock(UsuarioRepository.class);
         when(usuarios.findById("u1")).thenReturn(Optional.of(Usuario.builder().id("u1").nombre("Ana").correo("ana@demo.com").build()));
         AvisosSolicitudServicio a = new AvisosSolicitudServicio(correo, usuarios, mock(TallerRepository.class),
-                mock(TiendaRepository.class), "http://localhost:5173");
+                mock(TiendaRepository.class), mock(NotificacionService.class), "http://localhost:5173");
         ReflectionTestUtils.setField(a, "devLog", devLog);
         ReflectionTestUtils.setField(a, "wompiPublicKey", llavePublica);
         return a;

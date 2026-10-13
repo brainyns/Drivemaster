@@ -1,18 +1,20 @@
-import { getToken } from "./authService";
+import { pedirTicket } from "./notificacionesService";
+import { urlWebSocket, retrasoReconexion } from "./notificacionesUtil";
+
+// Conexión única a /ws/notificaciones. Cada conexión (y cada reconexión) usa un ticket nuevo
+// de un solo uso: el token de sesión nunca viaja en la URL.
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 let ws = null;
-let token = null;
+let activo = false;
+let conectando = false;
 let reconnectTimer = null;
 let retries = 0;
 let generation = 0;
+let estado = "desconectado"; // "conectado" | "conectando" | "desconectado"
 const listeners = new Set();
-
-function wsUrl() {
-  const base = import.meta.env.VITE_API_URL || "http://localhost:8080";
-  const url = new URL(base);
-  const proto = url.protocol === "https:" ? "wss" : "ws";
-  return `${proto}://${url.host}/ws/notificaciones?token=${encodeURIComponent(token)}`;
-}
+const estadoListeners = new Set();
 
 function notify(data) {
   listeners.forEach((cb) => {
@@ -20,25 +22,48 @@ function notify(data) {
   });
 }
 
+function setEstado(nuevo) {
+  if (estado === nuevo) return;
+  estado = nuevo;
+  estadoListeners.forEach((cb) => {
+    try { cb(nuevo); } catch { /* ignore */ }
+  });
+}
+
 function scheduleReconnect() {
-  if (reconnectTimer || !token) return;
-  const delay = Math.min(30000, 3000 * (retries + 1));
+  if (reconnectTimer || !activo) return;
+  const delay = retrasoReconexion(retries);
   retries += 1;
+  setEstado("conectando");
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
     connect();
   }, delay);
 }
 
-function connect() {
-  const stored = getToken();
-  if (stored) token = stored;
-  if (!token) return;
-
+async function connect() {
+  if (!activo || ws || conectando) return;
+  conectando = true;
+  setEstado("conectando");
   const gen = generation;
+
+  let ticket;
+  try {
+    ticket = await pedirTicket();
+  } catch (e) {
+    conectando = false;
+    if (gen !== generation) return;
+    // Sin sesión o sin permiso no tiene sentido insistir; un fallo de red sí se reintenta
+    if (e?.status === 401 || e?.status === 403) { setEstado("desconectado"); return; }
+    scheduleReconnect();
+    return;
+  }
+  conectando = false;
+  if (gen !== generation || !activo) return;
+
   let socket;
   try {
-    socket = new WebSocket(wsUrl());
+    socket = new WebSocket(urlWebSocket(API_BASE, ticket));
   } catch {
     scheduleReconnect();
     return;
@@ -51,6 +76,7 @@ function connect() {
       return;
     }
     retries = 0;
+    setEstado("conectado");
   };
 
   socket.onmessage = (ev) => {
@@ -75,6 +101,7 @@ function connect() {
 
 function disconnectInternal() {
   generation += 1;
+  conectando = false;
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (ws) {
     const socket = ws;
@@ -86,23 +113,31 @@ function disconnectInternal() {
       try { socket.close(); } catch { /* ignore */ }
     }
   }
+  setEstado("desconectado");
 }
 
-export function connectNotifications(tok) {
-  if (!tok) return;
-  if (ws && token === tok) return;
-  token = tok;
-  disconnectInternal();
+/** Abre la conexión de la sesión actual (si ya está abierta, no hace nada). */
+export function connectNotifications() {
+  if (activo && (ws || conectando || reconnectTimer)) return;
+  activo = true;
+  retries = 0;
   connect();
 }
 
 export function disconnectNotifications() {
-  token = null;
+  activo = false;
+  retries = 0;
   disconnectInternal();
-  listeners.clear();
 }
 
 export function subscribeNotifications(cb) {
   listeners.add(cb);
   return () => listeners.delete(cb);
+}
+
+/** Estado de la conexión en vivo, para mostrarlo en la campanita. */
+export function subscribeEstadoConexion(cb) {
+  estadoListeners.add(cb);
+  cb(estado);
+  return () => estadoListeners.delete(cb);
 }
