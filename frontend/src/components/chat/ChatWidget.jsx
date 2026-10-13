@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ChatWindow from './ChatWindow';
 import ChatLogo from './ChatLogo';
 import { useChat } from './useChat';
@@ -22,6 +22,11 @@ const ChatWidget = ({ onVerProducto }) => {
     const [visto, setVisto] = useState(chatVisto);
     const [invitacion, setInvitacion] = useState(false);
     const [noLeidos, setNoLeidos] = useState(0);
+    // Tras cerrar o minimizar, el foco del teclado vuelve al botón que reabre el chat.
+    const devolverFoco = useRef(false);
+    const recibirFoco = (el) => {
+        if (el && devolverFoco.current) { devolverFoco.current = false; el.focus(); }
+    };
 
     // Invitación y la insignia "1" a los 1,2 s, solo si nunca se abrió el chat.
     useEffect(() => {
@@ -53,6 +58,7 @@ const ChatWidget = ({ onVerProducto }) => {
     const ocultar = (destino) => {
         if (isClosing) return;
         setIsClosing(true);
+        devolverFoco.current = true;
         setTimeout(() => {
             setChatState(destino);
             setIsClosing(false);
@@ -78,7 +84,7 @@ const ChatWidget = ({ onVerProducto }) => {
                         </button>
                     </div>
                 )}
-                <button type="button" className={`chat-toggle-button${visto ? ' visto' : ''}`} onClick={abrir}
+                <button type="button" ref={recibirFoco} className={`chat-toggle-button${visto ? ' visto' : ''}`} onClick={abrir}
                     aria-label={noLeidos ? `Abrir chat, ${noLeidos} sin leer` : 'Abrir chat'} title="Abrir chat">
                     <ChatLogo size={26} pensando={chat.isTyping} />
                     {noLeidos > 0 && <span className="insignia" aria-hidden="true">{noLeidos}</span>}
@@ -90,7 +96,7 @@ const ChatWidget = ({ onVerProducto }) => {
     if (chatState === 'minimized') {
         return (
             <div className="chat-widget-container">
-                <button type="button" className="chat-minimized-bar" onClick={abrir}>
+                <button type="button" ref={recibirFoco} className="chat-minimized-bar" onClick={abrir}>
                     <ChatLogo size={20} pensando={chat.isTyping} />
                     <span>
                         {chat.isTyping ? (

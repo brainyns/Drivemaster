@@ -3,9 +3,6 @@
    de la app (clases cortas como .chip, .precio o .mini). Paleta y fuentes de css/global.css.
    Las animaciones son solo CSS (@keyframes y transition); los componentes cambian clases. */
 
-/* Ángulo animable del borde que gira alrededor del campo de texto. */
-@property --giro { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-
 .chat-widget-container {
     --chat-surface: #1E2023;
     --chat-surface-2: #282B2E;
@@ -78,7 +75,7 @@ html[data-theme="light"] .chat-widget-container {
 
 .chat-widget-container button,
 .chat-widget-container textarea { font: inherit; }
-.chat-widget-container :focus-visible { outline: 2px solid var(--chat-accent); outline-offset: 2px; }
+.chat-widget-container :focus-visible { outline: 2px solid var(--chat-accent-text); outline-offset: 2px; }
 /* Texto solo para lectores de pantalla (el texto completo mientras se "escribe" palabra por palabra). */
 .chat-widget-container .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -115,14 +112,16 @@ html[data-theme="light"] .chat-widget-container {
 .chat-widget-container .burbuja-invita {
     position: relative; max-width: 236px; background: var(--chat-win); color: var(--chat-text);
     border: 1px solid var(--chat-line); border-radius: 14px 14px 4px 14px;
-    padding: 10px 32px 10px 13px; font-size: 13px; box-shadow: var(--chat-shadow-s);
+    padding: 10px 36px 10px 13px; font-size: 13px; box-shadow: var(--chat-shadow-s);
     transform-origin: bottom right; animation: chat-pop 0.5s var(--chat-resorte) both;
 }
 .chat-widget-container .burbuja-invita b { font-weight: 700; }
 .chat-widget-container .x-invita {
-    position: absolute; top: 5px; right: 5px; width: 22px; height: 22px; border: 0; border-radius: 50%;
+    position: absolute; top: 2px; right: 2px; width: 28px; height: 28px; border: 0; border-radius: 50%;
     background: transparent; color: var(--chat-muted); display: grid; place-items: center; cursor: pointer;
 }
+/* Área táctil de 44 px sin agrandar el dibujo */
+.chat-widget-container .x-invita::after { content: ''; position: absolute; inset: -8px; border-radius: 50%; }
 .chat-widget-container .x-invita:hover { background: var(--chat-surface-2); color: var(--chat-text); }
 
 /* ── Logo del tacómetro ──
@@ -190,13 +189,9 @@ html[data-theme="light"] .chat-widget-container {
     position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%;
     background: var(--chat-ok-fill); border: 2px solid var(--chat-accent);
 }
-.chat-widget-container .estado-punto::after {
-    content: ''; position: absolute; inset: -3px; border-radius: 50%;
-    border: 2px solid var(--chat-ok-fill); animation: chat-latido 2.2s ease-out infinite;
-}
 .chat-widget-container .chat-header-title { font-weight: 700; font-size: 16px; line-height: 1.2; }
 /* "en línea" y "Escribiendo" ocupan la misma celda: uno sale hacia arriba y el otro entra desde abajo */
-.chat-widget-container .chat-header-subtitle { display: grid; font-size: 12px; height: 17px; overflow: hidden; }
+.chat-widget-container .chat-header-subtitle { display: grid; font-size: 12px; height: 1.45em; overflow: hidden; }
 .chat-widget-container .chat-header-subtitle > span { grid-area: 1 / 1; transition: opacity 0.25s, transform 0.3s var(--chat-suave); white-space: nowrap; }
 .chat-widget-container .sub-normal { opacity: 0.8; }
 .chat-widget-container .sub-escribe { opacity: 0; transform: translateY(8px); }
@@ -257,10 +252,16 @@ html[data-theme="light"] .chat-widget-container {
 }
 /* El asistente responde con párrafos y listas con guiones: respetar los saltos de línea. */
 .chat-widget-container .bot-texto { margin: 0; padding: 10px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-widget-container .bot-texto:has(.cursor) { cursor: pointer; }
 .chat-widget-container .con-producto .bot-texto { border-top: 1px solid var(--chat-line); margin-top: 10px; padding-bottom: 12px; }
 .chat-widget-container .cursor {
     display: inline-block; width: 2px; height: 1.05em; margin-left: 1px; vertical-align: -2px;
     background: var(--chat-accent); animation: chat-parpadeo 0.9s steps(1) infinite;
+}
+
+/* Aviso fijo al inicio de la conversación: las respuestas las escribe un modelo */
+.chat-widget-container .aviso-ia {
+    margin: 0 8px; text-align: center; font-size: 12px; line-height: 1.4; color: var(--chat-muted);
 }
 
 /* ── Tarjeta de producto ── */
@@ -293,8 +294,9 @@ html[data-theme="light"] .chat-widget-container {
     transition: border-color 0.2s, transform 0.25s var(--chat-resorte);
     animation: chat-pop 0.4s var(--chat-resorte) both; animation-delay: calc(var(--i) * 70ms + 300ms);
 }
-.chat-widget-container .mini:hover { transform: translateY(-2px); }
-.chat-widget-container .mini.on { border-color: var(--chat-accent); }
+.chat-widget-container .mini:not(.on) { opacity: 0.6; }
+.chat-widget-container .mini:hover { transform: translateY(-2px); opacity: 1; }
+.chat-widget-container .mini.on { border-color: var(--chat-accent); transform: translateY(-2px); box-shadow: 0 4px 10px -4px var(--chat-accent-glow); }
 .chat-widget-container .mini img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .chat-widget-container .mini.sin { display: grid; place-items: center; color: var(--chat-muted); }
 .chat-widget-container .producto-info { padding: 10px 14px 0; display: grid; gap: 2px; transition: opacity 0.16s, transform 0.16s; }
@@ -383,32 +385,20 @@ html[data-theme="light"] .chat-widget-container {
     border-radius: 24px; background: var(--chat-surface); border: 1.5px solid var(--chat-line);
     transition: border-color 0.25s, box-shadow 0.35s, background 0.25s;
 }
-/* Borde naranja que gira al enfocar: conic-gradient + mask para pintar solo el borde */
-.chat-widget-container .chat-input-wrapper::before {
-    content: ''; position: absolute; inset: -1.5px; border-radius: inherit; padding: 1.5px; pointer-events: none;
-    background: conic-gradient(from var(--giro), var(--chat-accent), transparent 22%, transparent 48%, var(--chat-accent-h) 72%, var(--chat-accent));
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor; mask-composite: exclude;
-    opacity: 0; transition: opacity 0.3s; animation: chat-giro-borde 3s linear infinite; animation-play-state: paused;
-}
 .chat-widget-container .chat-input-wrapper:focus-within {
-    border-color: transparent; background: var(--chat-win);
+    border-color: var(--chat-accent); background: var(--chat-win);
     box-shadow: 0 0 0 4px var(--chat-accent-soft), 0 10px 26px -12px var(--chat-accent-glow);
 }
-.chat-widget-container .chat-input-wrapper:focus-within::before { opacity: 1; animation-play-state: running; }
 .chat-widget-container .campo { position: relative; flex: 1; min-width: 0; display: grid; }
 .chat-widget-container .chat-input {
     grid-area: 1 / 1; width: 100%; min-height: 38px; max-height: 120px; padding: 9px 0; border: 0; outline: 0;
-    resize: none; background: transparent; color: var(--chat-text); font-size: 14.5px; line-height: 1.4; overflow-y: auto;
+    resize: none; background: transparent; color: var(--chat-text); font-size: 16px; line-height: 1.4; overflow-y: auto;
 }
 .chat-widget-container .chat-input:focus-visible { outline: none; }
 .chat-widget-container .ph {
-    grid-area: 1 / 1; align-self: start; padding: 9px 0; color: var(--chat-muted); font-size: 14.5px; line-height: 1.4;
+    grid-area: 1 / 1; align-self: start; padding: 9px 0; color: var(--chat-muted); font-size: 16px; line-height: 1.4;
     pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    transition: opacity 0.25s, transform 0.3s var(--chat-suave);
 }
-.chat-widget-container .ph.sale { opacity: 0; transform: translateY(-9px); }
-.chat-widget-container .ph.baja { opacity: 0; transform: translateY(9px); transition: none; }
 .chat-widget-container .ph.oculto { opacity: 0; transition: none; }
 .chat-widget-container .contador {
     align-self: center; font-family: var(--chat-mono); font-size: 11px; color: var(--chat-muted);
@@ -446,7 +436,6 @@ html[data-theme="light"] .chat-widget-container {
 @keyframes chat-ventana-abre { from { opacity: 0; transform: translateY(28px) scale(0.86); } }
 @keyframes chat-ventana-cierra { to { opacity: 0; transform: translateY(16px) scale(0.94); } }
 @keyframes chat-brillo { to { transform: translateX(110%); } }
-@keyframes chat-latido { 0% { transform: scale(0.8); opacity: 0.9; } 100% { transform: scale(1.9); opacity: 0; } }
 @keyframes chat-girar { to { transform: rotate(360deg); } }
 @keyframes chat-rebote { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(var(--salto, -5px)); opacity: 1; } }
 @keyframes chat-entra-derecha { from { opacity: 0; transform: translateX(16px) scale(0.92); } }
@@ -456,7 +445,6 @@ html[data-theme="light"] .chat-widget-container {
 @keyframes chat-parpadeo { 50% { opacity: 0; } }
 @keyframes chat-carga { from { background-position: 130% 0; } to { background-position: -130% 0; } }
 @keyframes chat-temblor { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
-@keyframes chat-giro-borde { to { --giro: 360deg; } }
 @keyframes chat-pop-boton { 0% { transform: scale(0.8); } 55% { transform: scale(1.14); } 100% { transform: scale(1); } }
 @keyframes chat-vuela {
     0% { transform: none; opacity: 1; }
@@ -477,8 +465,7 @@ html[data-theme="light"] .chat-widget-container {
         scroll-behavior: auto !important;
     }
     .chat-widget-container .chat-toggle-button::before,
-    .chat-widget-container .chat-toggle-button::after,
-    .chat-widget-container .estado-punto::after { display: none; }
+    .chat-widget-container .chat-toggle-button::after { display: none; }
 }
 
 /* ── Responsive: en el celular la ventana abierta ocupa toda la pantalla ── */
@@ -486,6 +473,10 @@ html[data-theme="light"] .chat-widget-container {
     .chat-widget-container { right: 14px; bottom: 14px; }
     .chat-widget-container.abierto { inset: 0; }
     .chat-widget-container.abierto .chat-window-container {
-        width: 100%; height: 100%; max-height: none; border-radius: 0; border: 0;
+        /* dvh: el alto visible real, que cambia cuando Safari muestra u oculta su barra */
+        width: 100%; height: 100%; height: 100dvh; max-height: none; border-radius: 0; border: 0;
     }
+    .chat-widget-container .chat-header-actions { gap: 8px; }
+    .chat-widget-container .header-icon-btn { width: 40px; height: 40px; }
+    .chat-widget-container .chat-input-container { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 }

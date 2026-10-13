@@ -132,9 +132,11 @@ function TarjetaProducto({ productos, seleccionado, onSeleccionar }) {
  * Texto del bot palabra por palabra, con cursor. Los lectores de pantalla reciben el texto
  * completo de una vez (span .sr) y no la animación.
  */
-function TextoEscrito({ texto, animar, retraso, onAvance, onFin }) {
+function TextoEscrito({ texto, animar, saltar, retraso, onAvance, onFin }) {
   const [partes] = useState(() => texto.split(/(\s+)/));
-  const [mostradas, setMostradas] = useState(animar ? 0 : partes.length);
+  const [avance, setMostradas] = useState(animar ? 0 : partes.length);
+  // Un toque en la burbuja muestra el texto completo de una vez.
+  const mostradas = saltar ? partes.length : avance;
   const terminado = mostradas >= partes.length;
 
   useEffect(() => {
@@ -171,7 +173,7 @@ const MessageBubble = ({ message, animar, saliendo, retrasoSalida, onReintentar,
   const productos = !message.isUser && Array.isArray(message.productos) ? message.productos.filter(p => p?.id) : [];
   const conProducto = productos.length > 0;
   const [seleccionado, setSeleccionado] = useState(0);
-  const [escrito, setEscrito] = useState(!animar);
+  const [saltar, setSaltar] = useState(false);
   const animarTexto = animar && !message.isUser && !message.error && !message.saludo && !sinMovimiento();
 
   const salida = saliendo ? ' saliendo' : '';
@@ -211,16 +213,17 @@ const MessageBubble = ({ message, animar, saliendo, retrasoSalida, onReintentar,
     <div className={`message-bubble bot-message${animar ? ' entra-b' : ''}${conProducto ? ' con-producto' : ''}${salida}`} style={estiloSalida}>
       <div className="burbuja-bot">
         {conProducto && <TarjetaProducto productos={productos} seleccionado={seleccionado} onSeleccionar={setSeleccionado} />}
-        <p className="bot-texto">
+        <p className="bot-texto" onClick={() => setSaltar(true)}>
           <TextoEscrito
             texto={message.text}
             animar={animarTexto}
+            saltar={saltar}
             retraso={conProducto ? 450 : 120}
             onAvance={onCrecer}
-            onFin={() => { setEscrito(true); onCrecer(); }}
+            onFin={onCrecer}
           />
         </p>
-        {conProducto && escrito && (
+        {conProducto && (
           <button type="button" className="btn-ver" onClick={() => onVerProducto(productos[seleccionado].id)}>
             Ver producto <IconoFlecha />
           </button>

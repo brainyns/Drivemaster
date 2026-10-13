@@ -4,11 +4,9 @@ import ChatInput from './ChatInput';
 import ChatLogo from './ChatLogo';
 import { sinMovimiento } from './movimiento';
 
-// Avisos de la burbuja de espera. Cambian por tiempo, no por progreso real: el backend no informa
-// en qué paso va el agente; por eso dicen cosas que casi siempre hace.
+// Aviso de la burbuja de espera. El backend no informa en qué paso va el agente, así que no se
+// anuncian pasos ("Buscando en el catálogo…") que quizá no ocurren: solo se avisa si tarda.
 const PISTAS = [
-  [2200, 'Buscando en el catálogo…'],
-  [6000, 'Revisando precios y disponibilidad…'],
   [9500, 'Está tardando más de lo normal. Sigo aquí.']
 ];
 const RETRASO_ESPERA = 380;
@@ -121,6 +119,16 @@ const ChatWindow = ({
 
   useEffect(() => () => clearTimeout(timerAuto.current), []);
 
+  // Escape minimiza el chat. Se escucha en el documento: tocar el texto de una burbuja saca el foco
+  // de la ventana y, con un listener en la ventana, Escape dejaría de funcionar.
+  const minimizarRef = useRef(onMinimize);
+  useEffect(() => { minimizarRef.current = onMinimize; });
+  useEffect(() => {
+    const alPulsar = (e) => { if (e.key === 'Escape') minimizarRef.current(); };
+    document.addEventListener('keydown', alPulsar);
+    return () => document.removeEventListener('keydown', alPulsar);
+  }, []);
+
   // Mensaje nuevo: el del cliente baja al final; la respuesta del bot se sigue desde su inicio.
   const ultimoId = useRef(messages[messages.length - 1]?.id);
   useEffect(() => {
@@ -158,7 +166,7 @@ const ChatWindow = ({
   const verSugerencias = soloSaludo && !vaciando;
 
   return (
-    <section className={`chat-window-container${isClosing ? ' cerrando' : ''}`} aria-label="Chat con el asesor de DriveMaster">
+    <section className={`chat-window-container${isClosing ? ' cerrando' : ''}`} aria-label="Chat con el asistente de DriveMaster">
       <div className={`chat-header${isTyping ? ' escribiendo' : ''}`}>
         <div className="chat-header-left">
           <div className="chat-avatar">
@@ -168,7 +176,7 @@ const ChatWindow = ({
           <div>
             <div className="chat-header-title">Drivemaster</div>
             <div className="chat-header-subtitle">
-              <span className="sub-normal">Asesor virtual · en línea</span>
+              <span className="sub-normal">Asistente con IA</span>
               <span className="sub-escribe">Escribiendo<span className="mini-puntos" aria-hidden="true"><i /><i /><i /></span></span>
             </div>
           </div>
@@ -194,6 +202,8 @@ const ChatWindow = ({
       <div className="zona-mensajes">
         <div className="chat-messages" ref={listaRef} aria-live="polite"
           onScroll={() => { if (Date.now() >= autoHasta.current) actualizarIrFinal(); }}>
+          {/* El texto lo escribe un modelo: puede equivocarse aunque los datos de la tarjeta salgan de la base. */}
+          <p className="aviso-ia">Respondo con IA usando el catálogo real. Confirma precio y stock en la ficha antes de comprar.</p>
           {messages.map((message, i) => (
             <MessageBubble
               key={message.id}

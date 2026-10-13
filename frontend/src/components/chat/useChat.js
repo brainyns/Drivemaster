@@ -4,8 +4,10 @@ import { obtenerSessionId, cargarMensajes, guardarMensajes, reiniciarChat, EVENT
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 // Un poco más que los 90 s que el backend espera a n8n: así llega su mensaje amable y no un corte.
 const TIMEOUT_MS = 95_000;
-const MSG_ERROR = 'Lo siento, hubo un error. Por favor intenta de nuevo.';
-const MSG_TIMEOUT = 'El asistente está tardando demasiado. Por favor intenta de nuevo en unos segundos.';
+// Los errores dicen qué pasó y qué hacer; todos ofrecen el botón Reintentar.
+const MSG_ERROR = 'El asistente no está disponible en este momento. Toca Reintentar en unos segundos.';
+const MSG_SIN_CONEXION = 'No pude conectarme con el asistente. Revisa tu conexión a internet y toca Reintentar.';
+const MSG_TIMEOUT = 'El asistente tardó demasiado en responder. Toca Reintentar.';
 // El reloj del mensaje del cliente pasa a check tras este tiempo: es una señal visual de "enviado".
 const MS_ENVIADO = 450;
 
@@ -22,7 +24,7 @@ const mensaje = (text, isUser, extra = {}) => ({
 });
 
 // El saludo aparece completo, sin el efecto de escritura.
-const saludo = () => mensaje('¡Hola! Soy tu asesor virtual de Drivemaster. ¿En qué puedo ayudarte hoy?', false, { saludo: true });
+const saludo = () => mensaje('¡Hola! Soy el asistente de Drivemaster. ¿Qué repuesto buscas y para qué carro?', false, { saludo: true });
 
 // Un mensaje guardado "enviando" (se recargó la página a mitad del envío) se muestra como enviado.
 function mensajesIniciales() {
@@ -91,7 +93,9 @@ export function useChat() {
     } catch (error) {
       // AbortError sin timeout = el usuario empezó una conversación nueva: no es un fallo.
       if (error?.name !== 'AbortError') console.error('Error en el chat:', error);
-      respuesta = mensaje(porTimeout ? MSG_TIMEOUT : MSG_ERROR, false, { error: true, reintento: texto });
+      const sinConexion = typeof navigator !== 'undefined' && navigator.onLine === false;
+      const motivo = porTimeout ? MSG_TIMEOUT : (sinConexion || error?.name === 'TypeError') ? MSG_SIN_CONEXION : MSG_ERROR;
+      respuesta = mensaje(motivo, false, { error: true, reintento: texto });
     } finally {
       clearTimeout(timer);
       if (peticionRef.current === controller) peticionRef.current = null;
