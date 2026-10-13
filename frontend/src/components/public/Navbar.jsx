@@ -3,6 +3,7 @@ import Logo from "./Logo";
 import Icon from "./Icon";
 import ThemeToggle from "../ThemeToggle";
 import MenuUsuario from "./MenuUsuario";
+import CampanitaCliente from "../CampanitaCliente";
 import { OPCIONES_CLIENTE } from "./opcionesCliente";
 import { getUser } from "../../services/authService";
 import "../../css/navbar.css";
@@ -24,6 +25,7 @@ export default function Navbar({
   onRegistroNegocio,
   onIrMisServicios,
   onIrMisCompras,
+  onAbrirAviso,
   carritoCount = 0,
   onIrCarrito,
   theme,
@@ -81,6 +83,8 @@ export default function Navbar({
               <Icon name="box" size={21} />
               {carritoCount > 0 && <span className="dm-header__cart-badge">{carritoCount}</span>}
             </button>
+
+            {user?.rol === "CLIENTE" && <CampanitaCliente onAbrir={onAbrirAviso} />}
 
             {user ? (
               <MenuUsuario onIr={irA} onIrAdmin={onIrAdmin} onLogout={onLogout} />

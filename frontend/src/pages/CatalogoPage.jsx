@@ -22,7 +22,7 @@ const formatPrecio = (n) =>
 
 export default function CatalogoPage({
   onIrLogin, onIrAdmin, onIrSolicitud, onLogout,
-  onSolicitarDiagnostico, onRegistroNegocio, onIrMisCompras,
+  onSolicitarDiagnostico, onRegistroNegocio, onIrMisCompras, onAbrirAviso,
   vistaInicial = "inicio",
   onVistaConsumida,
   carrito, onIrCarrito,
@@ -197,6 +197,7 @@ export default function CatalogoPage({
         onRegistroNegocio={onRegistroNegocio}
         onIrMisServicios={irAMisServicios}
         onIrMisCompras={onIrMisCompras}
+        onAbrirAviso={onAbrirAviso}
         carritoCount={carrito?.cantidad ?? 0}
         onIrCarrito={onIrCarrito}
         theme={theme}

@@ -2,6 +2,7 @@ import Logo from "../public/Logo";
 import Icon from "../public/Icon";
 import ThemeToggle from "../ThemeToggle";
 import MenuUsuario from "../public/MenuUsuario";
+import CampanitaCliente from "../CampanitaCliente";
 import { getUser } from "../../services/authService";
 import "../../css/navbar.css";
 import "../../css/marketplace.css";
@@ -13,7 +14,7 @@ import "../../css/marketplace.css";
 export default function MarketHeader({
   activo, cantidadCarrito = 0,
   onIrInicio, onIrCatalogo, onIrCarrito, onIrMisCompras, onIrLogin, onLogout, onSolicitarDiagnostico,
-  onIr, onIrAdmin,
+  onIr, onIrAdmin, onAbrirAviso,
   theme, onToggleTheme,
 }) {
   const user = getUser();
@@ -42,6 +43,7 @@ export default function MarketHeader({
             <Icon name="box" size={21} />
             {cantidadCarrito > 0 && <span className="dm-header__cart-badge">{cantidadCarrito}</span>}
           </button>
+          {esCliente && <CampanitaCliente onAbrir={onAbrirAviso} />}
           {user ? (
             <MenuUsuario onIr={onIr} onIrAdmin={onIrAdmin} onLogout={onLogout} />
           ) : (

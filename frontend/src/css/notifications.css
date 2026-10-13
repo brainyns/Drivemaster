@@ -53,7 +53,7 @@
   white-space: nowrap;
 }
 
-.nt-link {
+.nt-dropdown .nt-link {
   background: none;
   border: none;
   padding: 4px 2px;
@@ -66,8 +66,8 @@
   white-space: nowrap;
 }
 
-.nt-link:hover { text-decoration: underline; }
-.nt-link:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.nt-dropdown .nt-link:hover { text-decoration: underline; }
+.nt-dropdown .nt-link:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 
 .nt-scroll {
   flex: 1;
@@ -113,8 +113,8 @@
   padding: var(--ui-sp-3) var(--ui-sp-4) var(--ui-sp-1);
 }
 
-/* ── Aviso ── */
-.nt-item {
+/* ── Aviso ── (con .nt-dropdown delante: la base pública, .dm-page button, quita fondo, borde y color) */
+.nt-dropdown .nt-item {
   display: flex;
   align-items: flex-start;
   gap: var(--ui-sp-3);
@@ -130,10 +130,10 @@
   transition: background var(--ui-dur, 0.15s) var(--ui-ease, ease);
 }
 
-.nt-item:hover { background: var(--ui-hover); }
-.nt-item:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }
+.nt-dropdown .nt-item:hover { background: var(--ui-hover); }
+.nt-dropdown .nt-item:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }
 
-.nt-item--nueva {
+.nt-dropdown .nt-item--nueva {
   background: var(--ui-surface-2);
   border-left-color: var(--primary);
 }
@@ -261,6 +261,26 @@
   .tb-notif-badge--nuevo { animation: none; }
 }
 
+/* ── Campanita del cliente (cabecera pública y páginas del cliente) ── */
+.nt-campanita {
+  position: relative;
+  display: inline-flex;
+}
+
+.nt-campanita__boton {
+  border: none;
+  cursor: pointer;
+}
+
+.nt-campanita .nt-campanita__boton--activo { background: var(--dm-surface, var(--ui-surface-2)); }
+.nt-campanita .nt-campanita__boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+.nt-campanita--publica .tb-notif-badge {
+  top: -3px;
+  right: -6px;
+  border-color: var(--dm-bg, var(--ui-surface));
+}
+
 /* ── Móvil ── */
 @media (max-width: 768px) {
   .nt-dropdown {
@@ -271,6 +291,12 @@
     width: auto;
     max-width: none;
     max-height: calc(100dvh - 72px);
+  }
+
+  /* La cabecera pública es más alta que la barra del panel */
+  .nt-dropdown--publica {
+    top: 76px;
+    max-height: calc(100dvh - 92px);
   }
 
 }

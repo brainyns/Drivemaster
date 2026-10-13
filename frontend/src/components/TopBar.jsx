@@ -1,8 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import NotificationDropdown from "./NotificationDropdown";
-import { getToken } from "../services/authService";
-import { connectNotifications, disconnectNotifications, subscribeNotifications } from "../services/websocketService";
-import { listarMisAvisos } from "../services/notificacionesService";
+import useNoLeidas from "../hooks/useNoLeidas";
 import { tieneCampanita, textoContador } from "../services/notificacionesUtil";
 import "../css/topbar.css";
 
@@ -165,30 +163,9 @@ function TopBar({
   const [configOpen, setConfigOpen] = useState(false);
   const [perfilOpen, setPerfilOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifCount, setNotifCount] = useState(0);
-  const [avisoNuevo, setAvisoNuevo] = useState(0);
+  // Campanita: avisos propios (la conexión en vivo la abre App para toda la sesión)
   const conCampanita = tieneCampanita(user?.rol);
-
-  // Contador de no leídas guardado en el servidor (al entrar y como respaldo si el WebSocket se cae)
-  const refreshCount = useCallback(async () => {
-    try {
-      const data = await listarMisAvisos(1);
-      setNotifCount(data?.noLeidas || 0);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    if (!conCampanita || !getToken()) return;
-    connectNotifications();
-    const initial = setTimeout(refreshCount, 0);
-    const respaldo = setInterval(refreshCount, 120000);
-    const unsub = subscribeNotifications((msg) => {
-      if (msg?.type !== "notificacion") return;
-      if (typeof msg.noLeidas === "number") setNotifCount(msg.noLeidas);
-      setAvisoNuevo((n) => n + 1);
-    });
-    return () => { clearTimeout(initial); clearInterval(respaldo); unsub(); disconnectNotifications(); };
-  }, [conCampanita, user?.id, refreshCount]);
+  const { noLeidas: notifCount, setNoLeidas: setNotifCount, latido: avisoNuevo } = useNoLeidas(conCampanita);
 
   return (
     <header className="tb-root">

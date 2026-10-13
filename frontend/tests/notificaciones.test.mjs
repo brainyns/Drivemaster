@@ -4,13 +4,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   tieneCampanita, haceCuanto, tonoDeAviso, agregarAviso, marcarLeidaEnLista, marcarTodasEnLista,
-  productosConStockBajo, urlWebSocket, retrasoReconexion, textoContador, MAX_AVISOS,
+  productosConStockBajo, urlWebSocket, retrasoReconexion, textoContador, MAX_AVISOS, destinoDeAviso,
 } from "../src/services/notificacionesUtil.js";
+import { clasificarCompras, pestanaDeCompra } from "../src/components/marketplace/clasificarCompras.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 const websocket = leer("../src/services/websocketService.js");
 const topbar = leer("../src/components/TopBar.jsx");
 const app = leer("../src/App.jsx");
+const navbar = leer("../src/components/public/Navbar.jsx");
+const marketHeader = leer("../src/components/marketplace/MarketHeader.jsx");
+const campanitaCliente = leer("../src/components/CampanitaCliente.jsx");
+const misServicios = leer("../src/pages/MisServicios.jsx");
 const avisosJava = leer("../../drivemaster/src/main/java/com/drivemaster/drivemaster/service/AvisosSolicitudServicio.java");
 
 /** Páginas permitidas de cada rol (mismo lector que menu.test.mjs). */
@@ -26,10 +31,58 @@ function paginasPermitidas() {
   return roles;
 }
 
-test("taller, tienda, ADMIN y SUPERADMIN tienen campanita; el cliente y el vendedor no (por ahora)", () => {
-  for (const rol of ["TALLER", "TIENDA", "ADMIN", "SUPERADMIN"]) assert.ok(tieneCampanita(rol), rol);
-  for (const rol of ["CLIENTE", "VENDEDOR", undefined, null]) assert.ok(!tieneCampanita(rol), String(rol));
+test("taller, tienda, ADMIN, SUPERADMIN y cliente tienen campanita; el vendedor no", () => {
+  for (const rol of ["TALLER", "TIENDA", "ADMIN", "SUPERADMIN", "CLIENTE"]) assert.ok(tieneCampanita(rol), rol);
+  for (const rol of ["VENDEDOR", undefined, null]) assert.ok(!tieneCampanita(rol), String(rol));
   assert.ok(topbar.includes("tieneCampanita(user?.rol)"), "la TopBar decide con tieneCampanita");
+});
+
+test("la conexión en vivo se abre una sola vez en App, no en cada barra o cabecera", () => {
+  assert.ok(app.includes("connectNotifications()") && app.includes("disconnectNotifications()"), "App abre y cierra la conexión");
+  for (const [nombre, codigo] of [["TopBar", topbar], ["CampanitaCliente", campanitaCliente], ["Navbar", navbar], ["MarketHeader", marketHeader]]) {
+    assert.ok(!codigo.includes("connectNotifications"), `${nombre} no debe abrir su propia conexión`);
+  }
+});
+
+test("la campanita del cliente está en la cabecera pública y en Mis servicios, solo para clientes", () => {
+  assert.ok(navbar.includes("<CampanitaCliente") && navbar.includes("user?.rol === \"CLIENTE\" && <CampanitaCliente"), "Navbar");
+  assert.ok(marketHeader.includes("esCliente && <CampanitaCliente"), "MarketHeader");
+  assert.ok(misServicios.includes("<CampanitaCliente"), "Mis servicios");
+  assert.ok(campanitaCliente.includes("rol === \"CLIENTE\"") && campanitaCliente.includes("if (!esCliente) return null"),
+    "el componente no se muestra a otros roles");
+});
+
+test("un aviso del cliente abre su solicitud o su compra; uno del panel abre la sección", () => {
+  assert.deepEqual(destinoDeAviso({ enlace: "mis-servicios", referenciaId: "o1" }), { pagina: "mis-servicios", id: "o1" });
+  assert.deepEqual(destinoDeAviso({ enlace: "mis-compras", referenciaId: "c1" }), { pagina: "mis-compras", id: "c1" });
+  assert.deepEqual(destinoDeAviso({ enlace: "taller-solicitudes", referenciaId: "o1" }), { pagina: "taller-solicitudes", id: null });
+  assert.deepEqual(destinoDeAviso({ enlace: "mis-servicios" }), { pagina: "mis-servicios", id: null });
+  assert.equal(destinoDeAviso({ enlace: null }), null);
+  assert.equal(destinoDeAviso(null), null);
+});
+
+test("App abre la solicitud o la compra del aviso con su id", () => {
+  assert.ok(/<MisServicios[\s\S]*?solicitudInicial=\{idSeleccionado\}/.test(app), "Mis servicios recibe la solicitud");
+  assert.ok(/<MisCompras[\s\S]*?compraInicial=\{idSeleccionado\}/.test(app), "Mis compras recibe la compra");
+  assert.ok(/<MisServicios[\s\S]*?key=\{idSeleccionado/.test(app) && /<MisCompras[\s\S]*?key=\{idSeleccionado/.test(app),
+    "otro aviso con la página ya abierta la vuelve a montar");
+});
+
+test("los avisos del cliente en el backend apuntan a su solicitud (orden) o a su compra", () => {
+  const servicios = [...avisosJava.matchAll(/"mis-servicios",\s*([\w.()]+)\)/g)].map((m) => m[1]);
+  const compras = [...avisosJava.matchAll(/"mis-compras",\s*([\w.()]+)\)/g)].map((m) => m[1]);
+  assert.ok(servicios.length >= 8 && compras.length >= 6, `servicios ${servicios.length}, compras ${compras.length}`);
+  for (const ref of servicios) assert.equal(ref, "orden.getId()", `mis-servicios debe referir la solicitud: ${ref}`);
+  for (const ref of compras) assert.ok(["compra.getId()", "pedido.getCompraId()"].includes(ref), `mis-compras debe referir la compra: ${ref}`);
+});
+
+test("la pestaña de Mis compras se elige según la compra del aviso", () => {
+  const compra = (id, estado, pedidos) => ({ id, estado, fechaPago: "2026-10-01T10:00:00", pedidos: pedidos.map((e, i) => ({ id: id + i, estado: e })) });
+  const grupos = clasificarCompras([compra("c1", "PAGADA", ["DESPACHADO"]), compra("c2", "PAGADA", ["ENTREGADO"])], []);
+  assert.equal(pestanaDeCompra(grupos, "c1"), "enCurso");
+  assert.equal(pestanaDeCompra(grupos, "c2"), "anteriores");
+  assert.equal(pestanaDeCompra(grupos, "otra"), "enCurso");
+  assert.equal(pestanaDeCompra(null, "c1"), "enCurso");
 });
 
 test("el WebSocket se abre con un ticket de un solo uso, nunca con el token de sesión en la URL", () => {

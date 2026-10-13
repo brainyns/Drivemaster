@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getToken } from "../services/authService";
+import { subscribeNotifications } from "../services/websocketService";
+import CampanitaCliente from "../components/CampanitaCliente";
 import { misSolicitudesServicio, cancelarSolicitudServicio } from "../services/solicitudServicioService";
 import { cotizacionesDeOrden, responderCotizacion } from "../services/cotizacionService";
 import { pagarDiagnostico, pagarCotizacion } from "../services/pagoMarketplaceService";
@@ -161,12 +163,17 @@ function ServiciosAnteriores({ ordenes, ahora, onIrHistorial }) {
 }
 
 /** Solicitudes de diagnóstico del cliente y el avance de cada una. */
-export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso, onIrHistorial }) {
+export default function MisServicios({
+  onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso, onIrHistorial,
+  solicitudInicial = null, onAbrirAviso,
+}) {
   const token = getToken();
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-  const [seleccionadaId, setSeleccionadaId] = useState(null);
+  // Desde un aviso de la campanita se abre directamente esa solicitud
+  const [seleccionadaId, setSeleccionadaId] = useState(solicitudInicial);
+  const avisoVisto = useRef(false);
   const [cancelando, setCancelando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [procesando, setProcesando] = useState(false);
@@ -187,6 +194,11 @@ export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = 
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  // Un aviso nuevo de mis servicios (cotización lista, pago aprobado, vehículo listo…) actualiza la lista
+  useEffect(() => subscribeNotifications((msg) => {
+    if (msg?.type === "notificacion" && msg.notificacion?.enlace === "mis-servicios") cargar();
+  }), [cargar]);
+
   // Órdenes del flujo anterior: aparte, para que un fallo no afecte las solicitudes actuales
   const [ordenesAnteriores, setOrdenesAnteriores] = useState([]);
   const [ahora] = useState(() => Date.now());
@@ -199,6 +211,22 @@ export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = 
   }, [token]);
 
   const seleccionada = solicitudes.find((s) => s.id === seleccionadaId) || null;
+
+  // Abierta desde un aviso: lleva la vista a lo que pide atención (la cotización por responder, la cita
+  // por pagar). La cotización se carga aparte, así que se espera un momento a que aparezca.
+  const abiertaDesdeAviso = !!seleccionada && seleccionada.id === solicitudInicial;
+  useEffect(() => {
+    if (!abiertaDesdeAviso || avisoVisto.current) return undefined;
+    avisoVisto.current = true;
+    window.scrollTo({ top: 0 });
+    let intentos = 0;
+    const buscar = setInterval(() => {
+      const destacado = document.querySelector(".ss-detalle .ss-bloque--destacado");
+      if (destacado) destacado.scrollIntoView({ block: "start", behavior: "smooth" });
+      if (destacado || ++intentos > 20) clearInterval(buscar);
+    }, 100);
+    return () => clearInterval(buscar);
+  }, [abiertaDesdeAviso]);
 
   const cancelar = async () => {
     setProcesando(true);
@@ -244,7 +272,10 @@ export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = 
             <h1 className="sv-title">{s.vehiculoDescripcion}</h1>
             <p className="sv-subtitle">{s.vehiculoPlaca ? `Placa ${s.vehiculoPlaca} · ` : ""}<EstadoServicio estado={s.estado} />{s.estado === "EN_INSTALACION" && s.subestado === "EN_PRUEBAS" ? " · En pruebas" : ""}</p>
           </div>
-          <button className="sv-volver" onClick={() => { setSeleccionadaId(null); setCancelando(false); }}>← Mis servicios</button>
+          <div className="ss-acciones">
+            <CampanitaCliente variante="panel" onAbrir={onAbrirAviso} />
+            <button className="sv-volver" onClick={() => { setSeleccionadaId(null); setCancelando(false); }}>← Mis servicios</button>
+          </div>
         </div>
 
         {error && <p className="ss-alerta" role="alert">{error}</p>}
@@ -404,6 +435,7 @@ export default function MisServicios({ onVolver, onSolicitar, avisoCotizacion = 
           <p className="sv-subtitle">Tus solicitudes de diagnóstico y el avance de cada una.</p>
         </div>
         <div className="ss-acciones">
+          <CampanitaCliente variante="panel" onAbrir={onAbrirAviso} />
           {onSolicitar && <button className="sv-btn" onClick={onSolicitar}>Solicitar diagnóstico</button>}
           {onVolver && <button className="sv-volver" onClick={onVolver}>← Volver</button>}
         </div>

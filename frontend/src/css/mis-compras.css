@@ -74,3 +74,12 @@
   border: 1px solid var(--ui-line);
   border-radius: var(--ui-r-sm);
 }
+
+/* Compra abierta desde un aviso de la campanita */
+.mk-grupo { scroll-margin-top: 96px; }
+.mk-grupo--resaltada {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.mk-grupo--resaltada:focus { outline: none; }
+.mk-grupo--resaltada:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 3px; }

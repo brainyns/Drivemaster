@@ -1,7 +1,7 @@
 // Lógica pura de la campanita (sin React ni red): se prueba con node --test.
 
-/** Roles con campanita en el panel. El cliente tendrá la suya en su fase aparte. */
-export const ROLES_CON_CAMPANITA = ["SUPERADMIN", "ADMIN", "TALLER", "TIENDA"];
+/** Roles con campanita: el personal y los negocios en la barra del panel; el cliente en la cabecera pública. */
+export const ROLES_CON_CAMPANITA = ["SUPERADMIN", "ADMIN", "TALLER", "TIENDA", "CLIENTE"];
 
 export const MAX_AVISOS = 30;
 
@@ -34,6 +34,16 @@ const TONOS = {
 export function tonoDeAviso(tipo) {
   for (const [tono, tipos] of Object.entries(TONOS)) if (tipos.includes(tipo)) return tono;
   return "info";
+}
+
+/**
+ * Página e id a los que lleva un aviso. Las páginas del cliente ("mis-servicios", "mis-compras") abren la
+ * solicitud o la compra exacta; las del panel llevan a la sección (su parámetro es un filtro, no un id).
+ */
+export function destinoDeAviso(aviso) {
+  if (!aviso?.enlace) return null;
+  const delCliente = aviso.enlace.startsWith("mis-");
+  return { pagina: aviso.enlace, id: delCliente ? aviso.referenciaId || null : null };
 }
 
 /** Agrega un aviso que llegó en vivo al principio, sin duplicarlo y sin pasar del máximo. */

@@ -58,3 +58,10 @@ export function clasificarCompras(compras = [], ventas = []) {
   ].sort((a, b) => b.fecha - a.fecha);
   return { enCurso: todas.filter((x) => x.enCurso), anteriores: todas.filter((x) => !x.enCurso) };
 }
+
+/** Pestaña donde está una compra del catálogo (para abrirla desde un aviso); "enCurso" si no aparece. */
+export function pestanaDeCompra(grupos, compraId) {
+  if (!grupos || !compraId) return "enCurso";
+  const esta = (x) => x.origen === "catalogo" && x.id === compraId;
+  return grupos.anteriores.some(esta) ? "anteriores" : "enCurso";
+}

@@ -55,6 +55,8 @@ import Liquidaciones         from "./pages/Liquidaciones";
 import ChatWidget            from "./components/chat/ChatWidget";
 import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
 import { useCarrito } from "./hooks/useCarrito";
+import { connectNotifications, disconnectNotifications } from "./services/websocketService";
+import { tieneCampanita } from "./services/notificacionesUtil";
 import MarketHeader from "./components/marketplace/MarketHeader";
 import DetalleProductoMarketplace from "./pages/DetalleProductoMarketplace";
 import CarritoMarketplace from "./pages/CarritoMarketplace";
@@ -263,6 +265,14 @@ function App() {
     };
   }, [expirarSesion]);
 
+  // Avisos en vivo: una sola conexión por sesión (no se reabre al cambiar de página ni de cabecera)
+  const conAvisos = !!user && tieneCampanita(user.rol);
+  useEffect(() => {
+    if (!conAvisos) return undefined;
+    connectNotifications();
+    return () => disconnectNotifications();
+  }, [conAvisos, user?.id]);
+
   const irA = (p, id = null) => { setIdSeleccionado(id); setPagina(p); };
 
   const handleLogin = (auth) => {
@@ -379,12 +389,13 @@ function App() {
       onIrInicio={irAlInicio}
       onIrCatalogo={irAlCatalogoGlobal}
       onIrCarrito={() => setPagina("carrito-marketplace")}
-      onIrMisCompras={() => setPagina("mis-compras")}
+      onIrMisCompras={() => irA("mis-compras")}
       onIrLogin={() => setPagina("login")}
       onLogout={handleLogout}
       onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
       onIr={(p) => irA(p)}
       onIrAdmin={() => setPagina(INICIO_POR_ROL[user?.rol] && user.rol !== "CLIENTE" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
+      onAbrirAviso={irA}
       theme={theme}
       onToggleTheme={toggleTheme}
     />
@@ -423,6 +434,8 @@ function App() {
       if (user.rol !== "CLIENTE") return <div style={{ padding: "40px" }}>Esta sección es para clientes.</div>;
       if (pagina === "mis-compras") return (
         <MisCompras
+          key={idSeleccionado || "mis-compras"}
+          compraInicial={idSeleccionado}
           header={cabeceraMarketplace("compras")}
           onVolver={() => setPagina("catalogo")}
           onIrCatalogo={() => irAlCatalogoGlobal()}
@@ -435,7 +448,7 @@ function App() {
           header={cabeceraMarketplace("carrito")}
           carrito={carrito}
           onVolverCarrito={() => setPagina("carrito-marketplace")}
-          onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); setPagina("mis-compras"); }}
+          onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); irA("mis-compras"); }}
         />
       );
     }
@@ -463,10 +476,11 @@ function App() {
         onIrSolicitud={(p) => setPagina(p || "checkout")}
         onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         onRegistroNegocio={() => setPagina("registro-negocio")}
-        onIrMisCompras={() => { if (!user) guardarDestinoPostLogin("checkout-marketplace"); setPagina("mis-compras"); }}
+        onIrMisCompras={() => { if (!user) guardarDestinoPostLogin("checkout-marketplace"); irA("mis-compras"); }}
         onLogout={handleLogout}
         carrito={carrito}
         onIrCarrito={() => setPagina("carrito-marketplace")}
+        onAbrirAviso={irA}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -514,9 +528,9 @@ function App() {
       <PagoResultado
         onPagoExitoso={() => setSolicitudItems([])}
         onIrSolicitudes={() => setPagina("mis-solicitudes")}
-        onIrServicios={() => setPagina("mis-servicios")}
+        onIrServicios={() => irA("mis-servicios")}
         onCompraCatalogoPagada={vaciarCarritoPagado}
-        onIrMisCompras={() => setPagina("mis-compras")}
+        onIrMisCompras={() => irA("mis-compras")}
       />
     );
 
@@ -527,7 +541,7 @@ function App() {
           window.history.replaceState(null, "", "/");
           // Sin sesión, "Mis servicios" pide iniciar sesión: al terminar se vuelve aquí
           if (!user) guardarDestinoPostLogin("mis-servicios");
-          setPagina("mis-servicios");
+          irA("mis-servicios");
         }}
         onIrInicio={() => { window.history.replaceState(null, "", "/"); setPagina("catalogo"); }}
       />
@@ -567,6 +581,9 @@ function App() {
       );
       if (pagina === "mis-servicios") return (
         <MisServicios
+          key={idSeleccionado || "mis-servicios"}
+          solicitudInicial={idSeleccionado}
+          onAbrirAviso={irA}
           onVolver={() => { setVieneDeCotizacion(false); setPagina("catalogo"); }}
           onSolicitar={() => irA("solicitar-diagnostico")}
           avisoCotizacion={vieneDeCotizacion ? user.correo : null}

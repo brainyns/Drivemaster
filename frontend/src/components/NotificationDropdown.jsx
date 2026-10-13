@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { subscribeNotifications, subscribeEstadoConexion } from "../services/websocketService";
 import { listarMisAvisos, marcarAvisoLeido, marcarTodosLeidos } from "../services/notificacionesService";
 import {
-  MAX_AVISOS, textoContador, haceCuanto, tonoDeAviso, agregarAviso, marcarLeidaEnLista, marcarTodasEnLista, productosConStockBajo,
+  MAX_AVISOS, textoContador, haceCuanto, destinoDeAviso, tonoDeAviso, agregarAviso, marcarLeidaEnLista, marcarTodasEnLista, productosConStockBajo,
 } from "../services/notificacionesUtil";
 import "../css/notifications.css";
 
@@ -15,7 +15,7 @@ const TEXTO_ESTADO = { conectado: "En vivo", conectando: "Reconectando…", desc
  * Lista de avisos del usuario (guardados en el servidor y los que llegan en vivo).
  * La tienda ve además sus productos con stock bajo.
  */
-export default function NotificationDropdown({ rol, onClose, onNavigate, onNoLeidas }) {
+export default function NotificationDropdown({ rol, variante = "panel", onClose, onNavigate, onNoLeidas }) {
   const ref = useRef(null);
   const [avisos, setAvisos] = useState([]);
   const [noLeidas, setNoLeidas] = useState(0);
@@ -76,9 +76,10 @@ export default function NotificationDropdown({ rol, onClose, onNavigate, onNoLei
       actualizarNoLeidas(noLeidas - 1);
       marcarAvisoLeido(aviso.id).catch(() => { /* se corrige en la próxima carga */ });
     }
-    if (aviso.enlace) {
+    const destino = destinoDeAviso(aviso);
+    if (destino) {
       onClose();
-      onNavigate?.(aviso.enlace, null);
+      onNavigate?.(destino.pagina, destino.id);
     }
   };
 
@@ -91,7 +92,7 @@ export default function NotificationDropdown({ rol, onClose, onNavigate, onNoLei
   const vacio = avisos.length === 0 && stockBajo.length === 0;
 
   return (
-    <div className="nt-dropdown" ref={ref} role="dialog" aria-label="Notificaciones">
+    <div className={`nt-dropdown nt-dropdown--${variante}`} ref={ref} role="dialog" aria-label="Notificaciones">
       <div className="nt-header">
         <div className="nt-header__titulo">
           <span className="nt-title">Notificaciones</span>

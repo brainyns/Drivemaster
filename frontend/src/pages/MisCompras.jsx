@@ -5,7 +5,8 @@ import { misVentas } from "../services/ventaService";
 import { misSolicitudes } from "../services/solicitudService";
 import { formatFechaHora, formatPrecio } from "../components/servicio/estadosServicio";
 import { ESTADO_COMPRA, ESTADOS_CON_CODIGO, estadoPedido } from "../components/marketplace/estadosCompra";
-import { clasificarCompras, estadoVentaAnterior, solicitudesSinCerrar } from "../components/marketplace/clasificarCompras";
+import { subscribeNotifications } from "../services/websocketService";
+import { clasificarCompras, estadoVentaAnterior, solicitudesSinCerrar, pestanaDeCompra } from "../components/marketplace/clasificarCompras";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import "../css/marketplace.css";
 import "../css/mis-compras.css";
@@ -26,7 +27,7 @@ const PESTANAS = [
  * El código de retiro NUNCA se muestra aquí: llega por correo y, si se pierde, se pide uno nuevo
  * (que reemplaza al anterior). "Ya lo recibí" y "Reportar un problema" piden confirmación.
  */
-export default function MisCompras({ header, onVolver, onIrCatalogo, onIrSolicitudes, onIrHistorial }) {
+export default function MisCompras({ header, compraInicial = null, onVolver, onIrCatalogo, onIrSolicitudes, onIrHistorial }) {
   const token = getToken();
   const [compras, setCompras] = useState(null);
   const [error, setError] = useState(null);
@@ -34,7 +35,9 @@ export default function MisCompras({ header, onVolver, onIrCatalogo, onIrSolicit
   const [ventas, setVentas] = useState([]);
   const [errorVentas, setErrorVentas] = useState(false);
   const [solicitudesAbiertas, setSolicitudesAbiertas] = useState(0);
-  const [pestana, setPestana] = useState("enCurso");
+  // null: la elige la compra que se abrió desde un aviso (o "En curso")
+  const [pestanaElegida, setPestana] = useState(null);
+  const compraVista = useRef(false);
   const [aviso, setAviso] = useState(null);
   const [accion, setAccion] = useState(null); // { tipo: "codigo"|"recibido"|"problema", pedido }
   const pestanasRef = useRef(null);
@@ -103,7 +106,23 @@ export default function MisCompras({ header, onVolver, onIrCatalogo, onIrSolicit
     },
   };
 
+  // Un aviso nuevo de mis compras (pedido enviado, listo para retirar…) actualiza la lista
+  useEffect(() => subscribeNotifications((msg) => {
+    if (msg?.type === "notificacion" && msg.notificacion?.enlace === "mis-compras") cargar();
+  }), [cargar]);
+
   const grupos = compras ? clasificarCompras(compras, ventas) : null;
+  const pestana = pestanaElegida ?? pestanaDeCompra(grupos, compraInicial);
+
+  // Desde un aviso de la campanita: se lleva la vista a esa compra una sola vez, cuando ya cargó
+  useEffect(() => {
+    if (!compraInicial || !compras || compraVista.current) return;
+    const el = document.getElementById(`mk-compra-${compraInicial}`);
+    if (!el) return;
+    compraVista.current = true;
+    el.scrollIntoView({ block: "start", behavior: "smooth" });
+    el.focus({ preventScroll: true });
+  }, [compraInicial, compras]);
   const sinNada = grupos && grupos.enCurso.length === 0 && grupos.anteriores.length === 0;
 
   // Pestañas: flechas izquierda y derecha cambian de pestaña (patrón de pestañas WAI-ARIA)
@@ -119,7 +138,8 @@ export default function MisCompras({ header, onVolver, onIrCatalogo, onIrSolicit
   const renderCompra = (c) => {
     const estado = ESTADO_COMPRA[c.estado] || { label: c.estado, tono: "aviso" };
     return (
-      <section key={c.id} className="mk-grupo" aria-labelledby={`mk-c-${c.id}`}>
+      <section key={c.id} id={`mk-compra-${c.id}`} tabIndex={c.id === compraInicial ? -1 : undefined}
+        className={`mk-grupo${c.id === compraInicial ? " mk-grupo--resaltada" : ""}`} aria-labelledby={`mk-c-${c.id}`}>
         <header className="mk-compra__cabecera">
           <div>
             <h2 id={`mk-c-${c.id}`}>Compra #{refCompra(c.id)}</h2>
