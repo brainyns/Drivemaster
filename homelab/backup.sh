@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Respaldo de las bases de datos de DriveMaster en la nube (MongoDB Atlas y Supabase/PostgreSQL)
-# y del volumen de n8n (workflows del chat IA, ejecuciones y credenciales).
+# y de lo que corre en la VM: volumen de n8n (workflows del chat IA, ejecuciones y credenciales) y
+# memoria del chat (PostgreSQL local, servicio chat-memory).
 #
 # Uso:      ./backup.sh [carpeta_destino]          (por defecto ./backups, junto al script)
 # Con cron: 0 3 * * * /opt/drivemaster/backup.sh /mnt/nas/backups/drivemaster
@@ -67,9 +68,21 @@ else
   echo "Volumen ${STACK}_n8n_data no encontrado; omito el respaldo de n8n."
 fi
 
+echo "[$(date)] Respaldando la memoria del chat (chat-memory)..."
+MEMORIA="$(docker ps -q \
+  --filter "label=com.docker.compose.project=$STACK" \
+  --filter "label=com.docker.compose.service=chat-memory")"
+if [ -n "$MEMORIA" ]; then
+  docker exec "$MEMORIA" pg_dump -U n8n -d chat_memory --no-owner --no-privileges \
+    | gzip > "$DESTINO/chat_memory_${FECHA}.sql.gz"
+else
+  echo "Contenedor chat-memory no encontrado; omito el respaldo de la memoria del chat."
+fi
+
 find "$DESTINO" -name 'mongo_*.archive.gz' -mtime +"$DIAS_RETENCION" -delete
 find "$DESTINO" -name 'postgres_*.sql.gz'  -mtime +"$DIAS_RETENCION" -delete
 find "$DESTINO" -name 'n8n_*.tar.gz'       -mtime +"$DIAS_RETENCION" -delete
+find "$DESTINO" -name 'chat_memory_*.sql.gz' -mtime +"$DIAS_RETENCION" -delete
 
 echo "[$(date)] Listo en $DESTINO"
-ls -lh "$DESTINO" | tail -n 4
+ls -lh "$DESTINO" | tail -n 5

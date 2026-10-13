@@ -33,6 +33,7 @@ Todo es **un solo stack de Portainer** llamado `drivemaster`, creado desde la ra
 | `frontend` | nginx: entrega el React compilado y reenvía `/api` y `/ws` al backend | Puerto `8088` (LAN y Funnel) |
 | `backend` | La API Spring Boot (se compila desde `drivemaster/Dockerfile`). El chat IA solo lo reenvía a n8n | No |
 | `n8n` | Agente del chat IA (modelo vía OpenRouter, memoria y herramientas). Editor en `localhost:5678` de la VM (túnel SSH) | No (no publica puertos fuera de localhost) |
+| `chat-memory` | PostgreSQL local con la memoria del chat (solo lo usa n8n). Así no gasta conexiones de Supabase | No (sin puertos) |
 | `cloudflared` | Túnel de Cloudflare. Detenido hasta tener dominio | No (no escucha puertos) |
 
 **Servicios en la nube**: MongoDB Atlas, Supabase, Wompi (pagos), Brevo (correo), Cloudinary (imágenes) y
@@ -140,6 +141,7 @@ líneas de comentario** y complétalo:
 | `SECURITY_JWT_SECRET`, `RETIRO_CODIGO_SECRET` | **Las mismas de Render**: así las sesiones y los códigos de retiro ya emitidos siguen siendo válidos |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | **Obligatorios** (vacíos = el backend no arranca) |
 | `N8N_CHAT_SECRET` / `N8N_TOOLS_SECRET` | Secretos compartidos backend ↔ n8n (genera dos con `openssl rand -hex 32`). **Obligatorios**: sin ellos el stack no se despliega. La API key de OpenRouter va como credencial dentro de n8n, no aquí |
+| `CHAT_MEMORY_DB_PASSWORD` | Contraseña del PostgreSQL de la memoria del chat (genera otra con `openssl rand -hex 32`). **Obligatoria**. La misma va en la credencial Postgres de n8n |
 | `N8N_VERSION` | La versión de n8n que ya corre (n8n → Settings → About). Vacía = `latest`. Nunca una anterior a la actual |
 | `OPENROUTER_MODEL`, `N8N_CHAT_RATE_MAX`, `N8N_CHAT_RATE_DIA_IP`, `N8N_CHAT_RATE_DIA_GLOBAL` | Opcionales: modelo de OpenRouter (`anthropic/claude-haiku-5.5`) y topes del chat: por minuto por IP (`6`), por día por IP (`60`) y por día en total (`400`, acota el gasto diario) |
 | `CLOUDINARY_*`, `BREVO_*`, `WOMPI_*` | Las de Render |
@@ -164,7 +166,8 @@ lo repitas.
    desactívala y bórrala. Luego importa `n8n/workflows/chat-drivemaster.json`
    (**Workflows → Import from File**).
 3. Crea las credenciales: **OpenRouter** con la API key de OpenRouter (con límite de crédito) y, para la memoria,
-   **Postgres** con los datos de Supabase (el *Session pooler*). Asígnalas a los nodos
+   **Postgres** con el contenedor local de memoria: Host `chat-memory`, Database `chat_memory`,
+   User `n8n`, Password = `CHAT_MEMORY_DB_PASSWORD`, Port `5432`, SSL **disable**. Asígnalas a los nodos
    `Modelo OpenRouter` y `Memoria (Postgres)`. El webhook no necesita credencial: el workflow valida
    `X-Chat-Secret` contra `N8N_CHAT_SECRET`.
 4. Activa el workflow. Prueba desde la VM. El backend no publica el puerto 8080, así que entra por

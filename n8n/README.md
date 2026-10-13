@@ -31,7 +31,7 @@ Al importar, dos nodos quedan sin credencial. Créalas en **Credentials → Add 
 | Nodo | Credencial | Dato que pide |
 | --- | --- | --- |
 | `Modelo OpenRouter` | **OpenRouter** | La API key de OpenRouter (`sk-or-…`, en openrouter.ai → Settings → API Keys). Créala solo para la tienda y con **límite de crédito** (p. ej. US$2): si alguien abusa del chat, no se gasta todo el saldo. |
-| `Memoria (Postgres)` | **Postgres** | Host/base/usuario/clave de Supabase (el *Session pooler*, con SSL). La tabla `drivemaster_chat_memory` se crea sola. |
+| `Memoria (Postgres)` | **Postgres** | El contenedor local `chat-memory`: Host `chat-memory`, Database `chat_memory`, User `n8n`, Password = `CHAT_MEMORY_DB_PASSWORD`, Port `5432`, SSL **disable**. La tabla `drivemaster_chat_memory` se crea sola. |
 
 El webhook **no** necesita credencial: el nodo `Validar secreto` compara el header `X-Chat-Secret`
 con la variable de entorno `N8N_CHAT_SECRET` y responde `403` si no coincide.
