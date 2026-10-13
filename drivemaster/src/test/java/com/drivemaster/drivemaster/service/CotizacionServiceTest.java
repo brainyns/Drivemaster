@@ -376,4 +376,22 @@ class CotizacionServiceTest {
         verify(cotizacionRepository).findByTallerIdOrderByFechaEmisionDesc("t1");
         verify(cotizacionRepository).findByTallerIdOrderByFechaEmisionDesc("t2");
     }
+
+    @Test
+    void lasRechazadasLleganAlTallerConSuFechaYSuMotivo() {
+        LocalDateTime respondida = LocalDateTime.now().minusHours(2);
+        Cotizacion rechazada = emitida(TokenSeguro.generar().token(), LocalDateTime.now().plusDays(3));
+        rechazada.setTallerId("t1");
+        rechazada.setEstado(Cotizacion.RECHAZADA);
+        rechazada.setFechaRespuesta(respondida);
+        rechazada.setMotivoRespuesta("Encontré un mejor precio");
+        when(cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc("t1")).thenReturn(List.of(rechazada));
+
+        CotizacionDTO dto = service.delTaller(CORREO_TALLER).get(0);
+
+        assertEquals(Cotizacion.RECHAZADA, dto.getEstado());
+        assertEquals(respondida, dto.getFechaRespuesta());
+        assertEquals("Encontré un mejor precio", dto.getMotivoRespuesta());
+        assertFalse(dto.isPuedeResponder());
+    }
 }

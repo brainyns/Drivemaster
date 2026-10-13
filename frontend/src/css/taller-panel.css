@@ -202,6 +202,8 @@
 .tp-cotiz__fila:focus-visible { outline: 2px solid var(--tp-info); outline-offset: -2px; }
 .tp-cotiz__vehiculo { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
 .tp-cotiz__total { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Motivo con el que el cliente rechazó la cotización */
+.tp-cotiz__motivo { margin-top: .2rem; font-size: var(--fs-etiqueta); line-height: 1.45; color: var(--ui-muted); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .tp-cotiz__detalle { padding: .2rem 1rem 1rem; border-top: 1px solid var(--tp-linea); animation: tp-despliegue .25s var(--tp-ease) both; }
 .tp-horario { font-size: 1rem; white-space: pre-line; }
 

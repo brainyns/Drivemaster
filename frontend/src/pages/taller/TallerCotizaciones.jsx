@@ -4,25 +4,10 @@ import { cotizacionesDelTaller } from "../../services/cotizacionService";
 import CotizacionDetalle from "../../components/servicio/CotizacionDetalle";
 import Etiqueta from "../../components/servicio/Etiqueta";
 import { ESTADOS_COTIZACION, formatFechaHora, formatPrecio } from "../../components/servicio/estadosServicio";
+import { FILTROS, VACIO, vencida, contarPorFiltro, filtrar } from "./filtrosCotizaciones";
 import "../../css/servicios.css";
 import "../../css/solicitud-servicio.css";
 import "../../css/cotizacion.css";
-
-// Una cotización emitida cuya vigencia ya pasó cuenta como vencida aunque el sistema aún no la haya cerrado.
-const vencida = (c, ahora) =>
-  c.estado === "VENCIDA" || (c.estado === "EMITIDA" && c.vigenciaHasta && new Date(c.vigenciaHasta).getTime() < ahora);
-
-const FILTROS = [
-  { key: "emitidas", label: "Emitidas", filtro: (c, ahora) => c.estado === "EMITIDA" && !vencida(c, ahora) },
-  { key: "aprobadas", label: "Aprobadas", filtro: (c) => c.estado === "APROBADA" },
-  { key: "vencidas", label: "Vencidas", filtro: vencida },
-];
-
-const VACIO = {
-  emitidas: "No tienes cotizaciones esperando respuesta. Las emites desde una solicitud diagnosticada, en Solicitudes.",
-  aprobadas: "Aún ninguna cotización aprobada. Cuando el cliente apruebe y pague, el trabajo pasa a Trabajos.",
-  vencidas: "No tienes cotizaciones vencidas.",
-};
 
 function diasRestantes(fecha, ahora) {
   const d = Math.ceil((new Date(fecha).getTime() - ahora) / 86400000);
@@ -30,7 +15,7 @@ function diasRestantes(fecha, ahora) {
   return d === 0 ? "vence hoy" : `vence en ${d} d`;
 }
 
-/** Cotizaciones del taller en una sola lista: emitidas, aprobadas y vencidas. */
+/** Cotizaciones del taller en una sola lista: emitidas, aprobadas, rechazadas y vencidas. */
 export default function TallerCotizaciones() {
   const token = getToken();
   const [cotizaciones, setCotizaciones] = useState([]);
@@ -49,11 +34,8 @@ export default function TallerCotizaciones() {
     return () => { cancelado = true; };
   }, [token]);
 
-  const conteo = useMemo(
-    () => Object.fromEntries(FILTROS.map((f) => [f.key, cotizaciones.filter((c) => f.filtro(c, ahora)).length])),
-    [cotizaciones, ahora]
-  );
-  const visibles = cotizaciones.filter((c) => FILTROS.find((f) => f.key === filtro).filtro(c, ahora));
+  const conteo = useMemo(() => contarPorFiltro(cotizaciones, ahora), [cotizaciones, ahora]);
+  const visibles = filtrar(cotizaciones, filtro, ahora);
   const pendienteTotal = cotizaciones
     .filter((c) => c.estado === "EMITIDA" && !vencida(c, ahora))
     .reduce((s, c) => s + (c.total || 0), 0);
@@ -66,7 +48,7 @@ export default function TallerCotizaciones() {
           <p className="pt-subtitle">
             {conteo.emitidas > 0
               ? `${conteo.emitidas} esperando respuesta del cliente, por ${formatPrecio(pendienteTotal)}.`
-              : "Lo que cotizaste, lo que aprobaron y lo que se venció."}
+              : "Lo que cotizaste, lo que aprobaron, lo que rechazaron y lo que se venció."}
           </p>
         </div>
       </header>
@@ -91,15 +73,21 @@ export default function TallerCotizaciones() {
         <ul className="tp-cotiz">
           {visibles.map((c) => {
             const abierto = abierta === c.id;
+            const rechazada = c.estado === "RECHAZADA";
             return (
               <li key={c.id} className="tp-cotiz__item">
                 <button className="tp-cotiz__fila" aria-expanded={abierto} onClick={() => setAbierta(abierto ? null : c.id)}>
                   <span className="tp-cotiz__vehiculo">
                     <strong>{c.vehiculoDescripcion || "Vehículo"}</strong>
                     <span className="ss-meta">
-                      v{c.version} · emitida {formatFechaHora(c.fechaEmision)}
+                      {rechazada
+                        ? <>v{c.version} · rechazada {c.fechaRespuesta ? formatFechaHora(c.fechaRespuesta) : "(sin fecha)"}</>
+                        : <>v{c.version} · emitida {formatFechaHora(c.fechaEmision)}</>}
                       {c.vigenciaHasta && c.estado === "EMITIDA" && ` · ${diasRestantes(c.vigenciaHasta, ahora)}`}
                     </span>
+                    {rechazada && c.motivoRespuesta && (
+                      <span className="tp-cotiz__motivo">Motivo del cliente: “{c.motivoRespuesta}”</span>
+                    )}
                   </span>
                   <span className="tp-cotiz__total">{formatPrecio(c.total)}</span>
                   <Etiqueta estado={vencida(c, ahora) ? "VENCIDA" : c.estado} catalogo={ESTADOS_COTIZACION} />
