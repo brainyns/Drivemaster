@@ -567,7 +567,8 @@ function App() {
         <MisVehiculos
           onVolver={() => setPagina("catalogo")}
           onVerServicio={(id) => irA("servicio-vehiculo", id)}
-        />
+        />,
+        "vehiculos"
       );
     }
 
@@ -578,7 +579,8 @@ function App() {
           vehiculoId={idSeleccionado}
           onVolver={() => setPagina("mis-vehiculos")}
           onSolicitarDiagnostico={(id) => irA("solicitar-diagnostico", id)}
-        />
+        />,
+        "vehiculos"
       );
     }
 
