@@ -43,21 +43,41 @@
 
 /* ── Panel editorial ─────────────────────────────────────────────────────── */
 .auth-aside {
-  position: relative;
   isolation: isolate;
   overflow: hidden;
   background: var(--dm-deep);
   color: #F5F5F3;
-  padding: 46px 52px 40px;
+  /* Ocupa el alto de la pantalla y queda fijo al hacer scroll: el bloque de texto va centrado en
+     lo visible y la etiqueta de abajo siempre se ve, aunque la tarjeta sea más alta */
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  min-height: 560px;
+  /* Abajo queda espacio para la etiqueta fija */
+  padding: 96px 64px 140px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 44px;
+  justify-content: center;
 }
 
 .auth-aside > *:not(.auth-aside__photo) {
   position: relative;
   z-index: 1;
+}
+
+/* Etiqueta y lema fijos abajo a la izquierda, fuera del centrado del bloque de texto */
+.auth-aside > .auth-aside__foot {
+  position: absolute;
+  left: 64px;
+  bottom: 40px;
+}
+
+/* Pantallas bajas: menos aire para que el bloque no se monte sobre la etiqueta de abajo */
+@media (max-height: 700px) {
+  .auth-aside { padding-top: 48px; padding-bottom: 124px; }
+  .auth-aside__title { margin-bottom: 18px; }
+  .auth-points { margin-top: 28px; gap: 14px; }
 }
 
 /* Foto de contexto: sitúa el proyecto sin competir con el texto. */
@@ -74,6 +94,13 @@
   position: absolute;
   inset: 0;
   background:
+    /* Más oscuro a la izquierda, detrás del texto, para que no quede sobre los faros */
+    linear-gradient(
+      to right,
+      rgba(13, 14, 16, 0.8) 0%,
+      rgba(13, 14, 16, 0.55) 45%,
+      transparent 78%
+    ),
     linear-gradient(
       to top,
       #0D0E10 3%,
@@ -115,27 +142,27 @@
 
 .auth-aside__title {
   font-family: var(--dm-display);
-  font-size: 2.75rem;
+  font-size: clamp(2.75rem, 3.6vw, 3.5rem);
   font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: -1.9px;
-  margin-bottom: 18px;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 26px;
 }
 
 .auth-aside__lead {
   font-size: 1.0625rem;
   line-height: 1.8;
-  color: rgba(245, 245, 243, 0.64);
-  max-width: 360px;
+  color: rgba(245, 245, 243, 0.72);
+  max-width: 380px;
 }
 
 .auth-points {
   list-style: none;
   padding: 0;
-  margin: 34px 0 0;
+  margin: 44px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .auth-points li {
@@ -226,11 +253,6 @@
   margin-bottom: 28px;
 }
 
-.auth-aside .auth-brand {
-  align-items: flex-start;
-  margin-bottom: 0;
-}
-
 .auth-brand-sub {
   font-size: var(--fs-etiqueta);
   letter-spacing: 3.4px;
@@ -240,13 +262,8 @@
   text-align: center;
 }
 
-.auth-aside .auth-brand-sub {
-  text-align: left;
-  color: rgba(245, 245, 243, 0.62);
-}
-
+/* La marca va siempre arriba en la tarjeta (sobre blanco), no en el panel oscuro */
 .auth-card__brand {
-  display: none;
   margin-bottom: 28px;
 }
 
@@ -586,10 +603,6 @@
 
   .auth-main {
     padding: 48px 24px;
-  }
-
-  .auth-page--client .auth-card__brand {
-    display: block;
   }
 
   .auth-card {

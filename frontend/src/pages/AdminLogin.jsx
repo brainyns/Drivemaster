@@ -28,7 +28,7 @@ export default function AdminLogin({ onLogin, onVolver }) {
       <div className="auth-card">
         <div className="auth-brand">
           <Logo size="lg" onClick={onVolver} />
-          <span className="auth-brand-sub">Acceso interno · Personal autorizado</span>
+          <span className="auth-brand-sub">Acceso interno</span>
         </div>
 
         <h2>Iniciar sesión</h2>

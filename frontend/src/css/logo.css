@@ -3,8 +3,8 @@
    alrededor de la "D". La caja .dm-logo__marca muestra solo la "D" (zona
    x 87–230, y 45–133 del archivo): la imagen va a altura fija con ancho
    automático y se desplaza dentro de la caja, así nunca se deforma.
-   Variantes: --fondo-oscuro (carretera blanca) en tema oscuro y en zonas que
-   son oscuras en cualquier tema (.dm-logo--light); --fondo-claro en tema claro. */
+   El logo es siempre el original (carretera negra) y va sobre blanco: en fondos
+   oscuros (tema oscuro y .dm-logo--light) .dm-logo__placa le pone una placa blanca. */
 
 .dm-logo {
   --logo-h: 40px;
@@ -34,6 +34,14 @@
 .dm-logo--md { --logo-h: 40px; font-size: 21px; }
 .dm-logo--lg { --logo-h: 52px; font-size: 26px; gap: 12px; }
 
+/* Sin fondo sobre blanco (tema claro); placa blanca en fondos oscuros (más abajo) */
+.dm-logo__placa {
+  display: block;
+  flex-shrink: 0;
+  line-height: 0;
+  border-radius: calc(var(--logo-h) * 0.2);
+}
+
 .dm-logo__marca {
   position: relative;
   display: block;
@@ -54,14 +62,12 @@
   object-fit: contain;
 }
 
-/* Tema oscuro (por defecto): variante con la carretera blanca */
-.dm-logo .dm-logo__img--fondo-claro { display: none; }
-
-/* Tema claro: el logo original, salvo en zonas oscuras (footer, panel del login) */
-html[data-theme="light"] .dm-logo .dm-logo__img--fondo-claro { display: block; }
-html[data-theme="light"] .dm-logo .dm-logo__img--fondo-oscuro { display: none; }
-html[data-theme="light"] .dm-logo--light .dm-logo__img--fondo-claro { display: none; }
-html[data-theme="light"] .dm-logo--light .dm-logo__img--fondo-oscuro { display: block; }
+/* Fondos oscuros: tema oscuro (por defecto) y zonas oscuras en cualquier tema (footer) */
+html:not([data-theme="light"]) .dm-logo__placa,
+.dm-logo--light .dm-logo__placa {
+  background: #fff;
+  padding: calc(var(--logo-h) * 0.1) calc(var(--logo-h) * 0.16);
+}
 
 .dm-logo--light { color: #fff; }
 

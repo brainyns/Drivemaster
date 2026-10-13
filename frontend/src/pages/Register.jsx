@@ -30,7 +30,7 @@ export default function Register({ onRegister, onBack }) {
       <div className="auth-card">
         <div className="auth-brand">
           <Logo size="lg" />
-          <span className="auth-brand-sub">Crear cuenta · Registro de cliente</span>
+          <span className="auth-brand-sub">Registro de cliente</span>
         </div>
 
         <h2>Registro</h2>

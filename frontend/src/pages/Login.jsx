@@ -5,10 +5,10 @@ import "../css/Login.css";
 
 const CLIENT_ID = "571035780087-mh3obhajnmvpj98cre938rmuhmqb0cf5.apps.googleusercontent.com";
 
-function Marca({ light = false, onInicio }) {
+function Marca({ onInicio }) {
   return (
     <div className="auth-brand">
-      <Logo size="lg" light={light} onClick={onInicio} />
+      <Logo size="lg" onClick={onInicio} />
       <span className="auth-brand-sub">Automotive Engine</span>
     </div>
   );
@@ -105,8 +105,6 @@ export default function Login({
     <div className="auth-page auth-page--client">
       <aside className="auth-aside">
         <div className="auth-aside__photo" aria-hidden="true" />
-
-        <Marca light onInicio={onVolver} />
 
         <div className="auth-aside__body">
           <span className="auth-eyebrow">Tu cuenta</span>
