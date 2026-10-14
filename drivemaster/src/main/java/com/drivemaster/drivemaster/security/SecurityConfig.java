@@ -46,6 +46,18 @@ public class SecurityConfig {
     @Value("${frontend.url:}")
     private String frontendUrl;
 
+    /**
+     * Orígenes fijos más la URL pública del despliegue (FRONTEND_URL), si existe. La usan CORS y el
+     * WebSocket de notificaciones: si solo la usara CORS, la campanita no conectaría en el HomeLab.
+     */
+    public static List<String> origenesPermitidos(String frontendUrl) {
+        List<String> origenes = new ArrayList<>(ORIGENES_PERMITIDOS);
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            origenes.add(frontendUrl.strip().replaceAll("/+$", ""));
+        }
+        return origenes;
+    }
+
     public SecurityConfig(CustomUserDetailsService userDetailsService,
                           JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.userDetailsService = userDetailsService;
@@ -254,11 +266,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        List<String> origenes = new ArrayList<>(ORIGENES_PERMITIDOS);
-        if (frontendUrl != null && !frontendUrl.isBlank()) {
-            origenes.add(frontendUrl.strip().replaceAll("/+$", ""));
-        }
-        configuration.setAllowedOriginPatterns(origenes);
+        configuration.setAllowedOriginPatterns(origenesPermitidos(frontendUrl));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "Cookie"));
         configuration.setAllowCredentials(true);
