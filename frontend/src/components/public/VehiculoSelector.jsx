@@ -52,7 +52,7 @@ export default function VehiculoSelector({
   };
 
   return (
-    <div className="dm-vehicle">
+    <div id="dm-vehicle" className="dm-container dm-vehicle">
       <div className="dm-vehicle__panel">
         <div className="dm-vehicle__heading">
           <div className="dm-vehicle__title">

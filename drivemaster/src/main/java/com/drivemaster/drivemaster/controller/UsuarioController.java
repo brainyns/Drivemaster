@@ -21,6 +21,8 @@ import com.drivemaster.drivemaster.dto.RegisterRequest;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
+import com.drivemaster.drivemaster.service.CuentaNegocioService;
+import com.drivemaster.drivemaster.service.NotificacionService;
 import com.drivemaster.drivemaster.service.UsuarioService;
 
 @RestController
@@ -30,13 +32,19 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CuentaNegocioService cuentaNegocioService;
+    private final NotificacionService notificacionService;
 
     public UsuarioController(UsuarioService usuarioService,
                              UsuarioRepository usuarioRepository,
-                             PasswordEncoder passwordEncoder) {
+                             PasswordEncoder passwordEncoder,
+                             CuentaNegocioService cuentaNegocioService,
+                             NotificacionService notificacionService) {
         this.usuarioService = usuarioService;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.cuentaNegocioService = cuentaNegocioService;
+        this.notificacionService = notificacionService;
     }
 
     @GetMapping
@@ -122,7 +130,13 @@ public class UsuarioController {
             usuario.setActivo(request.getActivo());
         }
 
-        return ResponseEntity.ok(usuarioService.actualizarUsuario(usuario));
+        Usuario actualizado = usuarioService.actualizarUsuario(usuario);
+        // Una cuenta de taller o tienda desactivada pausa su negocio (reactivarlo es manual, en Aprobaciones)
+        if (Boolean.FALSE.equals(request.getActivo())) {
+            cuentaNegocioService.pausarNegocioDe(usuario);
+            notificacionService.cerrarConexionesDe(usuario.getId());
+        }
+        return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")
@@ -140,6 +154,9 @@ public class UsuarioController {
 
         usuario.setActivo(false);
         usuarioService.actualizarUsuario(usuario);
+        // Una cuenta de taller o tienda desactivada pausa su negocio (reactivarlo es manual, en Aprobaciones)
+        cuentaNegocioService.pausarNegocioDe(usuario);
+        notificacionService.cerrarConexionesDe(usuario.getId());
         return ResponseEntity.ok().build();
     }
 

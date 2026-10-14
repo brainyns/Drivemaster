@@ -1,0 +1,131 @@
+{
+  "numeric_features": [
+    "anio_vehiculo",
+    "distancia_km",
+    "cantidad_repuestos",
+    "num_tiendas",
+    "monto_repuestos",
+    "monto_mano_obra",
+    "total_con_iva",
+    "proporcion_repuestos",
+    "tiempo_respuesta_horas",
+    "calificacion_taller"
+  ],
+  "means": [
+    2016.1422,
+    15.3307,
+    2.9836,
+    1.6367,
+    447874.2188,
+    193153.125,
+    762822.2656,
+    0.5206,
+    14.6373,
+    4.2483
+  ],
+  "stds": [
+    4.9176,
+    14.723,
+    1.7331,
+    0.8786,
+    339363.6172,
+    129526.3486,
+    478792.3464,
+    0.1959,
+    13.5044,
+    0.4332
+  ],
+  "marcas": [
+    "Chevrolet",
+    "Renault",
+    "Mazda",
+    "Toyota",
+    "Kia",
+    "Nissan",
+    "Hyundai",
+    "Ford"
+  ],
+  "tipos_servicio": [
+    "MANTENIMIENTO_PREVENTIVO",
+    "FRENOS",
+    "SUSPENSION",
+    "MOTOR_AFINAMIENTO",
+    "SISTEMA_ELECTRICO",
+    "DIAGNOSTICO_GENERAL",
+    "EMBRAGUE_TRANSMISION"
+  ],
+  "feature_names": [
+    "anio_vehiculo",
+    "distancia_km",
+    "cantidad_repuestos",
+    "num_tiendas",
+    "monto_repuestos",
+    "monto_mano_obra",
+    "total_con_iva",
+    "proporcion_repuestos",
+    "tiempo_respuesta_horas",
+    "calificacion_taller",
+    "marca_Chevrolet",
+    "marca_Renault",
+    "marca_Mazda",
+    "marca_Toyota",
+    "marca_Kia",
+    "marca_Nissan",
+    "marca_Hyundai",
+    "marca_Ford",
+    "servicio_MANTENIMIENTO_PREVENTIVO",
+    "servicio_FRENOS",
+    "servicio_SUSPENSION",
+    "servicio_MOTOR_AFINAMIENTO",
+    "servicio_SISTEMA_ELECTRICO",
+    "servicio_DIAGNOSTICO_GENERAL",
+    "servicio_EMBRAGUE_TRANSMISION"
+  ],
+  "weights": [
+    0.31292,
+    -0.4005,
+    -0.15421,
+    -0.21738,
+    -0.26441,
+    -0.17882,
+    -0.28061,
+    0.11565,
+    -0.64764,
+    0.5245,
+    0.0735,
+    0.04506,
+    0.02473,
+    0.04332,
+    -0.01577,
+    0.09524,
+    0.11316,
+    0.08073,
+    0.06528,
+    0.14586,
+    0.08326,
+    0.02722,
+    0.06221,
+    0.00347,
+    0.07267
+  ],
+  "bias": 0.47077,
+  "metrics": {
+    "accuracy": 0.6594,
+    "precision": 0.6724,
+    "recall": 0.8254,
+    "f1_score": 0.7411,
+    "roc_auc": 0.71,
+    "confusion_matrix": [
+      [
+        55,
+        76
+      ],
+      [
+        33,
+        156
+      ]
+    ],
+    "total_entrenamiento": 1280,
+    "total_prueba": 320
+  }
+}

@@ -1,0 +1,33 @@
+===========================================================================
+PROYECTO DE AULA: MODELO PREDICTIVO PARA ESTIMAR LA PROBABILIDAD DE APROBACIÓN
+DE UNA COTIZACIÓN DE SERVICIO EN LA PLATAFORMA DRIVEMASTER
+Integrantes: Brainy Blanco, Sebastian Ortega, Juan Cantillo, Elias Puello
+===========================================================================
+
+1. RESUMEN DE DATOS:
+   - Total de registros: 1600
+   - Tamaño conjunto de entrenamiento (80%): 1280
+   - Tamaño conjunto de prueba (20%):        320
+
+2. MÉTRICAS DE CLASIFICACIÓN (Evaluadas en conjunto de prueba independiente):
+   - Exactitud (Accuracy):  65.94%
+   - Precisión (Precision): 67.24%
+   - Sensibilidad (Recall): 82.54%
+   - Puntuación F1:         74.11%
+   - Área Bajo la Curva ROC (ROC-AUC): 0.7100
+
+3. MATRIZ DE CONFUSIÓN:
+   - Verdaderos Negativos (TN): 55
+   - Falsos Positivos    (FP): 76
+   - Falsos Negativos    (FN): 33
+   - Verdaderos Positivos (TP): 156
+
+4. COEFICIENTES DESTACADOS DEL MODELO (Importancia de Variables):
+   - tiempo_respuesta_horas   : -0.6476  (Favorece rechazo)
+   - calificacion_taller      : +0.5245  (Favorece aprobación)
+   - distancia_km             : -0.4005  (Favorece rechazo)
+   - anio_vehiculo            : +0.3129  (Favorece aprobación)
+   - total_con_iva            : -0.2806  (Favorece rechazo)
+   - monto_repuestos          : -0.2644  (Favorece rechazo)
+   - num_tiendas              : -0.2174  (Favorece rechazo)
+   - monto_mano_obra          : -0.1788  (Favorece rechazo)

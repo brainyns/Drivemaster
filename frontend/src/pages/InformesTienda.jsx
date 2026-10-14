@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { informesTienda } from "../services/informesTiendaService";
 import "../css/informes-tienda.css";
+import "../css/admin-base.css";
 
 const PERIODOS = [3, 6, 12];
 
@@ -142,7 +143,7 @@ function ProductosMasVendidos({ productos, onIr }) {
     return (
       <Vacio titulo="Todavía no vendes productos en este período"
         texto="Cuando se pague un pedido, tus productos más vendidos aparecen aquí."
-        accion={<button type="button" className="it-boton it-boton--sutil" onClick={() => onIr?.("productos")}>Revisar mis productos</button>} />
+        accion={<button type="button" className="adm-btn" onClick={() => onIr?.("productos")}>Revisar mis productos</button>} />
     );
   }
   const max = Math.max(...productos.map((p) => p.unidades));
@@ -192,7 +193,7 @@ function Despacho({ despacho, onIr }) {
         <li className={atrasados > 0 ? "is-alerta" : ""}><span>Fuera de plazo</span><strong className="it-cifra">{num(atrasados)}</strong></li>
       </ul>
       {atrasados > 0 && (
-        <button type="button" className="it-boton" onClick={() => onIr?.("pedidos-tienda")}>Ir a despachar los atrasados</button>
+        <button type="button" className="adm-btn adm-btn--primario" onClick={() => onIr?.("pedidos-tienda")}>Ir a despachar los atrasados</button>
       )}
     </div>
   );
@@ -221,7 +222,7 @@ function StockBajo({ stock, onIr }) {
       </table>
       <footer className="it-pie">
         <span>{stock.total > stock.items.length ? `Mostrando ${stock.items.length} de ${stock.total}` : `${stock.total} ${stock.total === 1 ? "producto" : "productos"}`}</span>
-        <button type="button" className="it-boton it-boton--sutil" onClick={() => onIr?.("movimientos")}>Ajustar inventario</button>
+        <button type="button" className="adm-btn" onClick={() => onIr?.("movimientos")}>Ajustar inventario</button>
       </footer>
     </>
   );
@@ -320,27 +321,28 @@ export default function InformesTienda({ token, onIr }) {
 
   return (
     <div className="it-root">
-      <header className="it-cabecera">
+      <header className="adm-encabezado">
         <div>
-          <h1>Informes</h1>
-          <p>Cómo va tu tienda: ventas, despachos y lo que falta por cobrar.</p>
+          <h1 className="adm-encabezado__titulo">Informes</h1>
+          <p className="adm-encabezado__sub">Cómo va tu tienda: ventas, despachos y lo que falta por cobrar.</p>
         </div>
-        <div className="it-controles">
-          <div className="it-segmentos" role="radiogroup" aria-label="Período">
+        <div className="adm-encabezado__lado">
+          <nav className="adm-pestanas" aria-label="Período">
             {PERIODOS.map((p) => (
-              <button key={p} type="button" role="radio" aria-checked={meses === p}
-                className={`it-segmentos__opcion${meses === p ? " is-activa" : ""}`} onClick={() => setMeses(p)}>
+              <button key={p} type="button" aria-pressed={meses === p}
+                className={`adm-pestana${meses === p ? " adm-pestana--activa" : ""}`} onClick={() => setMeses(p)}>
                 {p} meses
               </button>
             ))}
-          </div>
-          <button type="button" className="it-boton it-boton--sutil" onClick={() => setVersion((v) => v + 1)} disabled={cargando}>
+          </nav>
+          <button type="button" className={`adm-btn${cargando ? " adm-btn--cargando" : ""}`} onClick={() => setVersion((v) => v + 1)}
+            disabled={cargando} aria-busy={cargando}>
             {cargando ? "Actualizando…" : "Actualizar"}
           </button>
         </div>
       </header>
 
-      {error && <div className="it-error" role="alert">{error}{datos ? " Se muestran los últimos datos." : ""}</div>}
+      {error && <div className="adm-alerta adm-alerta--error" role="alert">{error}{datos ? " Se muestran los últimos datos." : ""}</div>}
 
       {!datos && !error && <CargandoInformes />}
 
@@ -350,7 +352,7 @@ export default function InformesTienda({ token, onIr }) {
             <div className="it-bienvenida">
               <strong>Aún no hay actividad en tu tienda</strong>
               <p>Cuando recibas tu primer pedido pagado, aquí verás tus ventas, el tiempo de despacho y lo que te toca cobrar. Mientras, asegúrate de tener tus productos publicados y con stock.</p>
-              <button type="button" className="it-boton" onClick={() => onIr?.("productos")}>Ir a mis productos</button>
+              <button type="button" className="adm-btn adm-btn--primario" onClick={() => onIr?.("productos")}>Ir a mis productos</button>
             </div>
           )}
 

@@ -23,7 +23,7 @@
   background: var(--dm-bg);
   color: var(--dm-text);
   font-family: var(--dm-font);
-  font-size: 14px;
+  font-size: 1rem;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -43,21 +43,41 @@
 
 /* ── Panel editorial ─────────────────────────────────────────────────────── */
 .auth-aside {
-  position: relative;
   isolation: isolate;
   overflow: hidden;
   background: var(--dm-deep);
   color: #F5F5F3;
-  padding: 46px 52px 40px;
+  /* Ocupa el alto de la pantalla y queda fijo al hacer scroll: el bloque de texto va centrado en
+     lo visible y la etiqueta de abajo siempre se ve, aunque la tarjeta sea más alta */
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  min-height: 560px;
+  /* Abajo queda espacio para la etiqueta fija */
+  padding: 96px 64px 140px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 44px;
+  justify-content: center;
 }
 
 .auth-aside > *:not(.auth-aside__photo) {
   position: relative;
   z-index: 1;
+}
+
+/* Etiqueta y lema fijos abajo a la izquierda, fuera del centrado del bloque de texto */
+.auth-aside > .auth-aside__foot {
+  position: absolute;
+  left: 64px;
+  bottom: 40px;
+}
+
+/* Pantallas bajas: menos aire para que el bloque no se monte sobre la etiqueta de abajo */
+@media (max-height: 700px) {
+  .auth-aside { padding-top: 48px; padding-bottom: 124px; }
+  .auth-aside__title { margin-bottom: 18px; }
+  .auth-points { margin-top: 28px; gap: 14px; }
 }
 
 /* Foto de contexto: sitúa el proyecto sin competir con el texto. */
@@ -74,6 +94,13 @@
   position: absolute;
   inset: 0;
   background:
+    /* Más oscuro a la izquierda, detrás del texto, para que no quede sobre los faros */
+    linear-gradient(
+      to right,
+      rgba(13, 14, 16, 0.8) 0%,
+      rgba(13, 14, 16, 0.55) 45%,
+      transparent 78%
+    ),
     linear-gradient(
       to top,
       #0D0E10 3%,
@@ -97,7 +124,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 10px;
+  font-size: var(--fs-etiqueta);
   font-weight: 700;
   letter-spacing: 1.7px;
   color: var(--dm-orange-text);
@@ -115,34 +142,34 @@
 
 .auth-aside__title {
   font-family: var(--dm-display);
-  font-size: 44px;
+  font-size: clamp(2.75rem, 3.6vw, 3.5rem);
   font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: -1.9px;
-  margin-bottom: 18px;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 26px;
 }
 
 .auth-aside__lead {
-  font-size: 13px;
+  font-size: 1.0625rem;
   line-height: 1.8;
-  color: rgba(245, 245, 243, 0.64);
-  max-width: 360px;
+  color: rgba(245, 245, 243, 0.72);
+  max-width: 380px;
 }
 
 .auth-points {
   list-style: none;
   padding: 0;
-  margin: 34px 0 0;
+  margin: 44px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .auth-points li {
   display: flex;
   align-items: center;
   gap: 11px;
-  font-size: 11px;
+  font-size: var(--fs-texto);
   line-height: 1.5;
   color: rgba(245, 245, 243, 0.78);
 }
@@ -174,7 +201,7 @@
   border-radius: 999px;
   background: rgba(13, 14, 16, 0.44);
   backdrop-filter: blur(6px);
-  font-size: 10px;
+  font-size: var(--fs-etiqueta);
   font-weight: 600;
   letter-spacing: 0.4px;
   color: rgba(245, 245, 243, 0.88);
@@ -189,7 +216,7 @@
 }
 
 .auth-aside__signoff {
-  font-size: 9px;
+  font-size: var(--fs-etiqueta);
   font-weight: 700;
   letter-spacing: 2.6px;
   color: rgba(245, 245, 243, 0.62);
@@ -222,54 +249,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   margin-bottom: 28px;
 }
 
-.auth-aside .auth-brand {
-  align-items: flex-start;
-  margin-bottom: 0;
-}
-
-.auth-brand-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.auth-brand-icon {
-  width: 36px;
-  height: 36px;
-  background: var(--dm-orange);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.auth-brand-icon svg {
-  width: 19px;
-  height: 19px;
-  fill: none;
-  stroke: var(--dm-on-accent);
-}
-
-.auth-brand-name {
-  font-family: var(--dm-display);
-  font-size: 21px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--dm-text);
-  text-transform: uppercase;
-}
-
-.auth-aside .auth-brand-name {
-  color: #F5F5F3;
-}
-
 .auth-brand-sub {
-  font-size: 9px;
+  font-size: var(--fs-etiqueta);
   letter-spacing: 3.4px;
   color: var(--dm-muted);
   text-transform: uppercase;
@@ -277,20 +262,15 @@
   text-align: center;
 }
 
-.auth-aside .auth-brand-sub {
-  text-align: left;
-  color: rgba(245, 245, 243, 0.62);
-}
-
+/* La marca va siempre arriba en la tarjeta (sobre blanco), no en el panel oscuro */
 .auth-card__brand {
-  display: none;
   margin-bottom: 28px;
 }
 
 /* ── Heading ─────────────────────────────────────────────────────────────── */
 .auth-card h2 {
   font-family: var(--dm-display);
-  font-size: 29px;
+  font-size: var(--fs-display);
   font-weight: 700;
   letter-spacing: -1.1px;
   color: var(--dm-text);
@@ -298,7 +278,7 @@
 }
 
 .auth-subtitle {
-  font-size: 12px;
+  font-size: 1rem;
   line-height: 1.7;
   color: var(--dm-muted);
   margin-bottom: 28px;
@@ -315,7 +295,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 11px;
+  font-size: var(--fs-texto);
   font-weight: 500;
   color: var(--dm-text);
 }
@@ -356,7 +336,7 @@
   border-radius: var(--radius-input);
   color: var(--dm-text);
   font-family: var(--dm-font);
-  font-size: 13px;
+  font-size: 1rem;
   font-weight: 400;
   padding: 13px 42px;
   outline: none;
@@ -371,7 +351,7 @@
 .auth-card input::placeholder {
   color: var(--dm-muted);
   opacity: 0.72;
-  font-size: 12px;
+  font-size: 1rem;
 }
 
 .auth-card input:focus {
@@ -413,7 +393,7 @@
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  font-size: 11px;
+  font-size: var(--fs-texto);
   line-height: 1.6;
   color: var(--dm-red);
   background: rgba(201, 47, 47, 0.09);
@@ -448,7 +428,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-input);
   font-family: var(--dm-font);
-  font-size: 12px;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.2s;
@@ -485,7 +465,7 @@
   align-items: center;
   gap: 13px;
   margin: 22px 0 15px;
-  font-size: 10px;
+  font-size: var(--fs-etiqueta);
   letter-spacing: 0.6px;
   color: var(--dm-muted);
 }
@@ -508,7 +488,7 @@
 /* ── Footer links ────────────────────────────────────────────────────────── */
 .auth-footer {
   text-align: center;
-  font-size: 11px;
+  font-size: var(--fs-texto);
   line-height: 1.7;
   color: var(--dm-muted);
   margin-top: 20px;
@@ -525,7 +505,7 @@
   color: var(--dm-orange-text);
   cursor: pointer;
   font-family: var(--dm-font);
-  font-size: 11px;
+  font-size: var(--fs-texto);
   font-weight: 600;
   transition: color 0.2s;
 }
@@ -547,7 +527,7 @@
   border-radius: var(--radius-input);
   color: var(--dm-muted);
   font-family: var(--dm-font);
-  font-size: 11px;
+  font-size: var(--fs-texto);
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
@@ -575,7 +555,7 @@
   gap: 7px;
   margin-top: 12px;
   font-family: var(--dm-font);
-  font-size: 10px;
+  font-size: var(--fs-texto);
   letter-spacing: 0.4px;
   color: var(--dm-muted-2);
   background: none;
@@ -605,7 +585,7 @@
 
 .auth-version {
   text-align: center;
-  font-size: 9px;
+  font-size: var(--fs-etiqueta);
   color: var(--dm-muted-2);
   margin-top: 18px;
   letter-spacing: 0.3px;
@@ -625,10 +605,6 @@
     padding: 48px 24px;
   }
 
-  .auth-page--client .auth-card__brand {
-    display: block;
-  }
-
   .auth-card {
     max-width: 420px;
   }
@@ -641,7 +617,7 @@
   }
 
   .auth-card h2 {
-    font-size: 27px;
+    font-size: var(--fs-titulo);
   }
 
   .auth-main {

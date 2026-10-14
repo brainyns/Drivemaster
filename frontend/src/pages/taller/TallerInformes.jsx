@@ -218,7 +218,6 @@ export default function TallerInformes() {
     <>
       <header className="pt-header tp-cabecera">
         <div>
-          <span className="pt-eyebrow">Taller aliado</span>
           <h1 className="pt-title">Informes</h1>
           <p className="pt-subtitle">Qué hiciste, cuánto te corresponde y cómo te califican tus clientes.</p>
         </div>

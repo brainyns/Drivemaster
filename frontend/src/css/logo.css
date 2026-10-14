@@ -1,0 +1,82 @@
+/* ── Logo de DriveMaster (src/components/Logo.jsx) ────────────────────────
+   public/images/Drivemaster_logo.png (320×175, fondo transparente) trae margen
+   alrededor de la "D". La caja .dm-logo__marca muestra solo la "D" (zona
+   x 87–230, y 45–133 del archivo): la imagen va a altura fija con ancho
+   automático y se desplaza dentro de la caja, así nunca se deforma.
+   El logo es siempre el original (carretera negra) y va sobre blanco: en fondos
+   oscuros (tema oscuro y .dm-logo--light) .dm-logo__placa le pone una placa blanca. */
+
+.dm-logo {
+  --logo-h: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  font-family: var(--dm-font);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--dm-text);
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dm-logo:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.dm-logo--sm { --logo-h: 30px; font-size: 15px; letter-spacing: -0.5px; gap: 8px; }
+.dm-logo--md { --logo-h: 40px; font-size: 21px; }
+.dm-logo--lg { --logo-h: 52px; font-size: 26px; gap: 12px; }
+
+/* Sin fondo sobre blanco (tema claro); placa blanca en fondos oscuros (más abajo) */
+.dm-logo__placa {
+  display: block;
+  flex-shrink: 0;
+  line-height: 0;
+  border-radius: calc(var(--logo-h) * 0.2);
+}
+
+.dm-logo__marca {
+  position: relative;
+  display: block;
+  height: var(--logo-h);
+  width: calc(var(--logo-h) * 144 / 89);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Doble clase para ganarle a reglas genéricas como ".dm-page img { max-width: 100% }" */
+.dm-logo .dm-logo__img {
+  position: absolute;
+  top: calc(var(--logo-h) * -45 / 89);
+  left: calc(var(--logo-h) * -87 / 89);
+  height: calc(var(--logo-h) * 175 / 89);
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+}
+
+/* Fondos oscuros: tema oscuro (por defecto) y zonas oscuras en cualquier tema (footer) */
+html:not([data-theme="light"]) .dm-logo__placa,
+.dm-logo--light .dm-logo__placa {
+  background: #fff;
+  padding: calc(var(--logo-h) * 0.1) calc(var(--logo-h) * 0.16);
+}
+
+.dm-logo--light { color: #fff; }
+
+.dm-logo__master { font-weight: 550; }
+
+.dm-logo__dot { color: var(--dm-orange-text); }
+
+@media (max-width: 760px) {
+  .dm-logo--sm { --logo-h: 26px; font-size: 14px; }
+  .dm-logo--md { --logo-h: 34px; font-size: 18px; }
+  .dm-logo--lg { --logo-h: 44px; font-size: 22px; }
+}

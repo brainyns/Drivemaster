@@ -8,6 +8,7 @@ import { ESTADOS_PEDIDO, MOTIVOS_NO_DESPACHO, formatFechaHora, formatPrecio, ref
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
+import "../css/pedidos-tienda.css";
 
 const FILTROS = [
   { key: "POR_DESPACHAR", label: "Por despachar", estados: ["PENDIENTE", "EN_PREPARACION"] },
@@ -130,6 +131,11 @@ export default function PedidosTienda() {
 
   return (
     <div className="ss-panel ss-panel--tienda">
+      <header className="pd-encabezado">
+        <h1 className="pd-encabezado__titulo">Pedidos</h1>
+        <p className="pd-encabezado__sub">Pedidos de clientes y talleres a tu tienda: prepáralos, despáchalos o entrégalos con el código de retiro.</p>
+      </header>
+
       {error && !abiertoId && <p className="ss-alerta" role="alert">{error}</p>}
       {aviso && <p className="ss-exito" role="status">{aviso} <button className="sv-btn-outline" onClick={() => setAviso(null)}>Cerrar</button></p>}
 
@@ -148,110 +154,128 @@ export default function PedidosTienda() {
           {filtro === "POR_DESPACHAR" ? "No tienes pedidos por despachar. Te avisaremos por correo cuando llegue uno." : "No hay pedidos en esta lista."}
         </p>
       ) : (
-        <div className="sv-list">
+        <div className="pd-lista">
           {visibles.map((p) => {
             const retiro = esRetiro(p);
             const envio = esEnvio(p);
+            const pideAccion = porDespachar(p) || p.estado === "LISTO_PARA_RETIRAR";
             return (
-              <section key={p.id} className={`ss-bloque${porDespachar(p) || p.estado === "LISTO_PARA_RETIRAR" ? " ss-bloque--destacado" : ""}`}>
-                <div className="ct-detalle__cabecera">
-                  <span className="ss-eyebrow">
-                    Pedido #{refSolicitud(p.id)} · {formatFechaHora(p.fechaCreacion)}
-                    {esCatalogo(p) && <> · Compra directa · {retiro ? "Retiro en tu tienda" : "Envío a domicilio"}</>}
-                  </span>
-                  <Etiqueta estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+              <article key={p.id} className={`pd-pedido${pideAccion ? " pd-pedido--accion" : ""}`} aria-labelledby={`pedido-${p.id}`}>
+                {/* Cabecera: número, cuándo y cómo, estado y total */}
+                <header className="pd-pedido__cabecera">
+                  <div className="pd-pedido__id">
+                    <h2 id={`pedido-${p.id}`} className="pd-pedido__numero">Pedido #{refSolicitud(p.id)}</h2>
+                    <span className="pd-pedido__meta">
+                      {formatFechaHora(p.fechaCreacion)}
+                      {esCatalogo(p) ? <> · Compra directa · {retiro ? "Retiro en tu tienda" : "Envío a domicilio"}</> : " · Para un taller"}
+                    </span>
+                  </div>
+                  <div className="pd-pedido__resumen">
+                    <Etiqueta estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+                    <strong className="pd-pedido__total">{formatPrecio(p.total)}</strong>
+                  </div>
+                </header>
+
+                <div className="pd-pedido__cuerpo">
+                  {/* Productos y totales */}
+                  <div className="pd-pedido__productos">
+                    <ul className="pd-items">
+                      {p.items.map((i, n) => (
+                        <li key={n} className="pd-item">
+                          <span className="pd-item__desc">
+                            <span className="pd-item__nombre">{i.cantidad} × {i.productoNombre}</span>
+                            <span className="pd-item__meta">
+                              {[i.marca, i.referencia].filter(Boolean).join(" · ")}
+                              {i.disponibilidad === "ENCARGO" && ` · Encargo${i.diasEntrega ? ` (${i.diasEntrega} días)` : ""}`}
+                            </span>
+                          </span>
+                          <span className="pd-item__valor">{formatPrecio(i.subtotal)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <dl className="pd-totales">
+                      <div><dt>IVA</dt><dd>{formatPrecio(p.iva)}</dd></div>
+                      {envio && <div><dt>Envío</dt><dd>{formatPrecio(p.costoEnvio)}</dd></div>}
+                      <div className="pd-totales__final"><dt>Total del pedido</dt><dd>{formatPrecio(p.total)}</dd></div>
+                    </dl>
+                  </div>
+
+                  {/* Entrega y seguimiento: solo lo necesario para despachar */}
+                  <div className="pd-pedido__entrega">
+                    <h3 className="pd-pedido__subtitulo">{retiro ? "Retiro" : envio ? "Envío" : "Entrega en taller"}</h3>
+                    {envio && (
+                      <p className="pd-destino">
+                        Enviar a <strong>{p.envioReceptor}</strong>
+                        <br />{[p.envioDireccion, p.envioCiudad].filter(Boolean).join(", ")}
+                        {p.envioTelefono && <> · Tel. {p.envioTelefono}</>}
+                        {p.envioIndicaciones && <><br />Indicaciones: {p.envioIndicaciones}</>}
+                      </p>
+                    )}
+                    {retiro && (
+                      <p className="pd-destino">
+                        El cliente retira en tu tienda ({[p.tiendaDireccion, p.tiendaCiudad].filter(Boolean).join(", ")}).
+                        Cuando llegue, pídele su <strong>código de retiro</strong> y valídalo aquí.
+                      </p>
+                    )}
+                    {!esCatalogo(p) && (
+                      <p className="pd-destino">
+                        Entregar en <strong>{p.tallerNombre}</strong>
+                        {(p.tallerDireccion || p.tallerCiudad) && <> · {[p.tallerDireccion, p.tallerCiudad].filter(Boolean).join(", ")}</>}
+                        {p.tallerTelefono && <> · Tel. {p.tallerTelefono}</>}
+                        <br />Vehículo: {p.vehiculoDescripcion}
+                      </p>
+                    )}
+
+                    {porDespachar(p) && p.plazoDespachoHasta && (
+                      <p className={plazoVencido(p) ? "pd-nota pd-nota--error" : "pd-nota pd-nota--plazo"} role={plazoVencido(p) ? "alert" : undefined}>
+                        {plazoVencido(p)
+                          ? `Plazo vencido el ${formatFechaHora(p.plazoDespachoHasta)}. DriveMaster ya fue alertado.`
+                          : `${retiro ? "Déjalo listo" : "Despáchalo"} antes del ${formatFechaHora(p.plazoDespachoHasta)}.`}
+                      </p>
+                    )}
+                    {p.estado === "EN_PREPARACION" && p.fechaPreparacion && (
+                      <p className="pd-nota">En preparación desde el {formatFechaHora(p.fechaPreparacion)}</p>
+                    )}
+                    {p.estado === "LISTO_PARA_RETIRAR" && p.fechaListoRetiro && (
+                      <p className="pd-nota">Listo para retirar desde el {formatFechaHora(p.fechaListoRetiro)}</p>
+                    )}
+                    {p.estado === "DESPACHADO" && (
+                      <p className="pd-nota">Despachado el {formatFechaHora(p.fechaDespacho)}{p.notaDespacho ? ` · ${p.notaDespacho}` : ""}</p>
+                    )}
+                    {envio && p.estado === "DESPACHADO" && !p.problemaReportado && (
+                      <p className="pd-nota">
+                        Esperando que el cliente confirme que lo recibió
+                        {p.autoconfirmaDespuesDe ? `; si no responde, se confirma solo el ${formatFechaHora(p.autoconfirmaDespuesDe)}` : ""}.
+                        Tu pago se habilita al confirmarse.
+                      </p>
+                    )}
+                    {envio && p.problemaReportado && (
+                      <p className="ss-alerta" role="alert">
+                        El cliente reportó un problema con este envío{p.problemaDetalle ? `: «${p.problemaDetalle}»` : ""}.
+                        {p.estado === "DESPACHADO"
+                          ? " DriveMaster lo está revisando; tu pago de este pedido está en pausa."
+                          : p.estado === "NO_ENTREGADO"
+                            ? " DriveMaster lo resolvió con reembolso al cliente: este pedido no se paga."
+                            : " DriveMaster lo resolvió: la entrega quedó confirmada."}
+                      </p>
+                    )}
+                    {p.estado === "ENTREGADO" && <p className="pd-nota">Entregado{p.recepcionAutomatica ? " (confirmado solo al vencer el plazo)" : " (confirmado por el cliente)"} el {formatFechaHora(p.fechaRecibidoCliente)}</p>}
+                    {p.estado === "RETIRADO" && <p className="pd-nota">Retirado el {formatFechaHora(p.fechaRetirado)}</p>}
+                    {p.estado === "NO_DESPACHADO" && <p className="pd-nota">No despachado: {p.motivoNoDespacho}</p>}
+                  </div>
                 </div>
-
-                <ul className="ct-items">
-                  {p.items.map((i, n) => (
-                    <li key={n} className="ct-item">
-                      <span className="ct-item__desc">
-                        {i.cantidad} × {i.productoNombre}
-                        <span className="ss-meta">
-                          {[i.marca, i.referencia].filter(Boolean).join(" · ")}
-                          {i.disponibilidad === "ENCARGO" && ` · Encargo${i.diasEntrega ? ` (${i.diasEntrega} días)` : ""}`}
-                        </span>
-                      </span>
-                      <span className="ct-item__valor">{formatPrecio(i.subtotal)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <dl className="ct-totales">
-                  <div className="ct-totales__fila"><dt>IVA</dt><dd>{formatPrecio(p.iva)}</dd></div>
-                  {envio && <div className="ct-totales__fila"><dt>Envío</dt><dd>{formatPrecio(p.costoEnvio)}</dd></div>}
-                  <div className="ct-totales__fila ct-totales__fila--final"><dt>Total del pedido</dt><dd>{formatPrecio(p.total)}</dd></div>
-                </dl>
-
-                {/* Destino: solo lo necesario para despachar */}
-                {envio && (
-                  <div className="ct-pedido__entrega">
-                    Enviar a <strong>{p.envioReceptor}</strong>
-                    <br />{[p.envioDireccion, p.envioCiudad].filter(Boolean).join(", ")}
-                    {p.envioTelefono && <> · Tel. {p.envioTelefono}</>}
-                    {p.envioIndicaciones && <><br />Indicaciones: {p.envioIndicaciones}</>}
-                  </div>
-                )}
-                {retiro && (
-                  <div className="ct-pedido__entrega">
-                    El cliente retira en tu tienda ({[p.tiendaDireccion, p.tiendaCiudad].filter(Boolean).join(", ")}).
-                    Cuando llegue, pídele su <strong>código de retiro</strong> y valídalo aquí.
-                  </div>
-                )}
-                {!esCatalogo(p) && (
-                  <div className="ct-pedido__entrega">
-                    Entregar en <strong>{p.tallerNombre}</strong>
-                    {(p.tallerDireccion || p.tallerCiudad) && <> · {[p.tallerDireccion, p.tallerCiudad].filter(Boolean).join(", ")}</>}
-                    {p.tallerTelefono && <> · Tel. {p.tallerTelefono}</>}
-                    <br />Vehículo: {p.vehiculoDescripcion}
-                  </div>
-                )}
-
-                {porDespachar(p) && p.plazoDespachoHasta && (
-                  <p className={plazoVencido(p) ? "ss-error" : "ss-meta"} role={plazoVencido(p) ? "alert" : undefined}>
-                    {plazoVencido(p)
-                      ? `Plazo vencido el ${formatFechaHora(p.plazoDespachoHasta)}. DriveMaster ya fue alertado.`
-                      : `${retiro ? "Déjalo listo" : "Despáchalo"} antes del ${formatFechaHora(p.plazoDespachoHasta)}.`}
-                  </p>
-                )}
-                {p.estado === "EN_PREPARACION" && p.fechaPreparacion && (
-                  <p className="ss-meta">En preparación desde el {formatFechaHora(p.fechaPreparacion)}</p>
-                )}
-                {p.estado === "LISTO_PARA_RETIRAR" && p.fechaListoRetiro && (
-                  <p className="ss-meta">Listo para retirar desde el {formatFechaHora(p.fechaListoRetiro)}</p>
-                )}
-                {p.estado === "DESPACHADO" && (
-                  <p className="ss-meta">Despachado el {formatFechaHora(p.fechaDespacho)}{p.notaDespacho ? ` · ${p.notaDespacho}` : ""}</p>
-                )}
-                {envio && p.estado === "DESPACHADO" && !p.problemaReportado && (
-                  <p className="ss-meta">
-                    Esperando que el cliente confirme que lo recibió
-                    {p.autoconfirmaDespuesDe ? `; si no responde, se confirma solo el ${formatFechaHora(p.autoconfirmaDespuesDe)}` : ""}.
-                    Tu pago se habilita al confirmarse.
-                  </p>
-                )}
-                {envio && p.problemaReportado && (
-                  <p className="ss-alerta" role="alert">
-                    El cliente reportó un problema con este envío{p.problemaDetalle ? `: «${p.problemaDetalle}»` : ""}.
-                    {p.estado === "DESPACHADO"
-                      ? " DriveMaster lo está revisando; tu pago de este pedido está en pausa."
-                      : p.estado === "NO_ENTREGADO"
-                        ? " DriveMaster lo resolvió con reembolso al cliente: este pedido no se paga."
-                        : " DriveMaster lo resolvió: la entrega quedó confirmada."}
-                  </p>
-                )}
-                {p.estado === "ENTREGADO" && <p className="ss-meta">Entregado{p.recepcionAutomatica ? " (confirmado solo al vencer el plazo)" : " (confirmado por el cliente)"} el {formatFechaHora(p.fechaRecibidoCliente)}</p>}
-                {p.estado === "RETIRADO" && <p className="ss-meta">Retirado el {formatFechaHora(p.fechaRetirado)}</p>}
-                {p.estado === "NO_DESPACHADO" && <p className="ss-meta">No despachado: {p.motivoNoDespacho}</p>}
 
                 {/* Validar el código de retiro */}
                 {p.estado === "LISTO_PARA_RETIRAR" && (
-                  <form className="ct-respuesta" onSubmit={(e) => { e.preventDefault(); validar(p); }} aria-label="Validar código de retiro">
-                    <label className="ss-meta" htmlFor={`codigo-${p.id}`}>Código de retiro del cliente</label>
-                    <input id={`codigo-${p.id}`} className="ss-input" placeholder="XXXX-XXXX" maxLength={12} autoComplete="off"
-                      value={codigos[p.id] || ""} onChange={(e) => setCodigos((m) => ({ ...m, [p.id]: e.target.value.toUpperCase() }))} />
-                    <p className="ss-ayuda">
-                      Cada código sirve una sola vez y solo para este pedido. Tras 5 intentos fallidos el pedido se bloquea 15 minutos.
-                    </p>
+                  <form className="pd-pedido__pie pd-form" onSubmit={(e) => { e.preventDefault(); validar(p); }} aria-label="Validar código de retiro">
+                    <div className="pd-form__campo">
+                      <label htmlFor={`codigo-${p.id}`}>Código de retiro del cliente</label>
+                      <input id={`codigo-${p.id}`} className="ss-input" placeholder="XXXX-XXXX" maxLength={12} autoComplete="off"
+                        value={codigos[p.id] || ""} onChange={(e) => setCodigos((m) => ({ ...m, [p.id]: e.target.value.toUpperCase() }))} />
+                      <p className="pd-form__ayuda">
+                        Cada código sirve una sola vez y solo para este pedido. Tras 5 intentos fallidos el pedido se bloquea 15 minutos.
+                      </p>
+                    </div>
                     {erroresCodigo[p.id] && (
                       <p className="ss-alerta" role="alert">
                         {erroresCodigo[p.id]}
@@ -259,7 +283,7 @@ export default function PedidosTienda() {
                           " Si el cliente te muestra un código de otra tienda o de otro pedido, no sirve aquí."}
                       </p>
                     )}
-                    <div className="ss-acciones">
+                    <div className="pd-acciones">
                       <button className="sv-btn" type="submit" disabled={procesando}>
                         {procesando ? "Validando..." : "Validar y entregar"}
                       </button>
@@ -269,7 +293,7 @@ export default function PedidosTienda() {
 
                 {/* Despacho */}
                 {porDespachar(p) && (abiertoId !== p.id ? (
-                  <div className="ss-acciones">
+                  <div className="pd-pedido__pie pd-acciones">
                     {p.estado === "PENDIENTE" && tieneEncargo(p) && (
                       <button className="sv-btn-outline" onClick={() => accionSimple(prepararPedido, p)} disabled={procesando}>
                         Iniciar preparación
@@ -282,14 +306,14 @@ export default function PedidosTienda() {
                     ) : (
                       <button className="sv-btn" onClick={() => { abrir(p.id); setModo("DESPACHAR"); }}>Marcar despachado</button>
                     )}
-                    <button className="sv-btn-outline" onClick={() => { abrir(p.id); setModo("NO_DESPACHAR"); }}>No puedo despachar</button>
+                    <button className="sv-btn-outline pd-btn-peligro" onClick={() => { abrir(p.id); setModo("NO_DESPACHAR"); }}>No puedo despachar</button>
                   </div>
                 ) : (
-                  <div className="ct-respuesta">
+                  <div className="pd-pedido__pie pd-form">
                     {error && <p className="ss-alerta" role="alert">{error}</p>}
                     {modo === "NO_DESPACHAR" && (
                       <fieldset className="ct-motivos">
-                        <legend className="ss-meta">¿Por qué no puedes despachar?</legend>
+                        <legend className="pd-form__etiqueta">¿Por qué no puedes despachar?</legend>
                         {MOTIVOS_NO_DESPACHO.map((m) => (
                           <label key={m.valor}>
                             <input type="radio" name={`motivo-${p.id}`} value={m.valor}
@@ -299,16 +323,18 @@ export default function PedidosTienda() {
                         ))}
                       </fieldset>
                     )}
-                    <label className="ss-meta" htmlFor={`nota-${p.id}`}>
-                      {modo === "DESPACHAR" ? (envio ? "Guía o información del envío (opcional, el cliente la ve)" : "Nota del despacho (opcional, ej. mensajero o guía)")
-                        : tipoMotivo === "OTRO" ? "Detalle (obligatorio)" : "Detalle (opcional)"}
-                    </label>
-                    <textarea id={`nota-${p.id}`} className="ss-textarea" rows={2} maxLength={500}
-                      value={nota} onChange={(e) => setNota(e.target.value)} />
+                    <div className="pd-form__campo">
+                      <label htmlFor={`nota-${p.id}`}>
+                        {modo === "DESPACHAR" ? (envio ? "Guía o información del envío (opcional, el cliente la ve)" : "Nota del despacho (opcional, ej. mensajero o guía)")
+                          : tipoMotivo === "OTRO" ? "Detalle (obligatorio)" : "Detalle (opcional)"}
+                      </label>
+                      <textarea id={`nota-${p.id}`} className="ss-textarea" rows={2} maxLength={500}
+                        value={nota} onChange={(e) => setNota(e.target.value)} />
+                    </div>
                     {modo === "NO_DESPACHAR" && (
-                      <p className="ss-ayuda">Se cancelará tu parte del pedido y DriveMaster reembolsará {formatPrecio(p.total)} al cliente.</p>
+                      <p className="pd-form__ayuda">Se cancelará tu parte del pedido y DriveMaster reembolsará {formatPrecio(p.total)} al cliente.</p>
                     )}
-                    <div className="ss-acciones">
+                    <div className="pd-acciones">
                       <button className={`sv-btn${modo === "NO_DESPACHAR" ? " ss-btn-peligro" : ""}`}
                         onClick={() => confirmar(p)} disabled={procesando}>
                         {procesando ? "Guardando..." : modo === "DESPACHAR" ? "Confirmar despacho" : "Confirmar: no puedo despachar"}
@@ -317,7 +343,7 @@ export default function PedidosTienda() {
                     </div>
                   </div>
                 ))}
-              </section>
+              </article>
             );
           })}
         </div>

@@ -256,3 +256,7 @@
     width: auto;
   }
 }
+/* Filtros activos (chips con botón para quitar), con el badge del sistema común */
+.cp-filtros-activos { align-items: center; margin: -0.25rem 0 1rem; }
+.cp-filtro-activo { display: inline-flex; align-items: center; gap: 0.3rem; }
+.cp-filtro-activo button { display: inline-flex; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }

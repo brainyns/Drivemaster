@@ -2,8 +2,11 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
 import com.drivemaster.drivemaster.model.Usuario;
+import com.drivemaster.drivemaster.repository.TallerRepository;
+import com.drivemaster.drivemaster.repository.TiendaRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
+import com.drivemaster.drivemaster.util.PlantillaCorreo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -13,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.HtmlUtils;
 
 import java.time.Instant;
+import java.util.function.Supplier;
 
 /**
  * Lógica común a las cuentas de negocio (talleres y tiendas): creación del
@@ -27,13 +31,64 @@ public class CuentaNegocioService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailsService emailsService;
+    private final TallerRepository tallerRepository;
+    private final TiendaRepository tiendaRepository;
 
     public CuentaNegocioService(UsuarioRepository usuarioRepository,
                                 PasswordEncoder passwordEncoder,
-                                EmailsService emailsService) {
+                                EmailsService emailsService,
+                                TallerRepository tallerRepository,
+                                TiendaRepository tiendaRepository) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailsService = emailsService;
+        this.tallerRepository = tallerRepository;
+        this.tiendaRepository = tiendaRepository;
+    }
+
+    /**
+     * Guarda el negocio de una cuenta recién creada. Si falla, borra esa cuenta y relanza el error:
+     * sin transacción entre las dos colecciones, así no queda un usuario sin negocio ni el correo ocupado.
+     */
+    public <T> T conCuentaNueva(Usuario cuentaNueva, Supplier<T> guardarNegocio) {
+        try {
+            return guardarNegocio.get();
+        } catch (RuntimeException e) {
+            try {
+                usuarioRepository.deleteById(cuentaNueva.getId());
+                log.warn("Registro de negocio fallido: se borró la cuenta recién creada {}", cuentaNueva.getCorreo());
+            } catch (RuntimeException borrado) {
+                log.error("No se pudo borrar la cuenta {} tras fallar el registro de su negocio",
+                        cuentaNueva.getCorreo(), borrado);
+                e.addSuppressed(borrado);
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Pausa (activo = false) el taller o la tienda de una cuenta que se desactiva: sin dueño que pueda entrar,
+     * el negocio no debe seguir recibiendo solicitudes ni pedidos. Reactivarlo es manual, desde Aprobaciones.
+     */
+    public void pausarNegocioDe(Usuario cuenta) {
+        if (cuenta == null || cuenta.getId() == null) return;
+        if (RolPermisos.TALLER.equals(cuenta.getRol())) {
+            tallerRepository.findByUsuarioId(cuenta.getId())
+                    .filter(t -> !Boolean.FALSE.equals(t.getActivo()))
+                    .ifPresent(t -> {
+                        t.setActivo(false);
+                        tallerRepository.save(t);
+                        log.info("Taller {} pausado: se desactivó su cuenta {}", t.getNombre(), cuenta.getCorreo());
+                    });
+        } else if (RolPermisos.TIENDA.equals(cuenta.getRol())) {
+            tiendaRepository.findByUsuarioId(cuenta.getId())
+                    .filter(t -> !Boolean.FALSE.equals(t.getActivo()))
+                    .ifPresent(t -> {
+                        t.setActivo(false);
+                        tiendaRepository.save(t);
+                        log.info("Tienda {} pausada: se desactivó su cuenta {}", t.getNombre(), cuenta.getCorreo());
+                    });
+        }
     }
 
     public void validarRegistro(RegistroNegocioRequest r) {
@@ -90,8 +145,9 @@ public class CuentaNegocioService {
                           + " Ya puedes iniciar sesión y empezar a operar.</p>"
                         : "<p>Revisamos la solicitud de <strong>" + nombre + "</strong> y por ahora no fue aprobada.</p>"
                           + "<p><strong>Motivo:</strong> " + HtmlUtils.htmlEscape(motivo != null ? motivo : "—") + "</p>";
-                String html = "<div style=\"font-family:Arial,sans-serif;color:#0C2240;max-width:560px\">"
-                        + "<h2 style=\"color:#18487A\">DriveMaster</h2>" + cuerpo + "</div>";
+                String html = PlantillaCorreo.documento("Registro de negocio",
+                        aprobado ? "Tu cuenta fue aprobada" : "Resultado de tu registro", cuerpo,
+                        "Este es un mensaje automático de DriveMaster.");
                 emailsService.enviarEmail(usuario.getCorreo(),
                         aprobado ? "Tu cuenta en DriveMaster fue aprobada" : "Resultado de tu registro en DriveMaster",
                         html);

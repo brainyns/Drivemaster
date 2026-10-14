@@ -54,6 +54,7 @@ public class CotizacionDTO {
     private LocalDateTime fechaEmision;
     private LocalDateTime fechaRespuesta;
     private String motivoRespuesta;
+    private PrediccionAprobacionDTO prediccionAprobacion;
 
     public static CotizacionDTO completa(Cotizacion c) {
         return base(c, c.getItems())

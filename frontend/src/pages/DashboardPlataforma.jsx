@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { dashboardPlataforma } from "../services/plataformaService";
 import "../css/dashboard.css";
 import "../css/dashboard-plataforma.css";
+import "../css/admin-base.css";
 
 const REFRESCO_MS = 60000;
 
@@ -31,15 +32,15 @@ function Tabla({ titulo, vacio, filas, columnas }) {
     <div className="db-card dp-tabla">
       <h2 className="db-card-title">{titulo}</h2>
       {filas.length === 0 ? (
-        <p className="db-empty">{vacio}</p>
+        <p className="adm-vacio">{vacio}</p>
       ) : (
-        <div className="db-table-wrap">
-          <table className="db-table">
-            <thead><tr>{columnas.map((c) => <th key={c.k} className={c.der ? "dp-der" : ""}>{c.t}</th>)}</tr></thead>
+        <div className="adm-tabla-wrap">
+          <table className="adm-tabla adm-tabla--tarjetas">
+            <thead><tr>{columnas.map((c) => <th key={c.k} className={c.der ? "adm-tabla__der" : ""}>{c.t}</th>)}</tr></thead>
             <tbody>
               {filas.map((f, i) => (
                 <tr key={f.id ?? i}>
-                  {columnas.map((c) => <td key={c.k} className={c.der ? "dp-der" : ""}>{c.f ? c.f(f) : f[c.k]}</td>)}
+                  {columnas.map((c) => <td key={c.k} className={c.der ? "adm-tabla__der" : ""} data-label={c.t}>{c.f ? c.f(f) : f[c.k]}</td>)}
                 </tr>
               ))}
             </tbody>
@@ -77,9 +78,9 @@ export default function DashboardPlataforma({ token, onIr }) {
 
   if (!d) {
     return (
-      <div className="db-root">
-        {error ? <div className="db-error" role="alert">{error}</div>
-          : <div className="db-loading"><div className="db-spinner" /> Cargando el panel…</div>}
+      <div className="adm-pagina">
+        {error ? <div className="adm-alerta adm-alerta--error" role="alert">{error}</div>
+          : <div className="adm-cargando">Cargando el panel…</div>}
       </div>
     );
   }
@@ -103,26 +104,26 @@ export default function DashboardPlataforma({ token, onIr }) {
   const totalSuscripciones = planes.reduce((s, [, n]) => s + n, 0);
 
   return (
-    <div className="db-root dp-root">
-      <header className="db-header">
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
         <div>
-          <h1 className="db-h1">Panel de la plataforma</h1>
-          <p className="db-sub">
+          <h1 className="adm-encabezado__titulo">Panel de la plataforma</h1>
+          <p className="adm-encabezado__sub">
             DriveMaster administra el marketplace, no vende. Sus ingresos son la comisión y las suscripciones;
             lo que pagan los clientes es de los talleres y las tiendas.
           </p>
         </div>
-        <div className="db-header-right dp-acciones">
-          <span className="db-date">
+        <div className="adm-encabezado__lado dp-acciones">
+          <span className="adm-encabezado__dato">
             Actualizado {new Date(d.generadoEn).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
           </span>
-          <button type="button" className="dp-btn" onClick={cargar} disabled={cargando}>
+          <button type="button" className="adm-btn" onClick={cargar} disabled={cargando}>
             {cargando ? "Actualizando…" : "Actualizar"}
           </button>
         </div>
       </header>
 
-      {error && <div className="db-error" role="alert">{error} (se muestran los últimos datos)</div>}
+      {error && <div className="adm-alerta adm-alerta--error" role="alert">{error} (se muestran los últimos datos)</div>}
 
       <section aria-label="Alertas" className="dp-alertas">
         {alertas.length === 0 ? (
@@ -135,7 +136,7 @@ export default function DashboardPlataforma({ token, onIr }) {
         ))}
       </section>
 
-      <h2 className="dp-seccion">Plataforma</h2>
+      <h2 className="adm-seccion">Plataforma</h2>
       <div className="db-kpi-grid">
         <Kpi etiqueta="Tiendas registradas" valor={num(d.tiendas.registradas)}
           detalle={`${num(d.tiendas.aprobadas)} aprobadas · ${num(d.tiendas.pendientes)} pendientes`} />
@@ -147,7 +148,7 @@ export default function DashboardPlataforma({ token, onIr }) {
           detalle={`${num(d.productos.nuevos7Dias)} nuevos en 7 días · ${num(d.productos.nuevos30Dias)} en 30`} />
       </div>
 
-      <h2 className="dp-seccion">Dinero</h2>
+      <h2 className="adm-seccion">Dinero</h2>
       <div className="db-kpi-grid">
         <Kpi etiqueta="Total movido" valor={cop(d.dinero.movido)} detalle="Pagos aprobados que pasaron por la plataforma. No es ingreso de DriveMaster." />
         <Kpi etiqueta="Comisión registrada" tono="orange" valor={cop(d.dinero.comisionRegistrada)}
@@ -171,7 +172,7 @@ export default function DashboardPlataforma({ token, onIr }) {
       <div className="dp-dos">
         <div className="db-card">
           <h2 className="db-card-title">Órdenes de servicio por estado</h2>
-          {estadosOrdenes.length === 0 ? <p className="db-empty">Todavía no hay órdenes de servicio.</p> : (
+          {estadosOrdenes.length === 0 ? <p className="adm-vacio">Todavía no hay órdenes de servicio.</p> : (
             <ul className="dp-barras">
               {estadosOrdenes.map((e) => (
                 <li key={e}>
@@ -187,7 +188,7 @@ export default function DashboardPlataforma({ token, onIr }) {
         </div>
         <div className="db-card">
           <h2 className="db-card-title">Suscripciones activas por plan</h2>
-          {planes.length === 0 ? <p className="db-empty">Todavía no hay suscripciones activas.</p> : (
+          {planes.length === 0 ? <p className="adm-vacio">Todavía no hay suscripciones activas.</p> : (
             <ul className="dp-barras">
               {planes.map(([plan, n]) => (
                 <li key={plan}>

@@ -99,6 +99,32 @@ class AsignacionTallerServiceTest {
     }
 
     @Test
+    void elTallerElegidoEnElMapaVaPrimeroAunqueSeaDeOtraCiudad() {
+        when(tallerRepository.findByActivoTrue()).thenReturn(List.of(
+                taller("cerca", "Bogotá", 4.65, -74.06, EstadoAprobacion.APROBADO, 5),
+                taller("chia", "Chía", 4.86, -74.05, EstadoAprobacion.APROBADO, 3)));
+        OrdenServicio orden = orden("Bogotá", CHAPINERO_LAT, CHAPINERO_LNG);
+        orden.setTallerElegidoId("chia");
+
+        var candidatos = service.candidatos(orden);
+
+        assertEquals(List.of("chia"), candidatos.stream().map(c -> c.taller().getId()).toList());
+    }
+
+    @Test
+    void siElElegidoYaLaDescartoSigueLaAsignacionPorCiudad() {
+        when(tallerRepository.findByActivoTrue()).thenReturn(List.of(
+                taller("cerca", "Bogotá", 4.65, -74.06, EstadoAprobacion.APROBADO, 5),
+                taller("chia", "Chía", 4.86, -74.05, EstadoAprobacion.APROBADO, 3)));
+        OrdenServicio orden = orden("Bogotá", CHAPINERO_LAT, CHAPINERO_LNG, "chia");
+        orden.setTallerElegidoId("chia");
+
+        var candidatos = service.candidatos(orden);
+
+        assertEquals(List.of("cerca"), candidatos.stream().map(c -> c.taller().getId()).toList());
+    }
+
+    @Test
     void normalizaNombresDeCiudad() {
         assertEquals("bogota", AsignacionTallerService.normalizarCiudad("Bogotá D.C."));
         assertEquals("bogota", AsignacionTallerService.normalizarCiudad("  BOGOTA "));

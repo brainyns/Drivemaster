@@ -4,6 +4,7 @@ import { misVehiculos } from "../services/vehiculoService";
 import { obtenerMiPerfil } from "../services/clienteService";
 import { crearSolicitudServicio } from "../services/solicitudServicioService";
 import SubidaFotos from "../components/servicio/SubidaFotos";
+import MapaTalleres from "../components/mapa/MapaTalleres";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
@@ -30,6 +31,8 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
   const [ubicando, setUbicando] = useState(false);
   const [horario, setHorario] = useState(HORARIOS[0]);
   const [notaHorario, setNotaHorario] = useState("");
+  // Taller elegido en el mapa; null = asignación automática
+  const [tallerId, setTallerId] = useState(null);
 
   const [errores, setErrores] = useState({});
   const [error, setError] = useState(null);
@@ -104,6 +107,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
         latitud: coordenadas?.latitud ?? null,
         longitud: coordenadas?.longitud ?? null,
         preferenciaHorario: notaHorario.trim() ? `${horario} — ${notaHorario.trim()}` : horario,
+        tallerId,
       });
       setResultado(creada);
     } catch (err) {
@@ -124,7 +128,9 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
             <>
               <h1 className="sv-title">Tu solicitud ya tiene taller</h1>
               <p>
-                La asignamos a <strong>{resultado.tallerNombre}</strong>
+                {resultado.tallerElegidoId && resultado.tallerElegidoId === resultado.tallerId
+                  ? "La enviamos al taller que elegiste, " : "La asignamos a "}
+                <strong>{resultado.tallerNombre}</strong>
                 {resultado.distanciaTallerKm != null && ` (a ${resultado.distanciaTallerKm.toFixed(1)} km)`}.
                 El taller te propondrá una fecha para revisar tu vehículo; te avisaremos por correo.
               </p>
@@ -158,7 +164,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
           <span className="ss-eyebrow">Paso 1 de 5 · Diagnóstico</span>
           <h1 className="sv-title">Solicitar diagnóstico</h1>
           <p className="sv-subtitle">
-            Cuéntanos qué le pasa a tu vehículo. Lo asignamos al taller más cercano, que lo revisa y te envía una cotización.
+            Cuéntanos qué le pasa a tu vehículo y elige un taller en el mapa, o deja que lo asignemos al más cercano. El taller lo revisa y te envía una cotización.
           </p>
         </div>
         {onVolver && <button className="sv-volver" onClick={onVolver}>← Volver</button>}
@@ -245,6 +251,20 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
                 onChange={(e) => setNotaHorario(e.target.value)} placeholder="Ej. después de las 10 a. m." />
             </div>
           </div>
+        </section>
+
+        <section className="ss-bloque">
+          <h2 className="ss-bloque__titulo">Elige tu taller</h2>
+          <p className="ss-ayuda ss-bloque__ayuda">
+            Toca un pin o un taller de la lista para ver sus datos. Con tu ubicación te mostramos los más cercanos primero.
+          </p>
+          <MapaTalleres
+            token={token}
+            valor={tallerId}
+            onElegir={setTallerId}
+            ubicacion={coordenadas}
+            ciudad={ciudad}
+          />
         </section>
 
         {error && <p className="ss-alerta" role="alert">{error}</p>}

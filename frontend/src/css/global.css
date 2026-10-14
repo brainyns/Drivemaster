@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
   /* Acento único de DriveMaster: el naranja de Figma. El texto naranja usa --primary-text. */
@@ -96,6 +96,16 @@
      sombras y detalles. Cada pantalla pasa a estos tokens en su bloque. */
   --ui-font:      'DM Sans', system-ui, sans-serif;
   --ui-mono:      'JetBrains Mono', ui-monospace, monospace; /* solo códigos y referencias */
+
+  /* Escala tipográfica única de la app (DM Sans). Títulos de página, subtítulos de
+     sección, texto, botones, etiquetas de campo y textos pequeños (badges, ayudas). */
+  --fs-display:   2rem;       /* 32px: portada y panel lateral del login */
+  --fs-titulo:    1.5rem;     /* 24px: título de página o de formulario */
+  --fs-subtitulo: 1.125rem;   /* 18px: título de sección o de tarjeta grande */
+  --fs-texto:     0.875rem;   /* 14px: texto normal, campos */
+  --fs-boton:     0.8125rem;  /* 13px: botones */
+  --fs-etiqueta:  0.75rem;    /* 12px: etiquetas de campo, encabezados de tabla */
+  --fs-pequeno:   0.6875rem;  /* 11px: badges, eyebrows, notas */
 
   --ui-bg:        #141517;
   --ui-surface:   #1E2023;
@@ -238,6 +248,15 @@ img, video, iframe, table, canvas {
 }
 
 h1, h2, h3 { font-family: var(--ui-font); font-weight: 700; }
+
+/* button, input, textarea y select usan por defecto la fuente del sistema (no heredan).
+   Con esto toman la de la app; las clases que fijan un tamaño lo siguen haciendo. */
+button, input, textarea, select, optgroup {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+button { font-size: var(--fs-boton); }
 
 code, pre, .mono { font-family: var(--ui-mono); }
 

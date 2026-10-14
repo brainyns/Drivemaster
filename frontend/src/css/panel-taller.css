@@ -3,8 +3,8 @@
    ============================================================ */
 
 .pt-root {
+  /* Ancho completo, como el resto de paneles */
   padding: 1.5rem 1.75rem 2.5rem;
-  max-width: 1200px;
   animation: pt-in 0.4s var(--ease-out) both;
 }
 
@@ -21,12 +21,12 @@
   align-items: flex-end;
   gap: var(--sp-lg, 24px);
   flex-wrap: wrap;
-  margin-bottom: var(--sp-xl, 32px);
+  margin-bottom: 1.25rem;
 }
 
 .pt-eyebrow {
   display: block;
-  font-size: 0.68rem;
+  font-size: var(--fs-pequeno);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -36,7 +36,7 @@
 
 .pt-title {
   font-family: var(--ui-font);
-  font-size: 1.5rem;
+  font-size: var(--fs-titulo);
   font-weight: 650;
   letter-spacing: -0.01em;
   line-height: 1.2;
@@ -46,10 +46,10 @@
 
 .pt-subtitle {
   color: var(--ui-muted);
-  margin: 8px 0 0;
-  max-width: 56ch;
+  margin: 4px 0 0;
+  max-width: 65ch;
   line-height: 1.55;
-  font-size: 0.9rem;
+  font-size: var(--fs-texto);
 }
 
 /* Próximo ingreso: lo primero que entra por la puerta */
@@ -490,13 +490,13 @@
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
   border-radius: var(--ui-r-lg);
-  padding: var(--sp-xl, 32px) var(--sp-lg, 24px);
-  max-width: 640px;
+  padding: 20px;
+  box-shadow: var(--ui-sombra-1);
 }
 
 .pt-perfil-nombre {
   font-family: var(--ui-font);
-  font-size: 1.5rem;
+  font-size: var(--fs-subtitulo);
   font-weight: 650;
   letter-spacing: -0.01em;
   margin: 4px 0 var(--sp-lg, 24px);
@@ -523,10 +523,10 @@
   flex-direction: column;
   gap: 3px;
 }
-.pt-fact-label { color: var(--ui-muted); font-size: 0.74rem; }
+.pt-fact-label { color: var(--ui-muted); font-size: var(--fs-etiqueta); }
 .pt-fact-value {
   font-family: var(--ui-font);
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--ui-text);
   font-variant-numeric: tabular-nums;
@@ -534,7 +534,7 @@
 
 .pt-hint {
   color: var(--ui-muted);
-  font-size: 0.85rem;
+  font-size: var(--fs-etiqueta);
   line-height: 1.6;
   margin: 0;
 }

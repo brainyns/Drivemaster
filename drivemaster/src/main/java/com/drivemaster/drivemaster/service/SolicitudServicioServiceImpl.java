@@ -130,6 +130,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Este vehículo ya tiene una solicitud en curso. Revisa \"Mis servicios\".");
         }
+        Taller elegido = tallerElegido(r.getTallerId());
 
         LocalDateTime ahora = LocalDateTime.now();
         OrdenServicio orden = OrdenServicio.builder()
@@ -145,6 +146,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 .latitud(r.getLatitud())
                 .longitud(r.getLongitud())
                 .preferenciaHorario(r.getPreferenciaHorario())
+                .tallerElegidoId(elegido != null ? elegido.getId() : null)
+                .tallerElegidoNombre(elegido != null ? elegido.getNombre() : null)
                 .estado(EstadoOrden.ENVIADA)
                 .fechaCreacion(ahora)
                 .eventos(new ArrayList<>(List.of(EventoOrden.builder()
@@ -166,6 +169,18 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             log.warn("No se pudo asignar la solicitud {} al crearla; la retoma el job: {}", orden.getId(), e.getMessage());
         }
         return toDTO(orden, Vista.CLIENTE);
+    }
+
+    /** Taller elegido en el mapa: debe existir, estar aprobado y activo. Null si no se eligió. */
+    private Taller tallerElegido(String tallerId) {
+        if (tallerId == null || tallerId.isBlank()) return null;
+        Taller taller = tallerRepository.findById(tallerId.trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "El taller elegido no existe"));
+        if (!EstadoAprobacion.estaAprobado(taller.getEstadoAprobacion()) || !Boolean.TRUE.equals(taller.getActivo())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El taller elegido no está disponible. Elige otro o usa la asignación automática.");
+        }
+        return taller;
     }
 
     @Override
@@ -688,6 +703,10 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 .distanciaTallerKm(o.getDistanciaTallerKm())
                 .fechaAsignacion(o.getFechaAsignacion())
                 .fechaLimiteRespuesta(o.getFechaLimiteRespuesta())
+                .tallerElegidoId(o.getTallerElegidoId())
+                .tallerElegidoNombre(o.getTallerElegidoNombre())
+                .tallerElegidoNoAcepto(o.getTallerElegidoId() != null && o.getTalleresDescartados() != null
+                        && o.getTalleresDescartados().contains(o.getTallerElegidoId()))
                 .aceptadaPorTaller(o.getAceptadaPorTaller())
                 .fechaRevision(o.getFechaProgramada())
                 .mecanicoId(o.getMecanicoId())

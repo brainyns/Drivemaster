@@ -1,24 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { login, googleLogin } from "../services/authService";
+import Logo from "../components/Logo";
 import "../css/Login.css";
 
 const CLIENT_ID = "571035780087-mh3obhajnmvpj98cre938rmuhmqb0cf5.apps.googleusercontent.com";
 
-function Marca() {
+function Marca({ onInicio }) {
   return (
     <div className="auth-brand">
-      <div className="auth-brand-row">
-        <div className="auth-brand-icon">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" fill="none" strokeWidth="2" />
-            <circle cx="12" cy="12" r="3" strokeWidth="2" />
-            <line x1="12" y1="2" x2="12" y2="9" strokeWidth="2" strokeLinecap="round" />
-            <line x1="4.2" y1="16.5" x2="10.3" y2="13.2" strokeWidth="2" strokeLinecap="round" />
-            <line x1="19.8" y1="16.5" x2="13.7" y2="13.2" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </div>
-        <span className="auth-brand-name">DRIVEMASTER</span>
-      </div>
+      <Logo size="lg" onClick={onInicio} />
       <span className="auth-brand-sub">Automotive Engine</span>
     </div>
   );
@@ -116,8 +106,6 @@ export default function Login({
       <aside className="auth-aside">
         <div className="auth-aside__photo" aria-hidden="true" />
 
-        <Marca />
-
         <div className="auth-aside__body">
           <span className="auth-eyebrow">Tu cuenta</span>
           <h2 className="auth-aside__title">
@@ -159,7 +147,7 @@ export default function Login({
       <main className="auth-main">
         <div className="auth-card">
           <div className="auth-card__brand">
-            <Marca />
+            <Marca onInicio={onVolver} />
           </div>
 
           <h2>Iniciar sesión</h2>

@@ -47,6 +47,8 @@ class LimpiezaUsuariosYRespuestasAdminTest {
     @MockBean private PasswordEncoder passwordEncoder;
     @MockBean private TiendaService tiendaService;
     @MockBean private TallerService tallerService;
+    @MockBean private com.drivemaster.drivemaster.service.CuentaNegocioService cuentaNegocioService;
+    @MockBean private com.drivemaster.drivemaster.service.NotificacionService notificacionService;
     @MockBean private JwtUtil jwtUtil;
     @MockBean private CustomUserDetailsService customUserDetailsService;
 

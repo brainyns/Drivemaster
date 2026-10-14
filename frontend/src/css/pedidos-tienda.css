@@ -1,0 +1,132 @@
+/* ── Pedidos de la tienda (prefijo pd-, BEM) ──────────────────────────────
+   Tarjeta compacta con jerarquía: número y estado arriba con el total,
+   productos y entrega en dos columnas, y las acciones al pie.
+   Tokens del sistema común (--ui-*, --fs-*), tema claro y oscuro. */
+
+.pd-encabezado { margin-bottom: 1.25rem; }
+.pd-encabezado__titulo { margin: 0 0 .25rem; font-size: var(--fs-titulo); font-weight: 650; letter-spacing: -0.01em; line-height: 1.2; }
+.pd-encabezado__sub { margin: 0; max-width: 65ch; font-size: var(--fs-texto); line-height: 1.55; color: var(--ui-muted); }
+
+.pd-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-sp-4);
+}
+
+.pd-pedido {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-1);
+  overflow: hidden;
+}
+
+/* Los que esperan una acción de la tienda llevan la marca naranja a la izquierda */
+.pd-pedido--accion { box-shadow: inset 3px 0 0 var(--primary), var(--ui-sombra-1); }
+
+.pd-pedido__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--ui-sp-2) var(--ui-sp-4);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--ui-line);
+}
+
+.pd-pedido__id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.pd-pedido__numero {
+  margin: 0;
+  font-size: var(--fs-subtitulo);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.pd-pedido__meta { font-size: var(--fs-etiqueta); color: var(--ui-muted); }
+
+.pd-pedido__resumen {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-sp-3);
+}
+
+.pd-pedido__total {
+  font-size: var(--fs-subtitulo);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pd-pedido__cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+.pd-pedido__productos,
+.pd-pedido__entrega {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-sp-3);
+  padding: 14px 20px;
+  min-width: 0;
+}
+
+.pd-pedido__entrega { border-left: 1px solid var(--ui-line); background: var(--ui-surface-2); }
+
+.pd-pedido__subtitulo {
+  margin: 0;
+  font-size: var(--fs-pequeno);
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+
+/* Productos */
+.pd-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ui-sp-2); }
+.pd-item { display: flex; justify-content: space-between; align-items: baseline; gap: var(--ui-sp-3); }
+.pd-item__desc { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pd-item__nombre { font-size: var(--fs-texto); font-weight: 600; }
+.pd-item__meta { font-size: var(--fs-etiqueta); color: var(--ui-muted); }
+.pd-item__valor { font-size: var(--fs-texto); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.pd-totales { margin: 0; padding-top: var(--ui-sp-2); border-top: 1px dashed var(--ui-line); display: flex; flex-direction: column; gap: 2px; }
+.pd-totales > div { display: flex; justify-content: space-between; gap: var(--ui-sp-3); font-size: var(--fs-etiqueta); color: var(--ui-muted); }
+.pd-totales dd { margin: 0; font-variant-numeric: tabular-nums; }
+.pd-totales__final { margin-top: 2px; font-size: var(--fs-texto) !important; font-weight: 700; color: var(--ui-text) !important; }
+
+/* Entrega y seguimiento */
+.pd-destino { margin: 0; font-size: var(--fs-texto); line-height: 1.5; }
+.pd-nota { margin: 0; font-size: var(--fs-etiqueta); line-height: 1.5; color: var(--ui-muted); }
+.pd-nota--plazo { color: var(--ui-text); font-weight: 600; }
+.pd-nota--error { color: var(--ui-error); font-weight: 600; }
+.pd-pedido__entrega .ss-alerta { margin: 0; }
+
+/* Pie: acciones y formularios */
+.pd-pedido__pie {
+  padding: 12px 20px;
+  border-top: 1px solid var(--ui-line);
+}
+
+.pd-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-sp-2); }
+
+.pd-form { display: flex; flex-direction: column; gap: var(--ui-sp-3); }
+.pd-form__campo { display: grid; gap: .3rem; max-width: 34rem; }
+.pd-form__campo label,
+.pd-form__etiqueta { font-size: var(--fs-etiqueta); font-weight: 600; color: var(--ui-muted); }
+.pd-form__ayuda { margin: 0; font-size: var(--fs-etiqueta); color: var(--ui-muted); }
+.pd-form .ss-alerta { margin: 0; }
+
+/* "No puedo despachar": borde de peligro, sin competir con la acción principal */
+.pd-btn-peligro { border-color: var(--ui-error); color: var(--ui-error); }
+.pd-btn-peligro:hover:not(:disabled) { border-color: var(--ui-error); background: var(--ui-error-bg); }
+
+@media (max-width: 760px) {
+  .pd-pedido__cuerpo { grid-template-columns: minmax(0, 1fr); }
+  .pd-pedido__entrega { border-left: none; border-top: 1px solid var(--ui-line); }
+  .pd-pedido__cabecera,
+  .pd-pedido__productos,
+  .pd-pedido__entrega,
+  .pd-pedido__pie { padding-left: 16px; padding-right: 16px; }
+}

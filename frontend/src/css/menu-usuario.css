@@ -1,0 +1,118 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Menú de la cuenta (BEM, prefijo um-). Lo comparten el Navbar del sitio y la
+   cabecera del catálogo. Tokens --ui-*: sigue el tema claro y oscuro.
+   Movimiento: solo transform y opacity, 150 ms, y nada con movimiento reducido.
+───────────────────────────────────────────────────────────────────────────── */
+.um { position: relative; }
+
+.um .um__boton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 10px;
+  font-family: var(--ui-font);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--ui-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--ui-r-md);
+  cursor: pointer;
+}
+
+.um__boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.um__boton[aria-expanded="true"] { background: var(--ui-hover); }
+
+.um__chevron { transition: transform 150ms var(--ui-ease); }
+.um__boton[aria-expanded="true"] .um__chevron { transform: rotate(180deg); }
+
+.um__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 120;
+  width: min(272px, calc(100vw - 48px));
+  padding: 6px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-2);
+  transform-origin: top right;
+  animation: um-entrar 150ms var(--ui-ease);
+}
+
+@keyframes um-entrar {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+}
+
+.um__cabecera {
+  display: grid;
+  gap: 2px;
+  padding: 10px 10px 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--ui-line-soft);
+}
+
+.um__nombre {
+  font-family: var(--ui-font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ui-text);
+  overflow-wrap: anywhere;
+}
+
+.um__correo {
+  font-size: 0.78rem;
+  color: var(--ui-muted);
+  overflow-wrap: anywhere;
+}
+
+.um__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+
+.um .um__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  color: var(--ui-text);
+  background: transparent;
+  border: 0;
+  border-radius: var(--ui-r-md);
+  cursor: pointer;
+  transition: transform 150ms var(--ui-ease);
+}
+
+.um__icono { flex-shrink: 0; color: var(--ui-muted); }
+
+.um__item:active { transform: scale(0.98); }
+.um__item:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; background: var(--ui-hover); }
+.um .um__item--salir { color: var(--ui-error); }
+.um__item--salir .um__icono { color: currentColor; }
+
+.um__divisor { height: 1px; margin: 4px 6px; background: var(--ui-line); }
+
+@media (hover: hover) and (pointer: fine) {
+  .um__boton:hover { background: var(--ui-hover); }
+  .um__item:hover { background: var(--ui-hover); }
+}
+
+/* En móvil el botón queda solo con el ícono */
+@media (max-width: 760px) {
+  .um .um__boton { padding: 7px; }
+  .um__boton-nombre { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .um__panel { animation: none; }
+  .um__chevron, .um__item { transition: none; }
+  .um__item:active { transform: none; }
+}

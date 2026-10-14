@@ -20,32 +20,7 @@
   gap: 30px;
 }
 
-/* ── Logotipo ───────────────────────────────────────────────────────────── */
-.dm-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  font-family: var(--dm-font);
-  font-size: 23px;
-  font-weight: 800;
-  letter-spacing: -1.15px;
-  white-space: nowrap;
-  color: var(--dm-text);
-  cursor: pointer;
-}
-
-.dm-logo--light {
-  color: #fff;
-}
-
-.dm-logo__master {
-  font-weight: 550;
-}
-
-.dm-logo__dot {
-  color: var(--dm-orange-text);
-}
+/* El logotipo tiene sus estilos en logo.css (componente Logo). */
 
 /* ── Nav ────────────────────────────────────────────────────────────────── */
 .dm-header__nav {
@@ -77,7 +52,9 @@
   font-weight: 600;
 }
 
-.dm-header__nav > .dm-header__nav-negocio::after {
+/* Línea naranja de todas las opciones (header público y del marketplace): crece desde el centro al
+   pasar el mouse o con el teclado, y queda fija en la opción de la vista actual (aria-current) */
+.dm-header__nav > button::after {
   content: "";
   position: absolute;
   left: 0;
@@ -86,15 +63,18 @@
   height: 2px;
   background: var(--dm-orange);
   transform: scaleX(0);
-  transform-origin: left;
+  transform-origin: center;
   transition: transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.dm-header__nav > .dm-header__nav-negocio:hover::after,
-.dm-header__nav > .dm-header__nav-negocio:focus-visible::after { transform: scaleX(1); }
+.dm-header__nav > button:hover::after,
+.dm-header__nav > button:focus-visible::after,
+.dm-header__nav > button[aria-current="page"]::after { transform: scaleX(1); }
+
+.dm-header__nav > button[aria-current="page"] { color: var(--dm-text); }
 
 @media (prefers-reduced-motion: reduce) {
-  .dm-header__nav > .dm-header__nav-negocio::after { transition: none; }
+  .dm-header__nav > button::after { transition: none; }
 }
 
 /* ── Acciones ───────────────────────────────────────────────────────────── */
@@ -261,6 +241,14 @@
   color: var(--dm-orange-text-hover);
 }
 
+/* Opción de la vista actual en el menú móvil: texto naranja y barra a la izquierda */
+.dm-mobile-nav > button[aria-current="page"] {
+  color: var(--dm-orange-text);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--dm-orange);
+  padding-left: 12px;
+}
+
 @keyframes dm-nav-in {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: translateX(0); }
@@ -273,18 +261,14 @@
   .dm-header__nav > button { font-size: 10px; }
   /* "Solicitar diagnóstico" ya es el botón de la derecha y "Cómo funciona" está
      en la landing: se ocultan para que el header quepa y "Registra tu negocio" siga visible. */
-  .dm-header__nav > button:nth-child(2),
-  .dm-header__nav > button:nth-child(3) { display: none; }
+  .dm-header__nav > .dm-header__nav-secundario { display: none; }
   .dm-header__actions { gap: 14px; }
-  .dm-logo { font-size: 21px; }
-  .dm-logo svg { width: 28px; height: 24px; }
   .dm-header__actions .dm-btn { font-size: 9px; padding: 10px 12px; gap: 8px; }
   .dm-header__login { font-size: 10px; }
 }
 
 @media (max-width: 1000px) {
   .dm-header__inner { height: 75px; }
-  .dm-header__nav > button:nth-child(3) { display: none; }
   .dm-header__login { display: none; }
   .dm-header__vehicle { display: none; }
 }
@@ -294,14 +278,15 @@
   .dm-header__nav { display: none; }
   .dm-header__actions { gap: 10px; }
   .dm-header__toggle { display: inline-flex; }
-  .dm-header__actions .dm-btn--dark,
-  .dm-header__cta { min-height: 35px; padding: 8px 10px; font-size: 9px; gap: 8px; }
-  .dm-header__cta svg { width: 13px; }
+  .dm-header__actions .dm-btn--dark { min-height: 35px; padding: 8px 10px; font-size: 9px; gap: 8px; }
+  /* No cabe junto al logo y los íconos: "Solicitar diagnóstico" sigue en el menú móvil */
+  .dm-header__actions .dm-header__cta { display: none; }
   .dm-header__user-btn span { display: none; }
   .dm-header__user-btn { padding: 7px; }
   .dm-mobile-nav { inset-block-start: 68px; }
 }
 
-@media (max-width: 380px) {
-  .dm-header__cta { display: none; }
+/* Con sesión hay más íconos (campanita y menú de usuario): en pantallas angostas queda solo la "D" */
+@media (max-width: 440px) {
+  .dm-header .dm-logo__nombre { display: none; }
 }

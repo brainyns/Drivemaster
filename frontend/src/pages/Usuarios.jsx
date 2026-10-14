@@ -2,19 +2,23 @@ import { apiFetch } from "../services/http";
 import { useEffect, useState } from "react";
 import { crearUsuario, eliminarUsuario, getUser } from "../services/authService";
 import { usuariosPlataforma } from "../services/plataformaService";
+import DrawerAdmin from "../components/admin/DrawerAdmin";
+import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import "../css/Usuarios.css";
+import "../css/admin-base.css";
 
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
 
+// Variante del badge (admin-base.css): el equipo en info, los negocios y clientes en neutro
 const ROL_CONFIG = {
-  SUPERADMIN: { label: "SUPER ADMIN", className: "us-badge--superadmin" },
-  ADMIN: { label: "ADMIN", className: "us-badge--admin" },
-  TIENDA: { label: "TIENDA", className: "us-badge--tienda" },
-  TALLER: { label: "TALLER", className: "us-badge--taller" },
-  CLIENTE: { label: "CLIENTE", className: "us-badge--cliente" },
-  MECANICO: { label: "MECÁNICO", className: "us-badge--taller" },
+  SUPERADMIN: { label: "Super admin", variante: "info" },
+  ADMIN: { label: "Admin", variante: "info" },
+  TIENDA: { label: "Tienda", variante: "neutro" },
+  TALLER: { label: "Taller", variante: "neutro" },
+  CLIENTE: { label: "Cliente", variante: "neutro" },
+  MECANICO: { label: "Mecánico", variante: "neutro" },
   // Rol retirado: las cuentas que quedan se siguen listando para poder reasignarlas o desactivarlas
-  VENDEDOR: { label: "VENDEDOR (RETIRADO)", className: "us-badge--vendedor" },
+  VENDEDOR: { label: "Vendedor (retirado)", variante: "pendiente" },
 };
 
 // Solo estos roles se crean o se asignan desde aquí. Las tiendas y los talleres se registran con
@@ -36,8 +40,6 @@ const TARJETAS = [
   { rol: "ADMIN", titulo: "Administradores" },
   { rol: "SUPERADMIN", titulo: "Super Admins" },
 ];
-
-const AVATAR_COLORS = ["#E8450A", "#7C3AED", "#0EA5E9", "#10B981", "#F59E0B"];
 
 function getInitials(nombre) {
   return (nombre || "")
@@ -136,13 +138,19 @@ export default function Usuarios({ token }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("¿Desactivar este usuario? Esta acción no se puede deshacer.")) return;
+  // Desactivar pide confirmación en un diálogo del panel (antes, window.confirm)
+  const [desactivando, setDesactivando] = useState(null);
+  const [desactivandoEnCurso, setDesactivandoEnCurso] = useState(false);
+  const confirmarDesactivar = async () => {
+    setDesactivandoEnCurso(true);
     try {
-      await eliminarUsuario(id);
+      await eliminarUsuario(desactivando.id);
       recargar();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setDesactivandoEnCurso(false);
+      setDesactivando(null);
     }
   };
 
@@ -175,15 +183,14 @@ export default function Usuarios({ token }) {
   const paginas = Math.max(1, Math.ceil(total / TAMANO));
 
   return (
-    <>
-    <div className="us-root">
-      {/* ── Page header ── */}
-      <div className="us-page-header">
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
         <div>
-          <h1 className="us-page-title">Usuarios</h1>
-          <p className="us-page-sub">Gestiona los usuarios y roles de acceso al sistema.</p>
+          <h1 className="adm-encabezado__titulo">Usuarios</h1>
+          <p className="adm-encabezado__sub">Gestiona los usuarios y roles de acceso al sistema.</p>
         </div>
-      </div>
+        {lista.usuarios && <span className="adm-encabezado__dato">{total} {total === 1 ? "usuario" : "usuarios"}</span>}
+      </header>
 
       {/* ── Tarjetas por rol: también son filtros de la lista ── */}
       <div className="us-stats" role="group" aria-label="Usuarios por rol">
@@ -207,300 +214,221 @@ export default function Usuarios({ token }) {
         ))}
       </div>
 
-      {/* ── Main layout ── */}
+      <form className="adm-filtros" role="search" aria-label="Filtros de usuarios"
+        onSubmit={(e) => { e.preventDefault(); setPagina(0); setQ(busqueda.trim()); }}>
+        <label className="adm-campo adm-campo--ancho">
+          <span>Buscar</span>
+          <input type="search" placeholder="Nombre o correo" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        </label>
+        <label className="adm-campo">
+          <span>Rol</span>
+          <select value={filterRol} onChange={(e) => { setPagina(0); setFilterRol(e.target.value); }}>
+            <option value="TODOS">Todos los roles</option>
+            <option value="TIENDA">Tiendas</option>
+            <option value="TALLER">Talleres</option>
+            <option value="CLIENTE">Clientes</option>
+            <option value="ADMIN">Administradores</option>
+            <option value="SUPERADMIN">Super Admins</option>
+          </select>
+        </label>
+        <label className="adm-campo">
+          <span>Estado</span>
+          <select value={filtroEstado} onChange={(e) => { setPagina(0); setFiltroEstado(e.target.value); }}>
+            <option value="">Todos</option>
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+          </select>
+        </label>
+        <div className="adm-filtros__acciones">
+          <button type="submit" className="adm-btn">Buscar</button>
+        </div>
+      </form>
+
+      {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
+
       <div className="us-main">
         {/* ── Tabla ── */}
-        <div className="us-panel us-panel--table">
-          <div className="us-panel__header">
-            <h2 className="us-panel__title">Usuarios registrados</h2>
-            <div className="us-filter">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
-              <select
-                className="us-filter__select"
-                aria-label="Filtrar por rol"
-                value={filterRol}
-                onChange={(e) => { setPagina(0); setFilterRol(e.target.value); }}
-              >
-                <option value="TODOS">Todos los roles</option>
-                <option value="TIENDA">Tiendas</option>
-                <option value="TALLER">Talleres</option>
-                <option value="CLIENTE">Clientes</option>
-                <option value="ADMIN">Administradores</option>
-                <option value="SUPERADMIN">Super Admins</option>
-              </select>
-              <select
-                className="us-filter__select"
-                aria-label="Filtrar por estado"
-                value={filtroEstado}
-                onChange={(e) => { setPagina(0); setFiltroEstado(e.target.value); }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="activos">Activos</option>
-                <option value="inactivos">Inactivos</option>
-              </select>
-            </div>
-          </div>
-
-          <form className="us-search" role="search" onSubmit={(e) => { e.preventDefault(); setPagina(0); setQ(busqueda.trim()); }}>
-            <input
-              className="us-input"
-              type="search"
-              placeholder="Buscar por nombre o correo"
-              aria-label="Buscar usuarios"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-            <button type="submit" className="us-btn-submit us-btn-submit--sm">Buscar</button>
-          </form>
-
-          {error && <p className="us-error">{error}</p>}
-
-          <div className="us-table-wrap">
-              <table className="us-table">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Correo</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
-                    {isSuperadmin && <th>Acciones</th>}
-                  </tr>
-                </thead>
-              <tbody>
-                {usuariosFiltrados.map((u, i) => {
-                  const cfg = ROL_CONFIG[u.rol] || { label: u.rol, className: "" };
-                  const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
-                  return (
-                    <tr key={u.id} className="us-row">
-                      <td>
-                        <div className="us-user">
-                          <div className="us-avatar" style={{ background: color }}>
-                            {getInitials(u.nombre)}
-                          </div>
-                          <span className="us-user__name">{u.nombre}</span>
-                        </div>
-                      </td>
-                      <td className="us-cell--muted">{u.correo}</td>
-                      <td>
-                        <span className={`us-badge ${cfg.className}`}>{cfg.label}</span>
-                      </td>
-                      <td>
-                        <span className={`us-status ${u.activo ? "us-status--active" : "us-status--inactive"}`}>
-                          <span className="us-status__dot" />
-                          {u.activo ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      {isSuperadmin && (
-                        <td>
-                          <div className="us-actions">
-                            <button className="us-action-btn us-action-btn--edit" title="Editar" onClick={() => handleEditClick(u)}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                              </svg>
-                            </button>
-                            {u.activo ? (
-                              <button className="us-action-btn us-action-btn--delete" title="Desactivar" onClick={() => handleDelete(u.id)}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                                </svg>
-                              </button>
-                            ) : (
-                              <button className="us-action-btn us-action-btn--edit" title="Activar" onClick={() => handleActivar(u.id)}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
+        <div>
+          <div className="adm-tarjeta" aria-busy={!lista.usuarios}>
+            {!lista.usuarios && !error ? (
+              <div className="adm-cargando">Cargando usuarios…</div>
+            ) : lista.usuarios && usuariosFiltrados.length === 0 ? (
+              <p className="adm-vacio">Ningún usuario coincide con los filtros.</p>
+            ) : lista.usuarios && (
+              <div className="adm-tabla-wrap">
+                <table className="adm-tabla adm-tabla--tarjetas">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th>
+                      {isSuperadmin && <th className="adm-tabla__der">Acciones</th>}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {lista.usuarios && usuariosFiltrados.length === 0 && (
-              <p className="us-cell--muted" style={{ padding: "1rem" }}>Ningún usuario coincide con los filtros.</p>
+                  </thead>
+                  <tbody>
+                    {usuariosFiltrados.map((u) => {
+                      const cfg = ROL_CONFIG[u.rol] || { label: u.rol, variante: "neutro" };
+                      return (
+                        <tr key={u.id}>
+                          <td data-label="Nombre">
+                            <div className="us-user">
+                              <div className="us-avatar" aria-hidden="true">{getInitials(u.nombre)}</div>
+                              <strong>{u.nombre}</strong>
+                            </div>
+                          </td>
+                          <td data-label="Correo">{u.correo}</td>
+                          <td data-label="Rol"><span className={`adm-badge adm-badge--${cfg.variante}`}>{cfg.label}</span></td>
+                          <td data-label="Estado">
+                            <span className={`adm-badge ${u.activo ? "adm-badge--exito" : "adm-badge--neutro"}`}>
+                              {u.activo ? "Activo" : "Inactivo"}
+                            </span>
+                          </td>
+                          {isSuperadmin && (
+                            <td className="adm-tabla__der adm-tabla__celda--ancha">
+                              <div className="adm-tabla__acciones">
+                                <button type="button" className="adm-btn adm-btn--chico" onClick={() => handleEditClick(u)}>Editar</button>
+                                {u.activo ? (
+                                  <button type="button" className="adm-btn adm-btn--chico adm-btn--peligro" onClick={() => setDesactivando(u)}>Desactivar</button>
+                                ) : (
+                                  <button type="button" className="adm-btn adm-btn--chico adm-btn--primario" onClick={() => handleActivar(u.id)}>Activar</button>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
           {total > TAMANO && (
-            <div className="us-pager" style={{ display: "flex", justifyContent: "center", gap: "1rem", padding: ".75rem" }}>
-              <button type="button" className="us-action-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
-              <span className="us-cell--muted">Página {pagina + 1} de {paginas}</span>
-              <button type="button" className="us-action-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-            </div>
+            <nav className="adm-paginacion" aria-label="Paginación">
+              <button type="button" className="adm-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
+              <span>Página {pagina + 1} de {paginas}</span>
+              <button type="button" className="adm-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
+            </nav>
           )}
         </div>
 
         {/* ── Formulario ── */}
-        <div className="us-panel us-panel--form">
-          <h2 className="us-panel__title">Crear nuevo usuario</h2>
+        <section className="adm-tarjeta" aria-labelledby="us-nuevo-titulo">
+          <header className="adm-tarjeta__cabecera">
+            <h2 id="us-nuevo-titulo" className="adm-tarjeta__titulo">Crear nuevo usuario</h2>
+          </header>
+          <form onSubmit={handleSubmit} className="adm-tarjeta__cuerpo adm-drawer__bloque">
+            {success && <p className="adm-alerta adm-alerta--exito" role="status">Usuario creado correctamente.</p>}
 
-          {success && (
-            <div className="us-toast us-toast--success">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
-              Usuario creado correctamente
-            </div>
-          )}
+            <label className="adm-campo adm-campo--bloque">
+              <span>Nombre completo</span>
+              <input type="text" placeholder="Ej: Juan Pérez" value={nuevoUsuario.nombre}
+                onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })} required />
+            </label>
 
-          <form onSubmit={handleSubmit} className="us-form">
-            <div className="us-field">
-              <label className="us-label">Nombre Completo</label>
-              <input
-                className="us-input"
-                type="text"
-                placeholder="Ej: Juan Pérez"
-                value={nuevoUsuario.nombre}
-                onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })}
-                required
-              />
-            </div>
+            <label className="adm-campo adm-campo--bloque">
+              <span>Correo electrónico</span>
+              <input type="email" placeholder="email@drivemaster.co" value={nuevoUsuario.correo}
+                onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, correo: e.target.value })} required />
+            </label>
 
-            <div className="us-field">
-              <label className="us-label">Correo Electrónico</label>
-              <input
-                className="us-input"
-                type="email"
-                placeholder="email@kinetic.com"
-                value={nuevoUsuario.correo}
-                onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, correo: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="us-field">
-              <label className="us-label">Contraseña Temporal</label>
+            <div className="adm-campo adm-campo--bloque">
+              <label htmlFor="us-password">Contraseña temporal</label>
               <div className="us-input-wrap">
-                <input
-                  className="us-input"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={nuevoUsuario.password}
-                  onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })}
-                  required
-                />
-                <button
-                  type="button"
-                  className="us-eye"
-                  onClick={() => setShowPassword((p) => !p)}
-                  tabIndex={-1}
-                >
+                <input id="us-password" className="us-input" type={showPassword ? "text" : "password"} placeholder="••••••••"
+                  value={nuevoUsuario.password} onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })} required />
+                <button type="button" className="us-eye" onClick={() => setShowPassword((p) => !p)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}>
                   {showPassword ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                   ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                   )}
                 </button>
               </div>
             </div>
 
-            <div className="us-field">
-              <label className="us-label">Rol del Sistema</label>
-              <div className="us-select-wrap">
-                <select
-                  className="us-select"
-                  value={nuevoUsuario.rol}
-                  onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, rol: e.target.value })}
-                >
-                  <option value="ADMIN">Administrador</option>
-                  <option value="SUPERADMIN">Superadmin</option>
-                </select>
-                <svg className="us-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
-              </div>
-            </div>
+            <label className="adm-campo adm-campo--bloque">
+              <span>Rol del sistema</span>
+              <select value={nuevoUsuario.rol} onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, rol: e.target.value })}>
+                <option value="ADMIN">Administrador</option>
+                <option value="SUPERADMIN">Superadmin</option>
+              </select>
+            </label>
 
-            <button type="submit" className="us-btn-submit">
-              Registrar Usuario
-            </button>
+            <button type="submit" className="adm-btn adm-btn--primario adm-btn--bloque">Registrar usuario</button>
 
-            <p className="us-hint">
+            <p className="adm-encabezado__sub adm-campo__ayuda">
               Aquí solo se crean cuentas del equipo (administrador o superadmin). Las tiendas y los talleres se registran
               desde «Registra tu negocio» y se aprueban en Aprobaciones, porque necesitan perfil y aprobación.
             </p>
           </form>
-        </div>
+        </section>
       </div>
-    </div>
 
-      {/* ── Edit Modal (SUPERADMIN only) ── */}
+      {/* ── Edición (solo SUPERADMIN) ── */}
       {editando && isSuperadmin && (
-        <div className="us-modal-overlay" onClick={() => setEditando(null)}>
-          <div className="us-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="us-modal-header">
-              <h3>Editar usuario</h3>
-              <button className="us-modal-close" onClick={() => setEditando(null)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleEditSubmit} className="us-form">
-              <div className="us-field">
-                <label className="us-label">Nombre Completo</label>
-                <input
-                  className="us-input"
-                  type="text"
-                  value={editForm.nombre}
-                  onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="us-field">
-                <label className="us-label">Correo</label>
-                <input
-                  className="us-input"
-                  type="email"
-                  value={editando.correo}
-                  disabled
-                  style={{ opacity: 0.5 }}
-                />
-              </div>
-              <div className="us-field">
-                <label className="us-label">Nueva contraseña <span className="us-hint-inline">(dejar vacío para mantener)</span></label>
-                <input
-                  className="us-input"
-                  type="password"
-                  placeholder="••••••••"
-                  value={editForm.password}
-                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-                />
-              </div>
-              <div className="us-field">
-                <label className="us-label">Rol del Sistema</label>
-                <div className="us-select-wrap">
-                  <select
-                    className="us-select"
-                    value={editForm.rol}
-                    disabled={!rolEditable}
-                    onChange={(e) => setEditForm({ ...editForm, rol: e.target.value })}
-                  >
-                    {!ROLES_DEL_EQUIPO.includes(editando.rol) && (
-                      <option value={editando.rol} disabled>{(ROL_CONFIG[editando.rol] || { label: editando.rol }).label}</option>
-                    )}
-                    <option value="ADMIN">Administrador</option>
-                    <option value="SUPERADMIN">Superadmin</option>
-                  </select>
-                  <svg className="us-select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
-                </div>
-              </div>
+        <DrawerAdmin
+          titulo="Editar usuario"
+          encabezado={(
+            <span className={`adm-badge adm-badge--${(ROL_CONFIG[editando.rol] || { variante: "neutro" }).variante}`}>
+              {(ROL_CONFIG[editando.rol] || { label: editando.rol }).label}
+            </span>
+          )}
+          onCerrar={() => setEditando(null)}
+          pie={(
+            <>
+              <button type="button" className="adm-btn" onClick={() => setEditando(null)}>Cancelar</button>
+              <button type="submit" form="us-editar" className="adm-btn adm-btn--primario">Guardar cambios</button>
+            </>
+          )}
+        >
+          <form id="us-editar" onSubmit={handleEditSubmit} className="adm-drawer__bloque">
+            <label className="adm-campo adm-campo--bloque">
+              <span>Nombre completo</span>
+              <input type="text" value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} required />
+            </label>
+            <label className="adm-campo adm-campo--bloque">
+              <span>Correo</span>
+              <input type="email" value={editando.correo} disabled />
+            </label>
+            <label className="adm-campo adm-campo--bloque">
+              <span>Nueva contraseña <span className="adm-campo__ayuda">(déjala vacía para mantenerla)</span></span>
+              <input type="password" placeholder="••••••••" value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} />
+            </label>
+            <label className="adm-campo adm-campo--bloque">
+              <span>Rol del sistema</span>
+              <select value={editForm.rol} disabled={!rolEditable} onChange={(e) => setEditForm({ ...editForm, rol: e.target.value })}>
+                {!ROLES_DEL_EQUIPO.includes(editando.rol) && (
+                  <option value={editando.rol} disabled>{(ROL_CONFIG[editando.rol] || { label: editando.rol }).label}</option>
+                )}
+                <option value="ADMIN">Administrador</option>
+                <option value="SUPERADMIN">Superadmin</option>
+              </select>
+            </label>
 
-              {!rolEditable && (
-                <p className="us-hint">El rol de un cliente, una tienda o un taller no se cambia: su perfil depende de él.</p>
-              )}
-              {editando.rol === "VENDEDOR" && (
-                <p className="us-hint">El rol de vendedor se retiró. Reasígnalo a administrador o superadmin, o desactiva la cuenta.</p>
-              )}
-
-              {editError && <div className="us-error">{editError}</div>}
-              {editSuccess && <div className="us-toast us-toast--success">{editSuccess}</div>}
-
-              <div className="us-modal-actions">
-                <button type="button" className="us-btn-cancel" onClick={() => setEditando(null)}>Cancelar</button>
-                <button type="submit" className="us-btn-submit">Guardar cambios</button>
-              </div>
-            </form>
-          </div>
-        </div>
+            {!rolEditable && (
+              <p className="adm-alerta">El rol de un cliente, una tienda o un taller no se cambia: su perfil depende de él.</p>
+            )}
+            {editando.rol === "VENDEDOR" && (
+              <p className="adm-alerta adm-alerta--aviso">El rol de vendedor se retiró. Reasígnalo a administrador o superadmin, o desactiva la cuenta.</p>
+            )}
+            {editError && <p className="adm-alerta adm-alerta--error" role="alert">{editError}</p>}
+            {editSuccess && <p className="adm-alerta adm-alerta--exito" role="status">{editSuccess}</p>}
+          </form>
+        </DrawerAdmin>
       )}
-    </>
+
+      {desactivando && (
+        <ConfirmacionAdmin
+          titulo={`Desactivar a ${desactivando.nombre}`}
+          texto="La cuenta no podrá iniciar sesión. Puedes volver a activarla desde esta lista."
+          confirmar="Desactivar"
+          variante="peligro"
+          cargando={desactivandoEnCurso}
+          onConfirmar={confirmarDesactivar}
+          onCancelar={() => setDesactivando(null)}
+        />
+      )}
+    </div>
   );
 }

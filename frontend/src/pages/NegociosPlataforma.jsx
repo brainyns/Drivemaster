@@ -5,6 +5,8 @@ import { resolverAprobacionTienda, activarDesactivarTienda } from "../services/t
 import { listarPlanes, activarPlan } from "../services/suscripcionService";
 import "../css/dashboard.css";
 import "../css/dashboard-plataforma.css";
+import "../css/admin-base.css";
+import { capitalizar } from "../utils/formato";
 
 const TAMANO = 20;
 const ESTADOS = { PENDIENTE: "Pendiente", APROBADO: "Aprobado", RECHAZADO: "Rechazado" };
@@ -97,35 +99,35 @@ export default function NegociosPlataforma({ token }) {
   };
 
   return (
-    <div className="db-root dp-root">
-      <header className="db-header">
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
         <div>
-          <h1 className="db-h1">Tiendas y talleres</h1>
-          <p className="db-sub">Aprobaciones, plan, calificación, actividad y datos por completar de cada negocio.</p>
+          <h1 className="adm-encabezado__titulo">Tiendas y talleres</h1>
+          <p className="adm-encabezado__sub">Aprobaciones, plan, calificación, actividad y datos por completar de cada negocio.</p>
         </div>
-        {lista && <span className="db-date">{lista.total} {lista.total === 1 ? "negocio" : "negocios"}</span>}
+        {lista && <span className="adm-encabezado__dato">{lista.total} {lista.total === 1 ? "negocio" : "negocios"}</span>}
       </header>
 
       {datos && (
-        <div className="dp-pestanas" role="tablist" aria-label="Estado de aprobación">
-          <button type="button" role="tab" aria-selected={filtros.estado === ""} className={`dp-pestana${filtros.estado === "" ? " dp-pestana--activa" : ""}`}
+        <div className="adm-pestanas" role="tablist" aria-label="Estado de aprobación">
+          <button type="button" role="tab" aria-selected={filtros.estado === ""} className={`adm-pestana${filtros.estado === "" ? " adm-pestana--activa" : ""}`}
             onClick={() => poner({ estado: "" })}>Todos</button>
           {Object.keys(ESTADOS).map((e) => (
             <button key={e} type="button" role="tab" aria-selected={filtros.estado === e}
-              className={`dp-pestana${filtros.estado === e ? " dp-pestana--activa" : ""}`} onClick={() => poner({ estado: e })}>
-              {ESTADOS[e]}s <span className="dp-pestana__n">{datos.porEstado[e] ?? 0}</span>
+              className={`adm-pestana${filtros.estado === e ? " adm-pestana--activa" : ""}`} onClick={() => poner({ estado: e })}>
+              {ESTADOS[e]}s <span className="adm-pestana__n">{datos.porEstado[e] ?? 0}</span>
             </button>
           ))}
         </div>
       )}
 
-      <form className="dp-filtros" role="search" aria-label="Filtros de negocios"
+      <form className="adm-filtros" role="search" aria-label="Filtros de negocios"
         onSubmit={(e) => { e.preventDefault(); setPagina(0); setFiltros(borrador); }}>
-        <label className="dp-campo dp-campo--ancho">
+        <label className="adm-campo adm-campo--ancho">
           <span>Buscar</span>
           <input type="search" value={borrador.q} onChange={(e) => setBorrador({ ...borrador, q: e.target.value })} placeholder="Nombre o ciudad" />
         </label>
-        <label className="dp-campo">
+        <label className="adm-campo">
           <span>Tipo</span>
           <select value={borrador.tipo} onChange={(e) => poner({ tipo: e.target.value })}>
             <option value="">Tiendas y talleres</option>
@@ -133,27 +135,27 @@ export default function NegociosPlataforma({ token }) {
             <option value="TALLER">Talleres</option>
           </select>
         </label>
-        <div className="dp-filtros__acciones">
-          <button type="submit" className="dp-btn">Buscar</button>
-          {hayFiltros && <button type="button" className="dp-btn dp-btn--sutil" onClick={() => { setBorrador(FILTROS_INICIALES); setFiltros(FILTROS_INICIALES); setPagina(0); }}>Limpiar</button>}
+        <div className="adm-filtros__acciones">
+          <button type="submit" className="adm-btn">Buscar</button>
+          {hayFiltros && <button type="button" className="adm-btn adm-btn--sutil" onClick={() => { setBorrador(FILTROS_INICIALES); setFiltros(FILTROS_INICIALES); setPagina(0); }}>Limpiar</button>}
         </div>
       </form>
 
-      {aviso && <div className="dp-aviso" role="status">{aviso}</div>}
-      {(error || errorAccion) && <div className="db-error" role="alert">{errorAccion || error}</div>}
+      {aviso && <div className="adm-alerta adm-alerta--exito" role="status">{aviso}</div>}
+      {(error || errorAccion) && <div className="adm-alerta adm-alerta--error" role="alert">{errorAccion || error}</div>}
 
-      <div className="db-card dp-lista">
+      <div className="adm-tarjeta">
         {!lista && !error ? (
-          <div className="db-loading"><div className="db-spinner" /> Cargando negocios…</div>
+          <div className="adm-cargando">Cargando negocios…</div>
         ) : lista && lista.items.length === 0 ? (
-          <p className="db-empty">{hayFiltros ? "Ningún negocio coincide con los filtros." : "Todavía no hay negocios registrados."}</p>
+          <p className="adm-vacio">{hayFiltros ? "Ningún negocio coincide con los filtros." : "Todavía no hay negocios registrados."}</p>
         ) : lista && (
-          <div className="db-table-wrap">
-            <table className="db-table">
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
               <thead>
                 <tr>
-                  <th>Negocio</th><th>Estado</th><th>Plan</th><th className="dp-der">Calificación</th>
-                  <th className="dp-der">Actividad</th><th>Datos por completar</th><th>Registro</th><th><span className="dp-oculto">Acciones</span></th>
+                  <th>Negocio</th><th>Estado</th><th>Plan</th><th className="adm-tabla__der">Calificación</th>
+                  <th className="adm-tabla__der">Actividad</th><th>Datos por completar</th><th>Registro</th><th><span className="dp-oculto">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -163,24 +165,24 @@ export default function NegociosPlataforma({ token }) {
                   return (
                     <Fragment key={k}>
                       <tr>
-                        <td>
+                        <td data-label="Negocio">
                           <strong>{n.nombre || "Sin nombre"}</strong>
-                          <span className="dp-sub-celda">{n.tipo === "TIENDA" ? "Tienda" : "Taller"} · {n.ciudad || "sin ciudad"}</span>
+                          <span className="adm-tabla__sub">{n.tipo === "TIENDA" ? "Tienda" : "Taller"} · {capitalizar(n.ciudad) || "sin ciudad"}</span>
                         </td>
-                        <td>
-                          <span className={`dp-etiqueta${n.estado === "APROBADO" ? " dp-etiqueta--ok" : n.estado === "RECHAZADO" ? " dp-etiqueta--alerta" : ""}`}>{ESTADOS[n.estado] || n.estado}</span>
-                          {n.estado === "APROBADO" && !n.activo && <span className="dp-sub-celda">En pausa</span>}
+                        <td data-label="Estado">
+                          <span className={`adm-badge ${n.estado === "APROBADO" ? "adm-badge--exito" : n.estado === "RECHAZADO" ? "adm-badge--peligro" : "adm-badge--pendiente"}`}>{ESTADOS[n.estado] || n.estado}</span>
+                          {n.estado === "APROBADO" && !n.activo && <span className="adm-tabla__sub">En pausa</span>}
                         </td>
-                        <td>{n.plan ? n.plan.nombre : "—"}</td>
-                        <td className="dp-der">{n.calificacion != null ? `${n.calificacion.toFixed(1)} ★${n.calificaciones ? ` (${n.calificaciones})` : ""}` : "Sin calificar"}</td>
-                        <td className="dp-der">
+                        <td data-label="Plan">{n.plan ? n.plan.nombre : "—"}</td>
+                        <td className="adm-tabla__der" data-label="Calificación">{n.calificacion != null ? `${n.calificacion.toFixed(1)} ★${n.calificaciones ? ` (${n.calificaciones})` : ""}` : "Sin calificar"}</td>
+                        <td className="adm-tabla__der" data-label="Actividad">
                           {n.tipo === "TIENDA" ? `${n.productos} producto${n.productos === 1 ? "" : "s"}` : `${n.ordenes} orden${n.ordenes === 1 ? "" : "es"}`}
                         </td>
-                        <td>{completo ? <span className="dp-etiqueta dp-etiqueta--ok">Completos</span>
-                          : <span className="dp-etiqueta dp-etiqueta--alerta">Falta: {n.datosPorCompletar.join(", ")}</span>}</td>
-                        <td>{fecha(n.registrado)}</td>
-                        <td>
-                          <button type="button" className="dp-btn dp-btn--sutil" aria-expanded={abierto === k}
+                        <td data-label="Datos por completar">{completo ? <span className="adm-badge adm-badge--exito">Completos</span>
+                          : <span className="adm-badge adm-badge--peligro">Falta: {n.datosPorCompletar.join(", ")}</span>}</td>
+                        <td data-label="Registro">{fecha(n.registrado)}</td>
+                        <td className="adm-tabla__celda--ancha">
+                          <button type="button" className="adm-btn adm-btn--chico" aria-expanded={abierto === k}
                             onClick={() => { setAbierto(abierto === k ? null : k); setRechazando(null); setErrorAccion(null); }}>
                             {abierto === k ? "Cerrar" : "Gestionar"}
                           </button>
@@ -195,37 +197,37 @@ export default function NegociosPlataforma({ token }) {
 
                             {n.estado === "PENDIENTE" && (
                               <div className="dp-acciones-fila">
-                                <label className="dp-campo">
+                                <label className="adm-campo">
                                   <span>Plan al aprobar</span>
                                   <select value={planElegido[k] || "PRUEBA"} onChange={(e) => setPlanElegido({ ...planElegido, [k]: e.target.value })}>
                                     {planes.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
                                   </select>
                                 </label>
-                                <button type="button" className="dp-btn" disabled={procesando === k} onClick={() => aprobar(n)}>Aprobar</button>
-                                <button type="button" className="dp-btn dp-btn--sutil" onClick={() => setRechazando(rechazando === k ? null : k)}>Rechazar…</button>
+                                <button type="button" className="adm-btn adm-btn--primario" disabled={procesando === k} onClick={() => aprobar(n)}>Aprobar</button>
+                                <button type="button" className="adm-btn adm-btn--peligro" onClick={() => setRechazando(rechazando === k ? null : k)}>Rechazar…</button>
                               </div>
                             )}
                             {rechazando === k && (
                               <div className="dp-acciones-fila">
-                                <label className="dp-campo dp-campo--ancho">
+                                <label className="adm-campo adm-campo--ancho">
                                   <span>Motivo (se le envía al negocio)</span>
                                   <input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} />
                                 </label>
-                                <button type="button" className="dp-btn" disabled={procesando === k} onClick={() => rechazar(n)}>Confirmar rechazo</button>
+                                <button type="button" className="adm-btn adm-btn--peligro" disabled={procesando === k || !motivo.trim()} onClick={() => rechazar(n)}>Confirmar rechazo</button>
                               </div>
                             )}
                             {n.estado === "APROBADO" && (
                               <div className="dp-acciones-fila">
-                                <label className="dp-campo">
+                                <label className="adm-campo">
                                   <span>Plan</span>
                                   <select value={planElegido[k] || n.plan?.codigo || ""} onChange={(e) => setPlanElegido({ ...planElegido, [k]: e.target.value })}>
                                     {!n.plan && <option value="">Sin plan</option>}
                                     {planes.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
                                   </select>
                                 </label>
-                                <button type="button" className="dp-btn" disabled={procesando === k || !planElegido[k] || planElegido[k] === n.plan?.codigo}
+                                <button type="button" className="adm-btn adm-btn--primario" disabled={procesando === k || !planElegido[k] || planElegido[k] === n.plan?.codigo}
                                   onClick={() => cambiarPlan(n)}>Cambiar plan</button>
-                                <button type="button" className="dp-btn dp-btn--sutil" disabled={procesando === k} onClick={() => alternar(n)}>
+                                <button type="button" className={`adm-btn ${n.activo ? "adm-btn--peligro" : "adm-btn--primario"}`} disabled={procesando === k} onClick={() => alternar(n)}>
                                   {n.activo ? "Pausar" : "Activar"}
                                 </button>
                               </div>
@@ -243,10 +245,10 @@ export default function NegociosPlataforma({ token }) {
       </div>
 
       {lista && lista.total > lista.tamano && (
-        <nav className="dp-paginacion" aria-label="Paginación">
-          <button type="button" className="dp-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
+        <nav className="adm-paginacion" aria-label="Paginación">
+          <button type="button" className="adm-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
           <span>Página {pagina + 1} de {paginas}</span>
-          <button type="button" className="dp-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
+          <button type="button" className="adm-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
         </nav>
       )}
     </div>

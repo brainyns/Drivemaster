@@ -1,9 +1,11 @@
 /* ── Panel de identificaciónón de vehíoulo ─────────────────────────────────── */
 
-.dm-vehicle {
+/* Va debajo del título de "Compra directa", dentro del mismo ancho que el resto de la portada
+   (.dm-container). Antes subía 47px con un margen negativo, pensado para montarse sobre el
+   hero, y tapaba el título. */
+.dm-container.dm-vehicle {
   position: relative;
-  margin-top: -47px;
-  z-index: 5;
+  margin-top: 28px;
   scroll-margin-top: 110px;
 }
 
@@ -226,7 +228,7 @@
 }
 
 @media (max-width: 760px) {
-  .dm-vehicle { margin-top: -30px; }
+  .dm-container.dm-vehicle { margin-top: 20px; }
   .dm-vehicle__panel { padding: 21px 19px 0; border-radius: 7px; }
   .dm-vehicle__heading { margin-bottom: 22px; }
   .dm-vehicle__title { gap: 11px; }

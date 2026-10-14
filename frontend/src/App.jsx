@@ -56,11 +56,14 @@ import ChatWidget            from "./components/chat/ChatWidget";
 import { reiniciarChat }     from "./components/chat/chatSesion";
 import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
 import { useCarrito } from "./hooks/useCarrito";
+import { connectNotifications, disconnectNotifications } from "./services/websocketService";
+import { tieneCampanita } from "./services/notificacionesUtil";
 import MarketHeader from "./components/marketplace/MarketHeader";
 import DetalleProductoMarketplace from "./pages/DetalleProductoMarketplace";
 import CarritoMarketplace from "./pages/CarritoMarketplace";
 import CheckoutMarketplace from "./pages/CheckoutMarketplace";
 import MisCompras from "./pages/MisCompras";
+import PerfilCliente from "./pages/PerfilCliente";
 import ProblemasEnvios from "./pages/ProblemasEnvios";
 import DatosMiTienda from "./pages/DatosMiTienda";
 import { miTienda } from "./services/tiendaService";
@@ -113,6 +116,7 @@ const TITULOS = {
   "solicitar-diagnostico": "Solicitar diagnóstico",
   "mis-servicios":   "Mis servicios",
   "mis-compras":     "Mis compras",
+  "perfil-cliente":  "Mi perfil",
   "checkout-marketplace": "Entrega y pago",
   "taller-panel":    "Inicio del taller",
   "taller-inicio":   "Inicio del taller",
@@ -136,7 +140,7 @@ const TITULOS = {
 // Páginas del cliente que se muestran sin el panel lateral.
 const PAGINAS_CLIENTE = [
   "checkout", "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo",
-  "solicitar-diagnostico", "mis-servicios", "checkout-marketplace", "mis-compras",
+  "solicitar-diagnostico", "mis-servicios", "checkout-marketplace", "mis-compras", "perfil-cliente",
 ];
 
 // Catálogo marketplace: se consulta sin sesión y no usa el panel lateral aunque haya una.
@@ -262,6 +266,14 @@ function App() {
     };
   }, [expirarSesion]);
 
+  // Avisos en vivo: una sola conexión por sesión (no se reabre al cambiar de página ni de cabecera)
+  const conAvisos = !!user && tieneCampanita(user.rol);
+  useEffect(() => {
+    if (!conAvisos) return undefined;
+    connectNotifications();
+    return () => disconnectNotifications();
+  }, [conAvisos, user?.id]);
+
   const irA = (p, id = null) => { setIdSeleccionado(id); setPagina(p); };
 
   const handleLogin = (auth) => {
@@ -380,13 +392,25 @@ function App() {
       onIrInicio={irAlInicio}
       onIrCatalogo={irAlCatalogoGlobal}
       onIrCarrito={() => setPagina("carrito-marketplace")}
-      onIrMisCompras={() => setPagina("mis-compras")}
+      onIrMisCompras={() => irA("mis-compras")}
       onIrLogin={() => setPagina("login")}
       onLogout={handleLogout}
       onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
+      onIr={(p) => irA(p)}
+      onIrAdmin={() => setPagina(INICIO_POR_ROL[user?.rol] && user.rol !== "CLIENTE" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
+      onAbrirAviso={irA}
       theme={theme}
       onToggleTheme={toggleTheme}
     />
+  );
+
+  // Vistas de cliente sin cabecera propia: llevan la del marketplace (con el logo). El header
+  // necesita el scope .dm-page para sus estilos; se aplica solo a él para no cambiar la vista.
+  const conCabecera = (vista, activo = null) => (
+    <>
+      <div className="dm-page dm-page--solo-cabecera">{cabeceraMarketplace(activo)}</div>
+      {vista}
+    </>
   );
 
   const renderPagina = () => {
@@ -422,9 +446,13 @@ function App() {
       if (user.rol !== "CLIENTE") return <div style={{ padding: "40px" }}>Esta sección es para clientes.</div>;
       if (pagina === "mis-compras") return (
         <MisCompras
+          key={idSeleccionado || "mis-compras"}
+          compraInicial={idSeleccionado}
           header={cabeceraMarketplace("compras")}
           onVolver={() => setPagina("catalogo")}
           onIrCatalogo={() => irAlCatalogoGlobal()}
+          onIrSolicitudes={() => setPagina("mis-solicitudes")}
+          onIrHistorial={() => setPagina("mis-pedidos")}
         />
       );
       return (
@@ -432,7 +460,21 @@ function App() {
           header={cabeceraMarketplace("carrito")}
           carrito={carrito}
           onVolverCarrito={() => setPagina("carrito-marketplace")}
-          onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); setPagina("mis-compras"); }}
+          onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); irA("mis-compras"); }}
+        />
+      );
+    }
+
+    // Mi perfil del cliente (distinto de "mi-perfil", el perfil de los roles internos)
+    if (pagina === "perfil-cliente") {
+      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
+      if (user.rol !== "CLIENTE") return <div style={{ padding: "40px" }}>Esta sección es para clientes.</div>;
+      return (
+        <PerfilCliente
+          header={cabeceraMarketplace("perfil")}
+          onIr={(p) => irA(p)}
+          onIrCatalogo={() => irAlCatalogoGlobal()}
+          onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         />
       );
     }
@@ -446,10 +488,11 @@ function App() {
         onIrSolicitud={(p) => setPagina(p || "checkout")}
         onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         onRegistroNegocio={() => setPagina("registro-negocio")}
-        onIrMisCompras={() => { if (!user) guardarDestinoPostLogin("checkout-marketplace"); setPagina("mis-compras"); }}
+        onIrMisCompras={() => { if (!user) guardarDestinoPostLogin("checkout-marketplace"); irA("mis-compras"); }}
         onLogout={handleLogout}
         carrito={carrito}
         onIrCarrito={() => setPagina("carrito-marketplace")}
+        onAbrirAviso={irA}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -491,15 +534,15 @@ function App() {
       );
     }
 
-    if (pagina === "mis-solicitudes") return <MisSolicitudes onVolver={() => setPagina("catalogo")} />;
+    if (pagina === "mis-solicitudes") return conCabecera(<MisSolicitudes onVolver={() => setPagina("catalogo")} />);
 
-    if (pagina === "pago-resultado") return (
+    if (pagina === "pago-resultado") return conCabecera(
       <PagoResultado
         onPagoExitoso={() => setSolicitudItems([])}
         onIrSolicitudes={() => setPagina("mis-solicitudes")}
-        onIrServicios={() => setPagina("mis-servicios")}
+        onIrServicios={() => irA("mis-servicios")}
         onCompraCatalogoPagada={vaciarCarritoPagado}
-        onIrMisCompras={() => setPagina("mis-compras")}
+        onIrMisCompras={() => irA("mis-compras")}
       />
     );
 
@@ -510,7 +553,7 @@ function App() {
           window.history.replaceState(null, "", "/");
           // Sin sesión, "Mis servicios" pide iniciar sesión: al terminar se vuelve aquí
           if (!user) guardarDestinoPostLogin("mis-servicios");
-          setPagina("mis-servicios");
+          irA("mis-servicios");
         }}
         onIrInicio={() => { window.history.replaceState(null, "", "/"); setPagina("catalogo"); }}
       />
@@ -518,27 +561,29 @@ function App() {
 
     if (pagina === "mis-pedidos") {
       if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      return <MisPedidos onVolver={() => setPagina("catalogo")} />;
+      return conCabecera(<MisPedidos onVolver={() => setPagina("catalogo")} />);
     }
 
     if (pagina === "mis-vehiculos") {
       if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      return (
+      return conCabecera(
         <MisVehiculos
           onVolver={() => setPagina("catalogo")}
           onVerServicio={(id) => irA("servicio-vehiculo", id)}
-        />
+        />,
+        "vehiculos"
       );
     }
 
     if (pagina === "servicio-vehiculo") {
       if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      return (
+      return conCabecera(
         <VehiculoServicio
           vehiculoId={idSeleccionado}
           onVolver={() => setPagina("mis-vehiculos")}
           onSolicitarDiagnostico={(id) => irA("solicitar-diagnostico", id)}
-        />
+        />,
+        "vehiculos"
       );
     }
 
@@ -548,22 +593,27 @@ function App() {
       if (user.rol !== "CLIENTE") return (
         <div style={{ padding: "40px" }}>Esta sección es para clientes. Ingresa con una cuenta de cliente para solicitar un diagnóstico.</div>
       );
-      if (pagina === "mis-servicios") return (
+      if (pagina === "mis-servicios") return conCabecera(
         <MisServicios
+          key={idSeleccionado || "mis-servicios"}
+          solicitudInicial={idSeleccionado}
           onVolver={() => { setVieneDeCotizacion(false); setPagina("catalogo"); }}
           onSolicitar={() => irA("solicitar-diagnostico")}
           avisoCotizacion={vieneDeCotizacion ? user.correo : null}
           onCerrarAviso={() => setVieneDeCotizacion(false)}
-        />
+          onIrHistorial={() => setPagina("mis-pedidos")}
+        />,
+        "servicios"
       );
-      return (
+      return conCabecera(
         <SolicitarDiagnostico
           key={idSeleccionado || "nueva"}
           vehiculoIdInicial={idSeleccionado}
           onVolver={() => setPagina("catalogo")}
           onVerServicios={() => irA("mis-servicios")}
           onIrVehiculos={() => irA("mis-vehiculos")}
-        />
+        />,
+        "diagnostico"
       );
     }
 

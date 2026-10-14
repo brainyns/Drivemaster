@@ -74,9 +74,10 @@ class CotizacionServiceTest {
         VehiculoService vehiculoService = mock(VehiculoService.class);
         ProductoService productoService = mock(ProductoService.class);
         BuscadorRepuestosService buscador = mock(BuscadorRepuestosService.class);
+        PredictorCotizacionService predictor = mock(PredictorCotizacionService.class);
 
         service = new CotizacionService(cotizacionRepository, ordenRepository, mongoTemplate, transiciones,
-                tallerService, usuarioService, vehiculoService, productoService, buscador, parametros, avisos, liquidacion);
+                tallerService, usuarioService, vehiculoService, productoService, buscador, parametros, avisos, liquidacion, predictor);
 
         taller = Taller.builder().id("t1").nombre("AutoMax").activo(true).tarifaHora(60_000.0)
                 .estadoAprobacion(EstadoAprobacion.APROBADO).build();
@@ -374,5 +375,23 @@ class CotizacionServiceTest {
         assertEquals(1, deLaB.size());
         verify(cotizacionRepository).findByTallerIdOrderByFechaEmisionDesc("t1");
         verify(cotizacionRepository).findByTallerIdOrderByFechaEmisionDesc("t2");
+    }
+
+    @Test
+    void lasRechazadasLleganAlTallerConSuFechaYSuMotivo() {
+        LocalDateTime respondida = LocalDateTime.now().minusHours(2);
+        Cotizacion rechazada = emitida(TokenSeguro.generar().token(), LocalDateTime.now().plusDays(3));
+        rechazada.setTallerId("t1");
+        rechazada.setEstado(Cotizacion.RECHAZADA);
+        rechazada.setFechaRespuesta(respondida);
+        rechazada.setMotivoRespuesta("Encontré un mejor precio");
+        when(cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc("t1")).thenReturn(List.of(rechazada));
+
+        CotizacionDTO dto = service.delTaller(CORREO_TALLER).get(0);
+
+        assertEquals(Cotizacion.RECHAZADA, dto.getEstado());
+        assertEquals(respondida, dto.getFechaRespuesta());
+        assertEquals("Encontré un mejor precio", dto.getMotivoRespuesta());
+        assertFalse(dto.isPuedeResponder());
     }
 }

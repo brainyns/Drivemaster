@@ -3,6 +3,7 @@ node_modules/
 dist/ 
 build/ 
 .vscode/settings.json
+informes/
 
 be.txt
 *.log

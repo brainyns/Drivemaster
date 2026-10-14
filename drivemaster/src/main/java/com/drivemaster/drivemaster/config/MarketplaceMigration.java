@@ -5,6 +5,8 @@ import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.model.mysql.PlanSuscripcion;
 import com.drivemaster.drivemaster.repository.TallerRepository;
+import com.drivemaster.drivemaster.repository.UsuarioRepository;
+import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.service.SuscripcionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +26,9 @@ import java.time.LocalDateTime;
  * una vez aplicado.
  *
  * 1. Deja en 0 el stock nulo (el descuento atómico necesita un número).
- * 2. Marca como APROBADO los talleres anteriores al marketplace y les da plan PRUEBA.
+ * 2. Marca como APROBADO los talleres anteriores al marketplace que tienen una cuenta TALLER válida y les da
+ *    plan PRUEBA. Los que no la tienen quedan PENDIENTE e inactivos: sin dueño que pueda entrar no deben
+ *    recibir solicitudes, y un taller sin estado contaría como aprobado (EstadoAprobacion.estaAprobado).
  *
  * DriveMaster es la aplicación, no una tienda: aquí ya no se crea ninguna tienda propia ni se asignan
  * productos a una. Los productos sin tienda se quedan sin tienda y no aparecen en ningún catálogo.
@@ -42,21 +46,34 @@ public class MarketplaceMigration implements CommandLineRunner {
     private final MongoTemplate mongoTemplate;
     private final TallerRepository tallerRepository;
     private final SuscripcionService suscripcionService;
+    private final UsuarioRepository usuarioRepository;
 
     @Override
     public void run(String... args) {
         long stockNulo = mongoTemplate.updateMulti(
                 Query.query(Criteria.where("stockActual").is(null)),
                 new Update().set("stockActual", 0), Producto.class).getModifiedCount();
-        int talleres = aprobarTalleresExistentes();
+        int[] talleres = migrarTalleresExistentes();
 
-        log.info("✅ Migración marketplace: {} productos con stock nulo, {} talleres aprobados", stockNulo, talleres);
+        log.info("✅ Migración marketplace: {} productos con stock nulo, {} talleres aprobados, {} talleres sin cuenta dejados PENDIENTE",
+                stockNulo, talleres[0], talleres[1]);
     }
 
-    private int aprobarTalleresExistentes() {
+    /** Devuelve {aprobados, sin cuenta}. */
+    private int[] migrarTalleresExistentes() {
         int migrados = 0;
+        int sinCuenta = 0;
         for (Taller taller : tallerRepository.findAll()) {
             if (taller.getEstadoAprobacion() != null) continue;
+            if (!tieneCuentaTaller(taller)) {
+                taller.setEstadoAprobacion(EstadoAprobacion.PENDIENTE);
+                taller.setActivo(false);
+                tallerRepository.save(taller);
+                log.warn("Migración marketplace: el taller {} ({}) no tiene una cuenta TALLER válida; queda PENDIENTE e inactivo",
+                        taller.getNombre(), taller.getId());
+                sinCuenta++;
+                continue;
+            }
             taller.setEstadoAprobacion(EstadoAprobacion.APROBADO);
             if (taller.getFechaAprobacion() == null) taller.setFechaAprobacion(LocalDateTime.now());
             tallerRepository.save(taller);
@@ -66,6 +83,14 @@ public class MarketplaceMigration implements CommandLineRunner {
             }
             migrados++;
         }
-        return migrados;
+        return new int[]{migrados, sinCuenta};
+    }
+
+    private boolean tieneCuentaTaller(Taller taller) {
+        String usuarioId = taller.getUsuarioId();
+        if (usuarioId == null || usuarioId.isBlank()) return false;
+        return usuarioRepository.findById(usuarioId)
+                .map(u -> RolPermisos.TALLER.equals(u.getRol()))
+                .orElse(false);
     }
 }

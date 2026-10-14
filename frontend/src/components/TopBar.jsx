@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import Logo from "./Logo";
 import NotificationDropdown from "./NotificationDropdown";
-import { getToken } from "../services/authService";
-import { connectNotifications, disconnectNotifications, subscribeNotifications } from "../services/websocketService";
+import useNoLeidas from "../hooks/useNoLeidas";
+import { tieneCampanita, textoContador } from "../services/notificacionesUtil";
 import "../css/topbar.css";
 
 const IcoSettings = () => (
@@ -163,34 +164,9 @@ function TopBar({
   const [configOpen, setConfigOpen] = useState(false);
   const [perfilOpen, setPerfilOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifCount, setNotifCount] = useState(0);
-
-  const refreshCount = useCallback(async () => {
-    try {
-      // La pantalla de Solicitudes (flujo anterior) está oculta: ya no hay un conteo que mostrar
-      setNotifCount(0);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    // Las solicitudes pendientes son del personal interno; talleres y tiendas no tienen acceso.
-    if (!user || !["SUPERADMIN", "VENDEDOR"].includes(user.rol)) return;
-    const tok = getToken();
-    if (!tok) return;
-    connectNotifications(tok);
-    const initial = setTimeout(refreshCount, 0);
-    const unsub = subscribeNotifications((msg) => {
-      if (msg?.type === "solicitud" || msg?.type === "venta_estado") refreshCount();
-    });
-    return () => { clearTimeout(initial); unsub(); disconnectNotifications(); };
-  }, [user, refreshCount]);
-
-  useEffect(() => {
-    if (!notifOpen) return;
-    const initial = setTimeout(refreshCount, 0);
-    const interval = setInterval(refreshCount, 30000);
-    return () => { clearTimeout(initial); clearInterval(interval); };
-  }, [notifOpen, refreshCount]);
+  // Campanita: avisos propios (la conexión en vivo la abre App para toda la sesión)
+  const conCampanita = tieneCampanita(user?.rol);
+  const { noLeidas: notifCount, setNoLeidas: setNotifCount, latido: avisoNuevo } = useNoLeidas(conCampanita);
 
   return (
     <header className="tb-root">
@@ -209,8 +185,10 @@ function TopBar({
             </svg>
           </button>
         )}
-        <span className="tb-brand">DriveMaster</span>
-        <span className="tb-divider">|</span>
+        {/* En escritorio el logo ya está en el sidebar: aquí solo se ve en móvil */}
+        <span className="tb-logo">
+          <Logo size="sm" onClick={onNavigate ? () => onNavigate("catalogo") : undefined} />
+        </span>
         <span className="tb-breadcrumb">{titulo}</span>
       </div>
 
@@ -244,12 +222,14 @@ function TopBar({
           </div>
         )}
 
-        {/* Las notificaciones (solicitudes, ventas, stock) son del personal interno; el ADMIN no tiene acceso a esos datos */}
-        {user?.rol !== "ADMIN" && (
+        {/* Campanita: avisos propios de cada cuenta (taller, tienda, ADMIN y SUPERADMIN) */}
+        {conCampanita && (
         <div className="tb-ico-wrap tb-notif-wrap">
           <button
             className={`tb-ico-btn${notifOpen ? " tb-ico-btn--active" : ""}`}
             title="Notificaciones"
+            aria-label={notifCount > 0 ? `Notificaciones, ${notifCount} sin leer` : "Notificaciones"}
+            aria-expanded={notifOpen}
             onClick={() => { setNotifOpen(p => !p); setConfigOpen(false); setPerfilOpen(false); }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -257,11 +237,17 @@ function TopBar({
               <path d="M13.73 21a2 2 0 01-3.46 0"/>
             </svg>
           </button>
-          {notifCount > 0 && <span className="tb-notif-badge">{notifCount}</span>}
+          {notifCount > 0 && (
+            <span key={avisoNuevo} className={`tb-notif-badge${avisoNuevo > 0 ? " tb-notif-badge--nuevo" : ""}`} aria-hidden="true">
+              {textoContador(notifCount)}
+            </span>
+          )}
           {notifOpen && (
             <NotificationDropdown
+              rol={user?.rol}
               onClose={() => setNotifOpen(false)}
               onNavigate={(page, id) => onNavigate?.(page, id)}
+              onNoLeidas={setNotifCount}
             />
           )}
         </div>

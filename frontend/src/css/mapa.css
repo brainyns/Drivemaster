@@ -1,0 +1,388 @@
+/* ── Mapas (Leaflet + OpenStreetMap) ──────────────────────────────────────
+   SelectorUbicacion (registro y edición del taller) y MapaTalleres
+   (solicitud de diagnóstico). Prefijo mapa-, BEM. Superficies y texto con los
+   tokens --dm-* para respetar el tema claro/oscuro. */
+
+.mapa-selector,
+.mapa-talleres,
+.mapa-talleres__estado {
+  --mapa-navy:   #0C2240;
+  --mapa-steel:  #18487A;
+  --mapa-acento: #FF3D00;
+  --mapa-alto:   380px;
+}
+
+/* El contenedor de Leaflet necesita altura explícita o el mapa no se ve */
+.mapa-lienzo {
+  width: 100%;
+  height: 100%;
+  font-family: inherit;
+}
+
+/* ── Botones ────────────────────────────────────────────────────────────── */
+.mapa-boton {
+  padding: 9px 14px;
+  background: transparent;
+  color: var(--dm-text);
+  border: 1px solid var(--dm-line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.mapa-boton:hover:not(:disabled) {
+  background: var(--dm-surface-2);
+  border-color: var(--mapa-steel);
+}
+
+.mapa-boton:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.mapa-boton--primario {
+  background: var(--mapa-steel);
+  border-color: var(--mapa-steel);
+  color: #fff;
+}
+
+.mapa-boton--primario:hover:not(:disabled) {
+  background: var(--mapa-navy);
+  border-color: var(--mapa-navy);
+}
+
+.mapa-boton--acento {
+  background: var(--mapa-acento);
+  border-color: var(--mapa-acento);
+  color: #fff;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.mapa-boton--acento:hover:not(:disabled) {
+  background: #E03600;
+  border-color: #E03600;
+}
+
+.mapa-boton--chico {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.mapa-boton:focus-visible,
+.mapa-lista__ver:focus-visible,
+.mapa-auto:focus-visible,
+.mapa-selector__input:focus-visible {
+  outline: 2px solid var(--mapa-acento);
+  outline-offset: 2px;
+}
+
+.mapa-aviso {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--dm-muted);
+}
+
+.mapa-aviso--error {
+  color: var(--error, #EF4444);
+}
+
+/* ── Selector de ubicación ──────────────────────────────────────────────── */
+.mapa-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mapa-selector__barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mapa-selector__input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 9px 12px;
+  background: var(--dm-surface);
+  color: var(--dm-text);
+  border: 1px solid var(--dm-line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.mapa-selector__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.mapa-selector__mapa {
+  height: var(--mapa-alto);
+  border: 1px solid var(--dm-line);
+  border-radius: 10px;
+  overflow: hidden;
+  /* Leaflet usa z-index altos; se encierran para no tapar menús ni modales */
+  position: relative;
+  z-index: 0;
+}
+
+.mapa-selector--error .mapa-selector__mapa {
+  border-color: var(--error, #EF4444);
+}
+
+.mapa-selector__estado {
+  margin: 0;
+  font-size: 12px;
+  color: var(--dm-muted);
+}
+
+.mapa-selector__estado strong {
+  color: var(--dm-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.mapa-selector__error {
+  font-size: 12px;
+  color: var(--error, #EF4444);
+}
+
+/* ── Mapa de talleres ───────────────────────────────────────────────────── */
+.mapa-talleres {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+  gap: 12px;
+}
+
+.mapa-talleres__mapa {
+  height: 440px;
+  border: 1px solid var(--dm-line);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  z-index: 0;
+}
+
+.mapa-talleres__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 440px;
+  min-height: 0;
+}
+
+.mapa-talleres__estado {
+  padding: 24px 16px;
+  border: 1px dashed var(--dm-line);
+  border-radius: 10px;
+  text-align: center;
+  color: var(--dm-muted);
+  font-size: 14px;
+}
+
+.mapa-talleres__estado p {
+  margin: 0 0 8px;
+}
+
+.mapa-talleres__estado--error {
+  border-color: var(--error, #EF4444);
+  color: var(--dm-text);
+}
+
+.mapa-talleres__resumen,
+.mapa-talleres__vacio {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--dm-muted);
+}
+
+.mapa-talleres__seleccion {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 13px;
+  color: var(--dm-muted);
+}
+
+.mapa-talleres__seleccion strong {
+  color: var(--dm-text);
+}
+
+/* Opción "Asignar automáticamente" */
+.mapa-auto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  text-align: left;
+  background: var(--dm-surface);
+  color: var(--dm-text);
+  border: 1px solid var(--dm-line);
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mapa-auto--activo {
+  border-color: var(--mapa-steel);
+  box-shadow: inset 4px 0 0 var(--mapa-steel);
+}
+
+.mapa-auto__titulo {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.mapa-auto__detalle {
+  font-size: 12px;
+  color: var(--dm-muted);
+}
+
+/* Lista sincronizada con el mapa */
+.mapa-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.mapa-lista__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--dm-surface);
+  border: 1px solid var(--dm-line);
+  border-radius: 8px;
+}
+
+.mapa-lista__item--elegido {
+  border-color: var(--mapa-acento);
+  box-shadow: inset 4px 0 0 var(--mapa-acento);
+}
+
+.mapa-lista__ver {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--dm-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mapa-lista__nombre {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.mapa-lista__dato {
+  font-size: 12px;
+  color: var(--dm-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapa-lista__distancia {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mapa-acento);
+}
+
+.mapa-lista__marca {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mapa-acento);
+}
+
+/* Popup (Leaflet lo pinta siempre claro) */
+.mapa-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+  color: #0C2240;
+}
+
+.mapa-popup__nombre {
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.mapa-popup__dato {
+  font-size: 12px;
+  color: #475569;
+}
+
+.mapa-popup__elegido {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #FF3D00;
+}
+
+/* Pin del taller elegido (divIcon) */
+.mapa-pin {
+  background: none;
+  border: none;
+}
+
+.mapa-pin__forma {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg) translate(-2px, 2px);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.mapa-pin__forma--elegido {
+  background: #FF3D00;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .mapa-selector,
+  .mapa-talleres {
+    --mapa-alto: 350px;
+  }
+
+  .mapa-talleres {
+    grid-template-columns: 1fr;
+  }
+
+  .mapa-talleres__mapa {
+    height: 350px;
+  }
+
+  .mapa-talleres__panel {
+    max-height: none;
+  }
+
+  .mapa-lista {
+    overflow: visible;
+  }
+
+  .mapa-selector__barra .mapa-boton {
+    flex: 1 1 auto;
+  }
+}

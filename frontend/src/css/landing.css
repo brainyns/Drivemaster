@@ -47,14 +47,17 @@
   letter-spacing: 1.1px;
 }
 
+/* Reparto uniforme con 2, 3 o más marcas: space-evenly deja el mismo espacio entre ellas y en
+   los bordes (con space-between, dos marcas quedaban una en cada extremo). Si no caben, bajan
+   de línea en lugar de desbordar. */
 .dm-marcas__list {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 26px;
+  justify-content: space-evenly;
+  gap: 14px 26px;
   flex: 1;
-  overflow-x: auto;
-  scrollbar-width: none;
+  min-width: 0;
 }
 
 .dm-marcas__list::-webkit-scrollbar {
@@ -65,12 +68,12 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  font-family: Arial, sans-serif;
+  font-family: var(--ui-font);
   font-size: 21px;
   font-weight: 800;
   letter-spacing: -0.8px;
+  /* Sin opacidad: el gris de apoyo ya es discreto y así llega a 4,5:1 en los dos temas */
   color: var(--dm-muted);
-  opacity: 0.75;
   white-space: nowrap;
   filter: grayscale(1);
 }
@@ -79,7 +82,6 @@
   font-size: 9px;
   font-weight: 400;
   letter-spacing: 0;
-  opacity: 0.7;
 }
 
 /* ── Cómo funciona ─────────────────────────────────────────────────────── */
@@ -115,7 +117,8 @@
 }
 
 .dm-step__number {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
+  font-variant-numeric: tabular-nums;
   font-size: 36px;
   font-weight: 600;
   letter-spacing: -1px;
@@ -256,7 +259,6 @@
   font-size: 9px;
   letter-spacing: 1px;
   font-weight: 400;
-  opacity: 0.75;
 }
 
 .dm-eco__copy {
@@ -406,7 +408,8 @@
 }
 
 .dm-metrics strong {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--ui-font);
+  font-variant-numeric: tabular-nums;
   font-size: 43px;
   font-weight: 600;
   line-height: 1;
@@ -730,7 +733,7 @@
 
   .dm-marcas { gap: 15px; padding: 27px 0; flex-wrap: wrap; justify-content: space-around; }
   .dm-marcas__label { display: none; }
-  .dm-marcas__list { gap: 15px; justify-content: flex-start; }
+  .dm-marcas__list { gap: 12px 15px; }
   .dm-marcas__logo { font-size: 17px; }
   .dm-marcas__logo small { font-size: 10px; }
 

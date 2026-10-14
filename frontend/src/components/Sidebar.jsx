@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Logo from "./Logo";
 import "../css/sidebar.css";
 
 const Icons = {
@@ -109,11 +110,7 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar, resumenTaller
       <aside className={`sidebar${abierto ? " sidebar--open" : ""}`}>
       {/* Marca */}
       <div className="sidebar-brand">
-        <div className="sidebar-brand-icon">⚙</div>
-        <div>
-          <p className="sidebar-brand-name">DriveMaster</p>
-          <p className="sidebar-brand-sub">Automotive Engine</p>
-        </div>
+        <Logo size="sm" onClick={() => handleNav("catalogo")} />
       </div>
 
       {/* Navegación */}

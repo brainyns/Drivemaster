@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { registrarTaller } from "../services/tallerService";
 import { registrarTienda } from "../services/tiendaService";
+import Logo from "../components/Logo";
+import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
 import "../css/Login.css";
 import "../css/registro-negocio.css";
 
@@ -39,6 +41,8 @@ function validar(tipo, f) {
     const precio = Number(f.precioManoObra);
     if (vacio(f.precioManoObra) || isNaN(precio) || precio <= 0) e.precioManoObra = "Indica el valor de tu mano de obra.";
     if (!vacio(f.tarifaHora) && (isNaN(Number(f.tarifaHora)) || Number(f.tarifaHora) <= 0)) e.tarifaHora = "Tarifa no válida.";
+    // Con la ubicación el taller aparece en el mapa del cliente
+    if (vacio(f.latitud) || vacio(f.longitud)) e.ubicacion = "Marca la ubicación de tu taller en el mapa.";
   }
   if (vacio(f.correo) || !/^\S+@\S+\.\S+$/.test(f.correo.trim())) e.correo = "Escribe un correo válido.";
   if (vacio(f.password) || f.password.length < 6) e.password = "Mínimo 6 caracteres.";
@@ -75,7 +79,12 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
     if (errores[name]) setErrores((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  // Las coordenadas permiten asignar solicitudes por cercanía; son opcionales.
+  const cambiarUbicacion = ({ latitud, longitud }) => {
+    setForm((prev) => ({ ...prev, latitud, longitud }));
+    if (errores.ubicacion) setErrores((prev) => ({ ...prev, ubicacion: undefined }));
+  };
+
+  // Tiendas: las coordenadas son opcionales y se toman del dispositivo.
   const usarUbicacion = () => {
     if (!navigator.geolocation) {
       setErrorServidor("Tu navegador no permite obtener la ubicación.");
@@ -142,6 +151,7 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
     return (
       <div className="auth-page">
         <div className="rn-card rn-card--exito">
+          <Logo onClick={onVolver} className="rn-logo" />
           <span className="rn-eyebrow">Registro enviado</span>
           <h1 className="rn-titulo">¡Listo, {registrado.nombre}!</h1>
           <p className="rn-texto">
@@ -162,6 +172,7 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
   return (
     <div className="auth-page">
       <div className="rn-card">
+        <Logo onClick={onVolver} className="rn-logo" />
         <span className="rn-eyebrow">DriveMaster para negocios</span>
         <h1 className="rn-titulo">Registra tu negocio</h1>
         <p className="rn-texto">
@@ -215,6 +226,18 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
             <Campo id="rn-horario" label="Horario de atención" error={errores.horario} opcional={esTaller} ancho>
               <input id="rn-horario" name="horario" className="rn-input" value={form.horario} onChange={cambiar} placeholder="L-V 8:00-18:00, S 8:00-13:00" />
             </Campo>
+            {esTaller ? (
+              <div className="rn-campo rn-campo--ancho">
+                <span className="rn-campo__label">Ubicación del taller en el mapa</span>
+                <SelectorUbicacion
+                  id="rn-mapa"
+                  ciudad={form.ciudad}
+                  value={vacio(form.latitud) ? null : { latitud: Number(form.latitud), longitud: Number(form.longitud) }}
+                  onChange={cambiarUbicacion}
+                  error={errores.ubicacion}
+                />
+              </div>
+            ) : (
             <div className="rn-campo rn-campo--ancho rn-ubicacion">
               <button type="button" className="rn-boton-secundario" onClick={usarUbicacion} disabled={ubicando}>
                 {ubicando ? "Obteniendo ubicación..." : "Usar mi ubicación actual"}
@@ -225,6 +248,7 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
                   : "Opcional: ayuda a asignarte solicitudes cercanas."}
               </span>
             </div>
+            )}
           </div>
 
           {esTaller && (

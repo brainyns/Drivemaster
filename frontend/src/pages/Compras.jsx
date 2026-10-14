@@ -2,26 +2,14 @@ import { useEffect, useState, useRef } from "react";
 import { listarCompras } from "../services/compraService";
 import "../css/compras.css";
 import "../css/compras-filtros.css";
+import "../css/admin-base.css";
 
 const POR_PAG = 10;
-
-const ESTADO_CSS = {
-  RECIBIDA: "cp-est--recibida",
-  PENDIENTE: "cp-est--pendiente",
-  CANCELADA: "cp-est--cancelada",
-  PAGADA: "cp-est--recibida",
-};
 
 const IcPlus = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="15" height="15">
     <line x1="12" y1="5" x2="12" y2="19" />
     <line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
-const IcSearch = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
 const IcCart = (
@@ -40,12 +28,6 @@ const IcCash = (
 const IcBox = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
     <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
-  </svg>
-);
-const IcEye = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
   </svg>
 );
 const IcFilter = (
@@ -250,222 +232,169 @@ function Compras({ onNueva, onDetalle, token }) {
       label: `$${filtros.totalMin || "0"} – $${filtros.totalMax || "∞"}`,
     });
 
+  // Variante y texto del badge de cada estado (admin-base.css)
+  const ESTADO = {
+    RECIBIDA:  { label: "Recibida",  badge: "exito" },
+    PAGADA:    { label: "Pagada",    badge: "exito" },
+    PENDIENTE: { label: "Pendiente", badge: "pendiente" },
+    CANCELADA: { label: "Cancelada", badge: "peligro" },
+  };
+  const dinero = (n) => `$${(n || 0).toLocaleString("es-CO", { maximumFractionDigits: 0 })}`;
+  const abrirConTeclado = (e, id) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onDetalle(id); }
+  };
+
   return (
-    <div className="cp-root">
-      {/* Header */}
-      <div className="cp-header">
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
         <div>
-          <p className="cp-breadcrumb">Gestión de compras</p>
-          <h1 className="cp-h1">Gestión de compras</h1>
+          <h1 className="adm-encabezado__titulo">Compras</h1>
+          <p className="adm-encabezado__sub">Órdenes de compra a tus proveedores. Al recibirlas, el stock se actualiza en tu inventario.</p>
         </div>
-        <button className="cp-btn-new" onClick={onNueva}>
-          {IcPlus} Nueva Compra
-        </button>
+        <div className="adm-encabezado__lado">
+          <button type="button" className="adm-btn adm-btn--primario" onClick={onNueva}>{IcPlus} Nueva compra</button>
+        </div>
+      </header>
+
+      <section className="adm-kpis" aria-label="Resumen de compras">
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono" aria-hidden="true">{IcCart}</span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Órdenes registradas</span>
+            <p className="adm-kpi__valor">{compras.length.toLocaleString("es-CO")}</p>
+          </div>
+        </div>
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono" aria-hidden="true">{IcCash}</span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Total gastado</span>
+            <p className="adm-kpi__valor">{dinero(totalGastado)}</p>
+          </div>
+        </div>
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono adm-kpi__icono--info" aria-hidden="true">{IcBox}</span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Ítems comprados</span>
+            <p className="adm-kpi__valor">{totalItems}</p>
+          </div>
+        </div>
+        <div className="adm-kpi">
+          <span className={`adm-kpi__icono${pendientes > 0 ? " adm-kpi__icono--pendiente" : ""}`} aria-hidden="true">{IcFilter}</span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Pendientes por recibir</span>
+            <p className="adm-kpi__valor">{pendientes}</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="adm-filtros" role="search" aria-label="Filtros de compras">
+        <label className="adm-campo adm-campo--ancho">
+          <span>Buscar</span>
+          <input type="search" placeholder="Número de compra o proveedor" value={busqueda}
+            onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }} />
+        </label>
+        {/* Botón Filtrar + panel flotante de fecha y total */}
+        <div className="adm-filtros__acciones cp-filter-wrap" ref={filterWrapRef}>
+          <button type="button" className={`adm-btn${panelOpen ? " adm-btn--activo" : ""}`}
+            aria-expanded={panelOpen} onClick={() => setPanelOpen((v) => !v)}>
+            {IcFilter} Más filtros
+            {filtrosActivos > 0 && <span className="adm-pestana__n">{filtrosActivos}</span>}
+          </button>
+          <FilterPanel
+            key={panelOpen ? "abierto" : "cerrado"}
+            open={panelOpen}
+            onClose={() => setPanelOpen(false)}
+            onApply={handleApplyFiltros}
+            filtrosActivos={filtros}
+          />
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="cp-kpis">
-        <div className="cp-kpi">
-          <div className="cp-kpi-ico-wrap">{IcCart}</div>
-          <div>
-            <p className="cp-kpi-label">Total Órdenes</p>
-            <p className="cp-kpi-val">{compras.length.toLocaleString()}</p>
-            <p className="cp-kpi-sub">registradas</p>
-          </div>
+      {/* Filtros activos */}
+      {filterTags.length > 0 && (
+        <div className="adm-badges cp-filtros-activos">
+          <span className="adm-campo__ayuda">Filtros activos:</span>
+          {filterTags.map((tag) => (
+            <span key={tag.key} className="adm-badge adm-badge--info cp-filtro-activo">
+              {tag.label}
+              <button type="button" onClick={() => quitarFiltro(tag.key)} aria-label={`Quitar filtro ${tag.label}`}>{IcX}</button>
+            </span>
+          ))}
+          <button type="button" className="adm-btn adm-btn--chico adm-btn--sutil" onClick={() => { setFiltros({ ...FILTROS_VACIOS }); setPagina(1); }}>
+            Limpiar todo
+          </button>
         </div>
-        <div className="cp-kpi">
-          <div className="cp-kpi-ico-wrap orange">{IcCash}</div>
-          <div>
-            <p className="cp-kpi-label">Total Gastado</p>
-            <p className="cp-kpi-val orange">
-              ${totalGastado.toLocaleString("es-CO", { minimumFractionDigits: 0 })}
-            </p>
-            <p className="cp-kpi-sub">en compras</p>
-          </div>
-        </div>
-        <div className="cp-kpi">
-          <div className="cp-kpi-ico-wrap blue">{IcBox}</div>
-          <div>
-            <p className="cp-kpi-label">Ítems Comprados</p>
-            <p className="cp-kpi-val blue">{totalItems}</p>
-            <p className="cp-kpi-sub">productos totales</p>
-          </div>
-        </div>
-        <div className="cp-kpi cp-kpi--highlight">
-          <div className="cp-kpi-ico-wrap amber">{IcFilter}</div>
-          <div>
-            <p className="cp-kpi-label">Pendientes</p>
-            <p className="cp-kpi-val amber">{pendientes}</p>
-            <p className="cp-kpi-sub">por recibir</p>
-          </div>
-        </div>
-      </div>
+      )}
 
-      {/* Tabla */}
-      <div className="cp-card">
-        <div className="cp-card-toolbar">
-          <div className="cp-card-title-wrap">
-            <span className="cp-accent-bar" />
-            <span className="cp-card-title">Compras recientes</span>
-            <span className="cp-card-sub">Sincronización en tiempo real</span>
-          </div>
-          <div className="cp-toolbar-right">
-            <div className="cp-search-wrap">
-              <span>{IcSearch}</span>
-              <input
-                className="cp-search"
-                placeholder="Buscar compra, proveedor..."
-                value={busqueda}
-                onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
-              />
-            </div>
+      {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
 
-            {/* Botón Filtrar + Panel */}
-            <div className="cp-filter-wrap" ref={filterWrapRef}>
-              <button
-                className={`cp-btn-outline${panelOpen ? " active" : ""}`}
-                onClick={() => setPanelOpen((v) => !v)}
-              >
-                {IcFilter} Filtrar
-                {filtrosActivos > 0 && (
-                  <span className="cp-filter-badge">{filtrosActivos}</span>
-                )}
-              </button>
-
-              <FilterPanel
-                key={panelOpen ? "abierto" : "cerrado"}
-                open={panelOpen}
-                onClose={() => setPanelOpen(false)}
-                onApply={handleApplyFiltros}
-                filtrosActivos={filtros}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Tags de filtros activos */}
-        {filterTags.length > 0 && (
-          <div className="cp-filter-tags-bar">
-            <span className="cp-filter-tags-label">Filtros activos:</span>
-            {filterTags.map((tag) => (
-              <span key={tag.key} className="cp-filter-tag">
-                {tag.label}
-                <button onClick={() => quitarFiltro(tag.key)}>{IcX}</button>
-              </span>
-            ))}
-            <button className="cp-filter-clear-all" onClick={() => { setFiltros({ ...FILTROS_VACIOS }); setPagina(1); }}>
-              Limpiar todo
-            </button>
-          </div>
-        )}
-
+      <div className="adm-tarjeta" aria-busy={loading}>
         {loading ? (
-          <div className="cp-loading">
-            <div className="cp-spinner" />
-            Cargando compras...
-          </div>
-        ) : error ? (
-          <p className="cp-error">{error}</p>
+          <div className="adm-cargando">Cargando compras…</div>
+        ) : paginadas.length === 0 ? (
+          <p className="adm-vacio">No hay compras que coincidan con los filtros.</p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="cp-table">
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
               <thead>
                 <tr>
-                  <th>Fecha</th>
-                  <th>ID de compra</th>
+                  <th>Compra</th>
                   <th>Proveedor</th>
-                  <th style={{ textAlign: "center" }}>Ítems</th>
-                  <th style={{ textAlign: "right" }}>Total</th>
+                  <th>Fecha</th>
+                  <th className="adm-tabla__der">Ítems</th>
+                  <th className="adm-tabla__der">Total</th>
                   <th>Estado</th>
-                  <th></th>
+                  <th className="adm-tabla__der">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {paginadas.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="cp-empty">
-                      No hay compras que coincidan con los filtros
-                    </td>
-                  </tr>
-                ) : (
-                  paginadas.map((c) => {
-                    const f = formatFecha(c.fecha);
-                    const estKey = c.estado?.toUpperCase() || "RECIBIDA";
-                    return (
-                      <tr
-                        key={c.id}
-                        className="cp-row"
-                        onClick={() => onDetalle(c.id)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <td>
-                          <p className="cp-fecha-date">{f.date}</p>
-                          <p className="cp-fecha-time">{f.time}</p>
-                        </td>
-                        <td>
-                          <span className="cp-po-id">#{String(c.id).toUpperCase()}</span>
-                        </td>
-                        <td>
-                          <div className="cp-prov-cell">
-                            <div className="cp-prov-ico">
-                              {(c.proveedorNombre || "P")[0].toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="cp-prov-name">{c.proveedorId}</p>
-                              <p className="cp-prov-sub">{c.proveedorId?.slice?.(-8) || "—"}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <span className="cp-items-badge">{c.productos?.length || 0} uds</span>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <span className="cp-total">
-                            ${(c.total || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`cp-estado ${ESTADO_CSS[estKey] || "cp-est--recibida"}`}>
-                            {c.estado || "RECIBIDA"}
-                          </span>
-                        </td>
-                        <td onClick={(e) => { e.stopPropagation(); onDetalle(c.id); }}>
-                          <button className="cp-icon-btn" title="Ver detalle">{IcEye}</button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                {paginadas.map((c) => {
+                  const f = formatFecha(c.fecha);
+                  const estKey = c.estado?.toUpperCase() || "RECIBIDA";
+                  const estado = ESTADO[estKey] || { label: c.estado, badge: "neutro" };
+                  return (
+                    <tr key={c.id} className="adm-tabla__fila--clic" tabIndex={0}
+                      onClick={() => onDetalle(c.id)} onKeyDown={(e) => abrirConTeclado(e, c.id)}>
+                      <td data-label="Compra"><strong className="adm-mono">#{String(c.id).toUpperCase()}</strong></td>
+                      <td data-label="Proveedor">
+                        <div className="adm-celda-producto">
+                          <span className="adm-miniatura" aria-hidden="true">{(c.proveedorNombre || c.proveedorId || "P")[0].toUpperCase()}</span>
+                          <strong>{c.proveedorNombre || c.proveedorId}</strong>
+                        </div>
+                      </td>
+                      <td data-label="Fecha" className="adm-tabla__nowrap">
+                        {f.date}
+                        <span className="adm-tabla__sub">{f.time}</span>
+                      </td>
+                      <td data-label="Ítems" className="adm-tabla__der">{c.productos?.length || 0}</td>
+                      <td data-label="Total" className="adm-tabla__der adm-tabla__nowrap"><strong>{dinero(c.total)}</strong></td>
+                      <td data-label="Estado"><span className={`adm-badge adm-badge--${estado.badge}`}>{estado.label}</span></td>
+                      <td className="adm-tabla__der adm-tabla__celda--ancha">
+                        <div className="adm-tabla__acciones">
+                          <button type="button" className="adm-btn adm-btn--chico"
+                            onClick={(e) => { e.stopPropagation(); onDetalle(c.id); }}>Ver detalle</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
-
-        {/* Paginación */}
-        <div className="cp-pag">
-          <span className="cp-pag-info">
-            Mostrando{" "}
-            <strong>
-              {filtradas.length === 0 ? 0 : (pagina - 1) * POR_PAG + 1}–
-              {Math.min(pagina * POR_PAG, filtradas.length)}
-            </strong>{" "}
-            de <strong>{filtradas.length}</strong> compras
-          </span>
-          <div className="cp-pag-btns">
-            <button className="cp-pag-btn" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina === 1}>‹</button>
-            {Array.from({ length: Math.min(totalPags, 5) }, (_, i) => i + 1).map((n) => (
-              <button key={n} className={`cp-pag-num${pagina === n ? " on" : ""}`} onClick={() => setPagina(n)}>{n}</button>
-            ))}
-            {totalPags > 5 && (
-              <>
-                <span style={{ color: "var(--muted)" }}>...</span>
-                <button className="cp-pag-num" onClick={() => setPagina(totalPags)}>{totalPags}</button>
-              </>
-            )}
-            <button className="cp-pag-btn" onClick={() => setPagina((p) => Math.min(totalPags, p + 1))} disabled={pagina === totalPags}>›</button>
-          </div>
-        </div>
       </div>
+
+      <nav className="adm-paginacion" aria-label="Paginación">
+        {totalPags > 1 && (
+          <button type="button" className="adm-btn" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina === 1}>Anterior</button>
+        )}
+        <span>
+          Mostrando {filtradas.length === 0 ? 0 : (pagina - 1) * POR_PAG + 1}–{Math.min(pagina * POR_PAG, filtradas.length)} de {filtradas.length} compras
+        </span>
+        {totalPags > 1 && (
+          <button type="button" className="adm-btn" onClick={() => setPagina((p) => Math.min(totalPags, p + 1))} disabled={pagina === totalPags}>Siguiente</button>
+        )}
+      </nav>
     </div>
   );
 }

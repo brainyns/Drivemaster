@@ -1,30 +1,42 @@
-/* ── Notification Dropdown ── */
+/* ── Campanita: desplegable de notificaciones (tokens --ui-* y escala --fs-* de global.css) ── */
 .nt-dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   right: 0;
-  width: 360px;
-  max-height: 480px;
-  background: var(--card-bg, var(--ui-surface));
+  width: 380px;
+  max-height: min(520px, calc(100dvh - 96px));
+  background: var(--ui-surface);
   border: 1px solid var(--ui-line);
   border-radius: var(--ui-r-lg);
-  box-shadow: var(--ui-sombra-1);
+  box-shadow: var(--ui-sombra-2);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  font-family: var(--ui-font);
+  color: var(--ui-text);
 }
 
 .nt-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 18px 12px;
+  gap: var(--ui-sp-2) var(--ui-sp-3);
+  padding: var(--ui-sp-4) var(--ui-sp-4) var(--ui-sp-3);
   border-bottom: 1px solid var(--ui-line);
+  flex-shrink: 0;
+}
+
+.nt-header__titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-sp-2);
+  min-width: 0;
 }
 
 .nt-title {
-  font-size: 14px;
+  font-size: var(--fs-subtitulo);
   font-weight: 700;
   color: var(--ui-text);
 }
@@ -32,83 +44,113 @@
 .nt-count {
   background: var(--primary);
   color: var(--on-primary);
-  font-size: 11px;
+  font-size: var(--fs-pequeno);
   font-weight: 700;
-  min-width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--ui-r-lg);
-  padding: 0 6px;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-align: center;
+  white-space: nowrap;
 }
+
+.nt-dropdown .nt-link {
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  font: inherit;
+  font-size: var(--fs-etiqueta);
+  font-weight: 600;
+  color: var(--primary-text, var(--ui-brand-tinta));
+  cursor: pointer;
+  border-radius: var(--ui-r-sm);
+  white-space: nowrap;
+}
+
+.nt-dropdown .nt-link:hover { text-decoration: underline; }
+.nt-dropdown .nt-link:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 
 .nt-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: var(--ui-sp-1) 0;
 }
 
-.nt-scroll::-webkit-scrollbar { width: 4px; }
+.nt-scroll::-webkit-scrollbar { width: 6px; }
 .nt-scroll::-webkit-scrollbar-track { background: transparent; }
 .nt-scroll::-webkit-scrollbar-thumb { background: var(--ui-line); border-radius: var(--ui-r-sm); }
+
+.nt-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 
 .nt-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
-  color: var(--text-tertiary, var(--ui-muted));
-  font-size: 13px;
-  gap: 8px;
+  padding: var(--ui-sp-7) var(--ui-sp-5);
+  color: var(--ui-muted);
+  font-size: var(--fs-texto);
+  gap: var(--ui-sp-2);
+  text-align: center;
 }
 
-.nt-empty svg { opacity: 0.3; }
+.nt-empty svg { opacity: 0.4; }
 .nt-empty p { margin: 0; }
 
-/* ── Groups ── */
-.nt-group {
-  padding: 0;
-}
+/* ── Grupos ── */
+.nt-group { border-top: 1px solid var(--ui-line-soft, var(--ui-line)); }
 
 .nt-group-label {
-  font-size: 10px;
+  font-size: var(--fs-pequeno);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text-tertiary, var(--ui-muted));
-  padding: 10px 18px 6px;
+  letter-spacing: 0.06em;
+  color: var(--ui-muted);
+  padding: var(--ui-sp-3) var(--ui-sp-4) var(--ui-sp-1);
 }
 
-/* ── Item ── */
-.nt-item {
+/* ── Aviso ── (con .nt-dropdown delante: la base pública, .dm-page button, quita fondo, borde y color) */
+.nt-dropdown .nt-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--ui-sp-3);
   width: 100%;
-  padding: 10px 18px;
+  padding: var(--ui-sp-3) var(--ui-sp-4);
   border: none;
+  border-left: 3px solid transparent;
   background: transparent;
   cursor: pointer;
   text-align: left;
-  transition: background 0.15s;
+  font: inherit;
+  color: inherit;
+  transition: background var(--ui-dur, 0.15s) var(--ui-ease, ease);
 }
 
-.nt-item:hover { background:  var(--ui-hover); }
+.nt-dropdown .nt-item:hover { background: var(--ui-hover); }
+.nt-dropdown .nt-item:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }
+
+.nt-dropdown .nt-item--nueva {
+  background: var(--ui-surface-2);
+  border-left-color: var(--primary);
+}
 
 .nt-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 5px;
+  margin-top: 6px;
+  background: var(--ui-info);
 }
 
-.nt-item--red .nt-dot { background: var(--ui-error); }
-.nt-item--orange .nt-dot { background: var(--primary); }
-.nt-item--green .nt-dot { background: var(--ui-ok); }
-.nt-item--blue .nt-dot { background: var(--ui-info); }
+.nt-item--error .nt-dot { background: var(--ui-error); }
+.nt-item--marca .nt-dot { background: var(--primary); }
+.nt-item--ok .nt-dot { background: var(--ui-ok); }
+.nt-item--info .nt-dot { background: var(--ui-info); }
 
 .nt-body {
   flex: 1;
@@ -119,43 +161,71 @@
 }
 
 .nt-item-label {
-  font-size: 13px;
+  font-size: var(--fs-texto);
   font-weight: 600;
   color: var(--ui-text);
 }
 
+.nt-item--nueva .nt-item-label { font-weight: 700; }
+
 .nt-item-detail {
-  font-size: 11px;
-  color: var(--text-tertiary, var(--ui-muted));
-  white-space: nowrap;
+  font-size: var(--fs-etiqueta);
+  line-height: 1.4;
+  color: var(--ui-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .nt-time {
-  font-size: 10px;
-  color: var(--text-tertiary, var(--ui-muted));
+  font-size: var(--fs-pequeno);
+  color: var(--ui-muted);
   white-space: nowrap;
   flex-shrink: 0;
   margin-top: 2px;
 }
 
+.nt-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Pie: estado de la conexión en vivo ── */
 .nt-footer {
-  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-sp-3);
+  padding: var(--ui-sp-2) var(--ui-sp-4);
   border-top: 1px solid var(--ui-line);
-  text-align: center;
+  flex-shrink: 0;
 }
 
-.nt-update {
-  font-size: 11px;
-  color: var(--primary-text);
-  cursor: pointer;
-  font-weight: 600;
+.nt-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-pequeno);
+  color: var(--ui-muted);
 }
 
-.nt-update:hover { opacity: 0.8; }
+.nt-estado__punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ui-muted);
+}
 
-/* ── Badge counter on bell icon ── */
+.nt-estado--conectado .nt-estado__punto { background: var(--ui-ok); }
+.nt-estado--conectando .nt-estado__punto { background: var(--ui-aviso); }
+
+/* ── Contador sobre la campanita ── */
 .tb-notif-wrap {
   position: relative;
 }
@@ -166,28 +236,67 @@
   right: -4px;
   background: var(--primary);
   color: var(--on-primary);
-  font-size: 9px;
+  font-family: var(--ui-font);
+  font-size: var(--fs-pequeno);
   font-weight: 700;
-  min-width: 16px;
-  height: 16px;
+  min-width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--ui-r-lg);
+  border-radius: 999px;
   padding: 0 4px;
   pointer-events: none;
-  border: 2px solid var(--card-bg, var(--ui-line));
+  border: 2px solid var(--ui-surface);
   line-height: 1;
 }
 
-/* ── RESPONSIVE ── */
+.tb-notif-badge--nuevo { animation: nt-latido 0.6s var(--ui-ease, ease) 2; }
+
+@keyframes nt-latido {
+  50% { transform: scale(1.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-notif-badge--nuevo { animation: none; }
+}
+
+/* ── Campanita del cliente (cabecera pública y páginas del cliente) ── */
+.nt-campanita {
+  position: relative;
+  display: inline-flex;
+}
+
+.nt-campanita__boton {
+  border: none;
+  cursor: pointer;
+}
+
+.nt-campanita .nt-campanita__boton--activo { background: var(--dm-surface, var(--ui-surface-2)); }
+.nt-campanita .nt-campanita__boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+.nt-campanita--publica .tb-notif-badge {
+  top: -3px;
+  right: -6px;
+  border-color: var(--dm-bg, var(--ui-surface));
+}
+
+/* ── Móvil ── */
 @media (max-width: 768px) {
   .nt-dropdown {
     position: fixed;
     top: 56px;
-    right: 0.5rem;
-    left: 0.5rem;
+    right: 16px;
+    left: 16px;
     width: auto;
     max-width: none;
+    max-height: calc(100dvh - 72px);
   }
+
+  /* La cabecera pública es más alta que la barra del panel */
+  .nt-dropdown--publica {
+    top: 76px;
+    max-height: calc(100dvh - 92px);
+  }
+
 }

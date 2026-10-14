@@ -92,6 +92,11 @@ public class OrdenServicio {
     private LocalDateTime fechaLimiteRespuesta;
     private Double distanciaTallerKm;
 
+    // Taller que el cliente eligió en el mapa (null = asignación automática). Se le
+    // ofrece primero; si rechaza o no responde, sigue la asignación por ciudad.
+    private String tallerElegidoId;
+    private String tallerElegidoNombre;
+
     // Aceptación del taller y cita de revisión
     private Boolean aceptadaPorTaller;
     private LocalDateTime fechaAceptacion;

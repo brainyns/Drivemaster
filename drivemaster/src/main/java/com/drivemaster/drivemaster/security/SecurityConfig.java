@@ -31,6 +31,10 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /** Orígenes del frontend: los usan el CORS de la API y el WebSocket de notificaciones. */
+    public static final List<String> ORIGENES_PERMITIDOS = List.of("http://localhost:5173", "http://localhost:5174",
+            "https://drivermaster.onrender.com", "https://drivemaster-orcin.vercel.app");
+
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -112,6 +116,8 @@ public class SecurityConfig {
                         // Módulo de servicios (Taller)
                         .requestMatchers(HttpMethod.GET, "/api/talleres/activos").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/talleres/registro").permitAll()
+                        // Mapa para elegir taller al pedir un diagnóstico (antes de la regla general /api/talleres/**)
+                        .requestMatchers(HttpMethod.GET, "/api/talleres/mapa").hasAnyRole("CLIENTE", "SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/talleres/mi-taller", "/api/talleres/mi-taller/**").hasRole("TALLER")
                         // El ADMIN solo ve la lista de talleres y los aprueba o rechaza; crear, editar y pausar es del SUPERADMIN
                         .requestMatchers(HttpMethod.PATCH, "/api/talleres/*/aprobacion").hasAnyRole("SUPERADMIN", "ADMIN")
@@ -248,7 +254,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        List<String> origenes = new ArrayList<>(List.of("http://localhost:5173", "http://localhost:5174", "https://drivermaster.onrender.com", "https://drivemaster-orcin.vercel.app"));
+        List<String> origenes = new ArrayList<>(ORIGENES_PERMITIDOS);
         if (frontendUrl != null && !frontendUrl.isBlank()) {
             origenes.add(frontendUrl.strip().replaceAll("/+$", ""));
         }

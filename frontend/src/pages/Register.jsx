@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { register } from "../services/authService";
+import Logo from "../components/Logo";
 import "../css/Login.css";
 
 export default function Register({ onRegister, onBack }) {
@@ -28,15 +29,7 @@ export default function Register({ onRegister, onBack }) {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <div className="auth-brand-row">
-            <div className="auth-brand-icon">
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            </div>
-            <span className="auth-brand-name">CREAR CUENTA</span>
-          </div>
+          <Logo size="lg" />
           <span className="auth-brand-sub">Registro de cliente</span>
         </div>
 

@@ -5,6 +5,8 @@ import {
 } from "../services/movimientoService";
 import { listarProductos, listarProductosMiTienda } from "../services/productoService";
 import "../css/movimientos.css";
+import "../css/admin-base.css";
+import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 
 // esTienda: la tienda solo ve y ajusta su propio inventario (el backend ya filtra los movimientos).
 function Movimientos({ token, esTienda = false }) {
@@ -148,374 +150,189 @@ function Movimientos({ token, esTienda = false }) {
     }
   };
 
-  const COLORES_AVATAR = [
-    "#343d96",
-    "#5e1b7a",
-    "#ff5c34",
-    "#1a6b3c",
-    "#7c3aed",
-    "#0369a1",
-  ];
-  const getColor = (id) =>
-    COLORES_AVATAR[(id?.charCodeAt(0) || 0) % COLORES_AVATAR.length];
+  // Variante del badge y signo de cada tipo de movimiento (admin-base.css)
+  const TIPO = {
+    ENTRADA: { label: "Entrada", badge: "exito", signo: "+" },
+    SALIDA:  { label: "Salida",  badge: "peligro", signo: "-" },
+    AJUSTE:  { label: "Ajuste",  badge: "pendiente", signo: "" },
+  };
+  const desdeN = filtradosBusqueda.length === 0 ? 0 : Math.min((pagina - 1) * POR_PAGINA + 1, filtradosBusqueda.length);
+  const hastaN = Math.min(pagina * POR_PAGINA, filtradosBusqueda.length);
 
   return (
-    <div className="mv-page">
-     
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
+        <div>
+          <h1 className="adm-encabezado__titulo">Inventario</h1>
+          <p className="adm-encabezado__sub">Entradas, salidas y ajustes de stock de tus productos, con su motivo y referencia.</p>
+        </div>
+        <div className="adm-encabezado__lado">
+          <button type="button" className="adm-btn adm-btn--primario" onClick={() => setMostrarModal(true)}>
+            Ajuste manual
+          </button>
+        </div>
+      </header>
 
-      <div className="mv-content">
-        {/* Stats */}
-        <div className="mv-stats">
-          <div className="mv-stat">
-            <div className="mv-stat-top">
-              <div className="mv-stat-icon mv-stat-icon--blue">≡</div>
-              <span className="mv-stat-pct mv-stat-pct--pos">+12%</span>
-            </div>
-            <p className="mv-stat-label">Total Movimientos</p>
-            <p className="mv-stat-val">{movimientos.length.toLocaleString()}</p>
-          </div>
-          <div className="mv-stat">
-            <div className="mv-stat-top">
-              <div className="mv-stat-icon mv-stat-icon--green">↓</div>
-              <span className="mv-stat-pct mv-stat-pct--pos">+8.4%</span>
-            </div>
-            <p className="mv-stat-label">Unidades Entrada</p>
-            <p className="mv-stat-val">{totalEntradas.toLocaleString()}</p>
-          </div>
-          <div className="mv-stat">
-            <div className="mv-stat-top">
-              <div className="mv-stat-icon mv-stat-icon--red">↑</div>
-              <span className="mv-stat-pct mv-stat-pct--neg">-3.1%</span>
-            </div>
-            <p className="mv-stat-label">Unidades Salida</p>
-            <p className="mv-stat-val">{totalSalidas.toLocaleString()}</p>
-          </div>
-          <div className="mv-stat">
-            <div className="mv-stat-top">
-              <div className="mv-stat-icon mv-stat-icon--orange">⚙</div>
-              <span className="mv-stat-pct mv-stat-pct--adj">Ajustado</span>
-            </div>
-            <p className="mv-stat-label">Ajustes Realizados</p>
-            <p className="mv-stat-val">{totalAjustes}</p>
+      <section className="adm-kpis" aria-label="Resumen de movimientos">
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono adm-kpi__icono--info" aria-hidden="true">≡</span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Movimientos</span>
+            <p className="adm-kpi__valor">{movimientos.length.toLocaleString("es-CO")}</p>
           </div>
         </div>
-
-        {/* Filtros */}
-        <form onSubmit={aplicarFiltros} className="mv-filters">
-          <div className="mv-filter-group">
-            <label>Buscar Producto</label>
-            <div className="mv-search-wrap">
-              <span className="mv-search-icon">🔍</span>
-              <input
-                className="mv-search"
-                placeholder="SKU, Nombre o Categoría..."
-                value={filtros.busqueda}
-                onChange={(e) =>
-                  setFiltros({ ...filtros, busqueda: e.target.value })
-                }
-              />
-            </div>
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono adm-kpi__icono--exito" aria-hidden="true">↓</span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Unidades que entraron</span>
+            <p className="adm-kpi__valor">{totalEntradas.toLocaleString("es-CO")}</p>
           </div>
-          <div className="mv-filter-group">
-            <label>Tipo de Mov.</label>
-            <select
-              className="mv-select"
-              value={filtros.tipo}
-              onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
-            >
-              <option value="">Todos</option>
+        </div>
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono adm-kpi__icono--peligro" aria-hidden="true">↑</span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Unidades que salieron</span>
+            <p className="adm-kpi__valor">{totalSalidas.toLocaleString("es-CO")}</p>
+          </div>
+        </div>
+        <div className="adm-kpi">
+          <span className="adm-kpi__icono adm-kpi__icono--pendiente" aria-hidden="true">⚙</span>
+          <div className="adm-kpi__texto">
+            <span className="adm-kpi__etiqueta">Ajustes realizados</span>
+            <p className="adm-kpi__valor">{totalAjustes}</p>
+          </div>
+        </div>
+      </section>
+
+      <form onSubmit={aplicarFiltros} className="adm-filtros" role="search" aria-label="Filtros de movimientos">
+        <label className="adm-campo adm-campo--ancho">
+          <span>Buscar producto</span>
+          <input type="search" placeholder="Código o nombre" value={filtros.busqueda}
+            onChange={(e) => setFiltros({ ...filtros, busqueda: e.target.value })} />
+        </label>
+        <label className="adm-campo">
+          <span>Tipo</span>
+          <select value={filtros.tipo} onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}>
+            <option value="">Todos</option>
+            <option value="ENTRADA">Entrada</option>
+            <option value="SALIDA">Salida</option>
+            <option value="AJUSTE">Ajuste</option>
+          </select>
+        </label>
+        <label className="adm-campo">
+          <span>Desde</span>
+          <input type="date" value={filtros.fechaInicio} onChange={(e) => setFiltros({ ...filtros, fechaInicio: e.target.value })} />
+        </label>
+        <label className="adm-campo">
+          <span>Hasta</span>
+          <input type="date" value={filtros.fechaFin} onChange={(e) => setFiltros({ ...filtros, fechaFin: e.target.value })} />
+        </label>
+        <div className="adm-filtros__acciones">
+          <button type="submit" className="adm-btn">Filtrar</button>
+        </div>
+      </form>
+
+      <div className="adm-tarjeta" aria-busy={loading}>
+        {loading ? (
+          <div className="adm-cargando">Cargando movimientos…</div>
+        ) : paginados.length === 0 ? (
+          <p className="adm-vacio">No hay movimientos registrados.</p>
+        ) : (
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Producto</th>
+                  <th>Tipo</th>
+                  <th className="adm-tabla__der">Cantidad</th>
+                  <th className="adm-tabla__der">Stock anterior</th>
+                  <th className="adm-tabla__der">Stock nuevo</th>
+                  <th>Motivo</th>
+                  <th>Referencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginados.map((m) => {
+                  const { fecha, hora } = formatFecha(m.fecha);
+                  const tipo = TIPO[m.tipo] || { label: m.tipo, badge: "neutro", signo: "" };
+                  return (
+                    <tr key={m.id}>
+                      <td data-label="Fecha" className="adm-tabla__nowrap">
+                        {fecha}
+                        <span className="adm-tabla__sub">{hora}</span>
+                      </td>
+                      <td data-label="Producto" className="adm-tabla__celda--ancha">
+                        <div className="adm-celda-producto">
+                          <span className="adm-miniatura" aria-hidden="true">{getInicial(m.productoId)}</span>
+                          <div>
+                            <strong>{getNombre(m.productoId)}</strong>
+                            <span className="adm-tabla__sub">Código {getCodigo(m.productoId)}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td data-label="Tipo"><span className={`adm-badge adm-badge--${tipo.badge}`}>{tipo.label}</span></td>
+                      <td data-label="Cantidad" className="adm-tabla__der"><strong>{tipo.signo}{m.cantidad}</strong></td>
+                      <td data-label="Stock anterior" className="adm-tabla__der">{m.stockAnterior}</td>
+                      <td data-label="Stock nuevo" className="adm-tabla__der"><strong>{m.stockNuevo}</strong></td>
+                      <td data-label="Motivo">{m.motivo || "—"}</td>
+                      <td data-label="Referencia">{m.referencia ? <span className="adm-mono">#{m.referencia}</span> : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <nav className="adm-paginacion" aria-label="Paginación">
+        {totalPags > 1 && (
+          <button type="button" className="adm-btn" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina === 1}>Anterior</button>
+        )}
+        <span>Mostrando {desdeN}–{hastaN} de {filtradosBusqueda.length} movimientos</span>
+        {totalPags > 1 && (
+          <button type="button" className="adm-btn" onClick={() => setPagina((p) => Math.min(totalPags, p + 1))} disabled={pagina === totalPags}>Siguiente</button>
+        )}
+      </nav>
+
+      {/* Ajuste manual */}
+      {mostrarModal && (
+        <ConfirmacionAdmin
+          titulo="Ajuste manual de stock"
+          texto="Registra una corrección manual al inventario."
+          confirmar="Registrar"
+          cargando={loadingAjuste}
+          deshabilitado={!ajuste.productoId || !ajuste.motivo || !ajuste.cantidad}
+          onConfirmar={handleAjuste}
+          onCancelar={() => setMostrarModal(false)}
+        >
+          <label className="adm-campo adm-campo--bloque">
+            <span>Producto</span>
+            <select value={ajuste.productoId} onChange={(e) => setAjuste({ ...ajuste, productoId: e.target.value })}>
+              <option value="">Seleccionar producto…</option>
+              {productos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </label>
+          <label className="adm-campo adm-campo--bloque">
+            <span>Tipo</span>
+            <select value={ajuste.tipo} onChange={(e) => setAjuste({ ...ajuste, tipo: e.target.value })}>
               <option value="ENTRADA">Entrada</option>
               <option value="SALIDA">Salida</option>
               <option value="AJUSTE">Ajuste</option>
             </select>
-          </div>
-          <div className="mv-filter-group">
-            <label>Desde</label>
-            <input
-              type="date"
-              className="mv-date"
-              value={filtros.fechaInicio}
-              onChange={(e) =>
-                setFiltros({ ...filtros, fechaInicio: e.target.value })
-              }
-            />
-          </div>
-          <div className="mv-filter-group">
-            <label>Hasta</label>
-            <input
-              type="date"
-              className="mv-date"
-              value={filtros.fechaFin}
-              onChange={(e) =>
-                setFiltros({ ...filtros, fechaFin: e.target.value })
-              }
-            />
-          </div>
-          <div className="mv-filter-group mv-filter-group--btn">
-            <label>&nbsp;</label>
-            <button type="submit" className="mv-btn-filter">
-              Filtrar
-            </button>
-          </div>
-          <div className="mv-filter-group mv-filter-group--btn">
-            <label>&nbsp;</label>
-            <button
-              type="button"
-              className="mv-btn-ajuste"
-              onClick={() => setMostrarModal(true)}
-            >
-              + Ajuste Manual
-            </button>
-          </div>
-        </form>
-
-        {/* Tabla */}
-        <div className="mv-table-card">
-          <table className="mv-table">
-            <thead>
-              <tr>
-                <th>Fecha / Hora</th>
-                <th>Producto</th>
-                <th>Tipo</th>
-                <th>Cant.</th>
-                <th>Stock Ant.</th>
-                <th>Stock Nuevo</th>
-                <th>Motivo</th>
-                <th>Ref.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="8" className="mv-empty">
-                    Cargando movimientos...
-                  </td>
-                </tr>
-              ) : paginados.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="mv-empty">
-                    No hay movimientos registrados
-                  </td>
-                </tr>
-              ) : (
-                paginados.map((m) => {
-                  const { fecha, hora } = formatFecha(m.fecha);
-                  const esEntrada = m.tipo === "ENTRADA";
-                  const esSalida = m.tipo === "SALIDA";
-                  return (
-                    <tr key={m.id} className="mv-row">
-                      <td>
-                        <p className="mv-fecha">{fecha}</p>
-                        <p className="mv-hora">{hora}</p>
-                      </td>
-                      <td>
-                        <div className="mv-product-cell">
-                          <div
-                            className="mv-product-avatar"
-                            style={{ background: getColor(m.productoId) }}
-                          >
-                            {getInicial(m.productoId)}
-                          </div>
-                          <div>
-                            <p className="mv-product-name">
-                              {getNombre(m.productoId)}
-                            </p>
-                            <p className="mv-product-sku">
-                              SKU: {getCodigo(m.productoId)}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        {m.tipo === "ENTRADA" && (
-                          <span className="mv-badge mv-badge--entrada">
-                            ↓ ENTRADA
-                          </span>
-                        )}
-                        {m.tipo === "SALIDA" && (
-                          <span className="mv-badge mv-badge--salida">
-                            ↑ SALIDA
-                          </span>
-                        )}
-                        {m.tipo === "AJUSTE" && (
-                          <span className="mv-badge mv-badge--ajuste">
-                            ⚙ AJUSTE
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        <span
-                          className={`mv-cantidad ${esEntrada ? "mv-cantidad--pos" : esSalida ? "mv-cantidad--neg" : "mv-cantidad--adj"}`}
-                        >
-                          {esEntrada ? "+" : esSalida ? "-" : ""}
-                          {m.cantidad}
-                        </span>
-                      </td>
-                      <td className="mv-muted">{m.stockAnterior}</td>
-                      <td>
-                        <strong className="mv-stock-nuevo">
-                          {m.stockNuevo}
-                        </strong>
-                      </td>
-                      <td>
-                        {m.motivo && (
-                          <span className="mv-motivo">{m.motivo}</span>
-                        )}
-                      </td>
-                      <td>
-                        {m.referencia && (
-                          <span className="mv-ref">#{m.referencia}</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-
-          {/* Footer paginación */}
-          <div className="mv-table-footer">
-            <span className="mv-count">
-              Mostrando{" "}
-              <strong>
-                {filtradosBusqueda.length === 0
-                  ? 0
-                  : Math.min(
-                      (pagina - 1) * POR_PAGINA + 1,
-                      filtradosBusqueda.length
-                    )}
-                -{Math.min(pagina * POR_PAGINA, filtradosBusqueda.length)}
-              </strong>{" "}
-              de <strong>{filtradosBusqueda.length}</strong> movimientos
-            </span>
-            {totalPags > 1 && (
-              <div className="mv-pag">
-                <button
-                  className="mv-pag-arrow"
-                  onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                  disabled={pagina === 1}
-                >
-                  ‹
-                </button>
-                {Array.from(
-                  { length: Math.min(totalPags, 5) },
-                  (_, i) => i + 1
-                ).map((n) => (
-                  <button
-                    key={n}
-                    className={`mv-pag-num ${pagina === n ? "activo" : ""}`}
-                    onClick={() => setPagina(n)}
-                  >
-                    {n}
-                  </button>
-                ))}
-                {totalPags > 5 && <span className="mv-muted">...</span>}
-                {totalPags > 5 && (
-                  <button
-                    className="mv-pag-num"
-                    onClick={() => setPagina(totalPags)}
-                  >
-                    {totalPags}
-                  </button>
-                )}
-                <button
-                  className="mv-pag-arrow"
-                  onClick={() => setPagina((p) => Math.min(totalPags, p + 1))}
-                  disabled={pagina === totalPags}
-                >
-                  ›
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Modal ajuste manual */}
-      {mostrarModal && (
-        <div className="mv-modal-overlay">
-          <div className="mv-modal">
-            <h2>Ajuste Manual de Stock</h2>
-            <p className="mv-modal-sub">
-              Registra una corrección manual al inventario
-            </p>
-
-            <div className="mv-modal-field">
-              <label>Producto</label>
-              <select
-                value={ajuste.productoId}
-                onChange={(e) =>
-                  setAjuste({ ...ajuste, productoId: e.target.value })
-                }
-              >
-                <option value="">Seleccionar producto...</option>
-                {productos.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="mv-modal-field">
-              <label>Tipo</label>
-              <select
-                value={ajuste.tipo}
-                onChange={(e) =>
-                  setAjuste({ ...ajuste, tipo: e.target.value })
-                }
-              >
-                <option value="ENTRADA">Entrada</option>
-                <option value="SALIDA">Salida</option>
-                <option value="AJUSTE">Ajuste</option>
-              </select>
-            </div>
-            <div className="mv-modal-field">
-              <label>Cantidad</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="0"
-                value={ajuste.cantidad}
-                onChange={(e) =>
-                  setAjuste({ ...ajuste, cantidad: e.target.value })
-                }
-              />
-            </div>
-            <div className="mv-modal-field">
-              <label>Motivo</label>
-              <input
-                type="text"
-                placeholder="Ej. Corrección de inventario"
-                value={ajuste.motivo}
-                onChange={(e) =>
-                  setAjuste({ ...ajuste, motivo: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="mv-modal-actions">
-              <button
-                onClick={() => setMostrarModal(false)}
-                className="mv-modal-cancel"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAjuste}
-                className="mv-modal-save"
-                disabled={
-                  loadingAjuste ||
-                  !ajuste.productoId ||
-                  !ajuste.motivo ||
-                  !ajuste.cantidad
-                }
-              >
-                {loadingAjuste ? "Guardando..." : "Registrar"}
-              </button>
-            </div>
-          </div>
-        </div>
+          </label>
+          <label className="adm-campo adm-campo--bloque">
+            <span>Cantidad</span>
+            <input type="text" inputMode="numeric" placeholder="0" value={ajuste.cantidad}
+              onChange={(e) => setAjuste({ ...ajuste, cantidad: e.target.value })} />
+          </label>
+          <label className="adm-campo adm-campo--bloque">
+            <span>Motivo</span>
+            <input type="text" placeholder="Ej. Corrección de inventario" value={ajuste.motivo}
+              onChange={(e) => setAjuste({ ...ajuste, motivo: e.target.value })} />
+          </label>
+        </ConfirmacionAdmin>
       )}
     </div>
   );

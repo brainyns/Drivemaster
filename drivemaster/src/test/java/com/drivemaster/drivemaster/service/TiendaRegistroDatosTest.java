@@ -37,7 +37,10 @@ class TiendaRegistroDatosTest {
         when(tiendaRepository.save(any(Tienda.class))).thenAnswer(i -> i.getArgument(0));
         when(cuentaNegocioService.crearUsuario(any(), any(), any(), any(), any(), any()))
                 .thenReturn(Usuario.builder().id("u1").correo("tienda@demo.com").build());
-        service = new TiendaServiceImpl(tiendaRepository, usuarioRepository, cuentaNegocioService, suscripciones);
+        // El guardado con cuenta nueva ejecuta el guardado real (la compensación se prueba en CuentaNegocioAtomicidadTest)
+        when(cuentaNegocioService.conCuentaNueva(any(), any()))
+                .thenAnswer(i -> ((java.util.function.Supplier<?>) i.getArgument(1)).get());
+        service =new TiendaServiceImpl(tiendaRepository, usuarioRepository, cuentaNegocioService, suscripciones);
     }
 
     private static RegistroNegocioRequest registro() {
@@ -82,7 +85,7 @@ class TiendaRegistroDatosTest {
     @Test
     void ciudadYDireccionSiguenSiendoObligatorias() {
         // Las valida CuentaNegocioService (real aquí para probar la regla de punta a punta)
-        CuentaNegocioService real = new CuentaNegocioService(usuarioRepository, null, null);
+        CuentaNegocioService real = new CuentaNegocioService(usuarioRepository, null, null, null, null);
         RegistroNegocioRequest sinDireccion = registro();
         sinDireccion.setDireccion(" ");
         assertThrows(ResponseStatusException.class, () -> real.validarRegistro(sinDireccion));

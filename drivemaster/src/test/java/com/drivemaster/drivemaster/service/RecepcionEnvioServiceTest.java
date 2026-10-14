@@ -311,7 +311,8 @@ class RecepcionEnvioServiceTest {
         when(usuarios.findByRol("SUPERADMIN")).thenReturn(List.of());
         AvisosSolicitudServicio real = new AvisosSolicitudServicio(emails, usuarios,
                 mock(com.drivemaster.drivemaster.repository.TallerRepository.class),
-                mock(com.drivemaster.drivemaster.repository.TiendaRepository.class), "https://front.test");
+                mock(com.drivemaster.drivemaster.repository.TiendaRepository.class),
+                mock(com.drivemaster.drivemaster.service.NotificacionService.class), "https://front.test");
         PedidoTienda p = envio("p1", PedidoTienda.DESPACHADO);
 
         real.problemaEnvio(p, "Llego roto");

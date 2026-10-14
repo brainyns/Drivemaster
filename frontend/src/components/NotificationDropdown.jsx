@@ -1,172 +1,182 @@
 import { apiFetch } from "../services/http";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { getToken } from "../services/authService";
-import { subscribeNotifications } from "../services/websocketService";
+import { subscribeNotifications, subscribeEstadoConexion } from "../services/websocketService";
+import { listarMisAvisos, marcarAvisoLeido, marcarTodosLeidos } from "../services/notificacionesService";
+import {
+  MAX_AVISOS, textoContador, haceCuanto, destinoDeAviso, tonoDeAviso, agregarAviso, marcarLeidaEnLista, marcarTodasEnLista, productosConStockBajo,
+} from "../services/notificacionesUtil";
 import "../css/notifications.css";
 
-const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
+const API_BASE = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api`;
 
-function timeAgo(iso) {
-  if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Ahora";
-  if (mins < 60) return `Hace ${mins} min`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `Hace ${hrs} h`;
-  const days = Math.floor(hrs / 24);
-  return `Hace ${days} día${days > 1 ? "s" : ""}`;
-}
+const TEXTO_ESTADO = { conectado: "En vivo", conectando: "Reconectando…", desconectado: "Sin conexión en vivo" };
 
-function authHeaders(token) {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-}
-
-export default function NotificationDropdown({ onClose, onNavigate }) {
+/**
+ * Lista de avisos del usuario (guardados en el servidor y los que llegan en vivo).
+ * La tienda ve además sus productos con stock bajo.
+ */
+export default function NotificationDropdown({ rol, variante = "panel", onClose, onNavigate, onNoLeidas }) {
   const ref = useRef(null);
-  const token = getToken();
-  const [notifications, setNotifications] = useState([]);
-  const [cargado, setCargado] = useState(false);
-  const loading = !cargado && !!token;
+  const [avisos, setAvisos] = useState([]);
+  const [noLeidas, setNoLeidas] = useState(0);
+  const [stockBajo, setStockBajo] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
+  const [estado, setEstado] = useState("desconectado");
 
-  const fetchNotifications = useCallback(async () => {
-    if (!token) return;
+  const actualizarNoLeidas = useCallback((n) => {
+    const valor = Math.max(0, n);
+    setNoLeidas(valor);
+    onNoLeidas?.(valor);
+  }, [onNoLeidas]);
+
+  const cargar = useCallback(async () => {
+    setError(false);
     try {
-      const items = [];
-
-      // Low stock
+      const data = await listarMisAvisos(MAX_AVISOS);
+      setAvisos(data?.items || []);
+      actualizarNoLeidas(data?.noLeidas || 0);
+    } catch {
+      setError(true);
+    }
+    if (rol === "TIENDA") {
       try {
-        const prods = await apiFetch(`${API_BASE}/productos`, { headers: authHeaders(token) }).then(r => r.json());
-        const lowStock = (prods || []).filter(p => p.stockActual != null && p.stockMinimo != null && p.activo !== false && p.stockActual <= p.stockMinimo);
-        lowStock.forEach(p => {
-          const isOut = p.stockActual === 0;
-          items.push({
-            id: `stock-${p.id}`,
-            type: "stock",
-            label: isOut ? "Producto agotado" : "Stock bajo",
-            detail: isOut
-              ? `${p.nombre} — Sin stock`
-              : `${p.nombre} (${p.stockActual} restantes)`,
-            time: null,
-            link: "productos",
-            linkId: p.id,
-            color: isOut ? "red" : "orange",
-          });
-        });
-      } catch { /* ignore */ }
-
-      // Recent sales from dashboard
-      try {
-        const d = await apiFetch(`${API_BASE}/reportes/dashboard`, { headers: authHeaders(token) }).then(r => r.json());
-        const totalHoy = d.totalVentasDia || 0;
-        if (totalHoy > 0) {
-          items.push({
-            id: "sales-today",
-            type: "venta",
-            label: "Ventas del día",
-            detail: `${totalHoy > 1 ? `${totalHoy} ventas registradas` : "Nueva venta registrada"}`,
-            time: new Date().toISOString(),
-            link: "ventas",
-            linkId: null,
-            color: "green",
-          });
-        }
-      } catch { /* ignore */ }
-
-      items.sort((a, b) => {
-        if (!a.time && !b.time) return 0;
-        if (!a.time) return 1;
-        if (!b.time) return -1;
-        return new Date(b.time) - new Date(a.time);
-      });
-
-      setNotifications(items.slice(0, 20));
-    } catch { /* ignore */ }
-    setCargado(true);
-  }, [token]);
+        const res = await apiFetch(`${API_BASE}/productos/mi-tienda`);
+        if (res.ok) setStockBajo(productosConStockBajo(await res.json()));
+      } catch { /* el inventario es secundario */ }
+    }
+    setCargando(false);
+  }, [rol, actualizarNoLeidas]);
 
   useEffect(() => {
-    const initial = setTimeout(fetchNotifications, 0);
-    const interval = setInterval(fetchNotifications, 30000);
+    const inicial = setTimeout(cargar, 0);
     const unsub = subscribeNotifications((msg) => {
-      if (msg?.type === "solicitud" || msg?.type === "venta_estado") fetchNotifications();
+      if (msg?.type !== "notificacion" || !msg.notificacion) return;
+      setAvisos((lista) => agregarAviso(lista, msg.notificacion));
+      if (typeof msg.noLeidas === "number") actualizarNoLeidas(msg.noLeidas);
     });
-    return () => { clearTimeout(initial); clearInterval(interval); unsub(); };
-  }, [fetchNotifications]);
+    const unsubEstado = subscribeEstadoConexion(setEstado);
+    return () => { clearTimeout(inicial); unsub(); unsubEstado(); };
+  }, [cargar, actualizarNoLeidas]);
 
   useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) onClose();
+    const fuera = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    const escape = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("mousedown", fuera);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("mousedown", fuera);
+      document.removeEventListener("keydown", escape);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
 
-  const groups = [
-    { key: "solicitud", label: "Solicitudes" },
-    { key: "stock", label: "Inventario" },
-    { key: "venta", label: "Ventas" },
-    { key: "info", label: "Información" },
-  ];
+  const abrir = (aviso) => {
+    if (!aviso.leida) {
+      setAvisos((lista) => marcarLeidaEnLista(lista, aviso.id));
+      actualizarNoLeidas(noLeidas - 1);
+      marcarAvisoLeido(aviso.id).catch(() => { /* se corrige en la próxima carga */ });
+    }
+    const destino = destinoDeAviso(aviso);
+    if (destino) {
+      onClose();
+      onNavigate?.(destino.pagina, destino.id);
+    }
+  };
 
-  const byGroup = {};
-  notifications.forEach((n) => {
-    if (!byGroup[n.type]) byGroup[n.type] = [];
-    byGroup[n.type].push(n);
-  });
+  const marcarTodas = async () => {
+    setAvisos((lista) => marcarTodasEnLista(lista));
+    actualizarNoLeidas(0);
+    try { await marcarTodosLeidos(); } catch { cargar(); }
+  };
 
-  const groupedNotifs = groups.filter((g) => (byGroup[g.key] || []).length > 0);
+  const vacio = avisos.length === 0 && stockBajo.length === 0;
 
   return (
-    <div className="nt-dropdown" ref={ref}>
+    <div className={`nt-dropdown nt-dropdown--${variante}`} ref={ref} role="dialog" aria-label="Notificaciones">
       <div className="nt-header">
-        <span className="nt-title">Notificaciones</span>
-        <span className="nt-count">{notifications.length}</span>
+        <div className="nt-header__titulo">
+          <span className="nt-title">Notificaciones</span>
+          {noLeidas > 0 && <span className="nt-count" title={`${noLeidas} sin leer`}>{textoContador(noLeidas)}<span className="nt-sr"> sin leer</span></span>}
+        </div>
+        {noLeidas > 0 && (
+          <button type="button" className="nt-link" onClick={marcarTodas}>Marcar todas como leídas</button>
+        )}
       </div>
 
-      {loading && notifications.length === 0 ? (
-        <div className="nt-empty">Cargando...</div>
-      ) : notifications.length === 0 ? (
+      {cargando && vacio ? (
+        <div className="nt-empty">Cargando…</div>
+      ) : error && vacio ? (
         <div className="nt-empty">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <p>No pudimos cargar tus notificaciones.</p>
+          <button type="button" className="nt-link" onClick={cargar}>Reintentar</button>
+        </div>
+      ) : vacio ? (
+        <div className="nt-empty">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
             <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
           </svg>
-          <p>No hay notificaciones</p>
+          <p>No tienes notificaciones</p>
         </div>
       ) : (
         <div className="nt-scroll">
-          {groupedNotifs.map((g) => (
-            <div key={g.key} className="nt-group">
-              <div className="nt-group-label">{g.label}</div>
-              {byGroup[g.key].map((n) => (
-                <button
-                  key={n.id}
-                  className={`nt-item nt-item--${n.color}`}
-                  onClick={() => { onClose(); onNavigate?.(n.link, n.linkId); }}
-                >
-                  <span className="nt-dot" />
-                  <div className="nt-body">
-                    <span className="nt-item-label">{n.label}</span>
-                    <span className="nt-item-detail">{n.detail}</span>
-                  </div>
-                  {n.time && <span className="nt-time">{timeAgo(n.time)}</span>}
-                </button>
+          {avisos.length > 0 && (
+            <ul className="nt-lista">
+              {avisos.map((a) => (
+                <li key={a.id}>
+                  <button
+                    type="button"
+                    className={`nt-item nt-item--${tonoDeAviso(a.tipo)}${a.leida ? "" : " nt-item--nueva"}`}
+                    onClick={() => abrir(a)}
+                  >
+                    <span className="nt-dot" aria-hidden="true" />
+                    <span className="nt-body">
+                      <span className="nt-item-label">
+                        {a.titulo}
+                        {!a.leida && <span className="nt-sr">(sin leer)</span>}
+                      </span>
+                      {a.mensaje && <span className="nt-item-detail">{a.mensaje}</span>}
+                    </span>
+                    <span className="nt-time">{haceCuanto(a.fechaCreacion)}</span>
+                  </button>
+                </li>
               ))}
+            </ul>
+          )}
+
+          {stockBajo.length > 0 && (
+            <div className="nt-group">
+              <div className="nt-group-label">Inventario</div>
+              <ul className="nt-lista">
+                {stockBajo.slice(0, 10).map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className={`nt-item nt-item--${p.stockActual === 0 ? "error" : "marca"}`}
+                      onClick={() => { onClose(); onNavigate?.("productos", p.id); }}
+                    >
+                      <span className="nt-dot" aria-hidden="true" />
+                      <span className="nt-body">
+                        <span className="nt-item-label">{p.stockActual === 0 ? "Producto agotado" : "Stock bajo"}</span>
+                        <span className="nt-item-detail">
+                          {p.nombre} {p.stockActual === 0 ? "— sin stock" : `(${p.stockActual} restantes)`}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
-          ))}
+          )}
         </div>
       )}
 
-      {notifications.length > 0 && (
-        <div className="nt-footer">
-          <span className="nt-update" onClick={fetchNotifications}>
-            ↻ Actualizar
-          </span>
-        </div>
-      )}
+      <div className="nt-footer">
+        <span className={`nt-estado nt-estado--${estado}`}>
+          <span className="nt-estado__punto" aria-hidden="true" />
+          {TEXTO_ESTADO[estado]}
+        </span>
+        <button type="button" className="nt-link" onClick={cargar}>Actualizar</button>
+      </div>
     </div>
   );
 }

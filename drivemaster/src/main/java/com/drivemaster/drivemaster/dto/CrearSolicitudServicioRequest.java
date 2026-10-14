@@ -25,4 +25,7 @@ public class CrearSolicitudServicioRequest {
 
     // Texto libre: "Mañanas entre semana", "Sábado temprano"...
     private String preferenciaHorario;
+
+    // Taller elegido en el mapa (opcional). Sin él, se asigna automáticamente por ciudad.
+    private String tallerId;
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { buscarRepuestos } from "../../services/repuestoService";
 import { ESTADO_OFERTA, formatPrecio } from "./estadosServicio";
 
@@ -72,7 +73,9 @@ function VentanaBuscador({ token, solicitud, elegidos, onElegir, onCerrar }) {
     inputRef.current?.focus();
   };
 
-  return (
+  // Se dibuja en <body>: dentro del panel del taller, la animación de entrada deja un transform en
+  // un contenedor y la ventana "fija" quedaba anclada a él (cortada arriba) y no a la pantalla.
+  return createPortal(
     <div className="ss-modal" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onCerrar(); }}>
       <div className="ss-modal__ventana" role="dialog" aria-modal="true" aria-labelledby="ss-modal-titulo">
         <header className="ss-modal__cabecera">
@@ -127,60 +130,70 @@ function VentanaBuscador({ token, solicitud, elegidos, onElegir, onCerrar }) {
             </div>
           )}
 
-          {resultados.map((g) => (
-            <section className="ss-pieza" key={g.clave}>
-              <header className="ss-pieza__cabecera">
-                <strong>{g.nombre}</strong>
-                <span className="ss-meta">
-                  {[g.marca, g.referencia && `Ref. ${g.referencia}`, g.categoria].filter(Boolean).join(" · ")}
-                </span>
-                <span className="ss-pieza__resumen">
-                  {g.ofertas.map((o) => `${o.tiendaNombre}: ${o.disponibilidad === "ENCARGO" ? "encargo" : o.stock}`).join(" · ")}
-                </span>
-              </header>
+          {resultados.length > 0 && (
+            <>
+              <p className="ss-ofertas__resumen">
+                {resultados.length} {resultados.length === 1 ? "repuesto" : "repuestos"} ·{" "}
+                {resultados.reduce((n, g) => n + g.ofertas.length, 0)} ofertas de tiendas
+              </p>
               <div className="ss-ofertas">
-                {g.ofertas.map((o) => (
-                  <TarjetaOferta key={o.productoId} oferta={o} elegido={elegidos.has(o.productoId)}
+                {resultados.flatMap((g) => g.ofertas.map((o) => (
+                  <TarjetaOferta key={o.productoId} oferta={o} categoria={g.categoria} elegido={elegidos.has(o.productoId)}
                     onElegir={() => onElegir(g, o, cantidad)} />
-                ))}
+                )))}
               </div>
-            </section>
-          ))}
+            </>
+          )}
         </div>
 
         <footer className="ss-modal__pie">
-          <span className="ss-meta">{elegidos.size} repuesto(s) en el diagnóstico</span>
+          <span className="ss-modal__contador" aria-live="polite">
+            <strong>{elegidos.size}</strong> {elegidos.size === 1 ? "repuesto" : "repuestos"} en el diagnóstico
+          </span>
           <button type="button" className="sv-btn" onClick={onCerrar}>Listo</button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
-function TarjetaOferta({ oferta: o, elegido, onElegir }) {
+function TarjetaOferta({ oferta: o, categoria, elegido, onElegir }) {
   const estado = ESTADO_OFERTA[o.estado] || { label: o.estado, tono: "info" };
   const ubicacion = [o.tiendaBarrio, o.tiendaCiudad].filter(Boolean).join(", ");
+  const encargo = o.disponibilidad === "ENCARGO";
 
   return (
-    <article className={`ss-oferta${o.seleccionable ? "" : " ss-oferta--bloqueada"}`}>
+    <article className={`ss-oferta${o.seleccionable ? "" : " ss-oferta--bloqueada"}${elegido ? " ss-oferta--elegida" : ""}`}>
       <div className="ss-oferta__foto">
         {o.imagenUrl ? <img src={o.imagenUrl} alt="" loading="lazy" /> : <span aria-hidden="true">🔧</span>}
+        <span className={`ss-estado ss-estado--${estado.tono} ss-oferta__compat`}><span className="ss-estado__punto" />{estado.label}</span>
       </div>
       <div className="ss-oferta__cuerpo">
-        <span className={`ss-estado ss-estado--${estado.tono}`}><span className="ss-estado__punto" />{estado.label}</span>
         <strong className="ss-oferta__nombre">{o.nombre}</strong>
-        <span className="ss-meta">{[o.referencia && `Ref. ${o.referencia}`, o.marca].filter(Boolean).join(" · ")}</span>
+        <span className="ss-oferta__ref">
+          {[o.referencia && `Ref. ${o.referencia}`, o.marca, categoria].filter(Boolean).join(" · ")}
+        </span>
         <span className="ss-oferta__tienda">{o.tiendaNombre}</span>
-        <span className="ss-meta">
+        <span className="ss-oferta__dato">
           {ubicacion || "Ubicación no registrada"}
-          {o.distanciaKm != null && ` · a ${o.distanciaKm} km del taller`}
+          {o.distanciaKm != null && ` · a ${o.distanciaKm} km`}
         </span>
-        <span className="ss-meta">
-          {o.disponibilidad === "ENCARGO"
-            ? `Por encargo · ${o.diasEntrega ? `${o.diasEntrega} día(s) estimados` : "tiempo por confirmar"}`
-            : `Stock: ${o.stock}`}
+        <span className="ss-oferta__etiquetas">
+          <span className={`ss-oferta__stock${!encargo && !o.stock ? " ss-oferta__stock--agotado" : ""}`}>
+            {encargo
+              ? `Por encargo · ${o.diasEntrega ? `${o.diasEntrega} día(s)` : "tiempo por confirmar"}`
+              : `Stock: ${o.stock}`}
+          </span>
+          {o.mismaTiendaQueSeleccion && <span className="ss-chip">Ya surte otros repuestos</span>}
         </span>
-        {o.mismaTiendaQueSeleccion && <span className="ss-chip">Ya surte otros repuestos</span>}
+        {/* El motivo va en el cuerpo para que precio y botón queden alineados entre tarjetas */}
+        {o.motivo && (
+          <span id={`motivo-${o.productoId}`}
+            className={`ss-oferta__motivo${o.seleccionable ? " ss-oferta__motivo--aviso" : ""}`}>
+            {o.motivo}
+          </span>
+        )}
       </div>
       <div className="ss-oferta__pie">
         <strong className="ss-oferta__precio">{formatPrecio(o.precio)}</strong>
@@ -188,12 +201,6 @@ function TarjetaOferta({ oferta: o, elegido, onElegir }) {
           onClick={onElegir} aria-describedby={o.motivo ? `motivo-${o.productoId}` : undefined}>
           {elegido ? "Elegido" : "Elegir"}
         </button>
-        {o.motivo && (
-          <span id={`motivo-${o.productoId}`}
-            className={`ss-oferta__motivo${o.seleccionable ? " ss-oferta__motivo--aviso" : ""}`}>
-            {o.motivo}
-          </span>
-        )}
       </div>
     </article>
   );

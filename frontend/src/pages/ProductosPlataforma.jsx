@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { productosPlataforma } from "../services/plataformaService";
 import "../css/dashboard.css";
 import "../css/dashboard-plataforma.css";
+import "../css/admin-base.css";
 
 const TAMANO = 20;
 const cop = (n) => (n == null ? "—" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n));
@@ -48,28 +49,28 @@ export default function ProductosPlataforma({ token }) {
   const hayFiltros = Object.values(filtros).some((v) => v !== "");
 
   return (
-    <div className="db-root dp-root">
-      <header className="db-header">
+    <div className="adm-pagina">
+      <header className="adm-encabezado">
         <div>
-          <h1 className="db-h1">Productos</h1>
-          <p className="db-sub">Catálogo global de las tiendas, solo lectura. Cada tienda administra sus propios productos.</p>
+          <h1 className="adm-encabezado__titulo">Productos</h1>
+          <p className="adm-encabezado__sub">Catálogo global de las tiendas, solo lectura. Cada tienda administra sus propios productos.</p>
         </div>
-        {lista && <span className="db-date">{lista.total} {lista.total === 1 ? "producto" : "productos"}</span>}
+        {lista && <span className="adm-encabezado__dato">{lista.total} {lista.total === 1 ? "producto" : "productos"}</span>}
       </header>
 
-      <form className="dp-filtros" onSubmit={aplicar} role="search" aria-label="Filtros de productos">
-        <label className="dp-campo dp-campo--ancho">
+      <form className="adm-filtros" onSubmit={aplicar} role="search" aria-label="Filtros de productos">
+        <label className="adm-campo adm-campo--ancho">
           <span>Buscar</span>
           <input type="search" value={borrador.q} onChange={cambiar("q")} placeholder="Nombre, código, marca o referencia" />
         </label>
-        <label className="dp-campo">
+        <label className="adm-campo">
           <span>Tienda</span>
           <select value={borrador.tiendaId} onChange={cambiar("tiendaId")}>
             <option value="">Todas</option>
             {(respuesta?.tiendas || []).map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
           </select>
         </label>
-        <label className="dp-campo">
+        <label className="adm-campo">
           <span>Ingreso</span>
           <select value={borrador.nuevosDias} onChange={cambiar("nuevosDias")}>
             <option value="">Todos</option>
@@ -77,7 +78,7 @@ export default function ProductosPlataforma({ token }) {
             <option value="30">Nuevos (30 días)</option>
           </select>
         </label>
-        <label className="dp-campo">
+        <label className="adm-campo">
           <span>Estado</span>
           <select value={borrador.estado} onChange={cambiar("estado")}>
             <option value="">Todos</option>
@@ -86,45 +87,45 @@ export default function ProductosPlataforma({ token }) {
             <option value="sin-stock">Sin stock</option>
           </select>
         </label>
-        <div className="dp-filtros__acciones">
-          <button type="submit" className="dp-btn">Buscar</button>
-          {hayFiltros && <button type="button" className="dp-btn dp-btn--sutil" onClick={limpiar}>Limpiar</button>}
+        <div className="adm-filtros__acciones">
+          <button type="submit" className="adm-btn">Buscar</button>
+          {hayFiltros && <button type="button" className="adm-btn adm-btn--sutil" onClick={limpiar}>Limpiar</button>}
         </div>
       </form>
 
-      {estado.error && <div className="db-error" role="alert">{estado.error}</div>}
+      {estado.error && <div className="adm-alerta adm-alerta--error" role="alert">{estado.error}</div>}
 
-      <div className="db-card dp-lista" aria-busy={cargando}>
+      <div className="adm-tarjeta" aria-busy={cargando}>
         {!lista && !estado.error ? (
-          <div className="db-loading"><div className="db-spinner" /> Cargando productos…</div>
+          <div className="adm-cargando">Cargando productos…</div>
         ) : lista && lista.items.length === 0 ? (
-          <p className="db-empty">{hayFiltros ? "Ningún producto coincide con los filtros." : "Todavía no hay productos."}</p>
+          <p className="adm-vacio">{hayFiltros ? "Ningún producto coincide con los filtros." : "Todavía no hay productos."}</p>
         ) : lista && (
-          <div className="db-table-wrap">
-            <table className="db-table">
+          <div className="adm-tabla-wrap">
+            <table className="adm-tabla adm-tabla--tarjetas">
               <thead>
                 <tr>
                   <th>Producto</th><th>Tienda</th><th>Categoría</th>
-                  <th className="dp-der">Stock</th><th className="dp-der">Precio</th><th>Estado</th><th>Ingreso</th>
+                  <th className="adm-tabla__der">Stock</th><th className="adm-tabla__der">Precio</th><th>Estado</th><th>Ingreso</th>
                 </tr>
               </thead>
               <tbody>
                 {lista.items.map((p) => (
                   <tr key={p.id}>
-                    <td>
+                    <td data-label="Producto">
                       <strong>{p.nombre || "Sin nombre"}</strong>
-                      <span className="dp-sub-celda">{[p.codigo, p.marca].filter(Boolean).join(" · ")}</span>
+                      <span className="adm-tabla__sub">{[p.codigo, p.marca].filter(Boolean).join(" · ")}</span>
                     </td>
-                    <td>{p.tienda || "—"}</td>
-                    <td>{p.categoria || "—"}</td>
-                    <td className="dp-der">{p.tipo === "ENCARGO" ? "Bajo pedido" : (p.stock ?? 0)}</td>
-                    <td className="dp-der">{cop(p.precio)}</td>
-                    <td>
-                      <span className={`dp-etiqueta ${p.activo ? "dp-etiqueta--ok" : "dp-etiqueta--no"}`}>
+                    <td data-label="Tienda">{p.tienda || "—"}</td>
+                    <td data-label="Categoría">{p.categoria || "—"}</td>
+                    <td className="adm-tabla__der" data-label="Stock">{p.tipo === "ENCARGO" ? "Bajo pedido" : (p.stock ?? 0)}</td>
+                    <td className="adm-tabla__der" data-label="Precio">{cop(p.precio)}</td>
+                    <td data-label="Estado">
+                      <span className={`adm-badge ${p.activo ? "adm-badge--exito" : "adm-badge--neutro"}`}>
                         {p.activo ? "Activo" : "Inactivo"}
                       </span>
                     </td>
-                    <td>{fecha(p.fechaIngreso)}</td>
+                    <td data-label="Ingreso">{fecha(p.fechaIngreso)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -134,10 +135,10 @@ export default function ProductosPlataforma({ token }) {
       </div>
 
       {lista && lista.total > lista.tamano && (
-        <nav className="dp-paginacion" aria-label="Paginación">
-          <button type="button" className="dp-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
+        <nav className="adm-paginacion" aria-label="Paginación">
+          <button type="button" className="adm-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
           <span>Página {pagina + 1} de {paginas}</span>
-          <button type="button" className="dp-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
+          <button type="button" className="adm-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
         </nav>
       )}
     </div>

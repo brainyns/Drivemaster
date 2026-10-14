@@ -75,62 +75,72 @@ export default function TallerMiTaller({ taller, ordenes, token, onActualizado }
   const faltaHorario = !taller?.horario;
   const aprobado = taller?.estadoAprobacion === "APROBADO";
   return (
-    <div className="pt-perfil">
-      {nombre ? (
-        <>
-          <span className="pt-eyebrow">Datos del taller</span>
-          <h2 className="pt-perfil-nombre">{nombre}</h2>
-          <div className="pt-perfil-facts">
-            <div className="pt-fact">
-              <span className="pt-fact-label">Tarifa por hora</span>
-              <span className="pt-fact-value">{faltaTarifa ? "Sin definir" : formatPrecio(taller.tarifaHora)}</span>
-            </div>
-            <div className="pt-fact">
-              <span className="pt-fact-label">Precio de mano de obra</span>
-              <span className="pt-fact-value">{formatPrecio(precio)}</span>
-            </div>
-            <div className="pt-fact">
-              <span className="pt-fact-label">Horario</span>
-              <span className="pt-fact-value tp-horario">{faltaHorario ? "Sin definir" : taller.horario}</span>
-            </div>
-            {taller?.ciudad && (
-              <div className="pt-fact">
-                <span className="pt-fact-label">Ciudad</span>
-                <span className="pt-fact-value">{taller.ciudad}</span>
-              </div>
-            )}
-          </div>
-          {(faltaTarifa || faltaHorario) && (
-            <p className="ss-aviso">
-              Falta {faltaTarifa && "la tarifa por hora"}{faltaTarifa && faltaHorario && " y "}{faltaHorario && "el horario"}.
-              La tarifa se usa al cotizar por horas y el horario lo ve el cliente al elegir taller.
-            </p>
-          )}
-
-          {editando ? (
-            <EditarDatos
-              taller={taller} token={token}
-              onCancelar={() => setEditando(false)}
-              onGuardado={(t) => { onActualizado?.(t); setEditando(false); setGuardado(true); }}
-            />
-          ) : (
+    <div className="tp-mitaller">
+      <header className="pt-header tp-cabecera">
+        <div>
+          <h1 className="pt-title">Mi taller</h1>
+          <p className="pt-subtitle">Tus datos de atención y el equipo de mecánicos que recibe las solicitudes.</p>
+        </div>
+      </header>
+      <div className="tp-mitaller__rejilla">
+        <section className="pt-perfil" aria-labelledby="tp-mitaller-nombre">
+          {nombre ? (
             <>
-              {aprobado && (
-                <button type="button" className="sv-btn-outline" onClick={() => { setGuardado(false); setEditando(true); }}>
-                  Editar tarifa y horario
-                </button>
+              <span className="pt-eyebrow">Datos del taller</span>
+              <h2 id="tp-mitaller-nombre" className="pt-perfil-nombre">{nombre}</h2>
+              <div className="pt-perfil-facts">
+                <div className="pt-fact">
+                  <span className="pt-fact-label">Tarifa por hora</span>
+                  <span className="pt-fact-value">{faltaTarifa ? "Sin definir" : formatPrecio(taller.tarifaHora)}</span>
+                </div>
+                <div className="pt-fact">
+                  <span className="pt-fact-label">Precio de mano de obra</span>
+                  <span className="pt-fact-value">{formatPrecio(precio)}</span>
+                </div>
+                <div className="pt-fact">
+                  <span className="pt-fact-label">Horario</span>
+                  <span className="pt-fact-value tp-horario">{faltaHorario ? "Sin definir" : taller.horario}</span>
+                </div>
+                {taller?.ciudad && (
+                  <div className="pt-fact">
+                    <span className="pt-fact-label">Ciudad</span>
+                    <span className="pt-fact-value">{taller.ciudad}</span>
+                  </div>
+                )}
+              </div>
+              {(faltaTarifa || faltaHorario) && (
+                <p className="ss-aviso">
+                  Falta {faltaTarifa && "la tarifa por hora"}{faltaTarifa && faltaHorario && " y "}{faltaHorario && "el horario"}.
+                  La tarifa se usa al cotizar por horas y el horario lo ve el cliente al elegir taller.
+                </p>
               )}
-              {guardado && <p className="tp-edicion__ok" role="status">Cambios guardados.</p>}
+
+              {editando ? (
+                <EditarDatos
+                  taller={taller} token={token}
+                  onCancelar={() => setEditando(false)}
+                  onGuardado={(t) => { onActualizado?.(t); setEditando(false); setGuardado(true); }}
+                />
+              ) : (
+                <>
+                  {aprobado && (
+                    <button type="button" className="sv-btn-outline" onClick={() => { setGuardado(false); setEditando(true); }}>
+                      Editar tarifa y horario
+                    </button>
+                  )}
+                  {guardado && <p className="tp-edicion__ok" role="status">Cambios guardados.</p>}
+                </>
+              )}
+              <p className="pt-hint">
+                Para cambiar el nombre, la ciudad, la dirección o el precio de mano de obra, escríbele al administrador de DriveMaster.
+              </p>
             </>
+          ) : (
+            <p className="sv-empty">Tu taller todavía no aparece en el reporte.</p>
           )}
-          <p className="pt-hint">
-            Para cambiar el nombre, la ciudad, la dirección o el precio de mano de obra, escríbele al administrador de DriveMaster.
-          </p>
-        </>
-      ) : (
-        <p className="sv-empty">Tu taller todavía no aparece en el reporte.</p>
-      )}
-      <MecanicosTaller token={token} />
+        </section>
+        <MecanicosTaller token={token} />
+      </div>
     </div>
   );
 }

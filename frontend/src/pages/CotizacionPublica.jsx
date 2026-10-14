@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { consultarCotizacionPublica, responderCotizacionPublica } from "../services/cotizacionService";
+import Logo from "../components/Logo";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
 import RespuestaCotizacion from "../components/servicio/RespuestaCotizacion";
 import "../css/solicitud-servicio.css";
@@ -57,7 +58,7 @@ export default function CotizacionPublica({ onIrServicios, onIrInicio }) {
   return (
     <div className="ct-publica">
       <div className="ct-publica__caja">
-        <div className="ct-publica__marca">Drive<span>Master</span></div>
+        <div className="ct-publica__marca"><Logo onClick={onIrInicio} /></div>
 
         {estado === "CARGANDO" && <p className="sv-empty">Cargando tu cotización...</p>}
 

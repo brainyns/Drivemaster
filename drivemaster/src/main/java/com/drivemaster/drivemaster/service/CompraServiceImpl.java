@@ -9,10 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.drivemaster.drivemaster.config.BrandConfig;
 import com.drivemaster.drivemaster.model.Compra;
 import com.drivemaster.drivemaster.model.DetalleCompra;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Proveedor;
+import com.drivemaster.drivemaster.util.PlantillaCorreo;
 import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.repository.CompraRepository;
 import com.drivemaster.drivemaster.util.PdfCompraBuilder;
@@ -89,18 +91,20 @@ public class CompraServiceImpl implements CompraService {
                 String poId = "PO-" + compraGuardada.getId()
                         .substring(Math.max(0, compraGuardada.getId().length() - 5))
                         .toUpperCase();
-                String html = "<div style='font-family:sans-serif;max-width:600px;margin:0 auto'>"
-                        + "<h2 style='color:#E8450A'>" + org.springframework.web.util.HtmlUtils.htmlEscape(tienda.getNombre() != null ? tienda.getNombre() : "DriveMaster") + "</h2>"
-                        + "<p>Estimado proveedor <strong>" + prov.getNombre() + "</strong>,</p>"
-                        + "<p>Adjunto encontrará la orden de compra <strong>" + poId + "</strong> registrada en nuestro sistema.</p>"
-                        + "<table style='width:100%;border-collapse:collapse;margin:1rem 0'>"
-                        + "<tr><td style='padding:.4rem;color:#888'>Total</td>"
-                        + "<td style='padding:.4rem;font-weight:700'>$" + String.format("%,.0f", compraGuardada.getTotal()) + "</td></tr>"
-                        + "<tr><td style='padding:.4rem;color:#888'>Fecha</td>"
-                        + "<td style='padding:.4rem'>" + compraGuardada.getFecha().toString().replace("T", " ").substring(0, 16) + "</td></tr>"
-                        + "</table>"
-                        + "<p style='color:#888;font-size:12px'>DriveMaster · Repuestos Automotrices · 2026</p>"
-                        + "</div>";
+                String filaEstilo = "padding:6px 0;font-size:14px;border-bottom:1px solid #e5e7eb;";
+                String html = PlantillaCorreo.documento("Orden de compra",
+                        tienda.getNombre() != null ? tienda.getNombre() : "DriveMaster",
+                        PlantillaCorreo.parrafo("Estimado proveedor <strong>" + PlantillaCorreo.e(prov.getNombre()) + "</strong>,")
+                        + PlantillaCorreo.parrafo("Adjunto encontrará la orden de compra <strong>" + poId + "</strong> registrada en nuestro sistema.")
+                        + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:8px 0 16px;\">"
+                        + "<tr><td style=\"" + filaEstilo + "color:#6b7280;\">Fecha</td>"
+                        + "<td align=\"right\" style=\"" + filaEstilo + "color:#374151;\">"
+                        + compraGuardada.getFecha().toString().replace("T", " ").substring(0, 16) + "</td></tr>"
+                        + "<tr><td style=\"padding:10px 0 0;border-top:2px solid " + BrandConfig.colorPrimario() + ";font-size:15px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">Total</td>"
+                        + "<td align=\"right\" style=\"padding:10px 0 0;border-top:2px solid " + BrandConfig.colorPrimario() + ";font-size:15px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">$"
+                        + String.format("%,.0f", compraGuardada.getTotal()) + "</td></tr>"
+                        + "</table>",
+                        "DriveMaster · Repuestos Automotrices · 2026");
                 emailService.enviarEmailConAdjunto(
                         prov.getCorreo(),
                         "Orden de Compra " + poId + " - DriveMaster",

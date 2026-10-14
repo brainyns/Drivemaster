@@ -202,6 +202,8 @@
 .tp-cotiz__fila:focus-visible { outline: 2px solid var(--tp-info); outline-offset: -2px; }
 .tp-cotiz__vehiculo { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
 .tp-cotiz__total { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Motivo con el que el cliente rechazó la cotización */
+.tp-cotiz__motivo { margin-top: .2rem; font-size: var(--fs-etiqueta); line-height: 1.45; color: var(--ui-muted); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .tp-cotiz__detalle { padding: .2rem 1rem 1rem; border-top: 1px solid var(--tp-linea); animation: tp-despliegue .25s var(--tp-ease) both; }
 .tp-horario { font-size: 1rem; white-space: pre-line; }
 
@@ -268,14 +270,14 @@
 }
 
 /* ── Editar tarifa y horario ──────────────────────────────────────────────── */
-.tp-edicion { display: grid; gap: 1rem; margin-top: 1.25rem; padding: 1.1rem 1.25rem; background: var(--tp-superficie); border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); max-width: 34rem; }
-.tp-edicion h3 { font-size: 1rem; margin: 0; }
+.tp-edicion { display: grid; gap: 1rem; padding: 1.1rem 1.25rem; background: var(--ui-surface-2); border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); }
+.tp-edicion h3 { font-size: var(--fs-texto); margin: 0; }
 .tp-edicion__campo { display: grid; gap: .35rem; }
-.tp-edicion__campo label { font-weight: 600; font-size: .9rem; }
+.tp-edicion__campo label { font-weight: 600; font-size: var(--fs-etiqueta); }
 .tp-edicion__campo input, .tp-edicion__campo textarea { font: inherit; padding: .55rem .7rem; color: var(--tp-texto); background: transparent; border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); }
 .tp-edicion__campo textarea { min-height: 4.5rem; resize: vertical; }
 .tp-edicion__campo input:focus-visible, .tp-edicion__campo textarea:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 1px; }
-.tp-edicion__ayuda { font-size: .8rem; color: var(--tp-texto-2); margin: 0; }
+.tp-edicion__ayuda { font-size: var(--fs-etiqueta); color: var(--tp-texto-2); margin: 0; }
 .tp-edicion__botones { display: flex; flex-wrap: wrap; gap: .6rem; }
 .tp-edicion__ok { color: var(--tp-texto); font-size: .85rem; margin: .5rem 0 0; }
 
@@ -290,3 +292,29 @@
 
 /* En móvil la etiqueta de estado ocupa su ancho, no toda la fila */
 .tp-cotiz__fila .ss-estado { justify-self: start; }
+
+/* ── Mi taller: datos y mecánicos lado a lado, a todo el ancho ────────────── */
+.tp-mitaller__rejilla {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(340px, 2fr);
+  gap: var(--ui-sp-4);
+  align-items: start;
+}
+.tp-mitaller .pt-perfil { display: flex; flex-direction: column; gap: var(--ui-sp-4); }
+.tp-mitaller .pt-perfil-nombre { margin: -.75rem 0 0; line-height: 1.25; }
+.tp-mitaller .pt-eyebrow { margin: 0; }
+.tp-mitaller .pt-perfil > .sv-btn-outline { align-self: flex-start; }
+.tp-mitaller .pt-perfil > .ss-aviso,
+.tp-mitaller .tp-edicion__ok { margin: 0; }
+@media (max-width: 1080px) { .tp-mitaller__rejilla { grid-template-columns: minmax(0, 1fr); } }
+
+/* Tarjetas y bloques del taller con el mismo borde, radio y sombra que el resto del panel */
+.tp-root .ss-bloque,
+.tp-root .ss-tarjeta {
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-1);
+}
+.tp-root .ss-bloque__titulo { font-size: var(--fs-subtitulo); }
+@media (max-width: 640px) { .pt-root { padding: 1rem 1rem 2rem; } }
+
+.tp-mitaller .pt-perfil-facts { margin: 0; }

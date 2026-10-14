@@ -24,6 +24,7 @@ import java.util.Set;
  * rechaza o no responde a tiempo.
  *
  * Candidatos: talleres aprobados y activos que no hayan descartado ya la solicitud.
+ *  0. Si el cliente eligió un taller en el mapa y sigue disponible, solo ese.
  *  1. Talleres de la misma ciudad, ordenados por distancia (si hay coordenadas) y rating.
  *  2. Si no hay ninguno en la ciudad: el más cercano dentro de RADIO_MAX_KM
  *     (requiere coordenadas del cliente y del taller).
@@ -82,7 +83,8 @@ public class AsignacionTallerService {
                 .set("aceptadaPorTaller", false);
 
         String nota = "Asignada a " + taller.getNombre()
-                + (elegido.distanciaKm() != null ? String.format(Locale.ROOT, " (%.1f km)", elegido.distanciaKm()) : "");
+                + (elegido.distanciaKm() != null ? String.format(Locale.ROOT, " (%.1f km)", elegido.distanciaKm()) : "")
+                + (taller.getId().equals(orden.getTallerElegidoId()) ? ", elegido por el cliente" : "");
         OrdenServicio asignada = transiciones.transicionar(orden, EstadoOrden.ASIGNADA_A_TALLER, Actor.SISTEMA,
                 nota, null, cambios);
         avisos.tallerAsignado(asignada, taller);
@@ -114,13 +116,25 @@ public class AsignacionTallerService {
         Set<String> descartados = orden.getTalleresDescartados() != null
                 ? Set.copyOf(orden.getTalleresDescartados()) : Set.of();
         boolean clienteConCoordenadas = orden.getLatitud() != null && orden.getLongitud() != null;
-        String ciudad = normalizarCiudad(orden.getCiudad());
 
         List<Candidato> disponibles = tallerRepository.findByActivoTrue().stream()
                 .filter(t -> EstadoAprobacion.estaAprobado(t.getEstadoAprobacion()))
                 .filter(t -> !descartados.contains(t.getId()))
                 .map(t -> new Candidato(t, distancia(orden, t, clienteConCoordenadas)))
                 .toList();
+
+        // El taller que el cliente eligió en el mapa va primero mientras no la haya descartado;
+        // después sigue la asignación automática.
+        String elegidoId = orden.getTallerElegidoId();
+        if (elegidoId != null) {
+            List<Candidato> elegido = disponibles.stream().filter(c -> elegidoId.equals(c.taller().getId())).toList();
+            if (!elegido.isEmpty()) return elegido;
+        }
+        return automaticos(orden, disponibles);
+    }
+
+    private List<Candidato> automaticos(OrdenServicio orden, List<Candidato> disponibles) {
+        String ciudad = normalizarCiudad(orden.getCiudad());
 
         Comparator<Candidato> porCercania = Comparator
                 .comparing(Candidato::distanciaKm, Comparator.nullsLast(Comparator.naturalOrder()))

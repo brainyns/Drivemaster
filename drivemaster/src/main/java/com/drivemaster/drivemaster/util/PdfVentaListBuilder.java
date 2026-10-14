@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.util;
 
+import com.drivemaster.drivemaster.config.BrandConfig;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.text.NumberFormat;
@@ -15,11 +16,13 @@ import com.lowagie.text.pdf.PdfWriter;
 
 public class PdfVentaListBuilder {
 
-    private static final Color ORANGE    = new Color(232, 69, 10);
+    // Blanco y naranja: el color principal de la marca en franjas, títulos, totales y montos (ver BrandConfig)
+    private static final Color ORANGE    = BrandConfig.colorPrimarioAwt();
+    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioAwt();
     private static final Color BG_PAGE   = new Color(243, 244, 246);
     private static final Color BG_WHITE  = new Color(255, 255, 255);
     private static final Color BG_STRIPE = new Color(249, 250, 251);
-    private static final Color TEXT_DARK = new Color(17, 24, 39);
+    private static final Color TEXT_STRONG = new Color(55,  65,  81);   // datos destacados: gris, sin negro
     private static final Color TEXT_BODY = new Color(55, 65, 81);
     private static final Color TEXT_MUTED= new Color(107, 114, 128);
     private static final Color BORDER    = new Color(229, 231, 235);
@@ -52,16 +55,14 @@ public class PdfVentaListBuilder {
             drawRect(cb, 0, pageH - 3, PW, 3, ORANGE);
             drawLine(cb, 0, pageH - headerH, PW, BORDER);
 
-            cb.beginText(); cb.setFontAndSize(bfBold, 22); cb.setColorFill(TEXT_DARK);
-            cb.setTextMatrix(PAD, pageH - headerH + 38); cb.showText("Drive");
-            cb.setColorFill(ORANGE); cb.showText("Master"); cb.endText();
+            PdfMarca.dibujarNombre(cb, bfBold, 22, PAD, pageH - headerH + 38);
 
             cb.beginText(); cb.setFontAndSize(bf, 7); cb.setColorFill(TEXT_MUTED);
             cb.setTextMatrix(PAD, pageH - headerH + 22); cb.showText("VENTAS"); cb.endText();
 
             String title = "REPORTE DE VENTAS";
             float tw = bfBold.getWidthPoint(title, 10);
-            cb.beginText(); cb.setFontAndSize(bfBold, 10); cb.setColorFill(ORANGE);
+            cb.beginText(); cb.setFontAndSize(bfBold, 10); cb.setColorFill(ORANGE_TEXT);
             cb.setTextMatrix(PW - PAD - tw, pageH - headerH + 42); cb.showText(title); cb.endText();
 
             String count = ventas.size() + " registros";
@@ -95,12 +96,12 @@ public class PdfVentaListBuilder {
                 String fecha = v.getFecha() != null ? v.getFecha().toLocalDate().toString() : "\u2014";
                 String metodo = v.getPagos() != null && !v.getPagos().isEmpty() ? v.getPagos().get(0).getMetodo() : "\u2014";
                 x = PAD;
-                drawText(cb, bfBold, 7, idCorto, x + 2, rowY - 14, TEXT_DARK); x += colW[0];
+                drawText(cb, bfBold, 7, idCorto, x + 2, rowY - 14, TEXT_STRONG); x += colW[0];
                 drawText(cb, bf, 7, safe(v.getClienteId()), x + 2, rowY - 14, TEXT_BODY); x += colW[1];
                 drawText(cb, bf, 7, fecha, x + 2, rowY - 14, TEXT_BODY); x += colW[2];
                 drawText(cb, bf, 7, metodo, x + 2, rowY - 14, TEXT_BODY); x += colW[3];
                 drawText(cb, bf, 7, safe(v.getEstado()), x + 2, rowY - 14, TEXT_BODY); x += colW[4];
-                drawTextRight(cb, bfBold, 8, fmt.format(v.getTotal() != null ? v.getTotal() : 0), x + colW[5] - 2, rowY - 14, ORANGE);
+                drawTextRight(cb, bfBold, 8, fmt.format(v.getTotal() != null ? v.getTotal() : 0), x + colW[5] - 2, rowY - 14, ORANGE_TEXT);
                 rowY -= rowH;
                 odd = !odd;
             }
@@ -109,7 +110,7 @@ public class PdfVentaListBuilder {
             double totalGeneral = ventas.stream().mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0).sum();
             String totalStr = "TOTAL GENERAL: " + fmt.format(totalGeneral);
             float totW = bfBold.getWidthPoint(totalStr, 9);
-            cb.beginText(); cb.setFontAndSize(bfBold, 9); cb.setColorFill(ORANGE);
+            cb.beginText(); cb.setFontAndSize(bfBold, 9); cb.setColorFill(ORANGE_TEXT);
             cb.setTextMatrix(PW - PAD - totW, rowY - 16); cb.showText(totalStr); cb.endText();
 
             float footY = rowY - gap - 12;

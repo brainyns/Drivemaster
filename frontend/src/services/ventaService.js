@@ -12,6 +12,13 @@ export async function listarVentas(token) {
   return res.json();
 }
 
+/** Ventas del cliente con sesión: compras del flujo anterior (el mismo endpoint del Historial de compras). */
+export async function misVentas(token) {
+  const res = await apiFetch(`${BASE}/ventas/mis-ventas`, { headers: headers(token) });
+  if (!res.ok) throw new Error("No se pudieron cargar tus compras anteriores");
+  return res.json();
+}
+
 export async function obtenerVenta(id, token) {
   const res = await apiFetch(`${BASE}/ventas/${id}`, { headers: headers(token) });
   if (!res.ok) throw new Error("Venta no encontrada");

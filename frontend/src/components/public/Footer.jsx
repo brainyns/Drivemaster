@@ -1,9 +1,9 @@
-import Logo from "./Logo";
+import Logo from "../Logo";
 import Icon from "./Icon";
 import "../../css/footer.css";
 
 export default function Footer({
-  onIrCatalogo, onIrInicio, onIrSolicitud, onIrVehiculo, onIrLogin, onIrAdmin,
+  onIrCatalogo, onIrInicio, onIrVehiculo, onIrLogin, onIrAdmin,
   onSolicitarDiagnostico, onRegistroNegocio,
 }) {
   const anio = new Date().getFullYear();
@@ -12,7 +12,7 @@ export default function Footer({
     <footer className="dm-footer">
       <div className="dm-container dm-footer__top">
         <div>
-          <Logo light as="div" />
+          <Logo light onClick={() => onIrInicio?.()} />
           <p>
             Diagnóstico, repuestos e instalación.
             <br />
@@ -41,7 +41,9 @@ export default function Footer({
             <br />
             adelante<span>↗</span>
           </strong>
-          <button className="dm-footer__wsp" onClick={onIrSolicitud}>
+          {/* Lleva a Solicitar diagnóstico, donde empieza una cotización. Antes pasaba el evento
+              del clic como nombre de página y terminaba en "Acceso no autorizado". */}
+          <button className="dm-footer__wsp" onClick={() => onSolicitarDiagnostico?.()}>
             <Icon name="message" size={16} /> Soporte y cotizaciones
           </button>
         </div>
