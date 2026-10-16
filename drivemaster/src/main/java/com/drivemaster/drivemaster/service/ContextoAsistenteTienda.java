@@ -177,7 +177,7 @@ public class ContextoAsistenteTienda {
     private Map<String, Long> unidadesVendidasDesde(String tiendaId, LocalDateTime desde) {
         Map<String, Long> r = new HashMap<>();
         for (Document d : agregadoPorProducto(Criteria.where("fechaCreacion").gte(desde), tiendaId, false)) {
-            r.put(String.valueOf(d.get("_id")), d.get("unidades") instanceof Number n ? n.longValue() : 0);
+            r.put(String.valueOf(d.get("_id")), d.get("unidades") instanceof Number n ? n.longValue() : 0L);
         }
         return r;
     }
