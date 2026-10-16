@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.Informes;
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.ProductoBajo;
+import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.ProductoVendido;
 import com.drivemaster.drivemaster.model.Compra;
 import com.drivemaster.drivemaster.model.DetalleCompra;
 import com.drivemaster.drivemaster.model.PedidoTienda;
@@ -31,7 +32,7 @@ import java.util.stream.Collectors;
 @Service
 public class ContextoAsistenteTienda {
 
-    static final ZoneId ZONA = ZoneId.of("America/Bogota");
+    public static final ZoneId ZONA = ZoneId.of("America/Bogota");
     static final int DIAS_RITMO = 90;
     static final int DIAS_COBERTURA = 30;
     static final int MAX_LISTA = 15;
@@ -170,6 +171,53 @@ public class ContextoAsistenteTienda {
         r.put("margenMasBajo", todos.stream().sorted(Comparator.comparingDouble(Margen::margenPct)).limit(MAX_LISTA).toList());
         r.put("productosSinPrecioDeCompra", productos.size() - todos.size());
         return r;
+    }
+
+    // ─── Semana (resumen por correo) ─────────────────────────────────────────
+
+    public record VentasSemana(LocalDate desde, LocalDate hasta, double ventas, long pedidos,
+                               double ventasAnterior, long pedidosAnterior, List<ProductoVendido> masVendidos) {}
+
+    /** Ventas de la semana que empieza el lunes dado (hora de Colombia), contra la semana anterior. */
+    public VentasSemana semana(String tiendaId, LocalDate lunes) {
+        Document actual = totalEntre(tiendaId, lunes, lunes.plusDays(7));
+        Document anterior = totalEntre(tiendaId, lunes.minusDays(7), lunes);
+        List<ProductoVendido> top = mongo.aggregate(Aggregation.newAggregation(
+                Aggregation.match(vendidosEntre(tiendaId, lunes, lunes.plusDays(7))),
+                Aggregation.unwind("items"),
+                Aggregation.match(Criteria.where("items.productoId").ne(null)),
+                Aggregation.group("items.productoId").first("items.productoNombre").as("nombre")
+                        .sum("items.cantidad").as("unidades").sum("items.subtotal").as("ventas"),
+                Aggregation.sort(Sort.by(Sort.Direction.DESC, "unidades")),
+                Aggregation.limit(3)), "pedidos_tienda", Document.class).getMappedResults().stream()
+                .map(d -> new ProductoVendido(String.valueOf(d.get("_id")), d.getString("nombre"),
+                        d.get("unidades") instanceof Number n ? n.longValue() : 0L,
+                        d.get("ventas") instanceof Number n ? n.doubleValue() : 0.0))
+                .toList();
+        return new VentasSemana(lunes, lunes.plusDays(6), decimal(actual, "ventas"), (long) decimal(actual, "pedidos"),
+                decimal(anterior, "ventas"), (long) decimal(anterior, "pedidos"), top);
+    }
+
+    private Document totalEntre(String tiendaId, LocalDate desde, LocalDate hasta) {
+        return mongo.aggregate(Aggregation.newAggregation(
+                Aggregation.match(vendidosEntre(tiendaId, desde, hasta)),
+                Aggregation.group().count().as("pedidos").sum("total").as("ventas")), "pedidos_tienda", Document.class)
+                .getUniqueMappedResult();
+    }
+
+    private static Criteria vendidosEntre(String tiendaId, LocalDate desde, LocalDate hasta) {
+        return Criteria.where("tiendaId").is(tiendaId)
+                .and("estado").nin(PedidoTienda.NO_DESPACHADO, PedidoTienda.NO_ENTREGADO)
+                .and("fechaCreacion").gte(local(desde)).lt(local(hasta));
+    }
+
+    /** Medianoche de Colombia en la hora del servidor, que es como se guardan las fechas LocalDateTime. */
+    private static LocalDateTime local(LocalDate dia) {
+        return dia.atStartOfDay(ZONA).withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
+    }
+
+    private static double decimal(Document d, String campo) {
+        return d != null && d.get(campo) instanceof Number n ? n.doubleValue() : 0;
     }
 
     // ─── Ventas por producto ─────────────────────────────────────────────────

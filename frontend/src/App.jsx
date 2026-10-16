@@ -47,6 +47,7 @@ import MisServicios          from "./pages/MisServicios";
 import CotizacionPublica     from "./pages/CotizacionPublica";
 import ReportesPlataforma     from "./pages/ReportesPlataforma";
 import InformesTienda        from "./pages/InformesTienda";
+import AsistenteTienda       from "./pages/AsistenteTienda";
 import NegociosPlataforma     from "./pages/NegociosPlataforma";
 import AprobacionesAdmin     from "./pages/AprobacionesAdmin";
 import PedidosEnvios         from "./pages/PedidosEnvios";
@@ -130,6 +131,7 @@ const TITULOS = {
   "aprobaciones":    "Aprobaciones",
   "negocios":        "Tiendas y talleres",
   "informes-tienda": "Informes",
+  "asistente-tienda": "Asistente",
   "pedidos-tienda":  "Pedidos",
   "liquidaciones":   "Liquidaciones y reembolsos",
   "problemas-envios": "Problemas de envío",
@@ -361,7 +363,7 @@ function App() {
     // "taller-panel" era la única página del taller: se conserva como alias de Inicio
     TALLER: ["taller-panel", ...Object.keys(SECCION_TALLER)],
     // Compras, proveedores e inventario son de cada tienda (el backend filtra por dueño)
-    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda", "informes-tienda",
+    TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda", "informes-tienda", "asistente-tienda",
       "compras", "compraNueva", "compraDetalle", "proveedores", "proveedorNuevo", "proveedorEditar"],
   };
   const esTienda = user?.rol === "TIENDA";
@@ -695,6 +697,7 @@ function App() {
     if (pagina === "aprobaciones")     return <Aprobaciones         token={token} />;
     if (pagina === "negocios")         return <NegociosPlataforma   token={token} />;
     if (pagina === "informes-tienda")  return <InformesTienda       token={token} onIr={(p) => irA(p)} />;
+    if (pagina === "asistente-tienda") return <AsistenteTienda      token={token} />;
     if (pagina === "liquidaciones")    return <Liquidaciones        />;
     if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
     if (pagina === "problemas-envios") return <ProblemasEnvios      />;
