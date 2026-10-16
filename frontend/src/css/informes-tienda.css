@@ -158,6 +158,22 @@
 .it-panel--4 { grid-column: span 4; }
 .it-panel--7 { grid-column: span 7; }
 .it-panel--5 { grid-column: span 5; }
+.it-panel--12 { grid-column: span 12; }
+
+/* ── Asistente ────────────────────────────────────────────────────────────── */
+.it-asistente { display: flex; flex-direction: column; gap: .75rem; }
+.it-asistente__resumen { display: flex; flex-direction: column; gap: .4rem; padding: .85rem 1rem; border-radius: var(--ui-r-lg); background: var(--it-superficie-2); }
+.it-asistente__resumen h3 { margin: 0; font-size: .82rem; font-weight: 600; letter-spacing: .02em; color: var(--it-texto-2); }
+.it-asistente__resumen p { margin: 0; white-space: pre-wrap; line-height: 1.5; font-size: .92rem; }
+.it-asistente__sugerencias { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.it-asistente__mensajes { display: flex; flex-direction: column; gap: .6rem; max-height: 22rem; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.it-asistente__msg { max-width: 75ch; padding: .6rem .85rem; border-radius: var(--ui-r-lg); white-space: pre-wrap; line-height: 1.45; font-size: .92rem; }
+.it-asistente__msg.is-usuario { align-self: flex-end; background: var(--it-superficie-2); }
+.it-asistente__msg.is-asistente { align-self: flex-start; border: 1px solid var(--it-linea); }
+.it-asistente__msg.is-error { border-color: var(--it-malo); }
+.it-asistente__msg.is-pensando { color: var(--it-texto-2); }
+.it-asistente__form { display: flex; gap: .5rem; }
+.it-asistente__form .adm-input { flex: 1; min-width: 0; font-size: 1rem; }
 
 .it-panel__cabecera h2 { margin: 0; font-size: 1.15rem; letter-spacing: .005em; text-wrap: balance; }
 .it-panel__cabecera p { margin: .2rem 0 0; font-size: .78rem; color: var(--it-texto-2); max-width: 60ch; text-wrap: pretty; }

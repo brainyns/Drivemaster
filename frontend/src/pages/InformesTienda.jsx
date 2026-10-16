@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { informesTienda } from "../services/informesTiendaService";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { informesTienda, preguntarAsistente, resumenAsistente } from "../services/informesTiendaService";
 import "../css/informes-tienda.css";
 import "../css/admin-base.css";
 
@@ -279,6 +279,87 @@ function Resumen({ datos }) {
   );
 }
 
+const SUGERENCIAS = [
+  "¿Cómo van mis ventas frente al mes pasado?",
+  "¿Qué debo reponer y cuánto?",
+  "¿A qué proveedor le compro más barato?",
+  "¿Qué pedidos despacho primero?",
+  "¿Cuánto me van a pagar y cuándo?",
+  "¿Qué productos no se venden hace 3 meses?",
+  "¿Qué producto me deja más ganancia?",
+];
+
+/** Preguntas en lenguaje natural sobre los informes. Solo lee y sugiere: nada cambia sin que la tienda lo haga en su sección. */
+function Asistente({ token }) {
+  const [mensajes, setMensajes] = useState([]);
+  const [texto, setTexto] = useState("");
+  const [pensando, setPensando] = useState(false);
+  const fin = useRef(null);
+  const [resumen, setResumen] = useState({ texto: null, error: null });
+
+  useEffect(() => {
+    let vivo = true;
+    resumenAsistente(token)
+      .then((texto) => { if (vivo) setResumen({ texto, error: null }); })
+      .catch((e) => { if (vivo) setResumen({ texto: null, error: e.message }); });
+    return () => { vivo = false; };
+  }, [token]);
+
+  useEffect(() => { fin.current?.scrollIntoView({ block: "nearest" }); }, [mensajes, pensando]);
+
+  async function enviar(pregunta) {
+    const limpia = pregunta.trim();
+    if (!limpia || pensando) return;
+    const historial = mensajes.filter((m) => !m.error).slice(-6).map(({ rol, texto: t }) => ({ rol, texto: t }));
+    setMensajes((m) => [...m, { rol: "usuario", texto: limpia }]);
+    setTexto("");
+    setPensando(true);
+    try {
+      const respuesta = await preguntarAsistente(token, limpia, historial);
+      setMensajes((m) => [...m, { rol: "asistente", texto: respuesta }]);
+    } catch (e) {
+      setMensajes((m) => [...m, { rol: "asistente", texto: e.message, error: true }]);
+    } finally {
+      setPensando(false);
+    }
+  }
+
+  return (
+    <div className="it-asistente">
+      <section className="it-asistente__resumen" aria-live="polite" aria-busy={!resumen.texto && !resumen.error}>
+        <h3>Resumen de hoy</h3>
+        {resumen.texto ? <p>{resumen.texto}</p>
+          : resumen.error ? <p className="it-nota">{resumen.error}</p>
+          : <><Esqueleto alto={12} /><Esqueleto alto={12} ancho="80%" /><Esqueleto alto={12} ancho="60%" /></>}
+      </section>
+      {mensajes.length === 0 ? (
+        <ul className="it-asistente__sugerencias">
+          {SUGERENCIAS.map((s) => <li key={s}><button type="button" className="adm-btn" onClick={() => enviar(s)}>{s}</button></li>)}
+        </ul>
+      ) : (
+        <ol className="it-asistente__mensajes" aria-live="polite">
+          {mensajes.map((m, i) => (
+            <li key={i} className={`it-asistente__msg is-${m.rol}${m.error ? " is-error" : ""}`}>
+              <span className="it-solo-lectores">{m.rol === "usuario" ? "Tú:" : "Asistente:"}</span>{m.texto}
+            </li>
+          ))}
+          {pensando && <li className="it-asistente__msg is-asistente is-pensando" role="status">Revisando tus informes…</li>}
+          <li ref={fin} aria-hidden="true" />
+        </ol>
+      )}
+      <form className="it-asistente__form" onSubmit={(e) => { e.preventDefault(); enviar(texto); }}>
+        <label className="it-solo-lectores" htmlFor="it-asistente-campo">Pregunta sobre tu tienda</label>
+        <input id="it-asistente-campo" className="adm-input" value={texto} maxLength={500} autoComplete="off"
+          placeholder="Ej.: ¿qué producto se vende más y cuánto stock me queda?" onChange={(e) => setTexto(e.target.value)} />
+        <button type="submit" className="adm-btn adm-btn--primario" disabled={pensando || !texto.trim()} aria-busy={pensando}>
+          {pensando ? "Pensando…" : "Preguntar"}
+        </button>
+      </form>
+      <p className="it-nota">Lo escribe una IA con los datos de estos informes: revisa las cifras antes de comprar. No hace cambios en tu tienda.</p>
+    </div>
+  );
+}
+
 function CargandoInformes() {
   return (
     <div className="it-cargando" role="status" aria-label="Cargando informes">
@@ -359,6 +440,9 @@ export default function InformesTienda({ token, onIr }) {
           <Resumen datos={datos} />
 
           <div className="it-rejilla">
+            <Panel ancho="12" titulo="Pregúntale a tu asistente" nota="Respuestas y sugerencias con IA a partir de tus informes de los últimos 6 meses.">
+              <Asistente token={token} />
+            </Panel>
             <Panel ancho="8" titulo="Ventas por mes" nota={`Pedidos despachados o entregados, con IVA y envío. Últimos ${datos.mesesConsultados} meses.`}>
               {datos.ventas.pedidos === 0
                 ? <Vacio titulo="Sin ventas en este período" texto="Prueba con un período más largo o revisa que tus productos estén publicados." />
