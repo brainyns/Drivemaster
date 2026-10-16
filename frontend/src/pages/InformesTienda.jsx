@@ -66,7 +66,8 @@ function VentasPorMes({ ventas }) {
   const [activo, setActivo] = useState(null);
   const meses = ventas.meses;
   const max = topeLimpio(Math.max(1, ...meses.map((m) => m.ventas)));
-  const indice = activo ?? meses.length - 1;
+  // Al pasar de 12 a 3 meses el mes elegido puede quedar fuera de la lista nueva.
+  const indice = activo != null && activo < meses.length ? activo : meses.length - 1;
   const seleccionado = meses[indice];
 
   return (
