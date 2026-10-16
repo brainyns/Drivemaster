@@ -7,6 +7,14 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      # n8n corre en el mismo compose: se alcanza por el nombre del servicio.
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/chat-drivemaster}
+      N8N_ASISTENTE_TIENDA_URL: ${N8N_ASISTENTE_TIENDA_URL:-http://n8n:5678/webhook/asistente-tienda}
+      N8N_CHAT_SECRET: ${N8N_CHAT_SECRET:-cambiar-este-secreto}
+      N8N_TOOLS_SECRET: ${N8N_TOOLS_SECRET:-cambiar-este-secreto-tools}
+    depends_on:
+      - n8n
 
   frontend:
     build: ./frontend
@@ -14,3 +22,42 @@ services:
       - "80:80"
     depends_on:
       - backend
+
+  # Memoria del chat IA: PostgreSQL local, solo para n8n (host "chat-memory", sin puertos publicados).
+  chat-memory:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=chat_memory
+      - POSTGRES_USER=n8n
+      - POSTGRES_PASSWORD=${CHAT_MEMORY_DB_PASSWORD:-cambiar-este-secreto-memoria}
+    volumes:
+      - chat_memory_data:/var/lib/postgresql/data
+
+  # Chat IA: agente orquestado en n8n (modelo vía OpenRouter, memoria y herramientas).
+  # El editor se abre en http://localhost:5678; el puerto se publica solo en localhost:
+  # n8n jamás debe quedar expuesto a Internet.
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:${N8N_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - GENERIC_TIMEZONE=America/Bogota
+      - N8N_DIAGNOSTICS_ENABLED=false
+      # El workflow lee secretos y URLs con $env; desde n8n 2.0 eso está bloqueado por defecto.
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      # Secretos compartidos con el backend y URL de las herramientas del agente.
+      - N8N_CHAT_SECRET=${N8N_CHAT_SECRET:-cambiar-este-secreto}
+      - N8N_TOOLS_SECRET=${N8N_TOOLS_SECRET:-cambiar-este-secreto-tools}
+      - N8N_TOOLS_BASE_URL=http://backend:8080
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-anthropic/claude-haiku-5.5}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - chat-memory
+
+volumes:
+  n8n_data:
+  chat_memory_data:

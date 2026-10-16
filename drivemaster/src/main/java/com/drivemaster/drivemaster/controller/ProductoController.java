@@ -1,16 +1,23 @@
 package com.drivemaster.drivemaster.controller;
 
+import com.drivemaster.drivemaster.dto.ProductoDTO;
+import com.drivemaster.drivemaster.dto.ResultadoBusquedaDTO;
 import com.drivemaster.drivemaster.model.MovimientoInventario;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.security.AlcanceTienda;
 import com.drivemaster.drivemaster.service.MovimientoInventarioService;
 import com.drivemaster.drivemaster.service.ProductoService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 
@@ -21,13 +28,33 @@ public class ProductoController {
     private final ProductoService productoService;
     private final MovimientoInventarioService movimientoInventarioService;
     private final AlcanceTienda alcanceTienda;
+    private final String chatToolsSecret;
 
     public ProductoController(ProductoService productoService,
                               MovimientoInventarioService movimientoInventarioService,
-                              AlcanceTienda alcanceTienda) {
+                              AlcanceTienda alcanceTienda,
+                              @Value("${n8n.tools.secret:}") String chatToolsSecret) {
         this.productoService = productoService;
         this.movimientoInventarioService = movimientoInventarioService;
         this.alcanceTienda = alcanceTienda;
+        this.chatToolsSecret = chatToolsSecret;
+    }
+
+    // BUSCAR para las herramientas del agente IA (n8n). Es público en Spring Security pero
+    // exige el token de servicio X-Service-Token: solo n8n debe consumirlo. Devuelve DTOs
+    // (sin datos internos como precioCompra), solo productos activos de tiendas visibles.
+    // Siempre incluye un mensaje: con una lista vacía a secas, el modelo a veces no contestaba nada.
+    @GetMapping("/buscar")
+    public ResultadoBusquedaDTO buscarParaChat(@RequestParam(name = "terminos", required = false) List<String> terminos,
+                                               @RequestHeader(name = "X-Service-Token", required = false) String token) {
+        validarTokenServicios(token);
+        List<ProductoDTO> productos = productoService.buscarParaAgente(terminos);
+        String buscado = terminos == null ? "" : String.join(", ", terminos);
+        String mensaje = productos.isEmpty()
+                ? "No hay productos en el catálogo que coincidan con: " + buscado + ". Díselo al cliente con "
+                  + "amabilidad y pídele otro nombre del repuesto o la marca, modelo y año de su vehículo."
+                : "Productos encontrados, ordenados del más al menos relevante.";
+        return new ResultadoBusquedaDTO(productos.size(), productos, mensaje);
     }
 
     // LISTAR: productos activos de las tiendas visibles (público, sin datos internos)
@@ -83,6 +110,17 @@ public class ProductoController {
         alcanceTienda.productoGestionable(auth, id);
         String url = productoService.subirImagen(id, archivo);
         return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    // Sin N8N_TOOLS_SECRET la herramienta queda cerrada: nginx publica todo /api/, así que
+    // validar "solo si hay secreto" dejaba el endpoint abierto a Internet.
+    private void validarTokenServicios(String token) {
+        boolean valido = chatToolsSecret != null && !chatToolsSecret.isBlank() && token != null
+                && MessageDigest.isEqual(chatToolsSecret.getBytes(StandardCharsets.UTF_8),
+                                         token.getBytes(StandardCharsets.UTF_8));
+        if (!valido) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Token de servicio inválido.");
+        }
     }
 
 }

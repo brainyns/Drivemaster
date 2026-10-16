@@ -1,0 +1,93 @@
+/* Asistente de la tienda: chat a la izquierda y "Detrás de escena" a la derecha. */
+.as-root {
+  --as-superficie: var(--ui-surface);
+  --as-superficie-2: var(--ui-surface-2);
+  --as-linea: var(--ui-line);
+  --as-texto: var(--ui-text);
+  --as-texto-2: var(--ui-muted);
+  --as-acento: var(--primary);
+  --as-ok: var(--ui-ok);
+  --as-malo: var(--ui-error);
+  color: var(--as-texto);
+}
+
+.as-rejilla { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 1rem; align-items: start; }
+
+.as-panel {
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--as-linea);
+  border-radius: var(--ui-r-lg);
+  background: var(--as-superficie);
+  min-width: 0;
+}
+.as-panel__cabecera h2, .as-chat__cabecera h2 { margin: 0; font-size: 1.1rem; }
+.as-panel__cabecera p { margin: .2rem 0 0; font-size: .8rem; color: var(--as-texto-2); }
+
+.as-chat__cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.as-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .25rem .65rem;
+  border-radius: 999px;
+  font-size: .76rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--as-ok) 14%, transparent);
+  color: var(--as-texto);
+}
+.as-chip::before { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: var(--as-ok); }
+
+.as-tenue { margin: 0; font-size: .82rem; color: var(--as-texto-2); }
+.as-inicio { display: flex; flex-direction: column; gap: .6rem; }
+.as-sugerencias { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+
+.as-mensajes { display: flex; flex-direction: column; gap: .6rem; max-height: 55vh; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.as-msg { max-width: 75ch; padding: .65rem .9rem; border-radius: var(--ui-r-lg); white-space: pre-wrap; line-height: 1.5; font-size: .92rem; }
+.as-msg.is-usuario { align-self: flex-end; background: var(--as-superficie-2); }
+.as-msg.is-asistente { align-self: flex-start; border: 1px solid var(--as-linea); }
+.as-msg.is-error { border-color: var(--as-malo); }
+.as-msg.is-pensando { color: var(--as-texto-2); }
+
+.as-form { display: flex; flex-direction: column; gap: .35rem; }
+.as-form label { font-size: .8rem; font-weight: 600; color: var(--as-texto-2); }
+.as-form__fila { display: flex; gap: .5rem; }
+.as-form__fila .adm-input { flex: 1; min-width: 0; font-size: 1rem; }
+.as-aviso { font-size: .76rem; }
+
+.as-pestanas { display: flex; gap: .25rem; padding: .2rem; border: 1px solid var(--as-linea); border-radius: 999px; }
+.as-pestana {
+  flex: 1;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--as-texto-2);
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.as-pestana.is-activa { background: var(--as-superficie-2); color: var(--as-texto); box-shadow: inset 0 0 0 1px var(--as-linea); }
+.as-pestana:focus-visible { outline: 2px solid var(--as-acento); outline-offset: 2px; }
+
+.as-detras__cuerpo { font-size: .86rem; line-height: 1.5; }
+.as-lista { display: flex; flex-direction: column; gap: .45rem; margin: 0; padding-left: 1.1rem; }
+.as-lista--ok { list-style: none; padding-left: 0; }
+.as-lista--ok li { position: relative; padding-left: 1.4rem; }
+.as-lista--ok li::before { content: "✓"; position: absolute; left: 0; color: var(--as-ok); font-weight: 700; }
+.as-herramienta { margin: 0 0 .5rem; font-weight: 600; }
+.as-datos { display: grid; gap: .5rem; margin: 0; }
+.as-datos div { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--as-linea); padding-bottom: .4rem; }
+.as-datos dt { color: var(--as-texto-2); }
+.as-datos dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+
+.as-solo-lectores {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+@media (max-width: 900px) {
+  .as-rejilla { grid-template-columns: 1fr; }
+}

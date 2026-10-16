@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { informesTienda } from "../services/informesTiendaService";
+import { informesTienda, resumenAsistente } from "../services/informesTiendaService";
 import "../css/informes-tienda.css";
 import "../css/admin-base.css";
 
@@ -66,7 +66,8 @@ function VentasPorMes({ ventas }) {
   const [activo, setActivo] = useState(null);
   const meses = ventas.meses;
   const max = topeLimpio(Math.max(1, ...meses.map((m) => m.ventas)));
-  const indice = activo ?? meses.length - 1;
+  // Al pasar de 12 a 3 meses el mes elegido puede quedar fuera de la lista nueva.
+  const indice = activo != null && activo < meses.length ? activo : meses.length - 1;
   const seleccionado = meses[indice];
 
   return (
@@ -279,6 +280,28 @@ function Resumen({ datos }) {
   );
 }
 
+/** Resumen del día escrito por la IA con los datos de la tienda. Solo lee: nada cambia en la tienda. */
+function ResumenIA({ token }) {
+  const [resumen, setResumen] = useState({ texto: null, error: null });
+
+  useEffect(() => {
+    let vivo = true;
+    resumenAsistente(token)
+      .then((texto) => { if (vivo) setResumen({ texto, error: null }); })
+      .catch((e) => { if (vivo) setResumen({ texto: null, error: e.message }); });
+    return () => { vivo = false; };
+  }, [token]);
+
+  return (
+    <div className="it-asistente__resumen" aria-live="polite" aria-busy={!resumen.texto && !resumen.error}>
+      {resumen.texto ? <p>{resumen.texto}</p>
+        : resumen.error ? <p className="it-nota">{resumen.error}</p>
+        : <><Esqueleto alto={12} /><Esqueleto alto={12} ancho="80%" /><Esqueleto alto={12} ancho="60%" /></>}
+      <p className="it-nota">Lo escribe una IA con los datos de estos informes: revisa las cifras antes de decidir.</p>
+    </div>
+  );
+}
+
 function CargandoInformes() {
   return (
     <div className="it-cargando" role="status" aria-label="Cargando informes">
@@ -359,6 +382,9 @@ export default function InformesTienda({ token, onIr }) {
           <Resumen datos={datos} />
 
           <div className="it-rejilla">
+            <Panel ancho="12" titulo="Resumen de hoy" nota="Lo más importante de tu tienda hoy, escrito por la IA con tus informes de los últimos 6 meses.">
+              <ResumenIA token={token} />
+            </Panel>
             <Panel ancho="8" titulo="Ventas por mes" nota={`Pedidos despachados o entregados, con IVA y envío. Últimos ${datos.mesesConsultados} meses.`}>
               {datos.ventas.pedidos === 0
                 ? <Vacio titulo="Sin ventas en este período" texto="Prueba con un período más largo o revisa que tus productos estén publicados." />

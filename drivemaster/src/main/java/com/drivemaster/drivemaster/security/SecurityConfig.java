@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.security;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +41,23 @@ public class SecurityConfig {
     @Value("${security.session.max-inactive-minutes:30}")
     private int maxInactiveMinutes;
 
+    // URL pública del frontend (FRONTEND_URL). Se suma a los orígenes permitidos para que un
+    // despliegue propio (p. ej. el HomeLab) funcione sin tocar esta lista.
+    @Value("${frontend.url:}")
+    private String frontendUrl;
+
+    /**
+     * Orígenes fijos más la URL pública del despliegue (FRONTEND_URL), si existe. La usan CORS y el
+     * WebSocket de notificaciones: si solo la usara CORS, la campanita no conectaría en el HomeLab.
+     */
+    public static List<String> origenesPermitidos(String frontendUrl) {
+        List<String> origenes = new ArrayList<>(ORIGENES_PERMITIDOS);
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            origenes.add(frontendUrl.strip().replaceAll("/+$", ""));
+        }
+        return origenes;
+    }
+
     public SecurityConfig(CustomUserDetailsService userDetailsService,
                           JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.userDetailsService = userDetailsService;
@@ -75,6 +93,9 @@ public class SecurityConfig {
                         // El ADMIN queda con la operación diaria (aprobaciones, servicios y problemas de envío).
                         .requestMatchers("/api/usuarios", "/api/usuarios/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/productos", "/api/productos/").permitAll()
+                        // Herramientas del agente IA (n8n): público aquí, pero exige el token de
+                        // servicio X-Service-Token en ProductoController.
+                        .requestMatchers(HttpMethod.GET, "/api/productos/buscar").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/productos/mi-tienda").hasRole("TIENDA")
                         // TIENDA solo gestiona sus productos: lo verifica AlcanceTienda en el controlador
                         .requestMatchers("/api/productos/**").hasAnyRole("SUPERADMIN", "VENDEDOR", "TIENDA")
@@ -245,7 +266,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(ORIGENES_PERMITIDOS);
+        configuration.setAllowedOriginPatterns(origenesPermitidos(frontendUrl));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "Cookie"));
         configuration.setAllowCredentials(true);

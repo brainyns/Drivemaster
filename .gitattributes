@@ -1,0 +1,2 @@
+# Los scripts de shell se ejecutan en Linux: siempre con saltos de línea LF, aunque se hagan commit desde Windows.
+*.sh text eol=lf
