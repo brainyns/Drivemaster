@@ -113,9 +113,11 @@ export async function crearPagoVenta(token, ventaId, redirectUrl) {
   return res.json();
 }
 
-export async function verificarPago(token, transactionId) {
-  const res = await apiFetch(`${PAGOS_BASE}/verificar/${transactionId}`, {
+// signal (opcional): permite cortar la consulta, p. ej. con conLimiteDeTiempo de pages/estadoPago.js
+export async function verificarPago(token, transactionId, { signal } = {}) {
+  const res = await apiFetch(`${PAGOS_BASE}/verificar/${encodeURIComponent(transactionId)}`, {
     headers: headers(token),
+    signal,
   });
   if (!res.ok) throw new Error("Error al verificar pago");
   return res.json();
