@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, listarProductosMiTienda, subirImagenProducto } from "../services/productoService";
+import { sugerirProducto } from "../services/informesTiendaService";
 import "../css/producto-form.css";
 
 const CATEGORIAS = [
@@ -146,6 +147,115 @@ function validarFormulario(form, productosExistentes, esEdicion, id) {
   if (erroresCompat.some(Boolean)) errores.compatibilidad = erroresCompat;
 
   return errores;
+}
+
+/** Nombre canónico de la lista del formulario (sin importar mayúsculas), o null si no está. */
+const enLista = (lista, valor) => lista.find((x) => x.toLowerCase() === String(valor || "").trim().toLowerCase()) || null;
+
+/** La compatibilidad sugerida solo se puede agregar si marca y modelo existen en las listas del formulario. */
+function compatDeLista(c) {
+  const marca = enLista(MARCAS_VEHICULO_LISTA, c.marca);
+  const modelo = marca ? enLista(MARCAS_VEHICULO[marca], c.modelo) : null;
+  return marca && modelo ? { marca, modelo, anoDesde: String(c.anoDesde), anoHasta: String(c.anoHasta), motor: c.motor || "" } : null;
+}
+
+const mismaCompat = (a, b) => a.marca === b.marca && a.modelo === b.modelo
+  && String(a.anoDesde) === String(b.anoDesde) && String(a.anoHasta) === String(b.anoHasta);
+
+/**
+ * Sugerencias de la IA para el producto (solo TIENDA): categoría de la lista y compatibilidades "por confirmar".
+ * Nada se guarda ni se cambia en el formulario hasta que la tienda pulsa "Aplicar" o "Agregar".
+ */
+function SugerenciasIA({ form, setForm, token }) {
+  const [estado, setEstado] = useState({ cargando: false, error: null, datos: null });
+  const puedePedir = form.nombre.trim().length >= 3;
+
+  const pedir = async () => {
+    setEstado({ cargando: true, error: null, datos: null });
+    try {
+      const datos = await sugerirProducto(token, form, CATEGORIAS);
+      setEstado({ cargando: false, error: null, datos });
+    } catch (e) {
+      setEstado({ cargando: false, error: e.message, datos: null });
+    }
+  };
+
+  const agregar = (compats) => setForm((prev) => {
+    // Las filas vacías del formulario se reemplazan; las que ya están no se repiten.
+    const llenas = prev.modelosCompatibles.filter((c) => !campoVacio(c.marca));
+    const nuevas = compats.filter((c) => !llenas.some((x) => mismaCompat(x, c)));
+    return { ...prev, compatibilidadUniversal: false, modelosCompatibles: [...llenas, ...nuevas] };
+  });
+
+  const { cargando, error, datos } = estado;
+  const sugeridas = (datos?.compatibilidades || []).map((c) => ({ original: c, deLista: compatDeLista(c) }));
+  const agregables = sugeridas.map((s) => s.deLista).filter(Boolean)
+    .filter((c) => !form.modelosCompatibles.some((x) => mismaCompat(x, c)));
+
+  return (
+    <div className="prf-section prf-ia" aria-live="polite">
+      <div className="prf-section-header prf-ia__cabecera">
+        <h3>Sugerencias de la IA</h3>
+        <button type="button" className="prf-ia__boton" onClick={pedir} disabled={!puedePedir || cargando} aria-busy={cargando}>
+          {cargando ? "Pensando…" : datos ? "Sugerir de nuevo" : "Sugerir"}
+        </button>
+      </div>
+
+      {!datos && !error && (
+        <p className="prf-ia__nota">
+          {puedePedir ? "Pulsa \"Sugerir\" para ver qué propone. Nada se guarda sin que lo apliques."
+            : "Escribe el nombre del producto (y si quieres la marca y la referencia) y pulsa \"Sugerir\"."}
+        </p>
+      )}
+      {error && <p className="prf-error" role="alert">{error}</p>}
+
+      {datos && (
+        <>
+          <div className="prf-ia__tarjeta">
+            <p className="prf-ia__titulo"><span className="prf-ia__chip">Por confirmar</span> Categoría</p>
+            {datos.categoria ? (
+              <div className="prf-ia__fila">
+                <span><strong>{datos.categoria}</strong> (de tu lista de categorías)</span>
+                {form.categoria === datos.categoria
+                  ? <span className="prf-ia__hecho">Aplicada</span>
+                  : <button type="button" className="prf-ia__accion" onClick={() => setForm((p) => ({ ...p, categoria: datos.categoria }))}>Aplicar</button>}
+              </div>
+            ) : <p className="prf-ia__nota">No encontró una categoría de tu lista que encaje. Elígela a mano.</p>}
+          </div>
+
+          <div className="prf-ia__tarjeta">
+            <p className="prf-ia__titulo"><span className="prf-ia__chip">Por confirmar</span> Compatibilidades</p>
+            <p className="prf-ia__aviso">
+              Revisa cada compatibilidad con el catálogo del fabricante. Una compatibilidad equivocada hace que el cliente compre la pieza que no es.
+            </p>
+            {sugeridas.length === 0 ? (
+              <p className="prf-ia__nota">No propuso compatibilidades seguras para este producto.</p>
+            ) : (
+              <ul className="prf-ia__lista">
+                {sugeridas.map(({ original: c, deLista }, i) => {
+                  const yaEsta = deLista && form.modelosCompatibles.some((x) => mismaCompat(x, deLista));
+                  return (
+                    <li key={i} className="prf-ia__fila">
+                      <span>{c.marca} {c.modelo} · {c.anoDesde}–{c.anoHasta}{c.motor ? ` · motor ${c.motor}` : ""}
+                        {!deLista && <em className="prf-ia__fuera"> No está en la lista del formulario: agrégalo a mano si es correcto.</em>}
+                      </span>
+                      {deLista && (yaEsta
+                        ? <span className="prf-ia__hecho">Agregada</span>
+                        : <button type="button" className="prf-ia__accion" onClick={() => agregar([deLista])}>Agregar</button>)}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {agregables.length > 1 && (
+              <button type="button" className="prf-ia__accion" onClick={() => agregar(agregables)}>Agregar las {agregables.length}</button>
+            )}
+          </div>
+          {datos.nota && <p className="prf-ia__nota">{datos.nota}</p>}
+        </>
+      )}
+    </div>
+  );
 }
 
 function FieldError({ msg }) {
@@ -418,6 +528,8 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
               </div>
             </div>
           </div>
+
+          {esTienda && <SugerenciasIA form={form} setForm={setForm} token={token} />}
 
           {/* Tipo de producto */}
           <div className="prf-field prf-field--full">

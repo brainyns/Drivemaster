@@ -158,6 +158,11 @@
 .it-panel--4 { grid-column: span 4; }
 .it-panel--7 { grid-column: span 7; }
 .it-panel--5 { grid-column: span 5; }
+.it-panel--12 { grid-column: span 12; }
+
+/* ── Asistente ────────────────────────────────────────────────────────────── */
+.it-asistente__resumen { display: flex; flex-direction: column; gap: .4rem; padding: .85rem 1rem; border-radius: var(--ui-r-lg); background: var(--it-superficie-2); }
+.it-asistente__resumen p { margin: 0; white-space: pre-wrap; line-height: 1.5; font-size: .92rem; }
 
 .it-panel__cabecera h2 { margin: 0; font-size: 1.15rem; letter-spacing: .005em; text-wrap: balance; }
 .it-panel__cabecera p { margin: .2rem 0 0; font-size: .78rem; color: var(--it-texto-2); max-width: 60ch; text-wrap: pretty; }

@@ -18,6 +18,7 @@ const Icons = {
   repProductos:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>,
   taller:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>,
   repServicios:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>,
+  asistente:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>,
   aprobaciones:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>,
 };
 
@@ -30,6 +31,7 @@ const menu = [
   { key: "proveedores",    label: "Proveedores", icon: "proveedores" },
   { key: "movimientos",    label: "Inventario",  icon: "movimientos" },
   { key: "informes-tienda", label: "Informes",    icon: "reportes"    },
+  { key: "asistente-tienda", label: "Asistente",  icon: "asistente"   },
   {
     key: "reportes", label: "Reportes", icon: "reportes",
     subItems: [
@@ -64,7 +66,7 @@ const MENU_TALLER = [
 ];
 
 // Tienda del marketplace: sus pedidos, su catálogo y los movimientos de su inventario.
-const MENU_TIENDA = ["pedidos-tienda", "productos", "compras", "proveedores", "movimientos", "informes-tienda", "mi-tienda"];
+const MENU_TIENDA = ["pedidos-tienda", "productos", "compras", "proveedores", "movimientos", "informes-tienda", "asistente-tienda", "mi-tienda"];
 
 // Operación diaria del ADMIN: aprobar tiendas y talleres, servicios y problemas de envío.
 const MENU_ADMIN = ["dashboard-main", "pedidos-envios", "aprobaciones", "admin-talleres", "finanzas"];
@@ -96,7 +98,7 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar, resumenTaller
     // ADMIN: solo la operación diaria; el resto del panel es del SUPERADMIN
     if (userRole === "ADMIN") return MENU_ADMIN.includes(item.key);
     // Compras, proveedores e inventario son de cada tienda: el personal interno ya no los ve
-    if (["compras", "proveedores", "movimientos", "informes-tienda"].includes(item.key)) return false;
+    if (["compras", "proveedores", "movimientos", "informes-tienda", "asistente-tienda"].includes(item.key)) return false;
     if (item.key === "admin-talleres" || item.key === "aprobaciones" || item.key === "negocios" || item.key === "finanzas" || item.key === "pedidos-envios") return userRole === "SUPERADMIN";
     if (item.key === "usuarios") return userRole === "SUPERADMIN";
     // VENDEDOR es un rol retirado: solo conserva su inicio (con un aviso)

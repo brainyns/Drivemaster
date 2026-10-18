@@ -3,6 +3,8 @@ package com.drivemaster.drivemaster.controller;
 import com.drivemaster.drivemaster.dto.ChatRequest;
 import com.drivemaster.drivemaster.dto.ChatResponse;
 import com.drivemaster.drivemaster.dto.ProductoDTO;
+import com.drivemaster.drivemaster.model.Producto;
+import com.drivemaster.drivemaster.repository.ProductoRepository;
 import com.drivemaster.drivemaster.security.ChatRateLimiter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +20,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -39,7 +43,11 @@ public class ChatProxyController {
             "Lo siento, el asistente no está disponible en este momento. Por favor, intenta de nuevo en unos segundos.";
     private static final String MSG_VACIO = "Escribe un mensaje para poder ayudarte.";
 
+    /** Las tarjetas del chat muestran como mucho 3 productos, igual que el texto del agente. */
+    private static final int MAX_PRODUCTOS = 3;
+
     private final ChatRateLimiter chatRateLimiter;
+    private final ProductoRepository productoRepository;
     private final ObjectMapper objectMapper;
     private final String n8nWebhookUrl;
     private final String n8nChatSecret;
@@ -47,11 +55,13 @@ public class ChatProxyController {
     private final int maxCaracteres;
 
     public ChatProxyController(ChatRateLimiter chatRateLimiter,
+                               ProductoRepository productoRepository,
                                ObjectMapper objectMapper,
                                @Value("${n8n.webhook.url:http://localhost:5678/webhook/chat-drivemaster}") String n8nWebhookUrl,
                                @Value("${n8n.chat.secret:}") String n8nChatSecret,
                                @Value("${n8n.chat.max-caracteres:500}") int maxCaracteres) {
         this.chatRateLimiter = chatRateLimiter;
+        this.productoRepository = productoRepository;
         this.objectMapper = objectMapper;
         this.n8nWebhookUrl = n8nWebhookUrl;
         this.n8nChatSecret = n8nChatSecret;
@@ -123,14 +133,46 @@ public class ChatProxyController {
         try {
             Object p = cuerpo == null ? null : cuerpo.get("productos");
             if (p instanceof List<?> lista) {
-                return lista.stream()
+                List<ProductoDTO> productos = lista.stream()
                         .filter(Map.class::isInstance)
                         .map(item -> objectMapper.convertValue(item, ProductoDTO.class))
+                        .filter(dto -> dto.getId() != null)
+                        .limit(MAX_PRODUCTOS)
                         .collect(Collectors.toList());
+                return completarDesdeCatalogo(productos);
             }
         } catch (Exception e) {
             log.warn("No se pudieron leer los productos devueltos por n8n: {}", e.getMessage());
         }
         return Collections.emptyList();
+    }
+
+    /**
+     * La herramienta del agente no envía la foto (gasta tokens) y lo que llega de n8n no es de fiar
+     * para precio y stock: se leen de la base. Se descartan los productos inactivos o que ya no existen.
+     */
+    private List<ProductoDTO> completarDesdeCatalogo(List<ProductoDTO> productos) {
+        if (productos.isEmpty()) return productos;
+        Map<String, Producto> porId = productoRepository.findAllById(
+                        productos.stream().map(ProductoDTO::getId).toList())
+                .stream()
+                .collect(Collectors.toMap(Producto::getId, Function.identity(), (a, b) -> a));
+        return productos.stream()
+                .map(dto -> {
+                    Producto real = porId.get(dto.getId());
+                    if (real == null || Boolean.FALSE.equals(real.getActivo())) return null;
+                    dto.setNombre(real.getNombre());
+                    dto.setMarca(real.getMarca());
+                    dto.setPrecioVenta(real.getPrecioVenta());
+                    dto.setStockActual(real.getStockActual());
+                    dto.setTipo(real.getTipo());
+                    dto.setDiasEntregaEncargo(real.getDiasEntregaEncargo());
+                    dto.setImagenUrl(real.getImagenUrl());
+                    // La tarjeta no usa la compatibilidad: no se envía al navegador.
+                    dto.setModelosCompatibles(null);
+                    return dto;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 }

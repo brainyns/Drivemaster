@@ -37,7 +37,8 @@ public class SecurityConfig {
 
     /**
      * ORIGENES_PERMITIDOS más la URL pública del frontend (FRONTEND_URL), si está definida.
-     * La usan el CORS y el WebSocket, para que cada despliegue (Render, HomeLab) solo cambie su configuración.
+     * La usan el CORS y el WebSocket de notificaciones (si solo la usara CORS, la campanita no conectaría
+     * en el HomeLab), para que cada despliegue (Render, HomeLab) solo cambie su configuración.
      */
     public static List<String> origenesPermitidos(String frontendUrl) {
         List<String> origenes = new ArrayList<>(ORIGENES_PERMITIDOS);

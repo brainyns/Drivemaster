@@ -18,8 +18,10 @@ los [problemas que se encontraron y cómo se resolvieron](#8-problemas-encontrad
 - n8n valida el secreto y ejecuta un **AI Agent** con Claude Haiku 5.5 vía OpenRouter (`anthropic/claude-haiku-5.5`), memoria en Postgres
   (contenedor local `chat-memory`) por `sessionId` y una herramienta, `Buscar productos`, que consulta
   `GET /api/productos/buscar` con el header `X-Service-Token`.
-- n8n responde `{ respuesta, productos: [] }`. El backend lo pasa tal cual al widget, que muestra
-  `respuesta`.
+- n8n responde `{ respuesta, productos }`. `productos` sale de los pasos intermedios del agente
+  (`returnIntermediateSteps`): los de la última búsqueda que el texto nombra (por nombre o precio), máximo 3.
+  El backend relee esos productos en la base (foto, precio y stock reales; descarta los inactivos) y el widget
+  muestra el texto y una tarjeta con la foto, miniaturas y el botón "Ver producto".
 - En Portainer, n8n es un servicio más del stack: comparte la red interna con el backend (`http://n8n:5678`
   y `http://backend:8080`), publica el 5678 **solo en `127.0.0.1` de la VM** (editor por túnel SSH) y
   guarda workflows, credenciales, ejecuciones y su clave de cifrado en el volumen `drivemaster_n8n_data`.
@@ -95,7 +97,7 @@ sequenceDiagram
     end
     G-->>A: texto final ($json.output)
     A->>M: guarda pregunta y respuesta
-    A-->>W: Formar respuesta → {respuesta, productos: []}
+    A-->>W: Formar respuesta → {respuesta, productos}
     W-->>B: 200 JSON
     B-->>U: {respuesta, productos}
     Note over B: Cualquier error con n8n → 200 con<br/>"Lo siento, el asistente no está disponible..."
@@ -210,7 +212,7 @@ Webhook chat ─► Validar secreto ─(sí)─► Preparar mensaje ─► Agent
 | **Modelo OpenRouter** | `lmChatOpenRouter` (v1) | `model = {{ $env.OPENROUTER_MODEL \|\| 'anthropic/claude-haiku-5.5' }}`, temperatura 0.3, máx. 400 tokens de salida |
 | **Memoria (Postgres)** | `memoryPostgresChat` (v1.3) | Clave `{{ $('Preparar mensaje').item.json.sessionId }}`, tabla `drivemaster_chat_memory`, 4 interacciones |
 | **Buscar productos** | `httpRequestTool` (v4.2) | `GET $env.N8N_TOOLS_BASE_URL/api/productos/buscar?terminos=$fromAI(...)` + `X-Service-Token: $env.N8N_TOOLS_SECRET` |
-| **Formar respuesta** | `code` (v2, por ítem) | Devuelve **un objeto** `{ json: { respuesta, productos: [] } }` |
+| **Formar respuesta** | `code` (v2, por ítem) | Devuelve **un objeto** `{ json: { respuesta, productos } }` (productos nombrados en la respuesta, máx. 3) |
 | **Responder** | `respondToWebhook` (v1.1) | Devuelve el JSON anterior |
 
 El *System Message* está en cuatro bloques cortos, cortos a propósito: el prompt se paga en cada llamada al modelo:

@@ -299,3 +299,26 @@ input[type=number] { -moz-appearance: textfield; }
 @media (max-width: 480px) {
   .prf-page { padding: 0; }
 }
+/* ── Sugerencias de la IA (solo tiendas) ─────────────────────────────────── */
+.prf-ia { display: flex; flex-direction: column; gap: .75rem; }
+.prf-ia__cabecera { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.prf-ia__boton, .prf-ia__accion {
+  min-height: 36px; padding: 0 .9rem; border-radius: var(--ui-r-lg); font-family: var(--ui-font);
+  font-size: .82rem; font-weight: 700; cursor: pointer;
+}
+.prf-ia__boton { border: 0; background: var(--primary); color: #fff; }
+.prf-ia__accion { border: 1px solid var(--ui-line); background: var(--ui-surface); color: var(--ui-text); align-self: flex-start; }
+.prf-ia__boton:disabled { opacity: .55; cursor: not-allowed; }
+.prf-ia__boton:focus-visible, .prf-ia__accion:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.prf-ia__tarjeta { display: flex; flex-direction: column; gap: .5rem; padding: .85rem 1rem; border: 1px dashed var(--ui-line); border-radius: var(--ui-r-lg); }
+.prf-ia__titulo { margin: 0; font-weight: 700; font-size: .88rem; color: var(--ui-text); display: flex; align-items: center; gap: .5rem; }
+.prf-ia__chip {
+  padding: .15rem .55rem; border-radius: 999px; font-size: .7rem; font-weight: 700; letter-spacing: .03em;
+  background: color-mix(in srgb, var(--ui-aviso) 18%, transparent); color: var(--ui-text);
+}
+.prf-ia__fila { display: flex; align-items: center; justify-content: space-between; gap: .75rem; font-size: .86rem; color: var(--ui-text); }
+.prf-ia__lista { display: flex; flex-direction: column; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+.prf-ia__nota, .prf-ia__aviso { margin: 0; font-size: .8rem; color: var(--ui-muted); line-height: 1.5; }
+.prf-ia__aviso { color: var(--ui-text); }
+.prf-ia__fuera { display: block; font-size: .76rem; color: var(--ui-muted); }
+.prf-ia__hecho { font-size: .78rem; font-weight: 700; color: var(--ui-ok); white-space: nowrap; }

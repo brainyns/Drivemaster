@@ -44,6 +44,7 @@ services:
       # Los dos secretos son obligatorios: sin ellos el despliegue falla en vez de usar un valor
       # conocido (los que había por defecto están publicados en el repositorio).
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/chat-drivemaster}
+      N8N_ASISTENTE_TIENDA_URL: ${N8N_ASISTENTE_TIENDA_URL:-http://n8n:5678/webhook/asistente-tienda}
       N8N_CHAT_SECRET: ${N8N_CHAT_SECRET:?Define N8N_CHAT_SECRET en las variables del stack}
       N8N_TOOLS_SECRET: ${N8N_TOOLS_SECRET:?Define N8N_TOOLS_SECRET en las variables del stack}
       N8N_CHAT_RATE_MAX: ${N8N_CHAT_RATE_MAX:-6}
@@ -115,7 +116,7 @@ services:
 
   # Chat IA: agente en n8n (modelo vía OpenRouter, memoria y herramientas). El puerto 5678 solo
   # se publica en localhost de la VM: ábrelo por túnel SSH (ssh -L 5678:localhost:5678), nunca
-  # con Funnel ni Cloudflare. Importa n8n/workflows/chat-drivemaster.json desde el editor.
+  # con Funnel ni Cloudflare. Importa n8n/workflows/chat-drivemaster.json y asistente-tienda.json desde el editor.
   n8n:
     # Fija N8N_VERSION en Portainer con la versión que ya corre (Settings → About en n8n):
     # con "latest", un "Pull and redeploy" puede subir de versión mayor sin aviso.

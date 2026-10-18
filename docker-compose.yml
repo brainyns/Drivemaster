@@ -10,6 +10,7 @@ services:
     environment:
       # n8n corre en el mismo compose: se alcanza por el nombre del servicio.
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://n8n:5678/webhook/chat-drivemaster}
+      N8N_ASISTENTE_TIENDA_URL: ${N8N_ASISTENTE_TIENDA_URL:-http://n8n:5678/webhook/asistente-tienda}
       N8N_CHAT_SECRET: ${N8N_CHAT_SECRET:-cambiar-este-secreto}
       N8N_TOOLS_SECRET: ${N8N_TOOLS_SECRET:-cambiar-este-secreto-tools}
     depends_on:
