@@ -13,3 +13,7 @@ frontend/preview-b1.html
 frontend/preview-movil.html
 frontend/src/__preview_b1.jsx
 capturas/
+
+# Volcados de JVM caída (p. ej. el language server de Java de VS Code)
+hs_err_pid*.log
+replay_pid*.log
