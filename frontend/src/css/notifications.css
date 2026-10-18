@@ -276,8 +276,11 @@
 .nt-campanita .nt-campanita__boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 
 .nt-campanita--publica .tb-notif-badge {
-  top: -3px;
-  right: -6px;
+  top: 2px;
+  right: 0;
+  font-size: 12px;
+  min-width: 20px;
+  height: 20px;
   border-color: var(--dm-bg, var(--ui-surface));
 }
 

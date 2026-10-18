@@ -26,7 +26,6 @@ export default function Hero({ onVerCatalogo, onSolicitarDiagnostico }) {
         />
       )}
       <div className="dm-hero__shade" />
-      <div className="dm-hero__grid" />
 
       <div className="dm-container dm-hero__content">
         <div className="dm-hero__copy">
@@ -58,15 +57,6 @@ export default function Hero({ onVerCatalogo, onSolicitarDiagnostico }) {
             <Icon name="shield" size={17} />
             <span>Tarifa fija de diagnóstico, descontable si aceptas la reparación.</span>
           </div>
-        </div>
-
-        <div className="dm-hero__technical">
-          <span className="dm-hero__cross">+</span>
-          <div>
-            DIAGNÓSTICO → TALLER → TIENDA
-            <small>ACOMPAÑAMIENTO TOTAL / 01</small>
-          </div>
-          <span className="dm-hero__rule" />
         </div>
 
         <div className="dm-hero__coordinate">

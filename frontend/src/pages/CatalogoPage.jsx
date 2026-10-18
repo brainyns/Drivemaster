@@ -208,7 +208,7 @@ export default function CatalogoPage({
 
       <main className="dm-view-shell">
         {vista === "inicio" ? (
-          <div key="inicio" className="dm-view">
+          <div key="inicio" className="dm-view dm-landing">
             <Hero onVerCatalogo={irAlCatalogo} onSolicitarDiagnostico={onSolicitarDiagnostico} />
 
             <Pasos
@@ -216,7 +216,7 @@ export default function CatalogoPage({
               onIrServicios={irAMisServicios}
             />
 
-            <Ecosistema onSolicitarDiagnostico={onSolicitarDiagnostico} />
+            <Ecosistema />
 
             <CotizacionEjemplo onSolicitarDiagnostico={onSolicitarDiagnostico} />
 

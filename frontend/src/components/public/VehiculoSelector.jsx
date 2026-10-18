@@ -75,7 +75,7 @@ export default function VehiculoSelector({
               Identifica tu vehículo para saber qué repuestos realmente
               le encajan.
             </p>
-            <button className="dm-btn dm-btn--primary" onClick={onIrLogin}>
+            <button className="dm-btn dm-btn--secondary" onClick={onIrLogin}>
               Iniciar sesión <Icon name="arrow" size={18} />
             </button>
           </div>
@@ -94,7 +94,7 @@ export default function VehiculoSelector({
                 ? `No pudimos cargar tus vehículos: ${error}`
                 : "Aún no tienes vehículos registrados. Agrega el tuyo y te mostramos solo lo compatible."}
             </p>
-            <button className="dm-btn dm-btn--primary" onClick={onIrVehiculos}>
+            <button className="dm-btn dm-btn--secondary" onClick={onIrVehiculos}>
               {error ? "Reintentar" : "Agregar mi vehículo"} <Icon name="arrow" size={18} />
             </button>
           </div>

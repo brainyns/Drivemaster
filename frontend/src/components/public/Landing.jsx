@@ -93,13 +93,13 @@ export function Pasos({ onSolicitarDiagnostico, onIrServicios }) {
           </h2>
         </div>
         <p>
-          Del primer síntoma a la entrega del vehículo.
+          Del primer síntoma a la entrega del vehículo.{" "}
           <br />
           Un taller, las tiendas y tú, conectados.
         </p>
       </div>
 
-      <div className="dm-steps dm-steps--flujo" data-reveal>
+      <div className="dm-steps" data-reveal>
         {pasos.map((p, i) => (
           <button className="dm-step" key={p.title} onClick={p.onClick}>
             <div className="dm-step__top">
@@ -123,7 +123,12 @@ export function Pasos({ onSolicitarDiagnostico, onIrServicios }) {
 }
 
 /* ── Ecosistema: cliente, taller y tiendas ─────────────────────────────── */
-export function Ecosistema({ onSolicitarDiagnostico }) {
+function verCotizacionEjemplo() {
+  const suave = !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  document.getElementById("dm-cotizacion")?.scrollIntoView({ behavior: suave ? "smooth" : "auto", block: "start" });
+}
+
+export function Ecosistema() {
   return (
     <section className="dm-container dm-eco">
       <div className="dm-eco__art">
@@ -156,8 +161,8 @@ export function Ecosistema({ onSolicitarDiagnostico }) {
           registradas. Apruebas la cotización, pagas una sola vez y nosotros
           coordinamos el pedido de los repuestos hasta el taller.
         </p>
-        <button className="dm-btn dm-btn--dark" onClick={onSolicitarDiagnostico}>
-          Solicitar diagnóstico <Icon name="arrow" size={18} />
+        <button className="dm-link" onClick={verCotizacionEjemplo}>
+          Ver una cotización de ejemplo <Icon name="arrow" size={18} />
         </button>
       </div>
     </section>
@@ -198,7 +203,7 @@ export function CotizacionEjemplo({ onSolicitarDiagnostico }) {
           Cada repuesto con su tienda, la mano de obra por horas, el IVA y el diagnóstico que ya
           pagaste descontado. Apruebas, pides cambios o la rechazas antes de pagar.
         </p>
-        <button className="dm-btn dm-btn--dark" onClick={onSolicitarDiagnostico}>
+        <button className="dm-link" onClick={onSolicitarDiagnostico}>
           Solicitar diagnóstico <Icon name="arrow" size={18} />
         </button>
       </div>
@@ -246,7 +251,7 @@ export function TiendasAliadas({ tiendas = [], onVerCatalogo }) {
         ))}
       </ul>
 
-      <button className="dm-btn dm-btn--dark" onClick={onVerCatalogo}>
+      <button className="dm-btn dm-btn--secondary" onClick={onVerCatalogo}>
         {resto > 0 ? `Ver el catálogo (${resto} tiendas más)` : "Ver el catálogo"} <Icon name="arrow" size={18} />
       </button>
     </section>
@@ -290,7 +295,7 @@ export function ParaNegocios({ onRegistroNegocio }) {
           </h2>
         </div>
         <p>
-          Únete al marketplace. Revisamos cada registro
+          Únete al marketplace. Revisamos cada registro{" "}
           <br />
           antes de activarlo.
         </p>
@@ -332,7 +337,7 @@ export function ParaNegocios({ onRegistroNegocio }) {
       </ol>
 
       <div className="dm-negocios__cta">
-        <button className="dm-btn dm-btn--primary" onClick={onRegistroNegocio}>
+        <button className="dm-btn dm-btn--dark" onClick={onRegistroNegocio}>
           Registra tu negocio <Icon name="arrow" size={18} />
         </button>
       </div>
@@ -390,7 +395,7 @@ export function Beneficios({ productos = [], onIrVehiculo }) {
           </h2>
         </div>
         <p>
-          El diagnóstico correcto. La cotización clara.
+          El diagnóstico correcto. La cotización clara.{" "}
           <br />
           La confianza de saber qué le hacen a tu vehículo.
         </p>
@@ -432,27 +437,30 @@ export function Beneficios({ productos = [], onIrVehiculo }) {
         </div>
       </div>
 
-      <div className="dm-metrics">
-        <div className="dm-metrics__intro">
-          <span className="dm-eyebrow">CATÁLOGO DRIVEMASTER</span>
-          <p>Datos reales del inventario para compra directa.</p>
-        </div>
-        {metricas.map((m) => (
-          <div key={m.label}>
-            <strong>
-              {m.sufijo && m.sufijo === "+" ? "+" : ""}
-              {m.valor}
-              <span>↗</span>
-            </strong>
-            <p>{m.label}</p>
+      {/* Sin catálogo (vacío o la API falló) no se muestran ceros: igual que la tira de marcas */}
+      {productos.length > 0 && (
+        <div className="dm-metrics">
+          <div className="dm-metrics__intro">
+            <span className="dm-eyebrow">CATÁLOGO DRIVEMASTER</span>
+            <p>Datos reales del inventario para compra directa.</p>
           </div>
-        ))}
-      </div>
+          {metricas.map((m) => (
+            <div key={m.label}>
+              <strong>
+                {m.sufijo && m.sufijo === "+" ? "+" : ""}
+                {m.valor}
+                <span>↗</span>
+              </strong>
+              <p>{m.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="dm-catalog-note">
         <Icon name="car" size={18} />
         <span>Tu vehículo es único. Sus repuestos también deberían serlo.</span>
-        <button onClick={onIrVehiculo}>
+        <button className="dm-link" onClick={onIrVehiculo}>
           Identificar mi vehículo <Icon name="arrow" size={15} />
         </button>
       </div>

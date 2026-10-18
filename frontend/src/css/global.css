@@ -69,6 +69,9 @@
   --dm-ink:         #F0EFEA;
   --dm-ink-fg:      #141517;
   --dm-deep:        #0D0E10;
+  /* Azul de marca (logo) para los encabezados de "Para negocios": igual en los dos temas */
+  --dm-navy:        #0C2240;
+  --dm-navy-2:      #18487A;
 
   --dm-font:        'DM Sans', sans-serif;
   --dm-display:     'DM Sans', sans-serif;
