@@ -1,4 +1,5 @@
 import Icon from "./Icon";
+import { getUser } from "../../services/authService";
 import CotizacionDetalle from "../servicio/CotizacionDetalle";
 import "../../css/landing.css";
 import "../../css/solicitud-servicio.css";
@@ -336,11 +337,14 @@ export function ParaNegocios({ onRegistroNegocio }) {
         </li>
       </ol>
 
-      <div className="dm-negocios__cta">
-        <button className="dm-btn dm-btn--dark" onClick={onRegistroNegocio}>
-          Registra tu negocio <Icon name="arrow" size={18} />
-        </button>
-      </div>
+      {/* Con sesión iniciada la sección queda informativa: registrar un negocio crea otra cuenta */}
+      {!getUser() && (
+        <div className="dm-negocios__cta">
+          <button className="dm-btn dm-btn--dark" onClick={onRegistroNegocio}>
+            Registra tu negocio <Icon name="arrow" size={18} />
+          </button>
+        </div>
+      )}
     </section>
   );
 }

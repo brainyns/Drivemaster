@@ -1,5 +1,6 @@
 import Logo from "../Logo";
 import Icon from "./Icon";
+import { getUser } from "../../services/authService";
 import "../../css/footer.css";
 
 export default function Footer({
@@ -7,6 +8,7 @@ export default function Footer({
   onSolicitarDiagnostico, onRegistroNegocio,
 }) {
   const anio = new Date().getFullYear();
+  const user = getUser();
 
   return (
     <footer className="dm-footer">
@@ -30,7 +32,7 @@ export default function Footer({
         <div>
           <span>DRIVEMASTER</span>
           <button onClick={() => onIrInicio?.("dm-pasos")}>Cómo funciona</button>
-          <button onClick={onRegistroNegocio}>Registra tu negocio</button>
+          {!user && <button onClick={onRegistroNegocio}>Registra tu negocio</button>}
           <button onClick={onIrLogin || onIrAdmin}>Mi cuenta</button>
         </div>
 

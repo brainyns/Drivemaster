@@ -233,6 +233,12 @@ function App() {
     localStorage.setItem("solicitudItems", JSON.stringify(solicitudItems));
   }, [solicitudItems]);
 
+  // El registro de negocios es solo para visitantes: con sesión se va al inicio del rol, como tras el login.
+  // Se ajusta durante el render (patrón de React para corregir estado) para que no alcance a pintarse.
+  const inicioDelRol = user ? INICIO_POR_ROL[user.rol] || "dashboard-main" : "catalogo";
+  if (user && pagina === "registro-negocio") setPagina(inicioDelRol);
+  const irARegistroNegocio = () => setPagina(user ? inicioDelRol : "registro-negocio");
+
   // Sesión expirada: limpiamos localmente pero conservamos el flag
   // para poder mostrar la pantalla de "sesión expirada".
   const expirarSesion = useCallback(() => {
@@ -489,7 +495,7 @@ function App() {
         onIrAdmin={() => setPagina(INICIO_POR_ROL[user?.rol] && user.rol !== "CLIENTE" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
         onIrSolicitud={(p) => setPagina(p || "checkout")}
         onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
-        onRegistroNegocio={() => setPagina("registro-negocio")}
+        onRegistroNegocio={irARegistroNegocio}
         onIrMisCompras={() => { if (!user) guardarDestinoPostLogin("checkout-marketplace"); irA("mis-compras"); }}
         onLogout={handleLogout}
         carrito={carrito}
@@ -624,6 +630,8 @@ function App() {
     }
 
     if (pagina === "registro-negocio") {
+      // Con sesión no se pinta: arriba ya se redirigió al inicio del rol
+      if (user) return null;
       return <RegistroNegocio onIrLogin={() => setPagina("login")} onVolver={() => setPagina("catalogo")} />;
     }
 

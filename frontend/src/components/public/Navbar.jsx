@@ -53,20 +53,22 @@ export default function Navbar({
 
   const cerrarY = (accion) => () => { setMobileAbierto(false); accion?.(); };
 
-  // clave: la vista con la que se marca como activa (aria-current); secundario: se oculta en pantallas medianas
+  // clave: la vista con la que se marca como activa (aria-current); secundario: se oculta en pantallas medianas;
+  // soloSinSesion: registrar un negocio crea una cuenta nueva, así que no se ofrece a quien ya inició sesión
   const enlaces = [
     { label: "Inicio", clave: "inicio", onClick: cerrarY(() => onIrInicio?.()) },
     { label: "Solicitar diagnóstico", clave: "diagnostico", onClick: cerrarY(onSolicitarDiagnostico), secundario: true },
     { label: "Cómo funciona", onClick: cerrarY(() => onIrInicio?.("dm-pasos")), secundario: true },
     { label: "Catálogo", clave: "catalogo", onClick: cerrarY(onIrCatalogo) },
-    { label: "Registra tu negocio", clave: "negocio", onClick: cerrarY(onRegistroNegocio), destacado: true },
+    { label: "Registra tu negocio", clave: "negocio", onClick: cerrarY(onRegistroNegocio), destacado: true, soloSinSesion: true },
     { label: "Mis servicios", clave: "servicios", onClick: cerrarY(onIrMisServicios), soloCliente: true },
   ];
   const actual = (e) => (e.clave && e.clave === activo ? "page" : undefined);
   const claseEnlace = (e) => [e.destacado && "dm-header__nav-negocio", e.secundario && "dm-header__nav-secundario"]
     .filter(Boolean).join(" ") || undefined;
 
-  const enlacesVisibles = enlaces.filter((e) => !e.soloCliente || user?.rol === "CLIENTE");
+  const enlacesVisibles = enlaces.filter((e) =>
+    (!e.soloCliente || user?.rol === "CLIENTE") && (!e.soloSinSesion || !user));
 
   return (
     <>
