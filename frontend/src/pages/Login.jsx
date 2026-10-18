@@ -3,7 +3,8 @@ import { login, googleLogin } from "../services/authService";
 import Logo from "../components/Logo";
 import "../css/Login.css";
 
-const CLIENT_ID = "571035780087-mh3obhajnmvpj98cre938rmuhmqb0cf5.apps.googleusercontent.com";
+// Debe ser el mismo GOOGLE_CLIENT_ID del backend, y el dominio del frontend debe estar autorizado en Google Cloud.
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "571035780087-mh3obhajnmvpj98cre938rmuhmqb0cf5.apps.googleusercontent.com";
 
 function Marca({ onInicio }) {
   return (

@@ -10,6 +10,7 @@ import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.service.SuscripcionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -36,6 +37,8 @@ import java.time.LocalDateTime;
  * Corre después de MysqlDataInitializer (planes) y ServicioTallerSeeder (datos demo).
  */
 @Slf4j
+// Solo en el servidor que ejecuta las tareas de fondo: ver TAREAS_PROGRAMADAS_ENABLED en application.properties.
+@ConditionalOnProperty(name = "drivemaster.tareas-programadas.enabled", havingValue = "true", matchIfMissing = true)
 @Component
 @Order(20)
 @RequiredArgsConstructor

@@ -17,6 +17,7 @@ const ChatInput = ({ value, onChange, onSend, isTyping }) => {
           onChange={onChange}
           placeholder="Escribe tu mensaje..."
           rows={1}
+          maxLength={500}
           onKeyPress={handleKeyPress}
           disabled={isTyping}
         />

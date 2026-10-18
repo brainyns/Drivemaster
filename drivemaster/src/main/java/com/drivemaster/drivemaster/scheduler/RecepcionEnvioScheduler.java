@@ -3,6 +3,7 @@ package com.drivemaster.drivemaster.scheduler;
 import com.drivemaster.drivemaster.service.RecepcionEnvioService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,8 @@ import java.time.LocalDateTime;
  * Confirma sola la recepción de los envíos del catálogo cuyo cliente no respondió dentro del plazo
  * (PLAZO_AUTOCONFIRMACION_DIAS_HABILES días hábiles tras el despacho) y no reportó un problema.
  */
+// Solo en el servidor que ejecuta las tareas de fondo: ver TAREAS_PROGRAMADAS_ENABLED en application.properties.
+@ConditionalOnProperty(name = "drivemaster.tareas-programadas.enabled", havingValue = "true", matchIfMissing = true)
 @Component
 public class RecepcionEnvioScheduler {
 

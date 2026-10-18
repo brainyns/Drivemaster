@@ -185,6 +185,9 @@
     border-radius: 18px;
     font-size: 14px;
     line-height: 1.4;
+    /* El asistente responde con párrafos y listas con guiones: respetar los saltos de línea. */
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 .user-message .message-content p {

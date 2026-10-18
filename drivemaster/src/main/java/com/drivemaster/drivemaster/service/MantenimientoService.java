@@ -9,9 +9,15 @@ import com.drivemaster.drivemaster.util.EmailMantenimientoBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -22,6 +28,9 @@ public class MantenimientoService {
     private final VehiculoRepository vehiculoRepository;
     private final UsuarioRepository usuarioRepository;
     private final EmailsService emailService;
+    private final MongoTemplate mongoTemplate;
+
+    private static final String CAMPO_ULTIMO_RECORDATORIO = "ultimoRecordatorioEnviado";
 
     /** Días mínimos entre dos correos de recordatorio para el mismo vehículo. */
     @Value("${mantenimiento.diasEntreRecordatorios:30}")
@@ -33,10 +42,12 @@ public class MantenimientoService {
 
     public MantenimientoService(VehiculoRepository vehiculoRepository,
                                 UsuarioRepository usuarioRepository,
-                                EmailsService emailService) {
+                                EmailsService emailService,
+                                MongoTemplate mongoTemplate) {
         this.vehiculoRepository = vehiculoRepository;
         this.usuarioRepository = usuarioRepository;
         this.emailService = emailService;
+        this.mongoTemplate = mongoTemplate;
     }
 
     /** Normaliza los campos de mantenimiento de un vehículo recién creado. */
@@ -113,21 +124,67 @@ public class MantenimientoService {
             return false;
         }
 
+        // Se reclama el envío ANTES de mandar el correo, con una escritura condicional: si otro servidor
+        // (Render y el HomeLab comparten la base) ya lo marcó en esta ventana, aquí no coincide y no se envía.
+        LocalDateTime anterior = vehiculo.getUltimoRecordatorioEnviado();
+        LocalDateTime marca = LocalDateTime.now().truncatedTo(ChronoUnit.MILLIS); // Mongo guarda milisegundos
+        if (!reclamarRecordatorio(vehiculo.getId(), marca)) {
+            log.debug("Recordatorio del vehiculo {}: ya lo envió otra ejecución, se omite", vehiculo.getId());
+            return false;
+        }
+
         String html = EmailMantenimientoBuilder.recordatorioKm(
                 usuario, vehiculo,
                 vehiculo.getKilometraje(),
                 vehiculo.getKmUltimoMantenimiento(),
                 vehiculo.getIntervaloMantenimientoKm());
 
-        emailService.enviarEmail(
-                usuario.getCorreo(),
-                "Recordatorio de mantenimiento — DriveMaster",
-                html);
+        try {
+            emailService.enviarEmail(
+                    usuario.getCorreo(),
+                    "Recordatorio de mantenimiento — DriveMaster",
+                    html);
+        } catch (RuntimeException e) {
+            // No salió: se devuelve la marca para que el próximo barrido lo reintente.
+            liberarRecordatorio(vehiculo.getId(), marca, anterior);
+            throw e;
+        }
 
-        // Se marca el envío para no repetir el correo en cada corrida.
-        vehiculo.setUltimoRecordatorioEnviado(LocalDateTime.now());
-        vehiculoRepository.save(vehiculo);
+        vehiculo.setUltimoRecordatorioEnviado(marca);
         return true;
+    }
+
+    /**
+     * Marca el recordatorio como enviado solo si nadie lo marcó dentro de la ventana de diasEntreRecordatorios
+     * y el cliente no apagó los recordatorios. Devuelve false si otra ejecución ganó.
+     * Solo escribe ese campo: un save() del documento entero pisaría cambios hechos mientras corre el barrido.
+     */
+    private boolean reclamarRecordatorio(String vehiculoId, LocalDateTime marca) {
+        Criteria sinAvisoReciente = new Criteria().orOperator(
+                Criteria.where(CAMPO_ULTIMO_RECORDATORIO).is(null),
+                Criteria.where(CAMPO_ULTIMO_RECORDATORIO).lt(marca.minusDays(diasEntreRecordatorios)));
+        Query query = Query.query(new Criteria().andOperator(
+                Criteria.where("id").is(vehiculoId),
+                Criteria.where("recordatoriosActivos").ne(false),
+                sinAvisoReciente));
+        Vehiculo marcado = mongoTemplate.findAndModify(query,
+                new Update().set(CAMPO_ULTIMO_RECORDATORIO, marca),
+                FindAndModifyOptions.options().returnNew(true), Vehiculo.class);
+        return marcado != null;
+    }
+
+    /** Deshace el reclamo si sigue siendo el nuestro (nadie registró un mantenimiento ni otro aviso entretanto). */
+    private void liberarRecordatorio(String vehiculoId, LocalDateTime marca, LocalDateTime anterior) {
+        try {
+            Update restaurar = anterior != null
+                    ? new Update().set(CAMPO_ULTIMO_RECORDATORIO, anterior)
+                    : new Update().unset(CAMPO_ULTIMO_RECORDATORIO);
+            mongoTemplate.updateFirst(Query.query(Criteria.where("id").is(vehiculoId)
+                    .and(CAMPO_ULTIMO_RECORDATORIO).is(marca)), restaurar, Vehiculo.class);
+        } catch (Exception e) {
+            log.warn("Recordatorio del vehiculo {}: no se pudo liberar la marca tras el fallo del correo: {}",
+                    vehiculoId, e.getMessage());
+        }
     }
 
     private boolean estaVencido(Vehiculo vehiculo) {

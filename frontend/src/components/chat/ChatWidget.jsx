@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import ChatWindow from './ChatWindow';
+import { useChat } from './useChat';
 import './chat.css';
 
 const ChatWidget = () => {
     const [chatState, setChatState] = useState('closed'); // 'closed' | 'open' | 'minimized'
     const [isClosing, setIsClosing] = useState(false);
+    // El estado de la conversación vive aquí: ChatWindow se desmonta al minimizar o cerrar.
+    const chat = useChat();
 
     const handleToggle = () => {
         if (chatState === 'open') {
@@ -52,7 +55,7 @@ const ChatWidget = () => {
                         <path d="M12 6v2" />
                         <circle cx="12" cy="15" r="1.25" fill="white" stroke="none" />
                     </svg>
-                    <span>Chat Drivemaster</span>
+                    <span>{chat.isTyping ? 'Drivemaster está escribiendo…' : 'Chat Drivemaster'}</span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style={{marginLeft: 'auto'}}>
                         <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
                     </svg>
@@ -65,6 +68,10 @@ const ChatWidget = () => {
     return (
         <div className="chat-widget-container">
             <ChatWindow
+                messages={chat.messages}
+                isTyping={chat.isTyping}
+                onSend={chat.enviar}
+                onNuevaConversacion={chat.nuevaConversacion}
                 onClose={handleToggle}
                 onMinimize={handleMinimize}
                 isClosing={isClosing}

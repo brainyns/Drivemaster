@@ -4,6 +4,7 @@ import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.service.AvisosSolicitudServicio;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -23,6 +24,8 @@ import java.time.LocalDateTime;
  *
  * Los pedidos anteriores a la Fase 4-B no tienen plazo y no se evalúan.
  */
+// Solo en el servidor que ejecuta las tareas de fondo: ver TAREAS_PROGRAMADAS_ENABLED en application.properties.
+@ConditionalOnProperty(name = "drivemaster.tareas-programadas.enabled", havingValue = "true", matchIfMissing = true)
 @Component
 public class DespachoAtrasadoScheduler {
 

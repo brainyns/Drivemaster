@@ -50,7 +50,7 @@ Plataforma integral de comercio de repuestos automotrices y servicios de taller:
 - Compatibilidad de repuestos por vehículo (marca, modelo y año) y control de stock.
 - Carrito de compras con **compra inmediata** y flujo de **solicitud de pedido**.
 - Imágenes de productos y vehículos alojadas en **Cloudinary**.
-- Chat con **asistente IA** integrado en la tienda (Gemini, con Groq como proveedor alternativo).
+- Chat con **asistente IA** integrado en la tienda: agente orquestado en **n8n** (Claude Haiku vía OpenRouter) con memoria por sesión y herramientas que consultan el catálogo en vivo.
 
 ### Pagos
 - **Wompi**: checkout con tarjeta, webhook de confirmación y redirección de verificación.
@@ -101,7 +101,7 @@ Plataforma integral de comercio de repuestos automotrices y servicios de taller:
 | Spring Data JPA (PostgreSQL) | Registro transaccional de pagos y parámetros |
 | Google OAuth2 | Inicio de sesión con Google |
 | Wompi API | Pasarela de pagos con tarjeta |
-| Gemini API (Spring AI) / Groq | Asistente conversacional de la tienda |
+| n8n (agente IA vía OpenRouter) | Asistente conversacional de la tienda: webhook, herramientas y memoria |
 | Brevo API / SMTP | Envío de correos transaccionales |
 | Cloudinary | Almacenamiento de imágenes |
 | Bucket4j + Caffeine | Rate limiting y caché |
@@ -133,12 +133,18 @@ flowchart TD
     FE["Frontend<br/>React 19 + Vite (SPA)"]
     MOB["Mobile<br/>(futuro)"]
     BE["Backend Spring Boot<br/>puerto 8080"]
+    N8N["n8n<br/>agente del chat IA"]
     MONGO[("MongoDB Atlas<br/>dominio")]
-    PG[("PostgreSQL Supabase<br/>pagos y config")]
-    EXT["Servicios externos<br/>Wompi · Gemini/Groq · Brevo/SMTP · Cloudinary · Google OAuth2"]
+    PG[("PostgreSQL Supabase<br/>pagos, config y memoria del chat")]
+    EXT["Servicios externos<br/>Wompi · Brevo/SMTP · Cloudinary · Google OAuth2"]
+    IA["OpenRouter (Claude Haiku)<br/>(credenciales en n8n)"]
 
     FE -- "HTTP/JSON (Bearer JWT)" --> BE
     MOB -. "HTTP/JSON" .-> BE
+    BE -- "/api/chat (proxy)" --> N8N
+    N8N -- "herramientas (API)" --> BE
+    N8N --> IA
+    N8N --> PG
     BE --> MONGO
     BE --> PG
     BE --> EXT
@@ -173,7 +179,8 @@ drivemaster (repo)
 │   │   └── css/                  # Sistema de estilos por módulo
 │   ├── Dockerfile
 │   └── package.json
-├── docker-compose.yml            # Backend (8080) + Frontend (80)
+├── n8n/                          # Chat IA: workflow del agente (importar en n8n) y guía
+├── docker-compose.yml            # Backend (8080) + Frontend (80) + n8n (5678)
 ├── .env.example                  # Referencia completa de variables
 └── README.md
 ```
@@ -188,7 +195,7 @@ drivemaster (repo)
 | Maven | 3.9 (o usa `./mvnw`) |
 | Node.js | 20+ |
 | Docker + Docker Compose | Opcional (para levantar todo junto) |
-| Cuentas externas | MongoDB Atlas, PostgreSQL, Wompi, Gemini (o Groq), Brevo/SMTP, Cloudinary, Google OAuth2 |
+| Cuentas externas | MongoDB Atlas, PostgreSQL, Wompi, OpenRouter, Brevo/SMTP, Cloudinary, Google OAuth2 |
 
 > **Nota:** la base de datos es **dual**. Sin credenciales de ambas no arranca la aplicación completa.
 
@@ -205,13 +212,13 @@ Copia `.env.example` a `.env` y completa los valores. El `.env` **no** se sube a
 | `SECURITY_JWT_SECRET` | Secreto largo y aleatorio (mín. 32 caracteres) |
 | `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | Correo remitente / SMTP |
 | `BREVO_API_KEY` | API Key de Brevo (envío transaccional) |
-| `GEMINI_API_KEY` | API Key de Gemini para el chat IA |
-| `GROQ_API_KEY` | (opcional) proveedor alternativo de IA |
+| `N8N_CHAT_SECRET` / `N8N_TOOLS_SECRET` | Secretos compartidos backend ↔ n8n (webhook del chat y herramientas). La API key de OpenRouter se configura como **credencial dentro de n8n** (ver [`n8n/README.md`](n8n/README.md)) |
 | `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Almacenamiento de imágenes |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth2 de Google |
+| `GOOGLE_CLIENT_ID` | Inicio de sesión con Google en el backend (mismo valor que `VITE_GOOGLE_CLIENT_ID`) |
 | `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_KEY` / `WOMPI_API_URL` / `WOMPI_REDIRECT_URL` | Integración de pagos Wompi (sandbox/producción) |
 | `FRONTEND_URL` | URL pública del frontend para redirecciones |
 | `VITE_API_URL` | URL de la API que consume el frontend |
+| `VITE_GOOGLE_CLIENT_ID` | Client-id de Google del frontend (vacío = el que trae el código) |
 | `VITE_WOMPI_PUBLIC_KEY` | Clave pública de Wompi para el checkout del frontend |
 
 ---
@@ -314,6 +321,7 @@ Referencias de despliegue usadas en el proyecto (ver `.env.example`):
 - **MongoDB**: Atlas.
 - **PostgreSQL**: Supabase.
 - **Wompi**: apuntar `WOMPI_API_URL` y `WOMPI_REDIRECT_URL` a los endpoints de producción (`production.wompi.co/v1`).
+- **HomeLab propio** (Proxmox + Docker, MongoDB y PostgreSQL locales, Cloudflare Tunnel): ver [`homelab/README.md`](homelab/README.md).
 
 ---
 

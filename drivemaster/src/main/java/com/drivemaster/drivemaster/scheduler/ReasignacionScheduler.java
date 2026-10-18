@@ -9,6 +9,7 @@ import com.drivemaster.drivemaster.service.TransicionOrdenService;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -36,6 +37,8 @@ import java.util.function.Consumer;
  * es una escritura condicional (TransicionOrdenService). Si otra acción ganó la
  * carrera, la escritura no aplica, se recibe 409 y la solicitud se omite.
  */
+// Solo en el servidor que ejecuta las tareas de fondo: ver TAREAS_PROGRAMADAS_ENABLED en application.properties.
+@ConditionalOnProperty(name = "drivemaster.tareas-programadas.enabled", havingValue = "true", matchIfMissing = true)
 @Component
 public class ReasignacionScheduler {
 
