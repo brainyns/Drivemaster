@@ -8,6 +8,11 @@ import { ESTADO_COMPRA, ESTADOS_CON_CODIGO, estadoPedido } from "../components/m
 import { subscribeNotifications } from "../services/websocketService";
 import { clasificarCompras, estadoVentaAnterior, solicitudesSinCerrar, pestanaDeCompra } from "../components/marketplace/clasificarCompras";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Alerta from "../components/ui/Alerta";
 import "../css/marketplace.css";
 import "../css/mis-compras.css";
 
@@ -40,6 +45,7 @@ export default function MisCompras({ header, compraInicial = null, onVolver, onI
   const compraVista = useRef(false);
   const [aviso, setAviso] = useState(null);
   const [accion, setAccion] = useState(null); // { tipo: "codigo"|"recibido"|"problema", pedido }
+  const [intento, setIntento] = useState(0);
   const pestanasRef = useRef(null);
 
   // Recarga tras una acción (confirmar, reportar, pedir código)
@@ -66,7 +72,14 @@ export default function MisCompras({ header, compraInicial = null, onVolver, onI
       .then((s) => { if (vivo) setSolicitudesAbiertas(solicitudesSinCerrar(Array.isArray(s) ? s : []).length); })
       .catch(() => {});
     return () => { vivo = false; };
-  }, [token]);
+  }, [token, intento]);
+
+  const reintentar = () => {
+    setCompras(null);
+    setError(null);
+    setErrorVentas(false);
+    setIntento((n) => n + 1);
+  };
 
   const confirmar = async (motivo) => {
     const { tipo, pedido } = accion;
@@ -146,8 +159,8 @@ export default function MisCompras({ header, compraInicial = null, onVolver, onI
             <span className="mk-tarjeta__meta">{formatFechaHora(c.fechaPago || c.fechaCreacion)}</span>
           </div>
           <div className="mk-compra__resumen">
-            <span className={`mk-etiqueta mk-etiqueta--${estado.tono}`}>{estado.label}</span>
-            <strong>{formatPrecio(c.total)}</strong>
+            <ChipEstado tono={estado.tono}>{estado.label}</ChipEstado>
+            <strong className="ui-precio">{formatPrecio(c.total)}</strong>
           </div>
         </header>
 
@@ -168,7 +181,7 @@ export default function MisCompras({ header, compraInicial = null, onVolver, onI
             <article key={p.id} className="mk-pedido">
               <div className="mk-pedido__cabecera">
                 <h3>{p.tiendaNombre}</h3>
-                <span className={`mk-etiqueta mk-etiqueta--${e.tono}`}>{e.label}</span>
+                <ChipEstado tono={e.tono}>{e.label}</ChipEstado>
               </div>
               <p className="mk-tarjeta__meta">
                 {retiro ? "Retiro en la tienda" : "Envío a domicilio"} · {formatPrecio(p.total)}
@@ -196,15 +209,15 @@ export default function MisCompras({ header, compraInicial = null, onVolver, onI
                 {retiro && ESTADOS_CON_CODIGO.includes(p.estado) && (
                   <>
                     <span className="mk-tarjeta__meta">Tu código de retiro llegó a tu correo.</span>
-                    <button className="dm-btn dm-btn--secondary" onClick={() => setAccion({ tipo: "codigo", pedido: p })}>
+                    <button className="ui-btn ui-btn--secundario" onClick={() => setAccion({ tipo: "codigo", pedido: p })}>
                       Pedir un código nuevo
                     </button>
                   </>
                 )}
                 {!retiro && p.estado === "DESPACHADO" && !p.problemaReportado && (
                   <>
-                    <button className="dm-btn dm-btn--primary" onClick={() => setAccion({ tipo: "recibido", pedido: p })}>Ya lo recibí</button>
-                    <button className="dm-btn dm-btn--secondary" onClick={() => setAccion({ tipo: "problema", pedido: p })}>Reportar un problema</button>
+                    <button className="ui-btn ui-btn--primario" onClick={() => setAccion({ tipo: "recibido", pedido: p })}>Ya lo recibí</button>
+                    <button className="ui-btn ui-btn--secundario" onClick={() => setAccion({ tipo: "problema", pedido: p })}>Reportar un problema</button>
                   </>
                 )}
               </div>
@@ -241,8 +254,8 @@ export default function MisCompras({ header, compraInicial = null, onVolver, onI
             <span className="mk-tarjeta__meta">{formatFechaHora(v.fecha)}</span>
           </div>
           <div className="mk-compra__resumen">
-            <span className={`mk-etiqueta mk-etiqueta--${estado.tono}`}>{estado.label}</span>
-            <strong>{formatPrecio(v.total)}</strong>
+            <ChipEstado tono={estado.tono}>{estado.label}</ChipEstado>
+            <strong className="ui-precio">{formatPrecio(v.total)}</strong>
           </div>
         </header>
         <p className="mk-tarjeta__meta">
@@ -280,22 +293,28 @@ export default function MisCompras({ header, compraInicial = null, onVolver, onI
     <div className="dm-page mk-pagina">
       {header}
       <main className="dm-container mk-contenido">
-        <div className="mk-titulo">
-          <span className="dm-eyebrow"><span className="dm-dot" /> MIS COMPRAS</span>
-          <h1>Mis compras</h1>
-          <p>El estado de lo que compraste en las tiendas del catálogo.</p>
-        </div>
+        <EncabezadoPagina
+          titulo="Mis compras"
+          descripcion="El estado de lo que compraste en las tiendas del catálogo: envío o retiro, y el detalle de cada pedido."
+          onVolver={onVolver}
+          textoVolver="Volver al inicio"
+          acciones={grupos && !sinNada && onIrCatalogo && (
+            <button className="ui-btn ui-btn--secundario" onClick={onIrCatalogo}>Explorar catálogo</button>
+          )}
+        />
 
-        {aviso && <p className="mk-toast" role="status">{aviso} <button className="mk-enlace" onClick={() => setAviso(null)}>Cerrar</button></p>}
-        {error && <p className="mk-aviso mk-aviso--error" role="alert">{error}</p>}
-        {!compras && !error && <p className="mk-conteo">Cargando...</p>}
+        {aviso && <Alerta tono="ok" onCerrar={() => setAviso(null)} className="mc-alerta">{aviso}</Alerta>}
+        {error && (
+          <Alerta onReintentar={reintentar} className="mc-alerta">No pudimos cargar tus compras. {error}</Alerta>
+        )}
+        {!compras && !error && <Esqueleto variante="lista" cantidad={3} texto="Cargando tus compras…" />}
 
         {sinNada && avisoSolicitudes}
         {sinNada && (
-          <div className="mk-vacio">
-            <p>Aún no has comprado en las tiendas del catálogo.</p>
-            <button className="dm-btn dm-btn--primary" onClick={onIrCatalogo}>Ver repuestos</button>
-          </div>
+          <EstadoVacio icono="box" titulo="Aún no tienes compras"
+            texto="Busca el repuesto que necesitas y compara precios entre las tiendas de tu ciudad.">
+            <button className="ui-btn ui-btn--primario" onClick={onIrCatalogo}>Explorar catálogo</button>
+          </EstadoVacio>
         )}
 
         {grupos && !sinNada && (
@@ -312,7 +331,13 @@ export default function MisCompras({ header, compraInicial = null, onVolver, onI
 
             <div id="mc-panel" role="tabpanel" aria-labelledby={`mc-tab-${pestana}`} className="mc-panel">
               {pestana === "enCurso" && avisoSolicitudes}
-              {lista.length === 0 && <p className="mc-vacio">{actual.vacio}</p>}
+              {lista.length === 0 && (
+                <EstadoVacio icono="box" titulo={actual.vacio} nivel={2}>
+                  {pestana === "enCurso" && (
+                    <button className="ui-btn ui-btn--secundario" onClick={() => setPestana("anteriores")}>Ver compras anteriores</button>
+                  )}
+                </EstadoVacio>
+              )}
               {lista.map((x) => (x.origen === "catalogo" ? renderCompra(x.dato) : renderVentaAnterior(x.dato)))}
               {pestana === "anteriores" && hayVentasAnteriores && onIrHistorial && (
                 <p className="mk-nota">
@@ -321,13 +346,11 @@ export default function MisCompras({ header, compraInicial = null, onVolver, onI
                 </p>
               )}
               {errorVentas && (
-                <p className="mk-nota" role="status">No pudimos cargar tus compras del sistema anterior. Intenta de nuevo más tarde.</p>
+                <Alerta tono="aviso" onReintentar={reintentar}>No pudimos cargar tus compras del sistema anterior.</Alerta>
               )}
             </div>
           </>
         )}
-
-        <button className="mk-enlace mk-volver" onClick={onVolver}>← Volver al inicio</button>
       </main>
 
       {accion && (

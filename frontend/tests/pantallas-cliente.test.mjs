@@ -17,3 +17,14 @@ test("Mis vehículos: tarjetas compartidas, campos con etiqueta y los tres estad
   assert.match(p, /role="switch"/);
   assert.doesNotMatch(leer("../src/css/servicios.css"), /sv-manto/);
 });
+
+test("Mis compras: cabecera compartida, chips de estado con texto y estados completos", () => {
+  const p = leer("../src/pages/MisCompras.jsx");
+  assert.match(p, /<EncabezadoPagina/);
+  assert.equal((p.match(/<ChipEstado tono=/g) || []).length, 3);
+  assert.match(p, /<Esqueleto variante="lista"/);
+  assert.match(p, /<EstadoVacio icono="box" titulo="Aún no tienes compras"/);
+  assert.match(p, /onReintentar=\{reintentar\}/);
+  assert.match(p, /<details className="mk-compra__detalle">/);
+  assert.doesNotMatch(p, /MIS COMPRAS|dm-eyebrow|mk-etiqueta/);
+});

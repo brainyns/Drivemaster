@@ -47,7 +47,8 @@
   .mc-pestana:hover { color: var(--ui-text); }
 }
 
-.mc-vacio { margin: var(--ui-sp-5) 0; color: var(--ui-muted); }
+/* Avisos (guardado, error al cargar) bajo la cabecera */
+.mc-alerta { margin-bottom: var(--ui-sp-4); }
 
 /* Aviso discreto: solicitudes del sistema anterior sin cerrar */
 .mc-aviso {
