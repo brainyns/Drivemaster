@@ -51,11 +51,6 @@ body:has(.sv-root) { background: var(--dm-bg); }
   width: 100%; height: 150px; object-fit: cover;
   border-radius: var(--r-md); border: 1px solid var(--border);
 }
-.sv-imagen-preview { display: flex; align-items: center; gap: var(--sp-md); }
-.sv-imagen-preview img {
-  width: 150px; height: 110px; object-fit: cover;
-  border-radius: var(--r-md); border: 1px solid var(--border);
-}
 
 /* Misma medida que los botones del panel (adm-btn): alto 36px, radio de tarjeta, texto oscuro sobre el naranja */
 .sv-btn {
@@ -117,22 +112,6 @@ body:has(.sv-root) { background: var(--dm-bg); }
 .sv-pay-method { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.95rem; }
 .sv-pay-ref { width: 100%; margin-top: var(--sp-sm); }
 
-/* ─── Mantenimiento preventivo ─── */
-.sv-manto { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border2); border-radius: 8px; font-size: 0.88rem; }
-/* Vencido: lo marca el borde y la etiqueta; un fondo rojo debajo de la etiqueta roja bajaba el contraste */
-.sv-manto-vencido { border-color: var(--ui-error); }
-.sv-manto-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.sv-manto-label { font-weight: 600; }
-.sv-manto-badge { padding: 2px 8px; border-radius: 999px; background: var(--ui-aviso-bg); color: var(--ui-aviso); font-size: 0.78rem; white-space: nowrap; }
-.sv-manto-badge-alerta { background: var(--ui-error-bg); color: var(--ui-error); }
-.sv-manto-meta { display: block; margin-top: 6px; color: var(--muted); }
-.sv-manto-aviso { display: block; margin-top: 4px; font-size: 0.8rem; color: var(--ui-aviso); }
-.sv-manto-edit { margin-top: 8px; }
-.sv-manto-edit input { width: 100%; margin-top: 4px; }
-.sv-manto-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
-.sv-manto-link { background: none; border: none; padding: 0; color: var(--ui-aviso); font-size: 0.85rem; cursor: pointer; text-decoration: underline; }
-.sv-manto-opt { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; }
-.sv-manto-error { display: block; margin-top: 6px; color: var(--ui-error); font-size: 0.82rem; }
 
 .sv-section-title { font-family: var(--ui-font); font-size: 1.4rem; margin: var(--sp-xl) 0 var(--sp-md); }
 /* ── Servicios anteriores (órdenes del flujo anterior, solo consulta) ── */

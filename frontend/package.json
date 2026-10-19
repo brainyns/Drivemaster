@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test tests/menu.test.mjs tests/cliente.test.mjs tests/notificaciones.test.mjs tests/cotizaciones-taller.test.mjs tests/pago-resultado.test.mjs tests/mapas.test.mjs tests/solicitar-diagnostico.test.mjs tests/ui-compartido.test.mjs tests/registro-negocio.test.mjs",
+    "test": "node --test tests/menu.test.mjs tests/cliente.test.mjs tests/notificaciones.test.mjs tests/cotizaciones-taller.test.mjs tests/pago-resultado.test.mjs tests/mapas.test.mjs tests/solicitar-diagnostico.test.mjs tests/ui-compartido.test.mjs tests/registro-negocio.test.mjs tests/pantallas-cliente.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

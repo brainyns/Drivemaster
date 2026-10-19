@@ -1,0 +1,181 @@
+/* ── Mis vehículos ────────────────────────────────────────────────────────
+   Prefijo mv-, BEM. Tarjetas, campos, botones y estados son de ui.css; aquí el formulario de alta, el
+   bloque de mantenimiento y el interruptor de recordatorios. */
+
+.mv-pagina { max-width: 1100px; }
+
+.mv-aviso { margin-bottom: var(--ui-sp-4); }
+.mv-lista { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+
+/* ── Alta ──────────────────────────────────────────────────────────────── */
+.mv-formulario {
+  margin-bottom: var(--ui-sp-6);
+  padding: 24px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+}
+
+.mv-formulario .mv-formulario__titulo {
+  margin: 0 0 18px;
+  font-family: var(--ui-font);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ui-text);
+}
+
+.mv-formulario__titulo:focus { outline: none; }
+
+.mv-formulario__rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 18px 20px;
+}
+
+.mv-formulario__foto {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  justify-items: start;
+}
+
+.mv-vista {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mv-vista img {
+  width: 120px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+}
+
+.mv-formulario__alerta { margin-top: 18px; }
+
+.mv-formulario__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+/* ── Tarjeta: foto y acciones ──────────────────────────────────────────── */
+.mv-foto { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+
+.mv-foto__error {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  width: max-content;
+  max-width: 200px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--ui-bg);
+  color: var(--ui-error);
+  font-size: 0.75rem;
+}
+
+.mv-ver { margin-top: 12px; }
+
+/* ── Mantenimiento ─────────────────────────────────────────────────────── */
+.mv-manto {
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+/* Vencido: lo marcan el borde y la etiqueta; un fondo rojo debajo de la etiqueta roja bajaría el contraste */
+.mv-manto--vencido { border-color: var(--ui-error); }
+
+.mv-manto__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mv-manto__titulo { font-weight: 600; color: var(--ui-text); }
+
+.mv-manto .mv-manto__texto {
+  margin: 6px 0 0;
+  line-height: 1.45;
+  color: var(--ui-muted);
+}
+
+.mv-manto__edicion { display: grid; gap: 10px; margin-top: 10px; }
+
+.mv-manto__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-top: 8px;
+}
+
+.mv-manto__acciones .ui-btn--texto { margin-left: -8px; }
+
+.mv-manto .mv-manto__error { margin: 8px 0 0; color: var(--ui-error); font-size: 0.82rem; }
+
+/* Interruptor (checkbox con role="switch"): el estado se ve por la posición, no solo por el color */
+.mv-interruptor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  color: var(--ui-text);
+  cursor: pointer;
+}
+
+.mv-interruptor input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.mv-interruptor__pista {
+  position: relative;
+  flex-shrink: 0;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--ui-line);
+  transition: background-color var(--ui-dur) ease;
+}
+
+.mv-interruptor__pista::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform var(--ui-dur) var(--ui-ease);
+}
+
+.mv-interruptor input:checked + .mv-interruptor__pista { background: var(--primary); }
+.mv-interruptor input:checked + .mv-interruptor__pista::after { transform: translateX(14px); }
+.mv-interruptor input:focus-visible + .mv-interruptor__pista { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.mv-interruptor input:disabled + .mv-interruptor__pista { opacity: 0.55; }
+
+@media (max-width: 600px) {
+  .mv-formulario { padding: 18px; }
+  .mv-formulario__acciones { flex-direction: column-reverse; }
+  .mv-formulario__acciones .ui-btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mv-interruptor__pista,
+  .mv-interruptor__pista::after { transition: none; }
+}
