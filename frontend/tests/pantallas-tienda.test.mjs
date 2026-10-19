@@ -69,3 +69,36 @@ test("Pedidos usa el sistema compartido y no cambia las llamadas del flujo", () 
   }
   assert.doesNotMatch(leer("../src/css/pedidos-tienda.css"), /inset 3px 0 0/, "sin franja de color a la izquierda");
 });
+
+test("Mi tienda: perfil completo con lo que pide el catálogo y validación en línea", async () => {
+  const { completitudTienda, erroresUbicacion, errorHorarioTienda, errorTelefono, errorCostoEnvio, comoLaVeElCliente } =
+    await import("../src/pages/tienda/perfilTienda.js");
+  const completa = { ciudad: "Cali", direccion: "Cra 1", horario: "L-V 8-18", latitud: 3.4, longitud: -76.5, telefono: "3001234567" };
+  assert.deepEqual(completitudTienda(completa), { porcentaje: 100, faltan: [] });
+  const { porcentaje, faltan } = completitudTienda({ ...completa, horario: " ", latitud: null });
+  assert.equal(porcentaje, 50);
+  assert.deepEqual(faltan.map((f) => f.clave), ["horario", "ubicacion"]);
+  assert.ok(faltan[0].catalogo && faltan.every((f) => f.seccion), "dice qué pide el catálogo y lleva a su sección");
+
+  assert.deepEqual(Object.keys(erroresUbicacion({ ciudad: "", direccion: "" })), ["ciudad", "direccion"]);
+  assert.deepEqual(erroresUbicacion({ ciudad: "Cali", direccion: "Cra 1" }), {});
+  assert.match(errorHorarioTienda(""), /Escribe tu horario/);
+  assert.equal(errorTelefono(""), null, "el teléfono es opcional");
+  assert.equal(errorTelefono("+57 300 123 4567"), null);
+  assert.match(errorTelefono("abc"), /teléfono válido/);
+  assert.equal(errorCostoEnvio(false, ""), null, "sin envío no se valida el costo");
+  assert.equal(errorCostoEnvio(true, "0"), null);
+  assert.match(errorCostoEnvio(true, ""), /puede ser 0/);
+  assert.match(errorCostoEnvio(true, "600000"), /entre \$ 0 y \$ 500\.000/);
+  assert.deepEqual(comoLaVeElCliente({ ...completa, nombre: "Repuestos Sol", costoEnvio: 8000, nit: "900", correoUsuario: "x@y.com" }),
+    { id: undefined, nombre: "Repuestos Sol", ciudad: "Cali", barrio: undefined, direccion: "Cra 1", horario: "L-V 8-18", ofreceEnvio: true, costoEnvio: 8000 });
+});
+
+test("Mi tienda usa las piezas de Mi taller y la ficha del catálogo, con los mismos datos de antes", () => {
+  const pagina = leer("../src/pages/DatosMiTienda.jsx");
+  for (const pieza of ["<CabeceraNegocio", "<SeccionEditable", "<VistaPrevia", "<TiendaVendedor", "<SelectorUbicacion", "<LogoNegocio"]) {
+    assert.ok(pagina.includes(pieza), `usa ${pieza}`);
+  }
+  assert.ok(pagina.includes("actualizarMiTienda(token, datos)"), "el mismo PUT /mi-tienda");
+  assert.ok(leer("../src/pages/DetalleProductoMarketplace.jsx").includes("<TiendaVendedor tienda={t} />"), "la misma ficha que ve el cliente");
+});

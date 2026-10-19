@@ -67,6 +67,7 @@ import MisCompras from "./pages/MisCompras";
 import PerfilCliente from "./pages/PerfilCliente";
 import ProblemasEnvios from "./pages/ProblemasEnvios";
 import DatosMiTienda from "./pages/DatosMiTienda";
+import Alerta from "./components/ui/Alerta";
 import { miTienda } from "./services/tiendaService";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
@@ -767,10 +768,10 @@ function App() {
         )}
 
         {esTienda && tiendaIncompleta && pagina !== "mi-tienda" && (
-          <p className="ss-aviso" role="status" style={{ margin: "12px 16px" }}>
+          <Alerta tono="aviso" className="app-aviso-tienda">
             Tus productos aún no se muestran en el catálogo: faltan la ciudad, la dirección o el horario de tu tienda.{" "}
-            <button className="sv-btn-outline" onClick={() => irA("mi-tienda")}>Completar datos</button>
-          </p>
+            <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("mi-tienda")}>Completar Mi tienda</button>
+          </Alerta>
         )}
 
         {renderPagina()}

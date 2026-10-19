@@ -353,28 +353,3 @@
     border-top: 1px solid var(--ui-line);
   }
 }
-
-/* ── Tienda propia de DriveMaster (datos para el catálogo) ── */
-.ap-propia {
-  margin-bottom: var(--sp-lg);
-  padding: var(--sp-lg);
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-line);
-  border-left: 4px solid var(--ap-steel);
-  border-radius: var(--ui-r-lg);
-}
-.ap-propia__cabecera { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-md); flex-wrap: wrap; }
-.ap-propia__cabecera h2 { margin: 0; font-size: 1.15rem; }
-.ap-propia__form { display: flex; flex-wrap: wrap; gap: var(--sp-md); margin-top: var(--sp-md); }
-.ap-propia__form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--ui-muted); flex: 1 1 200px; }
-.ap-propia__form input:not([type="checkbox"]) {
-  background: var(--ui-surface-2); color: var(--ui-text); border: 1px solid var(--ui-line);
-  border-radius: var(--ui-r-lg); padding: 9px 12px; font: inherit;
-}
-.ap-propia__ancho { flex-basis: 100% !important; }
-.ap-propia__check { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--ui-text) !important; }
-.ap-propia__acciones { flex-basis: 100%; display: flex; justify-content: flex-end; }
-
-/* Mapa de la ubicación de la tienda (SelectorUbicacion) */
-.ap-propia__mapa { display: flex; flex-direction: column; gap: 4px; }
-.ap-propia__mapa-titulo { font-size: 0.85rem; color: var(--ui-muted); }
