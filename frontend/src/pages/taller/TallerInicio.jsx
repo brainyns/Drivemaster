@@ -1,120 +1,175 @@
-import { useMemo } from "react";
-import EstadoServicio from "../../components/servicio/EstadoServicio";
-import { formatFechaHora, refSolicitud } from "../../components/servicio/estadosServicio";
-import { enTaller, esperaRepuestos, porResponder, proximaRevision, tiempoRelativo } from "./resumenTaller";
+import { useEffect, useMemo, useState } from "react";
+import { formatFechaHora, formatPrecio, refSolicitud } from "../../components/servicio/estadosServicio";
+import { informesTaller } from "../../services/informesTallerService";
+import { getToken } from "../../services/authService";
+import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
+import Indicador from "../../components/ui/Indicador";
+import ChipEstado from "../../components/ui/ChipEstado";
+import Alerta from "../../components/ui/Alerta";
+import EstadoVacio from "../../components/ui/EstadoVacio";
+import Esqueleto from "../../components/ui/Esqueleto";
+import BarraAccionMovil from "../../components/ui/BarraAccionMovil";
+import Icon from "../../components/public/Icon";
+import { citasDeHoy, enTaller, esperaRepuestos, porResponder, proximaRevision, tiempoRelativo, urgentes } from "./resumenTaller";
+import "../../css/inicio-taller.css";
 
-function Tarjeta({ titulo, valor, pie, tono, onClick }) {
-  return (
-    <button type="button" className={`tp-tarjeta${tono ? ` tp-tarjeta--${tono}` : ""}`} onClick={onClick}>
-      <span className="tp-tarjeta__titulo">{titulo}</span>
-      <span className="tp-tarjeta__valor">{valor}</span>
-      <span className="tp-tarjeta__pie">{pie}</span>
-      <span className="tp-tarjeta__flecha" aria-hidden="true">→</span>
-    </button>
-  );
+// Filas de "Lo urgente primero" antes de mandar a cada sección
+const MAX_URGENTES = 6;
+
+const hora = (f) => new Date(f).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" });
+
+/** Saludo según la hora: el panel se abre a primera hora y al final del día. */
+function saludo(ahora) {
+  const h = new Date(ahora).getHours();
+  return h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
 }
 
-function Esqueleto() {
-  return (
-    <div className="tp-esqueleto" aria-hidden="true">
-      <div className="tp-esqueleto__fila">
-        {[0, 1, 2].map((i) => <div className="tp-esqueleto__tarjeta" key={i} />)}
-      </div>
-      <div className="tp-esqueleto__bloque" />
-    </div>
-  );
-}
+/** Inicio del taller: el resumen del día, las acciones rápidas y lo urgente primero. */
+export default function TallerInicio({ taller, solicitudes, anteriores, cargando, error, onRecargar, irA }) {
+  const [ahora] = useState(() => Date.now());
+  const [ingresos, setIngresos] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
 
-/** Inicio del taller: lo que pide acción hoy, con acceso directo a cada sección. */
-export default function TallerInicio({ taller, solicitudes, anteriores, cargando, error, irA }) {
+  // Mano de obra liquidada y por cobrar (el backend la da acumulada, no por periodo)
+  useEffect(() => {
+    let vivo = true;
+    informesTaller(getToken(), 1)
+      .then((d) => { if (vivo) setIngresos(d.ingresos.manoDeObra); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, []);
+
   const datos = useMemo(() => {
     const responder = solicitudes.filter(porResponder)
       .sort((a, b) => new Date(a.fechaLimiteRespuesta || 0) - new Date(b.fechaLimiteRespuesta || 0));
     return {
       responder,
-      enTaller: solicitudes.filter(enTaller),
-      repuestos: solicitudes.filter(esperaRepuestos),
-      proxima: proximaRevision(solicitudes),
+      hoy: citasDeHoy(solicitudes, ahora),
+      porCotizar: solicitudes.filter((s) => s.estado === "DIAGNOSTICADA"),
+      esperandoCliente: solicitudes.filter((s) => s.estado === "COTIZADA" || s.estado === "APROBADA"),
+      enCurso: solicitudes.filter((s) => enTaller(s) || esperaRepuestos(s)),
+      urgentes: urgentes(solicitudes, ahora),
+      proxima: proximaRevision(solicitudes, ahora),
     };
-  }, [solicitudes]);
+  }, [solicitudes, ahora]);
+
+  const reintentar = async () => {
+    setReintentando(true);
+    await onRecargar?.();
+    setReintentando(false);
+  };
 
   const sinActividad = solicitudes.length === 0;
+  const primera = datos.responder[0];
 
   return (
-    <>
-      <header className="pt-header tp-cabecera">
-        <div>
-          <h1 className="pt-title">{taller?.nombre || "Panel del taller"}</h1>
-          <p className="pt-subtitle">Lo que necesita tu atención hoy: solicitudes por responder, trabajos en curso y repuestos que esperas.</p>
-        </div>
-      </header>
+    <div className="it-root">
+      <EncabezadoPagina
+        titulo={taller?.nombre ? `${saludo(ahora)}, ${taller.nombre}` : "Inicio del taller"}
+        descripcion={cargando ? "Revisando lo que tienes para hoy…" : resumenDelDia(datos)}
+        acciones={!cargando && !sinActividad && (
+          <>
+            {datos.responder.length > 0 && (
+              <button type="button" className="ui-btn ui-btn--primario" onClick={() => irA("taller-solicitudes", "responder")}>
+                Responder solicitudes <span className="it-contador">{datos.responder.length}</span>
+              </button>
+            )}
+            {datos.porCotizar.length > 0 && (
+              <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-solicitudes", "diagnosticadas")}>
+                <Icon name="file" size={16} /> Crear cotización
+              </button>
+            )}
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-solicitudes", "agendadas")}>
+              <Icon name="calendar" size={16} /> Ver agenda
+            </button>
+          </>
+        )}
+      />
 
-      {error && <p className="pt-error" role="alert">{error}</p>}
-
-      {anteriores.length > 0 && (
-        <button type="button" className="tp-aviso" onClick={() => irA("taller-anteriores")}>
-          <strong>Tienes {anteriores.length} {anteriores.length === 1 ? "orden" : "órdenes"} del flujo anterior por atender.</strong>
-          <span>Ábrelas en “Órdenes anteriores”. La sección se oculta sola cuando no quede ninguna.</span>
-        </button>
+      {error && (
+        <Alerta className="it-alerta" onReintentar={onRecargar ? reintentar : undefined} reintentando={reintentando}>
+          No pudimos cargar tus solicitudes. {error}
+        </Alerta>
       )}
 
-      {cargando ? <Esqueleto /> : sinActividad ? (
-        <div className="tp-vacio">
-          <h2>Aún no tienes solicitudes</h2>
-          <p>
-            Cuando un cliente pida un diagnóstico en tu zona, la solicitud llega aquí y te avisamos por correo.
-            Mientras tanto, deja listo tu equipo para poder asignar mecánicos desde el primer día.
-          </p>
-          <button type="button" className="sv-btn" onClick={() => irA("taller-mitaller")}>Completar Mi taller</button>
-        </div>
+      {anteriores.length > 0 && (
+        <Alerta tono="aviso" className="it-alerta">
+          Tienes {anteriores.length} {anteriores.length === 1 ? "orden" : "órdenes"} del flujo anterior por atender.{" "}
+          <button type="button" className="it-enlace" onClick={() => irA("taller-anteriores")}>Ver órdenes anteriores</button>
+        </Alerta>
+      )}
+
+      {cargando ? (
+        <>
+          <div className="ui-indicadores it-indicadores" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => <span key={i} className="ui-skeleton it-esqueleto" />)}
+          </div>
+          <Esqueleto variante="lista" cantidad={3} texto="Cargando el resumen del día…" />
+        </>
+      ) : sinActividad && !error ? (
+        <EstadoVacio icono="tool" titulo="Aún no tienes solicitudes"
+          texto="Cuando un cliente pida un diagnóstico en tu zona, llega aquí y te avisamos por correo. Mientras tanto, deja listo tu perfil y tu equipo.">
+          <button type="button" className="ui-btn ui-btn--primario" onClick={() => irA("taller-mitaller")}>Completar Mi taller</button>
+        </EstadoVacio>
       ) : (
         <>
-          <div className="tp-tarjetas">
-            <Tarjeta
-              titulo="Solicitudes por responder"
-              valor={datos.responder.length}
-              pie={datos.responder.length > 0
-                ? `La más urgente vence ${tiempoRelativo(datos.responder[0].fechaLimiteRespuesta)}`
-                : "Estás al día"}
-              tono={datos.responder.length > 0 ? "accion" : undefined}
-              onClick={() => irA("taller-solicitudes", "responder")}
-            />
-            <Tarjeta
-              titulo="Trabajos en curso"
-              valor={datos.enTaller.length}
-              pie={datos.enTaller.length > 0 ? "Vehículos con los repuestos ya en el taller" : "Ningún vehículo en el taller ahora"}
-              tono={datos.enTaller.length > 0 ? "vivo" : undefined}
-              onClick={() => irA("taller-trabajos", "entaller")}
-            />
-            <Tarjeta
-              titulo="Pendientes de repuestos"
-              valor={datos.repuestos.length}
-              pie={datos.repuestos.length > 0 ? "Confirma la recepción cuando lleguen" : "No esperas ningún pedido"}
-              onClick={() => irA("taller-trabajos", "repuestos")}
-            />
-          </div>
+          <section aria-labelledby="it-dia">
+            <h2 id="it-dia" className="ui-sr">Resumen del día</h2>
+            <div className="ui-indicadores it-indicadores">
+              <Indicador icono="message" titulo="Solicitudes nuevas" valor={datos.responder.length}
+                tono={datos.responder.length > 0 ? "accion" : undefined}
+                pie={primera?.fechaLimiteRespuesta ? `La más urgente vence ${tiempoRelativo(primera.fechaLimiteRespuesta, ahora)}` : "Estás al día"}
+                onClick={() => irA("taller-solicitudes", "responder")} />
+              <Indicador icono="calendar" titulo="Citas de hoy" valor={datos.hoy.length}
+                pie={datos.hoy.length > 0 ? `La primera a las ${hora(datos.hoy[0].fechaRevision)}` : "Sin revisiones agendadas hoy"}
+                onClick={() => irA("taller-solicitudes", "agendadas")} />
+              <Indicador icono="file" titulo="Cotizaciones pendientes" valor={datos.porCotizar.length + datos.esperandoCliente.length}
+                tono={datos.porCotizar.length > 0 ? "accion" : undefined}
+                pie={`${datos.porCotizar.length} por cotizar · ${datos.esperandoCliente.length} esperando al cliente`}
+                onClick={() => irA(datos.porCotizar.length > 0 ? "taller-solicitudes" : "taller-cotizaciones",
+                  datos.porCotizar.length > 0 ? "diagnosticadas" : undefined)} />
+              <Indicador icono="tool" titulo="Servicios en curso" valor={datos.enCurso.length}
+                pie={datos.enCurso.length > 0 ? "Esperando repuestos o en el taller" : "Ningún vehículo en curso"}
+                onClick={() => irA("taller-trabajos", datos.enCurso.some(enTaller) ? "entaller" : "repuestos")} />
+              {ingresos && (
+                <Indicador titulo="Mano de obra por cobrar" valor={formatPrecio(ingresos.pendiente)}
+                  tono={ingresos.pendiente > 0 ? "ok" : undefined}
+                  pie={`${formatPrecio(ingresos.liquidado)} ya liquidados en total`}
+                  onClick={() => irA("taller-informes")} />
+              )}
+            </div>
+          </section>
 
-          <div className="tp-columnas">
-            <section className="tp-bloque" aria-labelledby="tp-responder-t">
-              <h2 id="tp-responder-t" className="tp-bloque__titulo">Responder primero</h2>
-              {datos.responder.length === 0 ? (
-                <p className="tp-bloque__vacio">No hay solicitudes esperando tu respuesta.</p>
+          <div className="it-columnas">
+            <section className="it-bloque" aria-labelledby="it-urgente">
+              <div className="it-bloque__cabecera">
+                <h2 id="it-urgente" className="it-bloque__titulo">Lo urgente primero</h2>
+                {datos.urgentes.length > MAX_URGENTES && (
+                  <span className="it-bloque__total">{MAX_URGENTES} de {datos.urgentes.length}</span>
+                )}
+              </div>
+              {datos.urgentes.length === 0 ? (
+                <p className="it-bloque__vacio">
+                  <Icon name="check" size={18} /> Nada pide tu atención ahora. Las solicitudes nuevas aparecerán aquí.
+                </p>
               ) : (
-                <ul className="tp-lista">
-                  {datos.responder.slice(0, 4).map((s) => (
-                    <li key={s.id} className="tp-lista__fila">
-                      <div>
-                        <strong>{s.vehiculoDescripcion}</strong>
-                        <span className="tp-lista__meta">
-                          #{refSolicitud(s.id)} · {[s.barrio, s.ciudad].filter(Boolean).join(", ")}
-                          {s.distanciaTallerKm != null && ` · ${s.distanciaTallerKm.toFixed(1)} km`}
-                        </span>
-                        <span className="tp-lista__meta tp-lista__meta--limite">
-                          Responde antes de {formatFechaHora(s.fechaLimiteRespuesta)} ({tiempoRelativo(s.fechaLimiteRespuesta)})
+                <ul className="it-urgentes">
+                  {datos.urgentes.slice(0, MAX_URGENTES).map((u) => (
+                    <li key={`${u.s.id}-${u.orden}`} className="it-urgente">
+                      <div className="it-urgente__texto">
+                        <strong className="it-urgente__vehiculo">{u.s.vehiculoDescripcion || "Vehículo"}</strong>
+                        <span className="it-urgente__meta">
+                          #{refSolicitud(u.s.id)}
+                          {[u.s.barrio, u.s.ciudad].some(Boolean) && ` · ${[u.s.barrio, u.s.ciudad].filter(Boolean).join(", ")}`}
+                          {u.orden === 1 && ` · ${hora(u.s.fechaRevision)}`}
+                          {u.s.mecanicoNombre && ` · ${u.s.mecanicoNombre}`}
                         </span>
                       </div>
-                      <button type="button" className="sv-btn-outline" onClick={() => irA("taller-solicitudes", "responder")}>
-                        Responder
+                      <ChipEstado tono={u.tono}>{u.estado}</ChipEstado>
+                      <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico it-urgente__accion"
+                        onClick={() => irA(u.pagina, u.filtro)}
+                        aria-label={`${u.accion}: ${u.s.vehiculoDescripcion || "vehículo"} #${refSolicitud(u.s.id)}`}>
+                        {u.accion}
                       </button>
                     </li>
                   ))}
@@ -122,27 +177,56 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
               )}
             </section>
 
-            <section className="tp-bloque" aria-labelledby="tp-proxima-t">
-              <h2 id="tp-proxima-t" className="tp-bloque__titulo">Próxima revisión</h2>
-              {datos.proxima ? (
-                <div className="tp-proxima">
-                  {datos.proxima.vehiculoImagenUrl && (
-                    <img src={datos.proxima.vehiculoImagenUrl} alt="" loading="lazy" className="tp-proxima__foto" />
-                  )}
-                  <strong className="tp-proxima__cuando">{formatFechaHora(datos.proxima.fechaRevision)}</strong>
-                  <span>{datos.proxima.vehiculoDescripcion}</span>
-                  <span className="tp-lista__meta">
-                    {datos.proxima.mecanicoNombre ? `Mecánico: ${datos.proxima.mecanicoNombre}` : "Sin mecánico asignado"}
-                  </span>
-                  <EstadoServicio estado={datos.proxima.estado} />
-                </div>
+            <section className="it-bloque" aria-labelledby="it-agenda">
+              <div className="it-bloque__cabecera">
+                <h2 id="it-agenda" className="it-bloque__titulo">Agenda de hoy</h2>
+                <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("taller-solicitudes", "agendadas")}>
+                  Ver agenda
+                </button>
+              </div>
+              {datos.hoy.length > 0 ? (
+                <ol className="it-agenda">
+                  {datos.hoy.map((s) => (
+                    <li key={s.id} className="it-agenda__cita">
+                      <time className="it-agenda__hora" dateTime={s.fechaRevision}>{hora(s.fechaRevision)}</time>
+                      <span className="it-agenda__texto">
+                        <strong>{s.vehiculoDescripcion}</strong>
+                        <span>{s.mecanicoNombre ? `Mecánico: ${s.mecanicoNombre}` : "Sin mecánico asignado"}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              ) : datos.proxima ? (
+                <p className="it-bloque__vacio">
+                  Hoy no tienes citas. La próxima es el <strong>{formatFechaHora(datos.proxima.fechaRevision)}</strong>
+                  {" "}({datos.proxima.vehiculoDescripcion}).
+                </p>
               ) : (
-                <p className="tp-bloque__vacio">No tienes revisiones agendadas. Al aceptar una solicitud eliges la fecha.</p>
+                <p className="it-bloque__vacio">No tienes revisiones agendadas. Al aceptar una solicitud eliges la fecha.</p>
               )}
             </section>
           </div>
+
+          {primera && (
+            <BarraAccionMovil etiqueta="Solicitudes por responder" valor={datos.responder.length}
+              nota={primera.fechaLimiteRespuesta ? `La más urgente vence ${tiempoRelativo(primera.fechaLimiteRespuesta, ahora)}` : undefined}>
+              <button type="button" className="ui-btn ui-btn--primario" onClick={() => irA("taller-solicitudes", "responder")}>
+                Responder
+              </button>
+            </BarraAccionMovil>
+          )}
         </>
       )}
-    </>
+    </div>
   );
+}
+
+/** Una línea con lo que importa hoy, en lenguaje del taller. */
+function resumenDelDia({ responder, hoy, porCotizar }) {
+  const partes = [];
+  if (responder.length) partes.push(`${responder.length} ${responder.length === 1 ? "solicitud por responder" : "solicitudes por responder"}`);
+  if (hoy.length) partes.push(`${hoy.length} ${hoy.length === 1 ? "cita" : "citas"} hoy`);
+  if (porCotizar.length) partes.push(`${porCotizar.length} por cotizar`);
+  if (!partes.length) return "Estás al día. Aquí verás lo que pida tu atención en cuanto llegue.";
+  return `Hoy tienes ${partes.length > 1 ? `${partes.slice(0, -1).join(", ")} y ${partes.at(-1)}` : partes[0]}.`;
 }

@@ -29,3 +29,52 @@ export function tiempoRelativo(fecha, ahora = Date.now()) {
   const texto = abs < 60 ? `${abs} min` : abs < 1440 ? `${Math.round(abs / 60)} h` : `${Math.round(abs / 1440)} d`;
   return min >= 0 ? `en ${texto}` : `hace ${texto}`;
 }
+
+/** Revisión aceptada que aún no se diagnostica (la cita está en pie). */
+export const agendada = (s) => (s.estado === "ASIGNADA_A_TALLER" && s.aceptadaPorTaller) || s.estado === "EN_REVISION";
+
+const mismoDia = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+/** Citas de revisión de hoy (hora local), de la más temprana a la más tarde. */
+export function citasDeHoy(solicitudes, ahora = Date.now()) {
+  const hoy = new Date(ahora);
+  return solicitudes
+    .filter((s) => agendada(s) && s.fechaRevision && mismoDia(new Date(s.fechaRevision), hoy))
+    .sort((a, b) => new Date(a.fechaRevision) - new Date(b.fechaRevision));
+}
+
+// Menos de esto para el límite de respuesta: la solicitud se marca como crítica
+const HORAS_CRITICAS = 2;
+
+/**
+ * Lo que pide acción del taller, lo más urgente primero: solicitudes por responder (por vencimiento), citas de hoy,
+ * diagnósticos por cotizar, repuestos por confirmar y vehículos listos para entregar. Cada ítem dice qué hacer
+ * (accion), a qué sección ir (pagina + filtro) y con qué tono marcarlo.
+ */
+export function urgentes(solicitudes, ahora = Date.now()) {
+  const items = [];
+  solicitudes.filter(porResponder).forEach((s) => {
+    const horas = s.fechaLimiteRespuesta ? (new Date(s.fechaLimiteRespuesta).getTime() - ahora) / 3600000 : Infinity;
+    items.push({
+      s, orden: 0, clave: new Date(s.fechaLimiteRespuesta || 0).getTime(),
+      estado: s.fechaLimiteRespuesta ? `Responde ${tiempoRelativo(s.fechaLimiteRespuesta, ahora)}` : "Por responder",
+      tono: horas < HORAS_CRITICAS ? "error" : "aviso",
+      accion: "Responder", pagina: "taller-solicitudes", filtro: "responder",
+    });
+  });
+  citasDeHoy(solicitudes, ahora).forEach((s) => items.push({
+    s, orden: 1, clave: new Date(s.fechaRevision).getTime(),
+    estado: s.estado === "EN_REVISION" ? "En revisión hoy" : "Cita hoy", tono: "info",
+    accion: s.estado === "EN_REVISION" ? "Diagnosticar" : "Ver cita", pagina: "taller-solicitudes", filtro: "agendadas",
+  }));
+  const resto = [
+    { filtro: (s) => s.estado === "DIAGNOSTICADA", estado: "Por cotizar", tono: "acento", accion: "Cotizar", pagina: "taller-solicitudes", f: "diagnosticadas" },
+    { filtro: (s) => s.estado === "REPUESTOS_PEDIDOS", estado: "Repuestos en camino", tono: "info", accion: "Confirmar llegada", pagina: "taller-trabajos", f: "repuestos" },
+    { filtro: (s) => s.estado === "LISTA", estado: "Lista para entregar", tono: "ok", accion: "Entregar", pagina: "taller-trabajos", f: "entaller" },
+  ];
+  resto.forEach((r, i) => solicitudes.filter(r.filtro).forEach((s) => items.push({
+    s, orden: 2 + i, clave: new Date(s.fechaCreacion || 0).getTime(),
+    estado: r.estado, tono: r.tono, accion: r.accion, pagina: r.pagina, filtro: r.f,
+  })));
+  return items.sort((a, b) => a.orden - b.orden || a.clave - b.clave);
+}

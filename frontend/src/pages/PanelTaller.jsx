@@ -70,7 +70,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         {seccion === "inicio" && (
           <TallerInicio
             taller={taller} solicitudes={solicitudes} anteriores={anteriores}
-            cargando={cargando} error={error} irA={irA}
+            cargando={cargando} error={error} onRecargar={cargar} irA={irA}
           />
         )}
         {seccion === "solicitudes" && (

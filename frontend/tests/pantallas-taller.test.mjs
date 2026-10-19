@@ -48,3 +48,31 @@ test("Mi taller edita por sección y solo con los endpoints que ya existen", () 
   assert.ok(!pagina.includes("taller.rating"), "no muestra la calificación por defecto del registro");
   assert.match(leer("../src/components/servicio/MecanicosTaller.jsx"), /<SeccionEditable/);
 });
+
+test("Inicio: lo urgente va primero y las citas de hoy son solo las de hoy", async () => {
+  const { urgentes, citasDeHoy } = await import("../src/pages/taller/resumenTaller.js");
+  const ahora = new Date(2026, 9, 19, 9, 0).getTime();
+  const en = (h) => new Date(ahora + h * 3600000).toISOString();
+  const lista = [
+    { id: "lista", estado: "LISTA", fechaCreacion: en(-50) },
+    { id: "cotizar", estado: "DIAGNOSTICADA", fechaCreacion: en(-20) },
+    { id: "tarde", estado: "ASIGNADA_A_TALLER", aceptadaPorTaller: false, fechaLimiteRespuesta: en(10) },
+    { id: "ya", estado: "ASIGNADA_A_TALLER", aceptadaPorTaller: false, fechaLimiteRespuesta: en(1) },
+    { id: "cita", estado: "ASIGNADA_A_TALLER", aceptadaPorTaller: true, fechaRevision: en(5) },
+    { id: "manana", estado: "ASIGNADA_A_TALLER", aceptadaPorTaller: true, fechaRevision: en(26) },
+  ];
+  const u = urgentes(lista, ahora);
+  assert.deepEqual(u.map((x) => x.s.id), ["ya", "tarde", "cita", "cotizar", "lista"]);
+  assert.equal(u[0].tono, "error", "menos de 2 h para responder es crítico");
+  assert.equal(u[1].tono, "aviso");
+  assert.ok(u.every((x) => x.estado && x.accion && x.pagina), "cada ítem dice su estado con texto y qué hacer");
+  assert.deepEqual(citasDeHoy(lista, ahora).map((s) => s.id), ["cita"]);
+});
+
+test("Inicio usa el sistema compartido y la barra inferior en celular", () => {
+  const pagina = leer("../src/pages/taller/TallerInicio.jsx");
+  for (const pieza of ["<EncabezadoPagina", "<Indicador", "<ChipEstado", "<Alerta", "<EstadoVacio", "<Esqueleto", "<BarraAccionMovil"]) {
+    assert.ok(pagina.includes(pieza), `usa ${pieza}`);
+  }
+  assert.ok(!pagina.includes("→"), "sin flechas de texto: el ícono es SVG");
+});

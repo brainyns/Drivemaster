@@ -31,69 +31,7 @@
   color: var(--ui-text);
 }
 
-/* ── Tarjetas de Inicio ───────────────────────────────────────────────────── */
-.tp-tarjetas {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.tp-tarjeta {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: .3rem;
-  padding: 1.1rem 1.2rem 1.15rem;
-  text-align: left;
-  color: var(--tp-texto);
-  background: var(--tp-superficie);
-  border: 1px solid var(--tp-linea);
-  border-radius: var(--ui-r-lg);
-  box-shadow: var(--tp-sombra);
-  cursor: pointer;
-  font: inherit;
-  transition: transform .18s var(--tp-ease), border-color .18s var(--tp-ease);
-}
-
-.tp-tarjeta:hover { border-color: color-mix(in srgb, var(--tp-info) 55%, var(--tp-linea)); }
-.tp-tarjeta:active { transform: scale(.97); }
-.tp-tarjeta:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 2px; }
-
-.tp-tarjeta__titulo { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tp-texto-2); }
-.tp-tarjeta__valor { font-size: 2.6rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-.tp-tarjeta__pie { font-size: .85rem; color: var(--tp-texto-2); max-width: 30ch; }
-.tp-tarjeta__flecha { position: absolute; right: 1rem; top: 1rem; color: var(--tp-texto-2); transition: transform .18s var(--tp-ease); }
-.tp-tarjeta:hover .tp-tarjeta__flecha { transform: translateX(3px); }
-
-.tp-tarjeta--accion { border-color: color-mix(in srgb, var(--tp-acento) 60%, var(--tp-linea)); }
-.tp-tarjeta--accion .tp-tarjeta__valor { color: var(--primary-text); }
-.tp-tarjeta--vivo .tp-tarjeta__valor { color: var(--tp-info); }
-
-/* ── Aviso de órdenes anteriores ──────────────────────────────────────────── */
-.tp-aviso {
-  display: flex;
-  flex-direction: column;
-  gap: .15rem;
-  width: 100%;
-  margin-bottom: 1.25rem;
-  padding: .85rem 1.1rem;
-  text-align: left;
-  font: inherit;
-  color: var(--tp-texto);
-  background: color-mix(in srgb, var(--tp-aviso) 12%, var(--tp-superficie));
-  border: 1px solid color-mix(in srgb, var(--tp-aviso) 55%, var(--tp-linea));
-  border-radius: var(--ui-r-lg);
-  cursor: pointer;
-  transition: transform .18s var(--tp-ease);
-}
-.tp-aviso:active { transform: scale(.985); }
-.tp-aviso:focus-visible { outline: 2px solid var(--tp-aviso); outline-offset: 2px; }
-.tp-aviso span { font-size: .85rem; color: var(--tp-texto-2); }
-
 /* ── Bloques ──────────────────────────────────────────────────────────────── */
-.tp-columnas { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1rem; }
-
 .tp-bloque {
   padding: 1.1rem 1.2rem;
   background: var(--tp-superficie);
@@ -103,28 +41,7 @@
 .tp-bloque__titulo { margin: 0 0 .8rem; font-size: 1rem; }
 .tp-bloque__vacio { margin: 0; color: var(--tp-texto-2); font-size: .9rem; max-width: 44ch; text-wrap: pretty; }
 
-.tp-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.tp-lista__fila { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem 0; border-top: 1px solid var(--tp-linea); }
-.tp-lista__fila:first-child { border-top: 0; padding-top: 0; }
-.tp-lista__fila > div { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
-.tp-lista__meta { font-size: .82rem; color: var(--tp-texto-2); }
-.tp-lista__meta--limite { color: var(--tp-aviso); }
-
-.tp-proxima { display: flex; flex-direction: column; gap: .35rem; align-items: flex-start; }
-.tp-proxima__foto { width: 100%; max-height: 150px; object-fit: cover; border-radius: var(--ui-r-lg); }
-.tp-proxima__cuando { font-size: 1.15rem; }
-
-/* ── Estado vacío y carga ─────────────────────────────────────────────────── */
-.tp-vacio {
-  padding: 2.2rem 1.5rem;
-  text-align: center;
-  background: var(--tp-superficie);
-  border: 1px dashed var(--tp-linea);
-  border-radius: var(--ui-r-lg);
-}
-.tp-vacio h2 { margin: 0 0 .4rem; }
-.tp-vacio p { margin: 0 auto 1.1rem; max-width: 52ch; color: var(--tp-texto-2); text-wrap: pretty; }
-
+/* ── Carga ── */
 .tp-esqueleto__fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .tp-esqueleto__tarjeta, .tp-esqueleto__bloque {
   border-radius: var(--ui-r-lg);
@@ -138,10 +55,8 @@
 
 .pt-anteriores__nota { margin: 0 0 1rem; }
 
-@media (max-width: 860px) { .tp-columnas { grid-template-columns: 1fr; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .tp-tarjeta, .tp-tarjeta__flecha, .tp-aviso { transition: none; }
   .tp-esqueleto__tarjeta, .tp-esqueleto__bloque { animation: none; }
 }
 

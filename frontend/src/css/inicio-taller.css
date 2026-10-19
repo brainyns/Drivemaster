@@ -1,0 +1,124 @@
+/* ── Inicio del taller ─────────────────────────────────────────────────────
+   Prefijo it-, BEM. Cabecera, cifras (ui-indicador), chips, avisos, vacío, carga y barra inferior son de
+   ui.css; aquí la rejilla del día, la lista de lo urgente y la agenda. Tokens --ui-*, los dos temas. */
+
+.it-alerta { margin-bottom: var(--ui-sp-4); }
+.it-indicadores { margin-bottom: var(--ui-sp-5); }
+.it-esqueleto { height: 124px; border-radius: 12px; }
+
+/* El número de pendientes dentro del botón principal */
+.it-contador {
+  min-width: 1.5em;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--on-primary) 16%, transparent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.it-enlace {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--ui-text);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.it-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 4px; }
+
+/* ── Lo urgente y la agenda ────────────────────────────────────────────── */
+.it-columnas {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.it-bloque {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 20px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+}
+
+.it-bloque__cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; }
+
+.it-root .it-bloque__titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: var(--fs-subtitulo);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ui-text);
+}
+
+.it-bloque__total { font-size: 0.8125rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+
+.it-root .it-bloque__vacio {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ui-muted);
+  text-wrap: pretty;
+}
+
+.it-bloque__vacio svg { flex-shrink: 0; margin-top: 2px; color: var(--ui-ok); }
+.it-bloque__vacio strong { color: var(--ui-text); }
+
+.it-urgentes { display: grid; margin: 0; padding: 0; list-style: none; }
+
+.it-urgente {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.it-urgente:first-child { border-top: 0; padding-top: 0; }
+.it-urgente:last-child { padding-bottom: 0; }
+.it-urgente__texto { display: grid; gap: 2px; min-width: 0; }
+.it-urgente__vehiculo { font-size: 0.95rem; overflow-wrap: anywhere; }
+.it-urgente__meta { font-size: 0.8125rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+
+/* Agenda: la hora grande a la izquierda, como una hoja de citas */
+.it-agenda { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+
+.it-agenda__cita {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ui-surface-2);
+}
+
+.it-agenda__hora { font-size: 0.95rem; font-weight: 800; color: var(--primary-text); font-variant-numeric: tabular-nums; }
+.it-agenda__texto { display: grid; gap: 2px; min-width: 0; }
+.it-agenda__texto strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+.it-agenda__texto span { font-size: 0.8rem; color: var(--ui-muted); }
+
+@media (max-width: 960px) {
+  .it-columnas { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Celular: "Responder" queda además en la barra inferior; en la fila, el chip baja bajo el texto */
+@media (max-width: 600px) {
+  .it-urgente { grid-template-columns: minmax(0, 1fr) auto; }
+  .it-urgente .ui-badge { grid-column: 1; grid-row: 2; justify-self: start; }
+  .it-urgente__accion { grid-column: 2; grid-row: 1 / span 2; min-height: 40px; }
+}
