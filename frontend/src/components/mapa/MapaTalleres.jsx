@@ -163,7 +163,7 @@ function TalleresAgrupados({ talleres, valor, marcadores, abrir, onAbierto, onMa
  * ubicación", tocar el mapa o arrastrar su pin) y elige taller en el mismo mapa o en la lista de al lado.
  * ubicacion / onUbicacion({ latitud, longitud }): el punto del cliente (el estado vive en la página).
  * onDireccion({ direccion, barrio, ciudad, etiqueta }): la dirección legible del punto, cuando se conoce.
- * valor / onElegir(id | null): el taller elegido; null = asignación automática.
+ * valor / onElegir(id | null, nombre | null): el taller elegido; null = asignación automática.
  */
 export default function MapaTalleres({ id = "mapa-diagnostico", token, ciudad, ubicacion, onUbicacion, onDireccion, valor, onElegir }) {
   const [talleres, setTalleres] = useState([]);
@@ -259,8 +259,9 @@ export default function MapaTalleres({ id = "mapa-diagnostico", token, ciudad, u
     contenedorMapa.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
+  // El nombre va de segundo argumento para que la página lo muestre (p. ej. en su resumen)
   const elegir = (tallerId) => {
-    onElegir(tallerId);
+    onElegir(tallerId, tallerId ? talleres.find((t) => t.id === tallerId)?.nombre ?? null : null);
     mapa?.closePopup();
   };
 

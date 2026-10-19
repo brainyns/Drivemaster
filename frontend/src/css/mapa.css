@@ -446,7 +446,7 @@
   cursor: pointer;
 }
 
-.mapa-buscador__opcion--activa { background: var(--dm-surface-2); box-shadow: inset 3px 0 0 var(--mapa-acento); }
+.mapa-buscador__opcion--activa { background: var(--dm-surface-2); color: var(--dm-text); }
 
 .mapa-buscador__titulo {
   font-size: 14px;
@@ -632,7 +632,8 @@
 
 .mapa-auto--activo {
   border-color: var(--mapa-acento);
-  box-shadow: inset 4px 0 0 var(--mapa-acento);
+  box-shadow: 0 0 0 1px var(--mapa-acento);
+  background: color-mix(in srgb, var(--mapa-acento) 7%, var(--dm-surface));
 }
 
 .mapa-auto__titulo {
@@ -678,7 +679,8 @@
 
 .mapa-lista__item--elegido {
   border-color: var(--mapa-acento);
-  box-shadow: inset 4px 0 0 var(--mapa-acento);
+  box-shadow: 0 0 0 1px var(--mapa-acento);
+  background: color-mix(in srgb, var(--mapa-acento) 7%, var(--dm-surface));
 }
 
 .mapa-lista__nota {
