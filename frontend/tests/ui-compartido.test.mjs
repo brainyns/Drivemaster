@@ -44,3 +44,19 @@ test("ui.css no repite la franja de color a la izquierda ni usa colores fijos en
   assert.doesNotMatch(css, /inset [3-9]px 0 0/);
   assert.match(css, /\.ui-badge--ok\s+\{ color: var\(--ui-ok\)/);
 });
+
+test("el chip toma texto y tono de un catálogo de estados", () => {
+  const chip = leer("../src/components/ui/ChipEstado.jsx");
+  assert.match(chip, /catalogo\[estado\]/);
+  assert.match(chip, /\{info\?\.label\}/);
+});
+
+test("las piezas nuevas del panel llevan su accesibilidad", () => {
+  assert.match(leer("../src/components/ui/Estrellas.jsx"), /role="img" aria-label=\{texto\}/);
+  const barra = leer("../src/components/ui/BarraProgreso.jsx");
+  assert.match(barra, /role="progressbar"/);
+  assert.match(barra, /aria-valuenow=\{pct\}/);
+  const seccion = leer("../src/components/ui/SeccionEditable.jsx");
+  assert.match(seccion, /aria-labelledby=\{idTitulo\}/);
+  assert.match(leer("../src/components/ui/Indicador.jsx"), /type=\{onClick \? "button" : undefined\}/);
+});

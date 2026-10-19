@@ -750,6 +750,165 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   body:has(.ui-barra-movil) .chat-widget-container { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
 
+/* ── Cifra de un resumen (Indicador) ───────────────────────────────────── */
+.ui-indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.ui-indicador {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px 18px;
+  text-align: left;
+  font: inherit;
+  color: var(--ui-text);
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+}
+
+.ui-indicador__titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 20px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ui-muted);
+}
+
+.ui-indicador__valor {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.ui-indicador__pie { font-size: 0.8125rem; line-height: 1.45; color: var(--ui-muted); text-wrap: pretty; }
+
+.ui-indicador__flecha {
+  position: absolute;
+  top: 16px;
+  right: 14px;
+  color: var(--ui-muted);
+  transition: transform var(--ui-dur) var(--ui-ease), color var(--ui-dur) ease;
+}
+
+.ui-indicador--enlace { cursor: pointer; transition: border-color var(--ui-dur) ease, transform var(--ui-dur) var(--ui-ease); }
+.ui-indicador--enlace:active { transform: scale(0.98); }
+.ui-indicador--enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-indicador--enlace:hover { border-color: var(--ui-muted); }
+  .ui-indicador--enlace:hover .ui-indicador__flecha { transform: translateX(3px); color: var(--ui-text); }
+}
+
+/* Lo que pide atención: el valor en el acento y el borde tibio; lo que va bien, en verde */
+.ui-indicador--accion { border-color: color-mix(in srgb, var(--primary) 55%, var(--ui-line)); }
+.ui-indicador--accion .ui-indicador__valor { color: var(--primary-text); }
+.ui-indicador--ok .ui-indicador__valor { color: var(--ui-ok); }
+
+/* ── Sección editable por partes (SeccionEditable) ─────────────────────── */
+.ui-seccion {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  transition: border-color var(--ui-dur) ease, box-shadow var(--ui-dur) ease;
+}
+
+.ui-seccion--editando {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--ui-line));
+  box-shadow: var(--ui-sombra-1);
+}
+
+.ui-seccion__cabecera { display: flex; align-items: flex-start; gap: 12px; }
+
+.ui-seccion__icono {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+
+.ui-seccion__texto { flex: 1; min-width: 0; }
+
+.ui-seccion .ui-seccion__titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: var(--fs-subtitulo);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--ui-text);
+}
+
+.ui-seccion .ui-seccion__desc { margin: 2px 0 0; font-size: 0.875rem; line-height: 1.5; color: var(--ui-muted); text-wrap: pretty; }
+.ui-seccion__cuerpo { display: grid; gap: 16px; min-width: 0; }
+.ui-seccion .ui-seccion__nota { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: var(--ui-muted); }
+
+/* Datos de solo lectura: etiqueta arriba, valor abajo */
+.ui-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px 24px;
+  margin: 0;
+}
+
+.ui-datos__item { display: grid; gap: 2px; min-width: 0; }
+.ui-datos dt { font-size: 0.8125rem; color: var(--ui-muted); }
+.ui-datos dd { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--ui-text); overflow-wrap: anywhere; }
+.ui-datos__falta { font-weight: 500; color: var(--ui-muted); font-style: italic; }
+
+/* Guardar y Cancelar al pie de un formulario */
+.ui-form-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* ── Estrellas (Estrellas) ─────────────────────────────────────────────── */
+.ui-estrellas { display: inline-flex; gap: 2px; color: var(--ui-line); vertical-align: -2px; }
+.ui-estrellas svg { fill: currentColor; stroke: none; }
+.ui-estrellas .ui-estrellas__on { color: var(--ui-aviso); }
+
+/* ── Barra de avance (BarraProgreso) ───────────────────────────────────── */
+.ui-progreso {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ui-surface-2);
+  box-shadow: inset 0 0 0 1px var(--ui-line-soft);
+}
+
+.ui-progreso__barra {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: width 0.4s var(--ui-ease);
+}
+
+.ui-progreso--ok .ui-progreso__barra { background: var(--ui-ok); }
+
+/* ── Filtros (grupo de ui-chip) y búsqueda de una lista ────────────────── */
+.ui-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.ui-buscador { position: relative; flex: 1 1 240px; max-width: 360px; }
+.ui-buscador > svg { position: absolute; top: 50%; left: 14px; color: var(--ui-muted); transform: translateY(-50%); pointer-events: none; }
+.ui-buscador .ui-field__input { min-height: 44px; padding-left: 40px; }
+
 /* Precio destacado (tarifas, totales) */
 .ui-precio { font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 
@@ -776,4 +935,6 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   .ui-btn:active:not(:disabled) { transform: none; }
   .ui-btn[aria-busy="true"]::before { animation: none; }
   .ui-vehiculo__check { transition: opacity 0.2s; transform: none; }
+  .ui-indicador--enlace, .ui-indicador__flecha, .ui-seccion, .ui-progreso__barra { transition: none; }
+  .ui-indicador--enlace:active, .ui-indicador--enlace:hover .ui-indicador__flecha { transform: none; }
 }
