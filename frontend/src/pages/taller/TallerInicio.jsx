@@ -65,7 +65,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
   const primera = datos.responder[0];
 
   return (
-    <div className="it-root">
+    <div className="ini-root">
       <EncabezadoPagina
         titulo={taller?.nombre ? `${saludo(ahora)}, ${taller.nombre}` : "Inicio del taller"}
         descripcion={cargando ? "Revisando lo que tienes para hoy…" : resumenDelDia(datos)}
@@ -73,7 +73,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
           <>
             {datos.responder.length > 0 && (
               <button type="button" className="ui-btn ui-btn--primario" onClick={() => irA("taller-solicitudes", "responder")}>
-                Responder solicitudes <span className="it-contador">{datos.responder.length}</span>
+                Responder solicitudes <span className="ini-contador">{datos.responder.length}</span>
               </button>
             )}
             {datos.porCotizar.length > 0 && (
@@ -89,22 +89,22 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
       />
 
       {error && (
-        <Alerta className="it-alerta" onReintentar={onRecargar ? reintentar : undefined} reintentando={reintentando}>
+        <Alerta className="ini-alerta" onReintentar={onRecargar ? reintentar : undefined} reintentando={reintentando}>
           No pudimos cargar tus solicitudes. {error}
         </Alerta>
       )}
 
       {anteriores.length > 0 && (
-        <Alerta tono="aviso" className="it-alerta">
+        <Alerta tono="aviso" className="ini-alerta">
           Tienes {anteriores.length} {anteriores.length === 1 ? "orden" : "órdenes"} del flujo anterior por atender.{" "}
-          <button type="button" className="it-enlace" onClick={() => irA("taller-anteriores")}>Ver órdenes anteriores</button>
+          <button type="button" className="ini-enlace" onClick={() => irA("taller-anteriores")}>Ver órdenes anteriores</button>
         </Alerta>
       )}
 
       {cargando ? (
         <>
-          <div className="ui-indicadores it-indicadores" aria-hidden="true">
-            {[0, 1, 2, 3].map((i) => <span key={i} className="ui-skeleton it-esqueleto" />)}
+          <div className="ui-indicadores ini-indicadores" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => <span key={i} className="ui-skeleton ini-esqueleto" />)}
           </div>
           <Esqueleto variante="lista" cantidad={3} texto="Cargando el resumen del día…" />
         </>
@@ -115,9 +115,9 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
         </EstadoVacio>
       ) : (
         <>
-          <section aria-labelledby="it-dia">
-            <h2 id="it-dia" className="ui-sr">Resumen del día</h2>
-            <div className="ui-indicadores it-indicadores">
+          <section aria-labelledby="ini-dia">
+            <h2 id="ini-dia" className="ui-sr">Resumen del día</h2>
+            <div className="ui-indicadores ini-indicadores">
               <Indicador icono="message" titulo="Solicitudes nuevas" valor={datos.responder.length}
                 tono={datos.responder.length > 0 ? "accion" : undefined}
                 pie={primera?.fechaLimiteRespuesta ? `La más urgente vence ${tiempoRelativo(primera.fechaLimiteRespuesta, ahora)}` : "Estás al día"}
@@ -146,25 +146,25 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
             </div>
           </section>
 
-          <div className="it-columnas">
-            <section className="it-bloque" aria-labelledby="it-urgente">
-              <div className="it-bloque__cabecera">
-                <h2 id="it-urgente" className="it-bloque__titulo">Lo urgente primero</h2>
+          <div className="ini-columnas">
+            <section className="ini-bloque" aria-labelledby="ini-urgente">
+              <div className="ini-bloque__cabecera">
+                <h2 id="ini-urgente" className="ini-bloque__titulo">Lo urgente primero</h2>
                 {datos.urgentes.length > MAX_URGENTES && (
-                  <span className="it-bloque__total">{MAX_URGENTES} de {datos.urgentes.length}</span>
+                  <span className="ini-bloque__total">{MAX_URGENTES} de {datos.urgentes.length}</span>
                 )}
               </div>
               {datos.urgentes.length === 0 ? (
-                <p className="it-bloque__vacio">
+                <p className="ini-bloque__vacio">
                   <Icon name="check" size={18} /> Nada pide tu atención ahora. Las solicitudes nuevas aparecerán aquí.
                 </p>
               ) : (
-                <ul className="it-urgentes">
+                <ul className="ini-urgentes">
                   {datos.urgentes.slice(0, MAX_URGENTES).map((u) => (
-                    <li key={`${u.s.id}-${u.orden}`} className="it-urgente">
-                      <div className="it-urgente__texto">
-                        <strong className="it-urgente__vehiculo">{u.s.vehiculoDescripcion || "Vehículo"}</strong>
-                        <span className="it-urgente__meta">
+                    <li key={`${u.s.id}-${u.orden}`} className="ini-urgente">
+                      <div className="ini-urgente__texto">
+                        <strong className="ini-urgente__vehiculo">{u.s.vehiculoDescripcion || "Vehículo"}</strong>
+                        <span className="ini-urgente__meta">
                           #{refSolicitud(u.s.id)}
                           {[u.s.barrio, u.s.ciudad].some(Boolean) && ` · ${[u.s.barrio, u.s.ciudad].filter(Boolean).join(", ")}`}
                           {u.orden === 1 && ` · ${hora(u.s.fechaRevision)}`}
@@ -172,7 +172,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                         </span>
                       </div>
                       <ChipEstado tono={u.tono}>{u.estado}</ChipEstado>
-                      <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico it-urgente__accion"
+                      <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico ini-urgente__accion"
                         onClick={() => irA(u.pagina, { filtro: u.filtro, abrir: u.s.id, volverA: "taller-inicio" })}
                         aria-label={`${u.accion}: ${u.s.vehiculoDescripcion || "vehículo"} #${refSolicitud(u.s.id)}`}>
                         {u.accion}
@@ -183,19 +183,19 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
               )}
             </section>
 
-            <section className="it-bloque" aria-labelledby="it-agenda">
-              <div className="it-bloque__cabecera">
-                <h2 id="it-agenda" className="it-bloque__titulo">Agenda de hoy</h2>
+            <section className="ini-bloque" aria-labelledby="ini-agenda">
+              <div className="ini-bloque__cabecera">
+                <h2 id="ini-agenda" className="ini-bloque__titulo">Agenda de hoy</h2>
                 <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("taller-solicitudes", "agendadas")}>
                   Ver agenda
                 </button>
               </div>
               {datos.hoy.length > 0 ? (
-                <ol className="it-agenda">
+                <ol className="ini-agenda">
                   {datos.hoy.map((s) => (
-                    <li key={s.id} className="it-agenda__cita">
-                      <time className="it-agenda__hora" dateTime={s.fechaRevision}>{hora(s.fechaRevision)}</time>
-                      <span className="it-agenda__texto">
+                    <li key={s.id} className="ini-agenda__cita">
+                      <time className="ini-agenda__hora" dateTime={s.fechaRevision}>{hora(s.fechaRevision)}</time>
+                      <span className="ini-agenda__texto">
                         <strong>{s.vehiculoDescripcion}</strong>
                         <span>{s.mecanicoNombre ? `Mecánico: ${s.mecanicoNombre}` : "Sin mecánico asignado"}</span>
                       </span>
@@ -203,12 +203,12 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                   ))}
                 </ol>
               ) : datos.proxima ? (
-                <p className="it-bloque__vacio">
+                <p className="ini-bloque__vacio">
                   Hoy no tienes citas. La próxima es el <strong>{formatFechaHora(datos.proxima.fechaRevision)}</strong>
                   {" "}({datos.proxima.vehiculoDescripcion}).
                 </p>
               ) : (
-                <p className="it-bloque__vacio">No tienes revisiones agendadas. Al aceptar una solicitud eliges la fecha.</p>
+                <p className="ini-bloque__vacio">No tienes revisiones agendadas. Al aceptar una solicitud eliges la fecha.</p>
               )}
             </section>
           </div>
