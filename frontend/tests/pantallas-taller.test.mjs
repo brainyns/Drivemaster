@@ -127,6 +127,16 @@ test("Calificación: sin calificaciones es Nuevo (no un 5.0) y con ellas el prom
   assert.equal(datosCalificacion(4, 1).texto, "1 calificación");
 });
 
+test("Servicios (admin): la calificación promedio usa la misma regla que el chip de cada taller", async () => {
+  const { promedioDeTalleres } = await import("../src/utils/calificacion.js");
+  // La lista del ADMIN (TallerResumen) antes llegaba sin calificaciones: cada fila decía "Nuevo" y el promedio no
+  assert.equal(promedioDeTalleres([{ rating: 4.5 }, { rating: 5 }]), null, "sin cantidad, ningún taller cuenta");
+  assert.equal(promedioDeTalleres([{ rating: 4.5, calificaciones: 2 }, { rating: 5, calificaciones: 0 }, { rating: null, calificaciones: 0 }]), 4.5);
+  assert.equal(promedioDeTalleres([{ rating: 4, calificaciones: 1 }, { rating: 5, calificaciones: 3 }]), 4.5);
+  assert.equal(promedioDeTalleres([]), null);
+  assert.ok(leer("../src/pages/AdminTalleres.jsx").includes("promedioDeTalleres(talleres)"));
+});
+
 test("El admin ya no escribe la calificación a mano", () => {
   const admin = leer("../src/pages/AdminTalleres.jsx");
   assert.ok(!admin.includes("Rating inicial") && !admin.includes("form.rating"));

@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -212,6 +213,25 @@ class LimpiezaUsuariosYRespuestasAdminTest {
         for (String util : new String[]{"AutoMax", "Cali", "Frenos", "4.5", "60000"}) {
             assertTrue(json.contains(util), "falta " + util + " en: " + json);
         }
+    }
+
+    @Test
+    void laListaDeTalleresDelAdminLlevaCuantasCalificacionesTieneCadaTaller() throws Exception {
+        // Sin la cantidad, "Servicios" muestra "Nuevo" a un taller ya calificado (rating 4.5 con 0 calificaciones)
+        TallerDTO calificado = taller();
+        calificado.setCalificaciones(12);
+        TallerDTO nuevo = taller();
+        nuevo.setId("w2");
+        nuevo.setRating(null);
+        nuevo.setCalificaciones(null);
+        when(tallerService.listarTodos(any())).thenReturn(List.of(calificado, nuevo));
+
+        mvc.perform(get("/api/talleres").with(user("admin@demo.com").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].rating").value(4.5))
+                .andExpect(jsonPath("$[0].calificaciones").value(12))
+                .andExpect(jsonPath("$[1].rating").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$[1].calificaciones").value(0));
     }
 
     @Test

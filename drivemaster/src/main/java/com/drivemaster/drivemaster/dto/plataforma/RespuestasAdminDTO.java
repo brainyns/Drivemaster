@@ -32,15 +32,19 @@ public final class RespuestasAdminDTO {
         }
     }
 
-    /** Taller en la lista de "Servicios" del ADMIN. */
+    /**
+     * Taller en la lista de "Servicios" del ADMIN. rating y calificaciones van juntos, como en TallerDTO: sin la
+     * cantidad, la pantalla mostraría "Nuevo" a un taller ya calificado.
+     */
     public record TallerResumen(String id, String nombre, String ciudad, String barrio, String direccion,
-                                List<String> especialidades, Double rating, Double precioManoObra, String horario,
-                                Boolean activo, String estadoAprobacion, String motivoRechazo, LocalDateTime fechaRegistro) {
+                                List<String> especialidades, Double rating, Integer calificaciones,
+                                Double precioManoObra, String horario, Boolean activo, String estadoAprobacion, String motivoRechazo, LocalDateTime fechaRegistro) {
 
         public static TallerResumen de(TallerDTO t) {
             if (t == null) return null;
             return new TallerResumen(t.getId(), t.getNombre(), t.getCiudad(), t.getBarrio(), t.getDireccion(),
-                    t.getEspecialidades(), t.getRating(), t.getPrecioManoObra(), t.getHorario(), t.getActivo(),
+                    t.getEspecialidades(), t.getRating(),
+                    t.getCalificaciones() != null ? t.getCalificaciones() : 0, t.getPrecioManoObra(), t.getHorario(), t.getActivo(),
                     t.getEstadoAprobacion(), t.getMotivoRechazo(), t.getFechaRegistro());
         }
     }

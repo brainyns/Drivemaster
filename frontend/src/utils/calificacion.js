@@ -11,3 +11,13 @@ export function datosCalificacion(rating, calificaciones) {
   const texto = `${total} ${total === 1 ? "calificación" : "calificaciones"}`;
   return { nuevo: false, promedio, texto, etiqueta: `Calificación ${promedio} de 5, ${texto}` };
 }
+
+/**
+ * Promedio de los talleres que ya tienen calificaciones, con la misma regla que datosCalificacion: un rating sin
+ * calificaciones (un taller "Nuevo") no cuenta. null si ninguno tiene.
+ */
+export function promedioDeTalleres(talleres) {
+  const calificados = (talleres || []).filter((t) => !datosCalificacion(t.rating, t.calificaciones).nuevo);
+  if (calificados.length === 0) return null;
+  return calificados.reduce((s, t) => s + Number(t.rating), 0) / calificados.length;
+}

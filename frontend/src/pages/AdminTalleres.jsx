@@ -7,6 +7,7 @@ import DrawerAdmin from "../components/admin/DrawerAdmin";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import { capitalizar } from "../utils/formato";
 import Calificacion from "../components/ui/Calificacion";
+import { promedioDeTalleres } from "../utils/calificacion";
 import "../css/admin-talleres.css";
 import "../css/admin-base.css";
 
@@ -159,11 +160,8 @@ export default function AdminTalleres() {
 
   const resumen = useMemo(() => {
     const activos = talleres.filter(t => t.activo).length;
-    const calificados = talleres.filter(t => t.rating != null);
-    const promedio = calificados.length
-      ? calificados.reduce((s, t) => s + Number(t.rating), 0) / calificados.length
-      : null;
-    return { total: talleres.length, activos, inactivos: talleres.length - activos, promedio };
+    // Con la misma regla que el chip de cada fila: un taller "Nuevo" no entra en el promedio
+    return { total: talleres.length, activos, inactivos: talleres.length - activos, promedio: promedioDeTalleres(talleres) };
   }, [talleres]);
 
   const visibles = useMemo(() => {
