@@ -108,8 +108,11 @@
   gap: var(--sp-sm);
 }
 
+/* Lo que pide atención (cotización por responder, cita por pagar): borde completo con el acento y un tinte
+   suave, en vez de una franja de color a un lado */
 .ss-bloque--destacado {
-  border-left: 4px solid var(--ss-steel, #18487A);
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
 }
 
 .ss-bloque__titulo {

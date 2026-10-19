@@ -6,23 +6,35 @@ import { cotizacionesDeOrden, responderCotizacion } from "../services/cotizacion
 import { pagarDiagnostico, pagarCotizacion } from "../services/pagoMarketplaceService";
 import { pedidosDeOrden } from "../services/pedidoTiendaService";
 import { misOrdenes } from "../services/ordenServicioService";
-import EstadoServicio from "../components/servicio/EstadoServicio";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
 import RespuestaCotizacion from "../components/servicio/RespuestaCotizacion";
-import Etiqueta from "../components/servicio/Etiqueta";
 import PagoLocal from "../components/servicio/PagoLocal";
 import ConfirmarRecepcion from "../components/servicio/ConfirmarRecepcion";
 import {
-  ESTADOS_CANCELABLES_CLIENTE, ESTADOS_PEDIDO, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
+  ESTADOS, ESTADOS_CANCELABLES_CLIENTE, ESTADOS_PEDIDO, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
 import { ESTADOS_ORDEN_ANTERIOR, ordenarOrdenesAnteriores, tieneCitaProxima } from "../components/servicio/ordenesAnteriores";
 import RutaTaller from "../components/mapa/RutaTaller";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Alerta from "../components/ui/Alerta";
+import Icon from "../components/public/Icon";
+import { FILTROS_SERVICIOS, MINIMO_PARA_FILTRAR, contarServicios, filtrarServicios } from "../components/servicio/filtrosServicios";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
+import "../css/mis-servicios.css";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
+
+/** Estado de una solicitud con el chip compartido (texto y punto de color). */
+function ChipServicio({ estado }) {
+  const info = ESTADOS[estado] || { label: estado, tono: "info" };
+  return <ChipEstado tono={info.tono}>{info.label}</ChipEstado>;
+}
 
 /**
  * Cotización vigente, respuesta, pago y pedidos a tiendas de una solicitud. El
@@ -112,7 +124,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
                     <span className="ss-meta">No se pudo despachar: te devolveremos {formatPrecio(p.total)}.</span>
                   )}
                 </span>
-                <Etiqueta estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+                <ChipEstado tono={ESTADOS_PEDIDO[p.estado]?.tono}>{ESTADOS_PEDIDO[p.estado]?.label || p.estado}</ChipEstado>
               </li>
             ))}
           </ul>
@@ -136,10 +148,12 @@ function ServiciosAnteriores({ ordenes, ahora, onIrHistorial }) {
         {ordenarOrdenesAnteriores(ordenes).map((o) => (
           <article key={o.id} className="sv-anterior">
             <div className="ss-tarjeta__cabecera">
-              <span className="ss-eyebrow">#{refSolicitud(o.id)}{o.fechaCreacion ? ` · ${formatFecha(o.fechaCreacion)}` : ""}</span>
-              <Etiqueta estado={o.estado} catalogo={ESTADOS_ORDEN_ANTERIOR} />
+              <strong className="ss-tarjeta__titulo">{o.vehiculoDescripcion}</strong>
+              <ChipEstado tono={(ESTADOS_ORDEN_ANTERIOR[o.estado] || {}).tono}>
+                {(ESTADOS_ORDEN_ANTERIOR[o.estado] || { label: o.estado }).label}
+              </ChipEstado>
             </div>
-            <strong className="ss-tarjeta__titulo">{o.vehiculoDescripcion}</strong>
+            <span className="ss-meta">Orden #{refSolicitud(o.id)}{o.fechaCreacion ? ` · ${formatFecha(o.fechaCreacion)}` : ""}</span>
             <span className="ss-meta">{[o.tallerNombre, o.productoNombre].filter(Boolean).join(" · ")}</span>
             {tieneCitaProxima(o, ahora) && (
               <span className="sv-anterior__cita">Cita agendada: {formatFechaHora(o.fechaProgramada)}</span>
@@ -179,6 +193,8 @@ export default function MisServicios({
   const [procesando, setProcesando] = useState(false);
   const [pagandoDiagnostico, setPagandoDiagnostico] = useState(false);
   const [pagoDiagnosticoLocal, setPagoDiagnosticoLocal] = useState(null);
+  const [filtro, setFiltro] = useState("todas");
+  const [reintentando, setReintentando] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -211,6 +227,8 @@ export default function MisServicios({
   }, [token]);
 
   const seleccionada = solicitudes.find((s) => s.id === seleccionadaId) || null;
+  const conteo = contarServicios(solicitudes);
+  const visibles = filtrarServicios(solicitudes, solicitudes.length > MINIMO_PARA_FILTRAR ? filtro : "todas");
 
   // Abierta desde un aviso: lleva la vista a lo que pide atención (la cotización por responder, la cita
   // por pagar). La cotización se carga aparte, así que se espera un momento a que aparezca.
@@ -259,25 +277,40 @@ export default function MisServicios({
     }
   };
 
-  if (cargando) return <div className="sv-root"><p className="sv-empty">Cargando...</p></div>;
+  const reintentar = async () => {
+    setReintentando(true);
+    await cargar();
+    setReintentando(false);
+  };
+
+  if (cargando) {
+    return (
+      <div className="sv-root">
+        <EncabezadoPagina titulo="Mis servicios" descripcion="Tus solicitudes de diagnóstico y el avance de cada una." />
+        <Esqueleto variante="lista" cantidad={3} texto="Cargando tus servicios…" />
+      </div>
+    );
+  }
 
   if (seleccionada) {
     const s = seleccionada;
     const cancelable = ESTADOS_CANCELABLES_CLIENTE.includes(s.estado);
     return (
       <div className="sv-root">
-        <div className="sv-header-top">
-          <div>
-            <span className="ss-eyebrow">Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
-            <h1 className="sv-title">{s.vehiculoDescripcion}</h1>
-            <p className="sv-subtitle">{s.vehiculoPlaca ? `Placa ${s.vehiculoPlaca} · ` : ""}<EstadoServicio estado={s.estado} />{s.estado === "EN_INSTALACION" && s.subestado === "EN_PRUEBAS" ? " · En pruebas" : ""}</p>
-          </div>
-          <div className="ss-acciones">
-            <button className="sv-volver" onClick={() => { setSeleccionadaId(null); setCancelando(false); }}>← Mis servicios</button>
-          </div>
-        </div>
+        <EncabezadoPagina
+          titulo={s.vehiculoDescripcion}
+          onVolver={() => { setSeleccionadaId(null); setCancelando(false); }}
+          textoVolver="Mis servicios"
+        >
+          <p className="ms-detalle__meta">
+            <ChipServicio estado={s.estado} />
+            {s.estado === "EN_INSTALACION" && s.subestado === "EN_PRUEBAS" && <span>En pruebas</span>}
+            {s.vehiculoPlaca && <span className="ui-placa">{s.vehiculoPlaca}</span>}
+            <span>Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
+          </p>
+        </EncabezadoPagina>
 
-        {error && <p className="ss-alerta" role="alert">{error}</p>}
+        {error && <Alerta className="ms-alerta" onCerrar={() => setError(null)}>{error}</Alerta>}
 
         <div className="ss-detalle">
           <div className="ss-detalle__principal">
@@ -434,18 +467,20 @@ export default function MisServicios({
 
   return (
     <div className="sv-root">
-      <div className="sv-header-top">
-        <div>
-          <h1 className="sv-title">Mis servicios</h1>
-          <p className="sv-subtitle">Tus solicitudes de diagnóstico y el avance de cada una.</p>
-        </div>
-        <div className="ss-acciones">
-          {onSolicitar && <button className="sv-btn" onClick={onSolicitar}>Solicitar diagnóstico</button>}
-          {onVolver && <button className="sv-volver" onClick={onVolver}>← Volver</button>}
-        </div>
-      </div>
+      <EncabezadoPagina
+        titulo="Mis servicios"
+        descripcion="Tus solicitudes de diagnóstico y el avance de cada una."
+        onVolver={onVolver}
+        acciones={onSolicitar && solicitudes.length > 0 && (
+          <button className="ui-btn ui-btn--primario" onClick={onSolicitar}><Icon name="plus" size={16} /> Solicitar diagnóstico</button>
+        )}
+      />
 
-      {error && <p className="ss-alerta" role="alert">{error}</p>}
+      {error && (
+        <Alerta className="ms-alerta" onReintentar={reintentar} reintentando={reintentando}>
+          No pudimos cargar tus servicios. {error}
+        </Alerta>
+      )}
 
       {/* Llegó desde el enlace de la cotización: si ninguna solicitud espera su pago, esta cuenta no es la que la recibió */}
       {avisoCotizacion && !solicitudes.some((s) => s.estado === "COTIZADA" || s.estado === "APROBADA") && (
@@ -459,29 +494,52 @@ export default function MisServicios({
         </div>
       )}
 
-      {solicitudes.length === 0 ? (
-        <div className="ss-vacio">
-          <p>Aún no has solicitado diagnósticos.</p>
-          {onSolicitar && <button className="sv-btn" onClick={onSolicitar}>Solicitar mi primer diagnóstico</button>}
-        </div>
-      ) : (
-        <div className="sv-list">
-          {solicitudes.map((s) => (
-            <button key={s.id} className="ss-tarjeta" onClick={() => setSeleccionadaId(s.id)}>
-              <div className="ss-tarjeta__cabecera">
-                <span className="ss-eyebrow">#{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
-                <EstadoServicio estado={s.estado} />
-              </div>
-              <strong className="ss-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
-              <span className="ss-meta ss-tarjeta__sintomas">{s.sintomas}</span>
-              <span className="ss-meta">
-                {s.tallerNombre ? `Taller: ${s.tallerNombre}` : "Buscando taller"}
-                {s.tallerElegidoNoAcepto ? " · Reasignada: tu taller elegido no aceptó" : ""}
-                {s.fechaRevision ? ` · Revisión: ${formatFechaHora(s.fechaRevision)}` : ""}
-              </span>
+      {solicitudes.length === 0 && !error && (
+        <EstadoVacio icono="tool" titulo="Aún no has pedido diagnósticos"
+          texto="Cuéntanos qué le pasa a tu vehículo y un taller cercano lo revisa y te cotiza.">
+          {onSolicitar && <button className="ui-btn ui-btn--primario" onClick={onSolicitar}>Solicitar mi primer diagnóstico</button>}
+        </EstadoVacio>
+      )}
+
+      {solicitudes.length > MINIMO_PARA_FILTRAR && (
+        <div className="ms-filtros" role="group" aria-label="Filtrar servicios">
+          {FILTROS_SERVICIOS.map((f) => (
+            <button key={f.id} type="button" className="ui-chip" aria-pressed={filtro === f.id} onClick={() => setFiltro(f.id)}>
+              {f.label} <span className="ui-chip__contador">{conteo[f.id]}</span>
             </button>
           ))}
         </div>
+      )}
+
+      {solicitudes.length > 0 && visibles.length === 0 && (
+        <EstadoVacio icono="tool" titulo={filtro === "enCurso" ? "No tienes servicios en curso" : "Aún no tienes servicios finalizados"}>
+          <button className="ui-btn ui-btn--secundario" onClick={() => setFiltro("todas")}>Ver todos</button>
+        </EstadoVacio>
+      )}
+
+      {visibles.length > 0 && (
+        <ul className="sv-list ms-lista" aria-label="Solicitudes de diagnóstico">
+          {visibles.map((s) => (
+            <li key={s.id}>
+              <button className="ss-tarjeta ms-tarjeta" onClick={() => setSeleccionadaId(s.id)}>
+                <span className="ss-tarjeta__cabecera">
+                  <strong className="ss-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
+                  <ChipServicio estado={s.estado} />
+                </span>
+                <span className="ss-meta">Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
+                <span className="ss-meta ss-tarjeta__sintomas">{s.sintomas}</span>
+                <span className="ms-tarjeta__pie">
+                  <span className="ss-meta">
+                    {s.tallerNombre ? `Taller: ${s.tallerNombre}` : "Buscando taller"}
+                    {s.tallerElegidoNoAcepto ? " · Reasignada: tu taller elegido no aceptó" : ""}
+                    {s.fechaRevision ? ` · Revisión: ${formatFechaHora(s.fechaRevision)}` : ""}
+                  </span>
+                  <Icon name="arrow" size={16} className="ms-tarjeta__flecha" />
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
 
       <ServiciosAnteriores ordenes={ordenesAnteriores} ahora={ahora} onIrHistorial={onIrHistorial} />

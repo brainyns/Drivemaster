@@ -1,0 +1,55 @@
+/* ── Mis servicios (cliente) ──────────────────────────────────────────────
+   Prefijo ms-, BEM. Tarjetas y bloques vienen de solicitud-servicio.css (ss-*); cabecera, chips, vacío,
+   carga y avisos de ui.css. */
+
+.ms-alerta { margin-bottom: var(--ui-sp-4); }
+
+.ms-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--ui-sp-4);
+}
+
+.ms-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ms-tarjeta { width: 100%; text-align: left; }
+
+.ms-tarjeta .ss-tarjeta__cabecera { align-items: flex-start; }
+.ms-tarjeta .ss-tarjeta__titulo { font-size: 1.1rem; line-height: 1.3; }
+
+.ms-tarjeta__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ms-tarjeta__flecha {
+  flex-shrink: 0;
+  color: var(--ui-muted);
+  transition: transform var(--ui-dur) var(--ui-ease), color var(--ui-dur) ease;
+}
+
+.ms-tarjeta:hover .ms-tarjeta__flecha,
+.ms-tarjeta:focus-visible .ms-tarjeta__flecha { transform: translateX(3px); color: var(--ui-text); }
+
+/* Detalle: estado, placa y referencia bajo el título */
+.ui-page-header .ms-detalle__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 10px 0 0;
+  font-size: 0.875rem;
+  color: var(--ui-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ms-tarjeta__flecha { transition: none; }
+  .ms-tarjeta:hover .ms-tarjeta__flecha { transform: none; }
+}

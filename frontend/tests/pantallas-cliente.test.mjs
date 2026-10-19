@@ -28,3 +28,18 @@ test("Mis compras: cabecera compartida, chips de estado con texto y estados comp
   assert.match(p, /<details className="mk-compra__detalle">/);
   assert.doesNotMatch(p, /MIS COMPRAS|dm-eyebrow|mk-etiqueta/);
 });
+
+test("Mis servicios: filtros por estado, chips con texto, sin kickers y estados completos", async () => {
+  const { contarServicios, filtrarServicios } = await import("../src/components/servicio/filtrosServicios.js");
+  const lista = [{ estado: "COTIZADA" }, { estado: "ENTREGADA" }, { estado: "CANCELADA" }, { estado: "EN_INSTALACION" }, { estado: "RECHAZADA" }];
+  assert.deepEqual(contarServicios(lista), { todas: 5, enCurso: 2, finalizadas: 3 });
+  assert.deepEqual(filtrarServicios(lista, "enCurso").map((s) => s.estado), ["COTIZADA", "EN_INSTALACION"]);
+
+  const p = leer("../src/pages/MisServicios.jsx");
+  assert.match(p, /<Esqueleto variante="lista"/);
+  assert.match(p, /<EstadoVacio icono="tool" titulo="Aún no has pedido diagnósticos"/);
+  assert.match(p, /onReintentar=\{reintentar\}/);
+  assert.match(p, /className="ui-chip" aria-pressed=\{filtro === f\.id\}/);
+  assert.doesNotMatch(p, /ss-eyebrow|<EstadoServicio|<Etiqueta /);
+  assert.doesNotMatch(leer("../src/css/solicitud-servicio.css"), /border-left: 4px/);
+});
