@@ -141,8 +141,8 @@ export default function MecanicosTaller({ token, onCambio, onLista, id = "mt-equ
       )}
 
       {editandoId !== null && (
-        <form className="mt-form" onSubmit={guardar} noValidate aria-label={editandoId === "nuevo" ? "Agregar mecánico" : "Editar mecánico"}>
-          <div className="mt-form__campos">
+        <form className="ui-form" onSubmit={guardar} noValidate aria-label={editandoId === "nuevo" ? "Agregar mecánico" : "Editar mecánico"}>
+          <div className="ui-form__campos">
             <Campo id="mt-mec-nombre" label="Nombre" error={errorNombre}>
               <input className="ui-field__input" value={form.nombre} maxLength={80} autoFocus autoComplete="off"
                 onChange={(e) => { setForm({ ...form, nombre: e.target.value }); if (errorNombre) setErrorNombre(null); }}

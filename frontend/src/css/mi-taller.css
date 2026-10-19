@@ -1,114 +1,11 @@
 /* ── Mi taller (rol TALLER) ────────────────────────────────────────────────
-   Prefijo mt-, BEM. Secciones, datos, campos, chips, avisos y carga son de ui.css; aquí la cabecera con la
-   identidad del taller y el perfil completo, la rejilla con la vista del cliente y la lista del equipo.
-   Tokens --ui-*, los dos temas. */
+   Prefijo mt-, BEM. Cabecera del negocio, perfil completo, rejilla, vista previa, secciones, datos, formularios,
+   chips, avisos y carga son de ui.css (los mismos de Mi tienda); aquí el logo con su botón, los servicios, el
+   equipo y la tarjeta de la lista de talleres que ve el cliente. Tokens --ui-*, los dos temas. */
 
-.mt-root { display: grid; gap: var(--ui-sp-5); }
-
-/* ── Identidad: quién es el taller y qué le falta ─────────────────────── */
-.mt-identidad {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-  gap: var(--ui-sp-5);
-  align-items: start;
-  padding: 24px;
-  background:
-    radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 60%),
-    var(--ui-surface);
-  border: 1px solid var(--ui-line);
-  border-radius: 16px;
-}
-
-.mt-identidad__marca { display: flex; align-items: flex-start; gap: 18px; min-width: 0; }
-
-/* Sin logo en el backend: las iniciales sobre el naranja, con el texto oscuro del botón principal */
 /* Logo (LogoNegocio de ui.css) con su botón debajo */
 .mt-logo { display: grid; justify-items: center; gap: 8px; flex-shrink: 0; }
 .mt-logo .ui-btn { padding-inline: 10px; }
-.mt-identidad__aviso { grid-column: 1 / -1; }
-
-.mt-identidad__texto { display: grid; gap: 10px; min-width: 0; }
-
-.mt-root .mt-identidad__nombre {
-  margin: 0;
-  font-family: var(--ui-font);
-  font-size: var(--fs-display);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  color: var(--ui-text);
-  text-wrap: balance;
-  overflow-wrap: anywhere;
-}
-
-.mt-identidad__chips { display: flex; flex-wrap: wrap; gap: 6px; }
-
-.mt-root .mt-identidad__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 18px;
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--ui-muted);
-}
-
-.mt-identidad__meta > span { display: inline-flex; align-items: center; gap: 6px; }
-
-/* Perfil completo: el porcentaje, la barra y cada cosa que falta como acceso directo */
-.mt-completo {
-  display: grid;
-  gap: 10px;
-  padding: 16px;
-  background: var(--ui-bg);
-  border: 1px solid var(--ui-line-soft);
-  border-radius: 12px;
-}
-
-.mt-root .mt-completo__titulo { margin: 0; font-size: 0.875rem; color: var(--ui-muted); }
-.mt-completo__titulo strong { font-size: 1.25rem; color: var(--ui-text); font-variant-numeric: tabular-nums; }
-.mt-root .mt-completo__listo { margin: 0; font-size: 0.85rem; color: var(--ui-ok); }
-
-.mt-completo__faltan { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
-
-.mt-completo__accion {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 4px 8px;
-  margin-left: -8px;
-  background: none;
-  border: 0;
-  border-radius: 8px;
-  color: var(--primary-text);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--ui-dur) ease;
-}
-
-.mt-completo__accion svg { flex-shrink: 0; transition: transform var(--ui-dur) var(--ui-ease); }
-.mt-completo__accion:hover { background: var(--ui-hover); }
-.mt-completo__accion:hover svg { transform: translateX(3px); }
-.mt-completo__accion:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
-.mt-completo__admin { display: block; padding: 6px 0; font-size: 0.8125rem; color: var(--ui-muted); }
-
-/* ── Secciones y vista del cliente ─────────────────────────────────────── */
-.mt-rejilla {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: var(--ui-sp-5);
-  align-items: start;
-}
-
-.mt-secciones { display: grid; gap: 16px; min-width: 0; }
-.mt-secciones .ui-seccion { scroll-margin-top: 88px; }
-.mt-lateral { position: sticky; top: 88px; }
-
-.mt-datos__ancho { grid-column: 1 / -1; }
 
 .mt-especialidades { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
 
@@ -119,12 +16,6 @@
   font-size: 0.82rem;
   font-weight: 500;
 }
-
-.mt-root .mt-horario { margin: 0; font-size: 1rem; line-height: 1.6; white-space: pre-line; color: var(--ui-text); }
-
-.mt-form { display: grid; gap: 16px; }
-.mt-form__corto { max-width: 240px; }
-.mt-form__campos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 
 /* Equipo: una fila por mecánico con sus iniciales, estado y acciones */
 .mt-equipo { display: grid; margin: 0; padding: 0; list-style: none; }
@@ -161,25 +52,6 @@
 .mt-equipo__fila--inactivo .mt-equipo__datos { opacity: 0.6; }
 
 /* Vista previa: la tarjeta de la lista de talleres que ve el cliente, con su forma real */
-.mt-vista {
-  display: grid;
-  gap: 12px;
-  padding: 20px;
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-line);
-  border-radius: 12px;
-}
-
-.mt-root .mt-vista__titulo { margin: 0; font-family: var(--ui-font); font-size: var(--fs-subtitulo); font-weight: 700; color: var(--ui-text); }
-.mt-root .mt-vista__ayuda { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--ui-muted); }
-
-.mt-vista__marco {
-  padding: 12px;
-  background: var(--ui-bg);
-  border: 1px dashed var(--ui-line);
-  border-radius: 12px;
-}
-
 .mt-vista__item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -210,31 +82,8 @@
   font-weight: 700;
 }
 
-.mt-root .mt-vista__consejo { display: flex; gap: 8px; margin: 0; font-size: 0.8125rem; line-height: 1.5; color: var(--ui-muted); }
-.mt-vista__consejo svg { flex-shrink: 0; margin-top: 2px; }
-.mt-root .mt-vista__consejo--aviso { color: var(--ui-text); }
-.mt-vista__consejo--aviso svg { color: var(--ui-aviso); }
-
-/* ── Tableta y celular ─────────────────────────────────────────────────── */
-@media (max-width: 1180px) {
-  .mt-rejilla { grid-template-columns: minmax(0, 1fr); }
-  .mt-lateral { position: static; }
-}
-
-@media (max-width: 860px) {
-  .mt-identidad { grid-template-columns: minmax(0, 1fr); padding: 20px; }
-  .mt-form__campos { grid-template-columns: minmax(0, 1fr); }
-}
-
 @media (max-width: 600px) {
-  .mt-root .mt-identidad__nombre { font-size: 1.6rem; }
   .mt-equipo__fila { grid-template-columns: auto minmax(0, 1fr) auto; }
   .mt-equipo__acciones { grid-column: 2 / -1; margin-left: -8px; }
   .mt-equipo__acciones .ui-btn { min-height: 40px; }
-  .mt-form__corto { max-width: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mt-completo__accion, .mt-completo__accion svg { transition: none; }
-  .mt-completo__accion:hover svg { transform: none; }
 }

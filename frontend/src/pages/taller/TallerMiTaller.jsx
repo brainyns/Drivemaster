@@ -11,38 +11,15 @@ import ChipEstado from "../../components/ui/ChipEstado";
 import Alerta from "../../components/ui/Alerta";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Calificacion from "../../components/ui/Calificacion";
-import BarraProgreso from "../../components/ui/BarraProgreso";
+import CabeceraNegocio from "../../components/ui/CabeceraNegocio";
+import VistaPrevia from "../../components/ui/VistaPrevia";
+import Dato from "../../components/ui/Dato";
+import PieFormulario from "../../components/ui/PieFormulario";
 import Icon from "../../components/public/Icon";
 import { HORARIO_MAX, TIPOS_LOGO, comoLoVeElCliente, completitudPerfil, errorHorario, errorLogo, errorTarifa } from "./perfilTaller";
 import "../../css/mi-taller.css";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
-
-/** Un dato de solo lectura; sin valor muestra "Sin registrar" para que se note lo que falta. */
-function Dato({ etiqueta, children }) {
-  const vacio = children == null || children === "" || (Array.isArray(children) && children.length === 0);
-  return (
-    <div className="ui-datos__item">
-      <dt>{etiqueta}</dt>
-      <dd>{vacio ? <span className="ui-datos__falta">Sin registrar</span> : children}</dd>
-    </div>
-  );
-}
-
-/** Guardar y Cancelar de una sección; el error del servidor va encima. */
-function PieFormulario({ guardando, error, onCancelar, textoGuardar = "Guardar cambios" }) {
-  return (
-    <>
-      {error && <Alerta>{error}</Alerta>}
-      <div className="ui-form-pie">
-        <button type="submit" className="ui-btn ui-btn--primario" disabled={guardando} aria-busy={guardando}>
-          {guardando ? "Guardando…" : textoGuardar}
-        </button>
-        <button type="button" className="ui-btn ui-btn--secundario" onClick={onCancelar} disabled={guardando}>Cancelar</button>
-      </div>
-    </>
-  );
-}
 
 /** Formulario de la tarifa por hora: solo viaja ese campo (el horario queda como estaba). */
 function FormTarifa({ taller, token, onGuardado, onCancelar }) {
@@ -67,10 +44,10 @@ function FormTarifa({ taller, token, onGuardado, onCancelar }) {
   };
 
   return (
-    <form className="mt-form" onSubmit={guardar} noValidate>
+    <form className="ui-form" onSubmit={guardar} noValidate>
       <Campo id="mt-tarifa" label="Tarifa por hora (COP)" error={errorCampo}
         ayuda="Se usa al cotizar por horas. Las cotizaciones que ya emitiste no cambian.">
-        <input className="ui-field__input mt-form__corto" type="number" inputMode="numeric" min="1" step="any" autoFocus
+        <input className="ui-field__input ui-form__corto" type="number" inputMode="numeric" min="1" step="any" autoFocus
           value={tarifa} onChange={(e) => setTarifa(e.target.value)} onBlur={() => setTocado(true)} />
       </Campo>
       <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar tarifa" />
@@ -99,8 +76,8 @@ function FormHorario({ taller, token, onGuardado, onCancelar }) {
   };
 
   return (
-    <form className="mt-form" onSubmit={guardar} noValidate>
-      <Campo id="mt-horario" label="Horario de atención" error={errorCampo}
+    <form className="ui-form" onSubmit={guardar} noValidate>
+      <Campo id="mt-horario-texto" label="Horario de atención" error={errorCampo}
         ayuda={`Texto libre, una línea por día o franja. ${horario.length}/${HORARIO_MAX} caracteres.`}>
         <textarea className="ui-field__input" maxLength={HORARIO_MAX} rows={4} autoFocus value={horario}
           placeholder={"Lunes a viernes: 8:00 a. m. – 6:00 p. m.\nSábados: 8:00 a. m. – 1:00 p. m."}
@@ -135,7 +112,7 @@ function FormUbicacion({ taller, token, onGuardado, onCancelar }) {
   };
 
   return (
-    <form className="mt-form" onSubmit={guardar} noValidate>
+    <form className="ui-form" onSubmit={guardar} noValidate>
       <SelectorUbicacion
         id="mt-mapa"
         ciudad={taller?.ciudad}
@@ -197,10 +174,11 @@ function VistaCliente({ taller: datos }) {
   const taller = comoLoVeElCliente(datos);
   const sinPunto = taller.latitud == null || taller.longitud == null;
   return (
-    <section className="mt-vista" aria-labelledby="mt-vista-titulo">
-      <h2 id="mt-vista-titulo" className="mt-vista__titulo">Así te ven los clientes</h2>
-      <p className="mt-vista__ayuda">Al pedir un diagnóstico, el cliente elige taller en esta lista y en el mapa.</p>
-      <div className="mt-vista__marco" aria-hidden="true">
+    <VistaPrevia id="mt-vista" ayuda="Al pedir un diagnóstico, el cliente elige taller en esta lista y en el mapa."
+      tonoConsejo={sinPunto ? "aviso" : undefined}
+      consejo={sinPunto
+        ? "Sin pin no apareces en el mapa ni te llegan solicitudes por cercanía."
+        : "La distancia es un ejemplo: cada cliente ve la suya."}>
         <div className="mt-vista__item">
           <LogoNegocio url={taller.logoUrl} nombre={taller.nombre} className="mt-vista__logo" />
           <span className="mt-vista__nombre">{taller.nombre}</span>
@@ -214,15 +192,7 @@ function VistaCliente({ taller: datos }) {
             : <span className="mt-vista__distancia">12 min en carro · 3,4 km</span>}
           <span className="mt-vista__boton">Elegir</span>
         </div>
-      </div>
-      {sinPunto ? (
-        <p className="mt-vista__consejo mt-vista__consejo--aviso">
-          <Icon name="alert" size={16} /> Sin pin no apareces en el mapa ni te llegan solicitudes por cercanía.
-        </p>
-      ) : (
-        <p className="mt-vista__consejo"><Icon name="pin" size={16} /> La distancia es un ejemplo: cada cliente ve la suya.</p>
-      )}
-    </section>
+    </VistaPrevia>
   );
 }
 
@@ -269,13 +239,17 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
   };
 
   return (
-    <div className="mt-root">
-      <header className="mt-identidad">
-        <div className="mt-identidad__marca">
-          <LogoTaller taller={taller} token={token} onActualizado={onActualizado} onAviso={setAvisoLogo} />
-          <div className="mt-identidad__texto">
-            <h1 className="mt-identidad__nombre">{taller.nombre}</h1>
-            <div className="mt-identidad__chips">
+    <div className="ui-perfil">
+      <CabeceraNegocio
+        nombre={taller.nombre}
+        logo={<LogoTaller taller={taller} token={token} onActualizado={onActualizado} onAviso={setAvisoLogo} />}
+        porcentaje={porcentaje} faltan={faltan} onResolver={resolver}
+        textoListo="Tienes todo lo que los clientes y la asignación necesitan."
+        aviso={avisoLogo && (
+          <Alerta tono={avisoLogo.tono} onCerrar={() => setAvisoLogo(null)}>{avisoLogo.texto}</Alerta>
+        )}
+        chips={(
+          <>
               <ChipEstado tono={aprobado ? "ok" : "aviso"}>{aprobado ? "Aprobado" : "Pendiente de aprobación"}</ChipEstado>
               <ChipEstado tono={activo ? "ok" : "apagado"}>{activo ? "Activo" : "Inactivo"}</ChipEstado>
               {taller.planActual && (
@@ -283,8 +257,10 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
                   Plan {taller.planActual.toLowerCase()}{taller.planVence ? ` hasta ${formatFecha(taller.planVence)}` : ""}
                 </ChipEstado>
               )}
-            </div>
-            <p className="mt-identidad__meta">
+          </>
+        )}
+        meta={(
+          <>
               {/* Promedio real de las calificaciones de los clientes; sin ninguna, "Nuevo" */}
               <Calificacion rating={taller.rating} calificaciones={taller.calificaciones} />
               {(taller.barrio || taller.ciudad) && (
@@ -293,42 +269,12 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
               {(taller.fechaAprobacion || taller.fechaRegistro) && (
                 <span>En DriveMaster desde {formatFecha(taller.fechaAprobacion || taller.fechaRegistro)}</span>
               )}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-completo">
-          <p className="mt-completo__titulo">
-            Perfil completo al <strong>{porcentaje} %</strong>
-          </p>
-          <BarraProgreso valor={porcentaje} etiqueta="Perfil completo" tono={porcentaje === 100 ? "ok" : "acento"} />
-          {faltan.length === 0 ? (
-            <p className="mt-completo__listo">Tienes todo lo que los clientes y la asignación necesitan.</p>
-          ) : (
-            <ul className="mt-completo__faltan" aria-label="Lo que falta">
-              {faltan.map((f) => (
-                <li key={f.clave}>
-                  {f.seccion ? (
-                    <button type="button" className="mt-completo__accion" onClick={() => resolver(f)}>
-                      {f.texto} <Icon name="arrow" size={14} />
-                    </button>
-                  ) : (
-                    <span className="mt-completo__admin">{f.texto}: lo registra el administrador</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        {avisoLogo && (
-          <Alerta tono={avisoLogo.tono} className="mt-identidad__aviso" onCerrar={() => setAvisoLogo(null)}>
-            {avisoLogo.texto}
-          </Alerta>
+          </>
         )}
-      </header>
+      />
 
-      <div className="mt-rejilla">
-        <div className="mt-secciones">
+      <div className="ui-perfil__rejilla">
+        <div className="ui-perfil__secciones">
           <SeccionEditable id="mt-negocio" icono="file" titulo="Datos del negocio"
             descripcion="Con estos datos te identifican los clientes y DriveMaster." nota={ADMIN}>
             <dl className="ui-datos">
@@ -349,7 +295,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
                 onGuardado={guardado("servicios", "Tarifa guardada. Las cotizaciones nuevas usan este valor.")} />
             ) : (
               <dl className="ui-datos">
-                <div className="ui-datos__item mt-datos__ancho">
+                <div className="ui-datos__item ui-datos__item--ancho">
                   <dt>Servicios que ofreces</dt>
                   <dd>
                     {taller.especialidades?.length > 0 ? (
@@ -401,7 +347,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
               <FormHorario taller={taller} token={token} onCancelar={cerrar}
                 onGuardado={guardado("horario", "Horario guardado.")} />
             ) : taller.horario ? (
-              <p className="mt-horario">{taller.horario}</p>
+              <p className="ui-texto-pre">{taller.horario}</p>
             ) : (
               <p className="ui-datos__falta">Aún no escribes tu horario.</p>
             )}
@@ -418,7 +364,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
           </SeccionEditable>
         </div>
 
-        <aside className="mt-lateral">
+        <aside className="ui-perfil__lateral">
           <VistaCliente taller={taller} />
         </aside>
       </div>

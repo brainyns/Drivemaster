@@ -68,3 +68,14 @@ test("el historial es una lista ordenada con fechas en <time> y la marca es deco
   assert.match(historial, /ui-historial__marca" aria-hidden="true"/);
   assert.match(leer("../src/css/ui.css"), /\.ui-field__input\.ui-field__input--codigo \{/);
 });
+
+test("la cabecera de negocio y la vista previa son las mismas para Mi taller y Mi tienda", () => {
+  const cabecera = leer("../src/components/ui/CabeceraNegocio.jsx");
+  assert.match(cabecera, /<h1 className="ui-negocio__nombre">/);
+  assert.match(cabecera, /aria-label="Lo que falta"/);
+  assert.match(cabecera, /lo registra el administrador/);
+  assert.match(leer("../src/components/ui/VistaPrevia.jsx"), /className="ui-vista__marco" aria-hidden="true"/);
+  const taller = leer("../src/pages/taller/TallerMiTaller.jsx");
+  assert.ok(taller.includes("<CabeceraNegocio") && taller.includes("<VistaPrevia"), "Mi taller usa las piezas compartidas");
+  assert.doesNotMatch(leer("../src/css/mi-taller.css"), /\.mt-(identidad|completo|rejilla|vista \{)/, "sin CSS duplicado");
+});

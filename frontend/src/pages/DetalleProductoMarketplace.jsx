@@ -6,6 +6,7 @@ import { AvisoCompatibilidad, EtiquetaCompatibilidad, EtiquetaVendedor } from ".
 import { textoDisponibilidad } from "../components/marketplace/disponibilidad";
 import { limitarCantidad } from "../hooks/useCarrito";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
+import TiendaVendedor from "../components/marketplace/TiendaVendedor";
 import "../css/marketplace.css";
 
 const CLAVE_VEHICULO = "marketplaceVehiculoId";
@@ -95,15 +96,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
           </div>
         </section>
 
-        <section className="mk-tienda" aria-labelledby="mk-tienda-titulo">
-          <h2 id="mk-tienda-titulo">Vendido por {t.nombre}</h2>
-          <dl className="mk-datos">
-            <div><dt>Ciudad</dt><dd>{t.ciudad}{t.barrio ? ` · ${t.barrio}` : ""}</dd></div>
-            <div><dt>Dirección (retiro)</dt><dd>{t.direccion}</dd></div>
-            <div><dt>Horario</dt><dd>{t.horario}</dd></div>
-            <div><dt>Envío</dt><dd>{t.ofreceEnvio ? `${formatPrecio(t.costoEnvio)} · solo dentro de ${t.ciudad}` : "Solo retiro en la tienda"}</dd></div>
-          </dl>
-        </section>
+        <TiendaVendedor tienda={t} />
 
         <section className="mk-comparar" aria-labelledby="mk-comparar-titulo">
           <h2 id="mk-comparar-titulo">El mismo repuesto en otras tiendas</h2>

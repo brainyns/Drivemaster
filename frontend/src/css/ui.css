@@ -911,6 +911,160 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   .ui-logo--grande { width: 56px; height: 56px; border-radius: 14px; font-size: 1.25rem; }
 }
 
+/* ── Perfil de un negocio: Mi taller y Mi tienda ───────────────────────────
+   CabeceraNegocio (identidad y perfil completo), secciones a la izquierda y VistaPrevia fija a la derecha. */
+.ui-perfil { display: grid; gap: var(--ui-sp-5); }
+
+.ui-negocio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: var(--ui-sp-5);
+  align-items: start;
+  padding: 24px;
+  background:
+    radial-gradient(90% 140% at 0% 0%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 60%),
+    var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 16px;
+}
+
+.ui-negocio__marca { display: flex; align-items: flex-start; gap: 18px; min-width: 0; }
+.ui-negocio__texto { display: grid; gap: 10px; min-width: 0; }
+
+.ui-negocio .ui-negocio__nombre {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: var(--fs-display);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ui-text);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.ui-negocio__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.ui-negocio .ui-negocio__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ui-muted);
+}
+
+.ui-negocio__meta > span { display: inline-flex; align-items: center; gap: 6px; }
+.ui-negocio__aviso { grid-column: 1 / -1; }
+
+/* Perfil completo: el porcentaje, la barra y cada cosa que falta como acceso directo */
+.ui-negocio__completo {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-line-soft);
+  border-radius: 12px;
+}
+
+.ui-negocio .ui-negocio__completo-titulo { margin: 0; font-size: 0.875rem; color: var(--ui-muted); }
+.ui-negocio__completo-titulo strong { font-size: 1.25rem; color: var(--ui-text); font-variant-numeric: tabular-nums; }
+.ui-negocio .ui-negocio__listo { margin: 0; font-size: 0.85rem; color: var(--ui-ok); }
+.ui-negocio__faltan { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+
+.ui-negocio__accion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 8px;
+  margin-left: -8px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--primary-text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--ui-dur) ease;
+}
+
+.ui-negocio__accion svg { flex-shrink: 0; transition: transform var(--ui-dur) var(--ui-ease); }
+.ui-negocio__accion:hover { background: var(--ui-hover); }
+.ui-negocio__accion:hover svg { transform: translateX(3px); }
+.ui-negocio__accion:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+.ui-negocio__admin { display: block; padding: 6px 0; font-size: 0.8125rem; color: var(--ui-muted); }
+
+.ui-perfil__rejilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--ui-sp-5);
+  align-items: start;
+}
+
+.ui-perfil__secciones { display: grid; gap: 16px; min-width: 0; }
+.ui-perfil__secciones .ui-seccion { scroll-margin-top: 88px; }
+.ui-perfil__lateral { position: sticky; top: 88px; display: grid; gap: 16px; min-width: 0; }
+
+/* Vista previa (VistaPrevia): la pieza que ve el cliente dentro de un marco */
+.ui-vista {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+}
+
+.ui-vista .ui-vista__titulo { margin: 0; font-family: var(--ui-font); font-size: var(--fs-subtitulo); font-weight: 700; color: var(--ui-text); }
+.ui-vista .ui-vista__ayuda { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--ui-muted); }
+
+.ui-vista__marco {
+  min-width: 0;
+  padding: 12px;
+  background: var(--ui-bg);
+  border: 1px dashed var(--ui-line);
+  border-radius: 12px;
+}
+
+.ui-vista .ui-vista__consejo { display: flex; gap: 8px; margin: 0; font-size: 0.8125rem; line-height: 1.5; color: var(--ui-muted); }
+.ui-vista__consejo svg { flex-shrink: 0; margin-top: 2px; }
+.ui-vista .ui-vista__consejo--aviso { color: var(--ui-text); }
+.ui-vista__consejo--aviso svg { color: var(--ui-aviso); }
+
+/* Formularios por sección */
+.ui-form { display: grid; gap: 16px; }
+.ui-form__corto { max-width: 240px; }
+.ui-form__campos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ui-form__campos--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ui-datos__item--ancho { grid-column: 1 / -1; }
+
+/* Texto libre que respeta los saltos de línea (horarios, notas) */
+.ui-texto-pre { margin: 0; font-size: 1rem; line-height: 1.6; white-space: pre-line; color: var(--ui-text); }
+
+@media (max-width: 1180px) {
+  .ui-perfil__rejilla { grid-template-columns: minmax(0, 1fr); }
+  .ui-perfil__lateral { position: static; }
+}
+
+@media (max-width: 860px) {
+  .ui-negocio { grid-template-columns: minmax(0, 1fr); padding: 20px; }
+  .ui-form__campos, .ui-form__campos--2 { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .ui-negocio .ui-negocio__nombre { font-size: 1.6rem; }
+  .ui-form__corto { max-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-negocio__accion, .ui-negocio__accion svg { transition: none; }
+  .ui-negocio__accion:hover svg { transform: none; }
+}
+
 /* ── Historial (Historial): del más reciente al más antiguo ───────────── */
 .ui-historial { display: grid; margin: 0; padding: 0; list-style: none; }
 
