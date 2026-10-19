@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { preguntarAsistente } from "../services/informesTiendaService";
 import { miTienda } from "../services/tiendaService";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import Icon from "../components/public/Icon";
 import "../css/asistente-tienda.css";
-import "../css/admin-base.css";
 
 const SUGERENCIAS = [
   "¿Cómo van mis ventas frente al mes pasado?",
@@ -26,6 +28,17 @@ const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 function DetrasDeEscena({ detras }) {
   const [pestana, setPestana] = useState("seguridad");
 
+  // Pestañas con el patrón de teclado de ARIA: flechas, Inicio y Fin mueven el foco y la selección
+  const mover = (e) => {
+    const i = PESTANAS.findIndex((p) => p.id === pestana);
+    const destino = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: PESTANAS.length - 1 }[e.key];
+    if (destino == null) return;
+    e.preventDefault();
+    const siguiente = PESTANAS[(destino + PESTANAS.length) % PESTANAS.length].id;
+    setPestana(siguiente);
+    document.getElementById(`as-tab-${siguiente}`)?.focus();
+  };
+
   return (
     <section className="as-panel as-detras" aria-labelledby="as-detras-titulo">
       <header className="as-panel__cabecera">
@@ -36,12 +49,12 @@ function DetrasDeEscena({ detras }) {
         {PESTANAS.map((p) => (
           <button key={p.id} type="button" role="tab" id={`as-tab-${p.id}`} aria-selected={pestana === p.id}
             aria-controls={`as-tabpanel-${p.id}`} className={`as-pestana${pestana === p.id ? " is-activa" : ""}`}
-            onClick={() => setPestana(p.id)}>
+            tabIndex={pestana === p.id ? 0 : -1} onKeyDown={mover} onClick={() => setPestana(p.id)}>
             {p.etiqueta}
           </button>
         ))}
       </div>
-      <div role="tabpanel" id={`as-tabpanel-${pestana}`} aria-labelledby={`as-tab-${pestana}`} className="as-detras__cuerpo">
+      <div role="tabpanel" id={`as-tabpanel-${pestana}`} aria-labelledby={`as-tab-${pestana}`} className="as-detras__cuerpo" tabIndex={0}>
         {!detras ? (
           <p className="as-tenue">Envía un mensaje para ver aquí qué datos se usaron y cómo se protegió tu tienda.</p>
         ) : pestana === "seguridad" ? (
@@ -107,26 +120,22 @@ export default function AsistenteTienda({ token }) {
   const nombre = tienda?.nombre || "tu tienda";
 
   return (
-    <div className="as-root">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Asistente de tu tienda</h1>
-          <p className="adm-encabezado__sub">Pregunta por tus ventas, inventario, pedidos y dinero. La IA solo lee y sugiere: nada cambia sin ti.</p>
-        </div>
-      </header>
+    <div className="ss-panel--tienda as-root">
+      <EncabezadoPagina titulo="Asistente de tu tienda"
+        descripcion="Pregunta por tus ventas, inventario, pedidos y dinero. La IA solo lee y sugiere: nada cambia sin ti." />
 
       <div className="as-rejilla">
         <section className="as-panel as-chat" aria-labelledby="as-chat-titulo">
           <header className="as-chat__cabecera">
             <h2 id="as-chat-titulo">Asistente DriveMaster</h2>
-            <span className="as-chip">Solo ve los datos de {nombre}</span>
+            <ChipEstado tono="acento"><Icon name="lock" size={12} /> Solo ve los datos de {nombre}</ChipEstado>
           </header>
 
           {mensajes.length === 0 ? (
             <div className="as-inicio">
               <p className="as-tenue">Prueba con una de estas preguntas:</p>
-              <ul className="as-sugerencias">
-                {SUGERENCIAS.map((s) => <li key={s}><button type="button" className="adm-btn" onClick={() => enviar(s)}>{s}</button></li>)}
+              <ul className="as-sugerencias ui-filtros">
+                {SUGERENCIAS.map((s) => <li key={s}><button type="button" className="ui-chip" onClick={() => enviar(s)}>{s}</button></li>)}
               </ul>
             </div>
           ) : (
@@ -142,11 +151,11 @@ export default function AsistenteTienda({ token }) {
           )}
 
           <form className="as-form" onSubmit={(e) => { e.preventDefault(); enviar(texto); }}>
-            <label htmlFor="as-campo">Mensaje</label>
+            <label htmlFor="as-campo" className="ui-field__label">Mensaje</label>
             <div className="as-form__fila">
-              <input id="as-campo" ref={campo} className="adm-input" value={texto} maxLength={500} autoComplete="off"
+              <input id="as-campo" ref={campo} className="ui-field__input" value={texto} maxLength={500} autoComplete="off"
                 placeholder="Ej.: ¿qué producto se vende más y cuánto stock me queda?" onChange={(e) => setTexto(e.target.value)} />
-              <button type="submit" className="adm-btn adm-btn--primario" disabled={pensando || !texto.trim()} aria-busy={pensando}>
+              <button type="submit" className="ui-btn ui-btn--primario ui-btn--grande" disabled={pensando || !texto.trim()} aria-busy={pensando}>
                 {pensando ? "Pensando…" : "Enviar"}
               </button>
             </div>

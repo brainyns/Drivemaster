@@ -270,3 +270,11 @@ test("Informes de la tienda: cabecera, período en chips, cifras compartidas y e
   assert.ok(!pagina.includes("adm-"), "sin las clases del panel de administración");
   assert.doesNotMatch(leer("../src/css/informes-tienda.css"), /\.it-(segmentos|boton|cabecera)\b/);
 });
+
+test("Asistente: cabecera compartida, sugerencias en chips y pestañas que se mueven con el teclado", () => {
+  const pagina = leer("../src/pages/AsistenteTienda.jsx");
+  assert.ok(pagina.includes("<EncabezadoPagina") && pagina.includes('className="ui-chip" onClick={() => enviar(s)}'));
+  assert.ok(pagina.includes("tabIndex={pestana === p.id ? 0 : -1} onKeyDown={mover}"), "patrón de pestañas de ARIA");
+  assert.ok(!pagina.includes("adm-"));
+  assert.ok(pagina.includes("preguntarAsistente(token, limpia, historial)"));
+});
