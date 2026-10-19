@@ -238,3 +238,17 @@ test("Detalle de compra: sin factura oficial ni verificación inventada, con el 
   }
   assert.ok(pagina.includes("descargarPdfCompra(id, token)") && pagina.includes("obtenerProveedor(c.proveedorId, token)"));
 });
+
+test("Proveedores: búsqueda, validación con el correo del PDF y la lista con el sistema compartido", async () => {
+  const { coincideProveedor, erroresProveedor } = await import("../src/pages/tienda/proveedoresTienda.js");
+  const p = { nombre: "Autopartes Sur", nit: "900123456-7", correo: "ventas@sur.com", telefono: "6012345678" };
+  assert.ok(coincideProveedor(p, "900123"));
+  assert.ok(coincideProveedor(p, "SUR"));
+  assert.deepEqual(erroresProveedor(p), {});
+  assert.deepEqual(Object.keys(erroresProveedor({ nombre: "", correo: "" })), ["nombre", "correo"]);
+  assert.match(erroresProveedor({ ...p, correo: "ventas@" }).correo, /correo válido/);
+  assert.match(erroresProveedor({ ...p, telefono: "abc" }).telefono, /teléfono válido/);
+  const lista = leer("../src/pages/Proveedores.jsx");
+  assert.ok(lista.includes("<ConfirmarAccion") && lista.includes("ui-table--tarjetas") && !/\balert\(/.test(lista));
+  assert.ok(lista.includes("eliminarProveedor(eliminando.id, token)") && lista.includes("exportarProveedores(token)"));
+});

@@ -775,3 +775,30 @@
 @media (max-width: 600px) {
   .kpf-grid { grid-template-columns: 1fr; }
 }
+/* ── Lista de proveedores (prefijo prv-) ─────────────────────────────────
+   Cabecera, cifras, buscador, tabla que pasa a tarjetas, chips, avisos, vacío, carga y logo con iniciales son de
+   ui.css. Tokens --ui-*, los dos temas. */
+.prv-alerta, .prv-barra { margin-bottom: var(--ui-sp-4); }
+.prv-nombre { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.prv-nombre strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+.prv-tenue { color: var(--ui-muted); }
+.prv-enlace { color: var(--primary-text); text-underline-offset: 3px; overflow-wrap: anywhere; }
+.prv-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 4px; }
+.prv-eliminar.ui-btn { color: var(--ui-error); }
+
+.prv-paginas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 0.8125rem;
+  color: var(--ui-muted);
+}
+
+.prv-paginas__botones { display: inline-flex; align-items: center; gap: 10px; }
+
+@media (max-width: 600px) {
+  .prv-barra .ui-buscador { max-width: none; }
+}

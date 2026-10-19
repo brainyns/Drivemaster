@@ -1,212 +1,203 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarProveedores, eliminarProveedor, exportarProveedores } from "../services/proveedorService";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Indicador from "../components/ui/Indicador";
+import ChipEstado from "../components/ui/ChipEstado";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import LogoNegocio from "../components/ui/LogoNegocio";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
+import Icon from "../components/public/Icon";
+import { coincideProveedor } from "./tienda/proveedoresTienda";
 import "../css/proveedores.css";
-import "../css/admin-base.css";
-import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 
-// ── Iconos SVG inline ──────────────────────────────────────────────────────────
-const IconTruck = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/>
-    <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
-  </svg>
-);
-const IconShield = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-  </svg>
-);
-const IconPlus = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-  </svg>
-);
-const IconSearch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-  </svg>
-);
-const IconDownload = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-    <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-  </svg>
-);
+const POR_PAGINA = 15;
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function getInitials(nombre) {
-  return (nombre || "").split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-}
-
-const ITEMS_PER_PAGE = 8;
-
+/** Directorio de los proveedores de la tienda: a quién le compra y a dónde llega el PDF de cada compra. */
 export default function Proveedores({ onNuevo, onEditar, token }) {
   const [proveedores, setProveedores] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
-  const [confirmId, setConfirmId] = useState(null);
+  const [eliminando, setEliminando] = useState(null);
   const [exportando, setExportando] = useState(false);
+  const [aviso, setAviso] = useState(null); // { tono, texto }
 
-  useEffect(() => {
-    listarProveedores(token)
-      .then(setProveedores)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+  const cargar = useCallback(async () => {
+    try {
+      setProveedores((await listarProveedores(token)) || []);
+      setError(null);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCargando(false);
+    }
   }, [token]);
 
-  const filtrados = proveedores.filter((p) =>
-    [p.nombre, p.contacto, p.correo].some((v) =>
-      (v || "").toLowerCase().includes(busqueda.toLowerCase())
-    )
-  );
-  const totalPaginas = Math.ceil(filtrados.length / ITEMS_PER_PAGE);
-  const paginados = filtrados.slice((pagina - 1) * ITEMS_PER_PAGE, pagina * ITEMS_PER_PAGE);
+  useEffect(() => {
+    const id = setTimeout(cargar, 0);
+    return () => clearTimeout(id);
+  }, [cargar]);
 
-  const handleEliminar = async (id) => {
-    try {
-      await eliminarProveedor(id, token);
-      setProveedores(proveedores.filter((p) => p.id !== id));
-      setConfirmId(null);
-    } catch (err) {
-      alert("Error al eliminar: " + err.message);
-    }
+  const visibles = useMemo(() => proveedores.filter((p) => coincideProveedor(p, busqueda))
+    .sort((a, b) => String(a.nombre || "").localeCompare(String(b.nombre || ""), "es")), [proveedores, busqueda]);
+  const totalPaginas = Math.max(1, Math.ceil(visibles.length / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const enPagina = visibles.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+  const conCorreo = proveedores.filter((p) => p.correo).length;
+  const sinCorreo = proveedores.length - conCorreo;
+
+  const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
+
+  const confirmarEliminar = async () => {
+    await eliminarProveedor(eliminando.id, token);
+    setProveedores((prev) => prev.filter((p) => p.id !== eliminando.id));
+    setAviso({ tono: "ok", texto: `Eliminaste a ${eliminando.nombre}.` });
+    setEliminando(null);
   };
 
-  const handleExportar = async () => {
+  const exportar = async () => {
     setExportando(true);
+    setAviso(null);
     try {
       await exportarProveedores(token);
     } catch (e) {
-      alert("Error al exportar: " + e.message);
+      setAviso({ tono: "error", texto: `No pudimos generar el reporte. ${e.message}` });
     } finally {
       setExportando(false);
     }
   };
 
-  // Resumen con datos reales de la lista (antes eran cifras fijas: "98% OTD", "Premium", un gasto en MXN)
-  const conNit = proveedores.filter((p) => p.nit).length;
-  const conCorreo = proveedores.filter((p) => p.correo).length;
-  const desdeN = filtrados.length === 0 ? 0 : (pagina - 1) * ITEMS_PER_PAGE + 1;
-  const hastaN = Math.min(pagina * ITEMS_PER_PAGE, filtrados.length);
-  const aEliminar = proveedores.find((p) => p.id === confirmId);
+  const nuevo = (
+    <button type="button" className="ui-btn ui-btn--primario" onClick={onNuevo}><Icon name="plus" size={16} /> Nuevo proveedor</button>
+  );
+
+  if (cargando) {
+    return (
+      <div className="ss-panel--tienda prv-root">
+        <EncabezadoPagina titulo="Proveedores" descripcion="A quién le compras para surtir tu inventario." />
+        <Esqueleto variante="lista" cantidad={4} texto="Cargando proveedores…" />
+      </div>
+    );
+  }
 
   return (
-    <div className="adm-pagina">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Proveedores</h1>
-          <p className="adm-encabezado__sub">Directorio de los proveedores a los que le compras para surtir tu inventario.</p>
-        </div>
-        <div className="adm-encabezado__lado">
-          <button type="button" className={`adm-btn${exportando ? " adm-btn--cargando" : ""}`} onClick={handleExportar}
-            disabled={exportando} aria-busy={exportando}>
-            {!exportando && <IconDownload />} {exportando ? "Generando…" : "Descargar reporte"}
-          </button>
-          <button type="button" className="adm-btn adm-btn--primario" onClick={onNuevo}><IconPlus /> Nuevo proveedor</button>
-        </div>
-      </header>
+    <div className="ss-panel--tienda prv-root">
+      <EncabezadoPagina titulo="Proveedores"
+        descripcion="A quién le compras para surtir tu inventario. Cada compra registrada le llega en PDF a su correo."
+        acciones={proveedores.length > 0 && (
+          <>
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={exportar} disabled={exportando} aria-busy={exportando}>
+              {!exportando && <Icon name="file" size={16} />} {exportando ? "Generando…" : "Descargar reporte"}
+            </button>
+            {nuevo}
+          </>
+        )} />
 
-      <section className="adm-kpis" aria-label="Resumen de proveedores">
-        <div className="adm-kpi">
-          <span className="adm-kpi__icono" aria-hidden="true"><IconTruck /></span>
-          <div className="adm-kpi__texto">
-            <span className="adm-kpi__etiqueta">Proveedores registrados</span>
-            <p className="adm-kpi__valor">{proveedores.length}</p>
+      {error && (
+        <Alerta className="prv-alerta" onReintentar={reintentar} reintentando={reintentando}>
+          No pudimos cargar tus proveedores. {error}
+        </Alerta>
+      )}
+      {aviso && <Alerta tono={aviso.tono} className="prv-alerta" onCerrar={() => setAviso(null)}>{aviso.texto}</Alerta>}
+
+      {!error && proveedores.length === 0 ? (
+        <EstadoVacio icono="users" titulo="Aún no tienes proveedores"
+          texto="Agrega a quién le compras: lo eliges al registrar una compra y le enviamos el PDF a su correo.">
+          {nuevo}
+        </EstadoVacio>
+      ) : proveedores.length > 0 && (
+        <>
+          <section aria-labelledby="prv-resumen" className="prv-alerta">
+            <h2 id="prv-resumen" className="ui-sr">Resumen de proveedores</h2>
+            <div className="ui-indicadores">
+              <Indicador icono="users" titulo="Proveedores" valor={proveedores.length} />
+              <Indicador icono="mail" titulo="Reciben el PDF" valor={conCorreo} tono={sinCorreo === 0 ? "ok" : undefined}
+                pie={sinCorreo > 0 ? `${sinCorreo} sin correo registrado` : "Todos tienen correo"} />
+            </div>
+          </section>
+
+          <div className="prv-barra">
+            <div className="ui-buscador">
+              <Icon name="search" size={18} />
+              <label htmlFor="prv-busqueda" className="ui-sr">Buscar por nombre, NIT, correo o teléfono</label>
+              <input id="prv-busqueda" className="ui-field__input" type="search" placeholder="Nombre, NIT, correo o teléfono"
+                value={busqueda} onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }} />
+            </div>
           </div>
-        </div>
-        <div className="adm-kpi">
-          <span className="adm-kpi__icono" aria-hidden="true"><IconShield /></span>
-          <div className="adm-kpi__texto">
-            <span className="adm-kpi__etiqueta">Con NIT registrado</span>
-            <p className="adm-kpi__valor">{conNit}</p>
-          </div>
-        </div>
-        <div className="adm-kpi">
-          <span className="adm-kpi__icono" aria-hidden="true"><IconSearch /></span>
-          <div className="adm-kpi__texto">
-            <span className="adm-kpi__etiqueta">Con correo de contacto</span>
-            <p className="adm-kpi__valor">{conCorreo}</p>
-          </div>
-        </div>
-      </section>
 
-      <div className="adm-filtros" role="search" aria-label="Buscar proveedores">
-        <label className="adm-campo adm-campo--ancho">
-          <span>Buscar</span>
-          <input type="search" placeholder="Nombre, contacto o correo" value={busqueda}
-            onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }} />
-        </label>
-      </div>
+          {visibles.length === 0 ? (
+            <EstadoVacio icono="search" titulo="Ningún proveedor coincide" texto={`No encontramos “${busqueda.trim()}”.`}>
+              <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setBusqueda("")}>Limpiar búsqueda</button>
+            </EstadoVacio>
+          ) : (
+            <>
+              <div className="ui-card ui-table-card">
+                <div className="ui-table-wrap">
+                  <table className="ui-table ui-table--tarjetas">
+                    <caption className="ui-sr">Proveedores, en orden alfabético</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Proveedor</th>
+                        <th scope="col">NIT</th>
+                        <th scope="col">Teléfono</th>
+                        <th scope="col">Correo</th>
+                        <th scope="col"><span className="ui-sr">Acciones</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {enPagina.map((p) => (
+                        <tr key={p.id}>
+                          <td data-label="Proveedor" className="ui-table__titulo">
+                            <span className="prv-nombre"><LogoNegocio nombre={p.nombre} /><strong>{p.nombre}</strong></span>
+                          </td>
+                          <td data-label="NIT">{p.nit || <span className="prv-tenue">Sin NIT</span>}</td>
+                          <td data-label="Teléfono">
+                            {p.telefono ? <a className="prv-enlace" href={`tel:${p.telefono}`}>{p.telefono}</a> : <span className="prv-tenue">Sin teléfono</span>}
+                          </td>
+                          <td data-label="Correo">
+                            {p.correo ? <a className="prv-enlace" href={`mailto:${p.correo}`}>{p.correo}</a> : <ChipEstado tono="aviso">Sin correo</ChipEstado>}
+                          </td>
+                          <td className="ui-table__acciones">
+                            <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onEditar(p.id)}
+                              aria-label={`Editar a ${p.nombre}`}>
+                              <Icon name="pencil" size={14} /> Editar
+                            </button>
+                            <button type="button" className="ui-btn ui-btn--texto ui-btn--chico prv-eliminar" onClick={() => setEliminando(p)}
+                              aria-label={`Eliminar a ${p.nombre}`}>
+                              <Icon name="trash" size={14} /> Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <nav className="prv-paginas" aria-label="Páginas de proveedores">
+                <span>Mostrando {(paginaActual - 1) * POR_PAGINA + 1}–{Math.min(paginaActual * POR_PAGINA, visibles.length)} de {visibles.length}</span>
+                {totalPaginas > 1 && (
+                  <span className="prv-paginas__botones">
+                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={paginaActual === 1}
+                      onClick={() => setPagina(paginaActual - 1)}>Anterior</button>
+                    <span aria-current="page">Página {paginaActual} de {totalPaginas}</span>
+                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={paginaActual === totalPaginas}
+                      onClick={() => setPagina(paginaActual + 1)}>Siguiente</button>
+                  </span>
+                )}
+              </nav>
+            </>
+          )}
+        </>
+      )}
 
-      {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
-
-      <div className="adm-tarjeta" aria-busy={loading}>
-        {loading ? (
-          <div className="adm-cargando">Cargando proveedores…</div>
-        ) : filtrados.length === 0 ? (
-          <p className="adm-vacio">{busqueda ? "Sin resultados para tu búsqueda." : "No hay proveedores registrados."}</p>
-        ) : (
-          <div className="adm-tabla-wrap">
-            <table className="adm-tabla adm-tabla--tarjetas">
-              <thead>
-                <tr>
-                  <th>Proveedor</th>
-                  <th>NIT</th>
-                  <th>Teléfono</th>
-                  <th>Correo</th>
-                  <th className="adm-tabla__der">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginados.map((p) => (
-                  <tr key={p.id}>
-                    <td data-label="Proveedor">
-                      <div className="adm-celda-producto">
-                        <span className="adm-miniatura" aria-hidden="true">{getInitials(p.nombre)}</span>
-                        <div>
-                          <strong>{p.nombre}</strong>
-                          {p.categoria && <span className="adm-tabla__sub">{p.categoria}</span>}
-                        </div>
-                      </div>
-                    </td>
-                    <td data-label="NIT">{p.nit || "—"}</td>
-                    <td data-label="Teléfono" className="adm-tabla__nowrap">{p.telefono || "—"}</td>
-                    <td data-label="Correo">{p.correo || "—"}</td>
-                    <td className="adm-tabla__der adm-tabla__celda--ancha">
-                      <div className="adm-tabla__acciones">
-                        <button type="button" className="adm-btn adm-btn--chico" onClick={() => onEditar(p.id)}>Editar</button>
-                        <button type="button" className="adm-btn adm-btn--chico adm-btn--peligro" onClick={() => setConfirmId(p.id)}>Eliminar</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <nav className="adm-paginacion" aria-label="Paginación">
-        {totalPaginas > 1 && (
-          <button type="button" className="adm-btn" disabled={pagina === 1} onClick={() => setPagina((n) => n - 1)}>Anterior</button>
-        )}
-        <span>Mostrando {desdeN}–{hastaN} de {filtrados.length} proveedores</span>
-        {totalPaginas > 1 && (
-          <button type="button" className="adm-btn" disabled={pagina === totalPaginas} onClick={() => setPagina((n) => n + 1)}>Siguiente</button>
-        )}
-      </nav>
-
-      {confirmId && (
-        <ConfirmacionAdmin
-          titulo={`Eliminar ${aEliminar?.nombre || "proveedor"}`}
-          texto="Esta acción es permanente y no se puede deshacer. Se perderán todos los datos del proveedor."
-          confirmar="Sí, eliminar"
-          variante="peligro"
-          onConfirmar={() => handleEliminar(confirmId)}
-          onCancelar={() => setConfirmId(null)}
-        />
+      {eliminando && (
+        <ConfirmarAccion titulo={`¿Eliminar a ${eliminando.nombre}?`} peligro textoConfirmar="Eliminar proveedor"
+          mensaje="Sale de tu directorio y no podrás elegirlo en compras nuevas. Las compras que ya le hiciste quedan registradas, pero sin sus datos. No se puede deshacer."
+          onConfirmar={confirmarEliminar} onCancelar={() => setEliminando(null)} />
       )}
     </div>
   );
