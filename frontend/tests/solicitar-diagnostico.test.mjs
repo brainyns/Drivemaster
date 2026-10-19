@@ -3,9 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  MIN_SINTOMAS, PASOS_SERVICIO, SUGERENCIAS_SINTOMAS, alternarSugerencia, faltantes, formatoKm, formatoMotor,
-  tieneSugerencia,
+  MIN_SINTOMAS, PASOS_SERVICIO, SUGERENCIAS_SINTOMAS, alternarSugerencia, faltantes, tieneSugerencia,
 } from "../src/components/servicio/solicitudDiagnostico.js";
+import { formatoKm, formatoMotor } from "../src/utils/vehiculo.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 const frenos = SUGERENCIAS_SINTOMAS.find((s) => s.id === "frenos");
@@ -61,7 +61,7 @@ test("la página tiene stepper, resumen fijo con la tarifa, barra en celular y n
   const pagina = leer("../src/pages/SolicitarDiagnostico.jsx");
   assert.match(pagina, /<PasosServicio actual=\{1\} \/>/);
   assert.match(pagina, /className="mk-resumen sd-resumen"/);
-  assert.match(pagina, /sd-barra-movil/);
+  assert.match(pagina, /<BarraAccionMovil/);
   assert.match(pagina, /se descuenta del total si aceptas la reparación/);
   assert.doesNotMatch(pagina, /🚗|ss-eyebrow/);
   // Los dos botones envían el mismo formulario
@@ -74,7 +74,7 @@ test("la página tiene stepper, resumen fijo con la tarifa, barra en celular y n
 test("los vehículos son radios nativos dentro de un fieldset con legend", () => {
   const pagina = leer("../src/pages/SolicitarDiagnostico.jsx");
   assert.match(pagina, /<fieldset className="sd-fieldset"[^>]*>\s*<legend className="sd-seccion__titulo" id="sd-t-vehiculo">/);
-  assert.match(pagina, /type="radio"\s+name="vehiculo"/);
-  const css = leer("../src/css/solicitar-diagnostico.css");
-  assert.match(css, /\.sd-vehiculo:has\(input:focus-visible\)/);
+  assert.match(pagina, /seleccion=\{\{ name: "vehiculo"/);
+  assert.match(leer("../src/components/ui/TarjetaVehiculo.jsx"), /type="radio"\s+name=\{seleccion\.name\}/);
+  assert.match(leer("../src/css/ui.css"), /\.ui-vehiculo:has\(input:focus-visible\)/);
 });

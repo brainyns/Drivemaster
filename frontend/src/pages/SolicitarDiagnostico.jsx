@@ -8,10 +8,16 @@ import PasosServicio from "../components/servicio/PasosServicio";
 import MapaTalleres from "../components/mapa/MapaTalleres";
 import RutaTaller from "../components/mapa/RutaTaller";
 import Icon from "../components/public/Icon";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import TarjetaVehiculo from "../components/ui/TarjetaVehiculo";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Alerta from "../components/ui/Alerta";
+import Campo from "../components/ui/Campo";
+import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import {
-  MAX_SINTOMAS, MIN_SINTOMAS, SUGERENCIAS_SINTOMAS, alternarSugerencia, faltantes, formatoKm, formatoMotor,
-  tieneSugerencia,
+  MAX_SINTOMAS, MIN_SINTOMAS, SUGERENCIAS_SINTOMAS, alternarSugerencia, faltantes, tieneSugerencia,
 } from "../components/servicio/solicitudDiagnostico";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
@@ -24,42 +30,6 @@ const HORARIOS = ["Cualquier horario", "Mañanas entre semana", "Tardes entre se
 
 // Campo que recibe el foco cuando falta ese dato al enviar
 const FOCO_CAMPO = { sintomas: "ss-sintomas", ciudad: "ss-ciudad" };
-
-/** Tarjeta seleccionable de un vehículo: un radio nativo (flechas del teclado) con foto o imagen de respaldo. */
-function TarjetaVehiculo({ vehiculo: v, elegido, onElegir, describedBy }) {
-  const [fotoRota, setFotoRota] = useState(false);
-  const datos = [formatoMotor(v.motor), v.combustible, formatoKm(v.kilometraje)].filter(Boolean);
-  return (
-    <label className={`sd-vehiculo${elegido ? " sd-vehiculo--elegido" : ""}`}>
-      <input
-        type="radio"
-        name="vehiculo"
-        id={`sd-vehiculo-${v.id}`}
-        className="sd-sr"
-        value={v.id}
-        checked={elegido}
-        onChange={() => onElegir(v.id)}
-        aria-describedby={describedBy}
-      />
-      <span className="sd-vehiculo__media">
-        {v.imagenUrl && !fotoRota
-          ? <img src={v.imagenUrl} alt="" loading="lazy" onError={() => setFotoRota(true)} />
-          : (
-            <span className="sd-vehiculo__respaldo" aria-hidden="true">
-              <Icon name="car" size={34} />
-              <span>{v.marca}</span>
-            </span>
-          )}
-        <span className="sd-vehiculo__check" aria-hidden="true"><Icon name="check" size={14} /></span>
-      </span>
-      <span className="sd-vehiculo__cuerpo">
-        <span className="sd-vehiculo__nombre">{v.marca} {v.modelo} <span className="sd-vehiculo__anio">{v.anio}</span></span>
-        {v.placa && <span className="sd-placa"><span className="sd-sr">Placa </span>{v.placa}</span>}
-        {datos.length > 0 && <span className="sd-vehiculo__datos">{datos.join(" · ")}</span>}
-      </span>
-    </label>
-  );
-}
 
 /** El cliente pide un diagnóstico: el taller más cercano revisa el vehículo y cotiza. */
 export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVerServicios, onIrVehiculos }) {
@@ -129,7 +99,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
 
   const enfocar = (campo) => {
     const id = campo === "vehiculo"
-      ? (vehiculos[0] ? `sd-vehiculo-${vehiculos[0].id}` : "sd-registrar-vehiculo")
+      ? (vehiculos[0] ? `vehiculo-${vehiculos[0].id}` : "sd-registrar-vehiculo")
       : FOCO_CAMPO[campo];
     const el = document.getElementById(id);
     el?.focus({ preventScroll: true });
@@ -169,11 +139,8 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
 
   if (cargando) {
     return (
-      <div className="sv-root sd-pagina" aria-busy="true">
-        <div className="sd-esqueleto" aria-hidden="true">
-          <span /><span /><span />
-        </div>
-        <p className="sd-sr" role="status">Cargando el formulario…</p>
+      <div className="sv-root sd-pagina">
+        <Esqueleto variante="formulario" cantidad={4} texto="Cargando el formulario…" />
       </div>
     );
   }
@@ -216,8 +183,8 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
             </>
           )}
           <div className="ss-acciones">
-            <button className="sv-btn" onClick={onVerServicios}>Ver mis servicios</button>
-            {onVolver && <button className="sv-btn-outline" onClick={onVolver}>Volver al inicio</button>}
+            <button className="ui-btn ui-btn--primario" onClick={onVerServicios}>Ver mis servicios</button>
+            {onVolver && <button className="ui-btn ui-btn--secundario" onClick={onVolver}>Volver al inicio</button>}
           </div>
         </div>
       </div>
@@ -229,10 +196,12 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
   const ubicacionTexto = coordenadas && direccion ? direccion : [barrio.trim(), ciudad.trim()].filter(Boolean).join(", ");
   const horarioTexto = notaHorario.trim() ? `${horario} — ${notaHorario.trim()}` : horario;
   const sinVehiculos = vehiculos.length === 0;
+  const tarifaTexto = tarifa != null ? formatPrecio(tarifa) : "Por confirmar";
 
-  const botonEnviar = (clase) => (
-    <button type="submit" form="sd-form" className={`sv-btn sd-enviar ${clase}`} disabled={enviando || sinVehiculos}
-      aria-busy={enviando} aria-describedby={pendientes.length ? "sd-faltan" : undefined}>
+  const botonEnviar = (clase = "") => (
+    <button type="submit" form="sd-form" className={`ui-btn ui-btn--primario ui-btn--grande ${clase}`}
+      disabled={enviando || sinVehiculos} aria-busy={enviando}
+      aria-describedby={pendientes.length ? "sd-faltan" : undefined}>
       {enviando ? "Enviando…" : "Enviar solicitud"}
       {!enviando && <Icon name="arrow" size={16} />}
     </button>
@@ -240,19 +209,13 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
 
   return (
     <div className="sv-root sd-pagina">
-      <header className="sd-cabecera">
-        {onVolver && (
-          <button type="button" className="sd-volver" onClick={onVolver}>
-            <Icon name="arrow" size={16} className="sd-volver__icono" />
-            Volver
-          </button>
-        )}
-        <h1 className="sv-title sd-titulo">Solicitar diagnóstico</h1>
-        <p className="sv-subtitle sd-subtitulo">
-          Cuéntanos qué le pasa a tu vehículo. Un taller cercano lo revisa y te envía una cotización.
-        </p>
+      <EncabezadoPagina
+        titulo="Solicitar diagnóstico"
+        descripcion="Cuéntanos qué le pasa a tu vehículo. Un taller cercano lo revisa y te envía una cotización."
+        onVolver={onVolver}
+      >
         <PasosServicio actual={1} />
-      </header>
+      </EncabezadoPagina>
 
       <form id="sd-form" className="sd-grid" onSubmit={enviar} noValidate>
         <div className="sd-principal">
@@ -260,29 +223,28 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
             <fieldset className="sd-fieldset" aria-describedby={errores.vehiculo ? "sd-e-vehiculo" : undefined}>
               <legend className="sd-seccion__titulo" id="sd-t-vehiculo">Tu vehículo</legend>
               {sinVehiculos ? (
-                <div className="sd-vacio">
-                  <span className="sd-vacio__icono" aria-hidden="true"><Icon name="car" size={28} /></span>
-                  <p><strong>Aún no tienes vehículos registrados.</strong></p>
-                  <p className="sd-ayuda">Regístralo una vez y lo eliges aquí cada vez que necesites un diagnóstico.</p>
-                  <button type="button" id="sd-registrar-vehiculo" className="sv-btn" onClick={onIrVehiculos}>
+                <EstadoVacio icono="car" titulo="Aún no tienes vehículos registrados" nivel={3}
+                  texto="Regístralo una vez y lo eliges aquí cada vez que necesites un diagnóstico.">
+                  <button type="button" id="sd-registrar-vehiculo" className="ui-btn ui-btn--primario" onClick={onIrVehiculos}>
                     Registrar mi vehículo
                   </button>
-                </div>
+                </EstadoVacio>
               ) : (
-                <div className="sd-vehiculos">
+                <div className="ui-vehiculos">
                   {vehiculos.map((v) => (
-                    <TarjetaVehiculo key={v.id} vehiculo={v} elegido={vehiculoId === v.id} onElegir={setVehiculoId}
-                      describedBy={errores.vehiculo ? "sd-e-vehiculo" : undefined} />
+                    <TarjetaVehiculo key={v.id} vehiculo={v}
+                      seleccion={{ name: "vehiculo", elegido: vehiculoId === v.id, onElegir: setVehiculoId,
+                        describedBy: errores.vehiculo ? "sd-e-vehiculo" : undefined }} />
                   ))}
                   {onIrVehiculos && (
-                    <button type="button" className="sd-vehiculo sd-vehiculo--agregar" onClick={onIrVehiculos}>
+                    <button type="button" className="ui-vehiculo ui-vehiculo--agregar" onClick={onIrVehiculos}>
                       <Icon name="plus" size={22} />
                       <span>Agregar otro vehículo</span>
                     </button>
                   )}
                 </div>
               )}
-              {errores.vehiculo && <p className="sd-error" id="sd-e-vehiculo">{errores.vehiculo}</p>}
+              {errores.vehiculo && <p className="sd-error" id="sd-e-vehiculo"><Icon name="alert" size={14} />{errores.vehiculo}</p>}
             </fieldset>
           </section>
 
@@ -296,42 +258,40 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
               {SUGERENCIAS_SINTOMAS.map((s) => {
                 const activa = tieneSugerencia(sintomas, s);
                 return (
-                  <button key={s.id} type="button" className={`sd-chip${activa ? " sd-chip--activa" : ""}`}
-                    aria-pressed={activa} onClick={() => setSintomas((t) => alternarSugerencia(t, s).slice(0, MAX_SINTOMAS))}>
-                    {activa ? <Icon name="check" size={14} /> : <Icon name="plus" size={14} />}
+                  <button key={s.id} type="button" className="ui-chip" aria-pressed={activa}
+                    onClick={() => setSintomas((t) => alternarSugerencia(t, s).slice(0, MAX_SINTOMAS))}>
+                    <Icon name={activa ? "check" : "plus"} size={14} />
                     {s.etiqueta}
                   </button>
                 );
               })}
             </div>
 
-            <div className="sd-campo">
-              <label htmlFor="ss-sintomas" className="sd-label">Síntomas o problema</label>
+            <Campo id="ss-sintomas" label="Síntomas o problema" error={errores.sintomas}>
               <textarea
-                id="ss-sintomas"
-                className={`sd-textarea${errores.sintomas ? " sd-control--error" : ""}`}
+                className="ui-field__input"
                 rows={5}
                 value={sintomas}
                 maxLength={MAX_SINTOMAS}
                 onChange={(e) => setSintomas(e.target.value)}
-                aria-invalid={errores.sintomas ? true : undefined}
-                aria-describedby={`sd-contador${errores.sintomas ? " sd-e-sintomas" : ""}`}
+                aria-describedby="sd-contador"
                 placeholder="Ej. Suena un chirrido al frenar y el pedal se siente blando desde hace una semana."
               />
-              <div className="sd-campo__pie">
-                <span id="sd-contador" className={`sd-contador${largoSintomas >= MIN_SINTOMAS ? " sd-contador--ok" : ""}`}>
-                  {largoSintomas >= MIN_SINTOMAS
-                    ? <><Icon name="check" size={14} /> Listo</>
-                    : `Mínimo ${MIN_SINTOMAS} caracteres`}
-                </span>
-                <span className="sd-contador__numero">{sintomas.length}/{MAX_SINTOMAS}</span>
-              </div>
-              {errores.sintomas && <p className="sd-error" id="sd-e-sintomas">{errores.sintomas}</p>}
+            </Campo>
+            <div className="sd-campo__pie">
+              <span id="sd-contador" className={`sd-contador${largoSintomas >= MIN_SINTOMAS ? " sd-contador--ok" : ""}`}>
+                {largoSintomas >= MIN_SINTOMAS
+                  ? <><Icon name="check" size={14} /> Listo</>
+                  : `Mínimo ${MIN_SINTOMAS} caracteres`}
+              </span>
+              <span className="sd-contador__numero">{sintomas.length}/{MAX_SINTOMAS}</span>
             </div>
 
-            <div className="sd-campo">
-              <span className="sd-label" id="sd-t-fotos">Fotos <span className="sd-opcional">opcional</span></span>
-              <p className="sd-ayuda">Una foto del tablero, de una fuga o de la pieza ayuda al taller a llegar preparado.</p>
+            <div className="sd-fotos">
+              <span className="ui-field__label" id="sd-t-fotos">Fotos <span className="ui-field__opcional">opcional</span></span>
+              <p className="sd-seccion__ayuda sd-seccion__ayuda--pegada">
+                Una foto del tablero, de una fuga o de la pieza ayuda al taller a llegar preparado.
+              </p>
               <SubidaFotos token={token} fotos={fotos} onChange={setFotos} max={5} />
             </div>
           </section>
@@ -339,18 +299,13 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
           <section className="sd-seccion sd-seccion--mapa" aria-labelledby="sd-t-ubicacion">
             <h2 className="sd-seccion__titulo" id="sd-t-ubicacion">Ubicación y taller</h2>
             <div className="sd-fila">
-              <div className="sd-campo">
-                <label htmlFor="ss-ciudad" className="sd-label">Ciudad</label>
-                <input id="ss-ciudad" className={`sd-input${errores.ciudad ? " sd-control--error" : ""}`} value={ciudad}
-                  onChange={(e) => setCiudad(e.target.value)} placeholder="Bogotá D.C." autoComplete="address-level2"
-                  aria-invalid={errores.ciudad ? true : undefined} aria-describedby={errores.ciudad ? "sd-e-ciudad" : undefined} />
-                {errores.ciudad && <p className="sd-error" id="sd-e-ciudad">{errores.ciudad}</p>}
-              </div>
-              <div className="sd-campo">
-                <label htmlFor="ss-barrio" className="sd-label">Barrio <span className="sd-opcional">opcional</span></label>
-                <input id="ss-barrio" className="sd-input" value={barrio} onChange={(e) => setBarrio(e.target.value)}
-                  placeholder="Chapinero" />
-              </div>
+              <Campo id="ss-ciudad" label="Ciudad" error={errores.ciudad}>
+                <input className="ui-field__input" value={ciudad} onChange={(e) => setCiudad(e.target.value)}
+                  placeholder="Bogotá D.C." autoComplete="address-level2" />
+              </Campo>
+              <Campo id="ss-barrio" label="Barrio" opcional>
+                <input className="ui-field__input" value={barrio} onChange={(e) => setBarrio(e.target.value)} placeholder="Chapinero" />
+              </Campo>
             </div>
             <MapaTalleres
               id="ss-mapa"
@@ -370,18 +325,17 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
               <p className="sd-seccion__ayuda">El taller te propone la cita según tu preferencia.</p>
               <div className="sd-opciones">
                 {HORARIOS.map((h) => (
-                  <label key={h} className={`sd-opcion${horario === h ? " sd-opcion--elegida" : ""}`}>
-                    <input type="radio" name="horario" className="sd-sr" value={h} checked={horario === h}
+                  <label key={h} className={`ui-opcion${horario === h ? " ui-opcion--elegida" : ""}`}>
+                    <input type="radio" name="horario" className="ui-sr" value={h} checked={horario === h}
                       onChange={() => setHorario(h)} />
                     {h}
                   </label>
                 ))}
               </div>
-              <div className="sd-campo sd-campo--corto">
-                <label htmlFor="ss-nota-horario" className="sd-label">Detalle <span className="sd-opcional">opcional</span></label>
-                <input id="ss-nota-horario" className="sd-input" value={notaHorario} maxLength={120}
+              <Campo id="ss-nota-horario" label="Detalle" opcional className="sd-campo--corto">
+                <input className="ui-field__input" value={notaHorario} maxLength={120}
                   onChange={(e) => setNotaHorario(e.target.value)} placeholder="Ej. después de las 10 a. m." />
-              </div>
+              </Campo>
             </fieldset>
           </section>
         </div>
@@ -393,7 +347,9 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
               <div className="mk-resumen__grupo">
                 <dt className="mk-resumen__detalle">Vehículo</dt>
                 <dd className={vehiculo ? "" : "sd-resumen__vacio"}>
-                  {vehiculo ? <>{vehiculo.marca} {vehiculo.modelo} {vehiculo.anio}{vehiculo.placa && <span className="sd-placa sd-placa--chica">{vehiculo.placa}</span>}</> : "Sin elegir"}
+                  {vehiculo
+                    ? <>{vehiculo.marca} {vehiculo.modelo} {vehiculo.anio}{vehiculo.placa && <span className="ui-placa ui-placa--chica">{vehiculo.placa}</span>}</>
+                    : "Sin elegir"}
                 </dd>
               </div>
               <div className="mk-resumen__grupo">
@@ -410,9 +366,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
               </div>
               <div className="mk-resumen__grupo sd-resumen__tarifa">
                 <dt className="mk-resumen__fila">Tarifa de diagnóstico</dt>
-                <dd className="mk-resumen__fila">
-                  <strong>{tarifa != null ? formatPrecio(tarifa) : "Por confirmar"}</strong>
-                </dd>
+                <dd className="mk-resumen__fila"><strong className="ui-precio">{tarifaTexto}</strong></dd>
               </div>
             </dl>
             <p className="mk-resumen__nota sd-resumen__explicacion">
@@ -438,24 +392,21 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
 
             {/* El error se muestra junto al botón visible: aquí en escritorio, en la barra inferior en celular
                 (display: none saca la copia oculta del árbol de accesibilidad, así se anuncia una sola vez) */}
-            {error && <p className="ss-alerta sd-alerta sd-alerta--lateral" role="alert">{error}</p>}
-            {botonEnviar("sd-enviar--lateral")}
+            {error && <Alerta className="sd-alerta sd-solo-escritorio">{error}</Alerta>}
+            {botonEnviar("ui-btn--bloque sd-enviar sd-solo-escritorio")}
           </div>
         </aside>
       </form>
 
       {/* Celular: el total y el botón siempre a mano */}
-      <div className="sd-barra-movil">
-        {error && <p className="ss-alerta sd-alerta sd-alerta--movil" role="alert">{error}</p>}
-        <div className="sd-barra-movil__total">
-          <span className="sd-barra-movil__etiqueta">Diagnóstico</span>
-          <strong>{tarifa != null ? formatPrecio(tarifa) : "Por confirmar"}</strong>
-          <span className="sd-barra-movil__nota">
-            {pendientes.length ? `Falta: ${pendientes.map((f) => f.resumen.toLowerCase()).join(", ")}` : "Se descuenta si aceptas la reparación"}
-          </span>
-        </div>
-        {botonEnviar("sd-enviar--movil")}
-      </div>
+      <BarraAccionMovil
+        etiqueta="Diagnóstico"
+        valor={tarifaTexto}
+        nota={pendientes.length ? `Falta: ${pendientes.map((f) => f.resumen.toLowerCase()).join(", ")}` : "Se descuenta si aceptas la reparación"}
+        alerta={error && <Alerta>{error}</Alerta>}
+      >
+        {botonEnviar()}
+      </BarraAccionMovil>
     </div>
   );
 }

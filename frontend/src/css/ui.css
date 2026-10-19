@@ -1,41 +1,172 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Componentes comunes del panel (BEM, prefijo ui-). Usan solo los tokens --ui-*
-   y --primary de global.css, así que siguen el tema claro y oscuro sin reglas
-   propias. Movimiento: solo transform, opacity y color, y nada con movimiento
-   reducido.
+   Componentes comunes (BEM, prefijo ui-): los del panel y los de las pantallas del cliente
+   (components/ui/*). Usan solo los tokens --ui-* y --primary* de global.css, así que siguen el
+   tema claro y oscuro sin reglas propias. Movimiento: solo transform, opacity y color, y nada
+   con movimiento reducido.
+
+   Dentro del sitio público (.dm-page) los títulos y párrafos traen su propio reinicio con
+   especificidad 0,1,1 (letter-spacing, márgenes): por eso los textos de estos componentes se
+   escriben con dos clases.
 ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Cabecera de página ─────────────────────────────────────────────────── */
+.ui-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── Cabecera de página (EncabezadoPagina) ─────────────────────────────── */
 .ui-page-header {
+  margin-bottom: var(--ui-sp-5);
+}
+
+.ui-page-header__fila {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--ui-sp-3) var(--ui-sp-5);
-  margin-bottom: var(--ui-sp-5);
 }
 
-.ui-page-header__titulo {
+.ui-page-header__texto { min-width: 0; }
+
+.ui-page-header .ui-page-header__titulo {
   margin: 0;
   font-family: var(--ui-font);
-  font-size: 1.5rem;
-  font-weight: 650;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  font-size: var(--fs-display);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   color: var(--ui-text);
   text-wrap: balance;
 }
 
-.ui-page-header__sub {
-  margin: 4px 0 0;
-  max-width: 65ch;
-  font-size: 0.875rem;
+.ui-page-header .ui-page-header__sub {
+  margin: 8px 0 0;
+  max-width: 62ch;
+  font-size: 1rem;
   line-height: 1.55;
   color: var(--ui-muted);
   text-wrap: pretty;
 }
 
 .ui-page-header__acciones { display: flex; flex-wrap: wrap; gap: var(--ui-sp-2); }
+
+/* "Volver": un enlace tranquilo encima del título, alineado con su borde */
+.ui-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 0 0 4px -10px;
+  padding: 0 10px;
+  background: none;
+  border: none;
+  border-radius: var(--ui-r-lg);
+  color: var(--ui-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--ui-dur) ease, background-color var(--ui-dur) ease;
+}
+
+.ui-volver:hover { color: var(--ui-text); background: var(--ui-hover); }
+.ui-volver:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.ui-volver__icono { transform: rotate(180deg); }
+
+/* ── Pasos (Pasos) ─────────────────────────────────────────────────────── */
+.ui-pasos { margin-top: 28px; }
+
+.ui-pasos .ui-pasos__texto {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ui-muted);
+}
+
+.ui-pasos__texto strong { color: var(--ui-text); }
+
+.ui-pasos__lista {
+  display: grid;
+  grid-template-columns: repeat(var(--ui-pasos, 5), minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-pasos__paso {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: var(--ui-muted);
+}
+
+/* Barra segmentada: un tramo por paso */
+.ui-pasos__paso::before {
+  content: "";
+  flex: 0 0 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ui-line);
+}
+
+.ui-pasos__paso--hecho::before,
+.ui-pasos__paso--actual::before { background: var(--primary); }
+
+.ui-pasos__paso--actual { color: var(--ui-text); font-weight: 600; }
+
+.ui-pasos__marca {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--ui-line);
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-pasos__paso--hecho .ui-pasos__marca { border-color: var(--primary); color: var(--primary-text); }
+
+.ui-pasos__paso--actual .ui-pasos__marca {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.ui-pasos__nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Un paso ya hecho se puede volver a abrir */
+.ui-pasos__ir {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+
+.ui-pasos__ir:hover { color: var(--ui-text); text-decoration-color: currentColor; }
+.ui-pasos__ir:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 4px; }
 
 /* ── Tarjeta ────────────────────────────────────────────────────────────── */
 .ui-card {
@@ -54,10 +185,10 @@
   padding: 18px 20px 12px;
 }
 
-.ui-card__titulo {
+.ui-card .ui-card__titulo {
   margin: 0;
   font-family: var(--ui-font);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: -0.005em;
   color: var(--ui-text);
@@ -103,19 +234,21 @@
 
 /* ── Botón ──────────────────────────────────────────────────────────────── */
 .ui-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--ui-sp-2);
-  min-height: 38px;
+  min-height: 40px;
   padding: 8px 16px;
   font-family: var(--ui-font);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
+  text-decoration: none;
   border: 1px solid transparent;
-  border-radius: var(--ui-r-md);
+  border-radius: 10px;
   cursor: pointer;
   transition: background-color var(--ui-dur) ease, border-color var(--ui-dur) ease,
               color var(--ui-dur) ease, transform var(--ui-dur) var(--ui-ease);
@@ -129,26 +262,52 @@
 .ui-btn--secundario { background: var(--ui-surface); color: var(--ui-text); border-color: var(--ui-line); }
 .ui-btn--texto { background: transparent; color: var(--primary-text); padding-inline: 8px; }
 .ui-btn--peligro { background: transparent; color: var(--ui-error); border-color: currentColor; }
+.ui-btn--grande { min-height: 48px; padding: 10px 20px; font-size: 0.95rem; }
+.ui-btn--chico { min-height: 32px; padding: 4px 12px; font-size: 0.8125rem; }
+.ui-btn--bloque { width: 100%; }
+
+/* Cargando: el texto lo cambia el componente ("Ingresando…"); el giro acompaña sin mover el ancho */
+.ui-btn[aria-busy="true"] { cursor: progress; }
+.ui-btn[aria-busy="true"]::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: ui-giro 0.7s linear infinite;
+}
+
+@keyframes ui-giro { to { transform: rotate(360deg); } }
 
 @media (hover: hover) and (pointer: fine) {
   .ui-btn--primario:hover:not(:disabled) { background: var(--primary-h); }
-  .ui-btn--secundario:hover:not(:disabled) { background: var(--ui-surface-2); }
+  .ui-btn--secundario:hover:not(:disabled) { background: var(--ui-surface-2); border-color: var(--ui-muted); }
   .ui-btn--texto:hover:not(:disabled) { background: var(--ui-hover); }
   .ui-btn--peligro:hover:not(:disabled) { background: var(--ui-error-bg); }
 }
 
-/* ── Etiqueta de estado ─────────────────────────────────────────────────── */
+/* ── Etiqueta de estado (ChipEstado): siempre con texto, el color solo acompaña ── */
 .ui-badge {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   padding: 2px 8px;
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.5;
   white-space: nowrap;
-  border-radius: var(--ui-r-sm);
+  border-radius: 999px;
   color: var(--ui-muted);
   background: var(--ui-hover);
+}
+
+.ui-badge__punto {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .ui-badge--ok    { color: var(--ui-ok);    background: var(--ui-ok-bg); }
@@ -156,8 +315,80 @@
 .ui-badge--error { color: var(--ui-error); background: var(--ui-error-bg); }
 .ui-badge--info  { color: var(--ui-info);  background: var(--ui-info-bg); }
 .ui-badge--acento { color: var(--primary-text); background: var(--primary-soft); }
+.ui-badge--neutro { color: var(--ui-muted); background: var(--ui-hover); }
 
-/* ── Estado vacío ───────────────────────────────────────────────────────── */
+/* ── Chip seleccionable (filtros, sugerencias) ─────────────────────────── */
+.ui-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 14px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  color: var(--ui-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--ui-dur) ease, background-color var(--ui-dur) ease, color var(--ui-dur) ease;
+}
+
+.ui-chip svg { color: var(--ui-muted); }
+.ui-chip:hover { border-color: var(--ui-muted); }
+
+.ui-chip[aria-pressed="true"],
+.ui-chip[aria-pressed="true"]:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+.ui-chip[aria-pressed="true"] svg { color: currentColor; stroke-width: 2.4; }
+.ui-chip:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+.ui-chip__contador {
+  min-width: 1.4em;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ui-hover);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Opción seleccionable grande (radios con forma de botón) ───────────── */
+.ui-opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 16px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  color: var(--ui-text);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--ui-dur) ease, background-color var(--ui-dur) ease;
+}
+
+.ui-opcion:hover { border-color: var(--ui-muted); }
+
+.ui-opcion--elegida,
+.ui-opcion--elegida:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--ui-surface));
+  font-weight: 600;
+}
+
+.ui-opcion:has(input:focus-visible) { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+/* ── Estado vacío (EstadoVacio) ────────────────────────────────────────── */
 .ui-empty {
   display: grid;
   justify-items: start;
@@ -170,29 +401,292 @@
 
 .ui-empty__titulo { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--ui-text); }
 
-/* ── Campo de formulario: etiqueta arriba, ayuda y error abajo ──────────── */
-.ui-field { display: grid; gap: 6px; min-width: 0; }
-.ui-field__label { font-size: 0.8rem; font-weight: 600; color: var(--ui-text); }
-.ui-field__ayuda { margin: 0; font-size: 0.78rem; color: var(--ui-muted); }
-.ui-field__error { margin: 0; font-size: 0.78rem; color: var(--ui-error); }
+.ui-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 20px;
+  border: 1px dashed var(--ui-line);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.ui-vacio__icono {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+
+.ui-vacio .ui-vacio__titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ui-text);
+}
+
+.ui-vacio .ui-vacio__texto {
+  max-width: 46ch;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ui-muted);
+}
+
+.ui-vacio__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ui-sp-2);
+  margin-top: 10px;
+}
+
+/* ── Avisos y errores (Alerta) ─────────────────────────────────────────── */
+.ui-alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ui-text);
+}
+
+.ui-alerta > svg { flex-shrink: 0; margin-top: 1px; }
+.ui-alerta .ui-alerta__texto { flex: 1; min-width: 0; margin: 0; }
+.ui-alerta__acciones { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+
+.ui-alerta--error { background: var(--ui-error-bg); border-color: color-mix(in srgb, var(--ui-error) 35%, transparent); }
+.ui-alerta--error > svg { color: var(--ui-error); }
+.ui-alerta--ok { background: var(--ui-ok-bg); border-color: color-mix(in srgb, var(--ui-ok) 35%, transparent); }
+.ui-alerta--ok > svg { color: var(--ui-ok); }
+.ui-alerta--info { background: var(--ui-info-bg); border-color: color-mix(in srgb, var(--ui-info) 30%, transparent); }
+.ui-alerta--info > svg { color: var(--ui-info); }
+.ui-alerta--aviso { background: var(--ui-aviso-bg); border-color: color-mix(in srgb, var(--ui-aviso) 35%, transparent); }
+.ui-alerta--aviso > svg { color: var(--ui-aviso); }
+
+/* ── Campo de formulario (Campo): etiqueta arriba, ayuda y error abajo ─── */
+.ui-field { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.ui-field__label { font-size: 0.875rem; font-weight: 600; color: var(--ui-text); }
+
+.ui-field__opcional {
+  margin-left: 6px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--ui-muted);
+}
+
+.ui-field .ui-field__ayuda { margin: 0; font-size: 0.8rem; line-height: 1.5; color: var(--ui-muted); }
+
+.ui-field .ui-field__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ui-error);
+}
+
+.ui-field__error svg { flex-shrink: 0; margin-top: 1px; }
 
 .ui-field__input {
   width: 100%;
-  min-height: 38px;
-  padding: 8px 12px;
+  min-height: 46px;
+  padding: 11px 14px;
   font: inherit;
-  font-size: 0.875rem;
+  /* 16 px: en el celular un campo más pequeño hace zoom al enfocarlo */
+  font-size: 1rem;
   color: var(--ui-text);
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
-  border-radius: var(--ui-r-md);
-  transition: border-color var(--ui-dur) ease;
+  border-radius: 10px;
+  transition: border-color var(--ui-dur) ease, box-shadow var(--ui-dur) ease;
 }
 
-.ui-field__input::placeholder { color: var(--ui-muted); }
-.ui-field__input:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; border-color: transparent; }
+textarea.ui-field__input { min-height: 120px; line-height: 1.55; resize: vertical; }
+select.ui-field__input { cursor: pointer; }
 
-/* ── Carga ──────────────────────────────────────────────────────────────── */
+.ui-field__input::placeholder { color: var(--ui-muted); }
+.ui-field__input:hover { border-color: var(--ui-muted); }
+.ui-field__input:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; border-color: var(--ui-focus); }
+
+.ui-field__input[aria-invalid="true"],
+.ui-field__input[aria-invalid="true"]:hover { border-color: var(--ui-error); }
+
+/* Contraseña con botón para mostrarla (CampoClave) */
+.ui-clave { position: relative; }
+.ui-clave .ui-field__input { padding-right: 52px; }
+
+.ui-clave__ver {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--ui-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.ui-clave__ver:hover { color: var(--ui-text); background: var(--ui-hover); }
+.ui-clave__ver:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 0; }
+
+/* ── Vehículo (TarjetaVehiculo) ────────────────────────────────────────── */
+.ui-vehiculos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.ui-vehiculo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+label.ui-vehiculo { cursor: pointer; }
+label.ui-vehiculo:hover { border-color: var(--ui-muted); }
+.ui-vehiculo:has(input:focus-visible) { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+.ui-vehiculo--elegido,
+.ui-vehiculo--elegido:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary), 0 8px 24px -12px color-mix(in srgb, var(--primary) 45%, transparent);
+  background: color-mix(in srgb, var(--primary) 6%, var(--ui-surface));
+}
+
+.ui-vehiculo__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: var(--ui-surface-2);
+}
+
+.ui-vehiculo__media img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* Sin foto: el dibujo del carro y la marca sobre una superficie tenue (igual en todas las tarjetas) */
+.ui-vehiculo__respaldo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--ui-muted);
+  background:
+    radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--primary) 9%, transparent), transparent 60%),
+    var(--ui-surface-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ui-vehiculo__check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.ui-vehiculo__check svg { stroke-width: 2.6; }
+.ui-vehiculo--elegido .ui-vehiculo__check { opacity: 1; transform: scale(1); }
+
+.ui-vehiculo__media-accion { position: absolute; right: 10px; bottom: 10px; }
+
+.ui-vehiculo__cuerpo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px 14px;
+}
+
+.ui-vehiculo .ui-vehiculo__nombre {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: var(--ui-text);
+}
+
+.ui-vehiculo__anio { font-weight: 500; color: var(--ui-muted); }
+.ui-vehiculo__datos { font-size: 0.8rem; line-height: 1.4; color: var(--ui-muted); }
+.ui-vehiculo__extra { width: 100%; }
+
+/* La placa con su forma: lo primero que reconoce el dueño */
+.ui-placa {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1.5px solid var(--ui-text);
+  border-radius: 4px;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ui-placa--chica { margin-left: 8px; padding: 0 6px; font-size: 0.68rem; vertical-align: 1px; }
+
+/* Tarjeta para agregar (último lugar de la rejilla) */
+.ui-vehiculo--agregar {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 160px;
+  background: transparent;
+  border-style: dashed;
+  color: var(--ui-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ui-vehiculo--agregar:hover { border-color: var(--primary); color: var(--ui-text); }
+.ui-vehiculo--agregar:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+/* ── Carga (Esqueleto) ──────────────────────────────────────────────────── */
 .ui-skeleton {
   display: block;
   min-height: 1em;
@@ -203,8 +697,83 @@
 
 @keyframes ui-pulso { 50% { opacity: 0.55; } }
 
+.ui-esqueleto { display: grid; gap: 12px; }
+.ui-esqueleto__fila { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--ui-line-soft); border-radius: 12px; }
+.ui-esqueleto__titulo { width: 45%; height: 16px; }
+.ui-esqueleto__linea { width: 75%; height: 12px; }
+.ui-esqueleto__linea--corta { width: 30%; }
+.ui-esqueleto--tarjetas { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.ui-esqueleto__tarjeta { display: grid; gap: 10px; padding-bottom: 14px; border: 1px solid var(--ui-line-soft); border-radius: 12px; overflow: hidden; }
+.ui-esqueleto__media { aspect-ratio: 16 / 9; border-radius: 0; }
+.ui-esqueleto__tarjeta > .ui-skeleton:not(.ui-esqueleto__media) { margin-inline: 14px; }
+.ui-esqueleto__campo { display: grid; gap: 8px; }
+.ui-esqueleto__etiqueta { width: 120px; height: 12px; }
+.ui-esqueleto__control { height: 46px; border-radius: 10px; }
+
+/* ── Barra inferior con la acción principal (BarraAccionMovil) ─────────── */
+.ui-barra-movil { display: none; }
+
+@media (max-width: 1023px) {
+  .ui-barra-movil {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 80;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--ui-bg);
+    border-top: 1px solid var(--ui-line);
+    box-shadow: 0 -10px 30px -12px rgba(0, 0, 0, 0.35);
+  }
+
+  .ui-barra-movil__total { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ui-barra-movil__etiqueta { font-size: 0.72rem; color: var(--ui-muted); }
+  .ui-barra-movil__valor { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ui-text); }
+
+  .ui-barra-movil__nota {
+    overflow: hidden;
+    font-size: 0.74rem;
+    color: var(--ui-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ui-barra-movil__accion { flex-shrink: 0; }
+  .ui-barra-movil__alerta { flex-basis: 100%; }
+
+  /* Espacio para que la barra no tape el final de la página, y el chat sube para no quedar encima */
+  body:has(.ui-barra-movil) { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  body:has(.ui-barra-movil) .chat-widget-container { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Precio destacado (tarifas, totales) */
+.ui-precio { font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+@media (max-width: 600px) {
+  .ui-page-header .ui-page-header__titulo { font-size: 1.6rem; }
+  .ui-vehiculos,
+  .ui-esqueleto--tarjetas { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+
+  /* Pasos: las columnas son angostas y el paso actual ya se nombra arriba; los nombres quedan
+     para lectores de pantalla */
+  .ui-pasos__nombre {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ui-skeleton { animation: none; }
-  .ui-btn, .ui-table tbody tr, .ui-field__input { transition: none; }
+  .ui-btn, .ui-table tbody tr, .ui-field__input, .ui-chip, .ui-opcion, .ui-vehiculo { transition: none; }
   .ui-btn:active:not(:disabled) { transform: none; }
+  .ui-btn[aria-busy="true"]::before { animation: none; }
+  .ui-vehiculo__check { transition: opacity 0.2s; transform: none; }
 }

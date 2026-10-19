@@ -1,133 +1,17 @@
 /* ── Solicitar diagnóstico ────────────────────────────────────────────────
-   Prefijo sd-, BEM. Se apoya en servicios.css (sv-root, sv-btn, sv-title), en el resumen del checkout
-   (marketplace.css: mk-resumen*) y en los tokens del sitio público (--dm-*, --ui-*), así que sigue el tema
-   claro y oscuro sin reglas propias por tema. */
+   Solo la composición de la página (prefijo sd-, BEM). Las piezas (cabecera, pasos, tarjetas de vehículo,
+   campos, chips, opciones, vacío, carga, barra inferior) son de ui.css; el resumen reutiliza mk-resumen del
+   checkout (marketplace.css). Todo con tokens, así que sigue el tema claro y oscuro. */
 
 .sd-pagina {
   max-width: 1200px;
-  caret-color: var(--dm-orange);
-  accent-color: var(--dm-orange);
+  caret-color: var(--primary);
+  accent-color: var(--primary);
 }
 
 .sd-pagina ::selection {
-  background: color-mix(in srgb, var(--dm-orange) 32%, transparent);
+  background: color-mix(in srgb, var(--primary) 32%, transparent);
   color: inherit;
-}
-
-.sd-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/* ── Cabecera y pasos ──────────────────────────────────────────────────── */
-.sd-cabecera {
-  margin-bottom: 8px;
-}
-
-.sd-volver {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  margin: 0 0 4px -10px;
-  padding: 0 10px;
-  background: none;
-  border: none;
-  border-radius: 8px;
-  color: var(--dm-muted);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-}
-
-.sd-volver:hover { color: var(--dm-text); background: var(--dm-surface); }
-.sd-volver__icono { transform: rotate(180deg); }
-
-.sd-titulo {
-  font-size: 2rem;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  text-wrap: balance;
-}
-
-.sd-subtitulo {
-  max-width: 60ch;
-  margin-top: 8px;
-  font-size: 1rem;
-  line-height: 1.55;
-}
-
-.sd-pasos {
-  margin-top: 28px;
-}
-
-.sd-pasos__texto {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--dm-muted);
-}
-
-.sd-pasos__texto strong { color: var(--dm-text); }
-
-.sd-pasos__lista {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sd-pasos__paso {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 0.8125rem;
-  color: var(--dm-muted);
-}
-
-/* Barra segmentada: un tramo por paso */
-.sd-pasos__paso::before {
-  content: "";
-  flex: 0 0 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--dm-line);
-}
-
-.sd-pasos__paso--hecho::before,
-.sd-pasos__paso--actual::before { background: var(--dm-orange); }
-
-.sd-pasos__paso--actual {
-  color: var(--dm-text);
-  font-weight: 600;
-}
-
-.sd-pasos__marca {
-  display: inline-grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--dm-line);
-  border-radius: 50%;
-  font-size: 0.7rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.sd-pasos__paso--actual .sd-pasos__marca {
-  background: var(--dm-orange);
-  border-color: var(--dm-orange);
-  color: var(--dm-on-accent);
 }
 
 /* ── Rejilla: formulario + resumen ────────────────────────────────────── */
@@ -135,19 +19,18 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 48px;
-  margin-top: 8px;
 }
 
 .sd-principal { min-width: 0; }
 
 .sd-seccion {
   padding: 36px 0;
-  border-top: 1px solid var(--dm-line);
+  border-top: 1px solid var(--ui-line);
   /* Al llevar el foco a un campo, la sección no queda debajo de la cabecera fija */
   scroll-margin-top: 104px;
 }
 
-.sd-seccion:first-child { border-top: none; padding-top: 28px; }
+.sd-seccion:first-child { border-top: none; padding-top: 12px; }
 
 .sd-fieldset {
   min-width: 0;
@@ -164,12 +47,12 @@
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: var(--dm-text);
+  color: var(--ui-text);
 }
 
 /* Sin ayuda, el título necesita su propio aire antes del contenido */
-.sd-seccion__titulo + .sd-vehiculos,
-.sd-seccion__titulo + .sd-vacio,
+.sd-seccion__titulo + .ui-vehiculos,
+.sd-seccion__titulo + .ui-vacio,
 .sd-seccion__titulo + .sd-fila { margin-top: 16px; }
 
 .sd-seccion__ayuda {
@@ -177,275 +60,20 @@
   margin: 0 0 18px;
   font-size: 0.9rem;
   line-height: 1.55;
-  color: var(--dm-muted);
+  color: var(--ui-muted);
 }
 
-/* ── Vehículos ─────────────────────────────────────────────────────────── */
-.sd-vehiculos {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.sd-vehiculo {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--dm-surface);
-  border: 1px solid var(--dm-line);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-}
-
-.sd-vehiculo:hover { border-color: var(--dm-muted); }
-
-.sd-vehiculo:has(input:focus-visible) {
-  outline: 2px solid var(--ui-focus);
-  outline-offset: 2px;
-}
-
-.sd-vehiculo--elegido,
-.sd-vehiculo--elegido:hover {
-  border-color: var(--dm-orange);
-  box-shadow: 0 0 0 1px var(--dm-orange), 0 8px 24px -12px color-mix(in srgb, var(--dm-orange) 45%, transparent);
-  background: color-mix(in srgb, var(--dm-orange) 6%, var(--dm-surface));
-}
-
-.sd-vehiculo__media {
-  position: relative;
-  display: block;
-  aspect-ratio: 16 / 9;
-  background: var(--dm-surface-2);
-}
-
-.sd-vehiculo__media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* Sin foto: el dibujo del carro y la marca sobre una superficie tenue (igual en todas las tarjetas) */
-.sd-vehiculo__respaldo {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: var(--dm-muted);
-  background:
-    radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--dm-orange) 9%, transparent), transparent 60%),
-    var(--dm-surface-2);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.sd-vehiculo__check {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--dm-orange);
-  color: var(--dm-on-accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  opacity: 0;
-  transform: scale(0.6);
-  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.sd-vehiculo__check svg { stroke-width: 2.6; }
-
-.sd-vehiculo--elegido .sd-vehiculo__check {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.sd-vehiculo__cuerpo {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 12px 14px 14px;
-}
-
-.sd-vehiculo__nombre {
-  font-size: 0.95rem;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--dm-text);
-}
-
-.sd-vehiculo__anio {
-  font-weight: 500;
-  color: var(--dm-muted);
-}
-
-.sd-vehiculo__datos {
-  font-size: 0.8rem;
-  line-height: 1.4;
-  color: var(--dm-muted);
-}
-
-/* La placa con su forma: lo primero que reconoce el dueño */
-.sd-placa {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border: 1.5px solid var(--dm-text);
-  border-radius: 4px;
-  background: var(--dm-bg);
-  color: var(--dm-text);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-
-.sd-placa--chica {
-  margin-left: 8px;
-  padding: 0 6px;
-  font-size: 0.68rem;
-  vertical-align: 1px;
-}
-
-.sd-vehiculo--agregar {
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 160px;
-  background: transparent;
-  border-style: dashed;
-  color: var(--dm-muted);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.sd-vehiculo--agregar:hover { border-color: var(--dm-orange); color: var(--dm-text); }
-
-.sd-vehiculo--agregar:focus-visible {
-  outline: 2px solid var(--ui-focus);
-  outline-offset: 2px;
-}
-
-.sd-vacio {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 32px 20px;
-  border: 1px dashed var(--dm-line);
-  border-radius: 12px;
-  text-align: center;
-}
-
-.sd-vacio p { margin: 0; }
-
-.sd-vacio__icono {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  margin-bottom: 4px;
-  border-radius: 50%;
-  background: var(--dm-orange-soft);
-  color: var(--dm-orange-text);
-}
-
-/* ── Campos ────────────────────────────────────────────────────────────── */
-.sd-campo {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.sd-campo + .sd-campo { margin-top: 24px; }
-.sd-campo--corto { max-width: 420px; }
-
-.sd-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--dm-text);
-}
-
-.sd-opcional {
-  margin-left: 6px;
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: var(--dm-muted);
-}
-
-.sd-ayuda {
-  margin: 0;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  color: var(--dm-muted);
-}
-
-.sd-input,
-.sd-textarea {
-  width: 100%;
-  padding: 11px 14px;
-  background: var(--dm-surface);
-  border: 1px solid var(--dm-line);
-  border-radius: 10px;
-  color: var(--dm-text);
-  font: inherit;
-  /* 16 px: en el celular un campo más pequeño hace zoom al enfocarlo */
-  font-size: 1rem;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.sd-input::placeholder,
-.sd-textarea::placeholder { color: var(--dm-muted); }
-
-.sd-input:hover,
-.sd-textarea:hover { border-color: var(--dm-muted); }
-
-.sd-input:focus-visible,
-.sd-textarea:focus-visible {
-  outline: 2px solid var(--ui-focus);
-  outline-offset: 1px;
-  border-color: var(--ui-focus);
-}
-
-.sd-textarea {
-  min-height: 136px;
-  line-height: 1.55;
-  resize: vertical;
-}
-
-.sd-control--error,
-.sd-control--error:hover { border-color: var(--ui-error); }
+.sd-seccion__ayuda--pegada { margin-bottom: 4px; font-size: 0.82rem; }
 
 .sd-error {
-  margin: 2px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--ui-error);
 }
-
-.sd-campo__pie {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 0.78rem;
-  color: var(--dm-muted);
-}
-
-.sd-contador { display: inline-flex; align-items: center; gap: 4px; }
-.sd-contador--ok { color: var(--ui-ok); font-weight: 600; }
-.sd-contador__numero { font-variant-numeric: tabular-nums; }
 
 .sd-fila {
   display: grid;
@@ -454,88 +82,35 @@
   margin-bottom: 20px;
 }
 
-.sd-fila .sd-campo + .sd-campo { margin-top: 0; }
+.sd-campo--corto { max-width: 420px; }
 
-/* Sugerencias de síntomas */
-.sd-sugerencias {
+.sd-campo__pie {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--ui-muted);
+}
+
+.sd-contador { display: inline-flex; align-items: center; gap: 4px; }
+.sd-contador--ok { color: var(--ui-ok); font-weight: 600; }
+.sd-contador__numero { font-variant-numeric: tabular-nums; }
+
+.sd-sugerencias,
+.sd-opciones {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin: 0 0 18px;
 }
 
-.sd-chip {
-  display: inline-flex;
-  align-items: center;
+.sd-opciones { margin-bottom: 20px; }
+
+.sd-fotos {
+  display: grid;
   gap: 6px;
-  min-height: 36px;
-  padding: 6px 14px 6px 10px;
-  background: var(--dm-surface);
-  border: 1px solid var(--dm-line);
-  border-radius: 999px;
-  color: var(--dm-text);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
-}
-
-.sd-chip svg { color: var(--dm-muted); }
-.sd-chip:hover { border-color: var(--dm-muted); }
-
-.sd-chip--activa,
-.sd-chip--activa:hover {
-  background: var(--dm-orange-soft);
-  border-color: var(--dm-orange);
-  color: var(--dm-orange-text);
-}
-
-.sd-chip--activa svg { color: currentColor; stroke-width: 2.4; }
-
-.sd-chip:focus-visible,
-.sd-faltan__ir:focus-visible,
-.sd-volver:focus-visible {
-  outline: 2px solid var(--ui-focus);
-  outline-offset: 2px;
-}
-
-/* Horario */
-.sd-opciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.sd-opcion {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 10px 16px;
-  background: var(--dm-surface);
-  border: 1px solid var(--dm-line);
-  border-radius: 10px;
-  color: var(--dm-text);
-  font-size: 0.88rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.sd-opcion:hover { border-color: var(--dm-muted); }
-
-.sd-opcion--elegida,
-.sd-opcion--elegida:hover {
-  border-color: var(--dm-orange);
-  box-shadow: 0 0 0 1px var(--dm-orange);
-  background: color-mix(in srgb, var(--dm-orange) 8%, var(--dm-surface));
-  font-weight: 600;
-}
-
-.sd-opcion:has(input:focus-visible) {
-  outline: 2px solid var(--ui-focus);
-  outline-offset: 2px;
+  margin-top: 24px;
 }
 
 /* Mapa y lista de talleres: lado a lado solo si la columna del formulario es ancha; si no (portátiles
@@ -549,7 +124,7 @@
 }
 
 /* ── Resumen fijo (reutiliza mk-resumen del checkout) ─────────────────── */
-.sd-lateral { min-width: 0; padding-top: 28px; }
+.sd-lateral { min-width: 0; padding-top: 12px; }
 
 .sd-pagina .sd-resumen {
   top: 104px;
@@ -566,8 +141,8 @@
 }
 
 .sd-resumen__datos { margin: 0; }
-.sd-resumen__datos dd { margin: 0; font-size: 0.92rem; line-height: 1.45; color: var(--dm-text); overflow-wrap: anywhere; }
-.sd-resumen__datos dd.sd-resumen__vacio { color: var(--dm-muted); }
+.sd-resumen__datos dd { margin: 0; font-size: 0.92rem; line-height: 1.45; color: var(--ui-text); overflow-wrap: anywhere; }
+.sd-resumen__datos dd.sd-resumen__vacio { color: var(--ui-muted); }
 
 .sd-resumen__tarifa {
   flex-direction: row;
@@ -576,17 +151,16 @@
 }
 
 .sd-resumen__tarifa dt { font-weight: 600; }
-.sd-resumen__tarifa strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.sd-resumen__tarifa strong { font-size: 1.4rem; }
 
 .sd-resumen__explicacion { margin-top: 0; }
-
 .sd-resumen__estado { margin-top: 14px; }
 
 .sd-resumen__faltan-titulo {
   margin: 0;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--dm-text);
+  color: var(--ui-text);
 }
 
 .sd-faltan {
@@ -606,7 +180,7 @@
   flex-shrink: 0;
   width: 8px;
   height: 8px;
-  border: 1.5px solid var(--dm-muted);
+  border: 1.5px solid var(--ui-muted);
   border-radius: 50%;
 }
 
@@ -614,7 +188,7 @@
   padding: 4px 0;
   background: none;
   border: none;
-  color: var(--dm-orange-text);
+  color: var(--primary-text);
   font: inherit;
   font-size: 0.875rem;
   font-weight: 600;
@@ -624,7 +198,8 @@
   cursor: pointer;
 }
 
-.sd-faltan__ir:hover { color: var(--dm-orange-text-hover); }
+.sd-faltan__ir:hover { color: var(--dm-orange-text-hover, var(--primary-text)); }
+.sd-faltan__ir:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 
 .sd-listo {
   display: inline-flex;
@@ -636,49 +211,15 @@
   color: var(--ui-ok);
 }
 
-.sd-enviar {
-  width: 100%;
-  min-height: 48px;
-  margin-top: 16px;
-  font-size: 0.95rem;
-}
-
-.sd-alerta { margin: 14px 0 0; }
+.sd-enviar { margin-top: 16px; }
+.sd-alerta { margin-top: 14px; }
 
 .sd-codigo {
   margin: -8px 0 0;
   font-size: 0.85rem;
-  color: var(--dm-muted);
+  color: var(--ui-muted);
   font-variant-numeric: tabular-nums;
 }
-
-/* ── Carga ─────────────────────────────────────────────────────────────── */
-.sd-esqueleto {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.sd-esqueleto span {
-  display: block;
-  height: 40px;
-  max-width: 420px;
-  border-radius: 10px;
-  background: linear-gradient(90deg, var(--dm-surface) 0%, var(--dm-surface-2) 50%, var(--dm-surface) 100%);
-  background-size: 200% 100%;
-  animation: sd-brillo 1.4s ease-in-out infinite;
-}
-
-.sd-esqueleto span:nth-child(2) { height: 180px; max-width: none; }
-.sd-esqueleto span:nth-child(3) { height: 120px; max-width: none; }
-
-@keyframes sd-brillo {
-  from { background-position: 100% 0; }
-  to { background-position: -100% 0; }
-}
-
-/* ── Barra inferior (celular) ──────────────────────────────────────────── */
-.sd-barra-movil { display: none; }
 
 @media (max-width: 1023px) {
   .sd-grid {
@@ -686,83 +227,12 @@
     gap: 0;
   }
 
-  .sd-lateral { padding-top: 8px; }
   .sd-pagina .sd-resumen { position: static; }
-  .sd-enviar--lateral,
-  .sd-alerta--lateral { display: none; }
-
-  /* Espacio para que la barra no tape el final de la página */
-  .sd-pagina { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
-
-  .sd-barra-movil {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 80;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px 14px;
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
-    background: var(--dm-bg);
-    border-top: 1px solid var(--dm-line);
-    box-shadow: 0 -10px 30px -12px rgba(0, 0, 0, 0.35);
-  }
-
-  .sd-barra-movil__total {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .sd-barra-movil__etiqueta { font-size: 0.72rem; color: var(--dm-muted); }
-  .sd-barra-movil__total strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; color: var(--dm-text); }
-
-  .sd-barra-movil__nota {
-    overflow: hidden;
-    font-size: 0.74rem;
-    color: var(--dm-muted);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .sd-enviar--movil {
-    width: auto;
-    flex-shrink: 0;
-    margin-top: 0;
-    padding: 0 20px;
-  }
-
-  .sd-alerta--movil { flex-basis: 100%; margin: 0; }
-
-  /* El botón del chat sube para no quedar encima de la barra */
-  body:has(.sd-barra-movil) .chat-widget-container {
-    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  }
+  /* En celular el botón y los errores al enviar van en la barra inferior (BarraAccionMovil) */
+  .sd-solo-escritorio { display: none; }
 }
 
 @media (max-width: 600px) {
-  .sd-titulo { font-size: 1.6rem; }
   .sd-seccion { padding: 28px 0; }
   .sd-fila { grid-template-columns: minmax(0, 1fr); }
-  .sd-vehiculos { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-  .sd-vehiculo--agregar { min-height: 120px; }
-
-  /* Pasos: las columnas son angostas y el paso actual ya se nombra arriba ("Paso 1 de 5: Diagnóstico");
-     los nombres quedan para lectores de pantalla */
-  .sd-pasos__nombre {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sd-esqueleto span { animation: none; }
-  .sd-vehiculo__check { transition: opacity 0.2s; transform: none; }
 }

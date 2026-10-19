@@ -1,5 +1,6 @@
-// Reglas de presentación de Solicitar diagnóstico: síntomas sugeridos, datos del vehículo y qué falta para
-// poder enviar. Funciones puras (sin React) para probarlas con node --test.
+// Reglas de presentación de Solicitar diagnóstico: pasos del servicio, síntomas sugeridos y qué falta para
+// poder enviar. Funciones puras (sin React) para probarlas con node --test. Los datos del vehículo con su
+// etiqueta están en utils/vehiculo.js.
 
 export const MIN_SINTOMAS = 10;
 export const MAX_SINTOMAS = 1500;
@@ -29,23 +30,6 @@ export function alternarSugerencia(sintomas, sugerencia) {
   }
   const base = actual.trimEnd();
   return base ? `${base} ${sugerencia.texto}` : sugerencia.texto;
-}
-
-/**
- * El motor se guarda como texto libre: "1.2" o "1600" se leen como cilindrada ("Motor 1.2 L", "Motor 1600 cc");
- * lo demás se muestra tal cual con su etiqueta ("Motor 2.0 turbo").
- */
-export function formatoMotor(motor) {
-  const m = (motor || "").trim();
-  if (!m) return null;
-  if (/^\d+([.,]\d+)?$/.test(m)) return Number(m.replace(",", ".")) >= 100 ? `Motor ${m} cc` : `Motor ${m} L`;
-  return /^motor\b/i.test(m) ? m : `Motor ${m}`;
-}
-
-/** "45000" → "45.000 km". */
-export function formatoKm(km) {
-  if (km == null || !Number.isFinite(Number(km))) return null;
-  return `${Number(km).toLocaleString("es-CO")} km`;
 }
 
 /**
