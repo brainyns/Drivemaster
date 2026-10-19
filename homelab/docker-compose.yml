@@ -48,6 +48,8 @@ services:
       N8N_CHAT_SECRET: ${N8N_CHAT_SECRET:?Define N8N_CHAT_SECRET en las variables del stack}
       N8N_TOOLS_SECRET: ${N8N_TOOLS_SECRET:?Define N8N_TOOLS_SECRET en las variables del stack}
       N8N_CHAT_RATE_MAX: ${N8N_CHAT_RATE_MAX:-6}
+      # Rutas en carro para los talleres más cercanos. Por defecto, el servidor público de OSRM.
+      OSRM_URL: ${OSRM_URL:-https://router.project-osrm.org}
       N8N_CHAT_RATE_DIA_IP: ${N8N_CHAT_RATE_DIA_IP:-60}
       N8N_CHAT_RATE_DIA_GLOBAL: ${N8N_CHAT_RATE_DIA_GLOBAL:-400}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
@@ -85,6 +87,13 @@ services:
         # Mismo dominio público: nginx reenvía /api y /ws al backend, así no hay CORS entre dominios.
         VITE_API_URL: ${PUBLIC_URL}
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+        # Mapas: vacías = servicios públicos gratuitos. Sirven para apuntar a servidores propios del HomeLab.
+        VITE_MAPA_TILES_CLARO: ${VITE_MAPA_TILES_CLARO:-}
+        VITE_MAPA_TILES_OSCURO: ${VITE_MAPA_TILES_OSCURO:-}
+        VITE_PHOTON_URL: ${VITE_PHOTON_URL:-}
+        VITE_NOMINATIM_URL: ${VITE_NOMINATIM_URL:-}
+        VITE_NOMINATIM_EMAIL: ${VITE_NOMINATIM_EMAIL:-}
+        VITE_OSRM_URL: ${VITE_OSRM_URL:-}
     image: drivemaster-frontend:latest
     pull_policy: build
     restart: unless-stopped

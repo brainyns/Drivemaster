@@ -70,7 +70,6 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
   const [errores, setErrores] = useState({});
   const [errorServidor, setErrorServidor] = useState(null);
   const [enviando, setEnviando] = useState(false);
-  const [ubicando, setUbicando] = useState(false);
   const [registrado, setRegistrado] = useState(null);
 
   const cambiar = (e) => {
@@ -84,28 +83,14 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
     if (errores.ubicacion) setErrores((prev) => ({ ...prev, ubicacion: undefined }));
   };
 
-  // Tiendas: las coordenadas son opcionales y se toman del dispositivo.
-  const usarUbicacion = () => {
-    if (!navigator.geolocation) {
-      setErrorServidor("Tu navegador no permite obtener la ubicación.");
-      return;
-    }
-    setUbicando(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setForm((prev) => ({
-          ...prev,
-          latitud: pos.coords.latitude.toFixed(6),
-          longitud: pos.coords.longitude.toFixed(6),
-        }));
-        setUbicando(false);
-      },
-      () => {
-        setErrorServidor("No pudimos obtener tu ubicación. Puedes continuar sin ella.");
-        setUbicando(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+  // La dirección del pin completa los campos que el negocio aún no escribió (no pisa lo escrito)
+  const completarDireccion = ({ direccion, barrio, ciudad }) => {
+    setForm((prev) => ({
+      ...prev,
+      direccion: prev.direccion.trim() || direccion || prev.direccion,
+      barrio: prev.barrio.trim() || barrio || prev.barrio,
+      ciudad: prev.ciudad.trim() || ciudad || prev.ciudad,
+    }));
   };
 
   const enviar = async (e) => {
@@ -226,29 +211,23 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
             <Campo id="rn-horario" label="Horario de atención" error={errores.horario} opcional={esTaller} ancho>
               <input id="rn-horario" name="horario" className="rn-input" value={form.horario} onChange={cambiar} placeholder="L-V 8:00-18:00, S 8:00-13:00" />
             </Campo>
-            {esTaller ? (
-              <div className="rn-campo rn-campo--ancho">
-                <span className="rn-campo__label">Ubicación del taller en el mapa</span>
-                <SelectorUbicacion
-                  id="rn-mapa"
-                  ciudad={form.ciudad}
-                  value={vacio(form.latitud) ? null : { latitud: Number(form.latitud), longitud: Number(form.longitud) }}
-                  onChange={cambiarUbicacion}
-                  error={errores.ubicacion}
-                />
-              </div>
-            ) : (
-            <div className="rn-campo rn-campo--ancho rn-ubicacion">
-              <button type="button" className="rn-boton-secundario" onClick={usarUbicacion} disabled={ubicando}>
-                {ubicando ? "Obteniendo ubicación..." : "Usar mi ubicación actual"}
-              </button>
-              <span className="rn-ubicacion__texto">
-                {form.latitud && form.longitud
-                  ? `Coordenadas: ${form.latitud}, ${form.longitud}`
-                  : "Opcional: ayuda a asignarte solicitudes cercanas."}
+            <div className="rn-campo rn-campo--ancho">
+              <span className="rn-campo__label">
+                {esTaller ? "Ubicación del taller en el mapa" : "Ubicación de la tienda en el mapa"}
+                {!esTaller && <span className="rn-campo__opcional">opcional</span>}
               </span>
+              <SelectorUbicacion
+                id="rn-mapa"
+                ciudad={form.ciudad}
+                value={vacio(form.latitud) ? null : { latitud: Number(form.latitud), longitud: Number(form.longitud) }}
+                onChange={cambiarUbicacion}
+                onDireccion={completarDireccion}
+                error={errores.ubicacion}
+                ayuda={esTaller
+                  ? "Busca la dirección del taller, usa tu ubicación o toca el mapa. Así te llegan las solicitudes cercanas."
+                  : "Busca la dirección de la tienda, usa tu ubicación o toca el mapa para marcar el punto exacto."}
+              />
             </div>
-            )}
           </div>
 
           {esTaller && (

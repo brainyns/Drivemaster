@@ -17,6 +17,7 @@ import {
   ESTADOS_CANCELABLES_CLIENTE, ESTADOS_PEDIDO, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
 import { ESTADOS_ORDEN_ANTERIOR, ordenarOrdenesAnteriores, tieneCitaProxima } from "../components/servicio/ordenesAnteriores";
+import RutaTaller from "../components/mapa/RutaTaller";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
@@ -309,6 +310,12 @@ export default function MisServicios({
                 {s.aceptadaPorTaller && s.tallerTelefono && <p className="ss-meta">Teléfono: {s.tallerTelefono}</p>}
                 {!s.aceptadaPorTaller && s.estado === "ASIGNADA_A_TALLER" && (
                   <p className="ss-meta">Esperando que el taller confirme y te proponga una fecha.</p>
+                )}
+                {s.tallerLatitud != null && s.tallerLongitud != null && (
+                  <RutaTaller
+                    origen={s.latitud != null && s.longitud != null ? { latitud: s.latitud, longitud: s.longitud } : null}
+                    taller={{ nombre: s.tallerNombre, latitud: s.tallerLatitud, longitud: s.tallerLongitud }}
+                  />
                 )}
               </section>
             )}

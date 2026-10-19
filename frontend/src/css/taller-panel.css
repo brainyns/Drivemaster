@@ -279,6 +279,8 @@
 .tp-edicion__campo input:focus-visible, .tp-edicion__campo textarea:focus-visible { outline: 2px solid var(--tp-info); outline-offset: 1px; }
 .tp-edicion__ayuda { font-size: var(--fs-etiqueta); color: var(--tp-texto-2); margin: 0; }
 .tp-edicion__botones { display: flex; flex-wrap: wrap; gap: .6rem; }
+.tp-ubicacion { display: grid; gap: .75rem; margin-top: 1rem; padding: 1.1rem 1.25rem; background: var(--ui-surface-2); border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); }
+.tp-ubicacion h3 { font-size: var(--fs-texto); margin: 0; }
 .tp-edicion__ok { color: var(--tp-texto); font-size: .85rem; margin: .5rem 0 0; }
 
 /* ── Hojas compartidas dentro del panel del taller ──────────────────────────

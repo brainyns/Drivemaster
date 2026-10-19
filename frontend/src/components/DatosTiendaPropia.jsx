@@ -1,7 +1,8 @@
 import { useState } from "react";
+import SelectorUbicacion from "./mapa/SelectorUbicacion";
 
 /**
- * Datos públicos de una tienda: ciudad, dirección, horario y costo de envío. Mientras falten ciudad,
+ * Datos públicos de una tienda: ciudad, dirección, ubicación en el mapa, horario y costo de envío. Mientras falten ciudad,
  * dirección u horario, sus productos no aparecen en el catálogo marketplace.
  * La TIENDA edita la suya: se pasa alGuardar = actualizarMiTienda.
  */
@@ -15,6 +16,9 @@ export default function DatosTiendaPropia({ token, tienda, onGuardado, alGuardar
     ofreceEnvio: tienda.costoEnvio != null,
     costoEnvio: tienda.costoEnvio != null ? String(tienda.costoEnvio) : "",
   });
+  const [ubicacion, setUbicacion] = useState(
+    tienda.latitud != null && tienda.longitud != null ? { latitud: tienda.latitud, longitud: tienda.longitud } : null,
+  );
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [ok, setOk] = useState(false);
@@ -23,6 +27,21 @@ export default function DatosTiendaPropia({ token, tienda, onGuardado, alGuardar
     const { name, value, type, checked } = e.target;
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
     setOk(false);
+  };
+
+  const cambiarUbicacion = (punto) => {
+    setUbicacion(punto);
+    setOk(false);
+  };
+
+  // La dirección del pin solo completa lo que esté vacío: no pisa lo que la tienda escribió
+  const completarDireccion = ({ direccion, barrio, ciudad }) => {
+    setForm((f) => ({
+      ...f,
+      direccion: f.direccion.trim() || direccion || f.direccion,
+      barrio: f.barrio.trim() || barrio || f.barrio,
+      ciudad: f.ciudad.trim() || ciudad || f.ciudad,
+    }));
   };
 
   const faltan = ["ciudad", "direccion", "horario"].filter((k) => !form[k].trim());
@@ -40,6 +59,7 @@ export default function DatosTiendaPropia({ token, tienda, onGuardado, alGuardar
         ciudad: form.ciudad.trim(), barrio: form.barrio.trim() || null, direccion: form.direccion.trim(),
         horario: form.horario.trim(), telefono: form.telefono.trim() || null,
         ofreceEnvio: form.ofreceEnvio, costoEnvio: form.ofreceEnvio ? Number(form.costoEnvio) : null,
+        latitud: ubicacion?.latitud ?? null, longitud: ubicacion?.longitud ?? null,
       });
       setOk(true);
       await onGuardado?.();
@@ -68,6 +88,18 @@ export default function DatosTiendaPropia({ token, tienda, onGuardado, alGuardar
         <label>Ciudad<input name="ciudad" value={form.ciudad} onChange={cambiar} required /></label>
         <label>Barrio<input name="barrio" value={form.barrio} onChange={cambiar} /></label>
         <label className="ap-propia__ancho">Dirección<input name="direccion" value={form.direccion} onChange={cambiar} required /></label>
+        <div className="ap-propia__ancho ap-propia__mapa">
+          <span className="ap-propia__mapa-titulo" id="ap-mapa-titulo">Ubicación en el mapa</span>
+          <SelectorUbicacion
+            id="ap-mapa"
+            ciudad={form.ciudad}
+            value={ubicacion}
+            onChange={cambiarUbicacion}
+            onDireccion={completarDireccion}
+            direccionInicial={ubicacion && tienda.direccion ? tienda.direccion : null}
+            ayuda="Busca la dirección de la tienda, usa tu ubicación o toca el mapa para marcar el punto exacto."
+          />
+        </div>
         <label className="ap-propia__ancho">Horario de atención<input name="horario" value={form.horario} onChange={cambiar}
           placeholder="L-V 8:00-18:00, S 8:00-13:00" required /></label>
         <label>Teléfono<input name="telefono" value={form.telefono} onChange={cambiar} /></label>

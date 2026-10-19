@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { TILES_ATRIBUCION, TILES_URL, centroDeCiudad, redondear } from "../../utils/mapa";
+import { MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
+import CapaBase from "./CapaBase";
+import BuscadorDireccion from "./BuscadorDireccion";
+import { iconoPunto } from "./iconos";
+import { centroDeCiudad, redondear } from "../../utils/mapa";
+import { direccionDePunto, esCancelacion, obtenerMiUbicacion } from "../../services/geoService";
 import "../../css/mapa.css";
 
-const NOMINATIM = "https://nominatim.openstreetmap.org/search";
-// Política de uso de Nominatim: como máximo una petición por segundo
-const INTERVALO_BUSQUEDA_MS = 1000;
-
-const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+// Espera tras el último movimiento del pin antes de pedir su dirección (el teclado mueve el pin a saltos)
+const ESPERA_DIRECCION_MS = 700;
+// Con más margen de error que esto se avisa que la ubicación es aproximada
+const PRECISION_ACEPTABLE_M = 80;
 
 /** Coloca o mueve el pin con un clic en el mapa. */
 function ClicEnMapa({ onElegir }) {
@@ -25,148 +28,193 @@ function Volar({ destino }) {
 }
 
 /**
- * Mapa para marcar la ubicación de un negocio. Devuelve las coordenadas con
- * onChange({ latitud, longitud }). Se marca con clic, arrastrando el pin, buscando
- * una dirección (Nominatim) o con la ubicación del dispositivo.
+ * Pin que se arrastra con el mouse o el dedo y, con el foco en él, se mueve con las flechas
+ * (Mayúscula + flecha da saltos más largos).
  */
-export default function SelectorUbicacion({ value, onChange, ciudad, error, id = "selector-ubicacion" }) {
+function PinArrastrable({ posicion, onMover }) {
+  const map = useMap();
+  const marcador = useRef(null);
+  const onMoverRef = useRef(onMover);
+  useEffect(() => { onMoverRef.current = onMover; }, [onMover]);
+
+  useEffect(() => {
+    const el = marcador.current?.getElement();
+    if (!el) return undefined;
+    el.setAttribute("aria-label", "Pin de la ubicación. Arrástralo o usa las flechas del teclado para ajustarlo.");
+    const DIRECCIONES = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+    const tecla = (e) => {
+      const d = DIRECCIONES[e.key];
+      if (!d) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const paso = e.shiftKey ? 40 : 8;
+      const actual = map.latLngToContainerPoint(marcador.current.getLatLng());
+      const nuevo = map.containerPointToLatLng(actual.add([d[0] * paso, d[1] * paso]));
+      marcador.current.setLatLng(nuevo);
+      map.panInside(nuevo, { padding: [40, 40] });
+      onMoverRef.current(nuevo.lat, nuevo.lng);
+    };
+    el.addEventListener("keydown", tecla);
+    return () => el.removeEventListener("keydown", tecla);
+  }, [map]);
+
+  return (
+    <Marker
+      ref={marcador}
+      position={[posicion.latitud, posicion.longitud]}
+      icon={iconoPunto}
+      draggable
+      autoPan
+      title="Ubicación marcada"
+      zIndexOffset={1000}
+      eventHandlers={{
+        dragend: (e) => {
+          const p = e.target.getLatLng();
+          onMoverRef.current(p.lat, p.lng);
+        },
+      }}
+    />
+  );
+}
+
+/**
+ * Mapa para marcar una ubicación exacta: se busca la dirección (autocompletado), se usa la ubicación del
+ * dispositivo o se toca el mapa, y el pin se ajusta arrastrándolo. Devuelve las coordenadas con
+ * onChange({ latitud, longitud }) y, cuando se conoce, la dirección legible del punto con
+ * onDireccion({ direccion, barrio, ciudad, etiqueta }).
+ */
+export default function SelectorUbicacion({
+  value, onChange, onDireccion, ciudad, error, id = "selector-ubicacion",
+  ayuda = "Busca la dirección, usa tu ubicación o toca el mapa para marcar el punto.",
+  direccionInicial = null,
+}) {
   const tieneValor = value?.latitud != null && value?.longitud != null;
   const [centroInicial] = useState(() => (tieneValor ? value : centroDeCiudad(ciudad)));
   const [destino, setDestino] = useState(null);
-  const [consulta, setConsulta] = useState("");
-  const [buscando, setBuscando] = useState(false);
   const [ubicando, setUbicando] = useState(false);
   const [aviso, setAviso] = useState(null);
-  const ultimaBusqueda = useRef(0);
+  // Punto cuya dirección hay que buscar (después de tocar el mapa, arrastrar el pin o usar el GPS)
+  const [pendiente, setPendiente] = useState(null);
+  const [direccion, setDireccion] = useState(() => (direccionInicial ? { estado: "listo", etiqueta: direccionInicial } : null));
+
+  const onDireccionRef = useRef(onDireccion);
+  useEffect(() => { onDireccionRef.current = onDireccion; }, [onDireccion]);
 
   // Si cambia la ciudad y aún no hay pin, el mapa se mueve a esa ciudad
   useEffect(() => {
-    if (tieneValor || !ciudad) return;
+    if (tieneValor || !ciudad) return undefined;
     const t = setTimeout(() => setDestino({ ...centroDeCiudad(ciudad), zoom: 13 }), 600);
     return () => clearTimeout(t);
   }, [ciudad, tieneValor]);
 
-  const elegir = (lat, lng) => {
-    setAviso(null);
-    onChange({ latitud: redondear(lat), longitud: redondear(lng) });
-  };
-
-  const buscar = async () => {
-    const q = consulta.trim();
-    if (!q || buscando) return;
-    setAviso(null);
-    setBuscando(true);
-    try {
-      const faltan = INTERVALO_BUSQUEDA_MS - (Date.now() - ultimaBusqueda.current);
-      if (faltan > 0) await espera(faltan);
-      ultimaBusqueda.current = Date.now();
-
-      // La ciudad del formulario ayuda a desambiguar ("Calle 30" existe en todas)
-      const texto = ciudad && !q.toLowerCase().includes(ciudad.toLowerCase()) ? `${q}, ${ciudad}` : q;
-      const url = `${NOMINATIM}?format=json&countrycodes=co&limit=1&q=${encodeURIComponent(texto)}`;
-      const res = await fetch(url, { headers: { "Accept-Language": "es" } });
-      if (!res.ok) throw new Error();
-      const datos = await res.json();
-      if (!datos.length) {
-        setAviso({ tipo: "info", texto: "No encontramos esa dirección. Prueba con otra o marca el punto en el mapa." });
-        return;
+  // Dirección del punto con Nominatim: una sola consulta cuando el pin se queda quieto; la anterior se cancela
+  useEffect(() => {
+    if (!pendiente) return undefined;
+    const control = new AbortController();
+    const espera = setTimeout(async () => {
+      setDireccion({ estado: "buscando" });
+      try {
+        const d = await direccionDePunto(pendiente, { signal: control.signal });
+        setDireccion(d ? { estado: "listo", etiqueta: d.etiqueta } : { estado: "sin-datos" });
+        if (d) onDireccionRef.current?.(d);
+      } catch (e) {
+        if (!esCancelacion(e)) setDireccion({ estado: "error" });
       }
-      const lat = Number(datos[0].lat);
-      const lng = Number(datos[0].lon);
-      elegir(lat, lng);
-      setDestino({ latitud: lat, longitud: lng, zoom: 17 });
-      setAviso({ tipo: "info", texto: "Revisa que el pin quede sobre tu local; puedes arrastrarlo para ajustarlo." });
-    } catch {
-      setAviso({ tipo: "error", texto: "No se pudo buscar la dirección. Intenta de nuevo en un momento." });
-    } finally {
-      setBuscando(false);
-    }
+    }, ESPERA_DIRECCION_MS);
+    return () => {
+      clearTimeout(espera);
+      control.abort();
+    };
+  }, [pendiente]);
+
+  const marcar = (lat, lng) => {
+    const punto = { latitud: redondear(lat), longitud: redondear(lng) };
+    onChange(punto);
+    return punto;
   };
 
-  const usarMiUbicacion = () => {
-    if (!navigator.geolocation) {
-      setAviso({ tipo: "error", texto: "Tu navegador no permite obtener la ubicación." });
-      return;
-    }
+  // Tocar el mapa, arrastrar el pin o el GPS: la dirección se averigua después
+  const moverPin = (lat, lng) => {
+    setAviso(null);
+    setPendiente(marcar(lat, lng));
+  };
+
+  // Una sugerencia del buscador ya trae su dirección
+  const elegirSugerencia = (r) => {
+    setAviso(null);
+    setPendiente(null);
+    marcar(r.latitud, r.longitud);
+    setDestino({ latitud: r.latitud, longitud: r.longitud, zoom: r.direccion && /\d/.test(r.direccion) ? 18 : 16 });
+    const etiqueta = r.detalle ? `${r.titulo}, ${r.detalle}` : r.titulo;
+    setDireccion({ estado: "listo", etiqueta });
+    onDireccionRef.current?.({ direccion: r.direccion, barrio: r.barrio, ciudad: r.ciudad, etiqueta });
+    setAviso({ tipo: "info", texto: "Revisa que el pin quede en el sitio exacto; puedes arrastrarlo para ajustarlo." });
+  };
+
+  const usarMiUbicacion = async () => {
     setAviso(null);
     setUbicando(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        elegir(pos.coords.latitude, pos.coords.longitude);
-        setDestino({ latitud: pos.coords.latitude, longitud: pos.coords.longitude, zoom: 17 });
-        setUbicando(false);
-      },
-      (err) => {
-        setAviso({
-          tipo: "error",
-          texto: err.code === err.PERMISSION_DENIED
-            ? "No diste permiso para usar tu ubicación. Busca la dirección o marca el punto en el mapa."
-            : "No pudimos obtener tu ubicación. Busca la dirección o marca el punto en el mapa.",
-        });
-        setUbicando(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
-  // Enter en el buscador busca, no envía el formulario que contiene al selector
-  const teclaBuscador = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      buscar();
+    try {
+      const p = await obtenerMiUbicacion();
+      moverPin(p.latitud, p.longitud);
+      setDestino({ latitud: p.latitud, longitud: p.longitud, zoom: 17 });
+      if (p.precision > PRECISION_ACEPTABLE_M) {
+        setAviso({ tipo: "info", texto: `Tu ubicación es aproximada (unos ${Math.round(p.precision)} m). Arrastra el pin al sitio exacto.` });
+      }
+    } catch (e) {
+      setAviso({ tipo: "error", texto: e.message });
+    } finally {
+      setUbicando(false);
     }
   };
+
+  let estadoTexto = ayuda;
+  if (tieneValor) {
+    if (direccion?.estado === "buscando") estadoTexto = "Buscando la dirección de este punto…";
+    else if (direccion?.estado === "listo") estadoTexto = direccion.etiqueta;
+    else if (direccion?.estado === "error") estadoTexto = "El punto quedó marcado, pero no pudimos obtener su dirección.";
+    else estadoTexto = "Punto marcado en el mapa.";
+  }
 
   return (
     <div className={`mapa-selector${error ? " mapa-selector--error" : ""}`}>
       <div className="mapa-selector__barra">
-        <label className="mapa-selector__sr" htmlFor={`${id}-buscar`}>Buscar dirección</label>
-        <input
-          id={`${id}-buscar`}
-          className="mapa-selector__input"
-          value={consulta}
-          onChange={(e) => setConsulta(e.target.value)}
-          onKeyDown={teclaBuscador}
-          placeholder="Busca la dirección, ej. Calle 30 # 17-25"
-        />
-        <button type="button" className="mapa-boton mapa-boton--primario" onClick={buscar} disabled={buscando || !consulta.trim()}>
-          {buscando ? "Buscando..." : "Buscar"}
-        </button>
-        <button type="button" className="mapa-boton" onClick={usarMiUbicacion} disabled={ubicando}>
-          {ubicando ? "Ubicando..." : "Usar mi ubicación"}
+        <BuscadorDireccion id={`${id}-buscar`} cerca={tieneValor ? value : ciudad ? centroDeCiudad(ciudad) : null} onElegir={elegirSugerencia} />
+        <button type="button" className="mapa-boton mapa-boton--ubicacion" onClick={usarMiUbicacion} disabled={ubicando} aria-busy={ubicando}>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="3.5" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="7.5" />
+          </svg>
+          {ubicando ? "Ubicando…" : "Usar mi ubicación"}
         </button>
       </div>
 
       <div className="mapa-selector__mapa">
         <MapContainer
           center={[centroInicial.latitud, centroInicial.longitud]}
-          zoom={tieneValor ? 16 : 13}
+          zoom={tieneValor ? 17 : 13}
           scrollWheelZoom
           className="mapa-lienzo"
         >
-          <TileLayer url={TILES_URL} attribution={TILES_ATRIBUCION} />
-          <ClicEnMapa onElegir={elegir} />
+          <CapaBase />
+          <ClicEnMapa onElegir={moverPin} />
           <Volar destino={destino} />
-          {tieneValor && (
-            <Marker
-              position={[value.latitud, value.longitud]}
-              draggable
-              eventHandlers={{
-                dragend: (e) => {
-                  const p = e.target.getLatLng();
-                  elegir(p.lat, p.lng);
-                },
-              }}
-            />
-          )}
+          {tieneValor && <PinArrastrable posicion={value} onMover={moverPin} />}
         </MapContainer>
       </div>
 
-      <p className="mapa-selector__estado" aria-live="polite">
-        {tieneValor
-          ? <>Ubicación: <strong>{value.latitud.toFixed(6)}, {value.longitud.toFixed(6)}</strong></>
-          : "Haz clic en el mapa para marcar la ubicación de tu local."}
-      </p>
+      <div className={`mapa-selector__estado${tieneValor ? " mapa-selector__estado--marcado" : ""}`} aria-live="polite">
+        {tieneValor && (
+          <svg viewBox="0 0 32 42" width="14" height="18" aria-hidden="true" focusable="false" className="mapa-selector__icono">
+            <path d="M16 1C7.7 1 1 7.6 1 15.8c0 10.6 13.3 24.3 13.9 24.9a1.5 1.5 0 0 0 2.2 0C17.7 40.1 31 26.4 31 15.8 31 7.6 24.3 1 16 1z" />
+          </svg>
+        )}
+        <span>
+          {estadoTexto}
+          {tieneValor && (
+            <span className="mapa-selector__coords">{value.latitud.toFixed(6)}, {value.longitud.toFixed(6)}</span>
+          )}
+        </span>
+      </div>
       {aviso && (
         <p className={`mapa-aviso${aviso.tipo === "error" ? " mapa-aviso--error" : ""}`} role={aviso.tipo === "error" ? "alert" : "status"}>
           {aviso.texto}

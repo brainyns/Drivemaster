@@ -5,6 +5,8 @@ import { obtenerMiPerfil } from "../services/clienteService";
 import { crearSolicitudServicio } from "../services/solicitudServicioService";
 import SubidaFotos from "../components/servicio/SubidaFotos";
 import MapaTalleres from "../components/mapa/MapaTalleres";
+import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
+import RutaTaller from "../components/mapa/RutaTaller";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
@@ -28,7 +30,8 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
   const [ciudad, setCiudad] = useState("");
   const [barrio, setBarrio] = useState("");
   const [coordenadas, setCoordenadas] = useState(null);
-  const [ubicando, setUbicando] = useState(false);
+  // Dirección legible del pin (la da el buscador o Nominatim)
+  const [direccion, setDireccion] = useState("");
   const [horario, setHorario] = useState(HORARIOS[0]);
   const [notaHorario, setNotaHorario] = useState("");
   // Taller elegido en el mapa; null = asignación automática
@@ -62,23 +65,11 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
     return () => { vivo = false; };
   }, [token, vehiculoIdInicial]);
 
-  const usarUbicacion = () => {
-    if (!navigator.geolocation) {
-      setError("Tu navegador no permite obtener la ubicación.");
-      return;
-    }
-    setUbicando(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoordenadas({ latitud: pos.coords.latitude, longitud: pos.coords.longitude });
-        setUbicando(false);
-      },
-      () => {
-        setError("No pudimos obtener tu ubicación. Usaremos la ciudad para buscar el taller.");
-        setUbicando(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+  // La dirección sigue al pin; ciudad y barrio solo se completan si el cliente no los escribió
+  const recibirDireccion = (d) => {
+    setDireccion(d.etiqueta || d.direccion || "");
+    if (d.ciudad) setCiudad((c) => c.trim() ? c : d.ciudad);
+    if (d.barrio) setBarrio((b) => b.trim() ? b : d.barrio);
   };
 
   const validar = () => {
@@ -104,6 +95,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
         fotos,
         ciudad: ciudad.trim(),
         barrio: barrio.trim() || null,
+        direccion: coordenadas && direccion.trim() ? direccion.trim() : null,
         latitud: coordenadas?.latitud ?? null,
         longitud: coordenadas?.longitud ?? null,
         preferenciaHorario: notaHorario.trim() ? `${horario} — ${notaHorario.trim()}` : horario,
@@ -134,6 +126,12 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
                 {resultado.distanciaTallerKm != null && ` (a ${resultado.distanciaTallerKm.toFixed(1)} km)`}.
                 El taller te propondrá una fecha para revisar tu vehículo; te avisaremos por correo.
               </p>
+              <RutaTaller
+                origen={resultado.latitud != null ? { latitud: resultado.latitud, longitud: resultado.longitud } : null}
+                taller={resultado.tallerLatitud != null
+                  ? { nombre: resultado.tallerNombre, latitud: resultado.tallerLatitud, longitud: resultado.tallerLongitud }
+                  : null}
+              />
             </>
           )}
           {resultado.estado === "RECHAZADA" && (
@@ -232,12 +230,15 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
               <input id="ss-barrio" value={barrio} onChange={(e) => setBarrio(e.target.value)} placeholder="Chapinero" />
             </div>
             <div className="sv-field sv-form-full ss-ubicacion">
-              <button type="button" className="sv-btn-outline" onClick={usarUbicacion} disabled={ubicando}>
-                {ubicando ? "Obteniendo ubicación..." : coordenadas ? "Actualizar mi ubicación" : "Usar mi ubicación actual"}
-              </button>
-              <span className="ss-ayuda">
-                {coordenadas ? "Ubicación lista: buscaremos el taller más cercano a ti." : "Opcional: con tu ubicación encontramos el taller más cercano."}
-              </span>
+              <span className="ss-campo-titulo" id="ss-mapa-titulo">¿Dónde está el vehículo? (opcional)</span>
+              <SelectorUbicacion
+                id="ss-mapa"
+                ciudad={ciudad}
+                value={coordenadas}
+                onChange={setCoordenadas}
+                onDireccion={recibirDireccion}
+                ayuda="Opcional: busca la dirección, usa tu ubicación o toca el mapa. Con el punto exacto encontramos el taller más cercano."
+              />
             </div>
             <div className="sv-field">
               <label htmlFor="ss-horario">Preferencia de horario</label>

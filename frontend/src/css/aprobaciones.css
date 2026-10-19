@@ -374,3 +374,7 @@
 .ap-propia__ancho { flex-basis: 100% !important; }
 .ap-propia__check { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--ui-text) !important; }
 .ap-propia__acciones { flex-basis: 100%; display: flex; justify-content: flex-end; }
+
+/* Mapa de la ubicación de la tienda (SelectorUbicacion) */
+.ap-propia__mapa { display: flex; flex-direction: column; gap: 4px; }
+.ap-propia__mapa-titulo { font-size: 0.85rem; color: var(--ui-muted); }

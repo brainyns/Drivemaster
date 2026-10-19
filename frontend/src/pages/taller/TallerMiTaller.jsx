@@ -1,7 +1,8 @@
 import { useState } from "react";
 import MecanicosTaller from "../../components/servicio/MecanicosTaller";
 import { formatPrecio } from "../../components/servicio/estadosServicio";
-import { actualizarDatosTaller } from "../../services/tallerService";
+import { actualizarDatosTaller, actualizarUbicacionTaller } from "../../services/tallerService";
+import SelectorUbicacion from "../../components/mapa/SelectorUbicacion";
 
 const HORARIO_MAX = 200;
 const TARIFA_MAX = 1000000;
@@ -65,7 +66,64 @@ function EditarDatos({ taller, token, onGuardado, onCancelar }) {
   );
 }
 
-/** Datos del taller (tarifa y horario) y su equipo. */
+/** El punto exacto del taller en el mapa: es el que usa la asignación por cercanía y el que ve el cliente. */
+function UbicacionTaller({ taller, token, onGuardado }) {
+  const inicial = taller?.latitud != null && taller?.longitud != null
+    ? { latitud: taller.latitud, longitud: taller.longitud } : null;
+  const [punto, setPunto] = useState(inicial);
+  const [estado, setEstado] = useState(null); // { tipo: "ok" | "error", texto }
+  const [guardando, setGuardando] = useState(false);
+  const cambio = punto && (punto.latitud !== inicial?.latitud || punto.longitud !== inicial?.longitud);
+
+  const guardar = async () => {
+    setGuardando(true);
+    setEstado(null);
+    try {
+      const actualizado = await actualizarUbicacionTaller(token, punto);
+      onGuardado?.(actualizado);
+      setEstado({ tipo: "ok", texto: "Ubicación guardada. Así te verán los clientes en el mapa." });
+    } catch (err) {
+      setEstado({ tipo: "error", texto: err.message });
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <section className="tp-ubicacion" aria-labelledby="tp-ubicacion-titulo">
+      <h3 id="tp-ubicacion-titulo">Ubicación en el mapa</h3>
+      <p className="tp-edicion__ayuda">
+        Ajusta el pin a la entrada de tu taller: con este punto te asignamos las solicitudes cercanas y el cliente
+        calcula cómo llegar.
+      </p>
+      <SelectorUbicacion
+        id="tp-mapa"
+        ciudad={taller?.ciudad}
+        value={punto}
+        onChange={(p) => { setPunto(p); setEstado(null); }}
+        direccionInicial={inicial && taller?.direccion ? taller.direccion : null}
+        ayuda="Tu taller aún no tiene ubicación: busca la dirección, usa tu ubicación o toca el mapa."
+      />
+      <div className="tp-edicion__botones">
+        <button type="button" className="sv-btn" onClick={guardar} disabled={!cambio || guardando} aria-busy={guardando}>
+          {guardando ? "Guardando..." : "Guardar ubicación"}
+        </button>
+        {cambio && !guardando && (
+          <button type="button" className="sv-btn-outline" onClick={() => { setPunto(inicial); setEstado(null); }}>
+            Deshacer
+          </button>
+        )}
+      </div>
+      {estado && (
+        <p className={estado.tipo === "ok" ? "tp-edicion__ok" : "ss-alerta"} role={estado.tipo === "ok" ? "status" : "alert"}>
+          {estado.texto}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** Datos del taller (tarifa, horario y ubicación) y su equipo. */
 export default function TallerMiTaller({ taller, ordenes, token, onActualizado }) {
   const [editando, setEditando] = useState(false);
   const [guardado, setGuardado] = useState(false);
@@ -131,8 +189,9 @@ export default function TallerMiTaller({ taller, ordenes, token, onActualizado }
                   {guardado && <p className="tp-edicion__ok" role="status">Cambios guardados.</p>}
                 </>
               )}
+              {aprobado && <UbicacionTaller taller={taller} token={token} onGuardado={onActualizado} />}
               <p className="pt-hint">
-                Para cambiar el nombre, la ciudad, la dirección o el precio de mano de obra, escríbele al administrador de DriveMaster.
+                Para cambiar el nombre, la ciudad, la dirección escrita o el precio de mano de obra, escríbele al administrador de DriveMaster.
               </p>
             </>
           ) : (

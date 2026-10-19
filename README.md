@@ -220,6 +220,9 @@ Copia `.env.example` a `.env` y completa los valores. El `.env` **no** se sube a
 | `VITE_API_URL` | URL de la API que consume el frontend |
 | `VITE_GOOGLE_CLIENT_ID` | Client-id de Google del frontend (vacío = el que trae el código) |
 | `VITE_WOMPI_PUBLIC_KEY` | Clave pública de Wompi para el checkout del frontend |
+| `VITE_MAPA_TILES_CLARO` / `VITE_MAPA_TILES_OSCURO` | Teselas del mapa en tema claro y oscuro (por defecto CARTO Positron y Dark Matter) |
+| `VITE_PHOTON_URL` / `VITE_NOMINATIM_URL` / `VITE_NOMINATIM_EMAIL` | Autocompletado de direcciones (Photon) y dirección de un punto del mapa (Nominatim) |
+| `VITE_OSRM_URL` / `OSRM_URL` | Rutas en carro con OSRM en el frontend (ruta al taller) y en el backend (talleres más cercanos) |
 
 ---
 

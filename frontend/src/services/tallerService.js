@@ -137,3 +137,24 @@ export async function talleresMapa(token) {
   const res = await apiFetch(`${BASE}/mapa`, { headers: headers(token) });
   return handle(res, "No se pudieron cargar los talleres del mapa");
 }
+
+/**
+ * Los talleres más cercanos a un punto (Haversine en el backend) con la distancia y el tiempo en carro de OSRM
+ * cuando el servicio de rutas responde (si no, duracionMin llega en null).
+ */
+export async function talleresCercanos(token, { latitud, longitud }, { limite = 3, signal } = {}) {
+  const params = new URLSearchParams({ lat: String(latitud), lng: String(longitud), limite: String(limite) });
+  const res = await apiFetch(`${BASE}/cercanos?${params}`, { headers: headers(token), signal });
+  return handle(res, "No se pudieron calcular los talleres más cercanos");
+}
+
+/** El taller ajusta el punto exacto de su local en el mapa. */
+export async function actualizarUbicacionTaller(token, { latitud, longitud }) {
+  const res = await apiFetch(`${BASE}/mi-taller/datos`, {
+    method: "PATCH",
+    headers: headers(token),
+    body: JSON.stringify({ latitud, longitud }),
+  });
+  if (res.status === 403) throw new Error("Tu taller aún no está aprobado, así que todavía no puedes cambiar su ubicación.");
+  return handle(res, "No se pudo guardar la ubicación");
+}
