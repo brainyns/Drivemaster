@@ -93,6 +93,22 @@ public class ProductoController {
         return ResponseEntity.ok(productoService.actualizarProducto(id, producto));
     }
 
+    /**
+     * Publicar u ocultar en el catálogo. Va aparte del PUT (que no toca activo): el formulario reenvía el producto
+     * completo y no debe publicar uno oculto sin querer. Solo la TIENDA dueña (SecurityConfig y AlcanceTienda).
+     * Oculto (activo=false) no sale en el catálogo, el carrito, los pagos ni el buscador de repuestos del taller.
+     */
+    @PatchMapping("/{id}/publicado")
+    public ResponseEntity<Producto> cambiarPublicado(@PathVariable String id, @RequestBody Map<String, Boolean> body, Authentication auth) {
+        Boolean publicado = body == null ? null : body.get("publicado");
+        if (publicado == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica si el producto queda publicado (true) u oculto (false)");
+        }
+        alcanceTienda.tienda(auth);
+        alcanceTienda.productoGestionable(auth, id);
+        return ResponseEntity.ok(productoService.cambiarPublicado(id, publicado));
+    }
+
     // ELIMINAR
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable String id, Authentication auth) {

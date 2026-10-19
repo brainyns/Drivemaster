@@ -101,6 +101,8 @@ public class SecurityConfig {
                         // servicio X-Service-Token en ProductoController.
                         .requestMatchers(HttpMethod.GET, "/api/productos/buscar").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/productos/mi-tienda").hasRole("TIENDA")
+                        // Publicar u ocultar: solo la TIENDA dueña (AlcanceTienda verifica que el producto sea suyo)
+                        .requestMatchers(HttpMethod.PATCH, "/api/productos/*/publicado").hasRole("TIENDA")
                         // TIENDA solo gestiona sus productos: lo verifica AlcanceTienda en el controlador
                         .requestMatchers("/api/productos/**").hasAnyRole("SUPERADMIN", "VENDEDOR", "TIENDA")
                         // Clientes: la lista, el alta, el detalle, la exportación y el borrado son solo del SUPERADMIN.

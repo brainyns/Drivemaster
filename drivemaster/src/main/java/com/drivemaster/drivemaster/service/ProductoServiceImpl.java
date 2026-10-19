@@ -88,6 +88,13 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     @Override
+    public Producto cambiarPublicado(String id, boolean publicado) {
+        Producto producto = obtenerPorId(id);
+        producto.setActivo(publicado);
+        return productoRepository.save(producto);
+    }
+
+    @Override
     public Producto obtenerPorId(String id) {
         return productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));

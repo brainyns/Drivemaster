@@ -24,6 +24,7 @@
 .prt-producto__texto strong { font-size: 0.9rem; overflow-wrap: anywhere; }
 .prt-producto__texto span { font-size: 0.78rem; color: var(--ui-muted); overflow-wrap: anywhere; }
 .prt-tenue { color: var(--ui-muted); }
+.prt-catalogo { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 8px; }
 
 .prt-stock { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
 .prt-stock__num { font-size: 1rem; font-variant-numeric: tabular-nums; }

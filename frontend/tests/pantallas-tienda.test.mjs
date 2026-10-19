@@ -290,3 +290,13 @@ test("Logo de la tienda: el mismo componente y las mismas reglas que el del tall
   assert.ok(leer("../src/pages/taller/TallerMiTaller.jsx").includes("<LogoEditable"), "Mi taller usa el mismo componente");
   assert.ok(leer("../src/components/marketplace/TiendaVendedor.jsx").includes("<LogoNegocio url={t.logoUrl}"));
 });
+
+test("Productos: interruptor accesible para publicar u ocultar con el endpoint propio, no con el PUT", () => {
+  const inter = leer("../src/components/ui/Interruptor.jsx");
+  assert.match(inter, /role="switch" aria-checked=\{activo\} aria-label=\{etiqueta\}/);
+  const pagina = leer("../src/pages/Productos.jsx");
+  assert.ok(pagina.includes("cambiarPublicadoProducto(p.id, publicar, token)"));
+  assert.ok(pagina.includes("<Interruptor activo={publicado(p)}"));
+  const servicio = leer("../src/services/productoService.js");
+  assert.match(servicio, /\/publicado`, \{\s*method: "PATCH"/);
+});

@@ -1172,6 +1172,56 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 
 .ui-field__input--codigo::placeholder { letter-spacing: 0.18em; opacity: 0.6; }
 
+/* ── Interruptor (Interruptor, role="switch") ──────────────────────────── */
+.ui-interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 6px 4px 2px;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ui-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ui-interruptor:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.ui-interruptor:disabled { cursor: progress; opacity: 0.6; }
+
+.ui-interruptor__pista {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--ui-surface-2);
+  box-shadow: inset 0 0 0 1px var(--ui-line);
+  transition: background-color var(--ui-dur) ease, box-shadow var(--ui-dur) ease;
+}
+
+.ui-interruptor__perilla {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ui-muted);
+  transition: transform var(--ui-dur) var(--ui-ease), background-color var(--ui-dur) ease;
+}
+
+.ui-interruptor--activo { color: var(--ui-text); }
+.ui-interruptor--activo .ui-interruptor__pista { background: var(--primary); box-shadow: none; }
+.ui-interruptor--activo .ui-interruptor__perilla { background: var(--on-primary); transform: translateX(16px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-interruptor__pista, .ui-interruptor__perilla { transition: none; }
+}
+
 /* ── Calificación de un taller (Calificacion) ──────────────────────────── */
 .ui-calificacion { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.8125rem; }
 .ui-calificacion__promedio { color: var(--ui-text); font-variant-numeric: tabular-nums; }

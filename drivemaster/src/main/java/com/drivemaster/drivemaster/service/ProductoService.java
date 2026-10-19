@@ -13,6 +13,9 @@ public interface ProductoService {
 
     Producto actualizarProducto(String id, Producto producto);
 
+    /** Publica (activo=true) u oculta (activo=false) el producto en el catálogo. */
+    Producto cambiarPublicado(String id, boolean publicado);
+
     Producto obtenerPorId(String id);
 
     Producto obtenerPorCodigo(String codigo);

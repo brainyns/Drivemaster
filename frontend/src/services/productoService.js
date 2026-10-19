@@ -55,6 +55,21 @@ export async function actualizarProducto(id, producto, token) {
   return res.json();
 }
 
+/** TIENDA: publica (true) u oculta (false) su producto en el catálogo. Devuelve el producto actualizado. */
+export async function cambiarPublicadoProducto(id, publicado, token) {
+  const res = await apiFetch(`${BASE_URL}/${id}/publicado`, {
+    method: "PATCH",
+    headers: buildHeaders(token),
+    body: JSON.stringify({ publicado }),
+  });
+  if (!res.ok) {
+    let msg = publicado ? "No se pudo publicar el producto" : "No se pudo ocultar el producto";
+    try { const data = await res.json(); msg = data.error || data.message || msg; } catch { /* sin cuerpo */ }
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 export async function subirImagenProducto(id, archivo, token) {
   const formData = new FormData();
   formData.append("archivo", archivo);

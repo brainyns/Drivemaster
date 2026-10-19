@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { listarProductos, listarProductosMiTienda, eliminarProducto } from "../services/productoService";
+import { listarProductos, listarProductosMiTienda, eliminarProducto, cambiarPublicadoProducto } from "../services/productoService";
+import Interruptor from "../components/ui/Interruptor";
 import { miTienda } from "../services/tiendaService";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import EstadoNegocio from "../components/EstadoNegocio";
@@ -41,6 +42,7 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
   const [busqueda, setBusqueda] = useState("");
   const [eliminando, setEliminando] = useState(null); // producto a confirmar
   const [aviso, setAviso] = useState(null);
+  const [cambiando, setCambiando] = useState(null); // id del producto que se publica u oculta
 
   const cargar = useCallback(async () => {
     try {
@@ -76,8 +78,25 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
   const confirmarEliminar = async () => {
     await eliminarProducto(eliminando.id, token);
     setProductos((prev) => prev.filter((p) => p.id !== eliminando.id));
-    setAviso(`Eliminaste “${eliminando.nombre}”.`);
+    setAviso({ tono: "ok", texto: `Eliminaste “${eliminando.nombre}”.` });
     setEliminando(null);
+  };
+
+  // Publicar u ocultar: el cambio se ve en la fila cuando el backend lo confirma; el aviso dice qué pasó
+  const cambiarPublicado = async (p, publicar) => {
+    setCambiando(p.id);
+    setAviso(null);
+    try {
+      const actualizado = await cambiarPublicadoProducto(p.id, publicar, token);
+      setProductos((prev) => prev.map((x) => (x.id === p.id ? { ...x, activo: actualizado.activo } : x)));
+      setAviso(publicar
+        ? { tono: "ok", texto: `“${p.nombre}” ya se ve en el catálogo.` }
+        : { tono: "ok", texto: `“${p.nombre}” quedó oculto: no sale en el catálogo ni se puede comprar.` });
+    } catch (e) {
+      setAviso({ tono: "error", texto: e.message });
+    } finally {
+      setCambiando(null);
+    }
   };
 
   const conteo = useMemo(() => contar(productos), [productos]);
@@ -116,7 +135,7 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
             No pudimos cargar tus productos. {error}
           </Alerta>
         )}
-        {aviso && <Alerta tono="ok" className="prt-alerta" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
+        {aviso && <Alerta tono={aviso.tono} className="prt-alerta" onCerrar={() => setAviso(null)}>{aviso.texto}</Alerta>}
 
         {!error && productos.length === 0 ? (
           <EstadoVacio icono="box" titulo="Aún no tienes productos"
@@ -192,9 +211,11 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
                           <td data-label="Precio" className="ui-table__num"><span className="ui-precio">{formatPrecio(p.precioVenta)}</span></td>
                           <td data-label="Stock"><Stock p={p} /></td>
                           <td data-label="Catálogo">
-                            {publicado(p)
-                              ? <ChipEstado tono="ok">{porEncargo(p) || nivelStock(p) !== "agotado" ? "Publicado" : "Publicado · agotado"}</ChipEstado>
-                              : <ChipEstado tono="apagado">Oculto</ChipEstado>}
+                            <span className="prt-catalogo">
+                              <Interruptor activo={publicado(p)} textos={["Publicado", "Oculto"]} ocupado={cambiando === p.id}
+                                etiqueta={`Publicar “${p.nombre}” en el catálogo`} onCambiar={(v) => cambiarPublicado(p, v)} />
+                              {publicado(p) && !porEncargo(p) && nivelStock(p) === "agotado" && <ChipEstado tono="aviso">Sin stock</ChipEstado>}
+                            </span>
                           </td>
                           <td className="ui-table__acciones">
                             <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onEditar(p.id)}
