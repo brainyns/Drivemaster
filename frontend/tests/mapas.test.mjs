@@ -189,6 +189,62 @@ test("el mapa abre en la ciudad aunque venga con su nombre oficial", async () =>
   assert.deepEqual(centroDeCiudad("Bogotá D.C."), { latitud: 4.711, longitud: -74.072 });
 });
 
+test("una ciudad desconocida o vacía no inventa un centro (antes caía en Cartagena)", async () => {
+  const { centroDeCiudad } = await import("../src/utils/mapa.js");
+  assert.equal(centroDeCiudad("Ciudad Inventada"), null);
+  assert.equal(centroDeCiudad(""), null);
+  assert.equal(centroDeCiudad(undefined), null);
+});
+
+const TALLERES = [
+  { id: "lejos", nombre: "B Lejos", latitud: 10.3910, longitud: -75.4790 },
+  { id: "sinPunto", nombre: "A Sin punto", latitud: null, longitud: null },
+  { id: "cerca", nombre: "C Cerca", latitud: 10.4235, longitud: -75.5450 },
+  { id: "medio", nombre: "D Medio", latitud: 10.4000, longitud: -75.5200 },
+];
+const CLIENTE = { latitud: 10.4220, longitud: -75.5460 };
+
+test("sin ubicación la lista va por nombre y los talleres sin coordenadas al final, sin distancia", async () => {
+  const { ordenarTalleres } = await import("../src/components/mapa/ordenTalleres.js");
+  const lista = ordenarTalleres(TALLERES, null);
+  assert.deepEqual(lista.map((t) => t.id), ["lejos", "cerca", "medio", "sinPunto"]);
+  assert.ok(lista.every((t) => t.distancia == null));
+  assert.equal(lista.at(-1).sinUbicacion, true);
+});
+
+test("al marcar el pin la lista se reordena por cercanía; con tiempo en carro, esos primero y del más rápido", async () => {
+  const { ordenarTalleres } = await import("../src/components/mapa/ordenTalleres.js");
+  assert.deepEqual(ordenarTalleres(TALLERES, CLIENTE).map((t) => t.id), ["cerca", "medio", "lejos", "sinPunto"]);
+
+  // Por la ruta, "medio" resulta más rápido que "cerca" (p. ej. por un puente)
+  const tiempos = { cerca: { duracionMin: 9, distanciaRutaKm: 1.2 }, medio: { duracionMin: 6, distanciaRutaKm: 4.1 } };
+  const lista = ordenarTalleres(TALLERES, CLIENTE, tiempos);
+  assert.deepEqual(lista.map((t) => t.id), ["medio", "cerca", "lejos", "sinPunto"]);
+  assert.equal(lista[0].enCarro.duracionMin, 6);
+  assert.equal(lista.find((t) => t.id === "sinPunto").enCarro, null);
+  assert.ok(lista[2].distancia > 7);
+});
+
+test("la vista se ajusta al pin del cliente y a sus tres talleres más cercanos con coordenadas", async () => {
+  const { puntosCercanos } = await import("../src/components/mapa/ordenTalleres.js");
+  assert.deepEqual(puntosCercanos(CLIENTE, TALLERES), [
+    [10.4220, -75.5460], [10.4235, -75.5450], [10.4000, -75.5200], [10.3910, -75.4790],
+  ]);
+  assert.deepEqual(puntosCercanos(CLIENTE, TALLERES, 1), [[10.4220, -75.5460], [10.4235, -75.5450]]);
+  assert.deepEqual(puntosCercanos(CLIENTE, []), [[10.4220, -75.5460]]);
+});
+
+test("Solicitar diagnóstico tiene un solo mapa y la ubicación del cliente es un único estado compartido", () => {
+  const pagina = leer("../src/pages/SolicitarDiagnostico.jsx");
+  assert.doesNotMatch(pagina, /SelectorUbicacion/);
+  assert.equal((pagina.match(/<MapaTalleres/g) || []).length, 1);
+  assert.match(pagina, /ubicacion=\{coordenadas\}\s+onUbicacion=\{setCoordenadas\}/);
+  const mapa = leer("../src/components/mapa/MapaTalleres.jsx");
+  assert.equal((mapa.match(/<MapContainer/g) || []).length, 1);
+  assert.match(mapa, /<PinArrastrable posicion=\{ubicacion\}/);
+  assert.match(mapa, /useUbicacionPin\(\{ value: ubicacion, onChange: onUbicacion/);
+});
+
 test("el autocompletado se acota a Colombia", () => {
   assert.match(leer("../src/services/geoService.js"), /bbox: BBOX_COLOMBIA/);
 });

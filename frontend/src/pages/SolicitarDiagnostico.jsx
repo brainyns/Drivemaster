@@ -5,7 +5,6 @@ import { obtenerMiPerfil } from "../services/clienteService";
 import { crearSolicitudServicio } from "../services/solicitudServicioService";
 import SubidaFotos from "../components/servicio/SubidaFotos";
 import MapaTalleres from "../components/mapa/MapaTalleres";
-import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
 import RutaTaller from "../components/mapa/RutaTaller";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import "../css/servicios.css";
@@ -218,7 +217,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
         </section>
 
         <section className="ss-bloque">
-          <h2 className="ss-bloque__titulo">Ubicación y horario</h2>
+          <h2 className="ss-bloque__titulo">Ciudad y horario</h2>
           <div className="sv-form">
             <div className="sv-field">
               <label htmlFor="ss-ciudad">Ciudad</label>
@@ -228,17 +227,6 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
             <div className="sv-field">
               <label htmlFor="ss-barrio">Barrio (opcional)</label>
               <input id="ss-barrio" value={barrio} onChange={(e) => setBarrio(e.target.value)} placeholder="Chapinero" />
-            </div>
-            <div className="sv-field sv-form-full ss-ubicacion">
-              <span className="ss-campo-titulo" id="ss-mapa-titulo">¿Dónde está el vehículo? (opcional)</span>
-              <SelectorUbicacion
-                id="ss-mapa"
-                ciudad={ciudad}
-                value={coordenadas}
-                onChange={setCoordenadas}
-                onDireccion={recibirDireccion}
-                ayuda="Opcional: busca la dirección, usa tu ubicación o toca el mapa. Con el punto exacto encontramos el taller más cercano."
-              />
             </div>
             <div className="sv-field">
               <label htmlFor="ss-horario">Preferencia de horario</label>
@@ -255,16 +243,20 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
         </section>
 
         <section className="ss-bloque">
-          <h2 className="ss-bloque__titulo">Elige tu taller</h2>
+          <h2 className="ss-bloque__titulo">¿Dónde está el vehículo? Elige tu taller</h2>
           <p className="ss-ayuda ss-bloque__ayuda">
-            Toca un pin o un taller de la lista para ver sus datos. Con tu ubicación te mostramos los más cercanos primero.
+            Marca tu punto en el mapa (opcional) y te mostramos los talleres más cercanos primero. Toca un taller en el
+            mapa o en la lista para ver sus datos, o deja que lo asignemos automáticamente.
           </p>
           <MapaTalleres
+            id="ss-mapa"
             token={token}
+            ciudad={ciudad}
+            ubicacion={coordenadas}
+            onUbicacion={setCoordenadas}
+            onDireccion={recibirDireccion}
             valor={tallerId}
             onElegir={setTallerId}
-            ubicacion={coordenadas}
-            ciudad={ciudad}
           />
         </section>
 

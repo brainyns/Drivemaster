@@ -18,13 +18,14 @@ export const NOMINATIM_URL = (env.VITE_NOMINATIM_URL || "https://nominatim.opens
 export const NOMINATIM_EMAIL = env.VITE_NOMINATIM_EMAIL || "";
 export const OSRM_URL = (env.VITE_OSRM_URL || "https://router.project-osrm.org").replace(/\/+$/, "");
 
-// Centro de Colombia: sesgo del autocompletado cuando no se conoce la ciudad ni la ubicación
+// Centro de Colombia: vista del país (con ZOOM_COLOMBIA) y sesgo del autocompletado cuando no se conoce la ciudad
+// ni la ubicación
 export const CENTRO_COLOMBIA = { latitud: 4.5709, longitud: -74.2973 };
+export const ZOOM_COLOMBIA = 5;
+// Zoom con el que se abre el mapa en una ciudad
+export const ZOOM_CIUDAD = 12;
 // Rectángulo de Colombia (con San Andrés) que acota el autocompletado: oeste, sur, este, norte
 export const BBOX_COLOMBIA = "-82,-4.3,-66.8,13.6";
-
-// Cartagena: centro por defecto cuando no se conoce la ciudad
-export const CENTRO_DEFECTO = { latitud: 10.391, longitud: -75.479 };
 
 // Centros aproximados para abrir el mapa en la ciudad del negocio o del cliente
 const CIUDADES = {
@@ -65,10 +66,10 @@ function normalizar(ciudad) {
   return ALIAS[sinDc] || sinDc;
 }
 
-/** Centro aproximado de una ciudad colombiana conocida, o Cartagena. */
+/** Centro aproximado de una ciudad colombiana conocida, o null si no está en la lista (nunca un punto inventado). */
 export function centroDeCiudad(ciudad) {
   const c = CIUDADES[normalizar(ciudad)];
-  return c ? { latitud: c[0], longitud: c[1] } : CENTRO_DEFECTO;
+  return c ? { latitud: c[0], longitud: c[1] } : null;
 }
 
 /** Coordenadas con 6 decimales (~10 cm), suficiente para ubicar un local. */

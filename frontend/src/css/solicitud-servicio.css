@@ -203,12 +203,6 @@
 .ss-vehiculo__nombre { font-weight: 600; }
 .ss-vehiculo__meta { font-size: 0.8rem; color: var(--text-muted); }
 
-.ss-ubicacion {
-  gap: var(--sp-sm);
-}
-
-.ss-campo-titulo { font-size: 0.85rem; color: var(--text-muted); }
-
 /* ── Fotos ── */
 .ss-fotos { display: flex; flex-direction: column; gap: 6px; }
 

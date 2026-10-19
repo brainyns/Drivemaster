@@ -132,7 +132,7 @@ export async function actualizarDatosTaller(token, { tarifaHora, horario }) {
   return handle(res, "No se pudieron guardar los cambios");
 }
 
-/** Talleres aprobados con ubicación, para elegir uno en el mapa al pedir un diagnóstico. */
+/** Talleres aprobados para elegir uno al pedir un diagnóstico; los que no tienen ubicación llegan con latitud null. */
 export async function talleresMapa(token) {
   const res = await apiFetch(`${BASE}/mapa`, { headers: headers(token) });
   return handle(res, "No se pudieron cargar los talleres del mapa");

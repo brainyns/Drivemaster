@@ -86,6 +86,16 @@ class TalleresCercanosServiceTest {
     }
 
     @Test
+    void losTalleresSinUbicacionNoEntranEntreLosCercanos() {
+        when(tallerService.listarParaMapa()).thenReturn(List.of(
+                new TallerMapaDTO("sinPunto", "Taller sin punto", "Calle 2", "Cartagena", null, null, null),
+                taller("cerca", 10.4235, -75.5450)));
+        when(osrm.desde(anyDouble(), anyDouble(), anyList())).thenReturn(List.of());
+
+        assertEquals(List.of("cerca"), servicio.cercanos(LAT, LNG, 3).stream().map(TallerCercanoDTO::id).toList());
+    }
+
+    @Test
     void rechazaCoordenadasFueraDeRango() {
         assertThrows(ResponseStatusException.class, () -> servicio.cercanos(95, LNG, 3));
     }

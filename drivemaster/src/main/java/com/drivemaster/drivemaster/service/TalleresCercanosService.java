@@ -34,6 +34,8 @@ public class TalleresCercanosService {
         record ConDistancia(TallerMapaDTO taller, double km) {
         }
         List<ConDistancia> primeros = tallerService.listarParaMapa().stream()
+                // Sin coordenadas no hay distancia: salen en la lista del cliente, pero no entre los cercanos
+                .filter(t -> t.latitud() != null && t.longitud() != null)
                 .map(t -> new ConDistancia(t,
                         HaversineUtil.calcularDistanciaKm(latitud, longitud, t.latitud(), t.longitud())))
                 .sorted(Comparator.comparingDouble(ConDistancia::km))

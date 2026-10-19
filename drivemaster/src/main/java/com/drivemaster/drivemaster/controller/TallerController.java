@@ -35,7 +35,7 @@ public class TallerController {
         return ResponseEntity.ok(tallerService.listarActivos(ciudad, lat, lng));
     }
 
-    // Mapa de la solicitud de diagnóstico: talleres aprobados y con ubicación.
+    // Mapa y lista de la solicitud de diagnóstico: talleres aprobados (los que no tienen ubicación, con lat/lng en null).
     @GetMapping("/mapa")
     public ResponseEntity<List<TallerMapaDTO>> mapa() {
         return ResponseEntity.ok(tallerService.listarParaMapa());

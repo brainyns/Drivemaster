@@ -25,6 +25,20 @@ export const iconoTallerElegido = pin("elegido", llave);
 /** Punto que marca el usuario (su local o su ubicación para el diagnóstico). */
 export const iconoPunto = pin("punto", '<circle class="mapa-marca__centro" cx="16" cy="15.6" r="5.2"/>');
 
+/**
+ * Pin del cliente en el mapa de Solicitar diagnóstico: naranja como la marca pero más grande que los talleres,
+ * con borde azul y centro de "diana" para distinguirlo de un vistazo.
+ */
+export const iconoMiPunto = L.divIcon({
+  className: "mapa-marca mapa-marca--cliente",
+  html: `<svg viewBox="0 0 32 42" width="42" height="55" aria-hidden="true" focusable="false">
+    <path class="mapa-marca__forma" d="${FORMA_PIN}"/>
+    <circle class="mapa-marca__centro" cx="16" cy="15.6" r="6.4"/><circle class="mapa-marca__nucleo" cx="16" cy="15.6" r="2.9"/></svg>`,
+  iconSize: [42, 55],
+  iconAnchor: [21, 54],
+  tooltipAnchor: [0, -50],
+});
+
 /** Punto azul con halo: dónde está el cliente. */
 export const iconoCliente = L.divIcon({
   className: "mapa-yo",

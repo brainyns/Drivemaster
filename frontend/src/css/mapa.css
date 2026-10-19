@@ -4,6 +4,7 @@
    los tokens --dm-* para respetar el tema claro/oscuro; el naranja es el de la marca. */
 
 .mapa-selector,
+.mapa-diagnostico,
 .mapa-talleres,
 .mapa-talleres__estado,
 .mapa-ruta-taller,
@@ -144,6 +145,22 @@
 .mapa-marca--elegido svg { transform: scale(1.22); }
 .mapa-marca--elegido .mapa-marca__forma { fill: var(--mapa-navy); }
 .mapa-marca--elegido .mapa-marca__glifo { stroke: var(--mapa-acento); }
+
+/* El pin del cliente (Solicitar diagnóstico): más grande que los talleres, con borde azul y centro de diana */
+.mapa-marca--cliente { cursor: grab; }
+.mapa-marca--cliente:active { cursor: grabbing; }
+.mapa-marca--cliente .mapa-marca__forma { stroke: var(--mapa-navy); stroke-width: 2.2; }
+.mapa-marca--cliente .mapa-marca__nucleo { fill: var(--mapa-navy); }
+
+.mapa-lienzo .leaflet-tooltip.mapa-tooltip-cliente {
+  padding: 2px 8px;
+  background: var(--mapa-navy);
+  color: #fff;
+  border-color: var(--mapa-navy);
+  font-size: 11px;
+}
+
+.mapa-lienzo .leaflet-tooltip-top.mapa-tooltip-cliente::before { border-top-color: var(--mapa-navy); }
 
 /* El pin que se arrastra */
 .mapa-marca--punto { cursor: grab; }
@@ -524,15 +541,28 @@
   color: var(--error, #EF4444);
 }
 
-/* ── Mapa de talleres ───────────────────────────────────────────────────── */
+/* ── Mapa de Solicitar diagnóstico: ubicación del cliente + talleres ────── */
+.mapa-diagnostico {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .mapa-talleres {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
   gap: 12px;
 }
 
+.mapa-talleres__columna {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
 .mapa-talleres__mapa {
-  height: 460px;
+  height: 480px;
   border: 1px solid var(--dm-line);
   border-radius: var(--mapa-radio);
   overflow: hidden;
@@ -540,11 +570,12 @@
   z-index: 0;
 }
 
+/* La lista acompaña la altura del mapa en escritorio y tiene su propio scroll */
 .mapa-talleres__panel {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 460px;
+  max-height: 540px;
   min-height: 0;
 }
 
@@ -624,6 +655,8 @@
   flex-direction: column;
   gap: 6px;
   min-height: 0;
+  /* offsetTop de cada taller relativo a la lista, para llevar a la vista el que se toca en el mapa */
+  position: relative;
 }
 
 .mapa-lista__item {
@@ -634,11 +667,24 @@
   background: var(--dm-surface);
   border: 1px solid var(--dm-line);
   border-radius: 10px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+/* El taller cuyo marcador o fila se tocó */
+.mapa-lista__item--resaltado {
+  background: var(--dm-surface-2);
+  border-color: var(--dm-muted);
 }
 
 .mapa-lista__item--elegido {
   border-color: var(--mapa-acento);
   box-shadow: inset 4px 0 0 var(--mapa-acento);
+}
+
+.mapa-lista__nota {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--dm-muted);
 }
 
 .mapa-lista__ver {
@@ -765,7 +811,7 @@
   }
 
   .mapa-talleres__mapa {
-    height: 360px;
+    height: 380px;
   }
 
   .mapa-talleres__panel {

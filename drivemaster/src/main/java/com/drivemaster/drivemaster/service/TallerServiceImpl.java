@@ -164,12 +164,14 @@ public class TallerServiceImpl implements TallerService {
                 .collect(Collectors.toList());
     }
 
-    /** Talleres que el cliente ve en el mapa: aprobados, activos y con ubicación. */
+    /**
+     * Talleres que el cliente puede elegir al pedir un diagnóstico: aprobados y activos. Los que no tienen
+     * ubicación llegan con latitud y longitud en null: salen en la lista, pero no en el mapa.
+     */
     @Override
     public List<TallerMapaDTO> listarParaMapa() {
         return tallerRepository.findByActivoTrue().stream()
                 .filter(t -> EstadoAprobacion.estaAprobado(t.getEstadoAprobacion()))
-                .filter(t -> t.getLatitud() != null && t.getLongitud() != null)
                 .map(t -> new TallerMapaDTO(t.getId(), t.getNombre(), t.getDireccion(), t.getCiudad(),
                         t.getTelefono(), t.getLatitud(), t.getLongitud()))
                 .toList();
