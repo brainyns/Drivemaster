@@ -1,4 +1,5 @@
 import { apiFetch } from "./http";
+import { errorDeRespuesta } from "../utils/errores";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/movimientos`;
 
 const buildHeaders = (token, contentType) => {
@@ -16,7 +17,7 @@ export async function listarMovimientos({ productoId, tipo, fechaInicio, fechaFi
   if (fechaFin)    params.append("fechaFin", fechaFin);
 
   const res = await apiFetch(`${BASE_URL}?${params}`, { headers: buildHeaders(token) });
-  if (!res.ok) throw new Error("Error al obtener movimientos");
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudieron cargar los movimientos");
   return res.json();
 }
 
@@ -26,6 +27,7 @@ export async function registrarMovimiento({ productoId, tipo, cantidad, motivo }
     method: "POST",
     headers: buildHeaders(token),
   });
-  if (!res.ok) throw new Error("Error al registrar movimiento");
+  // El mensaje real del backend (p. ej. stock insuficiente); el genérico solo si la respuesta no trae cuerpo
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo registrar el movimiento. Inténtalo de nuevo.");
   return res.json();
 }

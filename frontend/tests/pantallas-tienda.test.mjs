@@ -326,3 +326,17 @@ test("Proveedores: los errores por campo del backend llegan al formulario", asyn
   assert.ok(form.includes("setErroresServidor(campos)"), "los errores del backend van a su campo");
   assert.match(leer("../src/services/proveedorService.js"), /throw await errorDeRespuesta\(res, "No se pudo crear el proveedor"\)/);
 });
+
+test("Inventario: el error real del backend llega a la pantalla (stock insuficiente) y el genérico solo sin cuerpo", async () => {
+  const { errorDeRespuesta, mensajeDeError } = await import("../src/utils/errores.js");
+  assert.equal(mensajeDeError({ error: "Stock insuficiente", producto: "Bujía NGK", stockDisponible: 3 }, "x"),
+    "Stock insuficiente: de “Bujía NGK” quedan 3 unidades.");
+  assert.equal(mensajeDeError({ error: "Stock insuficiente", producto: "Bujía NGK", stockDisponible: 1 }, "x"),
+    "Stock insuficiente: de “Bujía NGK” queda 1 unidad.");
+  assert.equal(mensajeDeError({ error: "Producto no encontrado" }, "x"), "Producto no encontrado");
+  const sinCuerpo = { json: async () => { throw new Error("vacío"); } };
+  assert.equal((await errorDeRespuesta(sinCuerpo, "No se pudo registrar el movimiento.")).message, "No se pudo registrar el movimiento.");
+  const servicio = leer("../src/services/movimientoService.js");
+  assert.ok(!servicio.includes("Error al registrar movimiento"));
+  assert.match(servicio, /throw await errorDeRespuesta\(res, "No se pudo registrar el movimiento/);
+});

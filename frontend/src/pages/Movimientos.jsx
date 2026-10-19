@@ -47,7 +47,7 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
       await registrarMovimiento({ ...form, cantidad: Number(form.cantidad), motivo: form.motivo.trim() }, token);
       onGuardado(`${tipo.label} registrada: ${producto.nombre} quedó con ${resultado} ${resultado === 1 ? "unidad" : "unidades"}.`);
     } catch (err) {
-      setError(`${err.message}. Revisa los datos e inténtalo de nuevo.`);
+      setError(err.message);
       setGuardando(false);
     }
   };
