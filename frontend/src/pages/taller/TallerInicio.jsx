@@ -173,7 +173,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                       </div>
                       <ChipEstado tono={u.tono}>{u.estado}</ChipEstado>
                       <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico it-urgente__accion"
-                        onClick={() => irA(u.pagina, u.filtro)}
+                        onClick={() => irA(u.pagina, { filtro: u.filtro, abrir: u.s.id, volverA: "taller-inicio" })}
                         aria-label={`${u.accion}: ${u.s.vehiculoDescripcion || "vehículo"} #${refSolicitud(u.s.id)}`}>
                         {u.accion}
                       </button>

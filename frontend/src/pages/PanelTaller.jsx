@@ -10,7 +10,7 @@ import TallerMiTaller from "./taller/TallerMiTaller";
 import TallerCotizaciones from "./taller/TallerCotizaciones";
 import TallerInformes from "./taller/TallerInformes";
 import OrdenesAnteriores from "./taller/OrdenesAnteriores";
-import { ordenesPorAtender } from "./taller/resumenTaller";
+import { destinoSeccion, ordenesPorAtender } from "./taller/resumenTaller";
 import "../css/servicios.css";
 import "../css/panel-taller.css";
 import "../css/taller-panel.css";
@@ -49,6 +49,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
     return () => clearTimeout(id);
   }, [cargar, seccion]);
 
+  const destino = destinoSeccion(param);
   const anteriores = useMemo(() => ordenesPorAtender(ordenes), [ordenes]);
   const porResponder = useMemo(
     () => solicitudes.filter((s) => s.estado === "ASIGNADA_A_TALLER" && !s.aceptadaPorTaller).length,
@@ -74,10 +75,12 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
           />
         )}
         {seccion === "solicitudes" && (
-          <TallerSolicitudes key={param || "responder"} filtroInicial={param || undefined} />
+          <TallerSolicitudes key={`${destino.filtro || "responder"}-${destino.abrir || ""}`} filtroInicial={destino.filtro}
+            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined} />
         )}
         {seccion === "trabajos" && (
-          <TallerSolicitudes key={param || "repuestos"} modo="trabajos" filtroInicial={param || undefined} />
+          <TallerSolicitudes key={`${destino.filtro || "repuestos"}-${destino.abrir || ""}`} modo="trabajos" filtroInicial={destino.filtro}
+            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined} />
         )}
         {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}
         {seccion === "informes" && <TallerInformes />}

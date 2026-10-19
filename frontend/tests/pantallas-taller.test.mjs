@@ -148,3 +148,18 @@ test("La vista previa de Mi taller usa los mismos campos que el mapa del cliente
   assert.equal((mapa.match(/<DatosTallerCliente/g) || []).length, 2, "en la lista y en el popup");
   assert.ok(leer("../src/pages/taller/TallerMiTaller.jsx").includes("<DatosTallerCliente taller={taller} />"));
 });
+
+test("Desde Inicio se abre la solicitud concreta y Volver regresa a Inicio, sin router", async () => {
+  const { destinoSeccion } = await import("../src/pages/taller/resumenTaller.js");
+  assert.deepEqual(destinoSeccion("agendadas"), { filtro: "agendadas", abrir: null, volverA: null }, "el menú y los avisos siguen igual");
+  assert.deepEqual(destinoSeccion(null), { filtro: undefined, abrir: null, volverA: null });
+  assert.deepEqual(destinoSeccion({ filtro: "responder", abrir: "s1", volverA: "taller-inicio" }),
+    { filtro: "responder", abrir: "s1", volverA: "taller-inicio" });
+
+  const inicio = leer("../src/pages/taller/TallerInicio.jsx");
+  assert.ok(inicio.includes('irA(u.pagina, { filtro: u.filtro, abrir: u.s.id, volverA: "taller-inicio" })'));
+  const solicitudes = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(solicitudes.includes("useState(abrirInicial)"), "abre el detalle directamente");
+  assert.ok(solicitudes.includes('textoVolver={desdeAfuera ? "Inicio" : textos.volver}'));
+  assert.ok(!leer("../src/App.jsx").includes("react-router"), "sin router nuevo");
+});

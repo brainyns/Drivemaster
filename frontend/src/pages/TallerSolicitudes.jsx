@@ -186,7 +186,7 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
  * Bandeja de solicitudes de diagnóstico del taller: responder (aceptar con cita o
  * rechazar), asignar mecánico, registrar el diagnóstico y elegir repuestos.
  */
-export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial }) {
+export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial, abrirInicial = null, onVolver }) {
   const token = getToken();
   const FILTROS = modo === "trabajos" ? FILTROS_TRABAJOS : FILTROS_SOLICITUDES;
   const textos = TEXTOS[modo];
@@ -197,7 +197,8 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
   const [filtro, setFiltro] = useState(FILTROS.some((f) => f.key === filtroInicial) ? filtroInicial : FILTROS[0].key);
   const [busqueda, setBusqueda] = useState("");
   const [lineaAbierta, setLineaAbierta] = useState(null);
-  const [seleccionadaId, setSeleccionadaId] = useState(null);
+  // Desde Inicio se abre directamente una solicitud (abrirInicial); su "Volver" regresa allá (onVolver)
+  const [seleccionadaId, setSeleccionadaId] = useState(abrirInicial);
 
   const [fechaRevision, setFechaRevision] = useState("");
   const [mecanicoAceptar, setMecanicoAceptar] = useState("");
@@ -232,6 +233,11 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
     return () => clearTimeout(id);
   }, [cargar]);
 
+  // Abierta desde Inicio: el detalle empieza arriba, no a la altura donde estaba la lista de urgentes
+  useEffect(() => {
+    if (abrirInicial) window.scrollTo({ top: 0 });
+  }, [abrirInicial]);
+
   const conteo = useMemo(
     () => Object.fromEntries(FILTROS.map((f) => [f.key, solicitudes.filter(f.filtro).length])),
     [solicitudes, FILTROS]
@@ -247,7 +253,13 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
   // El detalle y la lista empiezan arriba: si no, se abren a la altura de la tarjeta tocada
   const alInicio = () => window.scrollTo({ top: 0 });
 
-  const cerrarDetalle = () => { setSeleccionadaId(null); alInicio(); };
+  const desdeAfuera = !!onVolver && abrirInicial != null && seleccionadaId === abrirInicial;
+
+  const cerrarDetalle = () => {
+    if (desdeAfuera) { onVolver(); return; }
+    setSeleccionadaId(null);
+    alInicio();
+  };
 
   const abrir = (s) => {
     alInicio();
@@ -293,7 +305,8 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
 
   const rechazar = () => ejecutar(async () => {
     await rechazarSolicitudServicio(token, seleccionada.id, motivo.trim() || null);
-    // Pasa al siguiente taller: sale de esta bandeja.
+    // Pasa al siguiente taller: sale de esta bandeja. Si se abrió desde Inicio, se vuelve allá.
+    if (desdeAfuera) { onVolver(); return; }
     setSeleccionadaId(null);
     await cargar();
   });
@@ -346,7 +359,8 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
 
     return (
       <div className="ss-panel st-root st-detalle">
-        <EncabezadoPagina titulo={s.vehiculoDescripcion} onVolver={cerrarDetalle} textoVolver={textos.volver}>
+        <EncabezadoPagina titulo={s.vehiculoDescripcion} onVolver={cerrarDetalle}
+          textoVolver={desdeAfuera ? "Inicio" : textos.volver}>
           <p className="st-detalle__meta">
             <ChipEstado estado={s.estado} catalogo={ESTADOS} />
             {enPruebas && <ChipEstado tono="info">En pruebas</ChipEstado>}
