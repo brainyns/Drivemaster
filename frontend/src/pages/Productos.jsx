@@ -1,256 +1,228 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarProductos, listarProductosMiTienda, eliminarProducto } from "../services/productoService";
 import { miTienda } from "../services/tiendaService";
+import { formatPrecio } from "../components/servicio/estadosServicio";
 import EstadoNegocio from "../components/EstadoNegocio";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Indicador from "../components/ui/Indicador";
+import ChipEstado from "../components/ui/ChipEstado";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import ImagenProducto from "../components/marketplace/ImagenProducto";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
+import Icon from "../components/public/Icon";
+import { FILTROS, NIVEL, coincide, contar, nivelStock, ordenar, porEncargo, publicado, resumen } from "./tienda/productosTienda";
 import "../css/productos.css";
-import "../css/admin-base.css";
 
-// ─── SVG Icons ────────────────────────────────────────────────────────────────
-const IconBox = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-    <line x1="12" y1="22.08" x2="12" y2="12"/>
-  </svg>
-);
-
-const IconAlert = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <triangle points="10.29 3.86 1.82 18 22.18 18"/>
-    <path d="M10.29 3.86L1.82 18h20.36L10.29 3.86z"/>
-    <line x1="12" y1="9" x2="12" y2="13"/>
-    <line x1="12" y1="17" x2="12.01" y2="17"/>
-  </svg>
-);
-
-const IconTag = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-    <line x1="7" y1="7" x2="7.01" y2="7"/>
-  </svg>
-);
-
-const IconDollar = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="1" x2="12" y2="23"/>
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-  </svg>
-);
+/** Stock con su número y, si pide atención, el chip con texto (el color nunca va solo). */
+function Stock({ p }) {
+  const nivel = nivelStock(p);
+  if (nivel === "encargo") {
+    return <ChipEstado tono="info">Por encargo{p.diasEntregaEncargo ? ` · ${p.diasEntregaEncargo} días` : ""}</ChipEstado>;
+  }
+  return (
+    <span className="prt-stock">
+      <strong className={`prt-stock__num prt-stock__num--${nivel}`}>{p.stockActual ?? 0}</strong>
+      <span className="prt-stock__min">{p.stockMinimo != null ? `mín. ${p.stockMinimo}` : "sin mínimo"}</span>
+      {nivel !== "ok" && <ChipEstado tono={NIVEL[nivel].tono}>{NIVEL[nivel].texto}</ChipEstado>}
+    </span>
+  );
+}
 
 // esTienda: el usuario es una tienda del marketplace y solo ve su propio catálogo.
 function Productos({ onNuevo, onEditar, token, esTienda = false }) {
   const [productos, setProductos] = useState([]);
-  const [tienda, setTienda]       = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
-  const [filtro, setFiltro]       = useState("todos");
-  const [busqueda, setBusqueda]   = useState("");
+  const [tienda, setTienda] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
+  const [filtro, setFiltro] = useState("TODOS");
+  const [busqueda, setBusqueda] = useState("");
+  const [eliminando, setEliminando] = useState(null); // producto a confirmar
+  const [aviso, setAviso] = useState(null);
 
-  useEffect(() => { cargarProductos(); }, [token, esTienda]);
-
-  const cargarProductos = async () => {
+  const cargar = useCallback(async () => {
     try {
       if (esTienda) {
         // Si la tienda aún no está aprobada, sus productos responden 403 y se muestra
         // el aviso de estado en lugar del error.
         const [t, p] = await Promise.allSettled([miTienda(token), listarProductosMiTienda(token)]);
         if (t.status === "fulfilled") setTienda(t.value);
-        if (p.status === "fulfilled") setProductos(p.value);
+        if (p.status === "fulfilled") { setProductos(p.value || []); setError(null); }
         else setError(p.reason.message);
       } else {
-        setProductos(await listarProductos(token));
+        setProductos((await listarProductos(token)) || []);
+        setError(null);
       }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCargando(false);
     }
-    catch (e) { setError(e.message); }
-    finally { setLoading(false); }
+  }, [token, esTienda]);
+
+  useEffect(() => {
+    const id = setTimeout(cargar, 0);
+    return () => clearTimeout(id);
+  }, [cargar]);
+
+  const reintentar = async () => {
+    setReintentando(true);
+    await cargar();
+    setReintentando(false);
   };
 
-  const handleEliminar = async (id) => {
-    if (!confirm("Eliminar este producto?")) return;
-    try { await eliminarProducto(id, token); setProductos(prev => prev.filter(p => p.id !== id)); }
-    catch (e) { alert(e.message); }
+  const confirmarEliminar = async () => {
+    await eliminarProducto(eliminando.id, token);
+    setProductos((prev) => prev.filter((p) => p.id !== eliminando.id));
+    setAviso(`Eliminaste “${eliminando.nombre}”.`);
+    setEliminando(null);
   };
 
-  const getEstado = p => {
-    if (p.stockActual <= p.stockMinimo) return "critico";
-    if (p.stockActual <= p.stockMinimo * 2) return "medio";
-    return "activo";
-  };
+  const conteo = useMemo(() => contar(productos), [productos]);
+  const datos = useMemo(() => resumen(productos), [productos]);
+  const visibles = useMemo(() => {
+    const f = FILTROS.find((x) => x.key === filtro) || FILTROS[0];
+    return ordenar(productos.filter(f.filtro).filter((p) => coincide(p, busqueda)));
+  }, [productos, filtro, busqueda]);
 
-  const stockCritico = productos.filter(p => getEstado(p) === "critico").length;
-  const categorias   = [...new Set(productos.map(p => p.categoria).filter(Boolean))].length;
-  const valorTotal   = productos.reduce((a, p) => a + ((p.precioVenta || 0) * (p.stockActual || 0)), 0);
+  const titulo = "Productos";
+  const descripcion = tienda
+    ? `El catálogo de ${tienda.nombre}: precio, stock y si se ve en el catálogo. Lo que necesita atención va primero.`
+    : "Inventario centralizado de refacciones y consumibles automotrices.";
+  const agregar = (
+    <button type="button" className="ui-btn ui-btn--primario" onClick={onNuevo}>
+      <Icon name="plus" size={16} /> Agregar producto
+    </button>
+  );
 
-  const filtrados = productos.filter(p => {
-    const q = busqueda.toLowerCase();
-    const match = p.nombre?.toLowerCase().includes(q) ||
-                  p.codigo?.toLowerCase().includes(q) ||
-                  p.categoria?.toLowerCase().includes(q);
-    if (filtro === "todos")   return match;
-    if (filtro === "activo")  return getEstado(p) === "activo"  && match;
-    if (filtro === "medio")   return getEstado(p) === "medio"   && match;
-    if (filtro === "critico") return getEstado(p) === "critico" && match;
-    return match;
-  });
-
-  const getStockPct = p => {
-    const max = (p.stockMinimo * 5) || 100;
-    return Math.min((p.stockActual / max) * 100, 100);
-  };
-
-  // Etiqueta y variante de cada nivel de stock (admin-base.css)
-  const NIVEL = {
-    activo:  { label: "Normal", badge: "exito", barra: "" },
-    medio:   { label: "Medio",  badge: "pendiente", barra: " adm-nivel__relleno--pendiente" },
-    critico: { label: "Bajo",   badge: "peligro", barra: " adm-nivel__relleno--peligro" },
-  };
-  const FILTROS = [
-    { k: "todos",   l: "Todos" },
-    { k: "activo",  l: "Normal" },
-    { k: "medio",   l: "Medio" },
-    { k: "critico", l: "Bajo" },
-  ];
-  const conteoFiltro = (k) => (k === "todos" ? productos.length : productos.filter(p => getEstado(p) === k).length);
-
-  if (loading) return <div className="adm-pagina"><div className="adm-cargando">Cargando productos…</div></div>;
+  if (cargando) {
+    return (
+      <div className="ss-panel--tienda prt-root">
+        <EncabezadoPagina titulo={titulo} descripcion="Tu catálogo e inventario." />
+        <Esqueleto variante="lista" cantidad={4} texto="Cargando productos…" />
+      </div>
+    );
+  }
 
   return (
     <EstadoNegocio negocio={tienda} tipo="tienda">
-    {error ? <div className="adm-pagina"><p className="adm-alerta adm-alerta--error" role="alert">{error}</p></div> : (
-    <div className="adm-pagina">
+      <div className="ss-panel--tienda prt-root">
+        <EncabezadoPagina titulo={titulo} descripcion={descripcion} acciones={productos.length > 0 && agregar} />
 
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">{tienda ? `Productos de ${tienda.nombre}` : "Gestión de productos"}</h1>
-          <p className="adm-encabezado__sub">
-            {tienda
-              ? "Catálogo e inventario de tu tienda. Los talleres ven tu precio, disponibilidad y ubicación."
-              : "Inventario centralizado de refacciones y consumibles automotrices."}
-          </p>
-        </div>
-        <div className="adm-encabezado__lado">
-          <button type="button" className="adm-btn adm-btn--primario" onClick={onNuevo}>Agregar producto</button>
-        </div>
-      </header>
+        {error && (
+          <Alerta className="prt-alerta" onReintentar={reintentar} reintentando={reintentando}>
+            No pudimos cargar tus productos. {error}
+          </Alerta>
+        )}
+        {aviso && <Alerta tono="ok" className="prt-alerta" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
 
-      <section className="adm-kpis" aria-label="Resumen del catálogo">
-        <div className="adm-kpi">
-          <span className="adm-kpi__icono" aria-hidden="true"><IconBox /></span>
-          <div className="adm-kpi__texto">
-            <span className="adm-kpi__etiqueta">Total de repuestos</span>
-            <p className="adm-kpi__valor">{productos.length}</p>
-          </div>
-        </div>
-        <div className={`adm-kpi${stockCritico > 0 ? " adm-kpi--alerta" : ""}`}>
-          <span className={`adm-kpi__icono${stockCritico > 0 ? " adm-kpi__icono--peligro" : ""}`} aria-hidden="true"><IconAlert /></span>
-          <div className="adm-kpi__texto">
-            <span className="adm-kpi__etiqueta">Stock crítico</span>
-            <p className="adm-kpi__valor">
-              {stockCritico}
-              {stockCritico > 0 && <span className="adm-badge adm-badge--peligro">Revisar</span>}
-            </p>
-          </div>
-        </div>
-        <div className="adm-kpi">
-          <span className="adm-kpi__icono" aria-hidden="true"><IconTag /></span>
-          <div className="adm-kpi__texto">
-            <span className="adm-kpi__etiqueta">Categorías</span>
-            <p className="adm-kpi__valor">{categorias}</p>
-          </div>
-        </div>
-        <div className="adm-kpi">
-          <span className="adm-kpi__icono" aria-hidden="true"><IconDollar /></span>
-          <div className="adm-kpi__texto">
-            <span className="adm-kpi__etiqueta">Valor del inventario</span>
-            <p className="adm-kpi__valor">${valorTotal.toLocaleString("es-CO")}</p>
-          </div>
-        </div>
-      </section>
+        {!error && productos.length === 0 ? (
+          <EstadoVacio icono="box" titulo="Aún no tienes productos"
+            texto="Agrega tus repuestos con foto, precio y stock: aparecen en el catálogo y los talleres pueden pedirlos.">
+            {agregar}
+          </EstadoVacio>
+        ) : productos.length > 0 && (
+          <>
+            <section aria-labelledby="prt-resumen" className="prt-indicadores">
+              <h2 id="prt-resumen" className="ui-sr">Resumen del catálogo</h2>
+              <div className="ui-indicadores">
+                <Indicador icono="box" titulo="Productos" valor={datos.total} pie={`${datos.publicados} publicados en el catálogo`} />
+                <Indicador icono="alert" titulo="Necesitan atención" valor={datos.atencion}
+                  tono={datos.atencion > 0 ? "accion" : undefined}
+                  pie={datos.atencion > 0 ? "Agotados o con poco stock" : "Todo con stock suficiente"}
+                  onClick={datos.atencion > 0 ? () => setFiltro(conteo.AGOTADOS > 0 ? "AGOTADOS" : "POCO") : undefined} />
+                <Indicador titulo="Valor del inventario" valor={formatPrecio(datos.valor)} pie="Precio de venta × stock" />
+              </div>
+            </section>
 
-      <div className="adm-filtros" role="search" aria-label="Filtros de productos">
-        <nav className="adm-pestanas" aria-label="Nivel de stock">
-          {FILTROS.map(f => (
-            <button key={f.k} type="button" aria-pressed={filtro === f.k}
-              className={`adm-pestana${filtro === f.k ? " adm-pestana--activa" : ""}`}
-              onClick={() => setFiltro(f.k)}>
-              {f.l}<span className="adm-pestana__n">{conteoFiltro(f.k)}</span>
-            </button>
-          ))}
-        </nav>
-        <span className="adm-filtros__separador" />
-        <label className="adm-campo adm-campo--ancho">
-          <span>Buscar</span>
-          <input type="search" placeholder="Nombre, código o categoría" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
-        </label>
-      </div>
+            <div className="prt-barra">
+              <div className="ui-filtros" role="group" aria-label="Filtrar productos">
+                {FILTROS.map((f) => (
+                  <button key={f.key} type="button" className="ui-chip" aria-pressed={filtro === f.key} onClick={() => setFiltro(f.key)}>
+                    {f.label}
+                    {conteo[f.key] > 0 && <span className="ui-chip__contador">{conteo[f.key]}</span>}
+                  </button>
+                ))}
+              </div>
+              <div className="ui-buscador prt-buscador">
+                <Icon name="search" size={18} />
+                <label htmlFor="prt-busqueda" className="ui-sr">Buscar por nombre, código, marca o categoría</label>
+                <input id="prt-busqueda" className="ui-field__input" type="search" value={busqueda} autoComplete="off"
+                  onChange={(e) => setBusqueda(e.target.value)} placeholder="Nombre, código, marca o categoría" />
+              </div>
+            </div>
 
-      <div className="adm-tarjeta">
-        {filtrados.length === 0 ? (
-          <p className="adm-vacio">No se encontraron productos.</p>
-        ) : (
-          <div className="adm-tabla-wrap">
-            <table className="adm-tabla adm-tabla--tarjetas">
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Código</th>
-                  <th>Categoría</th>
-                  <th className="adm-tabla__der">Precio de venta</th>
-                  <th>Stock</th>
-                  <th>Estado</th>
-                  <th className="adm-tabla__der">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtrados.map((p, i) => {
-                  const estado = getEstado(p);
-                  const nivel = NIVEL[estado];
-                  return (
-                    <tr key={p.id}>
-                      <td data-label="Producto">
-                        <div className="adm-celda-producto">
-                          <span className="adm-miniatura" aria-hidden="true">{p.nombre?.[0]?.toUpperCase()}</span>
-                          <div>
-                            <strong>{p.nombre}</strong>
-                            <span className="adm-tabla__sub">{p.marca || "Sin marca"}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td data-label="Código"><span className="adm-mono">{p.codigo || String(i + 1).padStart(4, "0")}</span></td>
-                      <td data-label="Categoría"><span className="adm-badge adm-badge--neutro">{p.categoria || "Sin categoría"}</span></td>
-                      <td data-label="Precio de venta" className="adm-tabla__der adm-tabla__nowrap">${p.precioVenta?.toLocaleString("es-CO")}</td>
-                      <td data-label="Stock">
-                        <div className="adm-nivel">
-                          <span className="adm-nivel__pista" aria-hidden="true">
-                            <span className={`adm-nivel__relleno${nivel.barra}`} style={{ width: `${getStockPct(p)}%` }} />
-                          </span>
-                          <span className="adm-nivel__num">{p.stockActual}</span>
-                        </div>
-                      </td>
-                      <td data-label="Estado"><span className={`adm-badge adm-badge--${nivel.badge}`}>{nivel.label}</span></td>
-                      <td className="adm-tabla__der adm-tabla__celda--ancha">
-                        <div className="adm-tabla__acciones">
-                          <button type="button" onClick={() => onEditar(p.id)} className="adm-btn adm-btn--chico">Editar</button>
-                          <button type="button" onClick={() => handleEliminar(p.id)} className="adm-btn adm-btn--chico adm-btn--peligro">Eliminar</button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+            {visibles.length === 0 ? (
+              <EstadoVacio icono="search" titulo="Ningún producto coincide"
+                texto={busqueda.trim() ? `No encontramos “${busqueda.trim()}” con este filtro.` : "No hay productos con este filtro."}>
+                <button type="button" className="ui-btn ui-btn--secundario" onClick={() => { setBusqueda(""); setFiltro("TODOS"); }}>
+                  Ver todos los productos
+                </button>
+              </EstadoVacio>
+            ) : (
+              <div className="ui-card prt-tabla-tarjeta">
+                <div className="ui-table-wrap">
+                  <table className="ui-table prt-tabla">
+                    <caption className="ui-sr">Productos ({visibles.length} de {productos.length})</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Producto</th>
+                        <th scope="col">Categoría</th>
+                        <th scope="col" className="ui-table__num">Precio</th>
+                        <th scope="col">Stock</th>
+                        <th scope="col">Catálogo</th>
+                        <th scope="col"><span className="ui-sr">Acciones</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibles.map((p) => (
+                        <tr key={p.id}>
+                          <td data-label="Producto">
+                            <span className="prt-producto">
+                              <ImagenProducto src={p.imagenUrl} className="prt-producto__imagen" tamanioIcono={20} />
+                              <span className="prt-producto__texto">
+                                <strong>{p.nombre}</strong>
+                                <span>{[p.marca, p.referencia, p.codigo].filter(Boolean).join(" · ") || "Sin marca ni código"}</span>
+                              </span>
+                            </span>
+                          </td>
+                          <td data-label="Categoría">{p.categoria || <span className="prt-tenue">Sin categoría</span>}</td>
+                          <td data-label="Precio" className="ui-table__num"><span className="ui-precio">{formatPrecio(p.precioVenta)}</span></td>
+                          <td data-label="Stock"><Stock p={p} /></td>
+                          <td data-label="Catálogo">
+                            {publicado(p)
+                              ? <ChipEstado tono="ok">{porEncargo(p) || nivelStock(p) !== "agotado" ? "Publicado" : "Publicado · agotado"}</ChipEstado>
+                              : <ChipEstado tono="apagado">Oculto</ChipEstado>}
+                          </td>
+                          <td className="prt-acciones">
+                            <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onEditar(p.id)}
+                              aria-label={`Editar ${p.nombre}`}>
+                              <Icon name="pencil" size={14} /> Editar
+                            </button>
+                            <button type="button" className="ui-btn ui-btn--texto ui-btn--chico prt-eliminar" onClick={() => setEliminando(p)}
+                              aria-label={`Eliminar ${p.nombre}`}>
+                              <Icon name="trash" size={14} /> Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <p className="prt-pie">Mostrando {visibles.length} de {productos.length} productos</p>
+          </>
+        )}
+
+        {eliminando && (
+          <ConfirmarAccion titulo={`¿Eliminar “${eliminando.nombre}”?`} peligro textoConfirmar="Eliminar producto"
+            mensaje="Sale de tu catálogo y de tu inventario. Esta acción no se puede deshacer."
+            onConfirmar={confirmarEliminar} onCancelar={() => setEliminando(null)} />
         )}
       </div>
-      <p className="adm-paginacion">
-        Mostrando {filtrados.length} de {productos.length} productos
-      </p>
-    </div>
-    )}
     </EstadoNegocio>
   );
 }

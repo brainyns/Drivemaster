@@ -102,3 +102,27 @@ test("Mi tienda usa las piezas de Mi taller y la ficha del catálogo, con los mi
   assert.ok(pagina.includes("actualizarMiTienda(token, datos)"), "el mismo PUT /mi-tienda");
   assert.ok(leer("../src/pages/DetalleProductoMarketplace.jsx").includes("<TiendaVendedor tienda={t} />"), "la misma ficha que ve el cliente");
 });
+
+test("Productos: stock con aviso, publicado u oculto, filtros y lo que necesita atención primero", async () => {
+  const { nivelStock, contar, ordenar, resumen, coincide } = await import("../src/pages/tienda/productosTienda.js");
+  const p = (nombre, extra) => ({ id: nombre, nombre, precioVenta: 1000, stockActual: 10, stockMinimo: 3, ...extra });
+  assert.equal(nivelStock(p("a", { stockActual: 0 })), "agotado");
+  assert.equal(nivelStock(p("b", { stockActual: 3 })), "bajo", "en el mínimo ya es poco stock");
+  assert.equal(nivelStock(p("c")), "ok");
+  assert.equal(nivelStock(p("d", { tipo: "ENCARGO", stockActual: 0 })), "encargo", "los de encargo no dependen del stock");
+  const lista = [p("Zeta"), p("Alfa", { stockActual: 2 }), p("Beta", { stockActual: 0, activo: false })];
+  assert.deepEqual(contar(lista), { TODOS: 3, POCO: 1, AGOTADOS: 1, PUBLICADOS: 2, OCULTOS: 1 });
+  assert.deepEqual(ordenar(lista).map((x) => x.nombre), ["Beta", "Alfa", "Zeta"]);
+  assert.deepEqual(resumen(lista), { total: 3, publicados: 2, atencion: 2, valor: 12000 });
+  assert.ok(coincide(p("Pastillas", { marca: "Bosch" }), "bosch"));
+});
+
+test("Productos usa el sistema compartido, sin confirm() ni alert() del navegador", () => {
+  const pagina = leer("../src/pages/Productos.jsx");
+  for (const pieza of ["<EncabezadoPagina", "<Indicador", "<ChipEstado", "<EstadoVacio", "<Esqueleto", "<ImagenProducto", "<ConfirmarAccion",
+    'className="ui-table prt-tabla"', "data-label=\"Stock\""]) {
+    assert.ok(pagina.includes(pieza), `usa ${pieza}`);
+  }
+  assert.doesNotMatch(pagina, /\b(confirm|alert)\(/);
+  assert.ok(pagina.includes("eliminarProducto(eliminando.id, token)"), "la misma llamada para eliminar");
+});
