@@ -76,7 +76,8 @@ public class TallerServiceImpl implements TallerService {
                 .latitud(request.getLatitud())
                 .longitud(request.getLongitud())
                 .especialidades(request.getEspecialidades() != null ? request.getEspecialidades() : new ArrayList<>())
-                .rating(request.getRating() != null ? request.getRating() : 5.0)
+                // Sin calificaciones hasta que un cliente califique (el rating del pedido se ignora)
+                .calificaciones(0)
                 .precioManoObra(request.getPrecioManoObra())
                 .tarifaHora(request.getTarifaHora())
                 .horario(request.getHorario())
@@ -119,7 +120,6 @@ public class TallerServiceImpl implements TallerService {
         taller.setLatitud(request.getLatitud());
         taller.setLongitud(request.getLongitud());
         if (request.getEspecialidades() != null) taller.setEspecialidades(request.getEspecialidades());
-        if (request.getRating() != null) taller.setRating(request.getRating());
         if (request.getPrecioManoObra() != null) taller.setPrecioManoObra(request.getPrecioManoObra());
         if (request.getBarrio() != null) taller.setBarrio(request.getBarrio());
         if (request.getTelefono() != null) taller.setTelefono(request.getTelefono());
@@ -217,7 +217,7 @@ public class TallerServiceImpl implements TallerService {
                 .precioManoObra(r.getPrecioManoObra())
                 .tarifaHora(r.getTarifaHora())
                 .horario(r.getHorario())
-                .rating(5.0)
+                .calificaciones(0)
                 .estadoAprobacion(EstadoAprobacion.PENDIENTE)
                 .fechaRegistro(LocalDateTime.now())
                 .activo(false)
@@ -362,6 +362,7 @@ public class TallerServiceImpl implements TallerService {
                 .longitud(t.getLongitud())
                 .especialidades(t.getEspecialidades())
                 .rating(t.getRating())
+                .calificaciones(t.getCalificaciones() != null ? t.getCalificaciones() : 0)
                 .precioManoObra(t.getPrecioManoObra())
                 .tarifaHora(t.getTarifaHora())
                 .horario(t.getHorario())

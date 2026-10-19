@@ -21,7 +21,9 @@ public class TallerDTO {
     private Double latitud;
     private Double longitud;
     private List<String> especialidades;
+    // Promedio de las calificaciones de los clientes (null sin calificaciones) y cuántas son
     private Double rating;
+    private Integer calificaciones;
     private Double precioManoObra;
     private Boolean activo;
 

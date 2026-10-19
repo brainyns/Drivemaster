@@ -64,7 +64,6 @@
 }
 
 .mt-identidad__meta > span { display: inline-flex; align-items: center; gap: 6px; }
-.mt-identidad__nota strong { color: var(--ui-text); font-variant-numeric: tabular-nums; }
 
 /* Perfil completo: el porcentaje, la barra y cada cosa que falta como acceso directo */
 .mt-completo {

@@ -1,15 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import MecanicosTaller from "../../components/servicio/MecanicosTaller";
 import { formatFecha, formatPrecio } from "../../components/servicio/estadosServicio";
 import { actualizarDatosTaller, actualizarUbicacionTaller } from "../../services/tallerService";
-import { informesTaller } from "../../services/informesTallerService";
 import SelectorUbicacion from "../../components/mapa/SelectorUbicacion";
 import SeccionEditable from "../../components/ui/SeccionEditable";
 import Campo from "../../components/ui/Campo";
 import ChipEstado from "../../components/ui/ChipEstado";
 import Alerta from "../../components/ui/Alerta";
 import Esqueleto from "../../components/ui/Esqueleto";
-import Estrellas from "../../components/ui/Estrellas";
+import Calificacion from "../../components/ui/Calificacion";
 import BarraProgreso from "../../components/ui/BarraProgreso";
 import Icon from "../../components/public/Icon";
 import { HORARIO_MAX, completitudPerfil, errorHorario, errorTarifa, iniciales } from "./perfilTaller";
@@ -187,19 +186,6 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
   const [editando, setEditando] = useState(null); // "servicios" | "horario" | "ubicacion"
   const [aviso, setAviso] = useState(null); // { seccion, texto }
   const [activos, setActivos] = useState(0);
-  const [calificacion, setCalificacion] = useState(null);
-  const tallerId = taller?.id;
-
-  // La calificación real sale de los informes (todas las entregas calificadas)
-  useEffect(() => {
-    if (!tallerId) return undefined;
-    let vivo = true;
-    informesTaller(token, 1)
-      .then((d) => { if (vivo) setCalificacion(d.calificacion); })
-      .catch(() => {});
-    return () => { vivo = false; };
-  }, [token, tallerId]);
-
   const onLista = useCallback((lista) => setActivos(lista.filter((m) => m.activo !== false).length), []);
 
   if (!taller) {
@@ -252,15 +238,8 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
               )}
             </div>
             <p className="mt-identidad__meta">
-              {calificacion?.total > 0 ? (
-                <span className="mt-identidad__nota">
-                  <Estrellas valor={calificacion.promedio} />
-                  <strong>{calificacion.promedio.toLocaleString("es-CO", { minimumFractionDigits: 1 })}</strong>
-                  ({calificacion.total} {calificacion.total === 1 ? "calificación" : "calificaciones"})
-                </span>
-              ) : (
-                <span>Sin calificaciones aún</span>
-              )}
+              {/* Promedio real de las calificaciones de los clientes; sin ninguna, "Nuevo" */}
+              <Calificacion rating={taller.rating} calificaciones={taller.calificaciones} />
               {(taller.barrio || taller.ciudad) && (
                 <span><Icon name="pin" size={14} /> {[taller.barrio, taller.ciudad].filter(Boolean).join(", ")}</span>
               )}

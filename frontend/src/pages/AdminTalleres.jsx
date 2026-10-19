@@ -6,6 +6,7 @@ import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
 import DrawerAdmin from "../components/admin/DrawerAdmin";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import { capitalizar } from "../utils/formato";
+import Calificacion from "../components/ui/Calificacion";
 import "../css/admin-talleres.css";
 import "../css/admin-base.css";
 
@@ -17,7 +18,7 @@ const ESTADO_LABEL = {
 
 const VACIO = {
   nombre: "", ciudad: "", direccion: "", latitud: "", longitud: "",
-  especialidades: "", rating: "", precioManoObra: "",
+  especialidades: "", precioManoObra: "",
   correoUsuario: "", passwordUsuario: "",
 };
 
@@ -30,23 +31,6 @@ const FILTROS = [
 function formatPrecio(v) {
   if (v == null) return "—";
   return v.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
-}
-
-function Estrellas({ valor }) {
-  if (valor == null) return <span className="at-rating at-rating--vacio">Sin calificar</span>;
-  const lleno = Math.round(valor);
-  return (
-    <span className="at-rating" title={`${valor} de 5`}>
-      <span className="at-rating-estrellas" aria-hidden="true">
-        {[1, 2, 3, 4, 5].map(i => (
-          <svg key={i} viewBox="0 0 24 24" className={i <= lleno ? "on" : "off"} fill="currentColor">
-            <path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z" />
-          </svg>
-        ))}
-      </span>
-      <span className="at-rating-num">{Number(valor).toFixed(1)}</span>
-    </span>
-  );
 }
 
 function BadgeOrden({ estado }) {
@@ -105,7 +89,7 @@ export default function AdminTalleres() {
       nombre: t.nombre || "", ciudad: t.ciudad || "", direccion: t.direccion || "",
       latitud: t.latitud ?? "", longitud: t.longitud ?? "",
       especialidades: (t.especialidades || []).join(", "),
-      rating: t.rating ?? "", precioManoObra: t.precioManoObra ?? "",
+      precioManoObra: t.precioManoObra ?? "",
       correoUsuario: "", passwordUsuario: "",
     });
     setFormAbierto(true);
@@ -130,7 +114,6 @@ export default function AdminTalleres() {
         especialidades: form.especialidades
           ? form.especialidades.split(",").map(s => s.trim()).filter(Boolean)
           : [],
-        rating: form.rating === "" ? null : Number(form.rating),
         precioManoObra: form.precioManoObra === "" ? null : Number(form.precioManoObra),
       };
       if (!editandoId) {
@@ -334,7 +317,7 @@ export default function AdminTalleres() {
                       )}
                     </td>
                     <td data-label="Mano de obra" className="adm-tabla__der">{formatPrecio(t.precioManoObra)}</td>
-                    <td data-label="Calificación"><Estrellas valor={t.rating} /></td>
+                    <td data-label="Calificación"><Calificacion rating={t.rating} calificaciones={t.calificaciones} compacta /></td>
                     <td data-label="Estado">
                       <span className={`adm-badge ${t.activo ? "adm-badge--exito" : "adm-badge--neutro"}`}>
                         {t.activo ? "Activo" : "Pausado"}
@@ -452,10 +435,6 @@ export default function AdminTalleres() {
                 value={form.latitud === "" || form.longitud === "" ? null : { latitud: Number(form.latitud), longitud: Number(form.longitud) }}
                 onChange={({ latitud, longitud }) => setForm((f) => ({ ...f, latitud, longitud }))}
               />
-              <label className="adm-campo adm-campo--bloque">
-                <span>Rating inicial</span>
-                <input type="number" step="0.1" min="0" max="5" value={form.rating} onChange={e => setForm({ ...form, rating: e.target.value })} />
-              </label>
             </section>
 
             {!editandoId && (

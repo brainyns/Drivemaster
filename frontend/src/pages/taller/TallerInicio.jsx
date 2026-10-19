@@ -11,6 +11,7 @@ import Esqueleto from "../../components/ui/Esqueleto";
 import BarraAccionMovil from "../../components/ui/BarraAccionMovil";
 import Icon from "../../components/public/Icon";
 import { citasDeHoy, enTaller, esperaRepuestos, porResponder, proximaRevision, tiempoRelativo, urgentes } from "./resumenTaller";
+import { datosCalificacion } from "../../utils/calificacion";
 import "../../css/inicio-taller.css";
 
 // Filas de "Lo urgente primero" antes de mandar a cada sección
@@ -60,6 +61,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
   };
 
   const sinActividad = solicitudes.length === 0;
+  const calificacion = datosCalificacion(taller?.rating, taller?.calificaciones);
   const primera = datos.responder[0];
 
   return (
@@ -136,6 +138,10 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                   tono={ingresos.pendiente > 0 ? "ok" : undefined}
                   pie={`${formatPrecio(ingresos.liquidado)} ya liquidados en total`}
                   onClick={() => irA("taller-informes")} />
+              )}
+              {taller && (
+                <Indicador icono="star" titulo="Calificación" valor={calificacion.nuevo ? "Nuevo" : calificacion.promedio}
+                  pie={calificacion.texto} onClick={() => irA("taller-informes")} />
               )}
             </div>
           </section>

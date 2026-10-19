@@ -30,7 +30,10 @@ public class Taller {
     @Builder.Default
     private List<String> especialidades = new ArrayList<>();
 
+    // Promedio de las calificaciones reales (1 a 5) y cuántas son; null y 0 mientras no haya ninguna.
+    // Lo mantiene CalificacionTallerService: no se escribe a mano.
     private Double rating;
+    private Integer calificaciones;
     private Double precioManoObra;
     private Boolean activo;
 

@@ -38,6 +38,7 @@ class EtapasFinalesTest {
     private TallerService tallerService;
     private AvisosSolicitudServicio avisos;
     private LiquidacionService liquidacion;
+    private CalificacionTallerService calificaciones;
     private SolicitudServicioServiceImpl service;
     private OrdenServicio orden;
 
@@ -47,6 +48,7 @@ class EtapasFinalesTest {
         tallerService = mock(TallerService.class);
         avisos = mock(AvisosSolicitudServicio.class);
         liquidacion = mock(LiquidacionService.class);
+        calificaciones = mock(CalificacionTallerService.class);
         OrdenServicioRepository ordenRepository = mock(OrdenServicioRepository.class);
         UsuarioService usuarioService = mock(UsuarioService.class);
         VehiculoService vehiculoService = mock(VehiculoService.class);
@@ -54,7 +56,7 @@ class EtapasFinalesTest {
         service = new SolicitudServicioServiceImpl(ordenRepository, mock(TallerRepository.class), vehiculoService,
                 usuarioService, tallerService, mock(CloudinaryService.class), new TransicionOrdenService(mongoTemplate),
                 mock(AsignacionTallerService.class), mock(ParametrosMarketplace.class), avisos,
-                mock(ProductoService.class), mock(BuscadorRepuestosService.class), liquidacion);
+                mock(ProductoService.class), mock(BuscadorRepuestosService.class), liquidacion, calificaciones);
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).tallerId("t1").usuarioId("u1")
                 .vehiculoId("v1").mecanicoNombre("Carlos").eventos(new ArrayList<>()).build();
@@ -137,6 +139,8 @@ class EtapasFinalesTest {
         assertEquals(5, set.get("calificacionTaller"));
         // registrar no cambia el estado
         assertEquals(EstadoOrden.ENTREGADA, set.get("estado"));
+        // la nueva nota actualiza el promedio del taller
+        verify(calificaciones).recalcular("t1");
     }
 
     @Test
@@ -146,6 +150,14 @@ class EtapasFinalesTest {
         Document set = (Document) ultimaEscritura().getUpdateObject().get("$set");
         assertEquals(true, set.get("recepcionConfirmada"));
         assertFalse(set.containsKey("calificacionTaller"));
+        verifyNoInteractions(calificaciones);
+    }
+
+    @Test
+    void siElRecalculoFallaLaConfirmacionDelClienteIgualQueda() {
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        doThrow(new IllegalStateException("mongo caído")).when(calificaciones).recalcular(any());
+        assertDoesNotThrow(() -> service.confirmarRecepcion(CORREO_CLIENTE, "o1", 4, null));
     }
 
     @Test

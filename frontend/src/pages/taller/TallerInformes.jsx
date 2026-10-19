@@ -244,7 +244,7 @@ export default function TallerInformes() {
               <Indicador icono="clock" titulo="Respuesta promedio" valor={horas(d.tiempoRespuesta.horasPromedio)}
                 pie={d.tiempoRespuesta.muestra > 0 ? `${d.tiempoRespuesta.muestra} medidas` : "Sin revisiones aún"} />
               <Indicador icono="star" titulo="Calificación"
-                valor={d.calificacion.promedio == null ? "—" : decimal(d.calificacion.promedio)}
+                valor={d.calificacion.promedio == null ? "Nuevo" : decimal(d.calificacion.promedio)}
                 pie={d.calificacion.total > 0 ? `${d.calificacion.total} de clientes` : "Sin calificaciones aún"} />
             </div>
           </section>

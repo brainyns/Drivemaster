@@ -45,7 +45,8 @@ test("Mi taller edita por sección y solo con los endpoints que ya existen", () 
   assert.ok(pagina.includes("actualizarDatosTaller(token, { tarifaHora: Number(tarifa) })"), "la tarifa viaja sola");
   assert.ok(pagina.includes("actualizarDatosTaller(token, { horario })"), "el horario viaja solo");
   assert.ok(pagina.includes("<SelectorUbicacion"), "usa el selector de mapa existente");
-  assert.ok(!pagina.includes("taller.rating"), "no muestra la calificación por defecto del registro");
+  assert.ok(pagina.includes("<Calificacion rating={taller.rating} calificaciones={taller.calificaciones} />"),
+    "la calificación real del DTO (promedio y cantidad)");
   assert.match(leer("../src/components/servicio/MecanicosTaller.jsx"), /<SeccionEditable/);
 });
 
@@ -112,4 +113,22 @@ test("Órdenes anteriores: cabecera, chips compartidos y sin componentes definid
     assert.ok(pagina.includes(llamada), `misma llamada: ${llamada}`);
   }
   assert.doesNotMatch(leer("../src/css/panel-taller.css"), /border-left:\s*[2-9]px/);
+});
+
+test("Calificación: sin calificaciones es Nuevo (no un 5.0) y con ellas el promedio con su cantidad", async () => {
+  const { datosCalificacion } = await import("../src/utils/calificacion.js");
+  assert.equal(datosCalificacion(null, 0).nuevo, true);
+  assert.equal(datosCalificacion(5, 0).nuevo, true, "un 5.0 sin calificaciones no cuenta");
+  assert.equal(datosCalificacion(null, 0).texto, "Sin calificaciones aún");
+  const d = datosCalificacion(4.25, 3);
+  assert.equal(d.nuevo, false);
+  assert.equal(d.promedio, "4,3");
+  assert.equal(d.texto, "3 calificaciones");
+  assert.equal(datosCalificacion(4, 1).texto, "1 calificación");
+});
+
+test("El admin ya no escribe la calificación a mano", () => {
+  const admin = leer("../src/pages/AdminTalleres.jsx");
+  assert.ok(!admin.includes("Rating inicial") && !admin.includes("form.rating"));
+  assert.ok(admin.includes("<Calificacion rating={t.rating} calificaciones={t.calificaciones} compacta />"));
 });

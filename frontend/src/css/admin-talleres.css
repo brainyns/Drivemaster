@@ -317,18 +317,6 @@
 .at-pill--bad  { background: var(--ui-error-bg); color: var(--ui-error); border-color: transparent; }
 .at-pill--muted{ background: var(--ui-surface-2); color: var(--ui-muted); border-color: var(--ui-line); }
 
-.at-rating { display: inline-flex; align-items: center; gap: 7px; }
-.at-rating-estrellas { display: inline-flex; gap: 1px; }
-.at-rating-estrellas svg { width: 13px; height: 13px; }
-.at-rating-estrellas .on  { color: var(--ui-aviso); }
-.at-rating-estrellas .off { color: var(--ui-line); }
-.at-rating-num {
-  font-variant-numeric: tabular-nums;
-  font-size: 0.78rem;
-  color: var(--ui-muted);
-  font-variant-numeric: tabular-nums;
-}
-.at-rating--vacio { font-size: 0.78rem; color: var(--ui-muted); font-style: italic; }
 
 /* ---------- Acciones de fila ---------- */
 

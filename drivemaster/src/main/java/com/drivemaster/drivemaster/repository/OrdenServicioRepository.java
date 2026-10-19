@@ -26,5 +26,11 @@ public interface OrdenServicioRepository extends MongoRepository<OrdenServicio, 
 
     List<OrdenServicio> findByFlujoAndEstadoOrderByFechaCreacionDesc(String flujo, String estado);
 
+    // ─── Calificación de los talleres (CalificacionTallerService) ───
+
+    List<OrdenServicio> findByTallerIdAndCalificacionTallerNotNull(String tallerId);
+
+    List<OrdenServicio> findByCalificacionTallerNotNull();
+
     boolean existsByFlujoAndVehiculoIdAndEstadoIn(String flujo, String vehiculoId, Collection<String> estados);
 }

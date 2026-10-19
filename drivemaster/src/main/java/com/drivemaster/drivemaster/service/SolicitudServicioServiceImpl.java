@@ -67,6 +67,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private final ProductoService productoService;
     private final BuscadorRepuestosService buscador;
     private final LiquidacionService liquidacion;
+    private final CalificacionTallerService calificaciones;
 
     public SolicitudServicioServiceImpl(OrdenServicioRepository ordenRepository,
                                         TallerRepository tallerRepository,
@@ -80,7 +81,9 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                                         AvisosSolicitudServicio avisos,
                                         ProductoService productoService,
                                         BuscadorRepuestosService buscador,
-                                        LiquidacionService liquidacion) {
+                                        LiquidacionService liquidacion,
+                                        CalificacionTallerService calificaciones) {
+        this.calificaciones = calificaciones;
         this.liquidacion = liquidacion;
         this.productoService = productoService;
         this.buscador = buscador;
@@ -620,6 +623,14 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         OrdenServicio actualizada = transiciones.registrar(orden,
                 new Actor(EstadoOrden.CLIENTE, cliente.getId(), cliente.getNombre()), nota,
                 Criteria.where("usuarioId").is(cliente.getId()).and("recepcionConfirmada").ne(true), cambios);
+        // La nota ya quedó en la orden; si el recálculo falla, lo corrige la siguiente calificación o el de arranque
+        if (calificacion != null) {
+            try {
+                calificaciones.recalcular(orden.getTallerId());
+            } catch (RuntimeException e) {
+                log.warn("No se pudo recalcular la calificación del taller {}: {}", orden.getTallerId(), e.getMessage());
+            }
+        }
         return toDTO(actualizada, Vista.CLIENTE);
     }
 

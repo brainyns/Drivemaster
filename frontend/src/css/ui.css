@@ -882,6 +882,11 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 .ui-estrellas svg { fill: currentColor; stroke: none; }
 .ui-estrellas .ui-estrellas__on { color: var(--ui-aviso); }
 
+/* ── Calificación de un taller (Calificacion) ──────────────────────────── */
+.ui-calificacion { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.8125rem; }
+.ui-calificacion__promedio { color: var(--ui-text); font-variant-numeric: tabular-nums; }
+.ui-calificacion__texto { color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+
 /* ── Barra de avance (BarraProgreso) ───────────────────────────────────── */
 .ui-progreso {
   display: block;

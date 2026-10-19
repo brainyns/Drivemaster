@@ -17,6 +17,8 @@ public class CrearTallerRequest {
     private Double latitud;
     private Double longitud;
     private List<String> especialidades;
+    // Se ignora: la calificación sale de los clientes (CalificacionTallerService). Se conserva para no romper
+    // a quien todavía lo envíe.
     private Double rating;
     private Double precioManoObra;
     private String barrio;
