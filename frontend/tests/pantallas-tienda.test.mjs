@@ -188,3 +188,37 @@ test("Inventario usa el sistema compartido, sin alert() y con la misma llamada",
   assert.doesNotMatch(pagina, /\balert\(/);
   assert.ok(pagina.includes("registrarMovimiento({ ...form, cantidad: Number(form.cantidad), motivo: form.motivo.trim() }, token)"));
 });
+
+test("Compras: referencia del PDF, filtros, resumen del mes y la compra nueva", async () => {
+  const { refCompra, filtrarCompras, resumenCompras, erroresLinea, erroresCompra, agregarLinea } =
+    await import("../src/pages/tienda/comprasTienda.js");
+  assert.equal(refCompra("abc123def45"), "PO-DEF45");
+  const compras = [
+    { id: "1", proveedorId: "p1", fecha: "2026-10-02T10:00:00", total: 50000, productos: [{ nombre: "Filtro", cantidad: 5 }] },
+    { id: "2", proveedorId: "p2", fecha: "2026-09-20T10:00:00", total: 120000, productos: [{ nombre: "Bujía", cantidad: 10 }] },
+  ];
+  const nombres = { p1: "Autopartes Sur", p2: "Lubricantes Norte" };
+  const ids = (f) => filtrarCompras(compras, f, (id) => nombres[id]).map((c) => c.id);
+  assert.deepEqual(ids({}), ["1", "2"]);
+  assert.deepEqual(ids({ busqueda: "norte" }), ["2"]);
+  assert.deepEqual(ids({ busqueda: "filtro" }), ["1"], "también busca por producto");
+  assert.deepEqual(ids({ minimo: "100000" }), ["2"]);
+  assert.deepEqual(ids({ desde: "2026-10-01" }), ["1"]);
+  assert.deepEqual(resumenCompras(compras, new Date(2026, 9, 19).getTime()),
+    { total: 2, gastado: 170000, unidades: 15, mes: 50000, comprasMes: 1 });
+
+  assert.deepEqual(Object.keys(erroresLinea({ producto: null, cantidad: "0", costo: "" })), ["producto", "cantidad", "costo"]);
+  assert.deepEqual(erroresLinea({ producto: { id: "x" }, cantidad: "2", costo: "0" }), {});
+  assert.deepEqual(Object.keys(erroresCompra({ proveedorId: "", items: [] })), ["proveedor", "items"]);
+  const prod = { id: "x", nombre: "Filtro", codigo: "FIL-1" };
+  const una = agregarLinea([], { producto: prod, cantidad: "2", costo: "1000" });
+  const dos = agregarLinea(una, { producto: prod, cantidad: "3", costo: "9999" });
+  assert.deepEqual([dos.length, dos[0].cantidad, dos[0].subtotal], [1, 5, 5000], "el mismo producto suma con su costo");
+});
+
+test("Compras: la lista ya no inventa un estado ni pendientes por recibir", () => {
+  const pagina = leer("../src/pages/Compras.jsx");
+  assert.ok(!pagina.includes("Pendientes por recibir") && !pagina.includes("RECIBIDA"), "la compra no tiene estados");
+  assert.ok(pagina.includes("listarProveedores(token)"), "el nombre del proveedor sale de su lista");
+  assert.ok(pagina.includes("ui-table--tarjetas"));
+});

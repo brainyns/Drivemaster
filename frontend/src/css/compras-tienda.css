@@ -1,0 +1,48 @@
+/* ── Compras de la tienda (prefijo cmp-, BEM) ──────────────────────────────
+   Lista, nueva compra y detalle. Cabecera, cifras, campos, chips, buscador, tabla que pasa a tarjetas, avisos, vacío
+   y carga son de ui.css; la foto es ImagenProducto del catálogo. Tokens --ui-*, los dos temas. */
+
+.cmp-alerta { margin-bottom: var(--ui-sp-4); }
+.cmp-tenue { color: var(--ui-muted); }
+.cmp-ref { font-family: var(--ui-mono); letter-spacing: 0.02em; }
+
+/* ── Lista ─────────────────────────────────────────────────────────── */
+.cmp-filtros { display: grid; gap: 12px; margin-bottom: var(--ui-sp-4); }
+.cmp-filtros__fila { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+
+/* "Fechas y montos" abre un panel: abierto se ve como un chip activo */
+.cmp-filtros .ui-chip[aria-expanded="true"] { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-text); }
+
+.cmp-filtros__extra {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+}
+
+.cmp-filtro .ui-field__label { font-size: 0.8125rem; font-weight: 500; color: var(--ui-muted); }
+.cmp-filtro .ui-field__input { min-height: 44px; padding-block: 8px; }
+
+.cmp-paginas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 0.8125rem;
+  color: var(--ui-muted);
+}
+
+.cmp-paginas__botones { display: inline-flex; align-items: center; gap: 10px; }
+
+@media (max-width: 860px) {
+  .cmp-filtros__extra { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .cmp-filtros__fila .ui-buscador { flex-basis: 100%; max-width: none; }
+}
