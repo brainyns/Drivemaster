@@ -22,20 +22,10 @@
 .mt-identidad__marca { display: flex; align-items: flex-start; gap: 18px; min-width: 0; }
 
 /* Sin logo en el backend: las iniciales sobre el naranja, con el texto oscuro del botón principal */
-.mt-identidad__avatar {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 72px;
-  height: 72px;
-  border-radius: 18px;
-  background: var(--primary);
-  color: var(--on-primary);
-  font-size: 1.6rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--primary) 70%, transparent);
-}
+/* Logo (LogoNegocio de ui.css) con su botón debajo */
+.mt-logo { display: grid; justify-items: center; gap: 8px; flex-shrink: 0; }
+.mt-logo .ui-btn { padding-inline: 10px; }
+.mt-identidad__aviso { grid-column: 1 / -1; }
 
 .mt-identidad__texto { display: grid; gap: 10px; min-width: 0; }
 
@@ -192,7 +182,7 @@
 
 .mt-vista__item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 2px 12px;
   padding: 12px 14px;
   background: var(--ui-surface);
@@ -201,14 +191,15 @@
   box-shadow: var(--ui-sombra-1);
 }
 
-.mt-vista__item > span:not(.mt-vista__boton) { grid-column: 1; min-width: 0; }
+.mt-vista__item > .mt-vista__logo { grid-column: 1; grid-row: 1 / span 4; align-self: start; }
+.mt-vista__item > span:not(.mt-vista__boton):not(.mt-vista__logo) { grid-column: 2; min-width: 0; }
 .mt-vista__nombre { font-weight: 700; overflow-wrap: anywhere; }
 .mt-vista__dato { font-size: 0.8rem; color: var(--ui-muted); overflow-wrap: anywhere; }
 .mt-vista__distancia { font-size: 0.8rem; font-weight: 600; color: var(--primary-text); }
 .mt-vista__nota { font-size: 0.78rem; color: var(--ui-aviso); }
 
 .mt-vista__boton {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1 / span 4;
   align-self: center;
   padding: 6px 12px;
@@ -236,7 +227,6 @@
 }
 
 @media (max-width: 600px) {
-  .mt-identidad__avatar { width: 56px; height: 56px; border-radius: 14px; font-size: 1.25rem; }
   .mt-root .mt-identidad__nombre { font-size: 1.6rem; }
   .mt-equipo__fila { grid-template-columns: auto minmax(0, 1fr) auto; }
   .mt-equipo__acciones { grid-column: 2 / -1; margin-left: -8px; }

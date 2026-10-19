@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import MecanicosTaller from "../../components/servicio/MecanicosTaller";
 import { formatFecha, formatPrecio } from "../../components/servicio/estadosServicio";
-import { actualizarDatosTaller, actualizarUbicacionTaller } from "../../services/tallerService";
+import { actualizarDatosTaller, actualizarUbicacionTaller, subirLogoTaller } from "../../services/tallerService";
+import LogoNegocio from "../../components/ui/LogoNegocio";
 import SelectorUbicacion from "../../components/mapa/SelectorUbicacion";
 import DatosTallerCliente from "../../components/mapa/DatosTallerCliente";
 import SeccionEditable from "../../components/ui/SeccionEditable";
@@ -12,7 +13,7 @@ import Esqueleto from "../../components/ui/Esqueleto";
 import Calificacion from "../../components/ui/Calificacion";
 import BarraProgreso from "../../components/ui/BarraProgreso";
 import Icon from "../../components/public/Icon";
-import { HORARIO_MAX, comoLoVeElCliente, completitudPerfil, errorHorario, errorTarifa, iniciales } from "./perfilTaller";
+import { HORARIO_MAX, TIPOS_LOGO, comoLoVeElCliente, completitudPerfil, errorHorario, errorLogo, errorTarifa } from "./perfilTaller";
 import "../../css/mi-taller.css";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
@@ -149,6 +150,46 @@ function FormUbicacion({ taller, token, onGuardado, onCancelar }) {
 }
 
 /**
+ * Logo del taller con su botón para subirlo o cambiarlo (sin logo, las iniciales). Valida tipo y tamaño antes de
+ * enviarlo; el backend vuelve a validar y solo deja cambiar el del taller de la sesión. onAviso recibe el resultado.
+ */
+function LogoTaller({ taller, token, onActualizado, onAviso }) {
+  const input = useRef(null);
+  const [subiendo, setSubiendo] = useState(false);
+
+  const elegir = async (e) => {
+    const archivo = e.target.files?.[0];
+    e.target.value = "";
+    if (!archivo) return;
+    const error = errorLogo(archivo);
+    if (error) { onAviso({ tono: "error", texto: error }); return; }
+    setSubiendo(true);
+    onAviso(null);
+    try {
+      const { logoUrl } = await subirLogoTaller(token, archivo);
+      onActualizado?.({ ...taller, logoUrl });
+      onAviso({ tono: "ok", texto: "Logo guardado. Así te verán los clientes en la lista y el mapa." });
+    } catch (err) {
+      onAviso({ tono: "error", texto: err.message });
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  return (
+    <div className="mt-logo">
+      <LogoNegocio url={taller.logoUrl} nombre={taller.nombre} tamano="grande" />
+      <button id="mt-logo" type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={subiendo}
+        aria-busy={subiendo} onClick={() => input.current?.click()}>
+        {!subiendo && <Icon name="camera" size={14} />}
+        {subiendo ? "Subiendo…" : taller.logoUrl ? "Cambiar logo" : "Subir logo"}
+      </button>
+      <input ref={input} type="file" accept={TIPOS_LOGO.join(",")} hidden onChange={elegir} />
+    </div>
+  );
+}
+
+/**
  * "Así te ven los clientes": la misma información que muestra la lista de talleres al pedir un diagnóstico
  * (nombre, dirección, teléfono y si está en el mapa).
  */
@@ -161,6 +202,7 @@ function VistaCliente({ taller: datos }) {
       <p className="mt-vista__ayuda">Al pedir un diagnóstico, el cliente elige taller en esta lista y en el mapa.</p>
       <div className="mt-vista__marco" aria-hidden="true">
         <div className="mt-vista__item">
+          <LogoNegocio url={taller.logoUrl} nombre={taller.nombre} className="mt-vista__logo" />
           <span className="mt-vista__nombre">{taller.nombre}</span>
           <span className="mt-vista__dato">
             {taller.direccion || "Sin dirección"}{taller.ciudad ? `, ${taller.ciudad}` : ""}
@@ -189,6 +231,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
   const [editando, setEditando] = useState(null); // "servicios" | "horario" | "ubicacion"
   const [aviso, setAviso] = useState(null); // { seccion, texto }
   const [activos, setActivos] = useState(0);
+  const [avisoLogo, setAvisoLogo] = useState(null); // { tono, texto }
   const onLista = useCallback((lista) => setActivos(lista.filter((m) => m.activo !== false).length), []);
 
   if (!taller) {
@@ -221,6 +264,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
     if (item.seccion === "mt-servicios") abrir("servicios");
     else if (item.seccion === "mt-horario") abrir("horario");
     else if (item.seccion === "mt-ubicacion") abrir("ubicacion");
+    else if (item.seccion === "mt-logo") destino?.focus({ preventScroll: true });
     else destino?.querySelector("button")?.focus({ preventScroll: true });
   };
 
@@ -228,7 +272,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
     <div className="mt-root">
       <header className="mt-identidad">
         <div className="mt-identidad__marca">
-          <span className="mt-identidad__avatar" aria-hidden="true">{iniciales(taller.nombre)}</span>
+          <LogoTaller taller={taller} token={token} onActualizado={onActualizado} onAviso={setAvisoLogo} />
           <div className="mt-identidad__texto">
             <h1 className="mt-identidad__nombre">{taller.nombre}</h1>
             <div className="mt-identidad__chips">
@@ -276,6 +320,11 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             </ul>
           )}
         </div>
+        {avisoLogo && (
+          <Alerta tono={avisoLogo.tono} className="mt-identidad__aviso" onCerrar={() => setAvisoLogo(null)}>
+            {avisoLogo.texto}
+          </Alerta>
+        )}
       </header>
 
       <div className="mt-rejilla">

@@ -47,6 +47,9 @@ public class Taller {
     // Horario de atención en texto libre (ej. "L-V 8:00-18:00, S 8:00-13:00").
     private String horario;
 
+    // Logo o foto del local (URL de Cloudinary); lo sube el dueño desde Mi taller o el administrador.
+    private String logoUrl;
+
     // PENDIENTE, APROBADO, RECHAZADO (ver EstadoAprobacion). Null = taller anterior al marketplace.
     private String estadoAprobacion;
     private String motivoRechazo;

@@ -13,6 +13,7 @@ import { CENTRO_COLOMBIA, ZOOM_CIUDAD, ZOOM_COLOMBIA, centroDeCiudad } from "../
 import { formatoDistancia } from "../../utils/distancia";
 import { formatoDuracion } from "../../utils/geo";
 import DatosTallerCliente from "./DatosTallerCliente";
+import LogoNegocio from "../ui/LogoNegocio";
 import "../../css/mapa.css";
 
 // Espera tras el último cambio de la ubicación antes de pedir los tiempos en carro (el pin se puede seguir moviendo)
@@ -275,7 +276,10 @@ export default function MapaTalleres({ id = "mapa-diagnostico", token, ciudad, u
     const distancia = distanciaTexto(t);
     return (
       <div className="mapa-popup">
-        <strong className="mapa-popup__nombre">{t.nombre}</strong>
+        <span className="mapa-popup__cabecera">
+          <LogoNegocio url={t.logoUrl} nombre={t.nombre} tamano="mediano" />
+          <strong className="mapa-popup__nombre">{t.nombre}</strong>
+        </span>
         <DatosTallerCliente taller={t} completo />
         {t.direccion && <span className="mapa-popup__dato">{t.direccion}{t.ciudad ? `, ${t.ciudad}` : ""}</span>}
         {t.telefono && <span className="mapa-popup__dato">Tel. {t.telefono}</span>}
@@ -384,6 +388,7 @@ export default function MapaTalleres({ id = "mapa-diagnostico", token, ciudad, u
                   resaltado?.id === t.id && "mapa-lista__item--resaltado"].filter(Boolean).join(" ");
                 return (
                   <li key={t.id} className={clases} ref={(el) => { if (el) items.current[t.id] = el; else delete items.current[t.id]; }}>
+                    <LogoNegocio url={t.logoUrl} nombre={t.nombre} className="mapa-lista__logo" />
                     <button type="button" className="mapa-lista__ver" onClick={() => verEnMapa(t)}
                       aria-label={t.sinUbicacion ? t.nombre : `Ver ${t.nombre} en el mapa`}>
                       <span className="mapa-lista__nombre">

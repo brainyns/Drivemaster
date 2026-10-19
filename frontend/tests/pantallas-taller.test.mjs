@@ -12,12 +12,12 @@ const COMPLETO = {
 };
 
 test("Mi taller: el perfil completo cuenta lo que existe en el backend y dice qué falta", () => {
-  assert.deepEqual(completitudPerfil(COMPLETO, 1), { porcentaje: 100, faltan: [] });
+  assert.deepEqual(completitudPerfil({ ...COMPLETO, logoUrl: "https://img/logo.png" }, 1), { porcentaje: 100, faltan: [] });
   const { porcentaje, faltan } = completitudPerfil({ ...COMPLETO, latitud: null, horario: "  " }, 0);
-  assert.equal(porcentaje, 57);
-  assert.deepEqual(faltan.map((f) => f.clave), ["ubicacion", "horario", "mecanicos"]);
+  assert.equal(porcentaje, 50);
+  assert.deepEqual(faltan.map((f) => f.clave), ["ubicacion", "horario", "mecanicos", "logo"]);
   assert.ok(faltan.every((f) => f.seccion), "lo que el taller puede resolver lleva a su sección");
-  const admin = completitudPerfil({ ...COMPLETO, telefono: "" }, 1).faltan[0];
+  const admin = completitudPerfil({ ...COMPLETO, logoUrl: "x", telefono: "" }, 1).faltan[0];
   assert.equal(admin.admin, true, "el teléfono lo registra el administrador");
 });
 
@@ -141,7 +141,7 @@ test("La vista previa de Mi taller usa los mismos campos que el mapa del cliente
     correoUsuario: "dueno@demo.com", tarifaHora: 60000, mecanicos: [{ nombre: "Carlos" }],
   });
   assert.deepEqual(Object.keys(vista), ["id", "nombre", "direccion", "ciudad", "telefono", "latitud", "longitud",
-    "horario", "especialidades", "calificacion", "calificaciones"], "las mismas llaves de TallerMapaDTO");
+    "horario", "especialidades", "calificacion", "calificaciones", "logoUrl"], "las mismas llaves de TallerMapaDTO");
   assert.equal(vista.calificacion, 4.5);
   assert.deepEqual(comoLoVeElCliente({ id: "n" }).calificaciones, 0);
   const mapa = leer("../src/components/mapa/MapaTalleres.jsx");
@@ -162,4 +162,19 @@ test("Desde Inicio se abre la solicitud concreta y Volver regresa a Inicio, sin 
   assert.ok(solicitudes.includes("useState(abrirInicial)"), "abre el detalle directamente");
   assert.ok(solicitudes.includes('textoVolver={desdeAfuera ? "Inicio" : textos.volver}'));
   assert.ok(!leer("../src/App.jsx").includes("react-router"), "sin router nuevo");
+});
+
+test("Logo del taller: mismas reglas que el backend e iniciales de respaldo en todos lados", async () => {
+  const { errorLogo } = await import("../src/pages/taller/perfilTaller.js");
+  assert.equal(errorLogo({ type: "image/png", size: 1000 }), null);
+  assert.equal(errorLogo({ type: "image/jpeg", size: 5 * 1024 * 1024 }), null);
+  assert.match(errorLogo({ type: "image/svg+xml", size: 10 }), /JPG, PNG, WEBP o GIF/);
+  assert.match(errorLogo({ type: "application/pdf", size: 10 }), /JPG, PNG, WEBP o GIF/);
+  assert.match(errorLogo({ type: "image/png", size: 5 * 1024 * 1024 + 1 }), /menos de 5 MB/);
+  assert.equal(errorLogo(null), "Elige una imagen.");
+
+  const logo = leer("../src/components/ui/LogoNegocio.jsx");
+  assert.ok(logo.includes("iniciales(nombre)") && logo.includes("onError"), "sin logo o si no carga: iniciales");
+  assert.ok(leer("../src/pages/taller/TallerMiTaller.jsx").includes("subirLogoTaller(token, archivo)"));
+  assert.equal((leer("../src/components/mapa/MapaTalleres.jsx").match(/<LogoNegocio/g) || []).length, 2, "lista y popup");
 });

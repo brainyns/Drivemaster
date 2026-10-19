@@ -365,6 +365,7 @@ public class TallerServiceImpl implements TallerService {
                 .precioManoObra(t.getPrecioManoObra())
                 .tarifaHora(t.getTarifaHora())
                 .horario(t.getHorario())
+                .logoUrl(t.getLogoUrl())
                 .activo(t.getActivo());
     }
 }

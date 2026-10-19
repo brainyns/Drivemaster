@@ -35,6 +35,7 @@ public class TallerDTO {
     private String telefono;
     private Double tarifaHora;
     private String horario;
+    private String logoUrl;
 
     // Solo para el dueño del taller y el ADMIN (null en el listado público)
     private String estadoAprobacion;

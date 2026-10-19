@@ -882,6 +882,35 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 .ui-estrellas svg { fill: currentColor; stroke: none; }
 .ui-estrellas .ui-estrellas__on { color: var(--ui-aviso); }
 
+/* ── Logo de un negocio (LogoNegocio): imagen o iniciales sobre el naranja ── */
+.ui-logo {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ui-logo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ui-logo--imagen { background: var(--ui-surface-2); box-shadow: inset 0 0 0 1px var(--ui-line); }
+.ui-logo--chico { width: 36px; height: 36px; border-radius: 9px; font-size: 0.8rem; }
+.ui-logo--mediano { width: 44px; height: 44px; border-radius: 11px; font-size: 0.95rem; }
+
+.ui-logo--grande {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  font-size: 1.6rem;
+  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--primary) 70%, transparent);
+}
+
+@media (max-width: 600px) {
+  .ui-logo--grande { width: 56px; height: 56px; border-radius: 14px; font-size: 1.25rem; }
+}
+
 /* ── Calificación de un taller (Calificacion) ──────────────────────────── */
 .ui-calificacion { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.8125rem; }
 .ui-calificacion__promedio { color: var(--ui-text); font-variant-numeric: tabular-nums; }

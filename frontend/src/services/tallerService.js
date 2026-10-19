@@ -148,6 +148,18 @@ export async function talleresCercanos(token, { latitud, longitud }, { limite = 
   return handle(res, "No se pudieron calcular los talleres más cercanos");
 }
 
+/** El taller sube su logo (o una foto del local). Responde { logoUrl }. Mismo envío que la foto del vehículo. */
+export async function subirLogoTaller(token, archivo) {
+  const formData = new FormData();
+  formData.append("archivo", archivo);
+  const res = await apiFetch(`${BASE}/mi-taller/logo`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  return handle(res, "No se pudo subir el logo");
+}
+
 /** El taller ajusta el punto exacto de su local en el mapa. */
 export async function actualizarUbicacionTaller(token, { latitud, longitud }) {
   const res = await apiFetch(`${BASE}/mi-taller/datos`, {

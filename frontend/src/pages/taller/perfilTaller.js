@@ -3,6 +3,9 @@
 
 export const TARIFA_MAX = 1000000;
 export const HORARIO_MAX = 200;
+// Las mismas reglas del backend (ImagenSubida): las de la foto del vehículo, sin SVG
+export const TIPOS_LOGO = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+export const LOGO_MAX_MB = 5;
 
 /**
  * Lo que hace completo un perfil, en el orden en que conviene resolverlo. seccion: dónde se arregla dentro de Mi
@@ -15,6 +18,7 @@ const REQUISITOS = [
   { clave: "tarifa", texto: "Define tu tarifa por hora", seccion: "mt-servicios", hecho: (t) => t?.tarifaHora > 0 },
   { clave: "mecanicos", texto: "Registra al menos un mecánico activo", seccion: "mt-equipo",
     hecho: (_t, mecanicosActivos) => mecanicosActivos > 0 },
+  { clave: "logo", texto: "Sube el logo o una foto de tu taller", seccion: "mt-logo", hecho: (t) => !!t?.logoUrl },
   { clave: "telefono", texto: "Teléfono de contacto", admin: true, hecho: (t) => !!t?.telefono?.trim() },
   { clave: "direccion", texto: "Dirección escrita", admin: true, hecho: (t) => !!t?.direccion?.trim() },
   { clave: "especialidades", texto: "Servicios que ofreces", admin: true, hecho: (t) => (t?.especialidades || []).length > 0 },
@@ -40,6 +44,14 @@ export function errorTarifa(texto) {
   return null;
 }
 
+/** Error del archivo elegido como logo, o null si sirve. */
+export function errorLogo(archivo) {
+  if (!archivo) return "Elige una imagen.";
+  if (!TIPOS_LOGO.includes((archivo.type || "").toLowerCase())) return "El logo debe ser una imagen JPG, PNG, WEBP o GIF.";
+  if (archivo.size > LOGO_MAX_MB * 1024 * 1024) return `El logo debe pesar menos de ${LOGO_MAX_MB} MB.`;
+  return null;
+}
+
 export function errorHorario(texto) {
   return (texto || "").length > HORARIO_MAX ? `El horario admite hasta ${HORARIO_MAX} caracteres.` : null;
 }
@@ -52,7 +64,7 @@ export function comoLoVeElCliente(t) {
   return {
     id: t.id, nombre: t.nombre, direccion: t.direccion, ciudad: t.ciudad, telefono: t.telefono,
     latitud: t.latitud, longitud: t.longitud, horario: t.horario, especialidades: t.especialidades || [],
-    calificacion: t.rating ?? null, calificaciones: t.calificaciones ?? 0,
+    calificacion: t.rating ?? null, calificaciones: t.calificaciones ?? 0, logoUrl: t.logoUrl ?? null,
   };
 }
 

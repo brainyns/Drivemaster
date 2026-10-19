@@ -135,6 +135,8 @@ public class SecurityConfig {
                         // Mapa para elegir taller al pedir un diagnóstico (antes de la regla general /api/talleres/**)
                         .requestMatchers(HttpMethod.GET, "/api/talleres/mapa", "/api/talleres/cercanos").hasAnyRole("CLIENTE", "SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/talleres/mi-taller", "/api/talleres/mi-taller/**").hasRole("TALLER")
+                        // Logo de cualquier taller: también el ADMIN (el del dueño va por /mi-taller/logo, arriba)
+                        .requestMatchers(HttpMethod.POST, "/api/talleres/*/logo").hasAnyRole("SUPERADMIN", "ADMIN")
                         // El ADMIN solo ve la lista de talleres y los aprueba o rechaza; crear, editar y pausar es del SUPERADMIN
                         .requestMatchers(HttpMethod.PATCH, "/api/talleres/*/aprobacion").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/talleres").hasAnyRole("SUPERADMIN", "ADMIN")

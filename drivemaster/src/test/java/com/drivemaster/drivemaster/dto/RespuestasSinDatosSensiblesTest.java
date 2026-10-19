@@ -81,14 +81,14 @@ class RespuestasSinDatosSensiblesTest {
                 .id("t1").usuarioId("u-dueno").nombre("AutoMax").ciudad("Cali").direccion("Cra 1 # 2-3").barrio("Centro")
                 .telefono("3001234567").latitud(3.45).longitud(-76.53).especialidades(List.of("Frenos", "Motor"))
                 .rating(4.5).calificaciones(8).precioManoObra(80000.0).tarifaHora(60000.0).horario("L-V 8-18")
-                .estadoAprobacion("APROBADO").motivoRechazo("x").activo(true)
+                .estadoAprobacion("APROBADO").motivoRechazo("x").activo(true).logoUrl("https://img/logo.png")
                 .mecanicos(List.of(Mecanico.builder().id("m1").nombre("Carlos").telefono("3110000000").build()))
                 .build();
 
         JsonNode nodo = json.valueToTree(TallerMapaDTO.de(taller));
 
         assertEquals(List.of("id", "nombre", "direccion", "ciudad", "telefono", "latitud", "longitud", "horario",
-                "especialidades", "calificacion", "calificaciones"), iterar(nodo));
+                "especialidades", "calificacion", "calificaciones", "logoUrl"), iterar(nodo));
         for (String interno : List.of("usuarioId", "correoUsuario", "mecanicos", "tarifaHora", "precioManoObra",
                 "estadoAprobacion", "motivoRechazo", "activo", "planActual")) {
             assertFalse(nodo.has(interno), interno + " no debe salir en el mapa del cliente");
