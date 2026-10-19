@@ -4,7 +4,8 @@ export default function BarraProgreso({ valor, etiqueta, tono = "acento" }) {
   return (
     <span className={`ui-progreso ui-progreso--${tono}`} role="progressbar" aria-label={etiqueta}
       aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-      <span className="ui-progreso__barra" style={{ width: `${pct}%` }} />
+      {/* Escala en vez de ancho: el cambio se anima sin recalcular el layout */}
+      <span className="ui-progreso__barra" style={{ transform: `scaleX(${pct / 100})` }} />
     </span>
   );
 }
