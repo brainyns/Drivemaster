@@ -13,6 +13,8 @@ public record PerfilClienteResponse(
         String telefono,
         String documento,
         String ciudad,
+        // Departamento: lo pide y lo guarda el checkout del flujo anterior
+        String region,
         String direccion,
         String referencia,
         String rol,
@@ -20,7 +22,7 @@ public record PerfilClienteResponse(
 
     public static PerfilClienteResponse de(Usuario u) {
         return new PerfilClienteResponse(u.getId(), u.getNombre(), u.getCorreo(), u.getTelefono(),
-                u.getIdentificacion(), u.getCiudad(), u.getDireccion(), u.getReferencia(), u.getRol(),
+                u.getIdentificacion(), u.getCiudad(), u.getRegion(), u.getDireccion(), u.getReferencia(), u.getRol(),
                 "GOOGLE".equalsIgnoreCase(u.getProveedor()) || u.getGoogleId() != null);
     }
 }

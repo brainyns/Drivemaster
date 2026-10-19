@@ -69,16 +69,20 @@ function DatosPersonales({ token, correo, onNombre }) {
         setInicial(d);
         setErrorCarga(null);
       })
-      .catch((e) => { if (vivo) setErrorCarga(e.message); });
+      .catch((e) => { if (vivo) setErrorCarga({ texto: e.message, estado: e.estado }); });
     return () => { vivo = false; };
   }, [token, intento]);
 
+  // Un cliente nuevo llega con sus campos vacíos (200) y ve el formulario vacío. El 404 solo pasa si la cuenta
+  // de la sesión ya no existe: reintentar no sirve, el mensaje dice qué hacer.
   if (errorCarga) {
-    return (
-      <Alerta onReintentar={() => { setErrorCarga(null); setIntento((n) => n + 1); }}>
-        No pudimos cargar tus datos. {errorCarga}
-      </Alerta>
-    );
+    return errorCarga.estado === 404
+      ? <Alerta tono="aviso">{errorCarga.texto}</Alerta>
+      : (
+        <Alerta onReintentar={() => { setErrorCarga(null); setIntento((n) => n + 1); }}>
+          No pudimos cargar tus datos. {errorCarga.texto}
+        </Alerta>
+      );
   }
   if (!datos) return <Esqueleto variante="formulario" cantidad={3} texto="Cargando tus datos…" />;
 

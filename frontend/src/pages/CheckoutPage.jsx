@@ -140,13 +140,16 @@ export default function CheckoutPage({
   useEffect(() => {
     const cargar = async () => {
       try {
+        // PerfilClienteResponse: el documento llega como "documento" (el PUT lo sigue recibiendo como
+        // "identificacion"). Si la consulta falla (p. ej. 404, cuenta inexistente) el formulario queda vacío
+        // con el aviso de completar datos, el flujo normal de un cliente sin datos.
         const perfilRes = await apiFetch(`${API}/clientes/mi-perfil`, { headers: headers(token) });
         if (perfilRes.ok) {
           const perfil = await perfilRes.json();
           if (perfil.id) {
             setCliente(perfil);
             setFormData({
-              identificacion: perfil.identificacion || "",
+              identificacion: perfil.documento || "",
               telefono: perfil.telefono || "",
               direccion: perfil.direccion || "",
               ciudad: perfil.ciudad || "",

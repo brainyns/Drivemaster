@@ -15,12 +15,22 @@ export async function listarClientes(token) {
   return res.json();
 }
 
-/** Perfil del cliente autenticado (dirección, ciudad, teléfono...). */
+/**
+ * Perfil del cliente autenticado (PerfilClienteResponse: dirección, ciudad, teléfono, documento...). Un cliente
+ * nuevo recibe sus campos vacíos (200); el 404 solo llega si la cuenta de la sesión ya no existe. El error lleva
+ * `estado` para que quien llama distinga ese caso de una falla pasajera.
+ */
 export async function obtenerMiPerfil(token) {
   const res = await apiFetch(`${BASE_URL}/mi-perfil`, {
     headers: buildHeaders(token),
   });
-  if (!res.ok) throw new Error("No se pudo cargar tu perfil");
+  if (!res.ok) {
+    const error = new Error(res.status === 404
+      ? "No encontramos tu cuenta. Cierra sesión y vuelve a entrar."
+      : "No se pudo cargar tu perfil");
+    error.estado = res.status;
+    throw error;
+  }
   return res.json();
 }
 

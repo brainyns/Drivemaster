@@ -25,7 +25,7 @@ class RespuestasSinDatosSensiblesTest {
         return Usuario.builder()
                 .id("u1").nombre("Ana").correo("ana@demo.com").password("$2a$10$hash")
                 .googleId(googleId).proveedor(proveedor)
-                .identificacion("123").telefono("3001234567").direccion("Calle 1").ciudad("Cali").referencia("Casa azul")
+                .identificacion("123").telefono("3001234567").direccion("Calle 1").ciudad("Cali").region("Valle").referencia("Casa azul")
                 .rol("CLIENTE").permisos(List.of("VER_CATALOGO")).activo(true)
                 .intentosFallidos(2).bloqueado(false).fechaBloqueo(Instant.now()).fechaExpiracion(Instant.now())
                 .fechaCreacion(Instant.now()).ultimoLogin(Instant.now())
@@ -42,8 +42,9 @@ class RespuestasSinDatosSensiblesTest {
         JsonNode nodo = json.valueToTree(PerfilClienteResponse.de(usuario("LOCAL", null)));
 
         sinSensibles(nodo);
-        assertEquals(List.of("id", "nombre", "email", "telefono", "documento", "ciudad", "direccion", "referencia", "rol",
-                "cuentaGoogle"), iterar(nodo));
+        assertEquals(List.of("id", "nombre", "email", "telefono", "documento", "ciudad", "region", "direccion", "referencia",
+                "rol", "cuentaGoogle"), iterar(nodo));
+        assertEquals("Valle", nodo.get("region").asText());
         assertEquals("ana@demo.com", nodo.get("email").asText());
         assertEquals("123", nodo.get("documento").asText());
         assertFalse(nodo.get("cuentaGoogle").asBoolean());
