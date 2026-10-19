@@ -1,132 +1,204 @@
-/* ── Pedidos de la tienda (prefijo pd-, BEM) ──────────────────────────────
-   Tarjeta compacta con jerarquía: número y estado arriba con el total,
-   productos y entrega en dos columnas, y las acciones al pie.
-   Tokens del sistema común (--ui-*, --fs-*), tema claro y oscuro. */
+/* ── Pedidos de la tienda (prefijo pdt-, BEM) ─────────────────────────────
+   Cabecera, filtros (ui-chip), buscador, chips, tarjetas (ui-card), campos, historial, avisos, vacío, carga y
+   barra inferior son de ui.css; aquí la fila de la lista (columnas en escritorio, tarjeta en celular), los
+   productos con imagen y totales, y el bloque de la acción del estado. Tokens --ui-*, los dos temas. */
 
-.pd-encabezado { margin-bottom: 1.25rem; }
-.pd-encabezado__titulo { margin: 0 0 .25rem; font-size: var(--fs-titulo); font-weight: 650; letter-spacing: -0.01em; line-height: 1.2; }
-.pd-encabezado__sub { margin: 0; max-width: 65ch; font-size: var(--fs-texto); line-height: 1.55; color: var(--ui-muted); }
+.pdt-alerta { margin-bottom: var(--ui-sp-4); }
 
-.pd-lista {
+.pdt-barra {
   display: flex;
-  flex-direction: column;
-  gap: var(--ui-sp-4);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: var(--ui-sp-4);
 }
 
-.pd-pedido {
+/* ── Lista: una fila por pedido ──────────────────────────────────────── */
+.pdt-lista { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+
+.pdt-fila {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1.4fr) minmax(0, 1fr) 120px 20px;
+  align-items: center;
+  gap: 8px 16px;
+  width: 100%;
+  padding: 14px 18px;
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
-  border-radius: var(--ui-r-lg);
-  box-shadow: var(--ui-sombra-1);
-  overflow: hidden;
+  border-radius: 12px;
+  color: var(--ui-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--ui-dur) ease;
 }
 
-/* Los que esperan una acción de la tienda llevan la marca naranja a la izquierda */
-.pd-pedido--accion { box-shadow: inset 3px 0 0 var(--primary), var(--ui-sombra-1); }
+.pdt-fila:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.pdt-fila--vencido { border-color: color-mix(in srgb, var(--ui-error) 55%, var(--ui-line)); }
 
-.pd-pedido__cabecera {
+.pdt-fila__id,
+.pdt-fila__quien { display: grid; gap: 2px; min-width: 0; }
+.pdt-fila__numero { font-family: var(--ui-mono); font-size: 0.95rem; letter-spacing: 0.02em; }
+.pdt-fila__quien strong { font-size: 0.95rem; overflow-wrap: anywhere; }
+.pdt-fila__meta { font-size: 0.8125rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+.pdt-fila__estado { display: flex; flex-wrap: wrap; gap: 6px; }
+.pdt-fila__total { font-size: 1rem; text-align: right; }
+
+.pdt-fila__flecha {
+  color: var(--ui-muted);
+  transition: transform var(--ui-dur) var(--ui-ease), color var(--ui-dur) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pdt-fila:hover { border-color: var(--ui-muted); }
+  .pdt-fila:hover .pdt-fila__flecha { transform: translateX(3px); color: var(--ui-text); }
+}
+
+/* ── Detalle ─────────────────────────────────────────────────────────── */
+.ui-page-header .pdt-meta {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   flex-wrap: wrap;
-  gap: var(--ui-sp-2) var(--ui-sp-4);
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--ui-line);
-}
-
-.pd-pedido__id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-
-.pd-pedido__numero {
-  margin: 0;
-  font-size: var(--fs-subtitulo);
-  font-weight: 650;
-  line-height: 1.25;
-}
-
-.pd-pedido__meta { font-size: var(--fs-etiqueta); color: var(--ui-muted); }
-
-.pd-pedido__resumen {
-  display: flex;
   align-items: center;
-  gap: var(--ui-sp-3);
-}
-
-.pd-pedido__total {
-  font-size: var(--fs-subtitulo);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.pd-pedido__cuerpo {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-}
-
-.pd-pedido__productos,
-.pd-pedido__entrega {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-sp-3);
-  padding: 14px 20px;
-  min-width: 0;
-}
-
-.pd-pedido__entrega { border-left: 1px solid var(--ui-line); background: var(--ui-surface-2); }
-
-.pd-pedido__subtitulo {
-  margin: 0;
-  font-size: var(--fs-pequeno);
-  font-weight: 700;
-  letter-spacing: .07em;
-  text-transform: uppercase;
+  gap: 8px 12px;
+  margin: 10px 0 0;
+  font-size: 0.875rem;
   color: var(--ui-muted);
 }
 
-/* Productos */
-.pd-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--ui-sp-2); }
-.pd-item { display: flex; justify-content: space-between; align-items: baseline; gap: var(--ui-sp-3); }
-.pd-item__desc { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.pd-item__nombre { font-size: var(--fs-texto); font-weight: 600; }
-.pd-item__meta { font-size: var(--fs-etiqueta); color: var(--ui-muted); }
-.pd-item__valor { font-size: var(--fs-texto); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pdt-detalle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
 
-.pd-totales { margin: 0; padding-top: var(--ui-sp-2); border-top: 1px dashed var(--ui-line); display: flex; flex-direction: column; gap: 2px; }
-.pd-totales > div { display: flex; justify-content: space-between; gap: var(--ui-sp-3); font-size: var(--fs-etiqueta); color: var(--ui-muted); }
-.pd-totales dd { margin: 0; font-variant-numeric: tabular-nums; }
-.pd-totales__final { margin-top: 2px; font-size: var(--fs-texto) !important; font-weight: 700; color: var(--ui-text) !important; }
+.pdt-detalle__principal,
+.pdt-detalle__lateral { display: grid; gap: 16px; min-width: 0; }
+.pdt-detalle__lateral { position: sticky; top: 88px; }
 
-/* Entrega y seguimiento */
-.pd-destino { margin: 0; font-size: var(--fs-texto); line-height: 1.5; }
-.pd-nota { margin: 0; font-size: var(--fs-etiqueta); line-height: 1.5; color: var(--ui-muted); }
-.pd-nota--plazo { color: var(--ui-text); font-weight: 600; }
-.pd-nota--error { color: var(--ui-error); font-weight: 600; }
-.pd-pedido__entrega .ss-alerta { margin: 0; }
+/* La tarjeta con la acción del estado lleva el borde naranja: es lo primero que se busca */
+.pdt-accion { border-color: color-mix(in srgb, var(--primary) 60%, var(--ui-line)); box-shadow: var(--ui-sombra-1); }
+.pdt-sigue { display: grid; gap: 14px; }
 
-/* Pie: acciones y formularios */
-.pd-pedido__pie {
-  padding: 12px 20px;
+.pdt-root .pdt-texto { margin: 0; font-size: 0.9rem; line-height: 1.55; color: var(--ui-text); text-wrap: pretty; }
+
+.pdt-root .pdt-plazo {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ui-aviso-bg);
+  color: var(--ui-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.pdt-plazo svg { flex-shrink: 0; margin-top: 2px; color: var(--ui-aviso); }
+.pdt-root .pdt-plazo--vencido { background: var(--ui-error-bg); }
+.pdt-plazo--vencido svg { color: var(--ui-error); }
+
+.pdt-botones { display: grid; gap: 8px; }
+.pdt-peligro.ui-btn { justify-self: center; color: var(--ui-error); }
+.pdt-codigo, .pdt-form { display: grid; gap: 14px; }
+.pdt-motivos { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.pdt-motivos .ui-opcion { width: 100%; }
+
+.pdt-ancho { grid-column: 1 / -1; }
+
+.pdt-enlace {
+  color: var(--primary-text);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.pdt-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 4px; }
+
+/* Productos: foto, nombre y cantidad, valor a la derecha */
+.pdt-items { display: grid; margin: 0; padding: 0; list-style: none; }
+
+.pdt-item {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.pdt-item:first-child { border-top: 0; padding-top: 0; }
+.pdt-item__imagen.mk-imagen { width: 56px; border-radius: 10px; }
+.pdt-item__texto { display: grid; gap: 3px; min-width: 0; }
+.pdt-item__texto strong { font-size: 0.95rem; overflow-wrap: anywhere; }
+
+.pdt-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 0.8125rem;
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pdt-item__valor { font-size: 0.95rem; }
+
+.pdt-totales {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding-top: 14px;
   border-top: 1px solid var(--ui-line);
 }
 
-.pd-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-sp-2); }
+.pdt-totales > div { display: flex; justify-content: space-between; gap: 12px; font-size: 0.9rem; color: var(--ui-muted); }
+.pdt-totales dd { margin: 0; color: var(--ui-text); font-variant-numeric: tabular-nums; }
 
-.pd-form { display: flex; flex-direction: column; gap: var(--ui-sp-3); }
-.pd-form__campo { display: grid; gap: .3rem; max-width: 34rem; }
-.pd-form__campo label,
-.pd-form__etiqueta { font-size: var(--fs-etiqueta); font-weight: 600; color: var(--ui-muted); }
-.pd-form__ayuda { margin: 0; font-size: var(--fs-etiqueta); color: var(--ui-muted); }
-.pd-form .ss-alerta { margin: 0; }
+.pdt-totales .pdt-totales__final {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ui-line-soft);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ui-text);
+}
 
-/* "No puedo despachar": borde de peligro, sin competir con la acción principal */
-.pd-btn-peligro { border-color: var(--ui-error); color: var(--ui-error); }
-.pd-btn-peligro:hover:not(:disabled) { border-color: var(--ui-error); background: var(--ui-error-bg); }
+/* ── Tableta y celular ───────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .pdt-fila { grid-template-columns: 110px minmax(0, 1fr) auto 20px; }
+  .pdt-fila__estado { grid-column: 2; grid-row: 2; }
+  .pdt-fila__total { grid-column: 3; grid-row: 1; }
+  .pdt-fila__flecha { grid-column: 4; grid-row: 1 / span 2; }
+}
 
-@media (max-width: 760px) {
-  .pd-pedido__cuerpo { grid-template-columns: minmax(0, 1fr); }
-  .pd-pedido__entrega { border-left: none; border-top: 1px solid var(--ui-line); }
-  .pd-pedido__cabecera,
-  .pd-pedido__productos,
-  .pd-pedido__entrega,
-  .pd-pedido__pie { padding-left: 16px; padding-right: 16px; }
+@media (max-width: 960px) {
+  .pdt-detalle { grid-template-columns: minmax(0, 1fr); }
+  .pdt-detalle__lateral { position: static; order: -1; }
+}
+
+/* Celular: cada pedido es una tarjeta; número y total arriba, quién y estado debajo */
+@media (max-width: 600px) {
+  .pdt-barra .ui-buscador { max-width: none; }
+
+  .pdt-fila {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 14px 16px;
+  }
+
+  .pdt-fila__id { grid-column: 1; grid-row: 1; }
+  .pdt-fila__total { grid-column: 2; grid-row: 1; }
+  .pdt-fila__quien { grid-column: 1 / -1; grid-row: 2; }
+  .pdt-fila__estado { grid-column: 1 / -1; grid-row: 3; }
+  .pdt-fila__flecha { display: none; }
+
+  .pdt-item { grid-template-columns: 48px minmax(0, 1fr); }
+  .pdt-item__imagen.mk-imagen { width: 48px; }
+  .pdt-item__valor { grid-column: 2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdt-fila, .pdt-fila__flecha { transition: none; }
+  .pdt-fila:hover .pdt-fila__flecha { transform: none; }
 }
