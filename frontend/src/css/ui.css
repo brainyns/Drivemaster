@@ -911,6 +911,65 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   .ui-logo--grande { width: 56px; height: 56px; border-radius: 14px; font-size: 1.25rem; }
 }
 
+/* ── Historial (Historial): del más reciente al más antiguo ───────────── */
+.ui-historial { display: grid; margin: 0; padding: 0; list-style: none; }
+
+.ui-historial__paso {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.ui-historial__paso:last-child { padding-bottom: 0; }
+
+/* La línea que une los pasos */
+.ui-historial__paso:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  bottom: 0;
+  left: 6px;
+  width: 1px;
+  background: var(--ui-line);
+}
+
+.ui-historial__marca {
+  width: 13px;
+  height: 13px;
+  margin-top: 3px;
+  border: 2px solid var(--ui-line);
+  border-radius: 50%;
+  background: var(--ui-surface);
+}
+
+.ui-historial__paso--actual .ui-historial__marca {
+  border-color: var(--primary);
+  background: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.ui-historial__paso--error .ui-historial__marca { border-color: var(--ui-error); background: var(--ui-error); box-shadow: none; }
+
+.ui-historial__texto { display: grid; gap: 2px; min-width: 0; }
+.ui-historial__texto strong { font-size: 0.875rem; color: var(--ui-text); }
+.ui-historial__texto time { font-size: 0.78rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+.ui-historial .ui-historial__detalle { margin: 2px 0 0; font-size: 0.82rem; line-height: 1.45; color: var(--ui-muted); overflow-wrap: anywhere; }
+
+/* Campo para un código (retiro, verificación): grande, monoespaciado y fácil de dictar */
+.ui-field__input.ui-field__input--codigo {
+  min-height: 56px;
+  font-family: var(--ui-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.ui-field__input--codigo::placeholder { letter-spacing: 0.18em; opacity: 0.6; }
+
 /* ── Calificación de un taller (Calificacion) ──────────────────────────── */
 .ui-calificacion { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 0.8125rem; }
 .ui-calificacion__promedio { color: var(--ui-text); font-variant-numeric: tabular-nums; }

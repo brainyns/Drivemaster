@@ -60,3 +60,11 @@ test("las piezas nuevas del panel llevan su accesibilidad", () => {
   assert.match(seccion, /aria-labelledby=\{idTitulo\}/);
   assert.match(leer("../src/components/ui/Indicador.jsx"), /type=\{onClick \? "button" : undefined\}/);
 });
+
+test("el historial es una lista ordenada con fechas en <time> y la marca es decorativa", () => {
+  const historial = leer("../src/components/ui/Historial.jsx");
+  assert.match(historial, /<ol className="ui-historial" aria-label=\{etiqueta\}>/);
+  assert.match(historial, /<time dateTime=\{p\.fecha\}>/);
+  assert.match(historial, /ui-historial__marca" aria-hidden="true"/);
+  assert.match(leer("../src/css/ui.css"), /\.ui-field__input\.ui-field__input--codigo \{/);
+});
