@@ -156,3 +156,35 @@ test("Formulario de producto: etiquetas asociadas, errores accesibles y las mism
     assert.ok(pagina.includes(llamada), `misma llamada: ${llamada}`);
   }
 });
+
+test("Inventario: filtros por producto, tipo y fechas; el stock que resulta y los errores del movimiento", async () => {
+  const { filtrarMovimientos, resumenMovimientos, stockResultante, erroresMovimiento } = await import("../src/pages/tienda/inventarioTienda.js");
+  const productos = { a: { nombre: "Filtro de aceite", codigo: "FIL-1" }, b: { nombre: "Bujía", codigo: "BUJ-2" } };
+  const movs = [
+    { id: 1, productoId: "a", tipo: "ENTRADA", cantidad: 10, fecha: "2026-10-01T10:00:00" },
+    { id: 2, productoId: "b", tipo: "SALIDA", cantidad: 2, fecha: "2026-10-05T10:00:00" },
+    { id: 3, productoId: "a", tipo: "AJUSTE", cantidad: 7, fecha: "2026-10-10T10:00:00" },
+  ];
+  const buscar = (f) => filtrarMovimientos(movs, f, (id) => productos[id]).map((m) => m.id);
+  assert.deepEqual(buscar({}), [3, 2, 1], "del más reciente al más antiguo");
+  assert.deepEqual(buscar({ busqueda: "fil-1" }), [3, 1]);
+  assert.deepEqual(buscar({ tipo: "SALIDA" }), [2]);
+  assert.deepEqual(buscar({ desde: "2026-10-05", hasta: "2026-10-05" }), [2], "el día final se incluye completo");
+  assert.deepEqual(resumenMovimientos(movs), { total: 3, entradas: 10, salidas: 2, ajustes: 1 });
+
+  assert.equal(stockResultante("ENTRADA", 4, "3"), 7);
+  assert.equal(stockResultante("SALIDA", 4, "3"), 1);
+  assert.equal(stockResultante("AJUSTE", 4, "9"), 9, "el ajuste fija el número contado");
+  assert.equal(stockResultante("ENTRADA", 4, ""), null);
+  assert.match(erroresMovimiento({ productoId: "a", tipo: "SALIDA", cantidad: "5", motivo: "x" }, 4).cantidad, /stock actual es 4/);
+  assert.equal(erroresMovimiento({ productoId: "a", tipo: "AJUSTE", cantidad: "0", motivo: "Conteo" }, 4).cantidad, undefined, "un conteo puede dar 0");
+  assert.deepEqual(Object.keys(erroresMovimiento({ productoId: "", tipo: "ENTRADA", cantidad: "", motivo: "" }, 0)), ["productoId", "cantidad", "motivo"]);
+});
+
+test("Inventario usa el sistema compartido, sin alert() y con la misma llamada", () => {
+  const pagina = leer("../src/pages/Movimientos.jsx");
+  for (const pieza of ["<EncabezadoPagina", "<Indicador", "<SeccionEditable", "<Campo", "<ChipEstado", "<EstadoVacio", "<Esqueleto",
+    "ui-table--tarjetas"]) assert.ok(pagina.includes(pieza), `usa ${pieza}`);
+  assert.doesNotMatch(pagina, /\balert\(/);
+  assert.ok(pagina.includes("registrarMovimiento({ ...form, cantidad: Number(form.cantidad), motivo: form.motivo.trim() }, token)"));
+});
