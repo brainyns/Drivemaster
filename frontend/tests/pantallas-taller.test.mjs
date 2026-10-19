@@ -102,3 +102,14 @@ test("Informes: período con chips, estrellas dibujadas y tarjetas compartidas",
   assert.ok(pagina.includes("onReintentar={() => setIntento((n) => n + 1)}"), "el error se puede reintentar");
   assert.ok(pagina.includes('className="ui-card ti-tarjeta"'));
 });
+
+test("Órdenes anteriores: cabecera, chips compartidos y sin componentes definidos dentro del render", () => {
+  const pagina = leer("../src/pages/taller/OrdenesAnteriores.jsx");
+  assert.match(pagina, /<EncabezadoPagina\s+titulo="Órdenes anteriores"/);
+  assert.ok(pagina.includes("catalogo={ESTADOS_ORDEN_ANTERIOR}"), "estado con el catálogo compartido");
+  assert.ok(!/^ {2}function \w+\(/m.test(pagina), "los componentes no se crean en cada render");
+  for (const llamada of ["confirmarPagoOrden(token, id)", "iniciarServicio(token, id)", "programarCita(token, id, fechasCita[id])"]) {
+    assert.ok(pagina.includes(llamada), `misma llamada: ${llamada}`);
+  }
+  assert.doesNotMatch(leer("../src/css/panel-taller.css"), /border-left:\s*[2-9]px/);
+});

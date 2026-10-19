@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
 import { confirmarPagoOrden, iniciarServicio, finalizarServicio, programarCita } from "../../services/ordenServicioService";
 import { getToken } from "../../services/authService";
+import { formatFecha, formatFechaHora, formatPrecio, refSolicitud } from "../../components/servicio/estadosServicio";
+import { ESTADOS_ORDEN_ANTERIOR } from "../../components/servicio/ordenesAnteriores";
+import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
+import Indicador from "../../components/ui/Indicador";
+import ChipEstado from "../../components/ui/ChipEstado";
+import Campo from "../../components/ui/Campo";
+import Alerta from "../../components/ui/Alerta";
+import EstadoVacio from "../../components/ui/EstadoVacio";
+import Esqueleto from "../../components/ui/Esqueleto";
+import Icon from "../../components/public/Icon";
 import "../../css/servicios.css";
 import "../../css/panel-taller.css";
 
@@ -22,44 +32,38 @@ const ETAPAS = [
   { estado: "FINALIZADA", label: "Finalizadas" },
 ];
 
-function formatPrecio(v) {
-  if (v == null) return "—";
-  return v.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
-}
-
-function formatFecha(f) {
-  if (!f) return "-";
-  return new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-function formatFechaHora(f) {
-  if (!f) return "-";
-  return new Date(f).toLocaleString("es-CO", {
-    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-  });
-}
-
 function diasDesde(f) {
   if (!f) return null;
   const dias = Math.floor((Date.now() - new Date(f).getTime()) / 86400000);
   return dias < 0 ? 0 : dias;
 }
 
-function refOrden(id) {
-  return id ? id.slice(-6).toUpperCase() : "—";
+function FotoVehiculo({ o }) {
+  return o.vehiculoImagenUrl ? (
+    <img className="pt-card-foto" src={o.vehiculoImagenUrl} alt="" loading="lazy" />
+  ) : (
+    <div className="pt-card-foto pt-card-foto--ph" aria-hidden="true"><Icon name="car" size={34} /></div>
+  );
 }
 
-function Badge({ estado }) {
-  const map = {
-    COTIZADA:   ["sv-badge-cotizada",   "Cotizada"],
-    PAGADA:     ["sv-badge-pagada",     "Pagada"],
-    EN_PROCESO: ["sv-badge-proceso",    "En proceso"],
-    FINALIZADA: ["sv-badge-finalizada", "Finalizada"],
-    CANCELADA:  ["sv-badge-cancelada",  "Cancelada"],
-  };
-  const [cls, label] = map[estado] || ["sv-badge-cotizada", estado];
-  return <span className={`sv-badge ${cls}`}><span className="sv-badge-dot" />{label}</span>;
+/** Referencia, estado (con texto) y, si aplica, el aviso de retraso. */
+function CabeceraOrden({ o }) {
+  return (
+    <div className="pt-card-head">
+      <span className="pt-card-ref">#{refSolicitud(o.id)}</span>
+      <span className="pt-card-chips">
+        <ChipEstado estado={o.estado} catalogo={ESTADOS_ORDEN_ANTERIOR} />
+        {o.retrasada && <ChipEstado tono="error">Retrasada</ChipEstado>}
+      </span>
+    </div>
+  );
 }
+
+const VACIOS = {
+  ordenes: ["Nada por iniciar", "No tienes servicios pagados esperando inicio."],
+  proceso: ["Nada en proceso", "No tienes servicios en el taller ahora."],
+  finalizadas: ["Aún sin finalizar", "Los servicios que finalices quedan aquí."],
+};
 
 export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga, onRecargar }) {
   const [error, setError] = useState(null);
@@ -67,6 +71,7 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
   const [procesando, setProcesando] = useState(null);
   const [observaciones, setObservaciones] = useState({});
   const [fechasCita, setFechasCita] = useState({});
+  const [reintentando, setReintentando] = useState(false);
 
   const token = getToken();
   const cargar = onRecargar;
@@ -80,34 +85,6 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
   const enProceso   = useMemo(() => ordenes.filter(o => o.estado === "EN_PROCESO"), [ordenes]);
   const finalizadas = useMemo(() => ordenes.filter(o => o.estado === "FINALIZADA"), [ordenes]);
   const retrasadas  = useMemo(() => ordenes.filter(o => o.retrasada), [ordenes]);
-
-  function FotoVehiculo({ o }) {
-    return o.vehiculoImagenUrl ? (
-      <img
-        className="pt-card-foto"
-        src={o.vehiculoImagenUrl}
-        alt={o.vehiculoDescripcion || "Vehículo"}
-        loading="lazy"
-      />
-    ) : (
-      <div className="pt-card-foto pt-card-foto--ph" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
-          <rect x="3" y="6" width="18" height="13" rx="2" />
-          <circle cx="9" cy="13" r="1.5" />
-          <path d="M21 17l-4.5-4.5-6 6" />
-        </svg>
-      </div>
-    );
-  }
-
-  function ChipEstado({ o }) {
-    return (
-      <span className="pt-card-chips">
-        <Badge estado={o.estado} />
-        {o.retrasada && <span className="pt-pill-late">Retrasada</span>}
-      </span>
-    );
-  }
 
   const ingresosFinalizadas = useMemo(
     () => finalizadas.reduce((s, o) => s + (o.precioManoObra || 0), 0),
@@ -180,110 +157,76 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
     }
   };
 
+  const reintentar = async () => {
+    setReintentando(true);
+    await cargar();
+    setReintentando(false);
+  };
+
   const conteoPor = (estado) => ordenes.filter(o => o.estado === estado).length;
   const sinNada = ordenes.length === 0;
   // El flujo se reparte solo sobre lo que no está cancelado, para que la barra cierre en 100%.
   const totalFlujo = ETAPAS.reduce((s, e) => s + conteoPor(e.estado), 0);
   const canceladas = ordenes.length - totalFlujo;
+  const conteoTab = (key) => (key === "ordenes" ? pagadas.length + porConfirmar.length
+    : key === "proceso" ? enProceso.length
+    : key === "finalizadas" ? finalizadas.length
+    : 0);
+  const vacio = (key) => <EstadoVacio icono="tool" titulo={VACIOS[key][0]} texto={VACIOS[key][1]} />;
 
   return (
     <div className="pt-anteriores">
-      <p className="pt-hint pt-anteriores__nota">
-        Son órdenes del flujo anterior. Esta sección desaparece sola cuando no quede ninguna por atender.
-      </p>
+      <EncabezadoPagina
+        titulo="Órdenes anteriores"
+        descripcion="Son órdenes del flujo anterior. Esta sección desaparece sola cuando no quede ninguna por atender."
+      />
 
-      {(error || errorCarga) && <p className="pt-error">{error || errorCarga}</p>}
+      {errorCarga && (
+        <Alerta className="pt-anteriores__alerta" onReintentar={cargar ? reintentar : undefined} reintentando={reintentando}>
+          {errorCarga}
+        </Alerta>
+      )}
+      {error && <Alerta className="pt-anteriores__alerta" onCerrar={() => setError(null)}>{error}</Alerta>}
 
-      <nav className="pt-tabs" aria-label="Órdenes anteriores">
-        {TABS.map(t => {
-          const n = t.key === "ordenes" ? pagadas.length + porConfirmar.length
-            : t.key === "proceso" ? enProceso.length
-            : t.key === "finalizadas" ? finalizadas.length
-            : 0;
-          return (
-            <button
-              key={t.key}
-              className={`pt-tab${tab === t.key ? " pt-tab--activo" : ""}`}
-              aria-current={tab === t.key ? "page" : undefined}
-              onClick={() => setTab(t.key)}
-            >
-              {t.label}
-              {n > 0 && <span className="pt-tab-count">{n}</span>}
-            </button>
-          );
-        })}
-      </nav>
+      <div className="ui-filtros pt-anteriores__filtros" role="group" aria-label="Órdenes anteriores">
+        {TABS.map(t => (
+          <button key={t.key} type="button" className="ui-chip" aria-pressed={tab === t.key} onClick={() => setTab(t.key)}>
+            {t.label}
+            {conteoTab(t.key) > 0 && <span className="ui-chip__contador">{conteoTab(t.key)}</span>}
+          </button>
+        ))}
+      </div>
 
       {cargando ? (
-        <div className="pt-skel-wrap">
-          <div className="pt-skel-grid">
-            {[0, 1, 2, 3].map(i => <div className="pt-skel-card" key={i} />)}
-          </div>
-          <div className="pt-skel" />
-          <div className="pt-skel" />
-        </div>
+        <Esqueleto variante="lista" cantidad={3} texto="Cargando las órdenes anteriores…" />
       ) : sinNada ? (
-        <div className="pt-empty-state">
-          <div className="pt-empty-ico">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-              <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
-            </svg>
-          </div>
-          <h3>Todavía no te llega ningún servicio</h3>
-          <p>
-            Cuando un cliente pague una cotización, la orden aparece aquí lista para
-            programar el ingreso del vehículo.
-          </p>
-        </div>
+        <EstadoVacio icono="tool" titulo="Todavía no te llega ningún servicio"
+          texto="Cuando un cliente pague una cotización, la orden aparece aquí lista para programar el ingreso del vehículo." />
       ) : (
         <>
           {tab === "resumen" && (
             <>
-              <div className="pt-stats">
-                <div className="pt-stat-card">
-                  <span className="pt-stat-label">Por iniciar</span>
-                  <span className="pt-stat-value">{pagadas.length}</span>
-                  <span className="pt-stat-foot">Pagadas y sin trabajar</span>
-                </div>
-                <div className="pt-stat-card pt-stat-card--live">
-                  <span className="pt-stat-label">En proceso</span>
-                  <span className="pt-stat-value">{enProceso.length}</span>
-                  <span className="pt-stat-foot">Vehículos en el taller ahora</span>
-                </div>
-                <div className="pt-stat-card">
-                  <span className="pt-stat-label">Finalizadas</span>
-                  <span className="pt-stat-value">{finalizadas.length}</span>
-                  <span className="pt-stat-foot">Servicios entregados</span>
-                </div>
-                <div className="pt-stat-card">
-                  <span className="pt-stat-label">Citas agendadas</span>
-                  <span className="pt-stat-value">{conCita}</span>
-                  <span className="pt-stat-foot">{agenda.length} aún por llegar</span>
-                </div>
-                <div className={`pt-stat-card${retrasadas.length > 0 ? " pt-stat-card--late" : ""}`}>
-                  <span className="pt-stat-label">Con retraso</span>
-                  <span className="pt-stat-value">{retrasadas.length}</span>
-                  <span className="pt-stat-foot">
-                    {retrasadas.length === 0
-                      ? "Nada se quedó quieto"
-                      : "Servicios sin avance hace varios días"}
-                  </span>
-                </div>
-                <div className="pt-stat-card pt-stat-card--wide">
-                  <span className="pt-stat-label">Ingresos por mano de obra</span>
-                  <span className="pt-stat-value pt-stat-value--money">{formatPrecio(ingresosFinalizadas)}</span>
-                  <span className="pt-stat-foot">Suma de los servicios finalizados</span>
-                </div>
+              <div className="ui-indicadores pt-anteriores__indicadores">
+                <Indicador titulo="Por iniciar" valor={pagadas.length} pie="Pagadas y sin trabajar"
+                  tono={pagadas.length > 0 ? "accion" : undefined} />
+                <Indicador titulo="En proceso" valor={enProceso.length} pie="Vehículos en el taller ahora" />
+                <Indicador titulo="Finalizadas" valor={finalizadas.length} pie="Servicios entregados" />
+                <Indicador icono="calendar" titulo="Citas agendadas" valor={conCita} pie={`${agenda.length} aún por llegar`} />
+                <Indicador icono="alert" titulo="Con retraso" valor={retrasadas.length}
+                  tono={retrasadas.length > 0 ? "accion" : undefined}
+                  pie={retrasadas.length === 0 ? "Nada se quedó quieto" : "Servicios sin avance hace varios días"} />
+                <Indicador titulo="Ingresos por mano de obra" valor={formatPrecio(ingresosFinalizadas)} tono="ok"
+                  pie="Suma de los servicios finalizados" />
               </div>
 
-              <section className="pt-flow">
+              <section className="pt-flow" aria-labelledby="pt-flow-titulo">
                 <div className="pt-flow-head">
-                  <h2 className="pt-flow-title">Dónde están tus servicios</h2>
+                  <h2 id="pt-flow-titulo" className="pt-flow-title">Dónde están tus servicios</h2>
                   <span className="pt-flow-total">
                     {totalFlujo} en taller{canceladas > 0 && ` · ${canceladas} canceladas`}
                   </span>
                 </div>
-                <div className="pt-flow-bar">
+                <div className="pt-flow-bar" aria-hidden="true">
                   {totalFlujo === 0 ? (
                     <span className="pt-flow-seg pt-flow-seg--cotizada" style={{ width: "100%" }} />
                   ) : ETAPAS.map(e => {
@@ -294,191 +237,141 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
                         key={e.estado}
                         className={`pt-flow-seg pt-flow-seg--${e.estado.toLowerCase().replace("_", "-")}`}
                         style={{ width: `${pct}%` }}
-                        title={`${e.label}: ${n}`}
                       />
                     ) : null;
                   })}
                 </div>
-                <div className="pt-flow-legend">
+                <ul className="pt-flow-legend">
                   {ETAPAS.map(e => (
-                    <span className="pt-flow-key" key={e.estado}>
-                      <i className={`pt-flow-dot pt-flow-seg--${e.estado.toLowerCase().replace("_", "-")}`} />
+                    <li className="pt-flow-key" key={e.estado}>
+                      <i className={`pt-flow-dot pt-flow-seg--${e.estado.toLowerCase().replace("_", "-")}`} aria-hidden="true" />
                       {e.label}
                       <strong>{conteoPor(e.estado)}</strong>
-                    </span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </section>
             </>
           )}
 
           {tab === "ordenes" && (
-            <div className="pt-list">
-              {porConfirmar.map(o => (
-                <article className="pt-card" key={o.id}>
-                  <div className="pt-card-media">
-                    <FotoVehiculo o={o} />
-                  </div>
-                  <div className="pt-card-body">
-                    <div className="pt-card-head">
-                      <span className="pt-card-ref">#{refOrden(o.id)}</span>
-                      <ChipEstado o={o} />
-                    </div>
-                    <h3 className="pt-card-title">{o.vehiculoDescripcion || "Vehículo por identificar"}</h3>
-                    <p className="pt-card-meta">
-                      Pago reportado: {o.metodoPago === "TRANSFERENCIA" ? "Transferencia" : "Efectivo"}
-                      {o.referenciaPago ? ` · Comprobante ${o.referenciaPago}` : ""}
-                    </p>
-                    <p className="pt-card-total">{formatPrecio(o.total)}</p>
-                  </div>
-                  <div className="pt-card-actions">
-                    <button
-                      className="sv-btn pt-btn-block"
-                      disabled={procesando === o.id}
-                      onClick={() => handleConfirmarPago(o.id)}
-                    >
-                      {procesando === o.id ? "Procesando…" : "Confirmar pago recibido"}
-                    </button>
-                  </div>
-                </article>
-              ))}
-              {pagadas.length === 0 ? (
-                porConfirmar.length === 0 && <p className="sv-empty">No tienes servicios pagados esperando inicio.</p>
-              ) : pagadas.map(o => (
-                <article className="pt-card" key={o.id}>
-                  <div className="pt-card-media">
-                    <FotoVehiculo o={o} />
-                  </div>
-                  <div className="pt-card-body">
-                    <div className="pt-card-head">
-                      <span className="pt-card-ref">#{refOrden(o.id)}</span>
-                      <ChipEstado o={o} />
-                    </div>
-                    <h3 className="pt-card-title">{o.vehiculoDescripcion || "Vehículo por identificar"}</h3>
-                    <p className="pt-card-meta">
-                      {o.productoNombre || "Sin repuesto asociado"} · Mano de obra {formatPrecio(o.precioManoObra)}
-                    </p>
-                    <p className="pt-card-total">{formatPrecio(o.total)}</p>
-                  </div>
-                  <div className="pt-card-actions">
-                    <div className="pt-programar">
-                      <label className="pt-label" htmlFor={`cita-${o.id}`}>Ingreso del vehículo</label>
-                      <input
-                        id={`cita-${o.id}`}
-                        className="pt-input"
-                        type="datetime-local"
-                        value={fechasCita[o.id] || ""}
-                        onChange={(e) => setFechasCita(prev => ({ ...prev, [o.id]: e.target.value }))}
-                      />
-                      {o.fechaProgramada ? (
-                        <span className="pt-programado">Ya agendado: {formatFechaHora(o.fechaProgramada)}</span>
-                      ) : (
-                        <span className="pt-vacio-hint">El cliente aún no tiene cita</span>
-                      )}
-                      <button
-                        className="sv-btn-outline pt-btn-block"
-                        disabled={procesando === o.id || !fechasCita[o.id]}
-                        onClick={() => handleProgramar(o.id)}
-                      >
-                        {procesando === o.id ? "Enviando…" : "Programar y avisar"}
-                      </button>
-                    </div>
-                    <button
-                      className="sv-btn pt-btn-block"
-                      disabled={procesando === o.id}
-                      onClick={() => handleIniciar(o.id)}
-                    >
-                      {procesando === o.id ? "Procesando…" : "Iniciar servicio"}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-
-          {tab === "proceso" && (
-            <div className="pt-list">
-              {enProceso.length === 0 ? (
-                <p className="sv-empty">No tienes servicios en proceso.</p>
-              ) : enProceso.map(o => {
-                const dias = diasDesde(o.fechaInicio);
-                return (
-                  <article className="pt-card pt-card--live" key={o.id}>
-                    <div className="pt-card-media">
-                      <FotoVehiculo o={o} />
-                    </div>
+            porConfirmar.length + pagadas.length === 0 ? vacio("ordenes") : (
+              <div className="pt-list">
+                {porConfirmar.map(o => (
+                  <article className="pt-card" key={o.id}>
+                    <div className="pt-card-media"><FotoVehiculo o={o} /></div>
                     <div className="pt-card-body">
-                      <div className="pt-card-head">
-                        <span className="pt-card-ref">#{refOrden(o.id)}</span>
-                        <ChipEstado o={o} />
-                      </div>
+                      <CabeceraOrden o={o} />
                       <h3 className="pt-card-title">{o.vehiculoDescripcion || "Vehículo por identificar"}</h3>
-                      <p className="pt-card-meta">{o.productoNombre || "Sin repuesto asociado"}</p>
                       <p className="pt-card-meta">
-                        Iniciado el {formatFecha(o.fechaInicio)}
-                        {dias !== null && dias > 0 && <span className="pt-dias">hace {dias} día{dias === 1 ? "" : "s"}</span>}
+                        Pago reportado: {o.metodoPago === "TRANSFERENCIA" ? "Transferencia" : "Efectivo"}
+                        {o.referenciaPago ? ` · Comprobante ${o.referenciaPago}` : ""}
                       </p>
                       <p className="pt-card-total">{formatPrecio(o.total)}</p>
                     </div>
                     <div className="pt-card-actions">
-                      <div className="pt-finalizar">
-                        <label className="pt-label" htmlFor={`obs-${o.id}`}>
-                          Observaciones del servicio
-                        </label>
-                        <textarea
-                          id={`obs-${o.id}`}
-                          className="pt-textarea"
-                          placeholder="Qué se hizo, qué se reemplaza, si el cliente debe volver…"
-                          value={observaciones[o.id] || ""}
-                          onChange={(e) => setObservaciones(prev => ({ ...prev, [o.id]: e.target.value }))}
-                        />
-                        <button
-                          className="sv-btn pt-btn-block"
-                          disabled={procesando === o.id}
-                          onClick={() => handleFinalizar(o.id)}
-                        >
+                      <button type="button" className="ui-btn ui-btn--primario ui-btn--bloque"
+                        disabled={procesando === o.id} aria-busy={procesando === o.id}
+                        onClick={() => handleConfirmarPago(o.id)}>
+                        {procesando === o.id ? "Procesando…" : "Confirmar pago recibido"}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+                {pagadas.map(o => (
+                  <article className="pt-card" key={o.id}>
+                    <div className="pt-card-media"><FotoVehiculo o={o} /></div>
+                    <div className="pt-card-body">
+                      <CabeceraOrden o={o} />
+                      <h3 className="pt-card-title">{o.vehiculoDescripcion || "Vehículo por identificar"}</h3>
+                      <p className="pt-card-meta">
+                        {o.productoNombre || "Sin repuesto asociado"} · Mano de obra {formatPrecio(o.precioManoObra)}
+                      </p>
+                      <p className="pt-card-total">{formatPrecio(o.total)}</p>
+                    </div>
+                    <div className="pt-card-actions">
+                      <Campo id={`cita-${o.id}`} label="Ingreso del vehículo"
+                        ayuda={o.fechaProgramada ? `Ya agendado: ${formatFechaHora(o.fechaProgramada)}` : "El cliente aún no tiene cita."}>
+                        <input className="ui-field__input" type="datetime-local" value={fechasCita[o.id] || ""}
+                          onChange={(e) => setFechasCita(prev => ({ ...prev, [o.id]: e.target.value }))} />
+                      </Campo>
+                      <button type="button" className="ui-btn ui-btn--secundario ui-btn--bloque"
+                        disabled={procesando === o.id || !fechasCita[o.id]}
+                        onClick={() => handleProgramar(o.id)}>
+                        {procesando === o.id ? "Enviando…" : "Programar y avisar"}
+                      </button>
+                      <button type="button" className="ui-btn ui-btn--primario ui-btn--bloque"
+                        disabled={procesando === o.id} aria-busy={procesando === o.id}
+                        onClick={() => handleIniciar(o.id)}>
+                        {procesando === o.id ? "Procesando…" : "Iniciar servicio"}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )
+          )}
+
+          {tab === "proceso" && (
+            enProceso.length === 0 ? vacio("proceso") : (
+              <div className="pt-list">
+                {enProceso.map(o => {
+                  const dias = diasDesde(o.fechaInicio);
+                  return (
+                    <article className="pt-card" key={o.id}>
+                      <div className="pt-card-media"><FotoVehiculo o={o} /></div>
+                      <div className="pt-card-body">
+                        <CabeceraOrden o={o} />
+                        <h3 className="pt-card-title">{o.vehiculoDescripcion || "Vehículo por identificar"}</h3>
+                        <p className="pt-card-meta">{o.productoNombre || "Sin repuesto asociado"}</p>
+                        <p className="pt-card-meta">
+                          Iniciado el {formatFecha(o.fechaInicio)}
+                          {dias !== null && dias > 0 && ` · hace ${dias} día${dias === 1 ? "" : "s"}`}
+                        </p>
+                        <p className="pt-card-total">{formatPrecio(o.total)}</p>
+                      </div>
+                      <div className="pt-card-actions">
+                        <Campo id={`obs-${o.id}`} label="Observaciones del servicio" opcional>
+                          <textarea className="ui-field__input" rows={3}
+                            placeholder="Qué se hizo, qué se reemplaza, si el cliente debe volver…"
+                            value={observaciones[o.id] || ""}
+                            onChange={(e) => setObservaciones(prev => ({ ...prev, [o.id]: e.target.value }))} />
+                        </Campo>
+                        <button type="button" className="ui-btn ui-btn--primario ui-btn--bloque"
+                          disabled={procesando === o.id} aria-busy={procesando === o.id}
+                          onClick={() => handleFinalizar(o.id)}>
                           {procesando === o.id ? "Procesando…" : "Finalizar servicio"}
                         </button>
                       </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )
           )}
 
           {tab === "finalizadas" && (
-            <div className="pt-list">
-              {finalizadas.length === 0 ? (
-                <p className="sv-empty">Aún no has finalizado servicios.</p>
-              ) : finalizadas.map(o => (
-                <article className="pt-card pt-card--done" key={o.id}>
-                  <div className="pt-card-media">
-                    <FotoVehiculo o={o} />
-                  </div>
-                  <div className="pt-card-body">
-                    <div className="pt-card-head">
-                      <span className="pt-card-ref">#{refOrden(o.id)}</span>
-                      <ChipEstado o={o} />
+            finalizadas.length === 0 ? vacio("finalizadas") : (
+              <div className="pt-list">
+                {finalizadas.map(o => (
+                  <article className="pt-card" key={o.id}>
+                    <div className="pt-card-media"><FotoVehiculo o={o} /></div>
+                    <div className="pt-card-body">
+                      <CabeceraOrden o={o} />
+                      <h3 className="pt-card-title">{o.vehiculoDescripcion || "Vehículo por identificar"}</h3>
+                      <p className="pt-card-meta">{o.productoNombre || "Sin repuesto asociado"}</p>
+                      <p className="pt-card-meta">Finalizado el {formatFecha(o.fechaFinalizacion)}</p>
+                      {o.observaciones && <p className="pt-card-note">“{o.observaciones}”</p>}
                     </div>
-                    <h3 className="pt-card-title">{o.vehiculoDescripcion || "Vehículo por identificar"}</h3>
-                    <p className="pt-card-meta">{o.productoNombre || "Sin repuesto asociado"}</p>
-                    <p className="pt-card-meta">Finalizado el {formatFecha(o.fechaFinalizacion)}</p>
-                    {o.observaciones && <p className="pt-card-note">“{o.observaciones}”</p>}
-                  </div>
-                  <div className="pt-card-done">
-                    <span className="pt-done-ico">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    </span>
-                    <span className="pt-card-total">{formatPrecio(o.total)}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
+                    <div className="pt-card-done">
+                      <span className="pt-done-ico" aria-hidden="true"><Icon name="check" size={18} /></span>
+                      <span className="pt-card-total">{formatPrecio(o.total)}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )
           )}
-
         </>
       )}
     </div>
