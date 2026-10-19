@@ -1,13 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken } from "../../services/authService";
 import { cotizacionesDelTaller } from "../../services/cotizacionService";
 import CotizacionDetalle from "../../components/servicio/CotizacionDetalle";
-import Etiqueta from "../../components/servicio/Etiqueta";
 import { ESTADOS_COTIZACION, formatFechaHora, formatPrecio } from "../../components/servicio/estadosServicio";
+import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
+import ChipEstado from "../../components/ui/ChipEstado";
+import Alerta from "../../components/ui/Alerta";
+import EstadoVacio from "../../components/ui/EstadoVacio";
+import Esqueleto from "../../components/ui/Esqueleto";
+import Icon from "../../components/public/Icon";
 import { FILTROS, VACIO, vencida, contarPorFiltro, filtrar } from "./filtrosCotizaciones";
 import "../../css/servicios.css";
 import "../../css/solicitud-servicio.css";
 import "../../css/cotizacion.css";
+import "../../css/cotizaciones-taller.css";
+
+const TITULO_VACIO = {
+  emitidas: "Nada esperando respuesta",
+  aprobadas: "Aún sin cotizaciones aprobadas",
+  rechazadas: "Ninguna rechazada",
+  vencidas: "Ninguna vencida",
+};
 
 function diasRestantes(fecha, ahora) {
   const d = Math.ceil((new Date(fecha).getTime() - ahora) / 86400000);
@@ -16,23 +29,37 @@ function diasRestantes(fecha, ahora) {
 }
 
 /** Cotizaciones del taller en una sola lista: emitidas, aprobadas, rechazadas y vencidas. */
-export default function TallerCotizaciones() {
+export default function TallerCotizaciones({ irA }) {
   const token = getToken();
   const [cotizaciones, setCotizaciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
   const [filtro, setFiltro] = useState("emitidas");
   const [abierta, setAbierta] = useState(null);
   const [ahora] = useState(() => Date.now());
 
-  useEffect(() => {
-    let cancelado = false;
-    cotizacionesDelTaller(token)
-      .then((c) => { if (!cancelado) setCotizaciones(c || []); })
-      .catch((e) => { if (!cancelado) setError(e.message); })
-      .finally(() => { if (!cancelado) setCargando(false); });
-    return () => { cancelado = true; };
+  const cargar = useCallback(async () => {
+    try {
+      setCotizaciones((await cotizacionesDelTaller(token)) || []);
+      setError(null);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCargando(false);
+    }
   }, [token]);
+
+  useEffect(() => {
+    const id = setTimeout(cargar, 0);
+    return () => clearTimeout(id);
+  }, [cargar]);
+
+  const reintentar = async () => {
+    setReintentando(true);
+    await cargar();
+    setReintentando(false);
+  };
 
   const conteo = useMemo(() => contarPorFiltro(cotizaciones, ahora), [cotizaciones, ahora]);
   const visibles = filtrar(cotizaciones, filtro, ahora);
@@ -41,58 +68,77 @@ export default function TallerCotizaciones() {
     .reduce((s, c) => s + (c.total || 0), 0);
 
   return (
-    <div className="ss-panel tp-cotizaciones">
-      <header className="pt-header tp-cabecera">
-        <div>
-          <h1 className="pt-title">Cotizaciones</h1>
-          <p className="pt-subtitle">
-            {conteo.emitidas > 0
-              ? `${conteo.emitidas} esperando respuesta del cliente, por ${formatPrecio(pendienteTotal)}.`
-              : "Lo que cotizaste, lo que aprobaron, lo que rechazaron y lo que se venció."}
-          </p>
-        </div>
-      </header>
+    <div className="ss-panel tc-root">
+      <EncabezadoPagina
+        titulo="Cotizaciones"
+        descripcion={conteo.emitidas > 0
+          ? `${conteo.emitidas} esperando respuesta del cliente, por ${formatPrecio(pendienteTotal)}.`
+          : "Lo que cotizaste, lo que aprobaron, lo que rechazaron y lo que se venció."}
+        acciones={irA && (
+          <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-solicitudes", "diagnosticadas")}>
+            <Icon name="file" size={16} /> Crear cotización
+          </button>
+        )}
+      />
 
-      {error && <p className="ss-alerta" role="alert">{error}</p>}
+      {error && (
+        <Alerta className="tc-alerta" onReintentar={reintentar} reintentando={reintentando}>
+          No pudimos cargar tus cotizaciones. {error}
+        </Alerta>
+      )}
 
-      <nav className="ss-filtros" aria-label="Cotizaciones por estado">
+      <div className="ui-filtros tc-filtros" role="group" aria-label="Cotizaciones por estado">
         {FILTROS.map((f) => (
-          <button key={f.key} className={`ss-filtro${filtro === f.key ? " ss-filtro--activo" : ""}`}
-            aria-current={filtro === f.key ? "page" : undefined} onClick={() => { setFiltro(f.key); setAbierta(null); }}>
+          <button key={f.key} type="button" className="ui-chip" aria-pressed={filtro === f.key}
+            onClick={() => { setFiltro(f.key); setAbierta(null); }}>
             {f.label}
-            {conteo[f.key] > 0 && <span className="ss-filtro__conteo">{conteo[f.key]}</span>}
+            {conteo[f.key] > 0 && <span className="ui-chip__contador">{conteo[f.key]}</span>}
           </button>
         ))}
-      </nav>
+      </div>
 
       {cargando ? (
-        <p className="sv-empty">Cargando cotizaciones...</p>
+        <Esqueleto variante="lista" cantidad={4} texto="Cargando cotizaciones…" />
       ) : visibles.length === 0 ? (
-        <p className="sv-empty">{VACIO[filtro]}</p>
+        !error && (
+          <EstadoVacio icono="file" titulo={TITULO_VACIO[filtro]} texto={VACIO[filtro]}>
+            {filtro === "emitidas" && irA && (
+              <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-solicitudes", "diagnosticadas")}>
+                Ver solicitudes por cotizar
+              </button>
+            )}
+          </EstadoVacio>
+        )
       ) : (
-        <ul className="tp-cotiz">
+        <ul className="tc-lista">
           {visibles.map((c) => {
             const abierto = abierta === c.id;
             const rechazada = c.estado === "RECHAZADA";
             return (
-              <li key={c.id} className="tp-cotiz__item">
-                <button className="tp-cotiz__fila" aria-expanded={abierto} onClick={() => setAbierta(abierto ? null : c.id)}>
-                  <span className="tp-cotiz__vehiculo">
+              <li key={c.id} className={`tc-item${abierto ? " tc-item--abierto" : ""}`}>
+                <button type="button" className="tc-fila" aria-expanded={abierto} aria-controls={`tc-detalle-${c.id}`}
+                  onClick={() => setAbierta(abierto ? null : c.id)}>
+                  <span className="tc-fila__vehiculo">
                     <strong>{c.vehiculoDescripcion || "Vehículo"}</strong>
-                    <span className="ss-meta">
+                    <span className="tc-fila__meta">
                       {rechazada
                         ? <>v{c.version} · rechazada {c.fechaRespuesta ? formatFechaHora(c.fechaRespuesta) : "(sin fecha)"}</>
                         : <>v{c.version} · emitida {formatFechaHora(c.fechaEmision)}</>}
                       {c.vigenciaHasta && c.estado === "EMITIDA" && ` · ${diasRestantes(c.vigenciaHasta, ahora)}`}
                     </span>
                     {rechazada && c.motivoRespuesta && (
-                      <span className="tp-cotiz__motivo">Motivo del cliente: “{c.motivoRespuesta}”</span>
+                      <span className="tc-fila__motivo">Motivo del cliente: “{c.motivoRespuesta}”</span>
                     )}
                   </span>
-                  <span className="tp-cotiz__total">{formatPrecio(c.total)}</span>
-                  <Etiqueta estado={vencida(c, ahora) ? "VENCIDA" : c.estado} catalogo={ESTADOS_COTIZACION} />
+                  <span className="tc-fila__total ui-precio">{formatPrecio(c.total)}</span>
+                  <ChipEstado estado={vencida(c, ahora) ? "VENCIDA" : c.estado} catalogo={ESTADOS_COTIZACION} />
+                  <Icon name="chevron" size={18} className="tc-fila__chevron" />
                 </button>
-                {abierto && <div className="tp-cotiz__detalle"><CotizacionDetalle cotizacion={c} mostrarComision sinEstado /></div>}
+                {abierto && (
+                  <div id={`tc-detalle-${c.id}`} className="tc-detalle">
+                    <CotizacionDetalle cotizacion={c} mostrarComision sinEstado />
+                  </div>
+                )}
               </li>
             );
           })}

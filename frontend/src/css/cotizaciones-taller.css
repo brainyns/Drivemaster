@@ -1,0 +1,81 @@
+/* ── Cotizaciones del taller ───────────────────────────────────────────────
+   Prefijo tc-, BEM. Cabecera, filtros (ui-chip), chips, avisos, vacío y carga son de ui.css; aquí las filas
+   desplegables. En celular el total y el estado bajan bajo el vehículo. Tokens --ui-*, los dos temas. */
+
+.tc-alerta,
+.tc-filtros { margin-bottom: var(--ui-sp-4); }
+
+.tc-lista { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.tc-item {
+  overflow: hidden;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  transition: border-color var(--ui-dur) ease;
+}
+
+.tc-item--abierto { border-color: var(--ui-muted); }
+
+.tc-fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 20px;
+  align-items: center;
+  gap: 8px 16px;
+  width: 100%;
+  padding: 16px 18px;
+  background: none;
+  border: 0;
+  color: var(--ui-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--ui-dur) ease;
+}
+
+.tc-fila:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; border-radius: 12px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .tc-fila:hover { background: var(--ui-hover); }
+}
+
+.tc-fila__vehiculo { display: grid; gap: 3px; min-width: 0; }
+.tc-fila__vehiculo strong { font-size: 0.95rem; overflow-wrap: anywhere; }
+.tc-fila__meta { font-size: 0.8125rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+
+/* Motivo con el que el cliente rechazó la cotización */
+.tc-fila__motivo {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ui-muted);
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.tc-fila__total { font-size: 1rem; }
+
+.tc-fila__chevron {
+  color: var(--ui-muted);
+  transition: transform var(--ui-dur) var(--ui-ease);
+}
+
+.tc-fila[aria-expanded="true"] .tc-fila__chevron { transform: rotate(180deg); }
+
+.tc-detalle { padding: 4px 18px 18px; border-top: 1px solid var(--ui-line-soft); }
+
+@media (max-width: 600px) {
+  .tc-fila { grid-template-columns: minmax(0, 1fr) 20px; padding: 14px 16px; }
+  .tc-fila__vehiculo { grid-column: 1; }
+  .tc-fila__chevron { grid-column: 2; grid-row: 1; align-self: start; }
+  .tc-fila__total { grid-column: 1; }
+  .tc-fila .ui-badge { grid-column: 1; justify-self: start; }
+  .tc-detalle { padding: 4px 16px 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tc-item, .tc-fila, .tc-fila__chevron { transition: none; }
+}

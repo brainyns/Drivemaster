@@ -44,5 +44,5 @@ test("una emitida con la vigencia pasada cuenta como vencida, no como emitida", 
 test("la tarjeta rechazada muestra la fecha de rechazo y el motivo si existe", () => {
   assert.ok(pagina.includes("rechazada {c.fechaRespuesta"), "usa la fecha de la respuesta del cliente");
   assert.ok(pagina.includes("rechazada && c.motivoRespuesta &&"), "el motivo solo aparece si el cliente lo dejó");
-  assert.ok(pagina.includes("formatPrecio(c.total)") && pagina.includes("<Etiqueta estado="), "valor y etiqueta de estado");
+  assert.ok(pagina.includes("formatPrecio(c.total)") && pagina.includes("<ChipEstado estado="), "valor y etiqueta de estado");
 });

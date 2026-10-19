@@ -79,7 +79,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         {seccion === "trabajos" && (
           <TallerSolicitudes key={param || "repuestos"} modo="trabajos" filtroInicial={param || undefined} />
         )}
-        {seccion === "cotizaciones" && <TallerCotizaciones />}
+        {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}
         {seccion === "informes" && <TallerInformes />}
         {seccion === "mitaller" && (
           <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller}

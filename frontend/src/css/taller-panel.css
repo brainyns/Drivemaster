@@ -60,25 +60,6 @@
   .tp-esqueleto__tarjeta, .tp-esqueleto__bloque { animation: none; }
 }
 
-/* ── Cotizaciones ─────────────────────────────────────────────────────────── */
-.tp-cotiz { list-style: none; margin: 1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
-.tp-cotiz__item { background: var(--tp-superficie); border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); overflow: hidden; }
-.tp-cotiz__fila {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .5rem 1rem;
-  width: 100%; padding: .85rem 1rem; text-align: left; font: inherit; color: var(--tp-texto);
-  background: none; border: 0; cursor: pointer; transition: background .18s var(--tp-ease);
-}
-.tp-cotiz__fila:hover { background: color-mix(in srgb, var(--tp-info) 8%, transparent); }
-.tp-cotiz__fila:focus-visible { outline: 2px solid var(--tp-info); outline-offset: -2px; }
-.tp-cotiz__vehiculo { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
-.tp-cotiz__total { font-weight: 700; font-variant-numeric: tabular-nums; }
-/* Motivo con el que el cliente rechazó la cotización */
-.tp-cotiz__motivo { margin-top: .2rem; font-size: var(--fs-etiqueta); line-height: 1.45; color: var(--ui-muted); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.tp-cotiz__detalle { padding: .2rem 1rem 1rem; border-top: 1px solid var(--tp-linea); animation: tp-despliegue .25s var(--tp-ease) both; }
-
-@media (max-width: 560px) { .tp-cotiz__fila { grid-template-columns: 1fr auto; } .tp-cotiz__fila > :last-child { grid-column: 1 / -1; } }
-@media (prefers-reduced-motion: reduce) { .tp-cotiz__fila { transition: none; } .tp-cotiz__detalle { animation: none; } }
-
 /* ── Informes ─────────────────────────────────────────────────────────────── */
 .tp-segmentos { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--tp-linea); border-radius: var(--ui-r-lg); background: var(--tp-superficie); }
 .tp-segmentos__opcion {
@@ -147,8 +128,6 @@
 .tp-root .sv-btn:focus-visible,
 .tp-root .sv-btn-outline:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 
-/* En móvil la etiqueta de estado ocupa su ancho, no toda la fila */
-.tp-cotiz__fila .ss-estado { justify-self: start; }
 
 /* Tarjetas y bloques del taller con el mismo borde, radio y sombra que el resto del panel */
 .tp-root .ss-bloque,
