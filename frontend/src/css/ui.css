@@ -225,6 +225,50 @@
 }
 
 .ui-table tbody tr:last-child td { border-bottom: 0; }
+.ui-table-card { overflow: hidden; }
+.ui-table__acciones { white-space: nowrap; text-align: right; }
+.ui-table__acciones .ui-btn + .ui-btn { margin-left: 4px; }
+
+/* Tabla que en celular pasa a tarjetas (ui-table--tarjetas): cada fila es una tarjeta y cada celda lleva su
+   data-label delante. La celda ui-table__titulo va arriba a todo el ancho y ui-table__acciones al pie. */
+@media (max-width: 760px) {
+  .ui-table-card:has(.ui-table--tarjetas) { background: none; border: 0; box-shadow: none; }
+  .ui-table--tarjetas thead { display: none; }
+  .ui-table--tarjetas, .ui-table--tarjetas tbody, .ui-table--tarjetas tr, .ui-table--tarjetas td { display: block; }
+  .ui-table--tarjetas tbody { display: grid; gap: 10px; }
+
+  .ui-table--tarjetas tr {
+    padding: 14px 16px;
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-line);
+    border-radius: 12px;
+  }
+
+  .ui-table--tarjetas td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border: 0;
+    text-align: right;
+  }
+
+  .ui-table--tarjetas td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ui-muted);
+    text-align: left;
+  }
+
+  .ui-table--tarjetas td.ui-table__titulo { display: block; padding: 0 0 10px; text-align: left; }
+  .ui-table--tarjetas td.ui-table__titulo::before { display: none; }
+  .ui-table--tarjetas td.ui-table__acciones { justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--ui-line-soft); }
+  .ui-table--tarjetas .ui-table__acciones .ui-btn { min-height: 40px; }
+  .ui-table--tarjetas tbody tr:hover { background: var(--ui-surface); }
+}
 .ui-table tbody tr { transition: background-color var(--ui-dur) ease; }
 .ui-table__num { text-align: right; }
 

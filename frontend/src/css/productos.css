@@ -1,6 +1,6 @@
 /* ── Productos de la tienda (prefijo prt-, BEM) ───────────────────────────
    Cabecera, cifras, filtros, buscador, tabla (ui-table), chips, avisos, vacío y carga son de ui.css; la foto es
-   ImagenProducto del catálogo. Aquí la celda del producto, el stock y el paso de tabla a tarjetas en celular.
+   ImagenProducto del catálogo. Aquí la celda del producto y el stock (la tabla pasa a tarjetas con ui-table--tarjetas).
    Tokens --ui-*, los dos temas. Al final, los formularios viejos que aún usan ProductoForm y el ajuste de
    inventario. */
 
@@ -16,7 +16,6 @@
   margin-bottom: var(--ui-sp-4);
 }
 
-.prt-tabla-tarjeta { overflow: hidden; }
 .prt-tabla td { vertical-align: middle; }
 
 .prt-producto { display: flex; align-items: center; gap: 12px; min-width: 220px; }
@@ -32,52 +31,14 @@
 .prt-stock__num--bajo { color: var(--ui-aviso); }
 .prt-stock__min { font-size: 0.75rem; color: var(--ui-muted); }
 
-.prt-acciones { white-space: nowrap; text-align: right; }
-.prt-acciones .ui-btn + .ui-btn { margin-left: 4px; }
 .prt-eliminar.ui-btn { color: var(--ui-error); }
 .ss-panel--tienda .prt-pie { margin: 10px 0 0; font-size: 0.8125rem; color: var(--ui-muted); }
 
 /* Celular y tableta angosta: cada fila es una tarjeta con su etiqueta delante de cada dato */
+/* Celular: la tabla pasa a tarjetas con ui-table--tarjetas (ui.css) */
 @media (max-width: 760px) {
   .prt-barra .ui-buscador { max-width: none; }
-  .prt-tabla-tarjeta.ui-card { background: none; border: 0; box-shadow: none; }
-  .prt-tabla thead { display: none; }
-  .prt-tabla, .prt-tabla tbody, .prt-tabla tr, .prt-tabla td { display: block; }
-  .prt-tabla tbody { display: grid; gap: 10px; }
-
-  .prt-tabla tr {
-    padding: 14px 16px;
-    background: var(--ui-surface);
-    border: 1px solid var(--ui-line);
-    border-radius: 12px;
-  }
-
-  .prt-tabla td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 6px 0;
-    border: 0;
-    text-align: right;
-  }
-
-  .prt-tabla td[data-label]::before {
-    content: attr(data-label);
-    flex-shrink: 0;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--ui-muted);
-    text-align: left;
-  }
-
-  /* El producto va arriba, a todo el ancho y sin etiqueta */
-  .prt-tabla td[data-label="Producto"] { display: block; padding: 0 0 10px; text-align: left; }
-  .prt-tabla td[data-label="Producto"]::before { display: none; }
   .prt-producto { min-width: 0; }
-  .prt-acciones { display: flex; justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--ui-line-soft); }
-  .prt-acciones .ui-btn { min-height: 40px; }
-  .prt-tabla tbody tr:hover { background: var(--ui-surface); }
 }
 
 /* ── Formularios viejos (AjusteInventarioForm) ───────────────────────────────────────────────────────────── */

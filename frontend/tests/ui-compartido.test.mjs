@@ -79,3 +79,9 @@ test("la cabecera de negocio y la vista previa son las mismas para Mi taller y M
   assert.ok(taller.includes("<CabeceraNegocio") && taller.includes("<VistaPrevia"), "Mi taller usa las piezas compartidas");
   assert.doesNotMatch(leer("../src/css/mi-taller.css"), /\.mt-(identidad|completo|rejilla|vista \{)/, "sin CSS duplicado");
 });
+
+test("las tablas pasan a tarjetas en celular con la etiqueta de cada dato", () => {
+  const css = leer("../src/css/ui.css");
+  assert.match(css, /\.ui-table--tarjetas td\[data-label\]::before \{\s*content: attr\(data-label\);/);
+  assert.match(css, /\.ui-table--tarjetas td\.ui-table__titulo/);
+});

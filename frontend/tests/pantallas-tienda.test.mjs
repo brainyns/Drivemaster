@@ -120,7 +120,7 @@ test("Productos: stock con aviso, publicado u oculto, filtros y lo que necesita 
 test("Productos usa el sistema compartido, sin confirm() ni alert() del navegador", () => {
   const pagina = leer("../src/pages/Productos.jsx");
   for (const pieza of ["<EncabezadoPagina", "<Indicador", "<ChipEstado", "<EstadoVacio", "<Esqueleto", "<ImagenProducto", "<ConfirmarAccion",
-    'className="ui-table prt-tabla"', "data-label=\"Stock\""]) {
+    'className="ui-table ui-table--tarjetas prt-tabla"', "data-label=\"Stock\""]) {
     assert.ok(pagina.includes(pieza), `usa ${pieza}`);
   }
   assert.doesNotMatch(pagina, /\b(confirm|alert)\(/);

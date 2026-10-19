@@ -162,9 +162,9 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
                 </button>
               </EstadoVacio>
             ) : (
-              <div className="ui-card prt-tabla-tarjeta">
+              <div className="ui-card ui-table-card">
                 <div className="ui-table-wrap">
-                  <table className="ui-table prt-tabla">
+                  <table className="ui-table ui-table--tarjetas prt-tabla">
                     <caption className="ui-sr">Productos ({visibles.length} de {productos.length})</caption>
                     <thead>
                       <tr>
@@ -179,7 +179,7 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
                     <tbody>
                       {visibles.map((p) => (
                         <tr key={p.id}>
-                          <td data-label="Producto">
+                          <td data-label="Producto" className="ui-table__titulo">
                             <span className="prt-producto">
                               <ImagenProducto src={p.imagenUrl} className="prt-producto__imagen" tamanioIcono={20} />
                               <span className="prt-producto__texto">
@@ -196,7 +196,7 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
                               ? <ChipEstado tono="ok">{porEncargo(p) || nivelStock(p) !== "agotado" ? "Publicado" : "Publicado · agotado"}</ChipEstado>
                               : <ChipEstado tono="apagado">Oculto</ChipEstado>}
                           </td>
-                          <td className="prt-acciones">
+                          <td className="ui-table__acciones">
                             <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onEditar(p.id)}
                               aria-label={`Editar ${p.nombre}`}>
                               <Icon name="pencil" size={14} /> Editar
