@@ -252,3 +252,12 @@ test("Proveedores: búsqueda, validación con el correo del PDF y la lista con e
   assert.ok(lista.includes("<ConfirmarAccion") && lista.includes("ui-table--tarjetas") && !/\balert\(/.test(lista));
   assert.ok(lista.includes("eliminarProveedor(eliminando.id, token)") && lista.includes("exportarProveedores(token)"));
 });
+
+test("Formulario de proveedor: campos con etiqueta y error, sin promesas que no existen", () => {
+  const pagina = leer("../src/pages/ProveedorForm.jsx");
+  assert.equal((pagina.match(/<Campo id=/g) || []).length, 4);
+  for (const falso of ["OEM", "Categorización API", "facturación electrónica", "Validación Automática", "<a onClick"]) {
+    assert.ok(!pagina.includes(falso), `sin “${falso}”`);
+  }
+  assert.ok(pagina.includes("actualizarProveedor(id, datos, token)") && pagina.includes("crearProveedor(datos, token)"));
+});
