@@ -261,3 +261,12 @@ test("Formulario de proveedor: campos con etiqueta y error, sin promesas que no 
   }
   assert.ok(pagina.includes("actualizarProveedor(id, datos, token)") && pagina.includes("crearProveedor(datos, token)"));
 });
+
+test("Informes de la tienda: cabecera, período en chips, cifras compartidas y error con reintentar", () => {
+  const pagina = leer("../src/pages/InformesTienda.jsx");
+  for (const pieza of ["<EncabezadoPagina", "<Indicador", "onReintentar={() => setVersion((v) => v + 1)}", 'className="ui-chip" aria-pressed={meses === p}']) {
+    assert.ok(pagina.includes(pieza), `usa ${pieza}`);
+  }
+  assert.ok(!pagina.includes("adm-"), "sin las clases del panel de administración");
+  assert.doesNotMatch(leer("../src/css/informes-tienda.css"), /\.it-(segmentos|boton|cabecera)\b/);
+});

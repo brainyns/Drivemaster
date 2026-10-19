@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { informesTienda, resumenAsistente } from "../services/informesTiendaService";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Indicador from "../components/ui/Indicador";
+import Alerta from "../components/ui/Alerta";
+import Icon from "../components/public/Icon";
 import "../css/informes-tienda.css";
-import "../css/admin-base.css";
 
 const PERIODOS = [3, 6, 12];
 
@@ -33,7 +36,7 @@ const GRUPOS_ESTADO = [
 // ─── Piezas ────────────────────────────────────────────────────────────────
 
 function Esqueleto({ alto = 16, ancho = "100%" }) {
-  return <span className="it-esqueleto" style={{ height: alto, width: ancho }} aria-hidden="true" />;
+  return <span className="ui-skeleton it-esqueleto" style={{ height: alto, width: ancho }} aria-hidden="true" />;
 }
 
 function Panel({ titulo, nota, ancho, children, accion }) {
@@ -144,7 +147,7 @@ function ProductosMasVendidos({ productos, onIr }) {
     return (
       <Vacio titulo="Todavía no vendes productos en este período"
         texto="Cuando se pague un pedido, tus productos más vendidos aparecen aquí."
-        accion={<button type="button" className="adm-btn" onClick={() => onIr?.("productos")}>Revisar mis productos</button>} />
+        accion={<button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onIr?.("productos")}>Revisar mis productos</button>} />
     );
   }
   const max = Math.max(...productos.map((p) => p.unidades));
@@ -194,7 +197,7 @@ function Despacho({ despacho, onIr }) {
         <li className={atrasados > 0 ? "is-alerta" : ""}><span>Fuera de plazo</span><strong className="it-cifra">{num(atrasados)}</strong></li>
       </ul>
       {atrasados > 0 && (
-        <button type="button" className="adm-btn adm-btn--primario" onClick={() => onIr?.("pedidos-tienda")}>Ir a despachar los atrasados</button>
+        <button type="button" className="ui-btn ui-btn--primario" onClick={() => onIr?.("pedidos-tienda")}>Ir a despachar los atrasados</button>
       )}
     </div>
   );
@@ -223,7 +226,10 @@ function StockBajo({ stock, onIr }) {
       </table>
       <footer className="it-pie">
         <span>{stock.total > stock.items.length ? `Mostrando ${stock.items.length} de ${stock.total}` : `${stock.total} ${stock.total === 1 ? "producto" : "productos"}`}</span>
-        <button type="button" className="adm-btn" onClick={() => onIr?.("movimientos")}>Ajustar inventario</button>
+        <span className="it-pie__acciones">
+          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => onIr?.("productos")}>Ver productos</button>
+          <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onIr?.("movimientos")}>Registrar entrada</button>
+        </span>
       </footer>
     </>
   );
@@ -260,23 +266,26 @@ function Liquidacion({ liquidacion: l }) {
   );
 }
 
-function Resumen({ datos }) {
-  const celdas = [
-    { etiqueta: "Ventas del período", valor: cop(datos.ventas.ventas), detalle: `${num(datos.ventas.pedidos)} ${datos.ventas.pedidos === 1 ? "pedido" : "pedidos"}` },
-    { etiqueta: "Despacho promedio", valor: datos.despacho.horasPromedio != null ? `${datos.despacho.horasPromedio} h` : "—", detalle: datos.despacho.porcentajeATiempo != null ? `${datos.despacho.porcentajeATiempo}% a tiempo` : "sin datos aún" },
-    { etiqueta: "Por liquidar", valor: cop(datos.liquidacion.porLiquidar), detalle: `${cop(datos.liquidacion.enEspera)} en espera de entrega` },
-    { etiqueta: "Stock bajo", valor: num(datos.stockBajo.total), detalle: datos.stockBajo.total === 1 ? "producto por reponer" : "productos por reponer", alerta: datos.stockBajo.total > 0 },
-  ];
+/** Despacho promedio en horas o, desde 48 h, en días. */
+const duracion = (h) => (h == null ? "—" : h >= 48 ? `${(h / 24).toLocaleString("es-CO", { maximumFractionDigits: 1 })} días` : `${h} h`);
+
+function Resumen({ datos, onIr }) {
+  const stock = datos.stockBajo.total;
   return (
-    <dl className="it-resumen">
-      {celdas.map((c) => (
-        <div key={c.etiqueta} className={c.alerta ? "is-alerta" : ""}>
-          <dt>{c.etiqueta}</dt>
-          <dd className="it-cifra">{c.valor}</dd>
-          <p>{c.detalle}</p>
-        </div>
-      ))}
-    </dl>
+    <section aria-labelledby="it-resumen-titulo" className="it-resumen-cifras">
+      <h2 id="it-resumen-titulo" className="ui-sr">Resumen del período</h2>
+      <div className="ui-indicadores">
+        <Indicador titulo="Ventas del período" valor={cop(datos.ventas.ventas)}
+          pie={`${num(datos.ventas.pedidos)} ${datos.ventas.pedidos === 1 ? "pedido" : "pedidos"}`} />
+        <Indicador icono="clock" titulo="Despacho promedio" valor={duracion(datos.despacho.horasPromedio)}
+          pie={datos.despacho.porcentajeATiempo != null ? `${datos.despacho.porcentajeATiempo} % a tiempo` : "Sin despachos medidos aún"} />
+        <Indicador titulo="Por liquidar" valor={cop(datos.liquidacion.porLiquidar)} tono={datos.liquidacion.porLiquidar > 0 ? "ok" : undefined}
+          pie={`${cop(datos.liquidacion.enEspera)} en espera de entrega`} />
+        <Indicador icono="alert" titulo="Stock bajo" valor={num(stock)} tono={stock > 0 ? "accion" : undefined}
+          pie={stock === 0 ? "Nada por reponer" : stock === 1 ? "Producto por reponer" : "Productos por reponer"}
+          onClick={stock > 0 ? () => onIr?.("productos") : undefined} />
+      </div>
+    </section>
   );
 }
 
@@ -305,7 +314,7 @@ function ResumenIA({ token }) {
 function CargandoInformes() {
   return (
     <div className="it-cargando" role="status" aria-label="Cargando informes">
-      <div className="it-resumen it-resumen--esqueleto">{[0, 1, 2, 3].map((i) => <div key={i}><Esqueleto alto={12} ancho="55%" /><Esqueleto alto={26} ancho="75%" /><Esqueleto alto={11} ancho="45%" /></div>)}</div>
+      <div className="ui-indicadores it-resumen-cifras">{[0, 1, 2, 3].map((i) => <Esqueleto key={i} alto={112} />)}</div>
       <div className="it-rejilla">
         <div className="it-panel it-panel--8"><Esqueleto alto={14} ancho="30%" /><Esqueleto alto={190} /></div>
         <div className="it-panel it-panel--4"><Esqueleto alto={14} ancho="40%" /><Esqueleto alto={120} /></div>
@@ -343,29 +352,27 @@ export default function InformesTienda({ token, onIr }) {
     && datos.liquidacion.porLiquidar === 0 && datos.liquidacion.liquidado === 0, [datos]);
 
   return (
-    <div className="it-root">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Informes</h1>
-          <p className="adm-encabezado__sub">Cómo va tu tienda: ventas, despachos y lo que falta por cobrar.</p>
-        </div>
-        <div className="adm-encabezado__lado">
-          <nav className="adm-pestanas" aria-label="Período">
-            {PERIODOS.map((p) => (
-              <button key={p} type="button" aria-pressed={meses === p}
-                className={`adm-pestana${meses === p ? " adm-pestana--activa" : ""}`} onClick={() => setMeses(p)}>
-                {p} meses
-              </button>
-            ))}
-          </nav>
-          <button type="button" className={`adm-btn${cargando ? " adm-btn--cargando" : ""}`} onClick={() => setVersion((v) => v + 1)}
-            disabled={cargando} aria-busy={cargando}>
-            {cargando ? "Actualizando…" : "Actualizar"}
-          </button>
-        </div>
-      </header>
+    <div className="ss-panel--tienda it-root">
+      <EncabezadoPagina titulo="Informes" descripcion="Cómo va tu tienda: ventas, despachos y lo que falta por cobrar."
+        acciones={(
+          <>
+            <div className="ui-filtros" role="group" aria-label="Período">
+              {PERIODOS.map((p) => (
+                <button key={p} type="button" className="ui-chip" aria-pressed={meses === p} onClick={() => setMeses(p)}>{p} meses</button>
+              ))}
+            </div>
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setVersion((v) => v + 1)}
+              disabled={cargando} aria-busy={cargando}>
+              {!cargando && <Icon name="refresh" size={16} />}{cargando ? "Actualizando…" : "Actualizar"}
+            </button>
+          </>
+        )} />
 
-      {error && <div className="adm-alerta adm-alerta--error" role="alert">{error}{datos ? " Se muestran los últimos datos." : ""}</div>}
+      {error && !cargando && (
+        <Alerta className="it-alerta" onReintentar={() => setVersion((v) => v + 1)}>
+          No pudimos cargar los informes. {error}{datos ? " Se muestran los últimos datos." : ""}
+        </Alerta>
+      )}
 
       {!datos && !error && <CargandoInformes />}
 
@@ -375,11 +382,11 @@ export default function InformesTienda({ token, onIr }) {
             <div className="it-bienvenida">
               <strong>Aún no hay actividad en tu tienda</strong>
               <p>Cuando recibas tu primer pedido pagado, aquí verás tus ventas, el tiempo de despacho y lo que te toca cobrar. Mientras, asegúrate de tener tus productos publicados y con stock.</p>
-              <button type="button" className="adm-btn adm-btn--primario" onClick={() => onIr?.("productos")}>Ir a mis productos</button>
+              <button type="button" className="ui-btn ui-btn--primario" onClick={() => onIr?.("productos")}>Ir a mis productos</button>
             </div>
           )}
 
-          <Resumen datos={datos} />
+          <Resumen datos={datos} onIr={onIr} />
 
           <div className="it-rejilla">
             <Panel ancho="12" titulo="Resumen de hoy" nota="Lo más importante de tu tienda hoy, escrito por la IA con tus informes de los últimos 6 meses.">
