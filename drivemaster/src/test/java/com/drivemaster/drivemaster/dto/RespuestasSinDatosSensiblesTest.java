@@ -1,5 +1,7 @@
 package com.drivemaster.drivemaster.dto;
 
+import com.drivemaster.drivemaster.model.Mecanico;
+import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,6 +73,36 @@ class RespuestasSinDatosSensiblesTest {
             assertFalse(nodo.has(campo), campo);
         }
         assertFalse(nodo.toString().contains("$2a$10$hash"));
+    }
+
+    @Test
+    void elTallerQueVeElClienteSoloLlevaDatosPublicos() {
+        Taller taller = Taller.builder()
+                .id("t1").usuarioId("u-dueno").nombre("AutoMax").ciudad("Cali").direccion("Cra 1 # 2-3").barrio("Centro")
+                .telefono("3001234567").latitud(3.45).longitud(-76.53).especialidades(List.of("Frenos", "Motor"))
+                .rating(4.5).calificaciones(8).precioManoObra(80000.0).tarifaHora(60000.0).horario("L-V 8-18")
+                .estadoAprobacion("APROBADO").motivoRechazo("x").activo(true)
+                .mecanicos(List.of(Mecanico.builder().id("m1").nombre("Carlos").telefono("3110000000").build()))
+                .build();
+
+        JsonNode nodo = json.valueToTree(TallerMapaDTO.de(taller));
+
+        assertEquals(List.of("id", "nombre", "direccion", "ciudad", "telefono", "latitud", "longitud", "horario",
+                "especialidades", "calificacion", "calificaciones"), iterar(nodo));
+        for (String interno : List.of("usuarioId", "correoUsuario", "mecanicos", "tarifaHora", "precioManoObra",
+                "estadoAprobacion", "motivoRechazo", "activo", "planActual")) {
+            assertFalse(nodo.has(interno), interno + " no debe salir en el mapa del cliente");
+        }
+        assertFalse(nodo.toString().contains("u-dueno") || nodo.toString().contains("3110000000"));
+        assertEquals(4.5, nodo.get("calificacion").asDouble());
+        assertEquals(8, nodo.get("calificaciones").asInt());
+    }
+
+    @Test
+    void unTallerSinCalificacionesSaleSinPromedio() {
+        JsonNode nodo = json.valueToTree(TallerMapaDTO.de(Taller.builder().id("t2").nombre("Nuevo").build()));
+        assertTrue(nodo.get("calificacion").isNull());
+        assertEquals(0, nodo.get("calificaciones").asInt());
     }
 
     private static List<String> iterar(JsonNode nodo) {

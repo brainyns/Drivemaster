@@ -3,6 +3,7 @@ import MecanicosTaller from "../../components/servicio/MecanicosTaller";
 import { formatFecha, formatPrecio } from "../../components/servicio/estadosServicio";
 import { actualizarDatosTaller, actualizarUbicacionTaller } from "../../services/tallerService";
 import SelectorUbicacion from "../../components/mapa/SelectorUbicacion";
+import DatosTallerCliente from "../../components/mapa/DatosTallerCliente";
 import SeccionEditable from "../../components/ui/SeccionEditable";
 import Campo from "../../components/ui/Campo";
 import ChipEstado from "../../components/ui/ChipEstado";
@@ -11,7 +12,7 @@ import Esqueleto from "../../components/ui/Esqueleto";
 import Calificacion from "../../components/ui/Calificacion";
 import BarraProgreso from "../../components/ui/BarraProgreso";
 import Icon from "../../components/public/Icon";
-import { HORARIO_MAX, completitudPerfil, errorHorario, errorTarifa, iniciales } from "./perfilTaller";
+import { HORARIO_MAX, comoLoVeElCliente, completitudPerfil, errorHorario, errorTarifa, iniciales } from "./perfilTaller";
 import "../../css/mi-taller.css";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
@@ -151,7 +152,8 @@ function FormUbicacion({ taller, token, onGuardado, onCancelar }) {
  * "Así te ven los clientes": la misma información que muestra la lista de talleres al pedir un diagnóstico
  * (nombre, dirección, teléfono y si está en el mapa).
  */
-function VistaCliente({ taller }) {
+function VistaCliente({ taller: datos }) {
+  const taller = comoLoVeElCliente(datos);
   const sinPunto = taller.latitud == null || taller.longitud == null;
   return (
     <section className="mt-vista" aria-labelledby="mt-vista-titulo">
@@ -163,6 +165,7 @@ function VistaCliente({ taller }) {
           <span className="mt-vista__dato">
             {taller.direccion || "Sin dirección"}{taller.ciudad ? `, ${taller.ciudad}` : ""}
           </span>
+          <DatosTallerCliente taller={taller} />
           {taller.telefono && <span className="mt-vista__dato">Tel. {taller.telefono}</span>}
           {sinPunto
             ? <span className="mt-vista__nota">Sin ubicación en el mapa</span>

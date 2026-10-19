@@ -737,6 +737,31 @@
   color: var(--mapa-texto-acento);
 }
 
+/* Calificación, horario y servicios del taller (DatosTallerCliente): lista, popup y vista previa de Mi taller */
+.mapa-taller {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 2px 0;
+}
+
+.mapa-taller__horario {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 5px;
+  max-width: 100%;
+  font-size: 12px;
+  color: var(--ui-muted);
+}
+
+.mapa-taller__horario > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mapa-taller__horario svg { flex-shrink: 0; margin-top: 2px; }
+.mapa-taller__horario--completo > span { white-space: pre-line; }
+
+.mapa-taller__servicios { display: flex; flex-wrap: wrap; gap: 4px; }
+.mapa-taller__servicios .ui-badge { padding: 0 7px; font-size: 11px; font-weight: 500; }
+
 /* Popup del taller */
 .mapa-popup {
   display: flex;

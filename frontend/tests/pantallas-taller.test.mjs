@@ -132,3 +132,19 @@ test("El admin ya no escribe la calificación a mano", () => {
   assert.ok(!admin.includes("Rating inicial") && !admin.includes("form.rating"));
   assert.ok(admin.includes("<Calificacion rating={t.rating} calificaciones={t.calificaciones} compacta />"));
 });
+
+test("La vista previa de Mi taller usa los mismos campos que el mapa del cliente", async () => {
+  const { comoLoVeElCliente } = await import("../src/pages/taller/perfilTaller.js");
+  const vista = comoLoVeElCliente({
+    id: "t1", nombre: "AutoMax", direccion: "Cra 1", ciudad: "Cali", telefono: "300", latitud: 1, longitud: 2,
+    horario: "L-V 8-18", especialidades: ["Frenos"], rating: 4.5, calificaciones: 8,
+    correoUsuario: "dueno@demo.com", tarifaHora: 60000, mecanicos: [{ nombre: "Carlos" }],
+  });
+  assert.deepEqual(Object.keys(vista), ["id", "nombre", "direccion", "ciudad", "telefono", "latitud", "longitud",
+    "horario", "especialidades", "calificacion", "calificaciones"], "las mismas llaves de TallerMapaDTO");
+  assert.equal(vista.calificacion, 4.5);
+  assert.deepEqual(comoLoVeElCliente({ id: "n" }).calificaciones, 0);
+  const mapa = leer("../src/components/mapa/MapaTalleres.jsx");
+  assert.equal((mapa.match(/<DatosTallerCliente/g) || []).length, 2, "en la lista y en el popup");
+  assert.ok(leer("../src/pages/taller/TallerMiTaller.jsx").includes("<DatosTallerCliente taller={taller} />"));
+});

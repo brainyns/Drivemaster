@@ -44,6 +44,18 @@ export function errorHorario(texto) {
   return (texto || "").length > HORARIO_MAX ? `El horario admite hasta ${HORARIO_MAX} caracteres.` : null;
 }
 
+/**
+ * El taller con la forma que recibe el cliente (TallerMapaDTO) a partir de los datos de Mi taller (TallerDTO): así la
+ * vista previa usa exactamente los mismos campos que la lista y el mapa de Solicitar diagnóstico.
+ */
+export function comoLoVeElCliente(t) {
+  return {
+    id: t.id, nombre: t.nombre, direccion: t.direccion, ciudad: t.ciudad, telefono: t.telefono,
+    latitud: t.latitud, longitud: t.longitud, horario: t.horario, especialidades: t.especialidades || [],
+    calificacion: t.rating ?? null, calificaciones: t.calificaciones ?? 0,
+  };
+}
+
 /** Iniciales para el avatar mientras no haya logo: "Mecánica Rápida" → "MR"; "Taller El Pistón" → "P". */
 export function iniciales(nombre) {
   const palabras = (nombre || "").split(/\s+/).filter((p) => p && !/^(taller|de|del|la|el|los|las|y)$/i.test(p));

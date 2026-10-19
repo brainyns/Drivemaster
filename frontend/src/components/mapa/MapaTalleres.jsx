@@ -12,6 +12,7 @@ import { talleresCercanos, talleresMapa } from "../../services/tallerService";
 import { CENTRO_COLOMBIA, ZOOM_CIUDAD, ZOOM_COLOMBIA, centroDeCiudad } from "../../utils/mapa";
 import { formatoDistancia } from "../../utils/distancia";
 import { formatoDuracion } from "../../utils/geo";
+import DatosTallerCliente from "./DatosTallerCliente";
 import "../../css/mapa.css";
 
 // Espera tras el último cambio de la ubicación antes de pedir los tiempos en carro (el pin se puede seguir moviendo)
@@ -275,6 +276,7 @@ export default function MapaTalleres({ id = "mapa-diagnostico", token, ciudad, u
     return (
       <div className="mapa-popup">
         <strong className="mapa-popup__nombre">{t.nombre}</strong>
+        <DatosTallerCliente taller={t} completo />
         {t.direccion && <span className="mapa-popup__dato">{t.direccion}{t.ciudad ? `, ${t.ciudad}` : ""}</span>}
         {t.telefono && <span className="mapa-popup__dato">Tel. {t.telefono}</span>}
         {distancia && <span className="mapa-popup__distancia">{distancia}</span>}
@@ -389,6 +391,7 @@ export default function MapaTalleres({ id = "mapa-diagnostico", token, ciudad, u
                         {hayUbicacion && i === 0 && !t.sinUbicacion && <span className="mapa-lista__insignia">Más cercano</span>}
                       </span>
                       <span className="mapa-lista__dato">{t.direccion}{t.ciudad ? `, ${t.ciudad}` : ""}</span>
+                      <DatosTallerCliente taller={t} />
                       {distancia && <span className="mapa-lista__distancia">{distancia}</span>}
                       {t.sinUbicacion && <span className="mapa-lista__nota">Sin ubicación en el mapa</span>}
                     </button>

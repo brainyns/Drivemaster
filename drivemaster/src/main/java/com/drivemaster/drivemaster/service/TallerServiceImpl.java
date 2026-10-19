@@ -172,8 +172,7 @@ public class TallerServiceImpl implements TallerService {
     public List<TallerMapaDTO> listarParaMapa() {
         return tallerRepository.findByActivoTrue().stream()
                 .filter(t -> EstadoAprobacion.estaAprobado(t.getEstadoAprobacion()))
-                .map(t -> new TallerMapaDTO(t.getId(), t.getNombre(), t.getDireccion(), t.getCiudad(),
-                        t.getTelefono(), t.getLatitud(), t.getLongitud()))
+                .map(TallerMapaDTO::de)
                 .toList();
     }
 

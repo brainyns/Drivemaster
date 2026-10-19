@@ -201,7 +201,7 @@
   box-shadow: var(--ui-sombra-1);
 }
 
-.mt-vista__item > span:not(.mt-vista__boton) { grid-column: 1; }
+.mt-vista__item > span:not(.mt-vista__boton) { grid-column: 1; min-width: 0; }
 .mt-vista__nombre { font-weight: 700; overflow-wrap: anywhere; }
 .mt-vista__dato { font-size: 0.8rem; color: var(--ui-muted); overflow-wrap: anywhere; }
 .mt-vista__distancia { font-size: 0.8rem; font-weight: 600; color: var(--primary-text); }
@@ -209,7 +209,7 @@
 
 .mt-vista__boton {
   grid-column: 2;
-  grid-row: 1 / span 3;
+  grid-row: 1 / span 4;
   align-self: center;
   padding: 6px 12px;
   border-radius: 8px;
