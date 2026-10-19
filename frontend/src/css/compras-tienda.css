@@ -128,3 +128,27 @@
 @media (max-width: 1023px) {
   .cmp-registrar { display: none; }
 }
+
+/* ── Detalle ───────────────────────────────────────────────────────── */
+.ui-page-header .cmp-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 10px 0 0;
+  font-size: 0.875rem;
+  color: var(--ui-muted);
+}
+
+.cmp-lateral { display: grid; gap: 16px; }
+.cmp-linea { display: flex; align-items: center; gap: 10px; }
+.cmp-linea strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+.cmp-total--detalle { margin: 0 20px 18px; }
+.cmp-datos { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.cmp-efectos { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; font-size: 0.875rem; line-height: 1.5; }
+.cmp-efectos li { display: flex; gap: 8px; }
+.cmp-efectos svg { flex-shrink: 0; margin-top: 2px; color: var(--ui-muted); }
+.cmp-efectos li:first-child svg { color: var(--ui-ok); }
+
+@media (max-width: 760px) {
+  .cmp-total--detalle { margin: 12px 0 0; }
+}

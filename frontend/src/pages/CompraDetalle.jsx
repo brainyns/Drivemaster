@@ -1,222 +1,166 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { obtenerCompra, descargarPdfCompra } from "../services/compraService";
-import "../css/compras.css";
+import { obtenerProveedor } from "../services/proveedorService";
+import { listarProductosMiTienda } from "../services/productoService";
+import { formatPrecio } from "../components/servicio/estadosServicio";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Dato from "../components/ui/Dato";
+import Alerta from "../components/ui/Alerta";
+import Esqueleto from "../components/ui/Esqueleto";
+import ImagenProducto from "../components/marketplace/ImagenProducto";
+import Icon from "../components/public/Icon";
+import { refCompra, unidades } from "./tienda/comprasTienda";
+import "../css/compras-tienda.css";
 
-const IcArrow = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
-const IcPrint = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>;
-const IcDown  = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-const IcCheck = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>;
-const IcTruck = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
+const fechaHora = (f) => (f
+  ? new Date(f).toLocaleString("es-CO", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
+  : "—");
 
-function formatFecha(f) {
-  if (!f) return "—";
-  return new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
-}
-
+/** Una compra registrada: qué llegó, de quién, cuánto sumó al stock y su PDF. Las compras no se editan. */
 function CompraDetalle({ id, onVolver, token }) {
-  const [compra, setCompra]         = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
+  const [compra, setCompra] = useState(null);
+  const [proveedor, setProveedor] = useState(null);
+  const [imagenes, setImagenes] = useState({});
+  const [error, setError] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
   const [descargando, setDescargando] = useState(false);
+  const [errorPdf, setErrorPdf] = useState(null);
 
-  useEffect(() => {
-    obtenerCompra(id, token)
-      .then(setCompra)
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
+  const cargar = useCallback(async () => {
+    try {
+      const c = await obtenerCompra(id, token);
+      setCompra(c);
+      setError(null);
+      // La compra guarda solo el id del proveedor; si ya no existe, se muestra sin sus datos
+      obtenerProveedor(c.proveedorId, token).then(setProveedor).catch(() => setProveedor(null));
+    } catch (e) {
+      setError(e.message);
+    }
   }, [id, token]);
 
-  const handlePdf = async () => {
+  useEffect(() => {
+    let vivo = true;
+    listarProductosMiTienda(token)
+      .then((l) => { if (vivo) setImagenes(Object.fromEntries((l || []).map((p) => [p.id, p.imagenUrl]))); })
+      .catch(() => {});
+    const t = setTimeout(cargar, 0);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [token, cargar]);
+
+  const descargar = async () => {
     setDescargando(true);
+    setErrorPdf(null);
     try {
       await descargarPdfCompra(id, token);
     } catch (e) {
-      alert("Error al generar PDF: " + e.message);
+      setErrorPdf(`No pudimos generar el PDF. ${e.message}`);
     } finally {
       setDescargando(false);
     }
   };
 
-  const handleImprimir = async () => {
-    setDescargando(true);
-    try {
-      await descargarPdfCompra(id, token);
-      setTimeout(() => window.print(), 800);
-    } catch (e) {
-      alert("Error al imprimir: " + e.message);
-    } finally {
-      setDescargando(false);
-    }
-  };
+  if (!compra) {
+    return (
+      <div className="ss-panel--tienda cmp-root">
+        <EncabezadoPagina titulo="Compra" onVolver={onVolver} textoVolver="Compras" />
+        {error ? (
+          <Alerta reintentando={reintentando} onReintentar={async () => { setReintentando(true); await cargar(); setReintentando(false); }}>
+            No pudimos cargar la compra. {error}
+          </Alerta>
+        ) : <Esqueleto variante="lista" cantidad={3} texto="Cargando la compra…" />}
+      </div>
+    );
+  }
 
-  if (loading) return <div className="cp-root"><div className="cp-loading"><div className="cp-spinner"/>Cargando...</div></div>;
-  if (error)   return <div className="cp-root"><p className="cp-error">{error}</p></div>;
-  if (!compra) return null;
-
-  const subtotal = compra.productos?.reduce((s, p) => s + (p.subtotal || 0), 0) || compra.total || 0;
-  const poId     = `PO-${String(compra.id).slice(-5).toUpperCase()}`;
-  const fecha    = formatFecha(compra.fecha);
+  const productos = compra.productos || [];
+  const subtotal = productos.reduce((s, p) => s + (p.subtotal || 0), 0);
+  const total = compra.total ?? subtotal;
+  const totalUnidades = unidades(compra);
 
   return (
-    <div className="cp-root">
+    <div className="ss-panel--tienda cmp-root">
+      <EncabezadoPagina titulo={`Compra ${refCompra(compra.id)}`} onVolver={onVolver} textoVolver="Compras"
+        acciones={(
+          <button type="button" className="ui-btn ui-btn--secundario" onClick={descargar} disabled={descargando} aria-busy={descargando}>
+            {!descargando && <Icon name="file" size={16} />}{descargando ? "Generando el PDF…" : "Descargar PDF"}
+          </button>
+        )}>
+        <p className="cmp-meta">
+          <span>{fechaHora(compra.fecha)}</span>
+          {proveedor?.nombre && <span>{proveedor.nombre}</span>}
+          <span>{totalUnidades} {totalUnidades === 1 ? "unidad" : "unidades"}</span>
+        </p>
+      </EncabezadoPagina>
 
-      {/* Header */}
-      <div className="cp-header">
-        <div>
-          <button className="cp-back-link" onClick={onVolver}>{IcArrow} Volver a Compras</button>
-          <h1 className="cp-h1" style={{ marginTop: ".4rem" }}>Registro de compra</h1>
-          <p className="cp-breadcrumb">ID de registro: {poId}</p>
-        </div>
-        <button
-          className="cp-btn-new"
-          onClick={onVolver}
-          style={{ background: "var(--surface2)", border: "1px solid var(--border2)", color: "var(--text)" }}
-        >
-          + Nueva Compra
-        </button>
-      </div>
+      {errorPdf && <Alerta className="cmp-alerta" onCerrar={() => setErrorPdf(null)}>{errorPdf}</Alerta>}
 
-      <div className="cp-detalle-layout">
-
-        {/* Factura principal */}
-        <div className="cp-detalle-main">
-
-          <div className="cp-invoice-head">
-            <div>
-              <span className="cp-invoice-tag">FACTURA OFICIAL</span>
-              <h2 className="cp-invoice-title">FACTURA #{poId}</h2>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <p style={{ fontSize: ".72rem", color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em" }}>Fecha de emisión</p>
-              <p style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-.02em" }}>{fecha}</p>
-            </div>
+      <div className="cmp-form">
+        <section className="ui-card ui-table-card cmp-detalle" aria-labelledby="cmp-productos-titulo">
+          <div className="ui-card__header">
+            <h2 id="cmp-productos-titulo" className="ui-card__titulo">Productos</h2>
+            <span className="ui-card__sub">{productos.length} {productos.length === 1 ? "producto" : "productos"}</span>
           </div>
-
-          <div className="cp-invoice-parties">
-            <div>
-              <p className="cp-invoice-party-label">Datos del proveedor</p>
-              <p className="cp-invoice-party-name" style={{ color: "var(--primary-text)" }}>
-                {compra.proveedorNombre || `Proveedor #${String(compra.proveedorId).slice(-6)}`}
-              </p>
-              <p className="cp-invoice-party-sub">{compra.proveedorContacto || "—"}</p>
-              {compra.proveedorEmail && <p className="cp-invoice-party-sub">{compra.proveedorEmail}</p>}
-            </div>
-            <div>
-              <p className="cp-invoice-party-label">Enviar a</p>
-              <p className="cp-invoice-party-name">DriveMaster</p>
-              <p className="cp-invoice-party-sub">Almacén Central</p>
-              <p className="cp-invoice-party-sub">Colombia</p>
-            </div>
-          </div>
-
-          <div className="cp-invoice-section">
-            <div className="cp-invoice-section-header">
-              <h3 className="cp-invoice-section-title">Productos de la orden de compra</h3>
-              <span className="cp-items-badge">{`ÍTEMS: ${String(compra.productos?.length || 0).padStart(2, "0")}`}</span>
-            </div>
-            <table className="cp-invoice-table">
+          <div className="ui-table-wrap">
+            <table className="ui-table ui-table--tarjetas">
               <thead>
                 <tr>
-                  <th></th>
-                  <th>Producto</th>
-                  <th style={{ textAlign: "center" }}>Cantidad</th>
-                  <th style={{ textAlign: "right" }}>Costo unitario</th>
-                  <th style={{ textAlign: "right" }}>Subtotal</th>
+                  <th scope="col">Producto</th>
+                  <th scope="col" className="ui-table__num">Cantidad</th>
+                  <th scope="col" className="ui-table__num">Costo por unidad</th>
+                  <th scope="col" className="ui-table__num">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
-                {compra.productos?.map((p, i) => (
-                  <tr key={i} className="cp-invoice-row">
-                    <td>
-                      <div className="cp-invoice-prod-ico">
-                        {(p.nombre || "P")[0].toUpperCase()}
-                      </div>
+                {productos.map((p, i) => (
+                  <tr key={`${p.productoId}-${i}`}>
+                    <td data-label="Producto" className="ui-table__titulo">
+                      <span className="cmp-linea">
+                        <ImagenProducto src={imagenes[p.productoId]} className="cmp-item__imagen" tamanioIcono={16} />
+                        <strong>{p.nombre}</strong>
+                      </span>
                     </td>
-                    <td>
-                      <p className="cp-invoice-prod-name">{p.nombre}</p>
-                      <p className="cp-invoice-prod-sku">SKU: {p.productoId?.slice(-8).toUpperCase() || "—"}</p>
-                    </td>
-                    <td style={{ textAlign: "center", fontWeight: 800, fontSize: "1rem" }}>
-                      {String(p.cantidad).padStart(2, "0")}
-                    </td>
-                    <td style={{ textAlign: "right", color: "var(--muted)", fontSize: ".85rem" }}>
-                      ${(p.costo || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ textAlign: "right", fontWeight: 800, color: "var(--primary-text)", fontSize: ".9rem" }}>
-                      ${(p.subtotal || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}
-                    </td>
+                    <td data-label="Cantidad" className="ui-table__num">{p.cantidad}</td>
+                    <td data-label="Costo por unidad" className="ui-table__num">{formatPrecio(p.costo)}</td>
+                    <td data-label="Subtotal" className="ui-table__num"><span className="ui-precio">{formatPrecio(p.subtotal)}</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <div className="cmp-total cmp-total--detalle"><span>Total de la compra</span><strong className="ui-precio">{formatPrecio(total)}</strong></div>
+        </section>
 
-          <div className="cp-invoice-totals">
-            <div className="cp-invoice-total-row">
-              <span>Subtotal</span>
-              <span>${subtotal.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
+        <aside className="cmp-form__lateral cmp-lateral">
+          <section className="ui-card" aria-labelledby="cmp-proveedor-titulo">
+            <div className="ui-card__header"><h2 id="cmp-proveedor-titulo" className="ui-card__titulo">Proveedor</h2></div>
+            <div className="ui-card__cuerpo">
+              {proveedor ? (
+                <dl className="ui-datos cmp-datos">
+                  <Dato etiqueta="Nombre">{proveedor.nombre}</Dato>
+                  <Dato etiqueta="NIT">{proveedor.nit}</Dato>
+                  <Dato etiqueta="Teléfono">{proveedor.telefono}</Dato>
+                  <Dato etiqueta="Correo">{proveedor.correo}</Dato>
+                </dl>
+              ) : (
+                <p className="cmp-tenue cmp-sin-resultados">Este proveedor ya no está en tu lista.</p>
+              )}
             </div>
-            <div className="cp-invoice-total-final">
-              <span>TOTAL A PAGAR</span>
-              <span>${(compra.total || subtotal).toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
+          </section>
+          <section className="ui-card" aria-labelledby="cmp-efecto-titulo">
+            <div className="ui-card__header"><h2 id="cmp-efecto-titulo" className="ui-card__titulo">Qué hizo esta compra</h2></div>
+            <div className="ui-card__cuerpo">
+              <ul className="cmp-efectos">
+                <li><Icon name="check" size={16} /> Sumó {totalUnidades} {totalUnidades === 1 ? "unidad" : "unidades"} al stock de tus productos.</li>
+                <li>
+                  <Icon name={proveedor?.correo ? "mail" : "alert"} size={16} />
+                  {proveedor?.correo
+                    ? `Al registrarla le enviamos el PDF a ${proveedor.correo}.`
+                    : "El proveedor no tenía correo: el PDF no se envió. Puedes descargarlo arriba."}
+                </li>
+              </ul>
             </div>
-            <button
-              className="cp-btn-outline"
-              style={{ marginTop: "1rem", width: "100%", justifyContent: "center" }}
-              onClick={handlePdf}
-              disabled={descargando}
-            >
-              {IcDown} {descargando ? "Generando..." : "Descargar registro de la transacción"}
-            </button>
-          </div>
-        </div>
-
-        {/* Panel lateral */}
-        <div className="cp-detalle-side">
-
-          <div className="cp-side-panel">
-            <p className="cp-side-panel-title">Acciones</p>
-            {[
-              { ico: IcPrint, label: "Imprimir factura",                       onClick: handleImprimir },
-              { ico: IcDown,  label: descargando ? "Generando..." : "Descargar PDF", onClick: handlePdf },
-              { ico: IcTruck, label: "Enviar al proveedor por correo",         onClick: () => alert("El PDF se envía automáticamente al registrar la compra.") },
-            ].map((a, i) => (
-              <button key={i} className="cp-action-row" onClick={a.onClick} disabled={descargando}>
-                <span className="cp-action-ico">{a.ico}</span>
-                <span>{a.label}</span>
-                <span className="cp-action-arrow">›</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="cp-side-panel cp-side-panel--verified">
-            <div className="cp-verified-head">
-              <span className="cp-verified-dot"/>{IcCheck}
-              <span className="cp-verified-label">COMPRA VERIFICADA</span>
-            </div>
-            <p className="cp-verified-desc">
-              Esta compra ha sido reconciliada con el inventario y los controles de calidad han sido aplicados.
-            </p>
-          </div>
-
-          <div className="cp-side-panel">
-            <p className="cp-side-panel-title">Información General</p>
-            <div className="cp-info-rows">
-              {[
-                { label: "ID de compra", val: poId },
-                { label: "Fecha",       val: fecha },
-                { label: "Estado",      val: compra.estado || "RECIBIDA" },
-                { label: "Total ítems", val: compra.productos?.length || 0 },
-                { label: "Total",       val: `$${(compra.total || 0).toLocaleString("es-CO", { minimumFractionDigits: 2 })}` },
-              ].map((r, i) => (
-                <div key={i} className="cp-info-row">
-                  <span className="cp-info-label">{r.label}</span>
-                  <span className="cp-info-val">{r.val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+          </section>
+        </aside>
       </div>
     </div>
   );

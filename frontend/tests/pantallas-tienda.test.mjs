@@ -230,3 +230,11 @@ test("Nueva compra: selector nativo, resultados como botones, confirmación comp
   assert.ok(pagina.includes("<ConfirmarAccion") && pagina.includes("<BarraAccionMovil"));
   assert.ok(pagina.includes("productos: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad, costo: i.costo }))"));
 });
+
+test("Detalle de compra: sin factura oficial ni verificación inventada, con el PDF y lo que hizo la compra", () => {
+  const pagina = leer("../src/pages/CompraDetalle.jsx");
+  for (const falso of ["FACTURA OFICIAL", "COMPRA VERIFICADA", "Almacén Central", "alert("]) {
+    assert.ok(!pagina.includes(falso), `sin “${falso}”`);
+  }
+  assert.ok(pagina.includes("descargarPdfCompra(id, token)") && pagina.includes("obtenerProveedor(c.proveedorId, token)"));
+});
