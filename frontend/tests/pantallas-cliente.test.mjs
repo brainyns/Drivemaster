@@ -64,3 +64,16 @@ test("Mi perfil: secciones de datos, seguridad y preferencias, con validación y
   assert.doesNotMatch(p, /EditarNombre/);
   assert.doesNotMatch(leer("../src/css/perfil-cliente.css"), /\.pc-pagina \.ui-btn/);
 });
+
+test("Tu carrito: confirmar al vaciar, deshacer al quitar, resumen con envío e IVA y barra de pago en celular", () => {
+  const p = leer("../src/pages/CarritoMarketplace.jsx");
+  assert.doesNotMatch(p, /window\.confirm/);
+  assert.match(p, /<ConfirmarAccion\s+titulo="Vaciar el carrito"/);
+  assert.match(p, /Deshacer/);
+  assert.match(p, /<dt>Envío<\/dt>/);
+  assert.match(p, /<dt>IVA<\/dt>/);
+  assert.match(p, /<BarraAccionMovil etiqueta="Subtotal"/);
+  assert.match(p, /<EstadoVacio icono="box" titulo="Tu carrito está vacío"/);
+  // El paso al pago sigue siendo el mismo
+  assert.match(p, /onPagar: onContinuarCatalogo/);
+});

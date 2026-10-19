@@ -121,7 +121,6 @@
 .mk-tarjeta__agregar { min-height: 38px; padding: 8px 14px; }
 
 .mk-vacio { text-align: center; padding: 48px 12px; color: var(--dm-muted); }
-.mk-vacio__ayuda { font-size: 0.88rem; }
 
 .mk-paginas { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 28px; color: var(--dm-muted); }
 
@@ -232,7 +231,6 @@
 .mk-chip--apagado { color: var(--dm-muted); background: transparent; border-style: dashed; font-weight: 600; }
 
 /* ── Carrito: lista a la izquierda, resumen fijo a la derecha ────────── */
-.mk-carrito__titulo { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
 .mk-carrito { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
 .mk-carrito__lista { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .mk-carrito__lista > .mk-aviso { margin: 0; }
@@ -288,7 +286,7 @@
 .mk-linea__otras { grid-column: 1 / -1; }
 
 .mk-paso { display: inline-flex; align-items: stretch; border: 1px solid var(--dm-line); border-radius: 6px; overflow: hidden; background: var(--dm-surface); }
-.mk-paso button { width: 34px; height: 34px; border: none; background: var(--dm-surface-2); color: var(--dm-text); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.mk-paso button { width: 40px; height: 40px; border: none; background: var(--dm-surface-2); color: var(--dm-text); font-size: 1.1rem; line-height: 1; cursor: pointer; }
 .mk-paso button:hover:not(:disabled) { background: var(--dm-orange-soft); color: var(--dm-orange-text); }
 .mk-paso button:disabled { opacity: 0.4; cursor: not-allowed; }
 .mk-paso output { min-width: 40px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
@@ -324,12 +322,6 @@
 .mk-confianza li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.82rem; line-height: 1.4; }
 .mk-confianza svg { flex-shrink: 0; color: var(--ui-ok); margin-top: 1px; }
 
-/* Carrito vacío */
-.mk-vacio--carrito { background: var(--dm-surface); border: 1px dashed var(--dm-line); border-radius: 12px; padding: 56px 16px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.mk-vacio__icono { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--dm-orange-soft); color: var(--dm-orange-text); margin-bottom: 6px; }
-.mk-vacio--carrito h2 { margin: 0; color: var(--dm-text); }
-.mk-vacio--carrito p { margin: 0 0 10px; }
-.mk-vacio__ayuda { font-size: 0.85rem; }
 
 @media (max-width: 900px) {
   .mk-carrito { grid-template-columns: 1fr; gap: 20px; }
@@ -366,3 +358,14 @@
 
 /* Avisos de compatibilidad dentro de una línea del carrito: más compactos */
 .mk-linea .mk-aviso { margin: 6px 0 0; padding: 7px 11px; font-size: 0.8rem; }
+
+/* ── Carrito con las piezas compartidas (EncabezadoPagina, Alerta, BarraAccionMovil) ── */
+.mk-carrito__aviso { margin-bottom: 16px; }
+.mk-pagina .mk-vaciar { color: var(--ui-error); }
+.mk-pagina .mk-vaciar:hover:not(:disabled) { background: var(--ui-error-bg); }
+.mk-totales--carrito { max-width: none; margin: 0 0 6px; }
+.mk-totales--carrito dd { text-align: right; }
+.mk-paso button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }
+@media (pointer: coarse) { .mk-paso button { width: 44px; height: 44px; } }
+/* En celular el botón de pago va en la barra inferior */
+@media (max-width: 1023px) { .mk-solo-escritorio { display: none; } }

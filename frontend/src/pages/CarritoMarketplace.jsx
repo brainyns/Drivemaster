@@ -5,9 +5,15 @@ import { formatPrecio } from "../components/servicio/estadosServicio";
 import { AvisoCompatibilidad } from "../components/marketplace/EtiquetasProducto";
 import { textoDisponibilidad } from "../components/marketplace/disponibilidad";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
+import Icon from "../components/public/Icon";
 import {
-  IconoCamion, IconoCarrito, IconoDevolucion, IconoEscudo, IconoPin, IconoTienda,
+  IconoCamion, IconoDevolucion, IconoEscudo, IconoPin, IconoTienda,
 } from "../components/marketplace/IconosMarket";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Alerta from "../components/ui/Alerta";
+import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import "../css/marketplace.css";
 
 /** Agrupa por tienda conservando el orden en que se agregaron. */
@@ -200,15 +206,22 @@ export default function CarritoMarketplace({ header, carrito, onVolver, onVerPro
     clearTimeout(temporizador.current);
     setQuitado(null);
   };
+  // Vaciar no se puede deshacer: se confirma con el diálogo de la app (no el del navegador)
+  const [confirmarVaciar, setConfirmarVaciar] = useState(false);
   const vaciar = () => {
-    if (window.confirm("¿Vaciar todo el carrito?")) carrito.vaciar();
+    carrito.vaciar();
+    setConfirmarVaciar(false);
   };
   useEffect(() => () => clearTimeout(temporizador.current), []);
 
-  const accionPago = (texto, onPagar) => {
-    if (!user) return <button className="dm-btn dm-btn--primary dm-btn--full" onClick={onIrLogin}>Inicia sesión para pagar</button>;
+  const accionPago = (texto, onPagar, clase = "ui-btn--bloque") => {
+    if (!user) return <button className={`ui-btn ui-btn--primario ui-btn--grande ${clase}`} onClick={onIrLogin}>Inicia sesión para pagar</button>;
     if (!esCliente) return <p className="mk-nota">Para comprar entra con una cuenta de cliente.</p>;
-    return <button className="dm-btn dm-btn--primary dm-btn--full" onClick={onPagar}>{texto}</button>;
+    return (
+      <button className={`ui-btn ui-btn--primario ui-btn--grande ${clase}`} onClick={onPagar}>
+        {texto} <Icon name="arrow" size={16} />
+      </button>
+    );
   };
 
   const grupos = [
@@ -222,28 +235,30 @@ export default function CarritoMarketplace({ header, carrito, onVolver, onVerPro
     <div className="dm-page mk-pagina">
       {header}
       <main className="dm-container mk-contenido">
-        <button className="mk-enlace mk-volver" onClick={onVolver}>← Seguir comprando</button>
-        <div className="mk-carrito__titulo">
-          <div className="mk-titulo">
-            <h1>Tu carrito</h1>
-            {!vacio && <p>{etiquetaUnidades(carrito.cantidad)} · revisa las cantidades antes de pagar.</p>}
-          </div>
-          {!vacio && <button className="mk-enlace mk-enlace--peligro" onClick={vaciar}>Vaciar carrito</button>}
-        </div>
+        <EncabezadoPagina
+          titulo="Tu carrito"
+          descripcion={vacio ? null : `${etiquetaUnidades(carrito.cantidad)} · revisa las cantidades antes de pagar.`}
+          onVolver={onVolver}
+          textoVolver="Seguir comprando"
+          acciones={!vacio && (
+            <button className="ui-btn ui-btn--texto mk-vaciar" onClick={() => setConfirmarVaciar(true)}>
+              <Icon name="trash" size={16} /> Vaciar carrito
+            </button>
+          )}
+        />
 
         {quitado && (
-          <p className="mk-toast" role="status">
-            «{quitado.producto.nombre}» salió del carrito. <button className="mk-enlace" onClick={deshacer}>Deshacer</button>
-          </p>
+          <Alerta tono="info" className="mk-carrito__aviso" onCerrar={() => setQuitado(null)}>
+            «{quitado.producto.nombre}» salió del carrito.{" "}
+            <button className="ui-btn ui-btn--texto ui-btn--chico" onClick={deshacer}>Deshacer</button>
+          </Alerta>
         )}
 
         {vacio ? (
-          <div className="mk-vacio mk-vacio--carrito">
-            <span className="mk-vacio__icono" aria-hidden="true"><IconoCarrito size={34} /></span>
-            <h2>Tu carrito está vacío</h2>
-            <p>Busca el repuesto que necesitas y compara precios entre tiendas de tu ciudad.</p>
-            <button className="dm-btn dm-btn--primary" onClick={onVolver}>Ver el catálogo</button>
-          </div>
+          <EstadoVacio icono="box" titulo="Tu carrito está vacío"
+            texto="Busca el repuesto que necesitas y compara precios entre tiendas de tu ciudad.">
+            <button className="ui-btn ui-btn--primario" onClick={onVolver}>Explorar catálogo</button>
+          </EstadoVacio>
         ) : (
           <div className="mk-carrito">
             <div className="mk-carrito__lista">
@@ -262,15 +277,17 @@ export default function CarritoMarketplace({ header, carrito, onVolver, onVerPro
               <h2>Resumen</h2>
               {grupos.map((g) => (
                 <div key={g.clave} className="mk-resumen__grupo">
-                  <div className="mk-resumen__fila">
-                    <span>{g.titulo}</span>
-                    <strong>{formatPrecio(g.subtotal)}</strong>
-                  </div>
+                  <dl className="mk-totales mk-totales--carrito">
+                    <div><dt>{g.titulo}</dt><dd className="ui-precio">{formatPrecio(g.subtotal)}</dd></div>
+                    <div><dt>Envío</dt><dd>Se elige en el siguiente paso</dd></div>
+                    <div><dt>IVA</dt><dd>Se calcula al pagar</dd></div>
+                    <div className="mk-totales__final"><dt>Subtotal</dt><dd className="ui-precio">{formatPrecio(g.subtotal)}</dd></div>
+                  </dl>
                   <span className="mk-resumen__detalle">{etiquetaUnidades(g.cantidad)} · {g.detalle}</span>
-                  {g.onPagar && <div className="mk-resumen__accion">{accionPago(g.texto, g.onPagar)}</div>}
+                  {g.onPagar && <div className="mk-resumen__accion mk-solo-escritorio">{accionPago(g.texto, g.onPagar)}</div>}
                 </div>
               ))}
-              <p className="mk-resumen__nota">El envío o el retiro se elige en el siguiente paso; el IVA se calcula al pagar.</p>
+              <p className="mk-resumen__nota">El total final, con el envío o el retiro y el IVA, lo ves antes de pagar.</p>
               <ul className="mk-confianza">
                 <li><IconoEscudo size={18} /><span>Pago seguro con Wompi</span></li>
                 <li><IconoCamion size={18} /><span>Retiro en tienda o envío, según cada tienda</span></li>
@@ -280,6 +297,23 @@ export default function CarritoMarketplace({ header, carrito, onVolver, onVerPro
           </div>
         )}
       </main>
+
+      {!vacio && grupos[0] && (
+        <BarraAccionMovil etiqueta="Subtotal" valor={formatPrecio(grupos[0].subtotal)} nota="Envío e IVA en el siguiente paso">
+          {accionPago("Pagar", grupos[0].onPagar, "")}
+        </BarraAccionMovil>
+      )}
+
+      {confirmarVaciar && (
+        <ConfirmarAccion
+          titulo="Vaciar el carrito"
+          mensaje={`Se quitarán los ${etiquetaUnidades(carrito.cantidad)} del carrito. Esto no se puede deshacer.`}
+          textoConfirmar="Sí, vaciar"
+          peligro
+          onConfirmar={vaciar}
+          onCancelar={() => setConfirmarVaciar(false)}
+        />
+      )}
     </div>
   );
 }
