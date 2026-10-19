@@ -313,3 +313,16 @@ test("Avisos de la tienda: abren el pedido con irA(pagina, { abrir }) y los dem�
   assert.ok(pagina.includes("useState(destino.abrir)"), "abre el detalle directamente");
   assert.ok(pagina.includes("No encontramos el pedido del aviso"), "si el pedido no está, lo dice");
 });
+
+test("Proveedores: los errores por campo del backend llegan al formulario", async () => {
+  const { errorDeRespuesta, mensajeDeError } = await import("../src/utils/errores.js");
+  const respuesta = (cuerpo) => ({ json: async () => { if (cuerpo === undefined) throw new Error("sin cuerpo"); return cuerpo; } });
+  const e = await errorDeRespuesta(respuesta({ error: "Revisa los datos marcados", campos: { correo: "Escribe un correo válido" } }), "x");
+  assert.equal(e.message, "Revisa los datos marcados");
+  assert.deepEqual(e.campos, { correo: "Escribe un correo válido" });
+  assert.equal((await errorDeRespuesta(respuesta(undefined), "No se pudo crear el proveedor")).message, "No se pudo crear el proveedor");
+  assert.equal(mensajeDeError({ message: "otro" }, "x"), "otro");
+  const form = leer("../src/pages/ProveedorForm.jsx");
+  assert.ok(form.includes("setErroresServidor(campos)"), "los errores del backend van a su campo");
+  assert.match(leer("../src/services/proveedorService.js"), /throw await errorDeRespuesta\(res, "No se pudo crear el proveedor"\)/);
+});

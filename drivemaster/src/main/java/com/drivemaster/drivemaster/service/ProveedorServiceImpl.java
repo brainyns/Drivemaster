@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.service;
 
 import java.util.List;
 
+import com.drivemaster.drivemaster.util.ValidacionProveedor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,7 +21,7 @@ public class ProveedorServiceImpl implements ProveedorService {
 
     @Override
     public Proveedor crear(Proveedor proveedor) {
-        return proveedorRepository.save(proveedor);
+        return proveedorRepository.save(ValidacionProveedor.validar(proveedor));
     }
 
     @Override
@@ -56,14 +57,17 @@ public class ProveedorServiceImpl implements ProveedorService {
 
     @Override
     public Proveedor crearEnTienda(Proveedor proveedor, String tiendaId) {
+        String dueno = exigir(tiendaId);
+        ValidacionProveedor.validar(proveedor);
         proveedor.setId(null); // siempre es uno nuevo: no se pisa un registro ajeno eligiendo su id
-        proveedor.setTiendaId(exigir(tiendaId));
+        proveedor.setTiendaId(dueno);
         return proveedorRepository.save(proveedor);
     }
 
     @Override
     public Proveedor actualizarEnTienda(String id, Proveedor datos, String tiendaId) {
         Proveedor actual = obtenerDeTienda(id, tiendaId);
+        ValidacionProveedor.validar(datos);
         actual.setNombre(datos.getNombre());
         actual.setNit(datos.getNit());
         actual.setTelefono(datos.getTelefono());

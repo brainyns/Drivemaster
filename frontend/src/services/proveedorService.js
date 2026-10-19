@@ -1,4 +1,5 @@
 import { apiFetch } from "./http";
+import { errorDeRespuesta } from "../utils/errores";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/proveedores`;
 
 const buildHeaders = (token, contentType = "application/json") => {
@@ -26,7 +27,8 @@ export async function crearProveedor(proveedor, token) {
     headers: buildHeaders(token),
     body: JSON.stringify(proveedor),
   });
-  if (!res.ok) throw new Error("Error al crear proveedor");
+  // Un 400 trae el error de cada campo (error.campos) para mostrarlo en el formulario
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo crear el proveedor");
   return res.json();
 }
 
@@ -36,7 +38,7 @@ export async function actualizarProveedor(id, proveedor, token) {
     headers: buildHeaders(token),
     body: JSON.stringify(proveedor),
   });
-  if (!res.ok) throw new Error("Error al actualizar proveedor");
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo actualizar el proveedor");
   return res.json();
 }
 

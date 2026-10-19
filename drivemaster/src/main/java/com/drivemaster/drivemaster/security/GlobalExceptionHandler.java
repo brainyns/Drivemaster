@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.drivemaster.drivemaster.exception.DatosInvalidosException;
 import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 
 @RestControllerAdvice
@@ -48,6 +49,14 @@ public class GlobalExceptionHandler {
         response.put("error", "Stock insuficiente");
         response.put("producto", ex.getProducto());
         response.put("stockDisponible", ex.getStockDisponible());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /** Datos de un formulario con errores: el mensaje general y el de cada campo, para mostrarlos en línea. */
+    @ExceptionHandler(DatosInvalidosException.class)
+    public ResponseEntity<?> handleDatosInvalidos(DatosInvalidosException ex) {
+        Map<String, Object> response = buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+        response.put("campos", ex.getCampos());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 

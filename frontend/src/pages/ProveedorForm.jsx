@@ -18,6 +18,8 @@ export default function ProveedorForm({ id, onVolver, token }) {
   const [tocado, setTocado] = useState(false);
   const [errorCarga, setErrorCarga] = useState(null);
   const [errorGuardar, setErrorGuardar] = useState(null);
+  // Errores por campo que respondió el backend; se borran al editar el campo
+  const [erroresServidor, setErroresServidor] = useState({});
 
   useEffect(() => {
     if (!esEdicion) return;
@@ -29,8 +31,16 @@ export default function ProveedorForm({ id, onVolver, token }) {
       .finally(() => setCargando(false));
   }, [id, token, esEdicion]);
 
-  const errores = tocado ? erroresProveedor(form) : {};
-  const cambiar = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const errores = { ...erroresServidor, ...(tocado ? erroresProveedor(form) : {}) };
+  const cambiar = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    if (erroresServidor[name]) setErroresServidor((prev) => {
+      const resto = { ...prev };
+      delete resto[name];
+      return resto;
+    });
+  };
 
   const guardar = async (e) => {
     e.preventDefault();
@@ -41,13 +51,20 @@ export default function ProveedorForm({ id, onVolver, token }) {
     }
     setGuardando(true);
     setErrorGuardar(null);
+    setErroresServidor({});
     try {
       const datos = { nombre: form.nombre.trim(), nit: form.nit.trim(), telefono: form.telefono.trim(), correo: form.correo.trim() };
       if (esEdicion) await actualizarProveedor(id, datos, token);
       else await crearProveedor(datos, token);
       onVolver();
     } catch (err) {
-      setErrorGuardar(err.message);
+      const campos = err.campos && Object.keys(err.campos).some((c) => c in form) ? err.campos : null;
+      if (campos) {
+        setErroresServidor(campos);
+        requestAnimationFrame(() => document.querySelector(".prv-root [aria-invalid='true']")?.focus());
+      } else {
+        setErrorGuardar(err.message);
+      }
       setGuardando(false);
     }
   };
