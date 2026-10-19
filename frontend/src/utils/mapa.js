@@ -3,11 +3,13 @@
 
 const env = import.meta.env ?? {};
 
-// Teselas CARTO: Positron en tema claro y Dark Matter en oscuro
-export const TILES_CLARO = env.VITE_MAPA_TILES_CLARO || "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-export const TILES_OSCURO = env.VITE_MAPA_TILES_OSCURO || "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-export const TILES_ATRIBUCION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+// Teselas estándar de OpenStreetMap (sin API key ni registro). Su política de uso: un solo host, sin subdominios
+// a/b/c, sin precarga masiva y con el Referer normal del navegador. En tema oscuro se oscurecen con un filtro CSS
+// (mapa.css), porque OSM no tiene versión oscura.
+export const TILES_URL = env.VITE_MAP_TILES_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+export const TILES_ATRIBUCION = env.VITE_MAP_TILES_ATTRIBUTION
+  || '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+export const TILES_MAX_ZOOM = 19;
 
 // Autocompletado (Photon), dirección de un punto (Nominatim) y rutas en carro (OSRM)
 export const PHOTON_URL = (env.VITE_PHOTON_URL || "https://photon.komoot.io").replace(/\/+$/, "");

@@ -1,23 +1,20 @@
-import { useSyncExternalStore } from "react";
 import { TileLayer } from "react-leaflet";
-import { TILES_ATRIBUCION, TILES_CLARO, TILES_OSCURO } from "../../utils/mapa";
+import { TILES_ATRIBUCION, TILES_MAX_ZOOM, TILES_URL } from "../../utils/mapa";
 
-// El tema vive en <html data-theme="light|dark"> (lo pone App); sin atributo la app arranca en oscuro
-function suscribirTema(avisar) {
-  const observador = new MutationObserver(avisar);
-  observador.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  return () => observador.disconnect();
-}
-const temaOscuro = () => document.documentElement.getAttribute("data-theme") !== "light";
-
-/** true mientras la app esté en tema oscuro; se actualiza al cambiar el tema. */
-function useTemaOscuro() {
-  return useSyncExternalStore(suscribirTema, temaOscuro, () => true);
-}
-
-/** Teselas CARTO que siguen el tema (Positron en claro, Dark Matter en oscuro), con su atribución. */
+/**
+ * Teselas de OpenStreetMap con su atribución. El tema oscuro no cambia de capa: mapa.css le aplica un filtro
+ * solo a .mapa-teselas (no a marcadores, rutas ni controles), así que cambia al instante al alternar el tema.
+ * Se dejan las opciones de Leaflet por defecto que respetan la política de OSM: sin subdominios, sin precarga
+ * extra (keepBuffer normal) y sin tocar el Referer.
+ */
 export default function CapaBase() {
-  const url = useTemaOscuro() ? TILES_OSCURO : TILES_CLARO;
-  // La key fuerza a Leaflet a cambiar de capa cuando cambia el tema
-  return <TileLayer key={url} url={url} attribution={TILES_ATRIBUCION} subdomains="abcd" maxZoom={20} />;
+  return (
+    <TileLayer
+      url={TILES_URL}
+      attribution={TILES_ATRIBUCION}
+      maxZoom={TILES_MAX_ZOOM}
+      maxNativeZoom={TILES_MAX_ZOOM}
+      className="mapa-teselas"
+    />
+  );
 }

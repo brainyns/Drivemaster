@@ -88,8 +88,8 @@ services:
         VITE_API_URL: ${PUBLIC_URL}
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
         # Mapas: vacías = servicios públicos gratuitos. Sirven para apuntar a servidores propios del HomeLab.
-        VITE_MAPA_TILES_CLARO: ${VITE_MAPA_TILES_CLARO:-}
-        VITE_MAPA_TILES_OSCURO: ${VITE_MAPA_TILES_OSCURO:-}
+        VITE_MAP_TILES_URL: ${VITE_MAP_TILES_URL:-}
+        VITE_MAP_TILES_ATTRIBUTION: ${VITE_MAP_TILES_ATTRIBUTION:-}
         VITE_PHOTON_URL: ${VITE_PHOTON_URL:-}
         VITE_NOMINATIM_URL: ${VITE_NOMINATIM_URL:-}
         VITE_NOMINATIM_EMAIL: ${VITE_NOMINATIM_EMAIL:-}

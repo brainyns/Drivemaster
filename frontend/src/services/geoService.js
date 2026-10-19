@@ -1,8 +1,8 @@
 // Servicios de mapas gratuitos y sin API key: Photon (autocompletar), Nominatim (dirección de un punto),
 // OSRM (ruta en carro) y la geolocalización del navegador. Cada petición acepta un AbortSignal para que
 // quien la hace pueda cancelar la anterior.
-import { BBOX_COLOMBIA, CENTRO_COLOMBIA, NOMINATIM_EMAIL, NOMINATIM_URL, OSRM_URL, PHOTON_URL } from "../utils/mapa";
-import { direccionDeNominatim, normalizarConsulta, resultadosDePhoton, rutaDeOsrm } from "../utils/geo";
+import { BBOX_COLOMBIA, CENTRO_COLOMBIA, NOMINATIM_EMAIL, NOMINATIM_URL, OSRM_URL, PHOTON_URL } from "../utils/mapa.js";
+import { direccionDeNominatim, normalizarConsulta, resultadosDePhoton, rutaDeOsrm } from "../utils/geo.js";
 
 export const MIN_CARACTERES_BUSQUEDA = 3;
 const MAX_RESULTADOS = 6;
@@ -18,6 +18,41 @@ function esperar(ms, signal) {
     const t = setTimeout(resolve, ms);
     signal?.addEventListener("abort", () => { clearTimeout(t); reject(cancelada()); }, { once: true });
   });
+}
+
+// Ningún servicio externo puede dejar la pantalla esperando: pasado este tiempo la consulta se corta
+export const LIMITE_PETICION_MS = 8000;
+
+/**
+ * GET a un servicio de mapas con tiempo límite. Devuelve el JSON o lanza un Error con un mensaje en español según
+ * lo que pasó (tardó demasiado, sin conexión, límite de consultas, error del servicio). Si quien llama cancela,
+ * relanza la cancelación (AbortError) para que no se muestre.
+ */
+export async function pedirJson(url, { signal, servicio, limiteMs = LIMITE_PETICION_MS } = {}) {
+  if (signal?.aborted) throw cancelada();
+  const control = new AbortController();
+  const cancelar = () => control.abort();
+  signal?.addEventListener("abort", cancelar, { once: true });
+  let vencida = false;
+  const reloj = setTimeout(() => { vencida = true; control.abort(); }, limiteMs);
+  try {
+    const res = await fetch(url, { signal: control.signal });
+    if (res.status === 403 || res.status === 429) {
+      throw new Error(`${servicio} limitó las consultas por un momento. Espera unos segundos y vuelve a intentarlo.`);
+    }
+    if (!res.ok) throw new Error(`${servicio} no está disponible en este momento (error ${res.status}).`);
+    return await res.json();
+  } catch (e) {
+    if (vencida) throw new Error(`${servicio} tardó demasiado en responder. Vuelve a intentarlo.`);
+    if (esCancelacion(e)) throw e;
+    // fetch rechaza con TypeError cuando no hay red o el servicio está caído (no hay respuesta que leer)
+    if (e instanceof TypeError) throw new Error(`No pudimos conectar con ${servicio.toLowerCase()}. Revisa tu conexión.`);
+    if (e instanceof SyntaxError) throw new Error(`${servicio} respondió algo que no pudimos leer.`);
+    throw e;
+  } finally {
+    clearTimeout(reloj);
+    signal?.removeEventListener("abort", cancelar);
+  }
 }
 
 /**
@@ -38,9 +73,8 @@ export async function buscarDirecciones(texto, { cerca, signal } = {}) {
     zoom: cerca ? "12" : "6",
     bbox: BBOX_COLOMBIA,
   });
-  const res = await fetch(`${PHOTON_URL}/api/?${params}`, { signal });
-  if (!res.ok) throw new Error("El buscador de direcciones no responde en este momento.");
-  return resultadosDePhoton(await res.json()).slice(0, MAX_RESULTADOS);
+  const json = await pedirJson(`${PHOTON_URL}/api/?${params}`, { signal, servicio: "El buscador de direcciones" });
+  return resultadosDePhoton(json).slice(0, MAX_RESULTADOS);
 }
 
 // Política de uso de Nominatim: como máximo una petición por segundo desde la aplicación. Las peticiones se
@@ -62,7 +96,8 @@ function turnoNominatim(signal) {
 
 /**
  * Dirección legible de un punto con Nominatim: { direccion, barrio, ciudad, etiqueta } o null. El navegador no
- * deja cambiar el User-Agent; Nominatim identifica la aplicación por el Referer, que se envía siempre.
+ * deja cambiar el User-Agent; Nominatim identifica la aplicación por el Referer, que el navegador envía con su
+ * política normal (sin Referer, Nominatim responde 403). Tiene tiempo límite: nunca se queda esperando.
  */
 export async function direccionDePunto({ latitud, longitud }, { signal } = {}) {
   await turnoNominatim(signal);
@@ -75,9 +110,8 @@ export async function direccionDePunto({ latitud, longitud }, { signal } = {}) {
     "accept-language": "es",
   });
   if (NOMINATIM_EMAIL) params.set("email", NOMINATIM_EMAIL);
-  const res = await fetch(`${NOMINATIM_URL}/reverse?${params}`, { signal, referrerPolicy: "strict-origin-when-cross-origin" });
-  if (!res.ok) throw new Error("No pudimos obtener la dirección de ese punto.");
-  return direccionDeNominatim(await res.json());
+  const json = await pedirJson(`${NOMINATIM_URL}/reverse?${params}`, { signal, servicio: "El servicio de direcciones" });
+  return direccionDeNominatim(json);
 }
 
 // Las rutas ya calculadas se reutilizan: volver a abrir el mismo servicio no repite la consulta
@@ -90,9 +124,9 @@ export async function rutaEnCarro(origen, destino, { signal } = {}) {
   if (rutasCalculadas.has(clave)) return rutasCalculadas.get(clave);
 
   const tramo = `${origen.longitud},${origen.latitud};${destino.longitud},${destino.latitud}`;
-  const res = await fetch(`${OSRM_URL}/route/v1/driving/${tramo}?overview=full&geometries=geojson&alternatives=false&steps=false`, { signal });
-  if (!res.ok) throw new Error("El servicio de rutas no responde en este momento.");
-  const ruta = rutaDeOsrm(await res.json());
+  const json = await pedirJson(`${OSRM_URL}/route/v1/driving/${tramo}?overview=full&geometries=geojson&alternatives=false&steps=false`,
+    { signal, servicio: "El servicio de rutas" });
+  const ruta = rutaDeOsrm(json);
   if (!ruta) throw new Error("No encontramos una ruta en carro entre los dos puntos.");
   rutasCalculadas.set(clave, ruta);
   return ruta;

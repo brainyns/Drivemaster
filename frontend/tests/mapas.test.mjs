@@ -100,11 +100,86 @@ test("Nominatim se usa a lo sumo una vez por segundo y las URLs de los servicios
   const servicio = leer("../src/services/geoService.js");
   const config = leer("../src/utils/mapa.js");
   assert.match(servicio, /INTERVALO_NOMINATIM_MS = 1\d{3};/);
-  for (const v of ["VITE_MAPA_TILES_CLARO", "VITE_MAPA_TILES_OSCURO", "VITE_PHOTON_URL", "VITE_NOMINATIM_URL", "VITE_OSRM_URL"]) {
+  for (const v of ["VITE_MAP_TILES_URL", "VITE_MAP_TILES_ATTRIBUTION", "VITE_PHOTON_URL", "VITE_NOMINATIM_URL", "VITE_OSRM_URL"]) {
     assert.match(config, new RegExp(v));
   }
   assert.match(config, /OpenStreetMap/);
-  assert.match(config, /CARTO/);
+});
+
+test("el mapa base son las teselas estándar de OSM: un solo host, zoom 19 y atribución con enlace", async () => {
+  const { TILES_URL, TILES_ATRIBUCION, TILES_MAX_ZOOM } = await import("../src/utils/mapa.js");
+  assert.equal(TILES_URL, "https://tile.openstreetmap.org/{z}/{x}/{y}.png");
+  assert.equal(TILES_MAX_ZOOM, 19);
+  assert.match(TILES_ATRIBUCION, /href="https:\/\/www\.openstreetmap\.org\/copyright"/);
+  assert.match(TILES_ATRIBUCION, /OpenStreetMap<\/a> contributors/);
+  // Las props de la capa: nada de subdominios, precarga extra ni cambios al Referer
+  const capa = leer("../src/components/mapa/CapaBase.jsx");
+  const props = capa.slice(capa.indexOf("<TileLayer"), capa.indexOf("/>", capa.indexOf("<TileLayer")));
+  assert.doesNotMatch(props, /subdomains|referrerPolicy|keepBuffer|crossOrigin/);
+});
+
+test("el tema oscuro filtra solo la capa de teselas, no marcadores ni controles", () => {
+  const css = leer("../src/css/mapa.css");
+  assert.match(css, /:root:not\(\[data-theme="light"\]\) \.mapa-teselas \{\s*filter: var\(--mapa-filtro-oscuro\);/);
+  assert.match(css, /--mapa-filtro-oscuro: invert\(1\) hue-rotate\(180deg\)/);
+  assert.equal((css.match(/filter: var\(--mapa-filtro-oscuro\)/g) || []).length, 1);
+  assert.match(leer("../src/components/mapa/CapaBase.jsx"), /className="mapa-teselas"/);
+});
+
+test("no queda ninguna referencia a CARTO en el frontend", () => {
+  for (const archivo of ["../src/utils/mapa.js", "../src/components/mapa/CapaBase.jsx", "../src/css/mapa.css",
+    "../src/services/geoService.js", "../Dockerfile"]) {
+    assert.doesNotMatch(leer(archivo), /cartocdn|carto\.com|CARTO/);
+  }
+});
+
+// fetch simulado: responde lo que se le diga o se queda colgado hasta que lo cancelen
+function simularFetch(respuesta) {
+  const original = globalThis.fetch;
+  globalThis.fetch = (url, { signal } = {}) => new Promise((resolve, reject) => {
+    signal?.addEventListener("abort", () => reject(new DOMException("abortada", "AbortError")), { once: true });
+    if (respuesta === "colgada") return;
+    if (respuesta instanceof Error) return reject(respuesta);
+    resolve(respuesta);
+  });
+  return () => { globalThis.fetch = original; };
+}
+
+test("una consulta que no responde termina con un mensaje en español en vez de quedarse esperando", async () => {
+  const { pedirJson } = await import("../src/services/geoService.js");
+  const restaurar = simularFetch("colgada");
+  try {
+    await assert.rejects(pedirJson("https://x/reverse", { servicio: "El servicio de direcciones", limiteMs: 50 }),
+      { message: "El servicio de direcciones tardó demasiado en responder. Vuelve a intentarlo." });
+  } finally { restaurar(); }
+});
+
+test("límite de consultas, servicio caído y sin conexión dan mensajes distintos; cancelar no muestra error", async () => {
+  const { pedirJson, esCancelacion } = await import("../src/services/geoService.js");
+  const opciones = { servicio: "El servicio de direcciones", limiteMs: 1000 };
+
+  let restaurar = simularFetch({ ok: false, status: 429 });
+  await assert.rejects(pedirJson("https://x", opciones), /limitó las consultas/);
+  restaurar();
+
+  restaurar = simularFetch({ ok: false, status: 503 });
+  await assert.rejects(pedirJson("https://x", opciones), /no está disponible en este momento \(error 503\)/);
+  restaurar();
+
+  restaurar = simularFetch(new TypeError("Failed to fetch"));
+  await assert.rejects(pedirJson("https://x", opciones), /No pudimos conectar con el servicio de direcciones/);
+  restaurar();
+
+  restaurar = simularFetch({ ok: true, status: 200, json: async () => ({ address: { road: "Calle 30" } }) });
+  assert.deepEqual(await pedirJson("https://x", opciones), { address: { road: "Calle 30" } });
+  restaurar();
+
+  restaurar = simularFetch("colgada");
+  const control = new AbortController();
+  const pedido = pedirJson("https://x", { ...opciones, signal: control.signal });
+  control.abort();
+  await assert.rejects(pedido, (e) => esCancelacion(e));
+  restaurar();
 });
 
 test("el mapa abre en la ciudad aunque venga con su nombre oficial", async () => {
@@ -118,10 +193,8 @@ test("el autocompletado se acota a Colombia", () => {
   assert.match(leer("../src/services/geoService.js"), /bbox: BBOX_COLOMBIA/);
 });
 
-test("ningún mapa usa Google Maps ni las teselas de tile.openstreetmap.org", () => {
+test("ningún mapa usa la API de Google Maps (solo los enlaces gratuitos de Cómo llegar)", () => {
   for (const archivo of ["../src/utils/mapa.js", "../src/components/mapa/CapaBase.jsx", "../src/components/admin/MiniMapa.jsx"]) {
-    const s = leer(archivo);
-    assert.doesNotMatch(s, /tile\.openstreetmap\.org/);
-    assert.doesNotMatch(s, /maps\.googleapis/);
+    assert.doesNotMatch(leer(archivo), /maps\.googleapis/);
   }
 });

@@ -118,7 +118,8 @@ export default function SelectorUbicacion({
         setDireccion(d ? { estado: "listo", etiqueta: d.etiqueta } : { estado: "sin-datos" });
         if (d) onDireccionRef.current?.(d);
       } catch (e) {
-        if (!esCancelacion(e)) setDireccion({ estado: "error" });
+        // pedirJson siempre termina (tiempo límite): el estado nunca se queda en "buscando"
+        if (!esCancelacion(e)) setDireccion({ estado: "error", motivo: e.message });
       }
     }, ESPERA_DIRECCION_MS);
     return () => {
@@ -172,7 +173,9 @@ export default function SelectorUbicacion({
   if (tieneValor) {
     if (direccion?.estado === "buscando") estadoTexto = "Buscando la dirección de este punto…";
     else if (direccion?.estado === "listo") estadoTexto = direccion.etiqueta;
-    else if (direccion?.estado === "error") estadoTexto = "El punto quedó marcado, pero no pudimos obtener su dirección.";
+    else if (direccion?.estado === "error") {
+      estadoTexto = `El punto quedó marcado, pero no pudimos obtener su dirección. ${direccion.motivo || ""}`.trim();
+    } else if (direccion?.estado === "sin-datos") estadoTexto = "El punto quedó marcado; no encontramos una dirección para este lugar.";
     else estadoTexto = "Punto marcado en el mapa.";
   }
 
@@ -214,6 +217,12 @@ export default function SelectorUbicacion({
             <span className="mapa-selector__coords">{value.latitud.toFixed(6)}, {value.longitud.toFixed(6)}</span>
           )}
         </span>
+        {tieneValor && direccion?.estado === "error" && (
+          <button type="button" className="mapa-boton mapa-boton--chico mapa-selector__reintentar"
+            onClick={() => setPendiente({ latitud: value.latitud, longitud: value.longitud })}>
+            Reintentar
+          </button>
+        )}
       </div>
       {aviso && (
         <p className={`mapa-aviso${aviso.tipo === "error" ? " mapa-aviso--error" : ""}`} role={aviso.tipo === "error" ? "alert" : "status"}>

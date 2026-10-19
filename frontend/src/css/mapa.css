@@ -1,4 +1,4 @@
-/* ── Mapas (Leaflet + teselas CARTO) ──────────────────────────────────────
+/* ── Mapas (Leaflet + teselas de OpenStreetMap) ──────────────────────────
    SelectorUbicacion (registro y datos de taller y tienda, solicitud de diagnóstico), MapaTalleres
    (elegir taller), RutaTaller (taller asignado) y MiniMapa. Prefijo mapa-, BEM. Superficies y texto con
    los tokens --dm-* para respetar el tema claro/oscuro; el naranja es el de la marca. */
@@ -23,6 +23,22 @@
   height: 100%;
   font-family: inherit;
   background: var(--dm-surface);
+}
+
+/* Tema oscuro: OSM no tiene versión oscura, así que se invierte solo la capa de teselas (CapaBase le pone
+   .mapa-teselas). hue-rotate devuelve los colores a su tono (agua azul, parques verdes) y saturate los
+   apaga un poco para que no compitan con los marcadores naranjas; brillo y contraste bajos evitan que el
+   blanco invertido de las calles deslumbre. Marcadores, rutas, popups y controles no se filtran. */
+:root {
+  --mapa-filtro-oscuro: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.88) saturate(0.7);
+}
+
+.mapa-teselas {
+  transition: filter 0.3s ease;
+}
+
+:root:not([data-theme="light"]) .mapa-teselas {
+  filter: var(--mapa-filtro-oscuro);
 }
 
 .mapa-sr {
@@ -498,6 +514,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.mapa-selector__reintentar {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .mapa-selector__error {
   font-size: 12px;
   color: var(--error, #EF4444);
@@ -765,6 +786,7 @@
   .mapa-yo__halo,
   .mapa-cargando,
   .mapa-buscador__girando { animation: none; }
+  .mapa-teselas { transition: none; }
   .mapa-marca svg,
   .mapa-grupo__burbuja { transition: none; }
 }
