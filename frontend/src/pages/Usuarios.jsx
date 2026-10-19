@@ -1,433 +1,459 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "../services/http";
-import { useEffect, useState } from "react";
 import { crearUsuario, eliminarUsuario, getUser } from "../services/authService";
 import { usuariosPlataforma } from "../services/plataformaService";
-import DrawerAdmin from "../components/admin/DrawerAdmin";
-import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
-import "../css/Usuarios.css";
-import "../css/admin-base.css";
+import { errorDeRespuesta } from "../utils/errores";
+import { formatoFecha } from "../utils/formato";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Campo from "../components/ui/Campo";
+import CampoClave from "../components/ui/CampoClave";
+import LogoNegocio from "../components/ui/LogoNegocio";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
+import Icon from "../components/public/Icon";
+import {
+  ROLES, ROLES_DEL_EQUIPO, etiquetaRol, rolesParaFiltrar, rolEditable, filaUsuario,
+  erroresNuevoUsuario, erroresEdicion, cuerpoEdicion, erroresDelServidor, avisoDesactivar,
+} from "./admin/usuariosAdmin";
+import "../css/dashboard-plataforma.css";
+import "../css/marketplace.css"; // el diálogo de ConfirmarAccion
+import "../css/usuarios-admin.css";
 
-const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
-
-// Variante del badge (admin-base.css): el equipo en info, los negocios y clientes en neutro
-const ROL_CONFIG = {
-  SUPERADMIN: { label: "Super admin", variante: "info" },
-  ADMIN: { label: "Admin", variante: "info" },
-  TIENDA: { label: "Tienda", variante: "neutro" },
-  TALLER: { label: "Taller", variante: "neutro" },
-  CLIENTE: { label: "Cliente", variante: "neutro" },
-  MECANICO: { label: "Mecánico", variante: "neutro" },
-  // Rol retirado: las cuentas que quedan se siguen listando para poder reasignarlas o desactivarlas
-  VENDEDOR: { label: "Vendedor (retirado)", variante: "pendiente" },
-};
-
-// Solo estos roles se crean o se asignan desde aquí. Las tiendas y los talleres se registran con
-// "Registra tu negocio" y se aprueban en Aprobaciones, porque necesitan perfil y aprobación.
-const ROLES_DEL_EQUIPO = ["ADMIN", "SUPERADMIN"];
-
-const IconoTarjeta = {
-  TIENDA: <path d="M3 9l1.5-5h15L21 9M4 9v11h16V9M3 9a3 3 0 006 0 3 3 0 006 0 3 3 0 006 0M10 20v-5h4v5" />,
-  TALLER: <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />,
-  CLIENTE: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></>,
-  ADMIN: <><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></>,
-  SUPERADMIN: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
-};
-
-const TARJETAS = [
-  { rol: "TIENDA", titulo: "Tiendas" },
-  { rol: "TALLER", titulo: "Talleres" },
-  { rol: "CLIENTE", titulo: "Clientes" },
-  { rol: "ADMIN", titulo: "Administradores" },
-  { rol: "SUPERADMIN", titulo: "Super Admins" },
+const API_BASE = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api`;
+const TAMANO = 20;
+const ESTADOS = [
+  { valor: "", label: "Todas" },
+  { valor: "activos", label: "Activas" },
+  { valor: "inactivos", label: "Inactivas" },
 ];
+const NUEVO = { nombre: "", correo: "", password: "", rol: "ADMIN" };
 
-function getInitials(nombre) {
-  return (nombre || "")
-    .split(" ")
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+async function actualizarUsuario(id, body) {
+  const res = await apiFetch(`${API_BASE}/usuarios/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo guardar el usuario. Inténtalo de nuevo.");
+  return res.json();
 }
 
-export default function Usuarios({ token }) {
-  const [lista, setLista] = useState({ usuarios: null, porRol: {} });
-  const [version, setVersion] = useState(0); // al subir, la lista se vuelve a pedir
-  const [busqueda, setBusqueda] = useState("");
-  const [q, setQ] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("");
-  const [pagina, setPagina] = useState(0);
-  const usuarios = lista.usuarios?.items || [];
-  const recargar = () => setVersion((v) => v + 1);
-  const [nuevoUsuario, setNuevoUsuario] = useState({
-    nombre: "",
-    correo: "",
-    password: "",
-    rol: "ADMIN",
+/** Lleva el foco al primer campo con error (o al primero del formulario) después de pintar. */
+function enfocar(form, soloInvalido = false) {
+  requestAnimationFrame(() => {
+    const campo = form?.querySelector(soloInvalido ? "[aria-invalid='true']" : "input:not([disabled]), select:not([disabled])");
+    campo?.focus();
   });
+}
+
+/** Crear una cuenta del equipo (ADMIN o SUPERADMIN). Valida en línea al salir de cada campo y al enviar. */
+function FormNuevo({ onCreado, onCancelar }) {
+  const ref = useRef(null);
+  const [form, setForm] = useState(NUEVO);
+  const [tocados, setTocados] = useState({});
+  const [servidor, setServidor] = useState({});
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [filterRol, setFilterRol] = useState("TODOS");
-  const TAMANO = 20;
+  const [guardando, setGuardando] = useState(false);
 
-  const currentUser = getUser();
-  const isSuperadmin = currentUser?.rol === "SUPERADMIN";
+  useEffect(() => { enfocar(ref.current); }, []);
 
-  const [editando, setEditando] = useState(null);
-  const [editForm, setEditForm] = useState({ nombre: "", rol: "", password: "" });
-  const [editError, setEditError] = useState(null);
-  const [editSuccess, setEditSuccess] = useState(null);
+  const validos = erroresNuevoUsuario(form);
+  const errores = { ...servidor };
+  for (const k of Object.keys(validos)) if (tocados[k]) errores[k] = validos[k];
 
-  useEffect(() => {
-    if (!token) return undefined;
-    let vivo = true;
-    usuariosPlataforma(token, { q, rol: filterRol === "TODOS" ? "" : filterRol, estado: filtroEstado, pagina, tamano: TAMANO })
-      .then((r) => { if (vivo) { setLista({ usuarios: r.usuarios, porRol: r.porRol }); setError(null); } })
-      .catch((err) => { if (vivo) setError(err.message); });
-    return () => { vivo = false; };
-  }, [token, q, filterRol, filtroEstado, pagina, version]);
+  const cambiar = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    if (servidor[name]) setServidor(({ [name]: _quitado, ...resto }) => resto); // eslint-disable-line no-unused-vars
+  };
+  const tocar = (e) => setTocados((t) => ({ ...t, [e.target.name]: true }));
 
-  const handleSubmit = async (e) => {
+  const enviar = async (e) => {
     e.preventDefault();
+    setTocados({ nombre: true, correo: true, password: true, rol: true });
     setError(null);
-    setSuccess(false);
+    if (Object.keys(validos).length > 0) { enfocar(ref.current, true); return; }
+    setGuardando(true);
     try {
-      await crearUsuario(nuevoUsuario, token);
-      setNuevoUsuario({ nombre: "", correo: "", password: "", rol: "ADMIN" });
-      recargar();
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      const creado = await crearUsuario({ ...form, nombre: form.nombre.trim(), correo: form.correo.trim() });
+      onCreado(creado?.nombre || form.nombre.trim());
     } catch (err) {
-      setError(err.message || "Error al crear usuario");
+      const campos = erroresDelServidor(err.message);
+      if (campos) { setServidor(campos); enfocar(ref.current, true); } else setError(err.message);
+      setGuardando(false);
     }
   };
-
-  const handleEditClick = (u) => {
-    setEditando(u);
-    setEditForm({ nombre: u.nombre || "", rol: u.rol || "", password: "" });
-    setEditError(null);
-    setEditSuccess(null);
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    setEditError(null);
-    setEditSuccess(null);
-    try {
-      const body = { nombre: editForm.nombre };
-      if (editForm.password) body.password = editForm.password;
-      if (editForm.rol && editForm.rol !== editando.rol) body.rol = editForm.rol;
-      const res = await apiFetch(`${API_BASE}/usuarios/${editando.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || data.message || "Error al actualizar");
-      }
-      setEditSuccess("Usuario actualizado correctamente");
-      recargar();
-      setTimeout(() => { setEditando(null); setEditSuccess(null); }, 1500);
-    } catch (err) {
-      setEditError(err.message);
-    }
-  };
-
-  // Desactivar pide confirmación en un diálogo del panel (antes, window.confirm)
-  const [desactivando, setDesactivando] = useState(null);
-  const [desactivandoEnCurso, setDesactivandoEnCurso] = useState(false);
-  const confirmarDesactivar = async () => {
-    setDesactivandoEnCurso(true);
-    try {
-      await eliminarUsuario(desactivando.id);
-      recargar();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setDesactivandoEnCurso(false);
-      setDesactivando(null);
-    }
-  };
-
-  // Volver a activar una cuenta desactivada (solo SUPERADMIN: lo valida el backend)
-  const handleActivar = async (id) => {
-    try {
-      const res = await apiFetch(`${API_BASE}/usuarios/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ activo: true }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || data.message || "No se pudo activar el usuario");
-      }
-      recargar();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  // Los conteos de las tarjetas vienen del servidor (no dependen de la página que se ve)
-  const conteo = lista.porRol;
-  // Cambiar el rol solo aplica a cuentas del equipo (ADMIN, SUPERADMIN) y al vendedor retirado, que se reasigna
-  const rolEditable = editando && (ROLES_DEL_EQUIPO.includes(editando.rol) || editando.rol === "VENDEDOR");
-  const elegirTarjeta = (rol) => { setPagina(0); setFilterRol(filterRol === rol ? "TODOS" : rol); };
-
-  const usuariosFiltrados = usuarios;
-  const total = lista.usuarios?.total || 0;
-  const paginas = Math.max(1, Math.ceil(total / TAMANO));
 
   return (
-    <div className="adm-pagina">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Usuarios</h1>
-          <p className="adm-encabezado__sub">Gestiona los usuarios y roles de acceso al sistema.</p>
+    <section className="ui-seccion ui-seccion--editando usr-panel" aria-labelledby="usr-nuevo-titulo">
+      <div className="ui-seccion__cabecera">
+        <span className="ui-seccion__icono" aria-hidden="true"><Icon name="user" size={18} /></span>
+        <div className="ui-seccion__texto">
+          <h2 id="usr-nuevo-titulo" className="ui-seccion__titulo">Nuevo usuario del equipo</h2>
+          <p className="ui-seccion__desc">
+            Para administradores y super admins. Las tiendas y los talleres se registran con «Registra tu negocio» y se
+            aprueban en Aprobaciones, porque necesitan perfil.
+          </p>
         </div>
-        {lista.usuarios && <span className="adm-encabezado__dato">{total} {total === 1 ? "usuario" : "usuarios"}</span>}
-      </header>
+      </div>
+      <form ref={ref} className="ui-form" onSubmit={enviar} noValidate>
+        <div className="ui-form__campos ui-form__campos--2">
+          <Campo id="usr-nuevo-nombre" label="Nombre completo" error={errores.nombre}>
+            <input className="ui-field__input" name="nombre" autoComplete="name" value={form.nombre} onChange={cambiar} onBlur={tocar} />
+          </Campo>
+          <Campo id="usr-nuevo-correo" label="Correo" error={errores.correo} ayuda="Con este correo inicia sesión.">
+            <input className="ui-field__input" name="correo" type="email" autoComplete="off" inputMode="email"
+              placeholder="nombre@drivemaster.co" value={form.correo} onChange={cambiar} onBlur={tocar} />
+          </Campo>
+          <Campo id="usr-nuevo-clave" label="Contraseña temporal" error={errores.password}
+            ayuda="Mínimo 6 caracteres. Compártela por un canal seguro y pide que la cambie al entrar.">
+            <CampoClave name="password" autoComplete="new-password" value={form.password} onChange={cambiar} onBlur={tocar} />
+          </Campo>
+          <Campo id="usr-nuevo-rol" label="Rol" error={errores.rol}>
+            <select className="ui-field__input" name="rol" value={form.rol} onChange={cambiar} onBlur={tocar}>
+              {ROLES_DEL_EQUIPO.map((r) => <option key={r} value={r}>{etiquetaRol(r)}</option>)}
+            </select>
+          </Campo>
+        </div>
+        {error && <Alerta>{error}</Alerta>}
+        <div className="ui-form-pie">
+          <button type="submit" className="ui-btn ui-btn--primario" disabled={guardando} aria-busy={guardando}>
+            {guardando ? "Creando…" : "Crear usuario"}
+          </button>
+          <button type="button" className="ui-btn ui-btn--secundario" onClick={onCancelar} disabled={guardando}>Cancelar</button>
+        </div>
+      </form>
+    </section>
+  );
+}
 
-      {/* ── Tarjetas por rol: también son filtros de la lista ── */}
-      <div className="us-stats" role="group" aria-label="Usuarios por rol">
-        {TARJETAS.map((t) => (
-          <button
-            key={t.rol}
-            type="button"
-            className={`us-stat us-stat--${t.rol.toLowerCase()}${filterRol === t.rol ? " is-activa" : ""}`}
-            aria-pressed={filterRol === t.rol}
-            onClick={() => elegirTarjeta(t.rol)}
-          >
-            <span className="us-stat__icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {IconoTarjeta[t.rol]}
-              </svg>
-            </span>
-            <span className="us-stat__label">{t.titulo}</span>
-            <span className="us-stat__value">{lista.usuarios ? (conteo[t.rol] ?? 0) : "–"}</span>
-            <span className={`us-stat__bar us-stat__bar--${t.rol.toLowerCase()}`} />
+/** Editar nombre, contraseña y, en cuentas del equipo, el rol. */
+function FormEditar({ usuario, onGuardado, onCancelar }) {
+  const ref = useRef(null);
+  const [form, setForm] = useState({ nombre: usuario.nombre, password: "", rol: usuario.rol });
+  const [tocados, setTocados] = useState({});
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const editableRol = rolEditable(usuario.rol);
+
+  useEffect(() => { enfocar(ref.current); }, []);
+
+  const validos = erroresEdicion(form);
+  const errores = {};
+  for (const k of Object.keys(validos)) if (tocados[k]) errores[k] = validos[k];
+
+  const cambiar = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const tocar = (e) => setTocados((t) => ({ ...t, [e.target.name]: true }));
+
+  const enviar = async (e) => {
+    e.preventDefault();
+    setTocados({ nombre: true, password: true });
+    setError(null);
+    if (Object.keys(validos).length > 0) { enfocar(ref.current, true); return; }
+    setGuardando(true);
+    try {
+      await actualizarUsuario(usuario.id, cuerpoEdicion(form, usuario));
+      onGuardado(form.nombre.trim());
+    } catch (err) {
+      setError(err.message);
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <section className="ui-seccion ui-seccion--editando usr-panel" aria-labelledby="usr-editar-titulo">
+      <div className="ui-seccion__cabecera">
+        <LogoNegocio nombre={usuario.nombre} tamano="mediano" />
+        <div className="ui-seccion__texto">
+          <h2 id="usr-editar-titulo" className="ui-seccion__titulo">Editar a {usuario.nombre || "este usuario"}</h2>
+          <p className="ui-seccion__desc">{usuario.correo} · {etiquetaRol(usuario.rol)}</p>
+        </div>
+      </div>
+      <form ref={ref} className="ui-form" onSubmit={enviar} noValidate>
+        <div className="ui-form__campos ui-form__campos--2">
+          <Campo id="usr-editar-nombre" label="Nombre completo" error={errores.nombre}>
+            <input className="ui-field__input" name="nombre" autoComplete="off" value={form.nombre} onChange={cambiar} onBlur={tocar} />
+          </Campo>
+          <Campo id="usr-editar-clave" label="Nueva contraseña" opcional error={errores.password}
+            ayuda="Déjala vacía para mantener la actual.">
+            <CampoClave name="password" autoComplete="new-password" value={form.password} onChange={cambiar} onBlur={tocar} />
+          </Campo>
+          {editableRol ? (
+            <Campo id="usr-editar-rol" label="Rol"
+              ayuda={usuario.rol === "VENDEDOR" ? "El rol de vendedor se retiró: reasígnala a administrador o super admin, o desactívala." : undefined}>
+              <select className="ui-field__input" name="rol" value={form.rol} onChange={cambiar}>
+                {!ROLES_DEL_EQUIPO.includes(usuario.rol) && <option value={usuario.rol} disabled>{etiquetaRol(usuario.rol)}</option>}
+                {ROLES_DEL_EQUIPO.map((r) => <option key={r} value={r}>{etiquetaRol(r)}</option>)}
+              </select>
+            </Campo>
+          ) : (
+            <div className="ui-field usr-rol-fijo">
+              <span className="ui-field__label">Rol</span>
+              <p className="usr-rol-fijo__valor">{etiquetaRol(usuario.rol)}</p>
+              <p className="ui-field__ayuda">El rol de un cliente, una tienda o un taller no se cambia: su perfil depende de él.</p>
+            </div>
+          )}
+        </div>
+        {error && <Alerta>{error}</Alerta>}
+        <div className="ui-form-pie">
+          <button type="submit" className="ui-btn ui-btn--primario" disabled={guardando} aria-busy={guardando}>
+            {guardando ? "Guardando…" : "Guardar cambios"}
+          </button>
+          <button type="button" className="ui-btn ui-btn--secundario" onClick={onCancelar} disabled={guardando}>Cancelar</button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+/** Cuentas de DriveMaster (solo SUPERADMIN): quién entra, con qué rol y si puede iniciar sesión. */
+export default function Usuarios({ token }) {
+  const yo = getUser();
+  const puedeGestionar = yo?.rol === "SUPERADMIN";
+
+  const [busqueda, setBusqueda] = useState("");
+  const [q, setQ] = useState("");
+  const [rol, setRol] = useState("");
+  const [estado, setEstado] = useState("");
+  const [pagina, setPagina] = useState(0);
+  const [version, setVersion] = useState(0);
+  const [datos, setDatos] = useState(null); // { items, total, porRol }
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
+
+  const [panel, setPanel] = useState(null); // "nuevo" | usuario en edición
+  const [desactivando, setDesactivando] = useState(null);
+  const [activando, setActivando] = useState(null);
+  const [aviso, setAviso] = useState(null); // { tono, texto }
+
+  // La búsqueda va al servidor; espera a que se deje de escribir
+  useEffect(() => {
+    const termino = busqueda.trim();
+    if (termino === q) return undefined;
+    const id = setTimeout(() => { setQ(termino); setPagina(0); }, 300);
+    return () => clearTimeout(id);
+  }, [busqueda, q]);
+
+  const cargar = useCallback(async (vivo = () => true) => {
+    setCargando(true);
+    try {
+      const r = await usuariosPlataforma(token, { q, rol, estado, pagina, tamano: TAMANO });
+      if (!vivo()) return;
+      setDatos({ items: (r.usuarios?.items || []).map(filaUsuario), total: r.usuarios?.total || 0, porRol: r.porRol || {} });
+      setError(null);
+    } catch (e) {
+      if (vivo()) setError(e.message);
+    } finally {
+      if (vivo()) setCargando(false);
+    }
+  }, [token, q, rol, estado, pagina]);
+
+  useEffect(() => {
+    let activo = true;
+    const id = setTimeout(() => cargar(() => activo), 0);
+    return () => { activo = false; clearTimeout(id); };
+  }, [cargar, version]);
+
+  const recargar = () => setVersion((v) => v + 1);
+  const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
+
+  const elegirRol = (r) => { setRol(r); setPagina(0); };
+  const elegirEstado = (e) => { setEstado(e); setPagina(0); };
+  const hayFiltros = q !== "" || rol !== "" || estado !== "";
+  const limpiar = () => { setBusqueda(""); setQ(""); setRol(""); setEstado(""); setPagina(0); };
+
+  const abrir = (siguiente) => {
+    setAviso(null);
+    setPanel(siguiente);
+    window.scrollTo?.({ top: 0, behavior: "smooth" });
+  };
+
+  const confirmarDesactivar = async () => {
+    await eliminarUsuario(desactivando.id);
+    setAviso({ tono: "ok", texto: `Desactivaste la cuenta de ${desactivando.nombre}.` });
+    setDesactivando(null);
+    recargar();
+  };
+
+  const activar = async (u) => {
+    setActivando(u.id);
+    setAviso(null);
+    try {
+      await actualizarUsuario(u.id, { activo: true });
+      setAviso({ tono: "ok", texto: `${u.nombre} ya puede iniciar sesión de nuevo.` });
+      recargar();
+    } catch (e) {
+      setAviso({ tono: "error", texto: `No pudimos activar a ${u.nombre}. ${e.message}` });
+    } finally {
+      setActivando(null);
+    }
+  };
+
+  const total = datos?.total || 0;
+  const paginas = Math.max(1, Math.ceil(total / TAMANO));
+  const porRol = datos?.porRol || {};
+  const totalCuentas = Object.values(porRol).reduce((s, n) => s + n, 0);
+
+  return (
+    <div className="ss-panel--plataforma usr-root">
+      <EncabezadoPagina titulo="Usuarios"
+        descripcion="Las cuentas que entran a DriveMaster: su rol y si pueden iniciar sesión."
+        acciones={puedeGestionar && panel !== "nuevo" && (
+          <button type="button" className="ui-btn ui-btn--primario" onClick={() => abrir("nuevo")}>
+            <Icon name="plus" size={16} /> Nuevo usuario del equipo
+          </button>
+        )} />
+
+      {aviso && <Alerta tono={aviso.tono} className="usr-bloque" onCerrar={() => setAviso(null)}>{aviso.texto}</Alerta>}
+
+      {panel === "nuevo" && (
+        <FormNuevo onCancelar={() => setPanel(null)}
+          onCreado={(nombre) => { setPanel(null); setAviso({ tono: "ok", texto: `Creaste la cuenta de ${nombre}.` }); recargar(); }} />
+      )}
+      {panel && panel !== "nuevo" && (
+        <FormEditar key={panel.id} usuario={panel} onCancelar={() => setPanel(null)}
+          onGuardado={(nombre) => { setPanel(null); setAviso({ tono: "ok", texto: `Guardaste los cambios de ${nombre}.` }); recargar(); }} />
+      )}
+
+      <div className="usr-filtros">
+        <div className="ui-buscador">
+          <Icon name="search" size={18} />
+          <label htmlFor="usr-busqueda" className="ui-sr">Buscar por nombre o correo</label>
+          <input id="usr-busqueda" className="ui-field__input" type="search" placeholder="Nombre o correo"
+            value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        </div>
+        <div className="ui-filtros" role="group" aria-label="Estado de la cuenta">
+          {ESTADOS.map((e) => (
+            <button key={e.valor || "todas"} type="button" className="ui-chip" aria-pressed={estado === e.valor}
+              onClick={() => elegirEstado(e.valor)}>{e.label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="ui-filtros usr-bloque" role="group" aria-label="Rol">
+        <button type="button" className="ui-chip" aria-pressed={rol === ""} onClick={() => elegirRol("")}>
+          Todos los roles {datos && <span className="ui-chip__contador">{totalCuentas}</span>}
+        </button>
+        {rolesParaFiltrar(porRol, rol).map((r) => (
+          <button key={r} type="button" className="ui-chip" aria-pressed={rol === r} onClick={() => elegirRol(r)}>
+            {ROLES[r].plural} {datos && <span className="ui-chip__contador">{porRol[r] || 0}</span>}
           </button>
         ))}
       </div>
 
-      <form className="adm-filtros" role="search" aria-label="Filtros de usuarios"
-        onSubmit={(e) => { e.preventDefault(); setPagina(0); setQ(busqueda.trim()); }}>
-        <label className="adm-campo adm-campo--ancho">
-          <span>Buscar</span>
-          <input type="search" placeholder="Nombre o correo" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-        </label>
-        <label className="adm-campo">
-          <span>Rol</span>
-          <select value={filterRol} onChange={(e) => { setPagina(0); setFilterRol(e.target.value); }}>
-            <option value="TODOS">Todos los roles</option>
-            <option value="TIENDA">Tiendas</option>
-            <option value="TALLER">Talleres</option>
-            <option value="CLIENTE">Clientes</option>
-            <option value="ADMIN">Administradores</option>
-            <option value="SUPERADMIN">Super Admins</option>
-          </select>
-        </label>
-        <label className="adm-campo">
-          <span>Estado</span>
-          <select value={filtroEstado} onChange={(e) => { setPagina(0); setFiltroEstado(e.target.value); }}>
-            <option value="">Todos</option>
-            <option value="activos">Activos</option>
-            <option value="inactivos">Inactivos</option>
-          </select>
-        </label>
-        <div className="adm-filtros__acciones">
-          <button type="submit" className="adm-btn">Buscar</button>
-        </div>
-      </form>
+      {error && (
+        // El servicio ya trae el mensaje del backend o "No se pudieron cargar los usuarios."
+        <Alerta className="usr-bloque" onReintentar={reintentar} reintentando={reintentando}>{error}</Alerta>
+      )}
 
-      {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
-
-      <div className="us-main">
-        {/* ── Tabla ── */}
-        <div>
-          <div className="adm-tarjeta" aria-busy={!lista.usuarios}>
-            {!lista.usuarios && !error ? (
-              <div className="adm-cargando">Cargando usuarios…</div>
-            ) : lista.usuarios && usuariosFiltrados.length === 0 ? (
-              <p className="adm-vacio">Ningún usuario coincide con los filtros.</p>
-            ) : lista.usuarios && (
-              <div className="adm-tabla-wrap">
-                <table className="adm-tabla adm-tabla--tarjetas">
-                  <thead>
-                    <tr>
-                      <th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th>
-                      {isSuperadmin && <th className="adm-tabla__der">Acciones</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {usuariosFiltrados.map((u) => {
-                      const cfg = ROL_CONFIG[u.rol] || { label: u.rol, variante: "neutro" };
-                      return (
-                        <tr key={u.id}>
-                          <td data-label="Nombre">
-                            <div className="us-user">
-                              <div className="us-avatar" aria-hidden="true">{getInitials(u.nombre)}</div>
-                              <strong>{u.nombre}</strong>
-                            </div>
-                          </td>
-                          <td data-label="Correo">{u.correo}</td>
-                          <td data-label="Rol"><span className={`adm-badge adm-badge--${cfg.variante}`}>{cfg.label}</span></td>
-                          <td data-label="Estado">
-                            <span className={`adm-badge ${u.activo ? "adm-badge--exito" : "adm-badge--neutro"}`}>
-                              {u.activo ? "Activo" : "Inactivo"}
+      {!datos ? (
+        !error && <Esqueleto variante="lista" cantidad={5} texto="Cargando usuarios…" />
+      ) : datos.items.length === 0 ? (
+        hayFiltros ? (
+          <EstadoVacio icono="search" titulo="Ningún usuario coincide"
+            texto="Prueba con otro nombre o correo, o quita algún filtro.">
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={limpiar}>Limpiar filtros</button>
+          </EstadoVacio>
+        ) : (
+          <EstadoVacio icono="users" titulo="Todavía no hay usuarios"
+            texto="Crea la primera cuenta del equipo; los clientes, las tiendas y los talleres aparecen aquí cuando se registran.">
+            {puedeGestionar && (
+              <button type="button" className="ui-btn ui-btn--primario" onClick={() => abrir("nuevo")}>
+                <Icon name="plus" size={16} /> Nuevo usuario del equipo
+              </button>
+            )}
+          </EstadoVacio>
+        )
+      ) : (
+        <>
+          <div className={`ui-card ui-table-card${cargando ? " usr-actualizando" : ""}`} aria-busy={cargando}>
+            <div className="ui-table-wrap">
+              <table className="ui-table ui-table--tarjetas">
+                <caption className="ui-sr">Usuarios, los más recientes primero</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Usuario</th>
+                    <th scope="col">Rol</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Creada</th>
+                    <th scope="col">Último acceso</th>
+                    {puedeGestionar && <th scope="col"><span className="ui-sr">Acciones</span></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {datos.items.map((u) => {
+                    const soyYo = yo?.id && yo.id === u.id;
+                    return (
+                      <tr key={u.id}>
+                        <td data-label="Usuario" className="ui-table__titulo">
+                          <span className="usr-persona">
+                            <LogoNegocio nombre={u.nombre} />
+                            <span className="usr-persona__texto">
+                              <strong>{u.nombre || "Sin nombre"}{soyYo && <span className="usr-tu">Tú</span>}</strong>
+                              <span className="usr-persona__correo">{u.correo}</span>
                             </span>
+                          </span>
+                        </td>
+                        <td data-label="Rol">
+                          {u.rol === "VENDEDOR" ? <ChipEstado tono="aviso">{etiquetaRol(u.rol)}</ChipEstado> : etiquetaRol(u.rol)}
+                        </td>
+                        <td data-label="Estado">
+                          <ChipEstado tono={u.activo ? "ok" : "apagado"}>{u.activo ? "Activa" : "Inactiva"}</ChipEstado>
+                        </td>
+                        <td data-label="Creada" className="usr-fecha">{formatoFecha(u.fechaCreacion)}</td>
+                        <td data-label="Último acceso" className="usr-fecha">
+                          {u.ultimoLogin ? formatoFecha(u.ultimoLogin) : <span className="usr-tenue">Nunca ha entrado</span>}
+                        </td>
+                        {puedeGestionar && (
+                          <td className="ui-table__acciones">
+                            <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => abrir(u)}
+                              aria-label={`Editar a ${u.nombre}`}>
+                              <Icon name="pencil" size={14} /> Editar
+                            </button>
+                            {u.activo ? (
+                              !soyYo && (
+                                <button type="button" className="ui-btn ui-btn--texto ui-btn--chico usr-desactivar"
+                                  onClick={() => setDesactivando(u)} aria-label={`Desactivar a ${u.nombre}`}>
+                                  Desactivar
+                                </button>
+                              )
+                            ) : (
+                              <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => activar(u)}
+                                disabled={activando === u.id} aria-busy={activando === u.id} aria-label={`Activar a ${u.nombre}`}>
+                                {activando === u.id ? "Activando…" : "Activar"}
+                              </button>
+                            )}
                           </td>
-                          {isSuperadmin && (
-                            <td className="adm-tabla__der adm-tabla__celda--ancha">
-                              <div className="adm-tabla__acciones">
-                                <button type="button" className="adm-btn adm-btn--chico" onClick={() => handleEditClick(u)}>Editar</button>
-                                {u.activo ? (
-                                  <button type="button" className="adm-btn adm-btn--chico adm-btn--peligro" onClick={() => setDesactivando(u)}>Desactivar</button>
-                                ) : (
-                                  <button type="button" className="adm-btn adm-btn--chico adm-btn--primario" onClick={() => handleActivar(u.id)}>Activar</button>
-                                )}
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          {total > TAMANO && (
-            <nav className="adm-paginacion" aria-label="Paginación">
-              <button type="button" className="adm-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
-              <span>Página {pagina + 1} de {paginas}</span>
-              <button type="button" className="adm-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-            </nav>
-          )}
-        </div>
-
-        {/* ── Formulario ── */}
-        <section className="adm-tarjeta" aria-labelledby="us-nuevo-titulo">
-          <header className="adm-tarjeta__cabecera">
-            <h2 id="us-nuevo-titulo" className="adm-tarjeta__titulo">Crear nuevo usuario</h2>
-          </header>
-          <form onSubmit={handleSubmit} className="adm-tarjeta__cuerpo adm-drawer__bloque">
-            {success && <p className="adm-alerta adm-alerta--exito" role="status">Usuario creado correctamente.</p>}
-
-            <label className="adm-campo adm-campo--bloque">
-              <span>Nombre completo</span>
-              <input type="text" placeholder="Ej: Juan Pérez" value={nuevoUsuario.nombre}
-                onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, nombre: e.target.value })} required />
-            </label>
-
-            <label className="adm-campo adm-campo--bloque">
-              <span>Correo electrónico</span>
-              <input type="email" placeholder="email@drivemaster.co" value={nuevoUsuario.correo}
-                onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, correo: e.target.value })} required />
-            </label>
-
-            <div className="adm-campo adm-campo--bloque">
-              <label htmlFor="us-password">Contraseña temporal</label>
-              <div className="us-input-wrap">
-                <input id="us-password" className="us-input" type={showPassword ? "text" : "password"} placeholder="••••••••"
-                  value={nuevoUsuario.password} onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, password: e.target.value })} required />
-                <button type="button" className="us-eye" onClick={() => setShowPassword((p) => !p)}
-                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}>
-                  {showPassword ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                  )}
-                </button>
-              </div>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-
-            <label className="adm-campo adm-campo--bloque">
-              <span>Rol del sistema</span>
-              <select value={nuevoUsuario.rol} onChange={(e) => setNuevoUsuario({ ...nuevoUsuario, rol: e.target.value })}>
-                <option value="ADMIN">Administrador</option>
-                <option value="SUPERADMIN">Superadmin</option>
-              </select>
-            </label>
-
-            <button type="submit" className="adm-btn adm-btn--primario adm-btn--bloque">Registrar usuario</button>
-
-            <p className="adm-encabezado__sub adm-campo__ayuda">
-              Aquí solo se crean cuentas del equipo (administrador o superadmin). Las tiendas y los talleres se registran
-              desde «Registra tu negocio» y se aprueban en Aprobaciones, porque necesitan perfil y aprobación.
-            </p>
-          </form>
-        </section>
-      </div>
-
-      {/* ── Edición (solo SUPERADMIN) ── */}
-      {editando && isSuperadmin && (
-        <DrawerAdmin
-          titulo="Editar usuario"
-          encabezado={(
-            <span className={`adm-badge adm-badge--${(ROL_CONFIG[editando.rol] || { variante: "neutro" }).variante}`}>
-              {(ROL_CONFIG[editando.rol] || { label: editando.rol }).label}
-            </span>
-          )}
-          onCerrar={() => setEditando(null)}
-          pie={(
-            <>
-              <button type="button" className="adm-btn" onClick={() => setEditando(null)}>Cancelar</button>
-              <button type="submit" form="us-editar" className="adm-btn adm-btn--primario">Guardar cambios</button>
-            </>
-          )}
-        >
-          <form id="us-editar" onSubmit={handleEditSubmit} className="adm-drawer__bloque">
-            <label className="adm-campo adm-campo--bloque">
-              <span>Nombre completo</span>
-              <input type="text" value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} required />
-            </label>
-            <label className="adm-campo adm-campo--bloque">
-              <span>Correo</span>
-              <input type="email" value={editando.correo} disabled />
-            </label>
-            <label className="adm-campo adm-campo--bloque">
-              <span>Nueva contraseña <span className="adm-campo__ayuda">(déjala vacía para mantenerla)</span></span>
-              <input type="password" placeholder="••••••••" value={editForm.password}
-                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} />
-            </label>
-            <label className="adm-campo adm-campo--bloque">
-              <span>Rol del sistema</span>
-              <select value={editForm.rol} disabled={!rolEditable} onChange={(e) => setEditForm({ ...editForm, rol: e.target.value })}>
-                {!ROLES_DEL_EQUIPO.includes(editando.rol) && (
-                  <option value={editando.rol} disabled>{(ROL_CONFIG[editando.rol] || { label: editando.rol }).label}</option>
-                )}
-                <option value="ADMIN">Administrador</option>
-                <option value="SUPERADMIN">Superadmin</option>
-              </select>
-            </label>
-
-            {!rolEditable && (
-              <p className="adm-alerta">El rol de un cliente, una tienda o un taller no se cambia: su perfil depende de él.</p>
+          </div>
+          <nav className="usr-paginas" aria-label="Páginas de usuarios">
+            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + datos.items.length} de {total}</span>
+            {paginas > 1 && (
+              <span className="usr-paginas__botones">
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
+                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
+                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
+                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
+              </span>
             )}
-            {editando.rol === "VENDEDOR" && (
-              <p className="adm-alerta adm-alerta--aviso">El rol de vendedor se retiró. Reasígnalo a administrador o superadmin, o desactiva la cuenta.</p>
-            )}
-            {editError && <p className="adm-alerta adm-alerta--error" role="alert">{editError}</p>}
-            {editSuccess && <p className="adm-alerta adm-alerta--exito" role="status">{editSuccess}</p>}
-          </form>
-        </DrawerAdmin>
+          </nav>
+        </>
       )}
 
       {desactivando && (
-        <ConfirmacionAdmin
-          titulo={`Desactivar a ${desactivando.nombre}`}
-          texto="La cuenta no podrá iniciar sesión. Puedes volver a activarla desde esta lista."
-          confirmar="Desactivar"
-          variante="peligro"
-          cargando={desactivandoEnCurso}
-          onConfirmar={confirmarDesactivar}
-          onCancelar={() => setDesactivando(null)}
-        />
+        <ConfirmarAccion titulo={`¿Desactivar la cuenta de ${desactivando.nombre}?`} peligro textoConfirmar="Desactivar cuenta"
+          mensaje={avisoDesactivar(desactivando)}
+          onConfirmar={confirmarDesactivar} onCancelar={() => setDesactivando(null)} />
       )}
     </div>
   );

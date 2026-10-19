@@ -1,0 +1,61 @@
+/* ── Usuarios del SUPERADMIN (prefijo usr-, BEM) ──────────────────────────
+   Cabecera, formularios en sección, campos, chips de filtro, buscador, tabla que pasa a tarjetas, estados, avisos,
+   vacío, carga e iniciales son de ui.css; el margen de página es de .ss-panel--plataforma. Aquí solo la celda de
+   la persona, el rol fijo, la paginación y los espacios. Tokens --ui-*, los dos temas. */
+.usr-bloque, .usr-panel { margin-bottom: var(--ui-sp-4); }
+.usr-panel { max-width: 920px; }
+
+.usr-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 10px;
+}
+
+.usr-persona { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.usr-persona__texto { display: grid; gap: 2px; min-width: 0; }
+.usr-persona__texto strong { display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; overflow-wrap: anywhere; }
+.usr-persona__correo { font-size: 0.8125rem; color: var(--ui-muted); overflow-wrap: anywhere; }
+
+.usr-tu {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.usr-fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.usr-tenue { color: var(--ui-muted); }
+.usr-desactivar.ui-btn { color: var(--ui-error); }
+
+/* Mientras llega otra página o filtro, la lista anterior queda a la vista, atenuada */
+.usr-actualizando { opacity: 0.6; transition: opacity var(--ui-dur) ease; }
+
+.usr-rol-fijo { align-content: start; }
+.usr-rol-fijo .usr-rol-fijo__valor { display: flex; align-items: center; min-height: 46px; margin: 0; font-weight: 600; color: var(--ui-text); }
+
+.usr-paginas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 0.8125rem;
+  color: var(--ui-muted);
+}
+
+.usr-paginas__botones { display: inline-flex; align-items: center; gap: 10px; }
+
+@media (max-width: 760px) {
+  .usr-filtros .ui-buscador { max-width: none; flex-basis: 100%; }
+  /* En la tarjeta el nombre ya va arriba: el correo cabe debajo sin cortar la fila */
+  .ui-table--tarjetas .usr-fecha { white-space: normal; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .usr-actualizando { transition: none; }
+}
