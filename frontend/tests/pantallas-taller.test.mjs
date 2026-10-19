@@ -94,3 +94,11 @@ test("Detalle de solicitud: título h1, volver, error de la cita en su campo y b
   assert.ok(!pagina.includes("← "), "volver sin flecha de texto");
   assert.ok(pagina.includes("aceptarSolicitudServicio(token, seleccionada.id, {"), "misma llamada para aceptar");
 });
+
+test("Informes: período con chips, estrellas dibujadas y tarjetas compartidas", () => {
+  const pagina = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(pagina.includes('className="ui-chip" aria-pressed={meses === m}'));
+  assert.ok(pagina.includes("<Estrellas") && !pagina.includes("★"), "sin estrellas de texto");
+  assert.ok(pagina.includes("onReintentar={() => setIntento((n) => n + 1)}"), "el error se puede reintentar");
+  assert.ok(pagina.includes('className="ui-card ti-tarjeta"'));
+});

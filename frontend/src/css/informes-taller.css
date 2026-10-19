@@ -1,0 +1,86 @@
+/* ── Informes del taller ───────────────────────────────────────────────────
+   Prefijo ti-, BEM. Cabecera, período (ui-chip), cifras (ui-indicador), tarjetas (ui-card), estrellas, barra de
+   avance, avisos y carga son de ui.css; aquí las barras por estado, las cifras de dinero y los comentarios.
+   Tokens --ui-*, los dos temas. */
+
+.ti-root { display: grid; gap: var(--ui-sp-5); }
+.ti-root > .ui-page-header { margin-bottom: 0; }
+.ti-esqueleto { height: 118px; border-radius: 12px; }
+
+.ti-rejilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.ti-tarjeta__cuerpo { display: grid; gap: 14px; }
+
+.ti-root .ti-vacio { margin: 0; max-width: 52ch; font-size: 0.9rem; line-height: 1.55; color: var(--ui-muted); text-wrap: pretty; }
+.ti-root .ti-nota { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: var(--ui-muted); text-wrap: pretty; }
+.ti-root .ti-nota--aparte { padding-top: 12px; border-top: 1px dashed var(--ui-line); }
+
+/* Barras: nombre, pista y valor en texto */
+.ti-barras { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+
+.ti-barras__fila {
+  display: grid;
+  grid-template-columns: minmax(96px, 160px) minmax(0, 1fr) 2.5rem;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+}
+
+.ti-barras__nombre { overflow: hidden; color: var(--ui-text); text-overflow: ellipsis; white-space: nowrap; }
+.ti-barras__pista { height: 10px; overflow: hidden; border-radius: 999px; background: var(--ui-surface-2); }
+
+.ti-barras__barra {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+  background: var(--primary);
+  transform-origin: left;
+  animation: ti-crece 0.5s var(--ui-ease) both;
+}
+
+.ti-barras__valor { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+
+@keyframes ti-crece { from { transform: scaleX(0); } }
+
+/* Dinero: liquidado y pendiente lado a lado, con la parte liquidada en la barra */
+.ti-dineros { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+.ti-dinero { display: grid; gap: 10px; }
+
+.ti-root .ti-dinero__titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ui-muted);
+}
+
+.ti-dinero__cifras { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; }
+.ti-dinero__cifras dt { font-size: 0.78rem; color: var(--ui-muted); }
+.ti-dinero__cifras dd { display: grid; gap: 2px; margin: 0; }
+.ti-dinero__cifras strong { font-size: 1.15rem; overflow-wrap: anywhere; }
+.ti-dinero__cifras span { font-size: 0.78rem; color: var(--ui-muted); }
+
+.ti-duo { display: flex; flex-wrap: wrap; gap: 32px; margin: 0; }
+.ti-duo dt { order: 2; font-size: 0.8125rem; color: var(--ui-muted); }
+.ti-duo div { display: flex; flex-direction: column; }
+.ti-duo dd { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+.ti-nota-grande { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ti-nota-grande strong { font-size: 2.4rem; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ti-nota-grande > span:last-child { font-size: 0.85rem; color: var(--ui-muted); }
+
+.ti-comentarios { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.ti-comentarios li { display: grid; gap: 4px; padding-top: 12px; border-top: 1px solid var(--ui-line-soft); }
+.ti-root .ti-comentarios p { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ui-text); text-wrap: pretty; }
+
+@media (max-width: 900px) {
+  .ti-rejilla { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .ti-barras__fila { grid-template-columns: minmax(84px, 120px) minmax(0, 1fr) 2.2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ti-barras__barra { animation: none; }
+}

@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { getToken } from "../../services/authService";
 import { informesTaller } from "../../services/informesTallerService";
 import { ESTADOS, formatPrecio } from "../../components/servicio/estadosServicio";
+import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
+import Indicador from "../../components/ui/Indicador";
+import Alerta from "../../components/ui/Alerta";
+import Esqueleto from "../../components/ui/Esqueleto";
+import Estrellas from "../../components/ui/Estrellas";
+import BarraProgreso from "../../components/ui/BarraProgreso";
+import "../../css/informes-taller.css";
 
 const PERIODOS = [3, 6, 12];
 // Menos calificaciones que esto: se muestran, pero se avisa que el promedio aún dice poco.
@@ -13,74 +20,73 @@ const horas = (h) => {
   return h < 48 ? `${h.toLocaleString("es-CO", { maximumFractionDigits: 1 })} h` : `${Math.round(h / 24)} d`;
 };
 
-function Resumen({ titulo, valor, pie, tono }) {
+const decimal = (n) => n.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** Tarjeta de un informe: título y contenido (ui-card de ui.css). */
+function Tarjeta({ id, titulo, children }) {
   return (
-    <div className={`tp-resumen${tono ? ` tp-resumen--${tono}` : ""}`}>
-      <span className="tp-resumen__titulo">{titulo}</span>
-      <span className="tp-resumen__valor">{valor}</span>
-      <span className="tp-resumen__pie">{pie}</span>
-    </div>
+    <section className="ui-card ti-tarjeta" aria-labelledby={id}>
+      <div className="ui-card__header"><h2 id={id} className="ui-card__titulo">{titulo}</h2></div>
+      <div className="ui-card__cuerpo ti-tarjeta__cuerpo">{children}</div>
+    </section>
   );
 }
 
-function Estrellas({ valor }) {
-  const llenas = Math.round(valor || 0);
+/** Barras horizontales con el nombre y el valor en texto; la barra solo acompaña. */
+function Barras({ filas }) {
+  const tope = Math.max(1, ...filas.map(([, n]) => n));
   return (
-    <span className="tp-estrellas" role="img" aria-label={`${valor ?? 0} de 5`}>
-      {[1, 2, 3, 4, 5].map((n) => <span key={n} className={n <= llenas ? "tp-estrellas__on" : ""}>★</span>)}
-    </span>
+    <ul className="ti-barras">
+      {filas.map(([nombre, n]) => (
+        <li key={nombre} className="ti-barras__fila">
+          <span className="ti-barras__nombre">{nombre}</span>
+          <span className="ti-barras__pista" aria-hidden="true">
+            <span className="ti-barras__barra" style={{ width: `${(n * 100) / tope}%` }} />
+          </span>
+          <span className="ti-barras__valor">{n}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 function ServiciosPorEstado({ servicios }) {
-  const filas = Object.entries(servicios.porEstado).filter(([, n]) => n > 0);
-  const tope = Math.max(1, ...filas.map(([, n]) => n));
+  const filas = Object.entries(servicios.porEstado).filter(([, n]) => n > 0)
+    .map(([estado, n]) => [ESTADOS[estado]?.label || estado, n]);
   return (
-    <section className="tp-bloque tp-informe" aria-labelledby="ti-servicios">
-      <h2 id="ti-servicios" className="tp-bloque__titulo">Servicios por estado</h2>
+    <Tarjeta id="ti-servicios" titulo="Servicios por estado">
       {filas.length === 0 ? (
-        <p className="tp-bloque__vacio">
+        <p className="ti-vacio">
           Aún no hay solicitudes en este periodo. Cuando un cliente pida un diagnóstico en tu zona, verás aquí en qué
           etapa va cada una.
         </p>
-      ) : (
-        <ul className="tp-barras">
-          {filas.map(([estado, n]) => (
-            <li key={estado} className="tp-barras__fila">
-              <span className="tp-barras__nombre">{ESTADOS[estado]?.label || estado}</span>
-              <span className="tp-barras__pista" aria-hidden="true">
-                <span className="tp-barras__barra" style={{ width: `${(n * 100) / tope}%` }} />
-              </span>
-              <span className="tp-barras__valor">{n}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+      ) : <Barras filas={filas} />}
+    </Tarjeta>
   );
 }
 
 function Dinero({ titulo, monto }) {
   const total = monto.liquidado + monto.pendiente;
-  const pct = total > 0 ? (monto.liquidado * 100) / total : 0;
   return (
-    <div className="tp-dinero">
-      <h3>{titulo}</h3>
-      <div className="tp-dinero__cifras">
+    <div className="ti-dinero">
+      <h3 className="ti-dinero__titulo">{titulo}</h3>
+      <dl className="ti-dinero__cifras">
         <div>
-          <span className="tp-dinero__etiqueta">Liquidado</span>
-          <strong>{formatPrecio(monto.liquidado)}</strong>
-          <span className="tp-dinero__lineas">{monto.lineasLiquidadas} {monto.lineasLiquidadas === 1 ? "pago" : "pagos"}</span>
+          <dt>Liquidado</dt>
+          <dd>
+            <strong className="ui-precio">{formatPrecio(monto.liquidado)}</strong>
+            <span>{monto.lineasLiquidadas} {monto.lineasLiquidadas === 1 ? "pago" : "pagos"}</span>
+          </dd>
         </div>
         <div>
-          <span className="tp-dinero__etiqueta">Pendiente</span>
-          <strong>{formatPrecio(monto.pendiente)}</strong>
-          <span className="tp-dinero__lineas">{monto.lineasPendientes} {monto.lineasPendientes === 1 ? "pago" : "pagos"}</span>
+          <dt>Pendiente</dt>
+          <dd>
+            <strong className="ui-precio">{formatPrecio(monto.pendiente)}</strong>
+            <span>{monto.lineasPendientes} {monto.lineasPendientes === 1 ? "pago" : "pagos"}</span>
+          </dd>
         </div>
-      </div>
-      {total > 0 && (
-        <span className="tp-dinero__pista" aria-hidden="true"><span className="tp-dinero__hecho" style={{ width: `${pct}%` }} /></span>
-      )}
+      </dl>
+      {total > 0 && <BarraProgreso valor={(monto.liquidado * 100) / total} etiqueta={`${titulo}: parte liquidada`} tono="ok" />}
     </div>
   );
 }
@@ -89,90 +95,80 @@ function Ingresos({ ingresos }) {
   const { manoDeObra, diagnostico, anulado, anteriores } = ingresos;
   const hay = manoDeObra.liquidado + manoDeObra.pendiente + diagnostico.liquidado + diagnostico.pendiente > 0;
   return (
-    <section className="tp-bloque tp-informe" aria-labelledby="ti-ingresos">
-      <h2 id="ti-ingresos" className="tp-bloque__titulo">Ingresos por mano de obra</h2>
+    <Tarjeta id="ti-ingresos" titulo="Ingresos por mano de obra">
       {hay ? (
-        <div className="tp-dineros">
+        <div className="ti-dineros">
           <Dinero titulo="Mano de obra" monto={manoDeObra} />
           <Dinero titulo="Diagnóstico" monto={diagnostico} />
         </div>
       ) : (
-        <p className="tp-bloque__vacio">
+        <p className="ti-vacio">
           Todavía no tienes pagos repartidos. La mano de obra queda pendiente cuando el cliente paga la cotización y se
           habilita al entregar el vehículo.
         </p>
       )}
-      <p className="tp-nota">
+      <p className="ti-nota">
         Es el total de todos tus servicios, no solo del periodo. “Pendiente” es lo que aún no se te ha pagado.
         {anulado > 0 && ` Hay ${formatPrecio(anulado)} anulados que no cuentan.`}
       </p>
       {anteriores.ordenes > 0 && (
-        <p className="tp-nota tp-nota--aparte">
+        <p className="ti-nota ti-nota--aparte">
           Aparte, del flujo anterior: {anteriores.ordenes} {anteriores.ordenes === 1 ? "orden finalizada" : "órdenes finalizadas"} por{" "}
           {formatPrecio(anteriores.manoDeObra)} de mano de obra. No se suman a lo de arriba.
         </p>
       )}
-    </section>
+    </Tarjeta>
   );
 }
 
 function TiempoRespuesta({ tiempo }) {
   return (
-    <section className="tp-bloque tp-informe" aria-labelledby="ti-tiempo">
-      <h2 id="ti-tiempo" className="tp-bloque__titulo">Tiempo de respuesta</h2>
+    <Tarjeta id="ti-tiempo" titulo="Tiempo de respuesta">
       {tiempo.muestra === 0 ? (
-        <p className="tp-bloque__vacio">
+        <p className="ti-vacio">
           Aún no hay revisiones que medir. Se calcula desde que se te asigna una solicitud hasta que pasa a revisión.
         </p>
       ) : (
         <>
-          <div className="tp-duo">
-            <div><span className="tp-duo__valor">{horas(tiempo.horasPromedio)}</span><span className="tp-duo__etiqueta">Promedio</span></div>
-            <div><span className="tp-duo__valor">{horas(tiempo.horasMediana)}</span><span className="tp-duo__etiqueta">Mediana</span></div>
-          </div>
-          <p className="tp-nota">Basado en {tiempo.muestra} {tiempo.muestra === 1 ? "solicitud" : "solicitudes"} del periodo, desde la asignación hasta la revisión.</p>
+          <dl className="ti-duo">
+            <div><dt>Promedio</dt><dd>{horas(tiempo.horasPromedio)}</dd></div>
+            <div><dt>Mediana</dt><dd>{horas(tiempo.horasMediana)}</dd></div>
+          </dl>
+          <p className="ti-nota">
+            Basado en {tiempo.muestra} {tiempo.muestra === 1 ? "solicitud" : "solicitudes"} del periodo, desde la asignación hasta la revisión.
+          </p>
         </>
       )}
-    </section>
+    </Tarjeta>
   );
 }
 
 function Calificacion({ calificacion }) {
-  const tope = Math.max(1, ...Object.values(calificacion.distribucion));
+  const filas = Object.entries(calificacion.distribucion).sort(([a], [b]) => b - a)
+    .map(([estrellas, n]) => [`${estrellas} ${estrellas === "1" ? "estrella" : "estrellas"}`, n]);
   return (
-    <section className="tp-bloque tp-informe" aria-labelledby="ti-calificacion">
-      <h2 id="ti-calificacion" className="tp-bloque__titulo">Calificación de los clientes</h2>
+    <Tarjeta id="ti-calificacion" titulo="Calificación de los clientes">
       {calificacion.total === 0 ? (
-        <p className="tp-bloque__vacio">
+        <p className="ti-vacio">
           Todavía ningún cliente te ha calificado. El cliente califica al confirmar que recibió su vehículo, así que
           aparecerá aquí después de tus primeras entregas. No mostramos un promedio hasta que exista.
         </p>
       ) : (
         <>
-          <div className="tp-nota-grande">
-            <strong>{calificacion.promedio.toLocaleString("es-CO", { minimumFractionDigits: 1 })}</strong>
-            <Estrellas valor={calificacion.promedio} />
+          <div className="ti-nota-grande">
+            <strong>{decimal(calificacion.promedio)}</strong>
+            <Estrellas valor={calificacion.promedio} size={20} />
             <span>{calificacion.total} {calificacion.total === 1 ? "calificación" : "calificaciones"}</span>
           </div>
           {calificacion.total < MINIMO_REPRESENTATIVO && (
-            <p className="tp-nota">Con pocas calificaciones el promedio todavía dice poco; se afina con cada entrega.</p>
+            <p className="ti-nota">Con pocas calificaciones el promedio todavía dice poco; se afina con cada entrega.</p>
           )}
-          <ul className="tp-barras">
-            {Object.entries(calificacion.distribucion).map(([estrellas, n]) => (
-              <li key={estrellas} className="tp-barras__fila">
-                <span className="tp-barras__nombre">{estrellas} ★</span>
-                <span className="tp-barras__pista" aria-hidden="true">
-                  <span className="tp-barras__barra" style={{ width: `${(n * 100) / tope}%` }} />
-                </span>
-                <span className="tp-barras__valor">{n}</span>
-              </li>
-            ))}
-          </ul>
+          <Barras filas={filas} />
           {calificacion.recientes.length > 0 && (
-            <ul className="tp-comentarios">
+            <ul className="ti-comentarios" aria-label="Comentarios recientes">
               {calificacion.recientes.map((c, i) => (
                 <li key={`${c.fecha}-${i}`}>
-                  <Estrellas valor={c.calificacion} />
+                  <Estrellas valor={c.calificacion} size={14} />
                   <p>“{c.comentario}”</p>
                 </li>
               ))}
@@ -180,16 +176,7 @@ function Calificacion({ calificacion }) {
           )}
         </>
       )}
-    </section>
-  );
-}
-
-function Cargando() {
-  return (
-    <div className="tp-esqueleto" aria-hidden="true">
-      <div className="tp-esqueleto__fila">{[0, 1, 2, 3].map((i) => <div className="tp-esqueleto__tarjeta" key={i} />)}</div>
-      <div className="tp-esqueleto__bloque" />
-    </div>
+    </Tarjeta>
   );
 }
 
@@ -197,57 +184,72 @@ function Cargando() {
 export default function TallerInformes() {
   const token = getToken();
   const [meses, setMeses] = useState(6);
-  const [estado, setEstado] = useState({ meses: null, datos: null, error: null });
+  const [intento, setIntento] = useState(0);
+  const [estado, setEstado] = useState({ clave: null, datos: null, error: null });
+  const clave = `${meses}-${intento}`;
 
   useEffect(() => {
     let cancelado = false;
     // El pedido va en un timeout para no actualizar el estado dentro del efecto
     const id = setTimeout(() => {
       informesTaller(token, meses)
-        .then((datos) => { if (!cancelado) setEstado({ meses, datos, error: null }); })
-        .catch((e) => { if (!cancelado) setEstado({ meses, datos: null, error: e.message }); });
+        .then((datos) => { if (!cancelado) setEstado({ clave, datos, error: null }); })
+        .catch((e) => { if (!cancelado) setEstado({ clave, datos: null, error: e.message }); });
     }, 0);
     return () => { cancelado = true; clearTimeout(id); };
-  }, [token, meses]);
+  }, [token, meses, clave]);
 
-  const cargando = estado.meses !== meses;
+  const cargando = estado.clave !== clave;
   const d = !cargando ? estado.datos : null;
   const entregados = d?.servicios.porEstado.ENTREGADA ?? 0;
 
   return (
-    <>
-      <header className="pt-header tp-cabecera">
-        <div>
-          <h1 className="pt-title">Informes</h1>
-          <p className="pt-subtitle">Qué hiciste, cuánto te corresponde y cómo te califican tus clientes.</p>
-        </div>
-        <div className="tp-segmentos" role="group" aria-label="Periodo de los servicios y tiempos">
-          {PERIODOS.map((m) => (
-            <button key={m} type="button" className={`tp-segmentos__opcion${meses === m ? " tp-segmentos__opcion--activa" : ""}`}
-              aria-pressed={meses === m} onClick={() => setMeses(m)}>
-              {m} meses
-            </button>
-          ))}
-        </div>
-      </header>
+    <div className="ti-root">
+      <EncabezadoPagina
+        titulo="Informes"
+        descripcion="Qué hiciste, cuánto te corresponde y cómo te califican tus clientes."
+        acciones={(
+          <div className="ui-filtros" role="group" aria-label="Periodo de los servicios y tiempos">
+            {PERIODOS.map((m) => (
+              <button key={m} type="button" className="ui-chip" aria-pressed={meses === m} onClick={() => setMeses(m)}>
+                {m} meses
+              </button>
+            ))}
+          </div>
+        )}
+      />
 
-      {!cargando && estado.error && <p className="pt-error" role="alert">{estado.error}</p>}
-      {cargando && <Cargando />}
+      {!cargando && estado.error && (
+        <Alerta onReintentar={() => setIntento((n) => n + 1)}>{estado.error}</Alerta>
+      )}
+
+      {cargando && (
+        <>
+          <div className="ui-indicadores ti-indicadores" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => <span key={i} className="ui-skeleton ti-esqueleto" />)}
+          </div>
+          <Esqueleto variante="lista" cantidad={2} texto="Cargando tus informes…" />
+        </>
+      )}
 
       {d && (
         <>
-          <div className="tp-resumenes">
-            <Resumen titulo="Servicios" valor={d.servicios.total} pie={`${entregados} entregados en ${d.mesesConsultados} meses`} />
-            <Resumen titulo="Mano de obra liquidada" valor={formatPrecio(d.ingresos.manoDeObra.liquidado)}
-              pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} pendiente`} tono="ok" />
-            <Resumen titulo="Respuesta promedio" valor={horas(d.tiempoRespuesta.horasPromedio)}
-              pie={d.tiempoRespuesta.muestra > 0 ? `${d.tiempoRespuesta.muestra} medidas` : "Sin revisiones aún"} />
-            <Resumen titulo="Calificación"
-              valor={d.calificacion.promedio == null ? "—" : d.calificacion.promedio.toLocaleString("es-CO", { minimumFractionDigits: 1 })}
-              pie={d.calificacion.total > 0 ? `${d.calificacion.total} de clientes` : "Sin calificaciones aún"} />
-          </div>
+          <section aria-labelledby="ti-resumen">
+            <h2 id="ti-resumen" className="ui-sr">Resumen del periodo</h2>
+            <div className="ui-indicadores ti-indicadores">
+              <Indicador icono="tool" titulo="Servicios" valor={d.servicios.total}
+                pie={`${entregados} ${entregados === 1 ? "entregado" : "entregados"} en ${d.mesesConsultados} meses`} />
+              <Indicador titulo="Mano de obra liquidada" valor={formatPrecio(d.ingresos.manoDeObra.liquidado)} tono="ok"
+                pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} pendiente`} />
+              <Indicador icono="clock" titulo="Respuesta promedio" valor={horas(d.tiempoRespuesta.horasPromedio)}
+                pie={d.tiempoRespuesta.muestra > 0 ? `${d.tiempoRespuesta.muestra} medidas` : "Sin revisiones aún"} />
+              <Indicador icono="star" titulo="Calificación"
+                valor={d.calificacion.promedio == null ? "—" : decimal(d.calificacion.promedio)}
+                pie={d.calificacion.total > 0 ? `${d.calificacion.total} de clientes` : "Sin calificaciones aún"} />
+            </div>
+          </section>
 
-          <div className="tp-informes">
+          <div className="ti-rejilla">
             <ServiciosPorEstado servicios={d.servicios} />
             <Ingresos ingresos={d.ingresos} />
             <TiempoRespuesta tiempo={d.tiempoRespuesta} />
@@ -255,6 +257,6 @@ export default function TallerInformes() {
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
