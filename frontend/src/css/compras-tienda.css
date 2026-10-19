@@ -46,3 +46,85 @@
 @media (max-width: 600px) {
   .cmp-filtros__fila .ui-buscador { flex-basis: 100%; max-width: none; }
 }
+
+/* ── Nueva compra ──────────────────────────────────────────────────── */
+.cmp-form { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+.cmp-form__principal { display: grid; gap: 16px; min-width: 0; }
+.cmp-form__lateral { position: sticky; top: 88px; min-width: 0; }
+
+.cmp-resultados {
+  display: grid;
+  margin: -6px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+}
+
+.cmp-resultado {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 8px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ui-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cmp-resultado:hover { background: var(--ui-hover); }
+.cmp-resultado:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }
+.cmp-resultado__imagen.mk-imagen, .cmp-item__imagen.mk-imagen { width: 36px; border-radius: 8px; }
+.cmp-resultado__texto, .cmp-item__texto { display: grid; gap: 1px; min-width: 0; }
+.cmp-resultado__texto strong, .cmp-item__texto strong { font-size: 0.875rem; overflow-wrap: anywhere; }
+.cmp-resultado__texto span, .cmp-item__texto span { font-size: 0.75rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+.ss-panel--tienda .cmp-sin-resultados { margin: -6px 0 0; font-size: 0.85rem; }
+.cmp-agregar.ui-btn { justify-self: start; }
+
+.cmp-resumen { display: grid; gap: 14px; }
+.cmp-items { display: grid; margin: 0; padding: 0; list-style: none; }
+
+.cmp-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.cmp-item:first-child { border-top: 0; padding-top: 0; }
+.cmp-item__quitar.ui-btn { min-width: 36px; padding-inline: 8px; color: var(--ui-muted); }
+.cmp-item__quitar.ui-btn:hover { color: var(--ui-error); }
+
+.cmp-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--ui-line);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.cmp-total strong { font-size: 1.25rem; }
+
+.ss-panel--tienda .cmp-nota { display: flex; gap: 6px; margin: 0; font-size: 0.8rem; line-height: 1.45; color: var(--ui-muted); }
+.cmp-nota svg { flex-shrink: 0; margin-top: 2px; color: var(--ui-ok); }
+
+@media (max-width: 1080px) {
+  .cmp-form { grid-template-columns: minmax(0, 1fr); }
+  .cmp-form__lateral { position: static; }
+}
+
+/* Celular: Registrar va en la barra inferior */
+@media (max-width: 1023px) {
+  .cmp-registrar { display: none; }
+}

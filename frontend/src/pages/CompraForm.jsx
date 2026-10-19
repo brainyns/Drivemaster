@@ -1,344 +1,217 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { crearCompra } from "../services/compraService";
 import { listarProveedores } from "../services/proveedorService";
 import { listarProductosMiTienda } from "../services/productoService";
-import "../css/compras.css";
+import { formatPrecio } from "../components/servicio/estadosServicio";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import SeccionEditable from "../components/ui/SeccionEditable";
+import Campo from "../components/ui/Campo";
+import Dato from "../components/ui/Dato";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import BarraAccionMovil from "../components/ui/BarraAccionMovil";
+import ImagenProducto from "../components/marketplace/ImagenProducto";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
+import Icon from "../components/public/Icon";
+import { agregarLinea, erroresCompra, erroresLinea } from "./tienda/comprasTienda";
+import "../css/compras-tienda.css";
 
-const IcTruck  = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 4v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
-const IcBox    = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>;
-const IcPlus   = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-const IcSearch = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
-const IcX      = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-const IcCheck  = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>;
+const MAX_RESULTADOS = 6;
+const LINEA_VACIA = { producto: null, cantidad: "1", costo: "" };
 
+/** Registrar lo que llegó de un proveedor: al confirmar se suma el stock y, si tiene correo, se le envía el PDF. */
 function CompraForm({ onVolver, token }) {
-  const [proveedores,  setProveedores]  = useState([]);
-  const [productos,    setProductos]    = useState([]);
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState(null);
-  const [showConfirm,  setShowConfirm]  = useState(false);
-
-  const [proveedorId,  setProveedorId]  = useState("");
-  const [provSearch,   setProvSearch]   = useState("");
-  const [showProvDrop, setShowProvDrop] = useState(false);
-
-  const [prodSearch,   setProdSearch]   = useState("");
-  const [prodQty,      setProdQty]      = useState(1);
-  const [prodCosto,    setProdCosto]    = useState(0);
-  const [prodSel,      setProdSel]      = useState(null);
-  const [showProdDrop, setShowProdDrop] = useState(false);
-
+  const [proveedores, setProveedores] = useState(null);
+  const [productos, setProductos] = useState([]);
+  const [proveedorId, setProveedorId] = useState("");
+  const [buscar, setBuscar] = useState("");
+  const [linea, setLinea] = useState(LINEA_VACIA);
+  const [tocadaLinea, setTocadaLinea] = useState(false);
   const [items, setItems] = useState([]);
+  const [tocadaCompra, setTocadaCompra] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   useEffect(() => {
-    listarProveedores(token).then(setProveedores).catch(() => {});
+    let vivo = true;
+    listarProveedores(token).then((l) => { if (vivo) setProveedores(l || []); }).catch(() => { if (vivo) setProveedores([]); });
     // Solo los productos de la tienda: no se puede comprar (ni subir el stock de) un producto de otra
-    listarProductosMiTienda(token).then(setProductos).catch(() => {});
+    listarProductosMiTienda(token).then((l) => { if (vivo) setProductos(l || []); }).catch(() => {});
+    return () => { vivo = false; };
   }, [token]);
 
-  const proveedorActivo = proveedores.find(p => p.id === proveedorId);
+  const proveedor = proveedores?.find((p) => p.id === proveedorId);
+  const resultados = useMemo(() => {
+    const q = buscar.trim().toLowerCase();
+    if (!q || linea.producto) return [];
+    return productos.filter((p) => [p.nombre, p.codigo, p.marca].some((x) => x && x.toLowerCase().includes(q))).slice(0, MAX_RESULTADOS);
+  }, [buscar, productos, linea.producto]);
+  const erroresL = tocadaLinea ? erroresLinea(linea) : {};
+  const erroresC = tocadaCompra ? erroresCompra({ proveedorId, items }) : {};
+  const total = items.reduce((s, i) => s + i.subtotal, 0);
+  const unidades = items.reduce((s, i) => s + i.cantidad, 0);
 
-  const provFiltrados = proveedores.filter(p =>
-    p.nombre?.toLowerCase().includes(provSearch.toLowerCase()) ||
-    p.nit?.toLowerCase().includes(provSearch.toLowerCase())
+  const elegir = (p) => {
+    setLinea({ producto: p, cantidad: "1", costo: p.precioCompra != null ? String(p.precioCompra) : "" });
+    setBuscar(p.nombre);
+    setTocadaLinea(false);
+    requestAnimationFrame(() => document.getElementById("cmp-cantidad")?.focus());
+  };
+
+  const agregar = (e) => {
+    e.preventDefault();
+    setTocadaLinea(true);
+    if (Object.keys(erroresLinea(linea)).length) return;
+    setItems((prev) => agregarLinea(prev, linea));
+    setLinea(LINEA_VACIA);
+    setBuscar("");
+    setTocadaLinea(false);
+    document.getElementById("cmp-buscar")?.focus();
+  };
+
+  const pedirConfirmacion = () => {
+    setTocadaCompra(true);
+    if (Object.keys(erroresCompra({ proveedorId, items })).length) return;
+    setConfirmando(true);
+  };
+
+  const registrar = async () => {
+    await crearCompra({
+      proveedorId,
+      productos: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad, costo: i.costo })),
+    }, token);
+    onVolver();
+  };
+
+  const botonRegistrar = (clase = "") => (
+    <button type="button" className={`ui-btn ui-btn--primario ${clase}`} onClick={pedirConfirmacion}>
+      Registrar compra
+    </button>
   );
 
-  const prodFiltrados = productos.filter(p =>
-    p.nombre?.toLowerCase().includes(prodSearch.toLowerCase()) ||
-    p.codigo?.toLowerCase().includes(prodSearch.toLowerCase())
-  ).slice(0, 6);
-
-  const seleccionarProd = (p) => {
-    setProdSel(p);
-    setProdCosto(p.precioCompra || 0);
-    setProdSearch(p.nombre);
-    setShowProdDrop(false);
-  };
-
-  const agregarItem = () => {
-    if (!prodSel) return;
-    setItems(prev => {
-      const exist = prev.find(i => i.productoId === prodSel.id);
-      if (exist) return prev.map(i => i.productoId === prodSel.id
-        ? { ...i, cantidad: i.cantidad + Number(prodQty), subtotal: (i.cantidad + Number(prodQty)) * i.costo }
-        : i);
-      return [...prev, {
-        productoId: prodSel.id,
-        nombre: prodSel.nombre,
-        sku: prodSel.codigo || prodSel.id.slice(-6).toUpperCase(),
-        costo: Number(prodCosto),
-        cantidad: Number(prodQty),
-        subtotal: Number(prodCosto) * Number(prodQty),
-      }];
-    });
-    setProdSel(null); setProdSearch(""); setProdQty(1); setProdCosto(0);
-  };
-
-  const quitarItem = id => setItems(prev => prev.filter(i => i.productoId !== id));
-
-  const subtotal = items.reduce((s, i) => s + i.subtotal, 0);
-  const total    = subtotal;
-
-  const confirmar = async () => {
-    if (!proveedorId || items.length === 0) return;
-    setLoading(true); setError(null);
-    try {
-      await crearCompra({
-        proveedorId,
-        productos: items.map(i => ({ productoId: i.productoId, cantidad: i.cantidad, costo: i.costo })),
-      }, token);
-      onVolver();
-    } catch (e) { setError(e.message); setShowConfirm(false); }
-    finally { setLoading(false); }
-  };
-
   return (
-    <div className="cp-root">
-      <div className="cp-header">
-        <div>
-          <p className="cp-breadcrumb">
-            <button className="cp-back-link" onClick={onVolver}>← Compras</button>
-            {" / "}Nueva Compra
-          </p>
-          <h1 className="cp-h1">Nueva Orden de Compra</h1>
-        </div>
-      </div>
+    <div className="ss-panel--tienda cmp-root">
+      <EncabezadoPagina titulo="Nueva compra" onVolver={onVolver} textoVolver="Compras"
+        descripcion="Elige el proveedor y agrega lo que llegó. Al registrarla se suma el stock de cada producto." />
 
-      {error && <p className="cp-error">{error}</p>}
-
-      <div className="cp-form-layout">
-        <div className="cp-form-left">
-
-          {/* 1. Proveedor */}
-          <div className="cp-panel">
-            <div className="cp-panel-head">
-              <span className="cp-panel-ico">{IcTruck}</span>
-              <div>
-                <p className="cp-panel-title">1. Proveedor</p>
-                <p className="cp-panel-sub">Selecciona el proveedor activo</p>
-              </div>
-            </div>
-
-            <div style={{ position: "relative" }}>
-              <div className="cp-prov-search-wrap" onClick={() => setShowProvDrop(v => !v)}>
-                <span className="cp-prov-search-ico">{IcSearch}</span>
-                <input
-                  className="cp-prov-search-input"
-                  placeholder="Buscar proveedor..."
-                  value={provSearch}
-                  onChange={e => { setProvSearch(e.target.value); setShowProvDrop(true); }}
-                  onFocus={() => setShowProvDrop(true)}
-                />
-                <span className="cp-prov-chevron">▾</span>
-              </div>
-              {showProvDrop && (
-                <div className="cp-dropdown" onMouseLeave={() => setShowProvDrop(false)}>
-                  {provFiltrados.length === 0
-                    ? <p className="cp-dropdown-empty">Sin resultados</p>
-                    : provFiltrados.map(p => (
-                        <button key={p.id} className="cp-dropdown-item"
-                          onClick={() => { setProveedorId(p.id); setProvSearch(p.nombre); setShowProvDrop(false); }}>
-                          <div className="cp-prov-ico" style={{ width: 28, height: 28, fontSize: ".72rem" }}>{p.nombre[0]}</div>
-                          <div>
-                            <p style={{ fontWeight: 600, fontSize: ".82rem" }}>{p.nombre}</p>
-                            <p style={{ fontSize: ".72rem", color: "var(--muted)" }}>{p.nit || "—"}</p>
-                          </div>
-                        </button>
-                      ))
-                  }
-                </div>
-              )}
-            </div>
-
-            {proveedorActivo && (
-              <div className="cp-prov-info">
-                <div className="cp-prov-info-row">
-                  <div>
-                    <p className="cp-prov-info-label">NIT</p>
-                    <p className="cp-prov-info-val">{proveedorActivo.nit || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="cp-prov-info-label">Teléfono</p>
-                    <p className="cp-prov-info-val">{proveedorActivo.telefono || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="cp-prov-info-label">Correo</p>
-                    <p className="cp-prov-info-val">{proveedorActivo.correo || "—"}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 2. Productos */}
-          <div className="cp-panel">
-            <div className="cp-panel-head">
-              <span className="cp-panel-ico">{IcBox}</span>
-              <div>
-                <p className="cp-panel-title">2. Productos de la compra</p>
-                <p className="cp-panel-sub">Busca y agrega productos al registro</p>
-              </div>
-            </div>
-
-            <div className="cp-line-grid">
-              <div className="cp-field cp-field--lg" style={{ position: "relative" }}>
-                <label>Producto / SKU</label>
-                <div className="cp-prod-search-wrap">
-                  <span>{IcSearch}</span>
-                  <input
-                    className="cp-prod-search-input"
-                    placeholder="Buscar inventario... SKU-001"
-                    value={prodSearch}
-                    onChange={e => { setProdSearch(e.target.value); setShowProdDrop(true); setProdSel(null); }}
-                    onFocus={() => setShowProdDrop(true)}
-                  />
-                </div>
-                {showProdDrop && prodSearch && (
-                  <div className="cp-dropdown" onMouseLeave={() => setShowProdDrop(false)}>
-                    {prodFiltrados.length === 0
-                      ? <p className="cp-dropdown-empty">Sin resultados</p>
-                      : prodFiltrados.map(p => (
-                          <button key={p.id} className="cp-dropdown-item" onClick={() => seleccionarProd(p)}>
-                            <div className="cp-prod-thumb">{p.nombre[0]}</div>
-                            <div>
-                              <p style={{ fontWeight: 600, fontSize: ".82rem" }}>{p.nombre}</p>
-                              <p style={{ fontSize: ".71rem", color: "var(--muted)" }}>SKU: {p.codigo || p.id.slice(-6)} · Stock: {p.stockActual}</p>
-                            </div>
-                            <span style={{ marginLeft: "auto", fontWeight: 700, color: "var(--primary)", fontSize: ".78rem", flexShrink: 0 }}>
-                              ${p.precioCompra?.toLocaleString() || "—"}
-                            </span>
-                          </button>
-                        ))
-                    }
-                  </div>
+      <div className="cmp-form">
+        <div className="cmp-form__principal">
+          <SeccionEditable id="cmp-proveedor" icono="users" titulo="Proveedor">
+            {proveedores && proveedores.length === 0 ? (
+              <Alerta tono="aviso">Aún no tienes proveedores. Agrégalos en Proveedores y vuelve a registrar la compra.</Alerta>
+            ) : (
+              <div className="ui-form">
+                <Campo id="cmp-proveedor-select" label="¿A quién le compraste?" error={erroresC.proveedor}>
+                  <select className="ui-field__input" value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} disabled={!proveedores}>
+                    <option value="">{proveedores ? "Elegir proveedor" : "Cargando proveedores…"}</option>
+                    {(proveedores || []).map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.nit ? ` · NIT ${p.nit}` : ""}</option>)}
+                  </select>
+                </Campo>
+                {proveedor && (
+                  <>
+                    <dl className="ui-datos">
+                      <Dato etiqueta="NIT">{proveedor.nit}</Dato>
+                      <Dato etiqueta="Teléfono">{proveedor.telefono}</Dato>
+                      <Dato etiqueta="Correo">{proveedor.correo}</Dato>
+                    </dl>
+                    {!proveedor.correo && (
+                      <Alerta tono="info">Este proveedor no tiene correo: la compra se registra igual, pero no le enviaremos el PDF.</Alerta>
+                    )}
+                  </>
                 )}
               </div>
+            )}
+          </SeccionEditable>
 
-              <div className="cp-field">
-                <label>Cantidad</label>
-                <input type="number" min="1" value={prodQty} onChange={e => setProdQty(e.target.value)} className="cp-input" />
+          <SeccionEditable id="cmp-productos" icono="box" titulo="Productos"
+            descripcion="Busca en tu catálogo, elige el producto, la cantidad y el costo por unidad.">
+            <form className="ui-form" onSubmit={agregar} noValidate>
+              <Campo id="cmp-buscar" label="Producto" error={erroresL.producto}
+                ayuda={linea.producto ? `Stock actual: ${linea.producto.stockActual ?? 0}` : "Por nombre, código o marca."}>
+                <input className="ui-field__input" type="search" value={buscar} autoComplete="off" placeholder="Ej. filtro de aceite"
+                  onChange={(e) => { setBuscar(e.target.value); if (linea.producto) setLinea(LINEA_VACIA); }} />
+              </Campo>
+              {resultados.length > 0 && (
+                <ul className="cmp-resultados" aria-label="Productos que coinciden">
+                  {resultados.map((p) => (
+                    <li key={p.id}>
+                      <button type="button" className="cmp-resultado" onClick={() => elegir(p)}>
+                        <ImagenProducto src={p.imagenUrl} className="cmp-resultado__imagen" tamanioIcono={16} />
+                        <span className="cmp-resultado__texto">
+                          <strong>{p.nombre}</strong>
+                          <span>{[p.codigo, `stock ${p.stockActual ?? 0}`].filter(Boolean).join(" · ")}</span>
+                        </span>
+                        <span className="cmp-tenue">{p.precioCompra != null ? formatPrecio(p.precioCompra) : ""}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {buscar.trim() && !linea.producto && resultados.length === 0 && (
+                <p className="cmp-tenue cmp-sin-resultados">Ningún producto de tu catálogo coincide con “{buscar.trim()}”.</p>
+              )}
+              <div className="ui-form__campos ui-form__campos--2">
+                <Campo id="cmp-cantidad" label="Cantidad" error={erroresL.cantidad}>
+                  <input className="ui-field__input" type="number" min="1" inputMode="numeric" value={linea.cantidad}
+                    onChange={(e) => setLinea((l) => ({ ...l, cantidad: e.target.value }))} />
+                </Campo>
+                <Campo id="cmp-costo" label="Costo por unidad (COP)" error={erroresL.costo}>
+                  <input className="ui-field__input" type="number" min="0" inputMode="numeric" value={linea.costo}
+                    onChange={(e) => setLinea((l) => ({ ...l, costo: e.target.value }))} />
+                </Campo>
               </div>
+              <button type="submit" className="ui-btn ui-btn--secundario cmp-agregar"><Icon name="plus" size={16} /> Agregar a la compra</button>
+            </form>
+          </SeccionEditable>
+        </div>
 
-              <div className="cp-field">
-                <label>Costo unit. ($)</label>
-                <input type="number" min="0" value={prodCosto} onChange={e => setProdCosto(e.target.value)} className="cp-input" />
-              </div>
+        <aside className="cmp-form__lateral" aria-labelledby="cmp-resumen-titulo">
+          <section className="ui-card">
+            <div className="ui-card__header">
+              <h2 id="cmp-resumen-titulo" className="ui-card__titulo">Resumen</h2>
+              {items.length > 0 && <span className="ui-card__sub">{unidades} {unidades === 1 ? "unidad" : "unidades"}</span>}
             </div>
-
-            <button className="cp-btn-add-item" onClick={agregarItem} disabled={!prodSel}>
-              {IcPlus} Agregar a la compra
-            </button>
-          </div>
-        </div>
-
-        {/* Carrito */}
-        <div className="cp-basket">
-          <div className="cp-basket-header">
-            <span className="cp-basket-title">Resumen de la compra</span>
-            {items.length > 0 && <span className="cp-basket-count">{items.length} ITEMS</span>}
-          </div>
-
-          <div className="cp-basket-items">
-            {items.length === 0 ? (
-              <div className="cp-basket-empty">
-                <div className="cp-basket-empty-ico">{IcBox}</div>
-                <p>Agrega productos al registro</p>
-              </div>
-            ) : items.map(it => (
-              <div key={it.productoId} className="cp-basket-item">
-                <div className="cp-basket-item-main">
-                  <p className="cp-basket-item-name">{it.nombre}</p>
-                  <p className="cp-basket-item-sku">SKU: {it.sku}</p>
-                  <div className="cp-basket-item-meta">
-                    <span>CANT. <strong>{it.cantidad}</strong></span>
-                    <span>C/U <strong>${it.costo.toLocaleString()}</strong></span>
-                  </div>
-                </div>
-                <div className="cp-basket-item-right">
-                  <span className="cp-basket-item-total">
-                    ${it.subtotal.toLocaleString("es-CO", { minimumFractionDigits: 2 })}
-                  </span>
-                  <button className="cp-basket-item-del" onClick={() => quitarItem(it.productoId)}>{IcX}</button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="cp-basket-totals">
-            <div className="cp-basket-row"><span>Subtotal</span><span>${subtotal.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span></div>
-          </div>
-
-          <div className="cp-basket-total-final">
-            <span>TOTAL</span>
-            <span>${total.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
-          </div>
-
-          <button
-            className="cp-btn-register"
-            onClick={() => setShowConfirm(true)}
-            disabled={!proveedorId || items.length === 0}
-          >
-            Registrar compra
-          </button>
-
-          <div className="cp-basket-note">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            Las compras registradas actualizarán el stock de inventario automáticamente.
-          </div>
-        </div>
+            <div className="ui-card__cuerpo cmp-resumen">
+              {items.length === 0 ? (
+                <EstadoVacio icono="box" nivel={3} titulo="Aún no hay productos" texto="Lo que agregues aparece aquí con su subtotal." />
+              ) : (
+                <ul className="cmp-items">
+                  {items.map((i) => (
+                    <li key={i.productoId} className="cmp-item">
+                      <ImagenProducto src={i.imagenUrl} className="cmp-item__imagen" tamanioIcono={16} />
+                      <span className="cmp-item__texto">
+                        <strong>{i.nombre}</strong>
+                        <span>{i.cantidad} × {formatPrecio(i.costo)}</span>
+                      </span>
+                      <span className="ui-precio">{formatPrecio(i.subtotal)}</span>
+                      <button type="button" className="ui-btn ui-btn--texto ui-btn--chico cmp-item__quitar"
+                        onClick={() => setItems((prev) => prev.filter((x) => x.productoId !== i.productoId))}
+                        aria-label={`Quitar ${i.nombre} de la compra`}>
+                        <Icon name="close" size={14} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {erroresC.items && <p className="ui-field__error" role="alert"><Icon name="alert" size={14} />{erroresC.items}</p>}
+              <div className="cmp-total"><span>Total</span><strong className="ui-precio">{formatPrecio(total)}</strong></div>
+              {botonRegistrar("ui-btn--grande ui-btn--bloque cmp-registrar")}
+              <p className="cmp-nota">
+                <Icon name="check" size={14} /> Al registrarla se suma el stock de cada producto{proveedor?.correo ? ` y enviamos el PDF a ${proveedor.correo}` : ""}.
+              </p>
+            </div>
+          </section>
+        </aside>
       </div>
 
-      {/* Modal confirmación */}
-      {showConfirm && (
-        <div className="cp-modal-overlay" onClick={e => e.target === e.currentTarget && setShowConfirm(false)}>
-          <div className="cp-modal">
-            <div className="cp-modal-header">
-              <div>
-                <p className="cp-modal-tag">Confirmar Orden</p>
-                <h2 className="cp-modal-title">Registro de Compra</h2>
-              </div>
-              <button className="cp-modal-close" onClick={() => setShowConfirm(false)}>{IcX}</button>
-            </div>
+      <BarraAccionMovil etiqueta="Total de la compra" valor={formatPrecio(total)}
+        nota={items.length ? `${unidades} ${unidades === 1 ? "unidad" : "unidades"}` : "Sin productos"}>
+        {botonRegistrar()}
+      </BarraAccionMovil>
 
-            <div className="cp-modal-body">
-              <p className="cp-modal-prov">
-                <span>{IcTruck}</span>
-                {proveedorActivo?.nombre || "Proveedor"}
-              </p>
-
-              <table className="cp-modal-table">
-                <thead>
-                  <tr><th>Producto</th><th>SKU</th><th style={{ textAlign: "center" }}>Cant.</th><th style={{ textAlign: "right" }}>Costo</th><th style={{ textAlign: "right" }}>Subtotal</th></tr>
-                </thead>
-                <tbody>
-                  {items.map((it, i) => (
-                    <tr key={i}>
-                      <td style={{ fontWeight: 600 }}>{it.nombre}</td>
-                      <td style={{ color: "var(--muted)", fontSize: ".75rem" }}>{it.sku}</td>
-                      <td style={{ textAlign: "center" }}>{String(it.cantidad).padStart(2, "0")}</td>
-                      <td style={{ textAlign: "right" }}>${it.costo.toLocaleString()}</td>
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--primary)" }}>
-                        ${it.subtotal.toLocaleString("es-CO", { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="cp-modal-total">
-                <span>TOTAL A PAGAR</span>
-                <span>${total.toLocaleString("es-CO", { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-
-            <div className="cp-modal-footer">
-              <button className="cp-btn-outline" onClick={() => setShowConfirm(false)}>Cancelar</button>
-              <button className="cp-btn-register" onClick={confirmar} disabled={loading} style={{ padding: ".65rem 1.5rem" }}>
-                {loading ? "Procesando..." : <>{IcCheck} Confirmar Compra</>}
-              </button>
-            </div>
-          </div>
-        </div>
+      {confirmando && (
+        <ConfirmarAccion titulo={`¿Registrar la compra a ${proveedor?.nombre || "este proveedor"}?`} textoConfirmar="Registrar compra"
+          mensaje={`Se suman ${unidades} ${unidades === 1 ? "unidad" : "unidades"} al stock por ${formatPrecio(total)}${proveedor?.correo ? ` y enviamos el PDF a ${proveedor.correo}` : ""}. Una compra registrada no se puede editar.`}
+          onConfirmar={registrar} onCancelar={() => setConfirmando(false)} />
       )}
     </div>
   );

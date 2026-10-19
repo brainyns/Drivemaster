@@ -222,3 +222,11 @@ test("Compras: la lista ya no inventa un estado ni pendientes por recibir", () =
   assert.ok(pagina.includes("listarProveedores(token)"), "el nombre del proveedor sale de su lista");
   assert.ok(pagina.includes("ui-table--tarjetas"));
 });
+
+test("Nueva compra: selector nativo, resultados como botones, confirmación compartida y la misma llamada", () => {
+  const pagina = leer("../src/pages/CompraForm.jsx");
+  assert.ok(pagina.includes('<Campo id="cmp-proveedor-select"'), "el proveedor es un select con etiqueta");
+  assert.ok(!pagina.includes("onMouseLeave"), "nada se cierra solo al mover el mouse");
+  assert.ok(pagina.includes("<ConfirmarAccion") && pagina.includes("<BarraAccionMovil"));
+  assert.ok(pagina.includes("productos: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad, costo: i.costo }))"));
+});
