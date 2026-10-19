@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.drivemaster.drivemaster.dto.RegisterRequest;
+import com.drivemaster.drivemaster.dto.UsuarioAdminDTO;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
@@ -47,13 +48,14 @@ public class UsuarioController {
         this.notificacionService = notificacionService;
     }
 
+    // Las respuestas son UsuarioAdminDTO: nunca la entidad (googleId, permisos, intentos fallidos, bloqueo...)
     @GetMapping
-    public List<Usuario> listarUsuarios() {
-        return usuarioService.listarTodos();
+    public List<UsuarioAdminDTO> listarUsuarios() {
+        return usuarioService.listarTodos().stream().map(UsuarioAdminDTO::de).toList();
     }
 
     @PostMapping
-    public ResponseEntity<Usuario> crearUsuario(@RequestBody RegisterRequest request) {
+    public ResponseEntity<UsuarioAdminDTO> crearUsuario(@RequestBody RegisterRequest request) {
         if (request.getCorreo() == null || request.getCorreo().isBlank() || request.getPassword() == null || request.getPassword().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo y contraseña son obligatorios");
         }
@@ -84,11 +86,11 @@ public class UsuarioController {
                 .bloqueado(false)
                 .build();
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(usuarioService.crearUsuario(usuario));
+        return ResponseEntity.status(HttpStatus.CREATED).body(UsuarioAdminDTO.de(usuarioService.crearUsuario(usuario)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> actualizarUsuario(@PathVariable String id, @RequestBody RegisterRequest request, Authentication auth) {
+    public ResponseEntity<UsuarioAdminDTO> actualizarUsuario(@PathVariable String id, @RequestBody RegisterRequest request, Authentication auth) {
         Usuario usuario = usuarioService.obtenerPorId(id);
         if (usuario == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
@@ -136,7 +138,7 @@ public class UsuarioController {
             cuentaNegocioService.pausarNegocioDe(usuario);
             notificacionService.cerrarConexionesDe(usuario.getId());
         }
-        return ResponseEntity.ok(actualizado);
+        return ResponseEntity.ok(UsuarioAdminDTO.de(actualizado));
     }
 
     @DeleteMapping("/{id}")

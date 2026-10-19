@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.drivemaster.drivemaster.dto.PerfilClienteResponse;
 import com.drivemaster.drivemaster.dto.UpdateClienteRequest;
 import com.drivemaster.drivemaster.dto.cliente.ClienteDTO;
 import com.drivemaster.drivemaster.dto.cliente.DatosClienteRequest;
@@ -145,17 +146,15 @@ public class ClienteController {
         return ResponseEntity.noContent().build();
     }
 
+    /** Los datos de la propia cuenta para Mi perfil: un DTO, nunca la entidad (no expone campos internos). */
     @GetMapping("/mi-perfil")
-    public ResponseEntity<?> miPerfil(Authentication auth) {
-        return usuarioRepository.findByCorreo(auth.getName())
-                .map(usuario -> ResponseEntity.ok().body((Object) usuario))
-                .orElse(ResponseEntity.ok().body(Map.of("completo", false, "mensaje", "Complete sus datos para continuar")));
+    public ResponseEntity<PerfilClienteResponse> miPerfil(Authentication auth) {
+        return ResponseEntity.ok(PerfilClienteResponse.de(usuarioDeLaSesion(auth)));
     }
 
     @PutMapping("/mi-perfil")
-    public ResponseEntity<Usuario> actualizarMiPerfil(@RequestBody UpdateClienteRequest request, Authentication auth) {
-        Usuario usuario = usuarioRepository.findByCorreo(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    public ResponseEntity<PerfilClienteResponse> actualizarMiPerfil(@RequestBody UpdateClienteRequest request, Authentication auth) {
+        Usuario usuario = usuarioDeLaSesion(auth);
 
         if (request.getIdentificacion() != null) usuario.setIdentificacion(request.getIdentificacion());
         if (request.getTelefono() != null) usuario.setTelefono(request.getTelefono());
@@ -165,7 +164,12 @@ public class ClienteController {
         if (request.getReferencia() != null) usuario.setReferencia(request.getReferencia());
 
         usuario.setDatosCompletos(true);
-        return ResponseEntity.ok(usuarioRepository.save(usuario));
+        return ResponseEntity.ok(PerfilClienteResponse.de(usuarioRepository.save(usuario)));
+    }
+
+    private Usuario usuarioDeLaSesion(Authentication auth) {
+        return usuarioRepository.findByCorreo(auth.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
     }
 
     @GetMapping("/exportar")

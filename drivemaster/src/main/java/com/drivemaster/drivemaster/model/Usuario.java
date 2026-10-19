@@ -21,9 +21,13 @@ public class Usuario {
     private String nombre;
     private String correo;
 
+    // Ningún endpoint devuelve esta entidad (usan DTO: PerfilClienteResponse, UsuarioAdminDTO, ClienteDTO...).
+    // Por si alguna vez se serializa, la contraseña y los datos de seguridad no salen en el JSON. No afecta a
+    // MongoDB, que guarda la entidad sin pasar por Jackson; ningún endpoint la recibe en el cuerpo.
     @JsonIgnore
     private String password;
 
+    @JsonIgnore
     private String googleId;
 
     private String proveedor;
@@ -42,8 +46,11 @@ public class Usuario {
     private Instant fechaCreacion;
     private Instant ultimoLogin;
     private Instant fechaExpiracion;
+    @JsonIgnore
     private Integer intentosFallidos;
+    @JsonIgnore
     private Boolean bloqueado;
+    @JsonIgnore
     private Instant fechaBloqueo;
 
     public boolean tienePermiso(String permiso) {

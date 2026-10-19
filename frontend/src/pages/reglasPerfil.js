@@ -22,10 +22,13 @@ export function validarClave(c) {
   return e;
 }
 
-/** Los datos del formulario a partir del perfil que devuelve el backend. */
+/**
+ * Los datos del formulario a partir del perfil que devuelve el backend (PerfilClienteResponse: el documento llega
+ * como "documento" y el correo como "email"; al guardar, el PUT sigue esperando "identificacion").
+ */
 export const datosDesdePerfil = (perfil, nombre) => ({
   nombre: perfil?.nombre || nombre || "",
-  identificacion: perfil?.identificacion || "",
+  identificacion: perfil?.documento || "",
   telefono: perfil?.telefono || "",
   ciudad: perfil?.ciudad || "",
   direccion: perfil?.direccion || "",

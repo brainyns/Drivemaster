@@ -53,6 +53,8 @@ test("Mi perfil: secciones de datos, seguridad y preferencias, con validación y
     "La nueva contraseña debe ser distinta de la actual.");
   const d = datosDesdePerfil({ telefono: "300", ciudad: "Cali" }, "Ana");
   assert.equal(d.nombre, "Ana");
+  // PerfilClienteResponse trae el documento como "documento"; el PUT lo sigue recibiendo como "identificacion"
+  assert.equal(datosDesdePerfil({ documento: "123", email: "ana@demo.com" }, "Ana").identificacion, "123");
   assert.deepEqual(cuerpoPerfil({ ...d, direccion: " Cra 1 " }),
     { identificacion: "", telefono: "300", ciudad: "Cali", direccion: "Cra 1", referencia: "" });
 
