@@ -20,6 +20,8 @@ public class CrearSolicitudServicioRequest {
 
     private String ciudad;
     private String barrio;
+    // Dirección legible del pin del mapa (opcional)
+    private String direccion;
     private Double latitud;
     private Double longitud;
 

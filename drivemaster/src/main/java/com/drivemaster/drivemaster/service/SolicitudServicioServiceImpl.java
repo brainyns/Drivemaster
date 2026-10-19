@@ -20,6 +20,7 @@ import com.drivemaster.drivemaster.model.Vehiculo;
 import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
 import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
+import com.drivemaster.drivemaster.util.Coordenadas;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -130,6 +131,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Este vehículo ya tiene una solicitud en curso. Revisa \"Mis servicios\".");
         }
+        Coordenadas.validar(r.getLatitud(), r.getLongitud(), false);
         Taller elegido = tallerElegido(r.getTallerId());
 
         LocalDateTime ahora = LocalDateTime.now();
@@ -143,6 +145,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 .fotos(new ArrayList<>(fotos))
                 .ciudad(r.getCiudad().trim())
                 .barrio(r.getBarrio() != null ? r.getBarrio().trim() : null)
+                .direccion(limpiarDireccion(r.getDireccion()))
                 .latitud(r.getLatitud())
                 .longitud(r.getLongitud())
                 .preferenciaHorario(r.getPreferenciaHorario())
@@ -685,6 +688,16 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
 
     private enum Vista { CLIENTE, TALLER, ADMIN }
 
+    private static final int MAX_DIRECCION = 200;
+
+    /** Texto plano de una línea y con largo acotado: viene de un geocodificador externo, a través del navegador. */
+    static String limpiarDireccion(String direccion) {
+        if (direccion == null) return null;
+        String limpia = direccion.replaceAll("[<>]", " ").replaceAll("\\p{Cntrl}", " ").replaceAll("\\s+", " ").trim();
+        if (limpia.isEmpty()) return null;
+        return limpia.length() > MAX_DIRECCION ? limpia.substring(0, MAX_DIRECCION).trim() : limpia;
+    }
+
     private SolicitudServicioDTO toDTO(OrdenServicio o, Vista vista) {
         SolicitudServicioDTO.SolicitudServicioDTOBuilder b = SolicitudServicioDTO.builder()
                 .id(o.getId())
@@ -735,10 +748,15 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             // vehículo eliminado: se muestra la descripción guardada
         }
 
-        // El cliente ve la dirección y el teléfono del taller asignado.
-        if (vista != Vista.TALLER && o.getTallerId() != null) {
-            tallerRepository.findById(o.getTallerId()).ifPresent(t ->
-                    b.tallerDireccion(t.getDireccion()).tallerTelefono(t.getTelefono()));
+        // El cliente ve su propio punto en el mapa y la dirección, el teléfono y la ubicación del
+        // taller asignado (para la ruta y el botón "Cómo llegar").
+        if (vista != Vista.TALLER) {
+            b.direccion(o.getDireccion()).latitud(o.getLatitud()).longitud(o.getLongitud());
+            if (o.getTallerId() != null) {
+                tallerRepository.findById(o.getTallerId()).ifPresent(t -> b
+                        .tallerDireccion(t.getDireccion()).tallerTelefono(t.getTelefono())
+                        .tallerLatitud(t.getLatitud()).tallerLongitud(t.getLongitud()));
+            }
         }
         // El taller asignado y el ADMIN ven el contacto del cliente.
         if (vista != Vista.CLIENTE) {

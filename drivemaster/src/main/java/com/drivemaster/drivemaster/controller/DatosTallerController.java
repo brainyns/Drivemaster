@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** El taller edita su tarifa por hora y su horario. El taller es el de la sesión, nunca uno que venga en el cuerpo. */
+/** El taller edita su tarifa por hora, su horario y su ubicación en el mapa. El taller es el de la sesión, nunca uno que venga en el cuerpo. */
 @RestController
 @RequestMapping("/api/talleres/mi-taller/datos")
 public class DatosTallerController {

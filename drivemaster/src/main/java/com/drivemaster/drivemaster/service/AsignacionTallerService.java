@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -159,11 +160,23 @@ public class AsignacionTallerService {
                 taller.getLatitud(), taller.getLongitud());
     }
 
-    /** "Bogotá D.C." y "bogota" se consideran la misma ciudad. */
+    /**
+     * Nombres oficiales que devuelven los geocodificadores del mapa ("Cartagena de Indias") y el nombre corto que
+     * escriben los usuarios. La misma lista está en frontend/src/utils/mapa.js.
+     */
+    private static final Map<String, String> ALIAS_CIUDAD = Map.of(
+            "cartagenadeindias", "cartagena",
+            "santafedebogota", "bogota",
+            "santiagodecali", "cali",
+            "sanjosedecucuta", "cucuta");
+
+    /** "Bogotá D.C." y "bogota", o "Cartagena de Indias" y "Cartagena", se consideran la misma ciudad. */
     static String normalizarCiudad(String ciudad) {
         if (ciudad == null) return "";
         String sinTildes = Normalizer.normalize(ciudad, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
         String soloLetras = sinTildes.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "");
-        return soloLetras.endsWith("dc") ? soloLetras.substring(0, soloLetras.length() - 2) : soloLetras;
+        String sinDc = ALIAS_CIUDAD.getOrDefault(soloLetras,
+                soloLetras.endsWith("dc") ? soloLetras.substring(0, soloLetras.length() - 2) : soloLetras);
+        return ALIAS_CIUDAD.getOrDefault(sinDc, sinDc);
     }
 }

@@ -138,6 +138,35 @@ class DatosTallerServiceTest {
     void elRequestNoTieneCamposQueElTallerNoDeberiaCambiar() {
         var campos = java.util.Arrays.stream(ActualizarDatosTallerRequest.class.getDeclaredFields())
                 .map(java.lang.reflect.Field::getName).sorted().toList();
-        assertEquals(java.util.List.of("horario", "tarifaHora"), campos);
+        assertEquals(java.util.List.of("horario", "latitud", "longitud", "tarifaHora"), campos);
+    }
+
+    private static ActualizarDatosTallerRequest ubicacion(Double lat, Double lng) {
+        ActualizarDatosTallerRequest r = new ActualizarDatosTallerRequest();
+        r.setLatitud(lat);
+        r.setLongitud(lng);
+        return r;
+    }
+
+    @Test
+    void guardaLaUbicacionRedondeadaYRegistraElCambio() {
+        servicio.actualizar("a@demo.com", ubicacion(4.6097102345, -74.0817501234));
+
+        assertEquals(4.60971, a.getLatitud());
+        assertEquals(-74.08175, a.getLongitud());
+        ArgumentCaptor<CambioTaller> registro = ArgumentCaptor.forClass(CambioTaller.class);
+        verify(cambios).save(registro.capture());
+        assertEquals("ubicacion", registro.getValue().getCampo());
+        assertNull(registro.getValue().getValorAnterior());
+        assertEquals("4.60971,-74.08175", registro.getValue().getValorNuevo());
+    }
+
+    @Test
+    void rechazaUbicacionIncompletaOFueraDeRango() {
+        assertEquals(400, estado(assertThrows(ResponseStatusException.class,
+                () -> servicio.actualizar("a@demo.com", ubicacion(4.6, null)))));
+        assertEquals(400, estado(assertThrows(ResponseStatusException.class,
+                () -> servicio.actualizar("a@demo.com", ubicacion(120.0, -74.0)))));
+        verify(tallerRepository, never()).save(any());
     }
 }

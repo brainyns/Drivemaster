@@ -81,6 +81,8 @@ public class OrdenServicio {
     private List<String> fotos = new ArrayList<>();
     private String ciudad;
     private String barrio;
+    // Dirección legible del punto que el cliente marcó en el mapa (geocodificada en el navegador)
+    private String direccion;
     private Double latitud;
     private Double longitud;
     private String preferenciaHorario;

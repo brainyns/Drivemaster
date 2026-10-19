@@ -10,6 +10,7 @@ import com.drivemaster.drivemaster.model.mysql.Suscripcion;
 import com.drivemaster.drivemaster.repository.TiendaRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
+import com.drivemaster.drivemaster.util.Coordenadas;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -134,8 +135,11 @@ public class TiendaServiceImpl implements TiendaService {
         if (r.getCiudad() != null && !r.getCiudad().isBlank()) tienda.setCiudad(r.getCiudad());
         if (r.getBarrio() != null) tienda.setBarrio(r.getBarrio());
         if (r.getDireccion() != null && !r.getDireccion().isBlank()) tienda.setDireccion(r.getDireccion());
-        if (r.getLatitud() != null) tienda.setLatitud(r.getLatitud());
-        if (r.getLongitud() != null) tienda.setLongitud(r.getLongitud());
+        if (r.getLatitud() != null || r.getLongitud() != null) {
+            Coordenadas.validar(r.getLatitud(), r.getLongitud(), false);
+            tienda.setLatitud(r.getLatitud());
+            tienda.setLongitud(r.getLongitud());
+        }
         if (r.getHorario() != null && !r.getHorario().isBlank()) tienda.setHorario(r.getHorario().trim());
         // Envío: ofreceEnvio=false lo quita; ofreceEnvio=true (o solo costoEnvio) fija el costo fijo
         if (r.getOfreceEnvio() != null || r.getCostoEnvio() != null) {

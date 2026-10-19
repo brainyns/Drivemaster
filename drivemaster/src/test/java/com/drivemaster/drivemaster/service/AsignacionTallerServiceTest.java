@@ -131,4 +131,12 @@ class AsignacionTallerServiceTest {
         assertEquals("medellin", AsignacionTallerService.normalizarCiudad("Medellín"));
         assertEquals("", AsignacionTallerService.normalizarCiudad(null));
     }
+
+    @Test
+    void elNombreOficialQueDaElMapaEsLaMismaCiudadQueElNombreCorto() {
+        assertEquals("cartagena", AsignacionTallerService.normalizarCiudad("Cartagena de Indias"));
+        assertEquals("bogota", AsignacionTallerService.normalizarCiudad("Santa Fe de Bogotá D.C."));
+        assertEquals("cali", AsignacionTallerService.normalizarCiudad("Santiago de Cali"));
+        assertEquals("cucuta", AsignacionTallerService.normalizarCiudad("San José de Cúcuta"));
+    }
 }

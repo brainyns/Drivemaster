@@ -35,6 +35,10 @@ public class SolicitudServicioDTO {
     private List<String> fotos;
     private String ciudad;
     private String barrio;
+    // Punto del cliente en el mapa (no se envía en la vista del taller)
+    private String direccion;
+    private Double latitud;
+    private Double longitud;
     private String preferenciaHorario;
     private LocalDateTime fechaCreacion;
 
@@ -48,6 +52,9 @@ public class SolicitudServicioDTO {
     private String tallerNombre;
     private String tallerDireccion;
     private String tallerTelefono;
+    // Ubicación del taller asignado, para dibujar la ruta y el botón "Cómo llegar"
+    private Double tallerLatitud;
+    private Double tallerLongitud;
     private Double distanciaTallerKm;
     private LocalDateTime fechaAsignacion;
     private LocalDateTime fechaLimiteRespuesta;
