@@ -493,40 +493,6 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 
 .ss-mecanico-actual { max-width: 320px; }
 
-/* ── Mecánicos ── */
-.ss-mecanicos {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-sm);
-}
-
-.ss-mecanico {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--sp-md);
-  flex-wrap: wrap;
-  padding: var(--sp-sm) var(--sp-md);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-}
-
-.ss-mecanico--inactivo { opacity: 0.6; }
-
-.ss-mecanicos__form {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: var(--sp-md) 0 0;
-}
-
-.ss-mecanicos__botones {
-  grid-column: 1 / -1;
-  flex-direction: row;
-  gap: var(--sp-sm);
-}
-
 .ss-btn-icono {
   flex-shrink: 0;
   width: 30px;
@@ -918,7 +884,6 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
   .ss-detalle { grid-template-columns: 1fr; }
   .ss-detalle__lateral { position: static; }
   .ss-urgencias { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ss-mecanicos__form { grid-template-columns: 1fr; }
   .ss-modal__filtros { grid-template-columns: minmax(0, 1fr) 100px; }
 }
 

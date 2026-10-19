@@ -27,6 +27,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
   const [ordenes, setOrdenes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [errorTaller, setErrorTaller] = useState(null);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -35,6 +36,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
       miTaller(token), bandejaSolicitudesTaller(token), ordenesDelTaller(token),
     ]);
     if (t.status === "fulfilled") setTaller(t.value);
+    setErrorTaller(t.status === "rejected" ? t.reason?.message || "No se pudieron cargar los datos del taller." : null);
     if (s.status === "fulfilled") setSolicitudes(s.value || []);
     else setError(s.reason?.message || "No se pudieron cargar las solicitudes.");
     if (o.status === "fulfilled") setOrdenes(o.value || []);
@@ -80,7 +82,8 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         {seccion === "cotizaciones" && <TallerCotizaciones />}
         {seccion === "informes" && <TallerInformes />}
         {seccion === "mitaller" && (
-          <TallerMiTaller taller={taller} ordenes={ordenes} token={token} onActualizado={setTaller} />
+          <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller}
+            onRecargar={cargar} onActualizado={setTaller} />
         )}
         {seccion === "anteriores" && (
           <OrdenesAnteriores ordenes={ordenes} cargando={cargando} error={error} onRecargar={cargar} />
