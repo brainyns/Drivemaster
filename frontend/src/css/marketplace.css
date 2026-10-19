@@ -133,6 +133,8 @@
 
 .mk-tienda, .mk-comparar { margin-top: 36px; }
 .mk-tienda h2, .mk-comparar h2 { margin: 0 0 12px; }
+.mk-tienda__cabecera { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.mk-tienda .mk-tienda__cabecera h2 { margin: 0; }
 .mk-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 0; }
 .mk-datos div { background: var(--dm-surface); border: 1px solid var(--dm-line); border-radius: 6px; padding: 10px 12px; }
 .mk-datos dt { color: var(--dm-muted); font-size: 0.76rem; font-weight: 700; margin-bottom: 2px; }

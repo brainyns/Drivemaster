@@ -207,6 +207,8 @@ public class SecurityConfig {
                         // Marketplace: tiendas y suscripciones
                         .requestMatchers(HttpMethod.POST, "/api/tiendas/registro").permitAll()
                         .requestMatchers("/api/tiendas/mi-tienda", "/api/tiendas/mi-tienda/**").hasRole("TIENDA")
+                        // Logo de cualquier tienda: también el ADMIN (el de la dueña va por /mi-tienda/logo, arriba)
+                        .requestMatchers(HttpMethod.POST, "/api/tiendas/*/logo").hasAnyRole("SUPERADMIN", "ADMIN")
                         // El ADMIN solo aprueba o rechaza (con el plan de prueba); lo demás de tiendas y planes es del SUPERADMIN
                         .requestMatchers(HttpMethod.PATCH, "/api/tiendas/*/aprobacion").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers("/api/tiendas", "/api/tiendas/**").hasRole("SUPERADMIN")

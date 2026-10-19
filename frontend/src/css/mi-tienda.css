@@ -50,6 +50,7 @@
 
 .mtd-vista__tarjeta strong { color: var(--ui-text); overflow-wrap: anywhere; }
 .mtd-vista__ficha.mk-tienda { margin-top: 0; }
-.mtd-vista__ficha.mk-tienda h2 { margin: 0 0 8px; font-size: 1rem; }
+.mtd-vista__ficha.mk-tienda h2 { margin: 0; font-size: 1rem; }
+.mtd-vista__ficha .mk-tienda__cabecera { margin-bottom: 8px; }
 .mtd-vista__ficha .mk-datos { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .mtd-vista__ficha .mk-datos dd { overflow-wrap: anywhere; white-space: pre-line; }

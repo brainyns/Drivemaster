@@ -26,6 +26,12 @@ public interface TiendaService {
     /** Tienda del usuario, solo si ya fue aprobada y está activa (403 en otro caso). */
     Tienda obtenerOperativaPorUsuario(String correoUsuario);
 
+    /** La tienda de la cuenta (aunque esté pendiente o pausada); 403 si la cuenta no tiene tienda. */
+    Tienda obtenerPorUsuario(String correoUsuario);
+
+    /** La tienda por id; 404 si no existe. */
+    Tienda obtenerEntidad(String id);
+
     /** Tiendas que muestran sus productos: aprobadas, activas y con dirección, ciudad y horario. */
     java.util.List<Tienda> listarVisibles();
 }

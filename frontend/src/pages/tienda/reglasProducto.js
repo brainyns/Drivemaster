@@ -163,15 +163,7 @@ export const mismaCompat = (a, b) => a.marca === b.marca && a.modelo === b.model
 export const COMPAT_VACIA = { marca: "", modelo: "", anoDesde: "", anoHasta: "", motor: "" };
 
 // Imagen: las mismas reglas que la foto del vehículo y el logo del taller
-export const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-export const IMAGEN_MAX_MB = 5;
-
-export function errorImagen(archivo) {
-  if (!archivo) return null;
-  if (!TIPOS_IMAGEN.includes((archivo.type || "").toLowerCase())) return "La foto debe ser JPG, PNG, WEBP o GIF.";
-  if (archivo.size > IMAGEN_MAX_MB * 1024 * 1024) return `La foto debe pesar menos de ${IMAGEN_MAX_MB} MB.`;
-  return null;
-}
+export { TIPOS_IMAGEN, IMAGEN_MAX_MB, errorImagen } from "../../utils/imagen.js";
 
 /** Margen sobre el precio de compra, con un decimal, o null si falta algún precio. */
 export function margen(precioCompra, precioVenta) {

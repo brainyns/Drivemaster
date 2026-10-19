@@ -56,6 +56,18 @@ export async function activarDesactivarTienda(token, id, activo) {
   return handle(res, "Error al cambiar el estado de la tienda");
 }
 
+/** TIENDA: sube el logo de su tienda (o una foto del local). Responde { logoUrl }. Mismo envío que el del taller. */
+export async function subirLogoTienda(token, archivo) {
+  const formData = new FormData();
+  formData.append("archivo", archivo);
+  const res = await apiFetch(`${BASE}/mi-tienda/logo`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  return handle(res, "No se pudo subir el logo");
+}
+
 /** TIENDA: actualiza los datos públicos de su tienda (ciudad, dirección, horario, envío). */
 export async function actualizarMiTienda(token, datos) {
   const res = await apiFetch(`${BASE}/mi-tienda`, {

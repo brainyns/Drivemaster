@@ -1,11 +1,11 @@
 // Mi taller: qué tan completo está el perfil y validación de lo que el taller edita (sin componentes: se prueba con
 // node --test). Los límites son los del backend (DatosTallerService).
 
+import { errorImagen } from "../../utils/imagen.js";
+
 export const TARIFA_MAX = 1000000;
 export const HORARIO_MAX = 200;
 // Las mismas reglas del backend (ImagenSubida): las de la foto del vehículo, sin SVG
-export const TIPOS_LOGO = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-export const LOGO_MAX_MB = 5;
 
 /**
  * Lo que hace completo un perfil, en el orden en que conviene resolverlo. seccion: dónde se arregla dentro de Mi
@@ -46,10 +46,7 @@ export function errorTarifa(texto) {
 
 /** Error del archivo elegido como logo, o null si sirve. */
 export function errorLogo(archivo) {
-  if (!archivo) return "Elige una imagen.";
-  if (!TIPOS_LOGO.includes((archivo.type || "").toLowerCase())) return "El logo debe ser una imagen JPG, PNG, WEBP o GIF.";
-  if (archivo.size > LOGO_MAX_MB * 1024 * 1024) return `El logo debe pesar menos de ${LOGO_MAX_MB} MB.`;
-  return null;
+  return archivo ? errorImagen(archivo, "El logo") : "Elige una imagen.";
 }
 
 export function errorHorario(texto) {

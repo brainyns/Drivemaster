@@ -39,6 +39,9 @@ public class Tienda {
     // Costo fijo de envío de la tienda, en pesos. null = la tienda no hace envíos (solo retiro).
     private Double costoEnvio;
 
+    // Logo o foto del local (URL de Cloudinary); lo sube la dueña desde Mi tienda o el administrador.
+    private String logoUrl;
+
     // Datos administrativos (privados)
     private String nit;
     private String telefono;

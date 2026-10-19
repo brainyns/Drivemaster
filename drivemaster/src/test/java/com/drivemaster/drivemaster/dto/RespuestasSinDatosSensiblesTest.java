@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.dto;
 
 import com.drivemaster.drivemaster.model.Mecanico;
 import com.drivemaster.drivemaster.model.Taller;
+import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -103,6 +104,22 @@ class RespuestasSinDatosSensiblesTest {
         JsonNode nodo = json.valueToTree(TallerMapaDTO.de(Taller.builder().id("t2").nombre("Nuevo").build()));
         assertTrue(nodo.get("calificacion").isNull());
         assertEquals(0, nodo.get("calificaciones").asInt());
+    }
+
+    @Test
+    void laTiendaQueVeElClienteEnElCatalogoSoloLlevaDatosPublicosYSuLogo() {
+        Tienda tienda = Tienda.builder()
+                .id("s1").usuarioId("u-duena").nombre("Repuestos Sol").ciudad("Cali").barrio("Centro").direccion("Cra 5 # 10-20")
+                .horario("L-V 8-18").costoEnvio(8000.0).nit("900123").telefono("3001112233").correoContacto("sol@demo.com")
+                .estadoAprobacion("APROBADO").activo(true).logoUrl("https://img/sol.png")
+                .build();
+
+        JsonNode nodo = json.valueToTree(com.drivemaster.drivemaster.service.CatalogoService.aTiendaDTO(tienda));
+
+        assertEquals(List.of("id", "nombre", "ciudad", "barrio", "direccion", "horario", "ofreceEnvio", "costoEnvio", "logoUrl"),
+                iterar(nodo));
+        assertFalse(nodo.toString().contains("900123") || nodo.toString().contains("3001112233") || nodo.toString().contains("u-duena"));
+        assertEquals("https://img/sol.png", nodo.get("logoUrl").asText());
     }
 
     private static List<String> iterar(JsonNode nodo) {

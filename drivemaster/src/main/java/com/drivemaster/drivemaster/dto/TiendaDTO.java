@@ -40,4 +40,5 @@ public class TiendaDTO {
     // Suscripción vigente
     private String planActual;
     private LocalDateTime planVence;
+    private String logoUrl;
 }

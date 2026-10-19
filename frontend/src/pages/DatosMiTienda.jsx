@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { actualizarMiTienda, miTienda } from "../services/tiendaService";
+import { actualizarMiTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
+import LogoEditable from "../components/ui/LogoEditable";
 import { cambiarResumenSemanal, probarResumenSemanal, resumenSemanal } from "../services/informesTiendaService";
 import { formatFecha, formatPrecio } from "../components/servicio/estadosServicio";
 import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
@@ -7,7 +8,6 @@ import TiendaVendedor from "../components/marketplace/TiendaVendedor";
 import CabeceraNegocio from "../components/ui/CabeceraNegocio";
 import VistaPrevia from "../components/ui/VistaPrevia";
 import SeccionEditable from "../components/ui/SeccionEditable";
-import LogoNegocio from "../components/ui/LogoNegocio";
 import ChipEstado from "../components/ui/ChipEstado";
 import Campo from "../components/ui/Campo";
 import Dato from "../components/ui/Dato";
@@ -245,6 +245,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
   const [reintentando, setReintentando] = useState(false);
   const [editando, setEditando] = useState(null); // "ubicacion" | "horario" | "entrega" | "contacto"
   const [aviso, setAviso] = useState(null); // { seccion, texto }
+  const [avisoLogo, setAvisoLogo] = useState(null); // { tono, texto }
 
   const cargar = useCallback(async () => {
     try {
@@ -293,6 +294,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start",
     });
     if (EDITOR[item.seccion]) abrir(EDITOR[item.seccion]);
+    else document.getElementById(item.seccion)?.focus({ preventScroll: true });
   };
   const vista = comoLaVeElCliente(t);
 
@@ -300,7 +302,11 @@ export default function DatosMiTienda({ token, onGuardado }) {
     <div className="ss-panel--tienda ui-perfil">
       <CabeceraNegocio
         nombre={t.nombre}
-        logo={<LogoNegocio url={t.logoUrl} nombre={t.nombre} tamano="grande" />}
+        logo={(
+          <LogoEditable id="mtd-logo" url={t.logoUrl} nombre={t.nombre} onAviso={setAvisoLogo}
+            subir={(archivo) => subirLogoTienda(token, archivo)}
+            onSubido={(logoUrl) => { const nueva = { ...t, logoUrl }; setTienda(nueva); onGuardado?.(nueva); }} />
+        )}
         porcentaje={porcentaje} faltan={faltan} onResolver={resolver}
         textoListo="Tu tienda tiene todo lo que el catálogo y tus clientes necesitan."
         chips={(
@@ -321,7 +327,9 @@ export default function DatosMiTienda({ token, onGuardado }) {
             {(t.fechaAprobacion || t.fechaRegistro) && <span>En DriveMaster desde {formatFecha(t.fechaAprobacion || t.fechaRegistro)}</span>}
           </>
         )}
-        aviso={!t.datosCompletos ? (
+        aviso={avisoLogo ? (
+          <Alerta tono={avisoLogo.tono} onCerrar={() => setAvisoLogo(null)}>{avisoLogo.texto}</Alerta>
+        ) : !t.datosCompletos ? (
           <Alerta tono="aviso">Tus productos no se muestran en el catálogo hasta que completes la ciudad, la dirección y el horario.</Alerta>
         ) : t.estadoAprobacion === "PENDIENTE" ? (
           <Alerta tono="info">DriveMaster está revisando tu tienda. Puedes dejar listos tus datos mientras tanto.</Alerta>

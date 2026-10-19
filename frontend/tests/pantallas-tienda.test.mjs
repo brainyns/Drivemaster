@@ -73,11 +73,12 @@ test("Pedidos usa el sistema compartido y no cambia las llamadas del flujo", () 
 test("Mi tienda: perfil completo con lo que pide el catálogo y validación en línea", async () => {
   const { completitudTienda, erroresUbicacion, errorHorarioTienda, errorTelefono, errorCostoEnvio, comoLaVeElCliente } =
     await import("../src/pages/tienda/perfilTienda.js");
-  const completa = { ciudad: "Cali", direccion: "Cra 1", horario: "L-V 8-18", latitud: 3.4, longitud: -76.5, telefono: "3001234567" };
+  const completa = { ciudad: "Cali", direccion: "Cra 1", horario: "L-V 8-18", latitud: 3.4, longitud: -76.5, telefono: "3001234567",
+    logoUrl: "https://img/sol.png" };
   assert.deepEqual(completitudTienda(completa), { porcentaje: 100, faltan: [] });
-  const { porcentaje, faltan } = completitudTienda({ ...completa, horario: " ", latitud: null });
-  assert.equal(porcentaje, 50);
-  assert.deepEqual(faltan.map((f) => f.clave), ["horario", "ubicacion"]);
+  const { porcentaje, faltan } = completitudTienda({ ...completa, horario: " ", latitud: null, logoUrl: null });
+  assert.equal(porcentaje, 40);
+  assert.deepEqual(faltan.map((f) => f.clave), ["horario", "ubicacion", "logo"]);
   assert.ok(faltan[0].catalogo && faltan.every((f) => f.seccion), "dice qué pide el catálogo y lleva a su sección");
 
   assert.deepEqual(Object.keys(erroresUbicacion({ ciudad: "", direccion: "" })), ["ciudad", "direccion"]);
@@ -91,12 +92,13 @@ test("Mi tienda: perfil completo con lo que pide el catálogo y validación en l
   assert.match(errorCostoEnvio(true, ""), /puede ser 0/);
   assert.match(errorCostoEnvio(true, "600000"), /entre \$ 0 y \$ 500\.000/);
   assert.deepEqual(comoLaVeElCliente({ ...completa, nombre: "Repuestos Sol", costoEnvio: 8000, nit: "900", correoUsuario: "x@y.com" }),
-    { id: undefined, nombre: "Repuestos Sol", ciudad: "Cali", barrio: undefined, direccion: "Cra 1", horario: "L-V 8-18", ofreceEnvio: true, costoEnvio: 8000 });
+    { id: undefined, nombre: "Repuestos Sol", ciudad: "Cali", barrio: undefined, direccion: "Cra 1", horario: "L-V 8-18", ofreceEnvio: true, costoEnvio: 8000,
+      logoUrl: "https://img/sol.png" });
 });
 
 test("Mi tienda usa las piezas de Mi taller y la ficha del catálogo, con los mismos datos de antes", () => {
   const pagina = leer("../src/pages/DatosMiTienda.jsx");
-  for (const pieza of ["<CabeceraNegocio", "<SeccionEditable", "<VistaPrevia", "<TiendaVendedor", "<SelectorUbicacion", "<LogoNegocio"]) {
+  for (const pieza of ["<CabeceraNegocio", "<SeccionEditable", "<VistaPrevia", "<TiendaVendedor", "<SelectorUbicacion", "<LogoEditable"]) {
     assert.ok(pagina.includes(pieza), `usa ${pieza}`);
   }
   assert.ok(pagina.includes("actualizarMiTienda(token, datos)"), "el mismo PUT /mi-tienda");
@@ -277,4 +279,14 @@ test("Asistente: cabecera compartida, sugerencias en chips y pestañas que se mu
   assert.ok(pagina.includes("tabIndex={pestana === p.id ? 0 : -1} onKeyDown={mover}"), "patrón de pestañas de ARIA");
   assert.ok(!pagina.includes("adm-"));
   assert.ok(pagina.includes("preguntarAsistente(token, limpia, historial)"));
+});
+
+test("Logo de la tienda: el mismo componente y las mismas reglas que el del taller, en Mi tienda y en Vendido por", async () => {
+  const { errorImagen } = await import("../src/utils/imagen.js");
+  assert.match(errorImagen({ type: "image/svg+xml", size: 10 }, "El logo"), /^El logo debe ser una imagen JPG, PNG, WEBP o GIF/);
+  assert.equal(errorImagen({ type: "image/png", size: 10 }), null);
+  const tienda = leer("../src/pages/DatosMiTienda.jsx");
+  assert.ok(tienda.includes("<LogoEditable") && tienda.includes("subirLogoTienda(token, archivo)"));
+  assert.ok(leer("../src/pages/taller/TallerMiTaller.jsx").includes("<LogoEditable"), "Mi taller usa el mismo componente");
+  assert.ok(leer("../src/components/marketplace/TiendaVendedor.jsx").includes("<LogoNegocio url={t.logoUrl}"));
 });

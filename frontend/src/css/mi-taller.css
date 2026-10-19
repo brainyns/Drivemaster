@@ -1,11 +1,6 @@
 /* ── Mi taller (rol TALLER) ────────────────────────────────────────────────
    Prefijo mt-, BEM. Cabecera del negocio, perfil completo, rejilla, vista previa, secciones, datos, formularios,
-   chips, avisos y carga son de ui.css (los mismos de Mi tienda); aquí el logo con su botón, los servicios, el
-   equipo y la tarjeta de la lista de talleres que ve el cliente. Tokens --ui-*, los dos temas. */
-
-/* Logo (LogoNegocio de ui.css) con su botón debajo */
-.mt-logo { display: grid; justify-items: center; gap: 8px; flex-shrink: 0; }
-.mt-logo .ui-btn { padding-inline: 10px; }
+   chips, avisos y carga son de ui.css (los mismos de Mi tienda); aquí los servicios, el equipo y la tarjeta de la lista de talleres que ve el cliente. Tokens --ui-*, los dos temas. */
 
 .mt-especialidades { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
 

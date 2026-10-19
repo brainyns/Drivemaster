@@ -17,6 +17,7 @@ const REQUISITOS = [
   { clave: "ubicacion", texto: "Marca tu tienda en el mapa", seccion: "mtd-ubicacion",
     hecho: (t) => t?.latitud != null && t?.longitud != null },
   { clave: "telefono", texto: "Agrega un teléfono de contacto", seccion: "mtd-contacto", hecho: (t) => lleno(t?.telefono) },
+  { clave: "logo", texto: "Sube el logo o una foto de tu tienda", seccion: "mtd-logo", hecho: (t) => lleno(t?.logoUrl) },
 ];
 
 export function completitudTienda(tienda) {
@@ -59,6 +60,6 @@ export function errorCostoEnvio(ofreceEnvio, costo) {
 export function comoLaVeElCliente(t) {
   return {
     id: t.id, nombre: t.nombre, ciudad: t.ciudad, barrio: t.barrio, direccion: t.direccion, horario: t.horario,
-    ofreceEnvio: t.costoEnvio != null, costoEnvio: t.costoEnvio ?? null,
+    ofreceEnvio: t.costoEnvio != null, costoEnvio: t.costoEnvio ?? null, logoUrl: t.logoUrl ?? null,
   };
 }

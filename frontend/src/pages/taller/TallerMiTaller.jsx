@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import MecanicosTaller from "../../components/servicio/MecanicosTaller";
 import { formatFecha, formatPrecio } from "../../components/servicio/estadosServicio";
 import { actualizarDatosTaller, actualizarUbicacionTaller, subirLogoTaller } from "../../services/tallerService";
@@ -16,7 +16,8 @@ import VistaPrevia from "../../components/ui/VistaPrevia";
 import Dato from "../../components/ui/Dato";
 import PieFormulario from "../../components/ui/PieFormulario";
 import Icon from "../../components/public/Icon";
-import { HORARIO_MAX, TIPOS_LOGO, comoLoVeElCliente, completitudPerfil, errorHorario, errorLogo, errorTarifa } from "./perfilTaller";
+import { HORARIO_MAX, comoLoVeElCliente, completitudPerfil, errorHorario, errorTarifa } from "./perfilTaller";
+import LogoEditable from "../../components/ui/LogoEditable";
 import "../../css/mi-taller.css";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
@@ -127,46 +128,6 @@ function FormUbicacion({ taller, token, onGuardado, onCancelar }) {
 }
 
 /**
- * Logo del taller con su botón para subirlo o cambiarlo (sin logo, las iniciales). Valida tipo y tamaño antes de
- * enviarlo; el backend vuelve a validar y solo deja cambiar el del taller de la sesión. onAviso recibe el resultado.
- */
-function LogoTaller({ taller, token, onActualizado, onAviso }) {
-  const input = useRef(null);
-  const [subiendo, setSubiendo] = useState(false);
-
-  const elegir = async (e) => {
-    const archivo = e.target.files?.[0];
-    e.target.value = "";
-    if (!archivo) return;
-    const error = errorLogo(archivo);
-    if (error) { onAviso({ tono: "error", texto: error }); return; }
-    setSubiendo(true);
-    onAviso(null);
-    try {
-      const { logoUrl } = await subirLogoTaller(token, archivo);
-      onActualizado?.({ ...taller, logoUrl });
-      onAviso({ tono: "ok", texto: "Logo guardado. Así te verán los clientes en la lista y el mapa." });
-    } catch (err) {
-      onAviso({ tono: "error", texto: err.message });
-    } finally {
-      setSubiendo(false);
-    }
-  };
-
-  return (
-    <div className="mt-logo">
-      <LogoNegocio url={taller.logoUrl} nombre={taller.nombre} tamano="grande" />
-      <button id="mt-logo" type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={subiendo}
-        aria-busy={subiendo} onClick={() => input.current?.click()}>
-        {!subiendo && <Icon name="camera" size={14} />}
-        {subiendo ? "Subiendo…" : taller.logoUrl ? "Cambiar logo" : "Subir logo"}
-      </button>
-      <input ref={input} type="file" accept={TIPOS_LOGO.join(",")} hidden onChange={elegir} />
-    </div>
-  );
-}
-
-/**
  * "Así te ven los clientes": la misma información que muestra la lista de talleres al pedir un diagnóstico
  * (nombre, dirección, teléfono y si está en el mapa).
  */
@@ -242,7 +203,10 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
     <div className="ui-perfil">
       <CabeceraNegocio
         nombre={taller.nombre}
-        logo={<LogoTaller taller={taller} token={token} onActualizado={onActualizado} onAviso={setAvisoLogo} />}
+        logo={(
+          <LogoEditable id="mt-logo" url={taller.logoUrl} nombre={taller.nombre} onAviso={setAvisoLogo}
+            subir={(archivo) => subirLogoTaller(token, archivo)} onSubido={(logoUrl) => onActualizado?.({ ...taller, logoUrl })} />
+        )}
         porcentaje={porcentaje} faltan={faltan} onResolver={resolver}
         textoListo="Tienes todo lo que los clientes y la asignación necesitan."
         aviso={avisoLogo && (

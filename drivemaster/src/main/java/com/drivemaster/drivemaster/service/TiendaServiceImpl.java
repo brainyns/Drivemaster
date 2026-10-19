@@ -167,12 +167,14 @@ public class TiendaServiceImpl implements TiendaService {
         return tiendaRepository.findAll().stream().filter(CatalogoService::tiendaVisible).toList();
     }
 
-    private Tienda obtenerEntidad(String id) {
+    @Override
+    public Tienda obtenerEntidad(String id) {
         return tiendaRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tienda no encontrada"));
     }
 
-    private Tienda obtenerPorUsuario(String correoUsuario) {
+    @Override
+    public Tienda obtenerPorUsuario(String correoUsuario) {
         Usuario usuario = usuarioRepository.findByCorreo(correoUsuario)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
         return tiendaRepository.findByUsuarioId(usuario.getId())
@@ -222,6 +224,7 @@ public class TiendaServiceImpl implements TiendaService {
                 .fechaAprobacion(t.getFechaAprobacion())
                 .planActual(plan != null ? plan.getPlanCodigo() : null)
                 .planVence(plan != null ? plan.getFechaFin() : null)
+                .logoUrl(t.getLogoUrl())
                 .build();
     }
 }
