@@ -483,6 +483,8 @@ function App() {
           onIr={(p) => irA(p)}
           onIrCatalogo={() => irAlCatalogoGlobal()}
           onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       );
     }

@@ -1,6 +1,7 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Mi perfil del cliente (BEM, prefijo pc-). Tarjetas, botones, etiquetas y
-   esqueleto de ui.css; tokens --ui-*, los dos temas. En móvil, una columna.
+   Mi perfil del cliente (BEM, prefijo pc-). Tarjetas, campos, botones, chips, avisos y esqueletos de
+   ui.css; tokens --ui-*, los dos temas. Escritorio: ajustes a la izquierda y actividad a la derecha;
+   en celular, una columna.
 ───────────────────────────────────────────────────────────────────────────── */
 .pc-contenido {
   display: grid;
@@ -36,24 +37,102 @@
 .dm-page .pc-nombre {
   margin: 0;
   font-family: var(--ui-font);
-  font-size: clamp(1.4rem, 3vw, 1.9rem);
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  font-size: var(--fs-display);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   color: var(--ui-text);
   overflow-wrap: anywhere;
 }
 
-.pc-correo { margin: 4px 0 0; font-size: 0.9rem; color: var(--ui-muted); overflow-wrap: anywhere; }
+.dm-page .pc-correo { margin: 4px 0 0; font-size: 0.9rem; color: var(--ui-muted); overflow-wrap: anywhere; }
 
-/* ── Resumen ── */
-.pc-rejilla {
+/* ── Cuerpo: ajustes + actividad ── */
+.pc-cuerpo {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--ui-sp-4);
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: var(--ui-sp-5);
   align-items: start;
 }
 
+.pc-ajustes,
+.pc-actividad { display: grid; gap: var(--ui-sp-4); min-width: 0; }
+
+/* ── Secciones de ajustes ── */
+.pc-seccion { padding: 22px 22px 24px; }
+
+.pc-seccion__cabecera { margin-bottom: 18px; }
+
+.dm-page .pc-seccion__titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ui-text);
+}
+
+.dm-page .pc-seccion__texto {
+  margin: 4px 0 0;
+  max-width: 60ch;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ui-muted);
+}
+
+.pc-rejilla-campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+
+.pc-ancho { grid-column: 1 / -1; }
+
+.pc-rejilla-campos .ui-field__input[readonly] {
+  background: var(--ui-surface-2);
+  color: var(--ui-muted);
+  cursor: default;
+}
+
+.pc-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.pc-acciones__aviso { flex: 1 1 260px; }
+
+.dm-page .pc-google {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+}
+
+.pc-google svg { flex-shrink: 0; color: var(--ui-ok); }
+
+.pc-fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.pc-fieldset legend { margin-bottom: 8px; padding: 0; }
+
+.pc-opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.pc-preferencia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.dm-page .pc-preferencia__titulo { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--ui-text); }
+
+/* ── Actividad ── */
 .dm-page .pc-tarjeta .ui-card__titulo { font-size: 1rem; }
 
 .pc-lista { list-style: none; margin: 0; padding: 0; display: grid; }
@@ -76,20 +155,11 @@
 .pc-item__lado { display: grid; justify-items: end; gap: 4px; flex-shrink: 0; text-align: right; }
 .pc-item__total { font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ui-text); }
 
-.pc-esq { display: block; background: var(--ui-line); }
-.pc-esq--titulo { width: 55%; height: 14px; }
-.pc-esq--linea { width: 35%; height: 11px; margin-top: 8px; }
-
-.pc-error { margin: 0; font-size: 0.875rem; color: var(--ui-error); }
 .pc-vacio { padding: var(--ui-sp-2) 0 0; }
-.pc-vacio p { margin: 0; }
+.dm-page .pc-vacio p { margin: 0; }
 
 /* ── Accesos ── */
-.pc-accesos {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--ui-sp-3);
-}
+.pc-accesos { display: grid; gap: var(--ui-sp-3); }
 
 .pc-pagina .pc-acceso {
   display: flex;
@@ -131,30 +201,19 @@
   .pc-acceso:hover .pc-acceso__flecha { transform: translateX(3px); }
 }
 
-@media (max-width: 900px) {
-  .pc-rejilla, .pc-accesos { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 960px) {
+  .pc-cuerpo { grid-template-columns: minmax(0, 1fr); }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 560px) {
   .pc-contenido { padding-top: 20px; }
-  .pc-cabecera__editar { width: 100%; }
+  .pc-seccion { padding: 18px 16px 20px; }
+  .pc-rejilla-campos { grid-template-columns: minmax(0, 1fr); }
+  .pc-acciones .ui-btn { width: 100%; }
+  .dm-page .pc-nombre { font-size: 1.6rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pc-acceso, .pc-acceso__flecha { transition: none; }
   .pc-acceso:active, .pc-acceso:hover .pc-acceso__flecha { transform: none; }
 }
-
-/* El reset de botones del sitio público (.dm-page button: font, borde y fondo) gana a ui.css:
-   dentro de la página se reponen los estilos de .ui-btn */
-.pc-pagina .ui-btn {
-  font-family: var(--ui-font);
-  font-size: 0.85rem;
-  font-weight: 600;
-  line-height: 1.2;
-  border: 1px solid transparent;
-}
-.pc-pagina .ui-btn--primario { background: var(--primary); color: var(--on-primary); }
-.pc-pagina .ui-btn--secundario { background: var(--ui-surface); color: var(--ui-text); border-color: var(--ui-line); }
-.pc-pagina .ui-btn--texto { background: transparent; color: var(--primary-text); padding-inline: 8px; }
-.dm-page .pc-tarjeta .ui-card__titulo { font-family: var(--ui-font); letter-spacing: -0.005em; }

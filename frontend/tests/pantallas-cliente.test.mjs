@@ -43,3 +43,24 @@ test("Mis servicios: filtros por estado, chips con texto, sin kickers y estados 
   assert.doesNotMatch(p, /ss-eyebrow|<EstadoServicio|<Etiqueta /);
   assert.doesNotMatch(leer("../src/css/solicitud-servicio.css"), /border-left: 4px/);
 });
+
+test("Mi perfil: secciones de datos, seguridad y preferencias, con validación y aviso al guardar", async () => {
+  const { validarClave, validarDatos, cuerpoPerfil, datosDesdePerfil } = await import("../src/pages/reglasPerfil.js");
+  assert.deepEqual(Object.keys(validarDatos({ nombre: " ", telefono: "abc" })), ["nombre", "telefono"]);
+  assert.deepEqual(validarDatos({ nombre: "Ana", telefono: "" }), {});
+  assert.deepEqual(Object.keys(validarClave({ actual: "", nueva: "123", confirmar: "12" })), ["actual", "nueva", "confirmar"]);
+  assert.equal(validarClave({ actual: "secreta", nueva: "secreta", confirmar: "secreta" }).nueva,
+    "La nueva contraseña debe ser distinta de la actual.");
+  const d = datosDesdePerfil({ telefono: "300", ciudad: "Cali" }, "Ana");
+  assert.equal(d.nombre, "Ana");
+  assert.deepEqual(cuerpoPerfil({ ...d, direccion: " Cra 1 " }),
+    { identificacion: "", telefono: "300", ciudad: "Cali", direccion: "Cra 1", referencia: "" });
+
+  const p = leer("../src/pages/PerfilCliente.jsx");
+  for (const t of ["Datos personales", "Seguridad", "Preferencias"]) assert.match(p, new RegExp(`titulo="${t}"`));
+  assert.match(p, /Guardamos tus datos\./);
+  assert.match(p, /cambiarPassword\(token, clave\.actual, clave\.nueva\)/);
+  assert.equal((p.match(/<CampoClave /g) || []).length, 3);
+  assert.doesNotMatch(p, /EditarNombre/);
+  assert.doesNotMatch(leer("../src/css/perfil-cliente.css"), /\.pc-pagina \.ui-btn/);
+});

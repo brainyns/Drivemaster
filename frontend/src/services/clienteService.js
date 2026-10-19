@@ -24,6 +24,17 @@ export async function obtenerMiPerfil(token) {
   return res.json();
 }
 
+/** Guarda los datos de contacto del cliente autenticado (PUT /mi-perfil: identificación, teléfono, dirección, ciudad, referencia). */
+export async function actualizarMiPerfil(token, datos) {
+  const res = await apiFetch(`${BASE_URL}/mi-perfil`, {
+    method: "PUT",
+    headers: buildHeaders(token),
+    body: JSON.stringify(datos),
+  });
+  if (!res.ok) throw new Error("No se pudieron guardar tus datos");
+  return res.json();
+}
+
 export async function obtenerCliente(id, token) {
   const res = await apiFetch(`${BASE_URL}/${id}`, {
     headers: buildHeaders(token),
