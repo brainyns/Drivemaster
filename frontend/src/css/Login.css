@@ -268,6 +268,7 @@
 }
 
 /* ── Heading ─────────────────────────────────────────────────────────────── */
+.auth-card h1,
 .auth-card h2 {
   font-family: var(--dm-display);
   font-size: var(--fs-display);
@@ -291,7 +292,7 @@
   gap: 17px;
 }
 
-.auth-card label {
+.auth-card label:not(.ui-field__label) {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -327,9 +328,9 @@
   stroke-linejoin: round;
 }
 
-.auth-card input[type="email"],
-.auth-card input[type="password"],
-.auth-card input[type="text"] {
+.auth-card input[type="email"]:not(.ui-field__input),
+.auth-card input[type="password"]:not(.ui-field__input),
+.auth-card input[type="text"]:not(.ui-field__input) {
   width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--dm-line);
@@ -344,7 +345,7 @@
   -webkit-appearance: none;
 }
 
-.auth-card input[type="email"] {
+.auth-card input[type="email"]:not(.ui-field__input) {
   padding-left: 39px;
 }
 
@@ -354,7 +355,7 @@
   font-size: 1rem;
 }
 
-.auth-card input:focus {
+.auth-card input:not(.ui-field__input):focus {
   border-color: var(--dm-orange);
   box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.16);
 }
@@ -414,7 +415,7 @@
 }
 
 /* ── Submit ──────────────────────────────────────────────────────────────── */
-.auth-card button[type="submit"] {
+.auth-card button[type="submit"]:not(.ui-btn) {
   width: 100%;
   margin-top: 5px;
   min-height: 48px;
@@ -434,22 +435,22 @@
   transition: background 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.2s;
 }
 
-.auth-card button[type="submit"]:hover:not(:disabled) {
+.auth-card button[type="submit"]:not(.ui-btn):hover:not(:disabled) {
   background: var(--dm-orange-hover);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(242, 140, 40, 0.18);
 }
 
-.auth-card button[type="submit"]:active:not(:disabled) {
+.auth-card button[type="submit"]:not(.ui-btn):active:not(:disabled) {
   transform: translateY(0);
 }
 
-.auth-card button[type="submit"]:disabled {
+.auth-card button[type="submit"]:not(.ui-btn):disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.auth-card button[type="submit"] svg {
+.auth-card button[type="submit"]:not(.ui-btn) svg {
   width: 15px;
   height: 15px;
   stroke: currentColor;
@@ -633,3 +634,5 @@
     transition: none !important;
   }
 }
+/* Login con los campos compartidos (components/ui/Campo y CampoClave): el botón respira un poco más */
+.auth-card .auth-enviar { margin-top: 6px; }

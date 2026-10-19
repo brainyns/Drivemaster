@@ -1,7 +1,21 @@
 import { useState, useEffect, useRef } from "react";
-import { login, googleLogin } from "../services/authService";
+import { login, googleLogin, getUser } from "../services/authService";
 import Logo from "../components/Logo";
+import Campo from "../components/ui/Campo";
+import CampoClave from "../components/ui/CampoClave";
+import Alerta from "../components/ui/Alerta";
 import "../css/Login.css";
+
+const CORREO_VALIDO = /^\S+@\S+\.\S+$/;
+
+/** Errores del formulario, en el orden en que se recorren con el foco. */
+function validarLogin(correo, password) {
+  const e = {};
+  if (!correo.trim()) e.correo = "Escribe tu correo.";
+  else if (!CORREO_VALIDO.test(correo.trim())) e.correo = "Revisa el correo: debe tener la forma nombre@dominio.com.";
+  if (!password) e.password = "Escribe tu contraseña.";
+  return e;
+}
 
 // Debe ser el mismo GOOGLE_CLIENT_ID del backend, y el dominio del frontend debe estar autorizado en Google Cloud.
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "571035780087-mh3obhajnmvpj98cre938rmuhmqb0cf5.apps.googleusercontent.com";
@@ -30,7 +44,8 @@ export default function Login({
 }) {
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
-  const [verClave, setVerClave] = useState(false);
+  // Los errores en línea aparecen tras el primer intento y se actualizan al corregir
+  const [intentado, setIntentado] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const googleBtnRef = useRef(null);
@@ -88,9 +103,17 @@ export default function Login({
     };
   }, []);
 
+  const errores = intentado ? validarLogin(correo, password) : {};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setIntentado(true);
+    const faltan = validarLogin(correo, password);
+    if (Object.keys(faltan).length) {
+      document.getElementById(faltan.correo ? "auth-correo" : "auth-password")?.focus();
+      return;
+    }
     setLoading(true);
     try {
       const response = await login(correo, password);
@@ -108,7 +131,6 @@ export default function Login({
         <div className="auth-aside__photo" aria-hidden="true" />
 
         <div className="auth-aside__body">
-          <span className="auth-eyebrow">Tu cuenta</span>
           <h2 className="auth-aside__title">
             Tu garaje
             <br />
@@ -151,97 +173,39 @@ export default function Login({
             <Marca onInicio={onVolver} />
           </div>
 
-          <h2>Iniciar sesión</h2>
+          <h1>Iniciar sesión</h1>
           <p className="auth-subtitle">
             Ingresa con tu correo o con Google para continuar.
           </p>
 
-          <form onSubmit={handleSubmit}>
-            <label htmlFor="auth-correo">
-              Correo electrónico
-              <div className="input-wrapper">
-                <span className="input-icon">
-                  <svg viewBox="0 0 24 24">
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <polyline points="2,4 12,13 22,4" />
-                  </svg>
-                </span>
-                <input
-                  id="auth-correo"
-                  type="email"
-                  value={correo}
-                  onChange={(e) => setCorreo(e.target.value)}
-                  placeholder="correo@ejemplo.com"
-                  autoComplete="email"
-                  required
-                />
-              </div>
-            </label>
+          <form onSubmit={handleSubmit} noValidate>
+            <Campo id="auth-correo" label="Correo electrónico" error={errores.correo}>
+              <input
+                className="ui-field__input"
+                type="email"
+                inputMode="email"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                placeholder="correo@ejemplo.com"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+            </Campo>
 
-            <label htmlFor="auth-password">
-              Contraseña
-              <div className="input-wrapper">
-                <span className="input-icon">
-                  <svg viewBox="0 0 24 24">
-                    <rect x="3" y="11" width="18" height="11" rx="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                </span>
-                <input
-                  id="auth-password"
-                  type={verClave ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  autoComplete="current-password"
-                  minLength={6}
-                  required
-                />
-                <button
-                  type="button"
-                  className="input-toggle"
-                  onClick={() => setVerClave((v) => !v)}
-                  aria-label={verClave ? "Ocultar contraseña" : "Mostrar contraseña"}
-                  aria-pressed={verClave}
-                >
-                  <svg viewBox="0 0 24 24">
-                    {verClave ? (
-                      <>
-                        <path d="M9.9 5.2A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7-.4 1-1.6 2.6-3.2 3.9" />
-                        <path d="M6.2 6.6C3.9 8.2 2.2 10.4 2 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.7-1.3" />
-                        <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
-                        <line x1="3" y1="3" x2="21" y2="21" />
-                      </>
-                    ) : (
-                      <>
-                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </>
-                    )}
-                  </svg>
-                </button>
-              </div>
-            </label>
+            <Campo id="auth-password" label="Contraseña" error={errores.password}>
+              <CampoClave
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </Campo>
 
-            {error && (
-              <p className="auth-error" role="alert">
-                <svg viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="9" />
-                  <line x1="12" y1="7.5" x2="12" y2="13" />
-                  <line x1="12" y1="16.5" x2="12" y2="16.6" />
-                </svg>
-                {error}
-              </p>
-            )}
+            {error && <Alerta>{error}</Alerta>}
 
-            <button type="submit" disabled={loading}>
-              {loading ? "Ingresando..." : "Iniciar sesión"}
-              {!loading && (
-                <svg viewBox="0 0 24 24">
-                  <line x1="4" y1="12" x2="19" y2="12" />
-                  <polyline points="13 6 19 12 13 18" />
-                </svg>
-              )}
+            <button type="submit" className="ui-btn ui-btn--primario ui-btn--grande ui-btn--bloque auth-enviar"
+              disabled={loading} aria-busy={loading}>
+              {loading ? "Ingresando…" : "Iniciar sesión"}
             </button>
           </form>
 
@@ -256,7 +220,8 @@ export default function Login({
             </button>
           </p>
 
-          {onGoRegistroNegocio && (
+          {/* "Registra tu negocio" solo sin sesión, como en el navbar y el pie */}
+          {onGoRegistroNegocio && !getUser() && (
             <p className="auth-footer auth-footer--negocio">
               ¿Tienes un taller o una tienda de autopartes?{" "}
               <button type="button" className="link-button" onClick={onGoRegistroNegocio}>
