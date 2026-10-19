@@ -1,166 +1,20 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, listarProductosMiTienda, subirImagenProducto } from "../services/productoService";
 import { sugerirProducto } from "../services/informesTiendaService";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import SeccionEditable from "../components/ui/SeccionEditable";
+import Campo from "../components/ui/Campo";
+import ChipEstado from "../components/ui/ChipEstado";
+import Alerta from "../components/ui/Alerta";
+import Esqueleto from "../components/ui/Esqueleto";
+import BarraAccionMovil from "../components/ui/BarraAccionMovil";
+import ImagenProducto from "../components/marketplace/ImagenProducto";
+import Icon from "../components/public/Icon";
+import {
+  ANO_ACTUAL, CATEGORIAS, COMPAT_VACIA, MARCAS_REPUESTO, MARCAS_VEHICULO, MARCAS_VEHICULO_LISTA, TIPOS_IMAGEN,
+  campoVacio, compatDeLista, errorImagen, margen as calcularMargen, mismaCompat, validarFormulario,
+} from "./tienda/reglasProducto";
 import "../css/producto-form.css";
-
-const CATEGORIAS = [
-  "Motor",
-  "Transmision y Embrague",
-  "Frenos",
-  "Suspension y Direccion",
-  "Sistema Electrico",
-  "Baterias y Carga",
-  "Enfriamiento y Radiadores",
-  "Lubricantes y Fluidos",
-  "Filtros",
-  "Escape y Emisiones",
-  "Combustible e Inyeccion",
-  "Aire Acondicionado y Climatizacion",
-  "Carroceria Exterior",
-  "Interior y Accesorios",
-  "Iluminacion",
-  "Neumaticos y Llantas",
-  "Audio, Multimedia y Electronica",
-  "Herramientas y Equipos",
-  "Consumibles y Taller",
-  "Otro",
-];
-
-const MARCAS_VEHICULO = {
-  Toyota:       ["Corolla","Camry","RAV4","Highlander","Prius","Land Cruiser","Yaris","Hilux","Fortuner","4Runner","Avalon","C-HR","Venza","Sequoia","Tacoma","Tundra","GR86","Supra","FJ Cruiser","Rush","Innova","Avanza","Wigo","Starlet","Etios"],
-  Mazda:        ["Mazda2","Mazda3","Mazda6","CX-3","CX-30","CX-5","CX-50","CX-60","CX-90","MX-5 Miata","MX-30","BT-50","RX-7","RX-8","626","323"],
-  Kia:          ["Picanto","Rio","Cerato","Forte","Stinger","Sportage","Sorento","Telluride","Soul","Seltos","Niro","EV6","EV9","Carnival","Stonic","XCeed","ProCeed","K5","K8","K900","Mohave"],
-  Renault:      ["Logan","Sandero","Duster","Kwid","Captur","Koleos","Megane","Clio","Fluence","Symbol","Oroch","Alaskan","Arkana","Zoe","Triber","Kardian","Stepway"],
-  Chevrolet:    ["Spark","Sail","Aveo","Cruze","Malibu","Camaro","Corvette","Equinox","Trax","Trailblazer","Traverse","Tahoe","Suburban","Silverado","Colorado","Captiva","Onix","Tracker","Montana","Blazer","Bolt EV"],
-  Hyundai:      ["i10","i20","i30","Elantra","Sonata","Accent","Tucson","Santa Fe","Palisade","Venue","Creta","Kona","Ioniq","Ioniq 5","Ioniq 6","Starex","H1","Veloster","Genesis","Nexo"],
-  Ford:         ["Fiesta","Focus","Mustang","Fusion","Taurus","EcoSport","Escape","Edge","Explorer","Expedition","Bronco","Bronco Sport","Maverick","Ranger","F-150","F-250","Transit","Puma","Kuga","Territory"],
-  Volkswagen:   ["Polo","Golf","Jetta","Passat","Arteon","Tiguan","T-Cross","T-Roc","Touareg","Atlas","ID.4","ID.3","Amarok","Caddy","Taos","Virtus","Nivus","Saveiro"],
-  Nissan:       ["Versa","Sentra","Altima","Maxima","Tiida","Kicks","Qashqai","X-Trail","Murano","Pathfinder","Armada","Frontier","Navara","GT-R","370Z","400Z","Leaf","Ariya","Terra","NP300"],
-  Honda:        ["Fit","Jazz","City","Civic","Accord","HR-V","CR-V","Pilot","Passport","Ridgeline","Odyssey","Element","BR-V","WR-V","ZR-V","Insight"],
-  Suzuki:       ["Alto","Celerio","Swift","Baleno","Ciaz","Vitara","S-Cross","Ignis","Jimny","Grand Vitara","Ertiga","XL7","Fronx"],
-  BMW:          ["116i","118i","120i","M2","M3","M4","M5","318i","320i","325i","330i","418i","420i","430i","520i","528i","530i","540i","730i","740i","750i","X1","X2","X3","X4","X5","X6","X7","iX","i4","i7","Z4"],
-  "Mercedes-Benz": ["A180","A200","A250","C180","C200","C220","C300","E200","E250","E300","E350","S350","S400","S500","GLA180","GLA200","GLC200","GLC300","GLE300","GLE400","GLS350","GLS450","CLA200","CLA250","EQA","EQB","EQC","EQS","AMG GT"],
-  Audi:         ["A1","A3","A4","A5","A6","A7","A8","Q2","Q3","Q5","Q7","Q8","TT","R8","e-tron","e-tron GT","RS3","RS4","RS5","RS6","RS7","S3","S4","S5","S6","S7","S8","SQ5","SQ7","SQ8"],
-  Jeep:         ["Renegade","Compass","Cherokee","Grand Cherokee","Wrangler","Gladiator","Commander","Avenger","Grand Wagoneer"],
-  Mitsubishi:   ["Mirage","Attrage","Lancer","Galant","Eclipse Cross","ASX","Outlander","Outlander Sport","Pajero","Montero","L200","Triton","Xpander","Xforce"],
-  Subaru:       ["Impreza","Legacy","Outback","Forester","XV","Crosstrek","Ascent","BRZ","WRX","WRX STI","Solterra"],
-  Volvo:        ["S60","S90","V60","V90","XC40","XC60","XC90","C40","EX30","EX90"],
-  Peugeot:      ["208","308","408","508","2008","3008","5008","Landtrek","Partner","Expert","Boxer"],
-  Fiat:         ["500","Mobi","Argo","Cronos","Siena","Pulse","Fastback","Toro","Doblo","Ducato"],
-  Dodge:        ["Neon","Charger","Challenger","Durango","Journey","RAM 1500","RAM 2500","Hornet","Viper"],
-  "Land Rover": ["Defender","Discovery","Discovery Sport","Freelander","Range Rover","Range Rover Sport","Range Rover Evoque","Range Rover Velar"],
-  Porsche:      ["911","718 Cayman","718 Boxster","Taycan","Panamera","Macan","Cayenne"],
-  Lexus:        ["IS","ES","GS","LS","UX","NX","RX","GX","LX","RC","LC","RZ"],
-  "Alfa Romeo": ["Giulia","Stelvio","Tonale","Giulietta","MiTo","4C","Spider"],
-  Seat:         ["Ibiza","Leon","Arona","Ateca","Tarraco","Mii","Alhambra","Toledo"],
-  Skoda:        ["Fabia","Octavia","Superb","Kamiq","Karoq","Kodiaq","Enyaq","Scala","Rapid"],
-  MINI:         ["Cooper","Cooper S","Clubman","Countryman","Paceman","Convertible","JCW"],
-  Tesla:        ["Model 3","Model Y","Model S","Model X","Cybertruck","Roadster"],
-  BYD:          ["Atto 3","Han","Tang","Song Plus","Seal","Dolphin","Yuan Plus","Shark"],
-  Chery:        ["QQ","Tiggo 2","Tiggo 4","Tiggo 7","Tiggo 8","Arrizo 5","Arrizo 6","Omoda 5","Omoda C9"],
-  JAC:          ["J2","J3","J4","S2","S3","S4","S5","T6","T8","EV"],
-  MG:           ["MG3","MG5","MG6","ZS","HS","RX5","RX8","One","Marvel R","EHS"],
-  Geely:        ["Coolray","Okavango","Emgrand","Azkarra","BL","MK","EC7"],
-  Ssangyong:    ["Tivoli","Korando","Rexton","Musso","Actyon","Rodius"],
-  Isuzu:        ["D-Max","MU-X","Trooper","Crosswind","Sportivo"],
-  RAM:          ["700","1000","1500","2500","3500","ProMaster"],
-  GMC:          ["Sierra","Canyon","Terrain","Acadia","Yukon"],
-  Cadillac:     ["CT4","CT5","XT4","XT5","XT6","Escalade","LYRIQ"],
-  Ferrari:      ["Roma","Portofino","SF90","812","F8","296","GTC4Lusso","Purosangue"],
-  Lamborghini:  ["Huracan","Aventador","Urus","Revuelto","Sterrato"],
-  Maserati:     ["Ghibli","Quattroporte","Levante","Grecale","MC20","GranTurismo"],
-};
-
-const MARCAS_REPUESTO = [
-  "AC Delco","Aisin","Akebono","Behr","Bilstein","Bosch","Brembo","Continental",
-  "Dayco","Denso","Delphi","Exide","Fag","Ferodo","Fram","Gates","Hella","KYB",
-  "LUK","Mahle","Mann Filter","Moog","Monroe","Motul","NGK","NTN",
-  "Pentosin","Sachs","Schaeffler","Shell","SKF","Textar","TRW","Valeo","VDO",
-  "Victor Reinz","ZF",
-  "Toyota","Chevrolet","Ford","Renault","Kia","Hyundai","Nissan","Honda",
-  "Suzuki","Mazda","Volkswagen","BMW","Mercedes-Benz","Audi","Mitsubishi",
-  "Otro",
-].sort((a, b) => a.localeCompare(b));
-
-const MARCAS_VEHICULO_LISTA = Object.keys(MARCAS_VEHICULO).sort((a, b) => a.localeCompare(b));
-
-const ANO_ACTUAL = new Date().getFullYear();
-
-const campoVacio = v => v === null || v === undefined || String(v).trim() === "";
-
-function validarFormulario(form, productosExistentes, esEdicion, id) {
-  const errores = {};
-
-  if (campoVacio(form.nombre)) errores.nombre = "El nombre es obligatorio.";
-  else if (form.nombre.trim().length < 3) errores.nombre = "El nombre debe tener al menos 3 caracteres.";
-
-  if (campoVacio(form.categoria)) errores.categoria = "Seleccione una categoria.";
-  if (campoVacio(form.codigo)) errores.codigo = "El codigo SKU es obligatorio.";
-  else {
-    const duplicado = productosExistentes.find(
-      p => p.codigo?.toLowerCase() === form.codigo.trim().toLowerCase() &&
-           (!esEdicion || String(p.id) !== String(id))
-    );
-    if (duplicado) errores.codigo = "Ya existe un producto con este codigo SKU.";
-  }
-
-  if (campoVacio(form.marca)) errores.marca = "Seleccione una marca.";
-
-  if (form.tipo === "ENCARGO" && !campoVacio(form.diasEntregaEncargo)) {
-    const dias = Number(form.diasEntregaEncargo);
-    if (!Number.isInteger(dias) || dias < 1 || dias > 120)
-      errores.diasEntregaEncargo = "Ingrese entre 1 y 120 días.";
-  }
-
-  const compra = Number(form.precioCompra);
-  const venta  = Number(form.precioVenta);
-  if (campoVacio(form.precioCompra) || isNaN(compra) || compra < 0)
-    errores.precioCompra = "Ingrese un precio de compra valido.";
-  if (campoVacio(form.precioVenta) || isNaN(venta) || venta < 0)
-    errores.precioVenta = "Ingrese un precio de venta valido.";
-  else if (compra > 0 && venta > 0 && venta < compra)
-    errores.precioVenta = "El precio de venta no puede ser menor al de compra.";
-
-  const stockActual  = Number(form.stockActual);
-  const stockMinimo  = Number(form.stockMinimo);
-  if (campoVacio(form.stockActual) || isNaN(stockActual) || !Number.isInteger(stockActual) || stockActual < 0)
-    errores.stockActual = "Ingrese un stock actual valido (numero entero mayor o igual a 0).";
-  if (campoVacio(form.stockMinimo) || isNaN(stockMinimo) || !Number.isInteger(stockMinimo) || stockMinimo < 0)
-    errores.stockMinimo = "Ingrese un stock minimo valido (numero entero mayor o igual a 0).";
-
-  // Un producto universal no necesita vehículos compatibles.
-  const erroresCompat = [];
-  if (!form.compatibilidadUniversal) form.modelosCompatibles.forEach((comp, i) => {
-    const e = {};
-    if (campoVacio(comp.marca))   e.marca  = "Seleccione la marca del vehiculo.";
-    if (campoVacio(comp.modelo))  e.modelo = "Seleccione el modelo.";
-    const desde = Number(comp.anoDesde);
-    const hasta = Number(comp.anoHasta);
-    if (campoVacio(comp.anoDesde) || isNaN(desde) || desde < 1900 || desde > ANO_ACTUAL + 1)
-      e.anoDesde = "Ano desde invalido.";
-    if (campoVacio(comp.anoHasta) || isNaN(hasta) || hasta < 1900 || hasta > ANO_ACTUAL + 2)
-      e.anoHasta = "Ano hasta invalido.";
-    else if (!e.anoDesde && hasta < desde)
-      e.anoHasta = "El ano hasta no puede ser anterior al ano desde.";
-    if (Object.keys(e).length) erroresCompat[i] = e;
-  });
-  if (erroresCompat.some(Boolean)) errores.compatibilidad = erroresCompat;
-
-  return errores;
-}
-
-/** Nombre canónico de la lista del formulario (sin importar mayúsculas), o null si no está. */
-const enLista = (lista, valor) => lista.find((x) => x.toLowerCase() === String(valor || "").trim().toLowerCase()) || null;
-
-/** La compatibilidad sugerida solo se puede agregar si marca y modelo existen en las listas del formulario. */
-function compatDeLista(c) {
-  const marca = enLista(MARCAS_VEHICULO_LISTA, c.marca);
-  const modelo = marca ? enLista(MARCAS_VEHICULO[marca], c.modelo) : null;
-  return marca && modelo ? { marca, modelo, anoDesde: String(c.anoDesde), anoHasta: String(c.anoHasta), motor: c.motor || "" } : null;
-}
-
-const mismaCompat = (a, b) => a.marca === b.marca && a.modelo === b.modelo
-  && String(a.anoDesde) === String(b.anoDesde) && String(a.anoHasta) === String(b.anoHasta);
 
 /**
  * Sugerencias de la IA para el producto (solo TIENDA): categoría de la lista y compatibilidades "por confirmar".
@@ -193,77 +47,77 @@ function SugerenciasIA({ form, setForm, token }) {
     .filter((c) => !form.modelosCompatibles.some((x) => mismaCompat(x, c)));
 
   return (
-    <div className="prf-section prf-ia" aria-live="polite">
-      <div className="prf-section-header prf-ia__cabecera">
-        <h3>Sugerencias de la IA</h3>
-        <button type="button" className="prf-ia__boton" onClick={pedir} disabled={!puedePedir || cargando} aria-busy={cargando}>
+    <SeccionEditable id="pfm-ia" icono="bolt" titulo="Sugerencias de la IA"
+      descripcion={puedePedir ? "Propone la categoría y los vehículos compatibles. Nada se guarda sin que lo apliques."
+        : "Escribe el nombre del producto (y si quieres la marca y la referencia) para pedir sugerencias."}>
+      <div aria-live="polite" className="pfm-ia">
+        <button type="button" className="ui-btn ui-btn--secundario pfm-ia__pedir" onClick={pedir} disabled={!puedePedir || cargando} aria-busy={cargando}>
+          {!cargando && <Icon name="bolt" size={16} />}
           {cargando ? "Pensando…" : datos ? "Sugerir de nuevo" : "Sugerir"}
         </button>
+        {error && <Alerta onCerrar={() => setEstado({ cargando: false, error: null, datos: null })}>{error}</Alerta>}
+
+        {datos && (
+          <>
+            <div className="pfm-ia__bloque">
+              <p className="pfm-ia__titulo"><ChipEstado tono="aviso">Por confirmar</ChipEstado> Categoría</p>
+              {datos.categoria ? (
+                <div className="pfm-ia__fila">
+                  <span><strong>{datos.categoria}</strong> (de tu lista de categorías)</span>
+                  {form.categoria === datos.categoria
+                    ? <ChipEstado tono="ok">Aplicada</ChipEstado>
+                    : <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => setForm((p) => ({ ...p, categoria: datos.categoria }))}>Aplicar</button>}
+                </div>
+              ) : <p className="pfm-ia__nota">No encontró una categoría de tu lista que encaje. Elígela a mano.</p>}
+            </div>
+
+            <div className="pfm-ia__bloque">
+              <p className="pfm-ia__titulo"><ChipEstado tono="aviso">Por confirmar</ChipEstado> Vehículos compatibles</p>
+              <Alerta tono="aviso">
+                Revisa cada compatibilidad con el catálogo del fabricante: una equivocada hace que el cliente compre la pieza que no es.
+              </Alerta>
+              {sugeridas.length === 0 ? (
+                <p className="pfm-ia__nota">No propuso compatibilidades seguras para este producto.</p>
+              ) : (
+                <ul className="pfm-ia__lista">
+                  {sugeridas.map(({ original: c, deLista }, i) => {
+                    const yaEsta = deLista && form.modelosCompatibles.some((x) => mismaCompat(x, deLista));
+                    return (
+                      <li key={i} className="pfm-ia__fila">
+                        <span>{c.marca} {c.modelo} · {c.anoDesde}–{c.anoHasta}{c.motor ? ` · motor ${c.motor}` : ""}
+                          {!deLista && <em className="pfm-ia__fuera"> No está en la lista del formulario: agrégalo a mano si es correcto.</em>}
+                        </span>
+                        {deLista && (yaEsta
+                          ? <ChipEstado tono="ok">Agregada</ChipEstado>
+                          : <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => agregar([deLista])}>Agregar</button>)}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {agregables.length > 1 && (
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => agregar(agregables)}>
+                  Agregar las {agregables.length}
+                </button>
+              )}
+            </div>
+            {datos.nota && <p className="pfm-ia__nota">{datos.nota}</p>}
+          </>
+        )}
       </div>
-
-      {!datos && !error && (
-        <p className="prf-ia__nota">
-          {puedePedir ? "Pulsa \"Sugerir\" para ver qué propone. Nada se guarda sin que lo apliques."
-            : "Escribe el nombre del producto (y si quieres la marca y la referencia) y pulsa \"Sugerir\"."}
-        </p>
-      )}
-      {error && <p className="prf-error" role="alert">{error}</p>}
-
-      {datos && (
-        <>
-          <div className="prf-ia__tarjeta">
-            <p className="prf-ia__titulo"><span className="prf-ia__chip">Por confirmar</span> Categoría</p>
-            {datos.categoria ? (
-              <div className="prf-ia__fila">
-                <span><strong>{datos.categoria}</strong> (de tu lista de categorías)</span>
-                {form.categoria === datos.categoria
-                  ? <span className="prf-ia__hecho">Aplicada</span>
-                  : <button type="button" className="prf-ia__accion" onClick={() => setForm((p) => ({ ...p, categoria: datos.categoria }))}>Aplicar</button>}
-              </div>
-            ) : <p className="prf-ia__nota">No encontró una categoría de tu lista que encaje. Elígela a mano.</p>}
-          </div>
-
-          <div className="prf-ia__tarjeta">
-            <p className="prf-ia__titulo"><span className="prf-ia__chip">Por confirmar</span> Compatibilidades</p>
-            <p className="prf-ia__aviso">
-              Revisa cada compatibilidad con el catálogo del fabricante. Una compatibilidad equivocada hace que el cliente compre la pieza que no es.
-            </p>
-            {sugeridas.length === 0 ? (
-              <p className="prf-ia__nota">No propuso compatibilidades seguras para este producto.</p>
-            ) : (
-              <ul className="prf-ia__lista">
-                {sugeridas.map(({ original: c, deLista }, i) => {
-                  const yaEsta = deLista && form.modelosCompatibles.some((x) => mismaCompat(x, deLista));
-                  return (
-                    <li key={i} className="prf-ia__fila">
-                      <span>{c.marca} {c.modelo} · {c.anoDesde}–{c.anoHasta}{c.motor ? ` · motor ${c.motor}` : ""}
-                        {!deLista && <em className="prf-ia__fuera"> No está en la lista del formulario: agrégalo a mano si es correcto.</em>}
-                      </span>
-                      {deLista && (yaEsta
-                        ? <span className="prf-ia__hecho">Agregada</span>
-                        : <button type="button" className="prf-ia__accion" onClick={() => agregar([deLista])}>Agregar</button>)}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {agregables.length > 1 && (
-              <button type="button" className="prf-ia__accion" onClick={() => agregar(agregables)}>Agregar las {agregables.length}</button>
-            )}
-          </div>
-          {datos.nota && <p className="prf-ia__nota">{datos.nota}</p>}
-        </>
-      )}
-    </div>
+    </SeccionEditable>
   );
 }
 
-function FieldError({ msg }) {
-  if (!msg) return null;
-  return <span className="prf-field-error">{msg}</span>;
+/** Campo de dinero con el signo $ delante. */
+function Dinero(props) {
+  return (
+    <span className="pfm-prefijo">
+      <span aria-hidden="true">$</span>
+      <input {...props} className="ui-field__input" type="text" inputMode="decimal" placeholder="0" />
+    </span>
+  );
 }
-
-const COMPAT_VACIA = { marca: "", modelo: "", anoDesde: "", anoHasta: "", motor: "" };
 
 function ProductoForm({ id, onVolver, token, esTienda = false }) {
   const esEdicion = Boolean(id);
@@ -278,15 +132,17 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
     modelosCompatibles: [COMPAT_VACIA],
   });
 
-  const [errores,             setErrores]            = useState({});
   const [productosExistentes, setProductosExistentes] = useState([]);
-  const [loading,             setLoading]            = useState(false);
-  const [serverError,         setServerError]        = useState(null);
-  const [submitted,           setSubmitted]          = useState(false);
-  const [imagenFile,          setImagenFile]         = useState(null);
-  const [imagenPreview,       setImagenPreview]      = useState(null);
-  const [subiendoImagen,      setSubiendoImagen]     = useState(false);
+  const [cargandoProducto, setCargandoProducto] = useState(esEdicion);
+  const [guardando, setGuardando] = useState(false);
+  const [serverError, setServerError] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [imagenFile, setImagenFile] = useState(null);
+  const [imagenPreview, setImagenPreview] = useState(null);
+  const [errorFoto, setErrorFoto] = useState(null);
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
   const fileInputRef = useRef(null);
+  const resumenRef = useRef(null);
 
   // El código SKU es único dentro de cada tienda: una tienda valida contra su propio catálogo.
   useEffect(() => {
@@ -296,40 +152,40 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
   }, [token, esTienda]);
 
   useEffect(() => {
-    if (esEdicion) {
-      obtenerProducto(id, token)
-        .then(data => {
-          setForm({
-            ...data,
-            referencia: data.referencia || "",
-            ubicacion: data.ubicacion || "",
-            diasEntregaEncargo: data.diasEntregaEncargo ?? "",
-            compatibilidadUniversal: !!data.compatibilidadUniversal,
-            modelosCompatibles: data.modelosCompatibles?.length
-              ? data.modelosCompatibles.map(c => ({ ...c, motor: c.motor || "" }))
-              : [COMPAT_VACIA],
-          });
-          if (data.imagenUrl) setImagenPreview(data.imagenUrl);
-        })
-        .catch(e => setServerError(e.message));
-    }
-  }, [id, token]);
+    if (!esEdicion) return;
+    obtenerProducto(id, token)
+      .then((data) => {
+        setForm({
+          ...data,
+          referencia: data.referencia || "",
+          ubicacion: data.ubicacion || "",
+          diasEntregaEncargo: data.diasEntregaEncargo ?? "",
+          compatibilidadUniversal: !!data.compatibilidadUniversal,
+          modelosCompatibles: data.modelosCompatibles?.length
+            ? data.modelosCompatibles.map((c) => ({ ...c, motor: c.motor || "" }))
+            : [COMPAT_VACIA],
+        });
+        if (data.imagenUrl) setImagenPreview(data.imagenUrl);
+      })
+      .catch((e) => setServerError(e.message))
+      .finally(() => setCargandoProducto(false));
+  }, [id, token, esEdicion]);
 
-  useEffect(() => {
-    if (submitted) {
-      const e = validarFormulario(form, productosExistentes, esEdicion, id);
-      setErrores(e);
-    }
-  }, [form, submitted]);
+  // Después del primer intento de guardar, los errores se recalculan en cada cambio (la validación es pura)
+  const errores = submitted ? validarFormulario(form, productosExistentes, esEdicion, id) : {};
+  const actualizar = (cambio) => setForm((prev) => (typeof cambio === "function" ? cambio(prev) : { ...prev, ...cambio }));
 
-  const handleChange = e => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    actualizar({ [name]: value });
   };
 
-  const handleImagenChange = e => {
+  const handleImagenChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const err = errorImagen(file);
+    setErrorFoto(err);
+    if (err) { e.target.value = ""; return; }
     setImagenFile(file);
     setImagenPreview(URL.createObjectURL(file));
   };
@@ -337,64 +193,58 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
   const eliminarImagenSeleccionada = () => {
     setImagenFile(null);
     setImagenPreview(null);
+    setErrorFoto(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleCompatibilidadChange = (index, e) => {
     const { name, value } = e.target;
-    setForm(prev => {
-      const nuevos = prev.modelosCompatibles.map((c, i) =>
-        i === index ? { ...c, [name]: value, ...(name === "marca" ? { modelo: "" } : {}) } : c
-      );
-      return { ...prev, modelosCompatibles: nuevos };
-    });
-  };
-
-  const agregarCompatibilidad = () => {
-    setForm(prev => ({
+    actualizar((prev) => ({
       ...prev,
-      modelosCompatibles: [...prev.modelosCompatibles, COMPAT_VACIA],
+      modelosCompatibles: prev.modelosCompatibles.map((c, i) =>
+        i === index ? { ...c, [name]: value, ...(name === "marca" ? { modelo: "" } : {}) } : c),
     }));
   };
 
-  const eliminarCompatibilidad = index => {
-    setForm(prev => ({
-      ...prev,
-      modelosCompatibles: prev.modelosCompatibles.filter((_, i) => i !== index),
-    }));
-  };
+  const agregarCompatibilidad = () => actualizar((prev) => ({ ...prev, modelosCompatibles: [...prev.modelosCompatibles, COMPAT_VACIA] }));
+  const eliminarCompatibilidad = (index) => actualizar((prev) => ({
+    ...prev, modelosCompatibles: prev.modelosCompatibles.filter((_, i) => i !== index),
+  }));
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitted(true);
     const e2 = validarFormulario(form, productosExistentes, esEdicion, id);
-    setErrores(e2);
-    if (Object.keys(e2).length > 0) return;
+    if (Object.keys(e2).length > 0) {
+      // El resumen se anuncia y el foco va al primer campo con error
+      requestAnimationFrame(() => document.querySelector(".pfm-root [aria-invalid='true']")?.focus());
+      return;
+    }
 
-    setLoading(true);
+    setGuardando(true);
     setServerError(null);
     try {
       const payload = {
         ...form,
-        nombre:       form.nombre.trim(),
-        codigo:       form.codigo.trim().toUpperCase(),
-        referencia:   form.referencia.trim() || null,
-        ubicacion:    form.ubicacion.trim() || null,
+        nombre: form.nombre.trim(),
+        codigo: form.codigo.trim().toUpperCase(),
+        referencia: form.referencia.trim() || null,
+        ubicacion: form.ubicacion.trim() || null,
         // Solo aplica a productos por encargo (tiempo estimado que ve el taller al cotizar).
         diasEntregaEncargo: form.tipo === "ENCARGO" && String(form.diasEntregaEncargo).trim() !== ""
           ? Number(form.diasEntregaEncargo) : null,
         precioCompra: Number(form.precioCompra),
-        precioVenta:  Number(form.precioVenta),
-        stockActual:  Number(form.stockActual),
-        tipo:         form.tipo,
-        stockMinimo:  Number(form.stockMinimo),
+        precioVenta: Number(form.precioVenta),
+        stockActual: Number(form.stockActual),
+        tipo: form.tipo,
+        stockMinimo: Number(form.stockMinimo),
         compatibilidadUniversal: !!form.compatibilidadUniversal,
         // Universal: sirve a cualquier vehículo, no se guardan modelos.
-        modelosCompatibles: form.compatibilidadUniversal ? [] : form.modelosCompatibles.map(c => ({
+        modelosCompatibles: form.compatibilidadUniversal ? [] : form.modelosCompatibles.map((c) => ({
           ...c,
           anoDesde: Number(c.anoDesde),
           anoHasta: Number(c.anoHasta),
-          motor:    c.motor?.trim() || null,
+          motor: c.motor?.trim() || null,
         })),
       };
       let productoId = id;
@@ -411,427 +261,232 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
       onVolver();
     } catch (err) {
       setServerError(err.message);
+      resumenRef.current?.scrollIntoView({ block: "center" });
     } finally {
       setSubiendoImagen(false);
-      setLoading(false);
+      setGuardando(false);
     }
   };
 
-  const compra = Number(form.precioCompra);
-  const venta  = Number(form.precioVenta);
-  const margen = compra > 0 && venta > 0
-    ? (((venta - compra) / compra) * 100).toFixed(1)
-    : null;
-
+  const margen = calcularMargen(form.precioCompra, form.precioVenta);
   const compatErrores = errores.compatibilidad || [];
+  const cantidadErrores = Object.keys(errores).filter((k) => k !== "compatibilidad").length
+    + compatErrores.filter(Boolean).reduce((s, e) => s + Object.keys(e).length, 0);
+  const textoGuardar = guardando ? (subiendoImagen ? "Subiendo la foto…" : "Guardando…") : esEdicion ? "Guardar cambios" : "Guardar producto";
+
+  const titulo = esEdicion ? "Editar producto" : "Nuevo producto";
+  if (cargandoProducto) {
+    return (
+      <div className="ss-panel--tienda pfm-root">
+        <EncabezadoPagina titulo={titulo} onVolver={onVolver} textoVolver="Productos" />
+        <Esqueleto variante="formulario" cantidad={5} texto="Cargando el producto…" />
+      </div>
+    );
+  }
 
   return (
-    <div className="prf-page">
+    <div className="ss-panel--tienda pfm-root">
+      <EncabezadoPagina titulo={esEdicion && form.nombre ? form.nombre : titulo} onVolver={onVolver} textoVolver="Productos"
+        descripcion={esEdicion
+          ? "Los cambios se ven en el catálogo apenas guardas."
+          : "Con foto, precio y vehículos compatibles, los clientes y talleres encuentran el repuesto correcto."} />
 
-      {/* ── El topbar fue eliminado: el TopBar global en App.jsx lo reemplaza ── */}
-
-      <div className="prf-tabs">
-        <button type="button" className="prf-tab prf-tab--active">
-          {esEdicion ? "Editar Producto" : "Nuevo Producto"}
-        </button>
-        <button type="button" className="prf-tab" onClick={onVolver}>
-          Ver Productos
-        </button>
+      <div ref={resumenRef}>
+        {serverError && <Alerta className="pfm-alerta" onCerrar={() => setServerError(null)}>{serverError}</Alerta>}
+        {submitted && cantidadErrores > 0 && (
+          <Alerta className="pfm-alerta">
+            Revisa {cantidadErrores === 1 ? "el campo marcado" : `los ${cantidadErrores} campos marcados`} antes de guardar.
+          </Alerta>
+        )}
       </div>
 
-      {serverError && <p className="prf-error">{serverError}</p>}
-
-      <form onSubmit={handleSubmit} noValidate className="prf-layout">
-
-        {/* ─── COLUMNA IZQUIERDA ─── */}
-        <div className="prf-left">
-
-          {/* Informacion General */}
-          <div className="prf-section">
-            <div className="prf-section-header">
-              <h3>Informacion General</h3>
-            </div>
-
-            <div className="prf-field prf-field--full">
-              <label>Nombre del Producto</label>
-              <input
-                name="nombre"
-                value={form.nombre}
-                onChange={handleChange}
-                placeholder="Ej. Pastillas de Freno Ceramicas Brembo"
-                className={errores.nombre ? "prf-input--error" : ""}
-              />
-              <FieldError msg={errores.nombre} />
-            </div>
-
-            <div className="prf-row">
-              <div className="prf-field">
-                <label>Categoria</label>
-                <select
-                  name="categoria"
-                  value={form.categoria}
-                  onChange={handleChange}
-                  className={errores.categoria ? "prf-input--error" : ""}
-                >
-                  <option value="">Seleccionar categoria</option>
-                  {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <FieldError msg={errores.categoria} />
-              </div>
-
-              <div className="prf-field">
-                <label>SKU / Codigo</label>
-                <input
-                  name="codigo"
-                  value={form.codigo}
-                  onChange={handleChange}
-                  placeholder="Ej. KNT-BRK-001"
-                  className={errores.codigo ? "prf-input--error" : ""}
-                />
-                <FieldError msg={errores.codigo} />
+      <form id="pfm-form" onSubmit={handleSubmit} noValidate className="pfm-layout">
+        <div className="pfm-columna">
+          <SeccionEditable id="pfm-general" icono="box" titulo="Información general"
+            descripcion="Cómo se identifica el repuesto en tu inventario y en el catálogo.">
+            <div className="ui-form">
+              <Campo id="pfm-nombre" label="Nombre del producto" error={errores.nombre}>
+                <input className="ui-field__input" name="nombre" value={form.nombre} onChange={handleChange}
+                  placeholder="Ej. Pastillas de freno cerámicas Brembo" />
+              </Campo>
+              <div className="ui-form__campos ui-form__campos--2">
+                <Campo id="pfm-categoria" label="Categoría" error={errores.categoria}>
+                  <select className="ui-field__input" name="categoria" value={form.categoria} onChange={handleChange}>
+                    <option value="">Elegir categoría</option>
+                    {CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </Campo>
+                <Campo id="pfm-codigo" label="Código SKU" error={errores.codigo} ayuda="Único dentro de tu tienda.">
+                  <input className="ui-field__input" name="codigo" value={form.codigo} onChange={handleChange}
+                    placeholder="Ej. KNT-BRK-001" autoCapitalize="characters" />
+                </Campo>
+                <Campo id="pfm-marca" label="Marca del repuesto" error={errores.marca}>
+                  <select className="ui-field__input" name="marca" value={form.marca} onChange={handleChange}>
+                    <option value="">Elegir marca</option>
+                    {MARCAS_REPUESTO.map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </Campo>
+                <Campo id="pfm-referencia" label="Referencia del fabricante" opcional>
+                  <input className="ui-field__input" name="referencia" value={form.referencia} onChange={handleChange} placeholder="Ej. P 85 020" />
+                </Campo>
+                <Campo id="pfm-ubicacion" label="Ubicación en bodega" opcional>
+                  <input className="ui-field__input" name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="Ej. Estante B-3" />
+                </Campo>
               </div>
             </div>
-
-            <div className="prf-field prf-field--full">
-              <label>Marca del Repuesto</label>
-              <select
-                name="marca"
-                value={form.marca}
-                onChange={handleChange}
-                className={errores.marca ? "prf-input--error" : ""}
-              >
-                <option value="">Seleccionar marca</option>
-                {MARCAS_REPUESTO.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <FieldError msg={errores.marca} />
-            </div>
-
-            <div className="prf-row">
-              <div className="prf-field">
-                <label>Referencia del fabricante</label>
-                <input
-                  name="referencia"
-                  value={form.referencia}
-                  onChange={handleChange}
-                  placeholder="Ej. P 85 020 (opcional)"
-                />
-              </div>
-
-              <div className="prf-field">
-                <label>Ubicación en bodega</label>
-                <input
-                  name="ubicacion"
-                  value={form.ubicacion}
-                  onChange={handleChange}
-                  placeholder="Ej. Estante B-3 (opcional)"
-                />
-              </div>
-            </div>
-          </div>
+          </SeccionEditable>
 
           {esTienda && <SugerenciasIA form={form} setForm={setForm} token={token} />}
 
-          {/* Tipo de producto */}
-          <div className="prf-field prf-field--full">
-            <label>Tipo de Producto</label>
-            <select name="tipo" value={form.tipo} onChange={handleChange}>
-              <option value="STOCK">Stock (compra inmediata)</option>
-              <option value="ENCARGO">Encargo (requiere validación)</option>
-            </select>
-            <FieldError msg={errores.tipo} />
-          </div>
-
-          {form.tipo === "ENCARGO" && (
-            <div className="prf-field prf-field--full">
-              <label>Días estimados de entrega</label>
-              <input
-                type="number"
-                name="diasEntregaEncargo"
-                min="1"
-                max="120"
-                value={form.diasEntregaEncargo}
-                onChange={handleChange}
-                placeholder="Ej. 5"
-                className={errores.diasEntregaEncargo ? "prf-input--error" : ""}
-              />
-              <FieldError msg={errores.diasEntregaEncargo} />
+          <SeccionEditable id="pfm-tipo" icono="clock" titulo="Disponibilidad"
+            descripcion="Si lo tienes en bodega o lo consigues cuando te lo piden.">
+            <div className="ui-form">
+              <fieldset className="pfm-opciones">
+                <legend className="ui-sr">Tipo de producto</legend>
+                {[["STOCK", "En stock", "Se compra y se despacha de inmediato."],
+                  ["ENCARGO", "Por encargo", "Lo consigues cuando te lo piden; el taller ve el tiempo de entrega."]].map(([valor, texto, ayuda]) => (
+                  <label key={valor} className={`ui-opcion pfm-opcion${form.tipo === valor ? " ui-opcion--elegida" : ""}`}>
+                    <input type="radio" className="ui-sr" name="tipo" value={valor} checked={form.tipo === valor} onChange={handleChange} />
+                    <span><strong>{texto}</strong><span>{ayuda}</span></span>
+                  </label>
+                ))}
+              </fieldset>
+              {form.tipo === "ENCARGO" && (
+                <Campo id="pfm-dias" label="Días estimados de entrega" opcional error={errores.diasEntregaEncargo} ayuda="Entre 1 y 120 días.">
+                  <input className="ui-field__input ui-form__corto" type="number" name="diasEntregaEncargo" min="1" max="120"
+                    value={form.diasEntregaEncargo} onChange={handleChange} placeholder="Ej. 5" />
+                </Campo>
+              )}
             </div>
-          )}
+          </SeccionEditable>
 
-          {/* Modelos Compatibles */}
-          <div className="prf-section">
-            <div className="prf-section-header">
-              <h3>Modelos Compatibles</h3>
+          <SeccionEditable id="pfm-compatibles" icono="car" titulo="Vehículos compatibles"
+            descripcion="Con esto el catálogo le dice al cliente si el repuesto le sirve a su vehículo.">
+            <div className="ui-form">
+              <label className="pfm-universal">
+                <input type="checkbox" checked={!!form.compatibilidadUniversal}
+                  onChange={(e) => actualizar({ compatibilidadUniversal: e.target.checked })} />
+                <span>
+                  <strong>Compatibilidad universal</strong>
+                  <span>Aceites, líquidos e insumos que sirven a cualquier vehículo. Los talleres lo verán como compatible.</span>
+                </span>
+              </label>
+
+              {!form.compatibilidadUniversal && (
+                <>
+                  {form.modelosCompatibles.map((comp, index) => {
+                    const modelos = comp.marca ? (MARCAS_VEHICULO[comp.marca] || []) : [];
+                    const ce = compatErrores[index] || {};
+                    const n = index + 1;
+                    return (
+                      <fieldset key={index} className="pfm-vehiculo">
+                        <legend className="pfm-vehiculo__titulo">Vehículo {n}</legend>
+                        {form.modelosCompatibles.length > 1 && (
+                          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico pfm-vehiculo__quitar"
+                            onClick={() => eliminarCompatibilidad(index)} aria-label={`Quitar el vehículo ${n}`}>
+                            <Icon name="trash" size={14} /> Quitar
+                          </button>
+                        )}
+                        <div className="ui-form__campos ui-form__campos--2">
+                          <Campo id={`pfm-v${n}-marca`} label="Marca" error={ce.marca}>
+                            <select className="ui-field__input" name="marca" value={comp.marca} onChange={(e) => handleCompatibilidadChange(index, e)}>
+                              <option value="">Elegir marca</option>
+                              {MARCAS_VEHICULO_LISTA.map((m) => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                          </Campo>
+                          <Campo id={`pfm-v${n}-modelo`} label="Modelo" error={ce.modelo}>
+                            <select className="ui-field__input" name="modelo" value={comp.modelo} disabled={!comp.marca}
+                              onChange={(e) => handleCompatibilidadChange(index, e)}>
+                              <option value="">{comp.marca ? "Elegir modelo" : "Primero elige la marca"}</option>
+                              {modelos.map((mo) => <option key={mo} value={mo}>{mo}</option>)}
+                            </select>
+                          </Campo>
+                          <Campo id={`pfm-v${n}-desde`} label="Año desde" error={ce.anoDesde}>
+                            <input className="ui-field__input" type="number" name="anoDesde" value={comp.anoDesde} min="1900" max={ANO_ACTUAL + 1}
+                              onChange={(e) => handleCompatibilidadChange(index, e)} placeholder="Ej. 2015" />
+                          </Campo>
+                          <Campo id={`pfm-v${n}-hasta`} label="Año hasta" error={ce.anoHasta}>
+                            <input className="ui-field__input" type="number" name="anoHasta" value={comp.anoHasta} min="1900" max={ANO_ACTUAL + 2}
+                              onChange={(e) => handleCompatibilidadChange(index, e)} placeholder="Ej. 2023" />
+                          </Campo>
+                        </div>
+                        <Campo id={`pfm-v${n}-motor`} label="Motor" opcional ayuda="Vacío: sirve para cualquier motor.">
+                          <input className="ui-field__input ui-form__corto" name="motor" value={comp.motor || ""}
+                            onChange={(e) => handleCompatibilidadChange(index, e)} placeholder="Ej. 1.6" />
+                        </Campo>
+                      </fieldset>
+                    );
+                  })}
+                  <button type="button" className="ui-btn ui-btn--secundario pfm-agregar" onClick={agregarCompatibilidad}>
+                    <Icon name="plus" size={16} /> Agregar otro vehículo
+                  </button>
+                </>
+              )}
             </div>
-
-            <label className="prf-universal">
-              <input
-                type="checkbox"
-                checked={!!form.compatibilidadUniversal}
-                onChange={e => setForm(prev => ({ ...prev, compatibilidadUniversal: e.target.checked }))}
-              />
-              <span>
-                <strong>Compatibilidad universal</strong>
-                Aceites, líquidos e insumos que sirven a cualquier vehículo. Los talleres lo verán como compatible.
-              </span>
-            </label>
-
-            {!form.compatibilidadUniversal && (<>
-            {form.modelosCompatibles.map((comp, index) => {
-              const modelosDisponibles = comp.marca ? (MARCAS_VEHICULO[comp.marca] || []) : [];
-              const ce = compatErrores[index] || {};
-              return (
-                <div key={index} className="prf-compat-block">
-                  <div className="prf-compat-header">
-                    <span className="prf-compat-num">Vehiculo {index + 1}</span>
-                    {form.modelosCompatibles.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => eliminarCompatibilidad(index)}
-                        className="prf-compat-del"
-                      >
-                        Eliminar
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="prf-compat-grid">
-                    <div className="prf-field">
-                      <label>Marca del Vehiculo</label>
-                      <select
-                        name="marca"
-                        value={comp.marca}
-                        onChange={e => handleCompatibilidadChange(index, e)}
-                        className={ce.marca ? "prf-input--error" : ""}
-                      >
-                        <option value="">Seleccionar marca</option>
-                        {MARCAS_VEHICULO_LISTA.map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-                      <FieldError msg={ce.marca} />
-                    </div>
-
-                    <div className="prf-field">
-                      <label>Modelo</label>
-                      <select
-                        name="modelo"
-                        value={comp.modelo}
-                        onChange={e => handleCompatibilidadChange(index, e)}
-                        disabled={!comp.marca}
-                        className={ce.modelo ? "prf-input--error" : ""}
-                      >
-                        <option value="">
-                          {comp.marca ? "Seleccionar modelo" : "Primero seleccione marca"}
-                        </option>
-                        {modelosDisponibles.map(mo => (
-                          <option key={mo} value={mo}>{mo}</option>
-                        ))}
-                      </select>
-                      <FieldError msg={ce.modelo} />
-                    </div>
-
-                    <div className="prf-field">
-                      <label>Ano Desde</label>
-                      <input
-                        type="number"
-                        name="anoDesde"
-                        value={comp.anoDesde}
-                        onChange={e => handleCompatibilidadChange(index, e)}
-                        placeholder="Ej. 2015"
-                        min="1900"
-                        max={ANO_ACTUAL + 1}
-                        className={ce.anoDesde ? "prf-input--error" : ""}
-                      />
-                      <FieldError msg={ce.anoDesde} />
-                    </div>
-
-                    <div className="prf-field">
-                      <label>Ano Hasta</label>
-                      <input
-                        type="number"
-                        name="anoHasta"
-                        value={comp.anoHasta}
-                        onChange={e => handleCompatibilidadChange(index, e)}
-                        placeholder="Ej. 2023"
-                        min="1900"
-                        max={ANO_ACTUAL + 2}
-                        className={ce.anoHasta ? "prf-input--error" : ""}
-                      />
-                      <FieldError msg={ce.anoHasta} />
-                    </div>
-
-                    <div className="prf-field prf-field--full">
-                      <label>Motor</label>
-                      <input
-                        name="motor"
-                        value={comp.motor || ""}
-                        onChange={e => handleCompatibilidadChange(index, e)}
-                        placeholder="Ej. 1.6 (opcional; vacío = cualquier motor)"
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            <button
-              type="button"
-              onClick={agregarCompatibilidad}
-              className="prf-add-compat"
-            >
-              + Agregar vehiculo compatible
-            </button>
-            </>)}
-          </div>
+          </SeccionEditable>
         </div>
 
-        {/* ─── COLUMNA DERECHA ─── */}
-        <div className="prf-right">
-          <div className="prf-section">
-            <div className="prf-section-header">
-              <h3>Precio e Inventario</h3>
-            </div>
-
-            <div className="prf-field prf-field--full">
-              <label>Precio de Compra</label>
-              <div className={`prf-money-input${errores.precioCompra ? " prf-money-input--error" : ""}`}>
-                <span>$</span>
-                <input
-                  name="precioCompra"
-                  type="text"
-                  inputMode="decimal"
-                  value={form.precioCompra}
-                  onChange={handleChange}
-                  placeholder="0"
-                />
+        <div className="pfm-columna pfm-columna--lateral">
+          <SeccionEditable id="pfm-precio" icono="tool" titulo="Precio e inventario">
+            <div className="ui-form">
+              <div className="ui-form__campos ui-form__campos--2">
+                <Campo id="pfm-compra" label="Precio de compra" error={errores.precioCompra}>
+                  <Dinero name="precioCompra" value={form.precioCompra} onChange={handleChange} />
+                </Campo>
+                <Campo id="pfm-venta" label="Precio de venta" error={errores.precioVenta}>
+                  <Dinero name="precioVenta" value={form.precioVenta} onChange={handleChange} />
+                </Campo>
               </div>
-              <FieldError msg={errores.precioCompra} />
-            </div>
-
-            <div className="prf-field prf-field--full">
-              <label>Precio de Venta</label>
-              <div className={`prf-money-input${errores.precioVenta ? " prf-money-input--error" : ""}`}>
-                <span>$</span>
-                <input
-                  name="precioVenta"
-                  type="text"
-                  inputMode="decimal"
-                  value={form.precioVenta}
-                  onChange={handleChange}
-                  placeholder="0"
-                />
-              </div>
-              <FieldError msg={errores.precioVenta} />
-            </div>
-
-            {margen !== null && (
-              <div className={`prf-margen ${Number(margen) >= 0 ? "prf-margen--pos" : "prf-margen--neg"}`}>
-                <span>Margen de ganancia</span>
-                <strong>{margen}%</strong>
-              </div>
-            )}
-
-            <div className="prf-row">
-              <div className="prf-field">
-                <label>Stock Real</label>
-                <div className={`prf-stock-input${errores.stockActual ? " prf-stock-input--error" : ""}`}>
-                  <input
-                    name="stockActual"
-                    type="text"
-                    inputMode="numeric"
-                    value={form.stockActual}
-                    onChange={handleChange}
-                    placeholder="0"
-                  />
-                  <span>UND</span>
-                </div>
-                <FieldError msg={errores.stockActual} />
-              </div>
-
-              <div className="prf-field">
-                <label>Stock Minimo</label>
-                <div className={`prf-stock-input${errores.stockMinimo ? " prf-stock-input--error" : ""}`}>
-                  <input
-                    name="stockMinimo"
-                    type="text"
-                    inputMode="numeric"
-                    value={form.stockMinimo}
-                    onChange={handleChange}
-                    placeholder="0"
-                  />
-                  <span>UND</span>
-                </div>
-                <FieldError msg={errores.stockMinimo} />
-              </div>
-            </div>
-          </div>
-
-          {/* ─── IMAGEN ─── */}
-          <div className="prf-section">
-            <div className="prf-section-header">
-              <h3>Imagen del Producto</h3>
-            </div>
-            <div className="prf-imagen-upload">
-              {imagenPreview ? (
-                <div className="prf-imagen-preview">
-                  <img src={imagenPreview} alt="Preview" />
-                  <button
-                    type="button"
-                    className="prf-imagen-remove"
-                    onClick={eliminarImagenSeleccionada}
-                  >
-                    Eliminar imagen
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className="prf-imagen-placeholder"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21 15 16 10 5 21"/>
-                  </svg>
-                  <span>Haz clic para subir imagen</span>
-                </div>
+              {margen !== null && (
+                <p className={`pfm-margen${margen < 0 ? " pfm-margen--negativo" : ""}`} role="status">
+                  Margen de ganancia <strong>{margen.toLocaleString("es-CO")} %</strong>
+                </p>
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImagenChange}
-                style={{ display: "none" }}
-              />
-              {subiendoImagen && (
-                <p className="prf-imagen-uploading">Subiendo imagen...</p>
-              )}
+              <div className="ui-form__campos ui-form__campos--2">
+                <Campo id="pfm-stock" label="Stock actual" error={errores.stockActual} ayuda="Unidades en bodega.">
+                  <input className="ui-field__input" name="stockActual" type="text" inputMode="numeric" value={form.stockActual} onChange={handleChange} placeholder="0" />
+                </Campo>
+                <Campo id="pfm-minimo" label="Stock mínimo" error={errores.stockMinimo} ayuda="Te avisamos al llegar aquí.">
+                  <input className="ui-field__input" name="stockMinimo" type="text" inputMode="numeric" value={form.stockMinimo} onChange={handleChange} placeholder="0" />
+                </Campo>
+              </div>
             </div>
-          </div>
+          </SeccionEditable>
 
-          {submitted && Object.keys(errores).length > 0 && (
-            <div className="prf-validation-summary">
-              Revise los campos marcados antes de continuar.
+          <SeccionEditable id="pfm-foto" icono="camera" titulo="Foto del producto"
+            descripcion="Una foto clara sobre fondo liso ayuda a vender. JPG, PNG, WEBP o GIF, hasta 5 MB.">
+            <div className="pfm-foto">
+              <ImagenProducto src={imagenPreview} alt={imagenPreview ? "Foto del producto" : ""} className="pfm-foto__imagen" tamanioIcono={36} />
+              <div className="pfm-foto__acciones">
+                <button type="button" className="ui-btn ui-btn--secundario" onClick={() => fileInputRef.current?.click()}
+                  aria-describedby={errorFoto ? "pfm-foto-error" : undefined}>
+                  <Icon name="camera" size={16} /> {imagenPreview ? "Cambiar foto" : "Elegir foto"}
+                </button>
+                {imagenPreview && (
+                  <button type="button" className="ui-btn ui-btn--texto" onClick={eliminarImagenSeleccionada}>Quitar foto</button>
+                )}
+              </div>
+              {errorFoto && <p id="pfm-foto-error" className="ui-field__error" role="alert"><Icon name="alert" size={14} />{errorFoto}</p>}
+              <input ref={fileInputRef} type="file" accept={TIPOS_IMAGEN.join(",")} onChange={handleImagenChange} hidden />
             </div>
-          )}
+          </SeccionEditable>
 
-          <button type="submit" className="prf-btn-save" disabled={loading}>
-            {loading ? "Guardando..." : esEdicion ? "Actualizar Producto" : "Guardar Producto"}
-          </button>
-          <button type="button" onClick={onVolver} className="prf-btn-cancel">
-            Descartar Cambios
-          </button>
-
-          <div className="prf-info-card">
-            <p className="prf-info-title">Sincronizacion Automatica</p>
-            <p className="prf-info-text">
-              Los productos guardados se sincronizaran automaticamente con el inventario
-              y estaran disponibles para facturacion inmediata.
-            </p>
+          <div className="pfm-guardar">
+            <button type="submit" className="ui-btn ui-btn--primario ui-btn--grande ui-btn--bloque" disabled={guardando} aria-busy={guardando}>
+              {textoGuardar}
+            </button>
+            <button type="button" className="ui-btn ui-btn--secundario ui-btn--bloque" onClick={onVolver} disabled={guardando}>
+              Descartar cambios
+            </button>
           </div>
         </div>
       </form>
+
+      <BarraAccionMovil etiqueta={esEdicion ? "Editando" : "Producto nuevo"} nota={form.nombre || undefined}>
+        <button type="submit" form="pfm-form" className="ui-btn ui-btn--primario" disabled={guardando} aria-busy={guardando}>
+          {guardando ? "Guardando…" : "Guardar"}
+        </button>
+      </BarraAccionMovil>
     </div>
   );
 }

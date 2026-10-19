@@ -126,3 +126,33 @@ test("Productos usa el sistema compartido, sin confirm() ni alert() del navegado
   assert.doesNotMatch(pagina, /\b(confirm|alert)\(/);
   assert.ok(pagina.includes("eliminarProducto(eliminando.id, token)"), "la misma llamada para eliminar");
 });
+
+test("Formulario de producto: validación en español, foto con las mismas reglas y margen", async () => {
+  const { validarFormulario, errorImagen, margen, COMPAT_VACIA } = await import("../src/pages/tienda/reglasProducto.js");
+  const base = { nombre: "Pastillas", categoria: "Frenos", codigo: "BRK-1", marca: "Bosch", tipo: "STOCK", precioCompra: "100",
+    precioVenta: "150", stockActual: "4", stockMinimo: "1", compatibilidadUniversal: true, modelosCompatibles: [COMPAT_VACIA] };
+  assert.deepEqual(validarFormulario(base, [], false), {});
+  const e = validarFormulario({ ...base, nombre: "", codigo: "brk-1", precioVenta: "50", compatibilidadUniversal: false },
+    [{ id: "x", codigo: "BRK-1" }], false);
+  assert.equal(e.nombre, "Escribe el nombre del producto.");
+  assert.equal(e.codigo, "Ya tienes un producto con este código SKU.");
+  assert.equal(e.precioVenta, "El precio de venta no puede ser menor que el de compra.");
+  assert.equal(e.compatibilidad[0].marca, "Elige la marca del vehículo.");
+  assert.equal(validarFormulario({ ...base }, [{ id: "p1", codigo: "BRK-1" }], true, "p1").codigo, undefined, "editar el mismo no es duplicado");
+  assert.equal(errorImagen({ type: "image/png", size: 10 }), null);
+  assert.match(errorImagen({ type: "image/svg+xml", size: 10 }), /JPG, PNG, WEBP o GIF/);
+  assert.match(errorImagen({ type: "image/jpeg", size: 6 * 1024 * 1024 }), /menos de 5 MB/);
+  assert.equal(margen("100", "150"), 50);
+  assert.equal(margen("", "150"), null);
+});
+
+test("Formulario de producto: etiquetas asociadas, errores accesibles y las mismas llamadas", () => {
+  const pagina = leer("../src/pages/ProductoForm.jsx");
+  assert.ok((pagina.match(/<Campo id=/g) || []).length >= 14, "cada campo con Campo (label y aria)");
+  assert.ok(!pagina.includes("Sincronizacion"), "sin la tarjeta que prometía facturación inmediata");
+  assert.ok(!/<div[^>]*onClick/.test(pagina), "nada clicable que no sea un botón");
+  for (const llamada of ["actualizarProducto(id, payload, token)", "crearProducto(payload, token)",
+    "subirImagenProducto(productoId, imagenFile, token)", "sugerirProducto(token, form, CATEGORIAS)"]) {
+    assert.ok(pagina.includes(llamada), `misma llamada: ${llamada}`);
+  }
+});

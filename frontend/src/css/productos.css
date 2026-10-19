@@ -80,7 +80,7 @@
   .prt-tabla tbody tr:hover { background: var(--ui-surface); }
 }
 
-/* ── Formularios viejos (AjusteInventarioForm, ProductoForm) ───────────────────────────────────────────────────────────── */
+/* ── Formularios viejos (AjusteInventarioForm) ───────────────────────────────────────────────────────────── */
 .form-container {
   padding: 1.5rem 1.75rem 2.5rem;
   max-width: 900px;
@@ -94,65 +94,12 @@
   margin: 0 0 1.25rem;
 }
 
-.producto-form {
-  background: var(--ui-surface);
-  padding: 1.5rem 1.75rem;
-  border-radius: var(--ui-r-lg);
-  border: 1px solid var(--ui-line);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   
   .form-container { padding: 1rem; max-width: 100%; }
   
-  .producto-form { padding: 1.1rem; }
+  
   
   
 }
