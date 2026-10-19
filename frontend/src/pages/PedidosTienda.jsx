@@ -19,6 +19,7 @@ import {
   FILTROS, VACIOS, accionPrincipal, cantidadProductos, coincide, contar, destinatario, esCatalogo, esEnvio, esRetiro,
   historialPedido, metodoEntrega, ordenarPorUrgencia, plazoVencido, porDespachar, subtotal, textoPlazo, tieneEncargo,
 } from "./tienda/pedidosTienda";
+import { destinoSeccion } from "../utils/navegacion";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/pedidos-tienda.css";
@@ -93,8 +94,10 @@ function textoEstado(p) {
  * dirección; en un retiro, nada (el cliente se identifica con su código, que se valida aquí).
  * "No puedo despachar" exige el motivo; el reembolso al cliente lo gestiona DriveMaster.
  */
-export default function PedidosTienda() {
+export default function PedidosTienda({ param, irA }) {
   const token = getToken();
+  // Desde un aviso (o desde otra sección) se abre directo un pedido: { abrir, volverA }
+  const destino = destinoSeccion(param);
   const [pedidos, setPedidos] = useState([]);
   const [imagenes, setImagenes] = useState({});
   const [cargando, setCargando] = useState(true);
@@ -103,7 +106,7 @@ export default function PedidosTienda() {
   const [aviso, setAviso] = useState(null);
   const [filtro, setFiltro] = useState("ATENDER");
   const [busqueda, setBusqueda] = useState("");
-  const [abiertoId, setAbiertoId] = useState(null);
+  const [abiertoId, setAbiertoId] = useState(destino.abrir);
   const [modo, setModo] = useState(null); // null | DESPACHAR | NO_DESPACHAR
   const [nota, setNota] = useState("");
   const [tipoMotivo, setTipoMotivo] = useState("");
@@ -125,6 +128,11 @@ export default function PedidosTienda() {
   }, [token]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Abierto desde un aviso: el detalle empieza arriba
+  useEffect(() => {
+    if (destino.abrir) window.scrollTo({ top: 0 });
+  }, [destino.abrir]);
 
   // Las fotos salen del catálogo de la tienda (el pedido guarda solo el nombre); si falla, quedan las de reemplazo
   useEffect(() => {
@@ -157,7 +165,10 @@ export default function PedidosTienda() {
     window.scrollTo({ top: 0 });
   };
 
+  const desdeAfuera = destino.abrir != null && abiertoId === destino.abrir;
+
   const cerrar = () => {
+    if (desdeAfuera && destino.volverA && irA) { irA(destino.volverA); return; }
     reiniciarFormularios();
     setAbiertoId(null);
     window.scrollTo({ top: 0 });
@@ -251,7 +262,8 @@ export default function PedidosTienda() {
 
     return (
       <div className="ss-panel ss-panel--tienda pdt-root">
-        <EncabezadoPagina titulo={`Pedido #${refSolicitud(p.id)}`} onVolver={cerrar} textoVolver="Pedidos">
+        <EncabezadoPagina titulo={`Pedido #${refSolicitud(p.id)}`} onVolver={cerrar}
+          textoVolver={desdeAfuera && destino.volverA ? "Volver" : "Pedidos"}>
           <p className="pdt-meta">
             <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />
             <ChipPlazo pedido={p} ahora={ahora} />
@@ -431,6 +443,11 @@ export default function PedidosTienda() {
       {error && (
         <Alerta className="pdt-alerta" onReintentar={reintentar} reintentando={reintentando}>
           No pudimos cargar tus pedidos. {error}
+        </Alerta>
+      )}
+      {!error && abiertoId && !abierto && (
+        <Alerta tono="aviso" className="pdt-alerta" onCerrar={() => setAbiertoId(null)}>
+          No encontramos el pedido del aviso entre los tuyos. Puede que ya no esté en tu lista.
         </Alerta>
       )}
       {aviso && <Alerta tono="ok" className="pdt-alerta" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}

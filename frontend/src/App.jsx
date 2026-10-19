@@ -710,7 +710,8 @@ function App() {
     if (pagina === "informes-tienda")  return <InformesTienda       token={token} onIr={(p) => irA(p)} />;
     if (pagina === "asistente-tienda") return <AsistenteTienda      token={token} />;
     if (pagina === "liquidaciones")    return <Liquidaciones        />;
-    if (pagina === "pedidos-tienda")   return <PedidosTienda        />;
+    // Un aviso de la campanita abre un pedido con irA("pedidos-tienda", { abrir }); otro aviso la vuelve a montar
+    if (pagina === "pedidos-tienda")   return <PedidosTienda key={idSeleccionado?.abrir || "pedidos"} param={idSeleccionado} irA={irA} />;
     if (pagina === "problemas-envios") return <ProblemasEnvios      />;
     if (pagina === "pedidos-envios")   return <PedidosEnvios key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado} />;
     if (pagina === "mi-tienda")        return <DatosMiTienda        token={token} onGuardado={(t) => setTiendaIncompleta(!t.datosCompletos)} />;

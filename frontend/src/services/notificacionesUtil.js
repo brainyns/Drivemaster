@@ -38,11 +38,15 @@ export function tonoDeAviso(tipo) {
 
 /**
  * Página e id a los que lleva un aviso. Las páginas del cliente ("mis-servicios", "mis-compras") abren la
- * solicitud o la compra exacta; las del panel llevan a la sección (su parámetro es un filtro, no un id).
+ * solicitud o la compra exacta con su id; los avisos de la tienda abren el pedido con el patrón de las secciones del
+ * panel, irA(pagina, { abrir }) (ver destinoSeccion); las demás secciones del panel llevan a la sección.
  */
 export function destinoDeAviso(aviso) {
   if (!aviso?.enlace) return null;
   const delCliente = aviso.enlace.startsWith("mis-");
+  if (aviso.enlace === "pedidos-tienda") {
+    return { pagina: aviso.enlace, id: aviso.referenciaId ? { abrir: aviso.referenciaId } : null };
+  }
   return { pagina: aviso.enlace, id: delCliente ? aviso.referenciaId || null : null };
 }
 

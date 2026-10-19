@@ -300,3 +300,16 @@ test("Productos: interruptor accesible para publicar u ocultar con el endpoint p
   const servicio = leer("../src/services/productoService.js");
   assert.match(servicio, /\/publicado`, \{\s*method: "PATCH"/);
 });
+
+test("Avisos de la tienda: abren el pedido con irA(pagina, { abrir }) y los demás avisos no cambian", async () => {
+  const { destinoDeAviso } = await import("../src/services/notificacionesUtil.js");
+  assert.deepEqual(destinoDeAviso({ enlace: "pedidos-tienda", referenciaId: "p1" }), { pagina: "pedidos-tienda", id: { abrir: "p1" } });
+  assert.deepEqual(destinoDeAviso({ enlace: "pedidos-tienda" }), { pagina: "pedidos-tienda", id: null });
+  assert.deepEqual(destinoDeAviso({ enlace: "taller-solicitudes", referenciaId: "o1" }), { pagina: "taller-solicitudes", id: null });
+  assert.deepEqual(destinoDeAviso({ enlace: "mis-compras", referenciaId: "c1" }), { pagina: "mis-compras", id: "c1" });
+  const app = leer("../src/App.jsx");
+  assert.ok(app.includes('<PedidosTienda key={idSeleccionado?.abrir || "pedidos"} param={idSeleccionado} irA={irA} />'));
+  const pagina = leer("../src/pages/PedidosTienda.jsx");
+  assert.ok(pagina.includes("useState(destino.abrir)"), "abre el detalle directamente");
+  assert.ok(pagina.includes("No encontramos el pedido del aviso"), "si el pedido no está, lo dice");
+});

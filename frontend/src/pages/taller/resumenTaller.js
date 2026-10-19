@@ -30,17 +30,8 @@ export function tiempoRelativo(fecha, ahora = Date.now()) {
   return min >= 0 ? `en ${texto}` : `hace ${texto}`;
 }
 
-/**
- * Lo que llega a una sección del panel en el segundo argumento de irA (idSeleccionado en App): el filtro de la
- * pestaña como texto (menú lateral, avisos) o { filtro, abrir, volverA } para abrir una solicitud concreta y que
- * "Volver" regrese a la página de origen. La app navega con el estado `pagina`, sin rutas.
- */
-export function destinoSeccion(param) {
-  if (param && typeof param === "object") {
-    return { filtro: param.filtro || undefined, abrir: param.abrir || null, volverA: param.volverA || null };
-  }
-  return { filtro: param || undefined, abrir: null, volverA: null };
-}
+// Lo comparten las secciones del taller y la tienda: vive en utils/navegacion.js
+export { destinoSeccion } from "../../utils/navegacion.js";
 
 /** Revisión aceptada que aún no se diagnostica (la cita está en pie). */
 export const agendada = (s) => (s.estado === "ASIGNADA_A_TALLER" && s.aceptadaPorTaller) || s.estado === "EN_REVISION";
