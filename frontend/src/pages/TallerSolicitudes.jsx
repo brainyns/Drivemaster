@@ -14,11 +14,20 @@ import CotizacionForm from "../components/servicio/CotizacionForm";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
 import Etiqueta from "../components/servicio/Etiqueta";
 import {
-  ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
+  ESTADOS, ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
+import { tiempoRelativo } from "./taller/resumenTaller";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Pasos from "../components/ui/Pasos";
+import Icon from "../components/public/Icon";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
+import "../css/solicitudes-taller.css";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 
@@ -45,20 +54,26 @@ const FILTROS_TRABAJOS = [
 
 const TEXTOS = {
   solicitudes: {
-    volver: "← Solicitudes",
+    titulo: "Solicitudes",
+    descripcion: "Diagnósticos que te asignan: respóndelos, agenda la revisión y registra lo que encuentres.",
+    volver: "Solicitudes",
+    icono: "message",
     vacio: {
-      responder: "No tienes solicitudes nuevas. Te avisaremos por correo cuando llegue una.",
-      agendadas: "No tienes revisiones agendadas. Al aceptar una solicitud eliges la fecha y la hora.",
-      diagnosticadas: "Ninguna solicitud espera cotización. Aparecen aquí cuando registras el diagnóstico.",
-      cerradas: "No hay solicitudes cerradas.",
+      responder: ["Estás al día", "No tienes solicitudes nuevas. Te avisaremos por correo cuando llegue una."],
+      agendadas: ["Sin revisiones agendadas", "Al aceptar una solicitud eliges la fecha y la hora de la revisión."],
+      diagnosticadas: ["Nada por cotizar", "Las solicitudes aparecen aquí cuando registras el diagnóstico."],
+      cerradas: ["Sin solicitudes cerradas", "Aquí quedan las canceladas, las rechazadas y las que pasaron a otro taller."],
     },
   },
   trabajos: {
-    volver: "← Trabajos",
+    titulo: "Trabajos",
+    descripcion: "Vehículos con cotización aprobada: repuestos, instalación, pruebas y entrega.",
+    volver: "Trabajos",
+    icono: "tool",
     vacio: {
-      repuestos: "No esperas repuestos. Cuando un cliente pague una cotización, el pedido a las tiendas aparece aquí.",
-      entaller: "No hay vehículos en el taller. Pasan aquí al confirmar que los repuestos llegaron.",
-      entregados: "Todavía no has entregado trabajos.",
+      repuestos: ["No esperas repuestos", "Cuando un cliente pague una cotización, el pedido a las tiendas aparece aquí."],
+      entaller: ["Ningún vehículo en el taller", "Pasan aquí al confirmar que los repuestos llegaron."],
+      entregados: ["Aún no has entregado trabajos", "Los vehículos entregados quedan aquí como historial."],
     },
   },
 };
@@ -187,6 +202,8 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
   const [cotizando, setCotizando] = useState(false);
   const [tarifaHora, setTarifaHora] = useState(null);
   const [procesando, setProcesando] = useState(false);
+  const [reintentando, setReintentando] = useState(false);
+  const [ahora] = useState(() => Date.now());
 
   const cargar = useCallback(async () => {
     try {
@@ -268,7 +285,20 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
     reemplazar(await asignarMecanicoSolicitud(token, seleccionada.id, mecanicoId));
   });
 
-  if (cargando) return <p className="sv-empty">Cargando solicitudes...</p>;
+  const reintentar = async () => {
+    setReintentando(true);
+    await cargar();
+    setReintentando(false);
+  };
+
+  if (cargando) {
+    return (
+      <div className="ss-panel">
+        <EncabezadoPagina titulo={textos.titulo} descripcion={textos.descripcion} />
+        <Esqueleto variante="lista" cantidad={4} texto={modo === "trabajos" ? "Cargando trabajos…" : "Cargando solicitudes…"} />
+      </div>
+    );
+  }
 
   // ─── Detalle ────────────────────────────────────────────────────────────
   if (seleccionada) {
@@ -518,107 +548,130 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
     const accion = accionRapida(s);
     const abierta = lineaAbierta === s.id;
     return (
-      <article key={s.id} className="ss-tarjeta tp-trabajo">
-        <button className="tp-trabajo__abrir" onClick={() => abrir(s)}>
-          <div className="ss-tarjeta__cabecera">
-            <span className="ss-eyebrow">#{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
-            <EstadoServicio estado={s.estado} />
-          </div>
-          <strong className="ss-tarjeta__titulo">{s.vehiculoDescripcion}{s.vehiculoPlaca ? ` · ${s.vehiculoPlaca}` : ""}</strong>
-          <span className="ss-meta">
-            {s.clienteNombre ? `${s.clienteNombre} · ` : ""}
-            {s.mecanicoNombre ? `Mecánico: ${s.mecanicoNombre}` : "Sin mecánico asignado"}
+      <li key={s.id} className="ss-tarjeta st-tarjeta st-tarjeta--trabajo">
+        <button type="button" className="st-tarjeta__abrir" onClick={() => abrir(s)}>
+          <span className="st-tarjeta__cabecera">
+            <strong className="st-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
+            <ChipEstado estado={s.estado} catalogo={ESTADOS} />
+          </span>
+          <span className="st-tarjeta__meta">
+            {s.vehiculoPlaca && <span className="ui-placa ui-placa--chica">{s.vehiculoPlaca}</span>}
+            #{refSolicitud(s.id)}
+            {s.clienteNombre && ` · ${s.clienteNombre}`}
+            {` · ${s.mecanicoNombre ? `Mecánico: ${s.mecanicoNombre}` : "Sin mecánico asignado"}`}
             {enEstadoDesde(s) && ` · en este estado ${enEstadoDesde(s)}`}
           </span>
         </button>
 
         {paso >= 0 ? (
-          <ol className="tp-pasos" aria-label="Avance del trabajo">
-            {PASOS_TRABAJO.map((nombre, n) => (
-              <li key={nombre} className={`tp-pasos__paso${n < paso ? " tp-pasos__paso--hecho" : ""}${n === paso ? " tp-pasos__paso--actual" : ""}`}
-                aria-current={n === paso ? "step" : undefined}>
-                <span className="tp-pasos__marca" aria-hidden="true" />
-                <span className="tp-pasos__nombre">{nombre}</span>
-              </li>
-            ))}
-          </ol>
+          <Pasos pasos={PASOS_TRABAJO} actual={paso + 1} id={`st-pasos-${s.id}`} />
         ) : (
-          <p className="ss-meta">
+          <p className="st-tarjeta__nota">
             {s.estado === "PAGADA" ? "Pagada: el pedido a las tiendas está por salir." : "Pedido a las tiendas en camino."}
           </p>
         )}
 
-        <div className="tp-trabajo__acciones">
+        <div className="st-tarjeta__acciones">
           {accion && (
-            <button className="sv-btn" disabled={procesando} onClick={() => ejecutar(accion.ejecutar)}>{accion.texto}</button>
+            <button type="button" className="ui-btn ui-btn--primario" disabled={procesando} aria-busy={procesando}
+              onClick={() => ejecutar(accion.ejecutar)}>{accion.texto}</button>
           )}
-          <button className="sv-btn-outline" aria-expanded={abierta} onClick={() => setLineaAbierta(abierta ? null : s.id)}>
+          <button type="button" className="ui-btn ui-btn--secundario" aria-expanded={abierta} aria-controls={`st-linea-${s.id}`}
+            onClick={() => setLineaAbierta(abierta ? null : s.id)}>
             {abierta ? "Ocultar avance" : "Ver avance"}
           </button>
         </div>
-        {abierta && <div className="tp-trabajo__linea"><LineaTiempo eventos={s.eventos} /></div>}
-      </article>
+        {abierta && <div id={`st-linea-${s.id}`} className="st-tarjeta__linea"><LineaTiempo eventos={s.eventos} /></div>}
+      </li>
     );
   };
 
+  /** Chip del plazo para responder: crítico con menos de 2 horas. */
+  const chipPlazo = (s) => {
+    if (!porResponder(s) || !s.fechaLimiteRespuesta) return null;
+    const horas = (new Date(s.fechaLimiteRespuesta).getTime() - ahora) / 3600000;
+    return (
+      <ChipEstado tono={horas < 2 ? "error" : "aviso"}>
+        {horas < 0 ? "Plazo vencido" : `Responde ${tiempoRelativo(s.fechaLimiteRespuesta, ahora)}`}
+      </ChipEstado>
+    );
+  };
+
+  const [tituloVacio, textoVacio] = textos.vacio[filtro];
+
   return (
-    <div className="ss-panel">
-      <header className="pt-header tp-cabecera">
-        <div>
-          <h1 className="pt-title">{modo === "trabajos" ? "Trabajos" : "Solicitudes"}</h1>
-          <p className="pt-subtitle">
-            {modo === "trabajos"
-              ? "Vehículos con cotización aprobada: repuestos, instalación, pruebas y entrega."
-              : "Diagnósticos que te asignan: respóndelos, agenda la revisión y registra lo que encuentres."}
-          </p>
-        </div>
-      </header>
+    <div className="ss-panel st-root">
+      <EncabezadoPagina titulo={textos.titulo} descripcion={textos.descripcion} />
 
-      {error && <p className="ss-alerta" role="alert">{error}</p>}
+      {error && (
+        <Alerta className="st-alerta" onReintentar={reintentar} reintentando={reintentando} onCerrar={() => setError(null)}>
+          {error}
+        </Alerta>
+      )}
 
-      <div className="tp-barra">
-        <nav className="ss-filtros" aria-label={modo === "trabajos" ? "Trabajos por etapa" : "Solicitudes por estado"}>
+      <div className="st-barra">
+        <div className="ui-filtros" role="group" aria-label={modo === "trabajos" ? "Trabajos por etapa" : "Solicitudes por estado"}>
           {FILTROS.map((f) => (
-            <button key={f.key} className={`ss-filtro${filtro === f.key ? " ss-filtro--activo" : ""}`}
-              aria-current={filtro === f.key ? "page" : undefined} onClick={() => setFiltro(f.key)}>
+            <button key={f.key} type="button" className="ui-chip" aria-pressed={filtro === f.key} onClick={() => setFiltro(f.key)}>
               {f.label}
-              {conteo[f.key] > 0 && <span className="ss-filtro__conteo">{conteo[f.key]}</span>}
+              {conteo[f.key] > 0 && <span className="ui-chip__contador">{conteo[f.key]}</span>}
             </button>
           ))}
-        </nav>
-        <input className="tp-busqueda" type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar por vehículo, placa o cliente" aria-label="Buscar" />
+        </div>
+        <div className="ui-buscador">
+          <Icon name="search" size={18} />
+          <label htmlFor="st-busqueda" className="ui-sr">Buscar por vehículo, placa, cliente o número</label>
+          <input id="st-busqueda" className="ui-field__input" type="search" value={busqueda} autoComplete="off"
+            onChange={(e) => setBusqueda(e.target.value)} placeholder="Vehículo, placa, cliente o #" />
+        </div>
       </div>
 
       {modo === "solicitudes" && mecanicosActivos.length === 0 && (
-        <p className="ss-aviso">Registra a tus mecánicos en “Mi taller” para asignarlos a las solicitudes.</p>
+        <Alerta tono="aviso" className="st-alerta">
+          Registra a tus mecánicos en “Mi taller” para asignarlos a las solicitudes.
+        </Alerta>
       )}
 
       {visibles.length === 0 ? (
-        <p className="sv-empty">
-          {termino ? `Nada coincide con “${busqueda.trim()}”. Prueba con la placa o el nombre del cliente.` : textos.vacio[filtro]}
-        </p>
+        termino ? (
+          <EstadoVacio icono="search" titulo="Nada coincide con tu búsqueda"
+            texto={`No encontramos “${busqueda.trim()}” en esta pestaña. Prueba con la placa o el nombre del cliente.`}>
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setBusqueda("")}>Limpiar búsqueda</button>
+          </EstadoVacio>
+        ) : (
+          <EstadoVacio icono={textos.icono} titulo={tituloVacio} texto={textoVacio} />
+        )
       ) : modo === "trabajos" ? (
-        <div className="sv-list">{visibles.map(tarjetaTrabajo)}</div>
+        <ul className="st-lista">{visibles.map(tarjetaTrabajo)}</ul>
       ) : (
-        <div className="sv-list">
+        <ul className="st-lista">
           {visibles.map((s) => (
-            <button key={s.id} className="ss-tarjeta" onClick={() => abrir(s)}>
-              <div className="ss-tarjeta__cabecera">
-                <span className="ss-eyebrow">#{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
-                <EstadoServicio estado={s.estado} />
-              </div>
-              <strong className="ss-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
-              <span className="ss-meta ss-tarjeta__sintomas">{s.sintomas}</span>
-              <span className="ss-meta">
-                {[s.barrio, s.ciudad].filter(Boolean).join(", ")}
-                {porResponder(s) && ` · Responde antes del ${formatFechaHora(s.fechaLimiteRespuesta)}`}
-                {s.fechaRevision && ` · Revisión: ${formatFechaHora(s.fechaRevision)}`}
-                {s.mecanicoNombre && ` · ${s.mecanicoNombre}`}
-              </span>
-            </button>
+            <li key={s.id}>
+              <button type="button" className="ss-tarjeta st-tarjeta st-tarjeta--boton" onClick={() => abrir(s)}>
+                <span className="st-tarjeta__cabecera">
+                  <strong className="st-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
+                  <span className="st-tarjeta__chips">
+                    {chipPlazo(s) || <ChipEstado estado={s.estado} catalogo={ESTADOS} />}
+                  </span>
+                </span>
+                <span className="st-tarjeta__sintomas">{s.sintomas}</span>
+                <span className="st-tarjeta__meta">
+                  #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}
+                  {[s.barrio, s.ciudad].some(Boolean) && ` · ${[s.barrio, s.ciudad].filter(Boolean).join(", ")}`}
+                  {s.distanciaTallerKm != null && ` · ${s.distanciaTallerKm.toFixed(1)} km`}
+                </span>
+                {(s.fechaRevision || s.mecanicoNombre || porResponder(s)) && (
+                  <span className="st-tarjeta__meta">
+                    {porResponder(s) && `Responde antes del ${formatFechaHora(s.fechaLimiteRespuesta)}`}
+                    {s.fechaRevision && <><Icon name="calendar" size={14} /> Revisión: {formatFechaHora(s.fechaRevision)}</>}
+                    {s.mecanicoNombre && ` · ${s.mecanicoNombre}`}
+                  </span>
+                )}
+                <Icon name="arrow" size={18} className="st-tarjeta__flecha" />
+              </button>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

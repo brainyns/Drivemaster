@@ -76,3 +76,12 @@ test("Inicio usa el sistema compartido y la barra inferior en celular", () => {
   }
   assert.ok(!pagina.includes("→"), "sin flechas de texto: el ícono es SVG");
 });
+
+test("Solicitudes y Trabajos: filtros con chips, búsqueda con etiqueta y estados compartidos", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(pagina.includes('className="ui-chip" aria-pressed={filtro === f.key}'), "filtros con ui-chip");
+  assert.ok(pagina.includes('<label htmlFor="st-busqueda" className="ui-sr">'), "la búsqueda tiene etiqueta");
+  for (const pieza of ["<EstadoVacio", "<Esqueleto", "onReintentar={reintentar}", "<Pasos pasos={PASOS_TRABAJO}"]) {
+    assert.ok(pagina.includes(pieza), `usa ${pieza}`);
+  }
+});
