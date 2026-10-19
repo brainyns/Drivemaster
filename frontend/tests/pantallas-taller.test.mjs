@@ -85,3 +85,12 @@ test("Solicitudes y Trabajos: filtros con chips, búsqueda con etiqueta y estado
     assert.ok(pagina.includes(pieza), `usa ${pieza}`);
   }
 });
+
+test("Detalle de solicitud: título h1, volver, error de la cita en su campo y barra inferior", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(pagina.includes("<EncabezadoPagina titulo={s.vehiculoDescripcion} onVolver={cerrarDetalle}"), "cabecera con volver");
+  assert.ok(pagina.includes('<Campo id="ss-fecha-revision" label="Fecha y hora de la revisión" error={errorFecha}>'));
+  assert.ok(pagina.includes("<BarraAccionMovil etiqueta={barra.etiqueta}"), "acción principal en la barra del celular");
+  assert.ok(!pagina.includes("← "), "volver sin flecha de texto");
+  assert.ok(pagina.includes("aceptarSolicitudServicio(token, seleccionada.id, {"), "misma llamada para aceptar");
+});

@@ -7,12 +7,10 @@ import {
 } from "../services/solicitudServicioService";
 import { cotizacionesDeOrden } from "../services/cotizacionService";
 import { pedidosDeOrden, confirmarRepuestosRecibidos } from "../services/pedidoTiendaService";
-import EstadoServicio from "../components/servicio/EstadoServicio";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import DiagnosticoForm from "../components/servicio/DiagnosticoForm";
 import CotizacionForm from "../components/servicio/CotizacionForm";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
-import Etiqueta from "../components/servicio/Etiqueta";
 import {
   ESTADOS, ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
@@ -23,6 +21,8 @@ import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Pasos from "../components/ui/Pasos";
+import Campo from "../components/ui/Campo";
+import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import Icon from "../components/public/Icon";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
@@ -30,6 +30,7 @@ import "../css/cotizacion.css";
 import "../css/solicitudes-taller.css";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
+const TONO_URGENCIA = { BAJA: "ok", MEDIA: "info", ALTA: "aviso", CRITICA: "error" };
 
 const porResponder = (s) => s.estado === "ASIGNADA_A_TALLER" && !s.aceptadaPorTaller;
 const agendada = (s) => (s.estado === "ASIGNADA_A_TALLER" && s.aceptadaPorTaller) || s.estado === "EN_REVISION";
@@ -135,19 +136,23 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
   const vigente = cotizaciones[0];
   return (
     <>
-      {error && <p className="ss-alerta" role="alert">{error}</p>}
+      {error && <Alerta onCerrar={() => setError(null)}>{error}</Alerta>}
       {vigente && (
-        <section className="ss-bloque">
-          <h3 className="ss-bloque__titulo">Cotización</h3>
+        <section className="ss-bloque" aria-labelledby="st-cotizacion">
+          <h2 id="st-cotizacion" className="ss-bloque__titulo">Cotización</h2>
           <CotizacionDetalle cotizacion={vigente} mostrarComision />
           {solicitud.estado === "COTIZADA" && <p className="ss-meta">Esperando la respuesta del cliente.</p>}
           {solicitud.estado === "APROBADA" && <p className="ss-meta">El cliente aprobó. Esperando el pago.</p>}
-          {cotizaciones.length > 1 && <p className="ss-ayuda">{cotizaciones.length - 1} versión(es) anterior(es).</p>}
+          {cotizaciones.length > 1 && (
+            <p className="ss-ayuda">
+              {cotizaciones.length - 1} {cotizaciones.length === 2 ? "versión anterior" : "versiones anteriores"}.
+            </p>
+          )}
         </section>
       )}
       {pedidos.length > 0 && (
-        <section className="ss-bloque">
-          <h3 className="ss-bloque__titulo">Pedidos a tiendas</h3>
+        <section className="ss-bloque" aria-labelledby="st-pedidos">
+          <h2 id="st-pedidos" className="ss-bloque__titulo">Pedidos a tiendas</h2>
           <ul className="ct-items">
             {pedidos.map((p) => (
               <li key={p.id} className="ct-item">
@@ -159,14 +164,14 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
                   </span>
                   {p.motivoNoDespacho && <span className="ss-meta">Motivo: {p.motivoNoDespacho}</span>}
                 </span>
-                <Etiqueta estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+                <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />
               </li>
             ))}
           </ul>
           {solicitud.estado === "REPUESTOS_PEDIDOS" && (
-            <div className="ss-acciones">
-              <button className="sv-btn" onClick={recibidos} disabled={procesando}>
-                {procesando ? "Confirmando..." : "Confirmar repuestos recibidos"}
+            <div className="ui-form-pie">
+              <button type="button" className="ui-btn ui-btn--primario" onClick={recibidos} disabled={procesando} aria-busy={procesando}>
+                {procesando ? "Confirmando…" : "Confirmar repuestos recibidos"}
               </button>
               <span className="ss-ayuda">Confírmalo cuando tengas los repuestos en el taller.</span>
             </div>
@@ -203,6 +208,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
   const [tarifaHora, setTarifaHora] = useState(null);
   const [procesando, setProcesando] = useState(false);
   const [reintentando, setReintentando] = useState(false);
+  const [errorFecha, setErrorFecha] = useState(null);
   const [ahora] = useState(() => Date.now());
 
   const cargar = useCallback(async () => {
@@ -238,8 +244,15 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
   const seleccionada = solicitudes.find((s) => s.id === seleccionadaId) || null;
   const mecanicosActivos = mecanicos.filter((m) => m.activo !== false);
 
+  // El detalle y la lista empiezan arriba: si no, se abren a la altura de la tarjeta tocada
+  const alInicio = () => window.scrollTo({ top: 0 });
+
+  const cerrarDetalle = () => { setSeleccionadaId(null); alInicio(); };
+
   const abrir = (s) => {
+    alInicio();
     setSeleccionadaId(s.id);
+    setErrorFecha(null);
     setFechaRevision("");
     setMecanicoAceptar(s.mecanicoId || "");
     setRechazando(false);
@@ -266,7 +279,11 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
   };
 
   const aceptar = () => {
-    if (!fechaRevision) return setError("Elige la fecha y hora de la revisión.");
+    if (!fechaRevision) {
+      setErrorFecha("Elige la fecha y la hora de la revisión.");
+      document.getElementById("ss-fecha-revision")?.focus();
+      return;
+    }
     ejecutar(async () => {
       reemplazar(await aceptarSolicitudServicio(token, seleccionada.id, {
         fechaRevision, mecanicoId: mecanicoAceptar || null,
@@ -300,80 +317,123 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
     );
   }
 
+  /** Acción que corresponde a este trabajo, para resolverla sin abrir el detalle (o desde la barra del celular). */
+  const accionRapida = (s) => {
+    if (s.estado === "REPUESTOS_PEDIDOS") return {
+      texto: "Confirmar repuestos recibidos",
+      ejecutar: async () => { await confirmarRepuestosRecibidos(token, s.id); await cargar(); },
+    };
+    if (s.estado === "REPUESTOS_RECIBIDOS") return { texto: "Iniciar instalación", ejecutar: async () => reemplazar(await iniciarInstalacion(token, s.id)) };
+    if (s.estado === "EN_INSTALACION") return { texto: "Marcar lista", ejecutar: async () => reemplazar(await marcarLista(token, s.id)) };
+    if (s.estado === "LISTA") return { texto: "Marcar entregada", ejecutar: async () => reemplazar(await marcarEntregada(token, s.id)) };
+    return null;
+  };
+
   // ─── Detalle ────────────────────────────────────────────────────────────
   if (seleccionada) {
     const s = seleccionada;
     const aceptada = !!s.aceptadaPorTaller;
-    return (
-      <div className="ss-panel">
-        <div className="sv-header-top">
-          <div>
-            <span className="ss-eyebrow">Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
-            <h2 className="sv-title">{s.vehiculoDescripcion}</h2>
-            <p className="sv-subtitle">{s.vehiculoPlaca ? `Placa ${s.vehiculoPlaca} · ` : ""}<EstadoServicio estado={s.estado} />{s.estado === "EN_INSTALACION" && s.subestado === "EN_PRUEBAS" ? " · En pruebas" : ""}</p>
-          </div>
-          <button className="sv-volver" onClick={() => setSeleccionadaId(null)}>{textos.volver}</button>
-        </div>
+    const enPruebas = s.estado === "EN_INSTALACION" && s.subestado === "EN_PRUEBAS";
+    const accion = accionRapida(s);
+    // Lo principal de este estado, a mano en la barra inferior del celular
+    const barra = porResponder(s) && !rechazando
+      ? { etiqueta: "Responde antes del", valor: formatFechaHora(s.fechaLimiteRespuesta), texto: "Aceptar y proponer cita", onClick: aceptar }
+      : s.estado === "DIAGNOSTICADA" && !cotizando && !editandoDiagnostico
+        ? { etiqueta: "Diagnóstico listo", texto: "Cotizar", onClick: () => setCotizando(true) }
+        : accion
+          ? { etiqueta: ESTADOS[s.estado]?.label, texto: accion.texto, onClick: () => ejecutar(accion.ejecutar) }
+          : null;
 
-        {error && <p className="ss-alerta" role="alert">{error}</p>}
+    return (
+      <div className="ss-panel st-root st-detalle">
+        <EncabezadoPagina titulo={s.vehiculoDescripcion} onVolver={cerrarDetalle} textoVolver={textos.volver}>
+          <p className="st-detalle__meta">
+            <ChipEstado estado={s.estado} catalogo={ESTADOS} />
+            {enPruebas && <ChipEstado tono="info">En pruebas</ChipEstado>}
+            {s.vehiculoPlaca && <span className="ui-placa">{s.vehiculoPlaca}</span>}
+            <span>Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
+          </p>
+        </EncabezadoPagina>
+
+        {error && <Alerta className="st-alerta" onCerrar={() => setError(null)}>{error}</Alerta>}
 
         <div className="ss-detalle">
           <div className="ss-detalle__principal">
-            <section className="ss-bloque">
-              <h3 className="ss-bloque__titulo">Problema reportado</h3>
+            <section className="ss-bloque" aria-labelledby="st-problema">
+              <h2 id="st-problema" className="ss-bloque__titulo">Problema reportado</h2>
               <p className="ss-texto">{s.sintomas}</p>
               {s.fotos?.length > 0 && (
                 <div className="ss-galeria">
-                  {s.fotos.map((f) => <a key={f} href={f} target="_blank" rel="noreferrer"><img src={f} alt="Foto del cliente" loading="lazy" /></a>)}
+                  {s.fotos.map((f, i) => (
+                    <a key={f} href={f} target="_blank" rel="noreferrer">
+                      <img src={f} alt={`Foto ${i + 1} del cliente`} loading="lazy" />
+                    </a>
+                  ))}
                 </div>
               )}
-              <p className="ss-meta">
-                {[s.barrio, s.ciudad].filter(Boolean).join(", ")}
-                {s.distanciaTallerKm != null && ` · a ${s.distanciaTallerKm.toFixed(1)} km`}
-                {" · "}{s.preferenciaHorario}
-              </p>
-              {aceptada && s.clienteNombre && (
-                <p className="ss-meta">Cliente: <strong>{s.clienteNombre}</strong>{s.clienteTelefono ? ` · ${s.clienteTelefono}` : ""}</p>
-              )}
+              <dl className="ui-datos st-detalle__datos">
+                <div className="ui-datos__item">
+                  <dt>Ubicación</dt>
+                  <dd>
+                    {[s.barrio, s.ciudad].filter(Boolean).join(", ") || "Sin indicar"}
+                    {s.distanciaTallerKm != null && ` · a ${s.distanciaTallerKm.toFixed(1)} km`}
+                  </dd>
+                </div>
+                {s.preferenciaHorario && (
+                  <div className="ui-datos__item"><dt>Prefiere</dt><dd>{s.preferenciaHorario}</dd></div>
+                )}
+                {aceptada && s.clienteNombre && (
+                  <div className="ui-datos__item">
+                    <dt>Cliente</dt>
+                    <dd>
+                      {s.clienteNombre}
+                      {s.clienteTelefono && <> · <a className="st-detalle__tel" href={`tel:${s.clienteTelefono}`}>{s.clienteTelefono}</a></>}
+                    </dd>
+                  </div>
+                )}
+              </dl>
             </section>
 
             {porResponder(s) && (
-              <section className="ss-bloque ss-bloque--destacado">
-                <h3 className="ss-bloque__titulo">Responder solicitud</h3>
-                <p className="ss-meta">Responde antes del <strong>{formatFechaHora(s.fechaLimiteRespuesta)}</strong>; si no, pasa al siguiente taller.</p>
+              <section className="ss-bloque ss-bloque--destacado" aria-labelledby="st-responder">
+                <h2 id="st-responder" className="ss-bloque__titulo">Responder solicitud</h2>
+                <p className="ss-meta">
+                  Responde antes del <strong>{formatFechaHora(s.fechaLimiteRespuesta)}</strong>
+                  {s.fechaLimiteRespuesta && ` (${tiempoRelativo(s.fechaLimiteRespuesta, ahora)})`}; si no, pasa al siguiente taller.
+                </p>
                 {!rechazando ? (
                   <>
-                    <div className="sv-form">
-                      <div className="sv-field">
-                        <label htmlFor="ss-fecha-revision">Fecha y hora de la revisión</label>
-                        <input id="ss-fecha-revision" type="datetime-local" min={ahoraParaInput()}
-                          value={fechaRevision} onChange={(e) => setFechaRevision(e.target.value)} />
-                      </div>
-                      <div className="sv-field">
-                        <label htmlFor="ss-mecanico-aceptar">Mecánico (opcional)</label>
-                        <select id="ss-mecanico-aceptar" value={mecanicoAceptar} onChange={(e) => setMecanicoAceptar(e.target.value)}>
+                    <div className="st-form">
+                      <Campo id="ss-fecha-revision" label="Fecha y hora de la revisión" error={errorFecha}>
+                        <input className="ui-field__input" type="datetime-local" min={ahoraParaInput()} value={fechaRevision}
+                          onChange={(e) => { setFechaRevision(e.target.value); setErrorFecha(null); }} />
+                      </Campo>
+                      <Campo id="ss-mecanico-aceptar" label="Mecánico" opcional
+                        ayuda={mecanicosActivos.length === 0 ? "Aún no tienes mecánicos activos: agrégalos en Mi taller." : undefined}>
+                        <select className="ui-field__input" value={mecanicoAceptar} onChange={(e) => setMecanicoAceptar(e.target.value)}>
                           <option value="">Asignar después</option>
                           {mecanicosActivos.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                         </select>
-                      </div>
+                      </Campo>
                     </div>
-                    <div className="ss-acciones">
-                      <button className="sv-btn" onClick={aceptar} disabled={procesando}>
-                        {procesando ? "Procesando..." : "Aceptar y proponer cita"}
+                    <div className="ui-form-pie">
+                      <button type="button" className="ui-btn ui-btn--primario" onClick={aceptar} disabled={procesando} aria-busy={procesando}>
+                        {procesando ? "Enviando…" : "Aceptar y proponer cita"}
                       </button>
-                      <button className="sv-btn-outline" onClick={() => setRechazando(true)} disabled={procesando}>Rechazar</button>
+                      <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setRechazando(true)} disabled={procesando}>Rechazar</button>
                     </div>
                   </>
                 ) : (
                   <>
-                    <label className="ss-meta" htmlFor="ss-motivo-rechazo">Motivo (opcional): se registra en el historial de la solicitud</label>
-                    <textarea id="ss-motivo-rechazo" className="ss-textarea" rows={3} maxLength={300}
-                      value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ej. Sin cupo esta semana" />
-                    <div className="ss-acciones">
-                      <button className="sv-btn ss-btn-peligro" onClick={rechazar} disabled={procesando}>
-                        {procesando ? "Procesando..." : "Confirmar rechazo"}
+                    <Campo id="ss-motivo-rechazo" label="Motivo del rechazo" opcional ayuda="Se registra en el historial de la solicitud.">
+                      <textarea className="ui-field__input" rows={3} maxLength={300} autoFocus
+                        value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ej. Sin cupo esta semana" />
+                    </Campo>
+                    <div className="ui-form-pie">
+                      <button type="button" className="ui-btn ui-btn--peligro" onClick={rechazar} disabled={procesando} aria-busy={procesando}>
+                        {procesando ? "Rechazando…" : "Confirmar rechazo"}
                       </button>
-                      <button className="sv-btn-outline" onClick={() => setRechazando(false)} disabled={procesando}>Volver</button>
+                      <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setRechazando(false)} disabled={procesando}>Volver</button>
                     </div>
                   </>
                 )}
@@ -381,23 +441,22 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
             )}
 
             {aceptada && s.fechaRevision && (
-              <section className="ss-bloque">
-                <h3 className="ss-bloque__titulo">Cita de revisión</h3>
-                <p className="ss-texto"><strong>{formatFechaHora(s.fechaRevision)}</strong></p>
+              <section className="ss-bloque" aria-labelledby="st-cita">
+                <h2 id="st-cita" className="ss-bloque__titulo">Cita de revisión</h2>
+                <p className="st-detalle__cita"><Icon name="calendar" size={18} /> {formatFechaHora(s.fechaRevision)}</p>
                 {s.tarifaDiagnostico != null && <p className="ss-meta">Tarifa de diagnóstico: {formatPrecio(s.tarifaDiagnostico)}</p>}
                 {s.pagoDiagnosticoEstado === "PENDIENTE" && (
-                  <p className="ss-aviso">Esperando el pago del diagnóstico (hasta el {formatFechaHora(s.fechaLimitePagoDiagnostico)}).</p>
+                  <Alerta tono="aviso">Esperando el pago del diagnóstico (hasta el {formatFechaHora(s.fechaLimitePagoDiagnostico)}).</Alerta>
                 )}
                 {["ASIGNADA_A_TALLER", "EN_REVISION", "DIAGNOSTICADA"].includes(s.estado) && (
-                  <div className="sv-field ss-mecanico-actual">
-                    <label htmlFor="ss-mecanico-cambiar">Mecánico</label>
-                    <select id="ss-mecanico-cambiar" value={s.mecanicoId || ""} disabled={procesando}
+                  <Campo id="ss-mecanico-cambiar" label="Mecánico" className="st-detalle__mecanico">
+                    <select className="ui-field__input" value={s.mecanicoId || ""} disabled={procesando}
                       onChange={(e) => e.target.value && cambiarMecanico(e.target.value)}>
                       <option value="">Sin asignar</option>
                       {mecanicos.filter((m) => m.activo !== false || m.id === s.mecanicoId)
                         .map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                     </select>
-                  </div>
+                  </Campo>
                 )}
               </section>
             )}
@@ -412,12 +471,13 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
                   onGuardado={(a) => { reemplazar(a); setEditandoDiagnostico(false); }}
                   onCancelar={() => setEditandoDiagnostico(false)} />
               ) : (
-                <section className="ss-bloque">
-                  <h3 className="ss-bloque__titulo">Diagnóstico</h3>
-                  <p className="ss-meta">
-                    Urgencia: <strong className={`ss-urgencia ss-urgencia--${s.diagnostico.urgencia?.toLowerCase()}`}>
-                      {ETIQUETA_URGENCIA[s.diagnostico.urgencia]}
-                    </strong> · {s.diagnostico.mecanicoNombre} · {formatFechaHora(s.diagnostico.fecha)}
+                <section className="ss-bloque" aria-labelledby="st-diagnostico">
+                  <h2 id="st-diagnostico" className="ss-bloque__titulo">Diagnóstico</h2>
+                  <p className="st-detalle__meta st-detalle__meta--bloque">
+                    <ChipEstado tono={TONO_URGENCIA[s.diagnostico.urgencia] || "info"}>
+                      Urgencia {(ETIQUETA_URGENCIA[s.diagnostico.urgencia] || "").toLowerCase()}
+                    </ChipEstado>
+                    <span>{s.diagnostico.mecanicoNombre} · {formatFechaHora(s.diagnostico.fecha)}</span>
                   </p>
                   <p className="ss-texto">{s.diagnostico.hallazgos}</p>
                   {s.diagnostico.fallas?.length > 0 && (
@@ -426,10 +486,14 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
                   {s.diagnostico.observaciones && <p className="ss-meta">{s.diagnostico.observaciones}</p>}
                   {s.diagnostico.fotos?.length > 0 && (
                     <div className="ss-galeria">
-                      {s.diagnostico.fotos.map((f) => <a key={f} href={f} target="_blank" rel="noreferrer"><img src={f} alt="Foto del diagnóstico" loading="lazy" /></a>)}
+                      {s.diagnostico.fotos.map((f, i) => (
+                        <a key={f} href={f} target="_blank" rel="noreferrer">
+                          <img src={f} alt={`Foto ${i + 1} del diagnóstico`} loading="lazy" />
+                        </a>
+                      ))}
                     </div>
                   )}
-                  <h3 className="ss-bloque__titulo">Repuestos necesarios</h3>
+                  <h3 className="st-detalle__subtitulo">Repuestos necesarios</h3>
                   {s.repuestos?.length > 0 ? (
                     <ul className="ss-lista">
                       {s.repuestos.map((r) => (
@@ -447,9 +511,13 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
                     <p className="ss-meta">Sin repuestos: solo mano de obra.</p>
                   )}
                   {s.estado === "DIAGNOSTICADA" && !cotizando && (
-                    <div className="ss-acciones">
-                      <button className="sv-btn" onClick={() => setCotizando(true)}>Cotizar</button>
-                      <button className="sv-btn-outline" onClick={() => setEditandoDiagnostico(true)}>Editar diagnóstico y repuestos</button>
+                    <div className="ui-form-pie">
+                      <button type="button" className="ui-btn ui-btn--primario" onClick={() => setCotizando(true)}>
+                        <Icon name="file" size={16} /> Cotizar
+                      </button>
+                      <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setEditandoDiagnostico(true)}>
+                        Editar diagnóstico y repuestos
+                      </button>
                     </div>
                   )}
                 </section>
@@ -463,49 +531,17 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
             )}
 
             {["REPUESTOS_RECIBIDOS", "EN_INSTALACION", "LISTA", "ENTREGADA"].includes(s.estado) && (
-              <section className="ss-bloque ss-bloque--destacado">
-                <h3 className="ss-bloque__titulo">Trabajo en el taller</h3>
+              <section className="ss-bloque ss-bloque--destacado" aria-labelledby="st-trabajo">
+                <h2 id="st-trabajo" className="ss-bloque__titulo">Trabajo en el taller</h2>
+                <Pasos pasos={PASOS_TRABAJO} actual={pasoDeTrabajo(s) + 1} id={`st-pasos-detalle-${s.id}`} />
                 {s.estado === "REPUESTOS_RECIBIDOS" && (
-                  <>
-                    <p className="ss-meta">Repuestos en el taller. Inicia la instalación cuando empiece el trabajo.</p>
-                    <div className="ss-acciones">
-                      <button className="sv-btn" disabled={procesando}
-                        onClick={() => ejecutar(async () => reemplazar(await iniciarInstalacion(token, s.id)))}>
-                        Iniciar instalación
-                      </button>
-                    </div>
-                  </>
+                  <p className="ss-meta">Repuestos en el taller. Inicia la instalación cuando empiece el trabajo.</p>
                 )}
                 {s.estado === "EN_INSTALACION" && (
-                  <>
-                    <p className="ss-meta">
-                      En instalación desde {formatFechaHora(s.fechaInicioInstalacion)}
-                      {s.subestado === "EN_PRUEBAS" ? " · En pruebas" : ""}
-                    </p>
-                    <div className="ss-acciones">
-                      {s.subestado !== "EN_PRUEBAS" && (
-                        <button className="sv-btn-outline" disabled={procesando}
-                          onClick={() => ejecutar(async () => reemplazar(await marcarEnPruebas(token, s.id)))}>
-                          Marcar en pruebas (opcional)
-                        </button>
-                      )}
-                      <button className="sv-btn" disabled={procesando}
-                        onClick={() => ejecutar(async () => reemplazar(await marcarLista(token, s.id)))}>
-                        Marcar lista
-                      </button>
-                    </div>
-                  </>
+                  <p className="ss-meta">En instalación desde {formatFechaHora(s.fechaInicioInstalacion)}{enPruebas ? " · En pruebas" : ""}</p>
                 )}
                 {s.estado === "LISTA" && (
-                  <>
-                    <p className="ss-meta">Lista desde {formatFechaHora(s.fechaLista)}. Avisamos al cliente por correo.</p>
-                    <div className="ss-acciones">
-                      <button className="sv-btn" disabled={procesando}
-                        onClick={() => ejecutar(async () => reemplazar(await marcarEntregada(token, s.id)))}>
-                        Marcar entregada
-                      </button>
-                    </div>
-                  </>
+                  <p className="ss-meta">Lista desde {formatFechaHora(s.fechaLista)}. Avisamos al cliente por correo.</p>
                 )}
                 {s.estado === "ENTREGADA" && (
                   <p className="ss-meta">
@@ -515,34 +551,46 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial 
                       : " · Esperando la confirmación del cliente"}
                   </p>
                 )}
+                {(accion || (s.estado === "EN_INSTALACION" && !enPruebas)) && (
+                  <div className="ui-form-pie">
+                    {s.estado === "EN_INSTALACION" && !enPruebas && (
+                      <button type="button" className="ui-btn ui-btn--secundario" disabled={procesando}
+                        onClick={() => ejecutar(async () => reemplazar(await marcarEnPruebas(token, s.id)))}>
+                        Marcar en pruebas (opcional)
+                      </button>
+                    )}
+                    {accion && (
+                      <button type="button" className="ui-btn ui-btn--primario" disabled={procesando} aria-busy={procesando}
+                        onClick={() => ejecutar(accion.ejecutar)}>
+                        {accion.texto}
+                      </button>
+                    )}
+                  </div>
+                )}
               </section>
             )}
 
             {s.cotizacionId && <SeguimientoTaller token={token} solicitud={s} onCambio={cargar} />}
           </div>
 
-          <aside className="ss-detalle__lateral">
-            <h3 className="ss-bloque__titulo">Avance</h3>
+          <aside className="ss-detalle__lateral" aria-labelledby="st-avance">
+            <h2 id="st-avance" className="ss-bloque__titulo">Avance</h2>
             <LineaTiempo eventos={s.eventos} />
           </aside>
         </div>
+
+        {barra && (
+          <BarraAccionMovil etiqueta={barra.etiqueta} valor={barra.valor}>
+            <button type="button" className="ui-btn ui-btn--primario" onClick={barra.onClick} disabled={procesando} aria-busy={procesando}>
+              {barra.texto}
+            </button>
+          </BarraAccionMovil>
+        )}
       </div>
     );
   }
 
   // ─── Lista ──────────────────────────────────────────────────────────────
-  /** Acción que corresponde a este trabajo, para resolverla sin abrir el detalle. */
-  const accionRapida = (s) => {
-    if (s.estado === "REPUESTOS_PEDIDOS") return {
-      texto: "Confirmar repuestos recibidos",
-      ejecutar: async () => { await confirmarRepuestosRecibidos(token, s.id); await cargar(); },
-    };
-    if (s.estado === "REPUESTOS_RECIBIDOS") return { texto: "Iniciar instalación", ejecutar: async () => reemplazar(await iniciarInstalacion(token, s.id)) };
-    if (s.estado === "EN_INSTALACION") return { texto: "Marcar lista", ejecutar: async () => reemplazar(await marcarLista(token, s.id)) };
-    if (s.estado === "LISTA") return { texto: "Marcar entregada", ejecutar: async () => reemplazar(await marcarEntregada(token, s.id)) };
-    return null;
-  };
-
   const tarjetaTrabajo = (s) => {
     const paso = pasoDeTrabajo(s);
     const accion = accionRapida(s);
