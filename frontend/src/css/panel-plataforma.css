@@ -1,0 +1,153 @@
+/* ── Panel de la plataforma (SUPERADMIN), prefijo pp-, BEM ─────────────────
+   Cabecera, cifras (ui-indicador), chips, buscador, tabla que pasa a tarjetas, avisos, vacío, carga, logo y
+   calificación son de ui.css; el margen de página y los tokens son de .ss-panel--plataforma. Aquí solo lo que
+   comparten las pantallas del panel: bloques, la lista de lo urgente, las barras, los filtros y la paginación.
+   Tokens --ui-*, los dos temas. */
+
+.pp-bloque-sep { margin-bottom: var(--ui-sp-4); }
+.pp-seccion { margin-bottom: var(--ui-sp-5); }
+
+.pp-root .pp-titulo {
+  margin: 0 0 12px;
+  font-family: var(--ui-font);
+  font-size: var(--fs-subtitulo);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ui-text);
+}
+
+.pp-esqueleto-indicador { height: 112px; border-radius: 12px; }
+
+.pp-actualizado { font-size: 0.8125rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Bloque con título y contenido (lo urgente, rankings, barras) */
+.pp-bloque {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+  padding: 20px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-1);
+}
+
+.pp-bloque__cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; }
+
+.pp-root .pp-bloque__titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: var(--fs-subtitulo);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ui-text);
+}
+
+.pp-bloque__nota { font-size: 0.8125rem; color: var(--ui-muted); }
+
+.pp-root .pp-bloque__vacio {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ui-muted);
+  text-wrap: pretty;
+}
+
+.pp-bloque__vacio svg { flex-shrink: 0; margin-top: 2px; color: var(--ui-ok); }
+
+.pp-columnas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── Lo urgente primero ────────────────────────────────────────────────── */
+.pp-urgentes { display: grid; margin: 0; padding: 0; list-style: none; }
+
+.pp-urgente {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.pp-urgente:first-child { border-top: 0; padding-top: 0; }
+.pp-urgente:last-child { padding-bottom: 0; }
+.pp-urgente__texto { display: grid; gap: 2px; min-width: 0; }
+.pp-urgente__titulo { font-size: 0.95rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pp-urgente__detalle { font-size: 0.8125rem; line-height: 1.45; color: var(--ui-muted); text-wrap: pretty; }
+
+/* ── Barras (órdenes por estado, suscripciones por plan) ───────────────── */
+.pp-barras { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.pp-barras__fila {
+  display: grid;
+  grid-template-columns: minmax(110px, 170px) minmax(0, 1fr) 4ch;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.pp-barras__fila strong { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Filtros y paginación de las listas ────────────────────────────────── */
+.pp-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 10px;
+}
+
+.pp-filtros__select { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; color: var(--ui-muted); }
+.pp-filtros__select .ui-field__input { min-height: 40px; width: auto; padding-block: 6px; }
+
+/* Mientras llega otra página o filtro, la lista anterior queda a la vista, atenuada */
+.pp-actualizando { opacity: 0.6; transition: opacity var(--ui-dur) ease; }
+
+.pp-paginas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 0.8125rem;
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pp-paginas__botones { display: inline-flex; align-items: center; gap: 10px; }
+
+.pp-tenue { color: var(--ui-muted); }
+.pp-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pp-sub { display: block; margin-top: 2px; font-size: 0.8rem; color: var(--ui-muted); }
+
+@media (max-width: 960px) {
+  .pp-columnas { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .pp-filtros .ui-buscador { max-width: none; flex-basis: 100%; }
+  .ui-table--tarjetas .pp-num { text-align: right; }
+}
+
+/* Celular: el chip baja bajo el texto y la acción queda a la derecha, a la altura del pulgar */
+@media (max-width: 600px) {
+  .pp-urgente { grid-template-columns: minmax(0, 1fr) auto; }
+  .pp-urgente .ui-badge { grid-column: 1; grid-row: 2; justify-self: start; }
+  .pp-urgente__accion { grid-column: 2; grid-row: 1 / span 2; min-height: 40px; }
+  .pp-barras__fila { grid-template-columns: minmax(0, 1fr) 4ch; }
+  .pp-barras__fila .ui-progreso { grid-column: 1 / -1; order: 3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-actualizando { transition: none; }
+}

@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { dashboardPlataforma } from "../services/plataformaService";
-import "../css/dashboard.css";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Indicador from "../components/ui/Indicador";
+import ChipEstado from "../components/ui/ChipEstado";
+import Alerta from "../components/ui/Alerta";
+import Esqueleto from "../components/ui/Esqueleto";
+import BarraProgreso from "../components/ui/BarraProgreso";
+import Icon from "../components/public/Icon";
+import { barras, urgentesDashboard } from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
-import "../css/admin-base.css";
+import "../css/panel-plataforma.css";
 
 const REFRESCO_MS = 60000;
 
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
+const hora = (iso) => new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
 
 const ESTADOS_ORDEN = {
   ENVIADA: "Enviada", ASIGNADA_A_TALLER: "Asignada a taller", REASIGNADA: "Reasignada", EN_REVISION: "En revisión",
@@ -15,46 +23,63 @@ const ESTADOS_ORDEN = {
   REPUESTOS_PEDIDOS: "Repuestos pedidos", REPUESTOS_RECIBIDOS: "Repuestos recibidos", EN_INSTALACION: "En instalación",
   LISTA: "Lista", ENTREGADA: "Entregada", RECHAZADA: "Rechazada", CANCELADA: "Cancelada",
 };
-const ORDEN_ESTADOS = Object.keys(ESTADOS_ORDEN);
 
-function Kpi({ etiqueta, valor, detalle, tono }) {
+/** Ranking de ventas: tabla en escritorio, tarjetas en celular. */
+function Ranking({ id, titulo, vacio, filas, columnas }) {
   return (
-    <div className="db-kpi dp-kpi">
-      <p className="db-kpi-label">{etiqueta}</p>
-      <p className={`db-kpi-val ${tono || ""}`}>{valor}</p>
-      {detalle && <p className="dp-kpi__detalle">{detalle}</p>}
-    </div>
-  );
-}
-
-function Tabla({ titulo, vacio, filas, columnas }) {
-  return (
-    <div className="db-card dp-tabla">
-      <h2 className="db-card-title">{titulo}</h2>
+    <section className="pp-bloque" aria-labelledby={id}>
+      <h2 id={id} className="pp-bloque__titulo">{titulo}</h2>
       {filas.length === 0 ? (
-        <p className="adm-vacio">{vacio}</p>
+        <p className="pp-bloque__vacio">{vacio}</p>
       ) : (
-        <div className="adm-tabla-wrap">
-          <table className="adm-tabla adm-tabla--tarjetas">
-            <thead><tr>{columnas.map((c) => <th key={c.k} className={c.der ? "adm-tabla__der" : ""}>{c.t}</th>)}</tr></thead>
+        <div className="ui-table-wrap">
+          <table className="ui-table ui-table--tarjetas">
+            <thead>
+              <tr>{columnas.map((c) => <th key={c.k} scope="col" className={c.num ? "pp-num" : undefined}>{c.t}</th>)}</tr>
+            </thead>
             <tbody>
-              {filas.map((f, i) => (
-                <tr key={f.id ?? i}>
-                  {columnas.map((c) => <td key={c.k} className={c.der ? "adm-tabla__der" : ""} data-label={c.t}>{c.f ? c.f(f) : f[c.k]}</td>)}
+              {filas.map((f) => (
+                <tr key={f.id}>
+                  {columnas.map((c, i) => (
+                    <td key={c.k} data-label={i === 0 ? undefined : c.t}
+                      className={i === 0 ? "ui-table__titulo" : c.num ? "pp-num" : undefined}>
+                      {c.f ? c.f(f) : f[c.k] || <span className="pp-tenue">Sin nombre</span>}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </div>
+    </section>
+  );
+}
+
+/** Lista de barras con su número; la barra es BarraProgreso (parte del total). */
+function Barras({ id, titulo, vacio, filas }) {
+  return (
+    <section className="pp-bloque" aria-labelledby={id}>
+      <h2 id={id} className="pp-bloque__titulo">{titulo}</h2>
+      {filas.length === 0 ? <p className="pp-bloque__vacio">{vacio}</p> : (
+        <ul className="pp-barras">
+          {filas.map((f) => (
+            <li key={f.clave} className="pp-barras__fila">
+              <span>{f.etiqueta}</span>
+              <BarraProgreso valor={Math.max(2, f.pct)} etiqueta={`${f.etiqueta}: ${num(f.n)}`} />
+              <strong>{num(f.n)}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
 /**
  * Panel de la plataforma (SUPERADMIN). DriveMaster administra el marketplace pero no vende: el dinero que pagan
- * los clientes se reparte entre talleres y tiendas. Por eso se muestra separado lo que "movió" la plataforma
- * (no es suyo) de la comisión registrada (informativa) y de las suscripciones.
+ * los clientes se reparte entre talleres y tiendas. Primero lo que pide atención, con acceso directo a cada lista;
+ * después las cifras, separando lo que "movió" la plataforma (no es suyo) de la comisión registrada (informativa).
  */
 export default function DashboardPlataforma({ token, onIr }) {
   const [estado, setEstado] = useState({ datos: null, error: null });
@@ -62,7 +87,7 @@ export default function DashboardPlataforma({ token, onIr }) {
 
   const cargar = useCallback(() => {
     setCargando(true);
-    dashboardPlataforma(token)
+    return dashboardPlataforma(token)
       .then((datos) => setEstado({ datos, error: null }))
       .catch((e) => setEstado((previo) => ({ datos: previo.datos, error: e.message })))
       .finally(() => setCargando(false));
@@ -75,133 +100,137 @@ export default function DashboardPlataforma({ token, onIr }) {
   }, [cargar]);
 
   const { datos: d, error } = estado;
+  const ir = (pagina, preset) => onIr?.(pagina, preset);
+
+  const encabezado = (
+    <EncabezadoPagina titulo="Panel de la plataforma"
+      descripcion="DriveMaster administra el marketplace, no vende: sus ingresos son la comisión y las suscripciones."
+      acciones={(
+        <>
+          {d && <span className="pp-actualizado">Actualizado a las {hora(d.generadoEn)}</span>}
+          <button type="button" className="ui-btn ui-btn--secundario" onClick={cargar} disabled={cargando} aria-busy={cargando}>
+            <Icon name="refresh" size={16} /> {cargando && d ? "Actualizando…" : "Actualizar"}
+          </button>
+        </>
+      )} />
+  );
 
   if (!d) {
     return (
-      <div className="adm-pagina">
-        {error ? <div className="adm-alerta adm-alerta--error" role="alert">{error}</div>
-          : <div className="adm-cargando">Cargando el panel…</div>}
+      <div className="ss-panel--plataforma pp-root">
+        {encabezado}
+        {error ? (
+          <Alerta onReintentar={cargar} reintentando={cargando}>{error}</Alerta>
+        ) : (
+          <>
+            <div className="ui-indicadores pp-seccion" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => <span key={i} className="ui-skeleton pp-esqueleto-indicador" />)}
+            </div>
+            <Esqueleto variante="lista" cantidad={3} texto="Cargando el panel…" />
+          </>
+        )}
       </div>
     );
   }
 
-  const a = d.alertas;
-  const alertas = [
-    { n: a.negociosPorAprobar, texto: "negocios por aprobar", ir: "aprobaciones" },
-    { n: a.despachosAtrasados, texto: "despachos atrasados", ir: "pedidos-envios", preset: "atrasados" },
-    { n: a.problemasEnvioAbiertos, texto: "problemas de envío abiertos", ir: "problemas-envios" },
-    { n: a.liquidacionesPendientes, texto: "liquidaciones por pagar", ir: "liquidaciones" },
-    { n: a.liquidacionesFallidas, texto: "liquidaciones fallidas", ir: "liquidaciones", critica: true },
-    { n: a.reembolsosPendientes, texto: `reembolsos pendientes (${cop(a.montoReembolsosPendientes)})`, ir: "liquidaciones", critica: true },
-  ].filter((x) => x.n > 0);
-
-  const estadosOrdenes = [
-    ...ORDEN_ESTADOS.filter((e) => d.ordenesPorEstado[e]),
-    ...Object.keys(d.ordenesPorEstado).filter((e) => !ESTADOS_ORDEN[e]),
-  ];
-  const totalOrdenes = estadosOrdenes.reduce((s, e) => s + d.ordenesPorEstado[e], 0);
-  const planes = Object.entries(d.suscripcionesPorPlan);
-  const totalSuscripciones = planes.reduce((s, [, n]) => s + n, 0);
+  const urgentes = urgentesDashboard(d.alertas);
+  const ordenes = barras(d.ordenesPorEstado, ESTADOS_ORDEN, Object.keys(ESTADOS_ORDEN));
+  const planes = barras(d.suscripcionesPorPlan);
 
   return (
-    <div className="adm-pagina">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Panel de la plataforma</h1>
-          <p className="adm-encabezado__sub">
-            DriveMaster administra el marketplace, no vende. Sus ingresos son la comisión y las suscripciones;
-            lo que pagan los clientes es de los talleres y las tiendas.
+    <div className="ss-panel--plataforma pp-root">
+      {encabezado}
+
+      {error && (
+        <Alerta tono="aviso" className="pp-bloque-sep" onReintentar={cargar} reintentando={cargando}>
+          No pudimos actualizar el panel: se muestran los datos de las {hora(d.generadoEn)}.
+        </Alerta>
+      )}
+
+      <section className="pp-bloque pp-seccion" aria-labelledby="pp-urgente">
+        <div className="pp-bloque__cabecera">
+          <h2 id="pp-urgente" className="pp-bloque__titulo">Lo urgente primero</h2>
+          {urgentes.length > 0 && <span className="pp-bloque__nota">{urgentes.length} {urgentes.length === 1 ? "tema" : "temas"} por atender</span>}
+        </div>
+        {urgentes.length === 0 ? (
+          <p className="pp-bloque__vacio">
+            <Icon name="check" size={18} /> Nada pide tu atención: no hay negocios por aprobar, problemas de envío,
+            despachos atrasados ni pagos pendientes.
           </p>
-        </div>
-        <div className="adm-encabezado__lado dp-acciones">
-          <span className="adm-encabezado__dato">
-            Actualizado {new Date(d.generadoEn).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
-          </span>
-          <button type="button" className="adm-btn" onClick={cargar} disabled={cargando}>
-            {cargando ? "Actualizando…" : "Actualizar"}
-          </button>
-        </div>
-      </header>
-
-      {error && <div className="adm-alerta adm-alerta--error" role="alert">{error} (se muestran los últimos datos)</div>}
-
-      <section aria-label="Alertas" className="dp-alertas">
-        {alertas.length === 0 ? (
-          <p className="dp-alertas__ok">Sin alertas: no hay despachos atrasados, problemas abiertos ni pagos pendientes.</p>
-        ) : alertas.map((x) => (
-          <button key={x.texto} type="button" className={`dp-alerta${x.critica ? " dp-alerta--critica" : ""}`}
-            onClick={() => onIr?.(x.ir, x.preset)}>
-            <strong>{num(x.n)}</strong> {x.texto}
-          </button>
-        ))}
+        ) : (
+          <ul className="pp-urgentes">
+            {urgentes.map((u) => (
+              <li key={u.clave} className="pp-urgente">
+                <div className="pp-urgente__texto">
+                  <strong className="pp-urgente__titulo">{u.titulo}</strong>
+                  <span className="pp-urgente__detalle">{u.detalle}</span>
+                </div>
+                <ChipEstado tono={u.tono}>{u.estado}</ChipEstado>
+                <button type="button" className={`ui-btn ui-btn--chico pp-urgente__accion ${u.tono === "error" ? "ui-btn--primario" : "ui-btn--secundario"}`}
+                  onClick={() => ir(u.pagina, u.preset)} aria-label={`${u.accion}: ${u.titulo}`}>
+                  {u.accion} <Icon name="arrow" size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
-      <h2 className="adm-seccion">Plataforma</h2>
-      <div className="db-kpi-grid">
-        <Kpi etiqueta="Tiendas registradas" valor={num(d.tiendas.registradas)}
-          detalle={`${num(d.tiendas.aprobadas)} aprobadas · ${num(d.tiendas.pendientes)} pendientes`} />
-        <Kpi etiqueta="Talleres" valor={num(d.talleres.registradas)}
-          detalle={`${num(d.talleres.aprobadas)} aprobados · ${num(d.talleres.pendientes)} pendientes`} />
-        <Kpi etiqueta="Clientes" valor={num(d.clientes.total)}
-          detalle={`+${num(d.clientes.nuevos7Dias)} en 7 días · +${num(d.clientes.nuevos30Dias)} en 30`} />
-        <Kpi etiqueta="Productos" valor={num(d.productos.total)}
-          detalle={`${num(d.productos.nuevos7Dias)} nuevos en 7 días · ${num(d.productos.nuevos30Dias)} en 30`} />
-      </div>
+      <section className="pp-seccion" aria-labelledby="pp-plataforma">
+        <h2 id="pp-plataforma" className="pp-titulo">Plataforma</h2>
+        <div className="ui-indicadores">
+          <Indicador icono="box" titulo="Tiendas" valor={num(d.tiendas.registradas)}
+            tono={d.tiendas.pendientes > 0 ? "accion" : undefined}
+            pie={`${num(d.tiendas.aprobadas)} aprobadas · ${num(d.tiendas.pendientes)} por aprobar`}
+            onClick={() => ir("negocios")} />
+          <Indicador icono="tool" titulo="Talleres" valor={num(d.talleres.registradas)}
+            tono={d.talleres.pendientes > 0 ? "accion" : undefined}
+            pie={`${num(d.talleres.aprobadas)} aprobados · ${num(d.talleres.pendientes)} por aprobar`}
+            onClick={() => ir("negocios")} />
+          <Indicador icono="users" titulo="Clientes" valor={num(d.clientes.total)}
+            pie={`+${num(d.clientes.nuevos7Dias)} en 7 días · +${num(d.clientes.nuevos30Dias)} en 30`}
+            onClick={() => ir("clientes")} />
+          <Indicador icono="layers" titulo="Productos" valor={num(d.productos.total)}
+            pie={`${num(d.productos.nuevos7Dias)} nuevos en 7 días · ${num(d.productos.nuevos30Dias)} en 30`}
+            onClick={() => ir("productos")} />
+        </div>
+      </section>
 
-      <h2 className="adm-seccion">Dinero</h2>
-      <div className="db-kpi-grid">
-        <Kpi etiqueta="Total movido" valor={cop(d.dinero.movido)} detalle="Pagos aprobados que pasaron por la plataforma. No es ingreso de DriveMaster." />
-        <Kpi etiqueta="Comisión registrada" tono="orange" valor={cop(d.dinero.comisionRegistrada)}
-          detalle={`Informativa, al ${d.dinero.comisionPct}% vigente en cada pago. No es dinero cobrado.`} />
-        <Kpi etiqueta="Por liquidar a negocios" valor={cop(d.dinero.porLiquidar)} detalle="Ya habilitado para pagar a talleres y tiendas." />
-      </div>
+      <section className="pp-seccion" aria-labelledby="pp-dinero">
+        <h2 id="pp-dinero" className="pp-titulo">Dinero</h2>
+        <div className="ui-indicadores">
+          <Indicador titulo="Total movido" valor={cop(d.dinero.movido)}
+            pie="Pagos aprobados que pasaron por la plataforma. No es ingreso de DriveMaster." />
+          <Indicador titulo="Comisión registrada" valor={cop(d.dinero.comisionRegistrada)} tono="ok"
+            pie={`Informativa, al ${d.dinero.comisionPct}% vigente en cada pago. No es dinero cobrado.`}
+            onClick={() => ir("reportes-plataforma")} />
+          <Indicador titulo="Por liquidar a negocios" valor={cop(d.dinero.porLiquidar)}
+            pie="Ya habilitado para pagar a talleres y tiendas." onClick={() => ir("liquidaciones")} />
+        </div>
+      </section>
 
-      <div className="dp-dos">
-        <Tabla titulo="Productos más vendidos" vacio="Todavía no hay ventas."
+      <div className="pp-columnas pp-seccion">
+        <Ranking id="pp-productos" titulo="Productos más vendidos" vacio="Todavía no hay ventas en el catálogo."
           filas={d.productosMasVendidos.map((p) => ({ ...p, id: p.productoId }))}
-          columnas={[{ k: "nombre", t: "Producto" }, { k: "tienda", t: "Tienda" },
-            { k: "unidades", t: "Unid.", der: true, f: (p) => num(p.unidades) },
-            { k: "ventas", t: "Ventas", der: true, f: (p) => cop(p.ventas) }]} />
-        <Tabla titulo="Tiendas más vendedoras" vacio="Todavía no hay ventas."
+          columnas={[
+            { k: "nombre", t: "Producto", f: (p) => (
+              <>{p.nombre || "Sin nombre"}<span className="pp-sub">{p.tienda || "Tienda sin nombre"}</span></>
+            ) },
+            { k: "unidades", t: "Unidades", num: true, f: (p) => num(p.unidades) },
+            { k: "ventas", t: "Ventas", num: true, f: (p) => cop(p.ventas) },
+          ]} />
+        <Ranking id="pp-tiendas" titulo="Tiendas más vendedoras" vacio="Todavía no hay ventas en el catálogo."
           filas={d.tiendasMasVendedoras.map((t) => ({ ...t, id: t.tiendaId }))}
-          columnas={[{ k: "nombre", t: "Tienda" },
-            { k: "pedidos", t: "Pedidos", der: true, f: (t) => num(t.pedidos) },
-            { k: "ventas", t: "Ventas", der: true, f: (t) => cop(t.ventas) }]} />
+          columnas={[
+            { k: "nombre", t: "Tienda" },
+            { k: "pedidos", t: "Pedidos", num: true, f: (t) => num(t.pedidos) },
+            { k: "ventas", t: "Ventas", num: true, f: (t) => cop(t.ventas) },
+          ]} />
       </div>
 
-      <div className="dp-dos">
-        <div className="db-card">
-          <h2 className="db-card-title">Órdenes de servicio por estado</h2>
-          {estadosOrdenes.length === 0 ? <p className="adm-vacio">Todavía no hay órdenes de servicio.</p> : (
-            <ul className="dp-barras">
-              {estadosOrdenes.map((e) => (
-                <li key={e}>
-                  <span>{ESTADOS_ORDEN[e] || e}</span>
-                  <span className="dp-barras__pista" aria-hidden="true">
-                    <span style={{ width: `${Math.max(4, (d.ordenesPorEstado[e] / totalOrdenes) * 100)}%` }} />
-                  </span>
-                  <strong>{num(d.ordenesPorEstado[e])}</strong>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="db-card">
-          <h2 className="db-card-title">Suscripciones activas por plan</h2>
-          {planes.length === 0 ? <p className="adm-vacio">Todavía no hay suscripciones activas.</p> : (
-            <ul className="dp-barras">
-              {planes.map(([plan, n]) => (
-                <li key={plan}>
-                  <span>{plan}</span>
-                  <span className="dp-barras__pista" aria-hidden="true">
-                    <span style={{ width: `${Math.max(4, (n / totalSuscripciones) * 100)}%` }} />
-                  </span>
-                  <strong>{num(n)}</strong>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      <div className="pp-columnas">
+        <Barras id="pp-ordenes" titulo="Órdenes de servicio por estado" vacio="Todavía no hay órdenes de servicio." filas={ordenes} />
+        <Barras id="pp-planes" titulo="Suscripciones activas por plan" vacio="Todavía no hay suscripciones activas." filas={planes} />
       </div>
     </div>
   );
