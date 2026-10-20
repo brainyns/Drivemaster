@@ -107,7 +107,7 @@
 }
 
 .pp-filtros__select { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; color: var(--ui-muted); }
-.pp-filtros__select .ui-field__input { min-height: 40px; width: auto; padding-block: 6px; }
+.pp-filtros__select .ui-field__input { min-height: 40px; width: auto; padding-block: 6px; font-size: 0.875rem; }
 
 /* Mientras llega otra página o filtro, la lista anterior queda a la vista, atenuada */
 .pp-actualizando { opacity: 0.6; transition: opacity var(--ui-dur) ease; }
@@ -127,7 +127,7 @@
 .pp-paginas__botones { display: inline-flex; align-items: center; gap: 10px; }
 
 .pp-tenue { color: var(--ui-muted); }
-.pp-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pp-num, .ui-table th.pp-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pp-sub { display: block; margin-top: 2px; font-size: 0.8rem; color: var(--ui-muted); }
 
 @media (max-width: 960px) {

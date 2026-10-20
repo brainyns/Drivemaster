@@ -1,64 +1,176 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { negociosPlataforma } from "../services/plataformaService";
 import { resolverAprobacionTaller, activarDesactivarTaller } from "../services/tallerService";
 import { resolverAprobacionTienda, activarDesactivarTienda } from "../services/tiendaService";
 import { listarPlanes, activarPlan } from "../services/suscripcionService";
-import "../css/dashboard.css";
+import { capitalizar, formatoFecha, unir } from "../utils/formato";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import Calificacion from "../components/ui/Calificacion";
+import LogoNegocio from "../components/ui/LogoNegocio";
+import BarraProgreso from "../components/ui/BarraProgreso";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Campo from "../components/ui/Campo";
+import Icon from "../components/public/Icon";
+import {
+  ESTADOS_NEGOCIO, SIN_PLAN, TIPOS_NEGOCIO, actividadNegocio, estadoNegocio, filtrosInicialesNegocios, perfilNegocio,
+} from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
-import "../css/admin-base.css";
-import { capitalizar } from "../utils/formato";
+import "../css/panel-plataforma.css";
+import "../css/negocios-plataforma.css";
 
 const TAMANO = 20;
-const ESTADOS = { PENDIENTE: "Pendiente", APROBADO: "Aprobado", RECHAZADO: "Rechazado" };
-const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—");
-const FILTROS_INICIALES = { tipo: "", estado: "", q: "" };
+const clave = (n) => `${n.tipo}-${n.id}`;
+const nombreTipo = (n) => (n.tipo === "TIENDA" ? "Tienda" : "Taller");
 
 /**
- * Tiendas y talleres en una sola lista (SUPERADMIN): estado de aprobación, plan, calificación, productos u órdenes
- * y qué datos les faltan. Desde aquí se aprueba, rechaza, pausa y cambia el plan. El ADMIN no ve esta pantalla:
- * solo aprueba o rechaza desde "Aprobaciones".
+ * Lo que se hace con un negocio desde su fila: aprobar con un plan o rechazar con motivo (pendientes), y cambiar el
+ * plan o pausar (aprobados). Las mismas llamadas de siempre; el resultado lo informa la pantalla.
  */
-export default function NegociosPlataforma({ token }) {
-  const [borrador, setBorrador] = useState(FILTROS_INICIALES);
-  const [filtros, setFiltros] = useState(FILTROS_INICIALES);
+function Gestion({ n, planes, procesando, onAprobar, onRechazar, onCambiarPlan, onAlternar, error }) {
+  const k = clave(n);
+  const [plan, setPlan] = useState(n.estado === "PENDIENTE" ? "PRUEBA" : n.plan?.codigo || "");
+  const [rechazando, setRechazando] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [errorMotivo, setErrorMotivo] = useState(null);
+  const ocupado = procesando === k;
+  const perfil = perfilNegocio(n);
+
+  const confirmarRechazo = () => {
+    if (!motivo.trim()) { setErrorMotivo("Escribe el motivo del rechazo: se le enviará al negocio."); return; }
+    onRechazar(n, motivo.trim());
+  };
+
+  return (
+    <div className="neg-gestion" id={`neg-gestion-${k}`}>
+      <ul className="neg-gestion__datos">
+        {n.tipo === "TIENDA"
+          ? <li>{n.productosActivos ?? 0} de {n.productos ?? 0} productos activos</li>
+          : <li>{n.ordenesEntregadas ?? 0} de {n.ordenes ?? 0} órdenes entregadas</li>}
+        <li>{perfil.completo ? "Perfil completo" : `Le falta: ${perfil.faltan.join(", ")}`}</li>
+        {n.plan?.hasta && <li>Plan vigente hasta el {formatoFecha(n.plan.hasta)}</li>}
+      </ul>
+      {n.estado === "RECHAZADO" && n.motivoRechazo && (
+        <p className="neg-gestion__motivo"><strong>Motivo del rechazo:</strong> {n.motivoRechazo}</p>
+      )}
+
+      {n.estado === "PENDIENTE" && (
+        <div className="neg-gestion__fila">
+          <Campo id={`neg-plan-${k}`} label="Plan al aprobar" className="neg-gestion__campo">
+            <select className="ui-field__input" value={plan} onChange={(e) => setPlan(e.target.value)}>
+              {planes.filter((p) => p.activo).map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
+            </select>
+          </Campo>
+          <button type="button" className="ui-btn ui-btn--primario" disabled={ocupado} aria-busy={ocupado}
+            onClick={() => onAprobar(n, plan || "PRUEBA")}>
+            <Icon name="check" size={16} /> Aprobar
+          </button>
+          <button type="button" className="ui-btn ui-btn--secundario" aria-expanded={rechazando} disabled={ocupado}
+            onClick={() => { setRechazando(!rechazando); setErrorMotivo(null); }}>
+            Rechazar…
+          </button>
+        </div>
+      )}
+
+      {rechazando && (
+        <div className="neg-gestion__fila">
+          <Campo id={`neg-motivo-${k}`} label="Motivo del rechazo" ayuda="Se le envía al negocio para que pueda corregirlo."
+            error={errorMotivo} className="neg-gestion__campo neg-gestion__campo--ancho">
+            <input className="ui-field__input" value={motivo} maxLength={300}
+              onChange={(e) => { setMotivo(e.target.value); if (errorMotivo) setErrorMotivo(null); }} />
+          </Campo>
+          <button type="button" className="ui-btn ui-btn--peligro" disabled={ocupado} aria-busy={ocupado} onClick={confirmarRechazo}>
+            Confirmar rechazo
+          </button>
+        </div>
+      )}
+
+      {n.estado === "APROBADO" && (
+        <div className="neg-gestion__fila">
+          <Campo id={`neg-plan-${k}`} label="Plan" className="neg-gestion__campo">
+            <select className="ui-field__input" value={plan} onChange={(e) => setPlan(e.target.value)}>
+              {!n.plan && <option value="">Sin plan</option>}
+              {planes.filter((p) => p.activo || p.codigo === n.plan?.codigo).map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
+            </select>
+          </Campo>
+          <button type="button" className="ui-btn ui-btn--primario" disabled={ocupado || !plan || plan === n.plan?.codigo}
+            onClick={() => onCambiarPlan(n, plan)}>
+            Cambiar plan
+          </button>
+          <button type="button" className={`ui-btn ${n.activo ? "ui-btn--secundario neg-pausar" : "ui-btn--primario"}`}
+            disabled={ocupado} aria-busy={ocupado} onClick={() => onAlternar(n)}>
+            {n.activo ? "Pausar" : "Activar"}
+          </button>
+        </div>
+      )}
+
+      {error && <Alerta>{error}</Alerta>}
+    </div>
+  );
+}
+
+/**
+ * Tiendas y talleres en una sola lista (SUPERADMIN): estado de aprobación, plan, calificación, actividad y perfil
+ * completo. Desde aquí se aprueba, rechaza, pausa y cambia el plan. El ADMIN no ve esta pantalla: solo aprueba o
+ * rechaza desde "Aprobaciones". filtroInicial ("TIENDA" o "TALLER") llega desde el dashboard.
+ */
+export default function NegociosPlataforma({ token, filtroInicial }) {
+  const [busqueda, setBusqueda] = useState("");
+  const [q, setQ] = useState("");
+  const [filtros, setFiltros] = useState(() => filtrosInicialesNegocios(filtroInicial));
   const [pagina, setPagina] = useState(0);
   const [version, setVersion] = useState(0);
-  const [estado, setEstado] = useState({ datos: null, error: null });
+  const [datos, setDatos] = useState(null); // { negocios: { items, total }, porEstado }
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
+
   const [planes, setPlanes] = useState([]);
   const [abierto, setAbierto] = useState(null);
-  const [planElegido, setPlanElegido] = useState({});
-  const [motivo, setMotivo] = useState("");
-  const [rechazando, setRechazando] = useState(null);
   const [procesando, setProcesando] = useState(null);
-  const [aviso, setAviso] = useState(null);
   const [errorAccion, setErrorAccion] = useState(null);
+  const [aviso, setAviso] = useState(null);
+
+  // La búsqueda va al servidor; espera a que se deje de escribir
+  useEffect(() => {
+    const termino = busqueda.trim();
+    if (termino === q) return undefined;
+    const id = setTimeout(() => { setQ(termino); setPagina(0); }, 300);
+    return () => clearTimeout(id);
+  }, [busqueda, q]);
+
+  const cargar = useCallback(async (vivo = () => true) => {
+    setCargando(true);
+    try {
+      const r = await negociosPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO });
+      if (!vivo()) return;
+      setDatos(r);
+      setError(null);
+    } catch (e) {
+      if (vivo()) setError(e.message);
+    } finally {
+      if (vivo()) setCargando(false);
+    }
+  }, [token, filtros, q, pagina]);
+
+  useEffect(() => {
+    let activo = true;
+    const id = setTimeout(() => cargar(() => activo), 0);
+    return () => { activo = false; clearTimeout(id); };
+  }, [cargar, version]);
 
   useEffect(() => {
     let vivo = true;
-    negociosPlataforma(token, { ...filtros, pagina, tamano: TAMANO })
-      .then((datos) => { if (vivo) setEstado({ datos, error: null }); })
-      .catch((e) => { if (vivo) setEstado((p) => ({ ...p, error: e.message })); });
-    return () => { vivo = false; };
-  }, [token, filtros, pagina, version]);
-
-  useEffect(() => {
-    let vivo = true;
-    listarPlanes(token).then((p) => { if (vivo) setPlanes(p.filter((x) => x.activo)); }).catch(() => {});
+    listarPlanes(token).then((p) => { if (vivo) setPlanes(p || []); }).catch(() => {});
     return () => { vivo = false; };
   }, [token]);
 
-  const { datos, error } = estado;
-  const lista = datos?.negocios;
-  const paginas = lista ? Math.max(1, Math.ceil(lista.total / lista.tamano)) : 1;
-  const clave = (n) => `${n.tipo}-${n.id}`;
-  const hayFiltros = filtros.tipo !== "" || filtros.estado !== "" || filtros.q !== "";
-
-  const poner = (cambio) => {
-    const siguiente = { ...borrador, ...cambio };
-    setBorrador(siguiente);
-    setPagina(0);
-    setFiltros(siguiente);
-  };
+  const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
+  const poner = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(0); setAbierto(null); };
+  const hayFiltros = q !== "" || filtros.tipo !== "" || filtros.estado !== "" || filtros.plan !== "";
+  const limpiar = () => { setBusqueda(""); setQ(""); setFiltros(filtrosInicialesNegocios()); setPagina(0); };
 
   const ejecutar = async (n, accion, mensaje) => {
     setProcesando(clave(n));
@@ -67,8 +179,7 @@ export default function NegociosPlataforma({ token }) {
     try {
       await accion();
       setAviso(mensaje);
-      setRechazando(null);
-      setMotivo("");
+      setAbierto(null);
       setVersion((v) => v + 1);
     } catch (e) {
       setErrorAccion(e.message);
@@ -77,179 +188,175 @@ export default function NegociosPlataforma({ token }) {
     }
   };
 
-  const aprobar = (n) => ejecutar(n,
-    () => (n.tipo === "TALLER" ? resolverAprobacionTaller : resolverAprobacionTienda)(token, n.id,
-      { aprobado: true, planCodigo: planElegido[clave(n)] || "PRUEBA" }),
+  const aprobar = (n, plan) => ejecutar(n,
+    () => (n.tipo === "TALLER" ? resolverAprobacionTaller : resolverAprobacionTienda)(token, n.id, { aprobado: true, planCodigo: plan }),
     `${n.nombre} quedó aprobado.`);
-
-  const rechazar = (n) => {
-    if (!motivo.trim()) { setErrorAccion("Escribe el motivo del rechazo: se le enviará al negocio."); return; }
-    ejecutar(n, () => (n.tipo === "TALLER" ? resolverAprobacionTaller : resolverAprobacionTienda)(token, n.id,
-      { aprobado: false, motivo: motivo.trim() }), `${n.nombre} fue rechazado.`);
-  };
-
+  const rechazar = (n, motivo) => ejecutar(n,
+    () => (n.tipo === "TALLER" ? resolverAprobacionTaller : resolverAprobacionTienda)(token, n.id, { aprobado: false, motivo }),
+    `${n.nombre} fue rechazado.`);
   const alternar = (n) => ejecutar(n,
     () => (n.tipo === "TALLER" ? activarDesactivarTaller : activarDesactivarTienda)(token, n.id, !n.activo),
     n.activo ? `${n.nombre} quedó en pausa.` : `${n.nombre} volvió a estar activo.`);
+  const cambiarPlan = (n, plan) => ejecutar(n, () => activarPlan(token, n.tipo, n.id, plan), `Plan de ${n.nombre} actualizado.`);
 
-  const cambiarPlan = (n) => {
-    const plan = planElegido[clave(n)];
-    if (!plan || plan === n.plan?.codigo) return;
-    ejecutar(n, () => activarPlan(token, n.tipo, n.id, plan), `Plan de ${n.nombre} actualizado.`);
-  };
+  const lista = datos?.negocios;
+  const items = lista?.items || [];
+  const total = lista?.total || 0;
+  const paginas = Math.max(1, Math.ceil(total / TAMANO));
+  const porEstado = datos?.porEstado || {};
+  const totalNegocios = Object.values(porEstado).reduce((s, n) => s + n, 0);
 
   return (
-    <div className="adm-pagina">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Tiendas y talleres</h1>
-          <p className="adm-encabezado__sub">Aprobaciones, plan, calificación, actividad y datos por completar de cada negocio.</p>
-        </div>
-        {lista && <span className="adm-encabezado__dato">{lista.total} {lista.total === 1 ? "negocio" : "negocios"}</span>}
-      </header>
+    <div className="ss-panel--plataforma pp-root neg-root">
+      <EncabezadoPagina titulo="Tiendas y talleres"
+        descripcion="Aprobación, plan, calificación, actividad y perfil de cada negocio del marketplace." />
 
-      {datos && (
-        <div className="adm-pestanas" role="tablist" aria-label="Estado de aprobación">
-          <button type="button" role="tab" aria-selected={filtros.estado === ""} className={`adm-pestana${filtros.estado === "" ? " adm-pestana--activa" : ""}`}
-            onClick={() => poner({ estado: "" })}>Todos</button>
-          {Object.keys(ESTADOS).map((e) => (
-            <button key={e} type="button" role="tab" aria-selected={filtros.estado === e}
-              className={`adm-pestana${filtros.estado === e ? " adm-pestana--activa" : ""}`} onClick={() => poner({ estado: e })}>
-              {ESTADOS[e]}s <span className="adm-pestana__n">{datos.porEstado[e] ?? 0}</span>
-            </button>
+      {aviso && <Alerta tono="ok" className="pp-bloque-sep" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
+
+      <div className="pp-filtros">
+        <div className="ui-buscador">
+          <Icon name="search" size={18} />
+          <label htmlFor="neg-busqueda" className="ui-sr">Buscar por nombre o ciudad</label>
+          <input id="neg-busqueda" className="ui-field__input" type="search" placeholder="Nombre o ciudad"
+            value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        </div>
+        <div className="ui-filtros" role="group" aria-label="Tipo de negocio">
+          {TIPOS_NEGOCIO.map((t) => (
+            <button key={t.valor || "todos"} type="button" className="ui-chip" aria-pressed={filtros.tipo === t.valor}
+              onClick={() => poner({ tipo: t.valor })}>{t.label}</button>
           ))}
         </div>
-      )}
-
-      <form className="adm-filtros" role="search" aria-label="Filtros de negocios"
-        onSubmit={(e) => { e.preventDefault(); setPagina(0); setFiltros(borrador); }}>
-        <label className="adm-campo adm-campo--ancho">
-          <span>Buscar</span>
-          <input type="search" value={borrador.q} onChange={(e) => setBorrador({ ...borrador, q: e.target.value })} placeholder="Nombre o ciudad" />
-        </label>
-        <label className="adm-campo">
-          <span>Tipo</span>
-          <select value={borrador.tipo} onChange={(e) => poner({ tipo: e.target.value })}>
-            <option value="">Tiendas y talleres</option>
-            <option value="TIENDA">Tiendas</option>
-            <option value="TALLER">Talleres</option>
+        <label className="pp-filtros__select">
+          Plan
+          <select className="ui-field__input" value={filtros.plan} onChange={(e) => poner({ plan: e.target.value })}>
+            <option value="">Todos los planes</option>
+            <option value={SIN_PLAN}>Sin plan</option>
+            {planes.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
           </select>
         </label>
-        <div className="adm-filtros__acciones">
-          <button type="submit" className="adm-btn">Buscar</button>
-          {hayFiltros && <button type="button" className="adm-btn adm-btn--sutil" onClick={() => { setBorrador(FILTROS_INICIALES); setFiltros(FILTROS_INICIALES); setPagina(0); }}>Limpiar</button>}
-        </div>
-      </form>
-
-      {aviso && <div className="adm-alerta adm-alerta--exito" role="status">{aviso}</div>}
-      {(error || errorAccion) && <div className="adm-alerta adm-alerta--error" role="alert">{errorAccion || error}</div>}
-
-      <div className="adm-tarjeta">
-        {!lista && !error ? (
-          <div className="adm-cargando">Cargando negocios…</div>
-        ) : lista && lista.items.length === 0 ? (
-          <p className="adm-vacio">{hayFiltros ? "Ningún negocio coincide con los filtros." : "Todavía no hay negocios registrados."}</p>
-        ) : lista && (
-          <div className="adm-tabla-wrap">
-            <table className="adm-tabla adm-tabla--tarjetas">
-              <thead>
-                <tr>
-                  <th>Negocio</th><th>Estado</th><th>Plan</th><th className="adm-tabla__der">Calificación</th>
-                  <th className="adm-tabla__der">Actividad</th><th>Datos por completar</th><th>Registro</th><th><span className="dp-oculto">Acciones</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {lista.items.map((n) => {
-                  const k = clave(n);
-                  const completo = n.datosPorCompletar.length === 0;
-                  return (
-                    <Fragment key={k}>
-                      <tr>
-                        <td data-label="Negocio">
-                          <strong>{n.nombre || "Sin nombre"}</strong>
-                          <span className="adm-tabla__sub">{n.tipo === "TIENDA" ? "Tienda" : "Taller"} · {capitalizar(n.ciudad) || "sin ciudad"}</span>
-                        </td>
-                        <td data-label="Estado">
-                          <span className={`adm-badge ${n.estado === "APROBADO" ? "adm-badge--exito" : n.estado === "RECHAZADO" ? "adm-badge--peligro" : "adm-badge--pendiente"}`}>{ESTADOS[n.estado] || n.estado}</span>
-                          {n.estado === "APROBADO" && !n.activo && <span className="adm-tabla__sub">En pausa</span>}
-                        </td>
-                        <td data-label="Plan">{n.plan ? n.plan.nombre : "—"}</td>
-                        <td className="adm-tabla__der" data-label="Calificación">{n.calificacion != null ? `${n.calificacion.toFixed(1)} ★${n.calificaciones ? ` (${n.calificaciones})` : ""}` : "Sin calificar"}</td>
-                        <td className="adm-tabla__der" data-label="Actividad">
-                          {n.tipo === "TIENDA" ? `${n.productos} producto${n.productos === 1 ? "" : "s"}` : `${n.ordenes} orden${n.ordenes === 1 ? "" : "es"}`}
-                        </td>
-                        <td data-label="Datos por completar">{completo ? <span className="adm-badge adm-badge--exito">Completos</span>
-                          : <span className="adm-badge adm-badge--peligro">Falta: {n.datosPorCompletar.join(", ")}</span>}</td>
-                        <td data-label="Registro">{fecha(n.registrado)}</td>
-                        <td className="adm-tabla__celda--ancha">
-                          <button type="button" className="adm-btn adm-btn--chico" aria-expanded={abierto === k}
-                            onClick={() => { setAbierto(abierto === k ? null : k); setRechazando(null); setErrorAccion(null); }}>
-                            {abierto === k ? "Cerrar" : "Gestionar"}
-                          </button>
-                        </td>
-                      </tr>
-                      {abierto === k && (
-                        <tr className="dp-gestion">
-                          <td colSpan={8}>
-                            {n.motivoRechazo && n.estado === "RECHAZADO" && <p className="dp-nota">Motivo del rechazo: {n.motivoRechazo}</p>}
-                            {n.tipo === "TIENDA" && <p className="dp-nota">{n.productosActivos} de {n.productos} productos activos.</p>}
-                            {n.tipo === "TALLER" && <p className="dp-nota">{n.ordenesEntregadas} de {n.ordenes} órdenes entregadas.</p>}
-
-                            {n.estado === "PENDIENTE" && (
-                              <div className="dp-acciones-fila">
-                                <label className="adm-campo">
-                                  <span>Plan al aprobar</span>
-                                  <select value={planElegido[k] || "PRUEBA"} onChange={(e) => setPlanElegido({ ...planElegido, [k]: e.target.value })}>
-                                    {planes.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
-                                  </select>
-                                </label>
-                                <button type="button" className="adm-btn adm-btn--primario" disabled={procesando === k} onClick={() => aprobar(n)}>Aprobar</button>
-                                <button type="button" className="adm-btn adm-btn--peligro" onClick={() => setRechazando(rechazando === k ? null : k)}>Rechazar…</button>
-                              </div>
-                            )}
-                            {rechazando === k && (
-                              <div className="dp-acciones-fila">
-                                <label className="adm-campo adm-campo--ancho">
-                                  <span>Motivo (se le envía al negocio)</span>
-                                  <input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} />
-                                </label>
-                                <button type="button" className="adm-btn adm-btn--peligro" disabled={procesando === k || !motivo.trim()} onClick={() => rechazar(n)}>Confirmar rechazo</button>
-                              </div>
-                            )}
-                            {n.estado === "APROBADO" && (
-                              <div className="dp-acciones-fila">
-                                <label className="adm-campo">
-                                  <span>Plan</span>
-                                  <select value={planElegido[k] || n.plan?.codigo || ""} onChange={(e) => setPlanElegido({ ...planElegido, [k]: e.target.value })}>
-                                    {!n.plan && <option value="">Sin plan</option>}
-                                    {planes.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
-                                  </select>
-                                </label>
-                                <button type="button" className="adm-btn adm-btn--primario" disabled={procesando === k || !planElegido[k] || planElegido[k] === n.plan?.codigo}
-                                  onClick={() => cambiarPlan(n)}>Cambiar plan</button>
-                                <button type="button" className={`adm-btn ${n.activo ? "adm-btn--peligro" : "adm-btn--primario"}`} disabled={procesando === k} onClick={() => alternar(n)}>
-                                  {n.activo ? "Pausar" : "Activar"}
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      </div>
+      <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Estado de aprobación">
+        <button type="button" className="ui-chip" aria-pressed={filtros.estado === ""} onClick={() => poner({ estado: "" })}>
+          Todos {datos && <span className="ui-chip__contador">{totalNegocios}</span>}
+        </button>
+        {Object.entries(ESTADOS_NEGOCIO).map(([e, info]) => (
+          <button key={e} type="button" className="ui-chip" aria-pressed={filtros.estado === e} onClick={() => poner({ estado: e })}>
+            {info.plural} {datos && <span className="ui-chip__contador">{porEstado[e] ?? 0}</span>}
+          </button>
+        ))}
       </div>
 
-      {lista && lista.total > lista.tamano && (
-        <nav className="adm-paginacion" aria-label="Paginación">
-          <button type="button" className="adm-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
-          <span>Página {pagina + 1} de {paginas}</span>
-          <button type="button" className="adm-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-        </nav>
+      {error && (
+        // El servicio ya trae "No se pudieron cargar los negocios." o el permiso que falta
+        <Alerta className="pp-bloque-sep" onReintentar={reintentar} reintentando={reintentando}>{error}</Alerta>
+      )}
+
+      {!datos ? (
+        !error && <Esqueleto variante="lista" cantidad={6} texto="Cargando negocios…" />
+      ) : items.length === 0 ? (
+        hayFiltros ? (
+          <EstadoVacio icono="search" titulo="Ningún negocio coincide"
+            texto="Prueba con otro nombre o ciudad, o quita algún filtro.">
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={limpiar}>Limpiar filtros</button>
+          </EstadoVacio>
+        ) : (
+          <EstadoVacio icono="box" titulo="Todavía no hay negocios"
+            texto="Las tiendas y los talleres aparecen aquí cuando se registran con «Registra tu negocio»; los nuevos llegan como pendientes." />
+        )
+      ) : (
+        <>
+          <div className={`ui-card ui-table-card${cargando ? " pp-actualizando" : ""}`} aria-busy={cargando}>
+            <div className="ui-table-wrap">
+              <table className="ui-table ui-table--tarjetas neg-tabla">
+                <caption className="ui-sr">Tiendas y talleres; los pendientes primero y después los más recientes</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Negocio</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Plan</th>
+                    <th scope="col">Calificación</th>
+                    <th scope="col">Actividad</th>
+                    <th scope="col">Perfil</th>
+                    <th scope="col">Registro</th>
+                    <th scope="col"><span className="ui-sr">Acciones</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((n) => {
+                    const k = clave(n);
+                    const est = estadoNegocio(n);
+                    const perfil = perfilNegocio(n);
+                    const act = actividadNegocio(n);
+                    const abiertoAqui = abierto === k;
+                    return (
+                      <Fragment key={k}>
+                        <tr className={abiertoAqui ? "neg-fila--abierta" : undefined}>
+                          <td className="ui-table__titulo">
+                            <span className="neg-negocio">
+                              <LogoNegocio url={n.logoUrl} nombre={n.nombre} />
+                              <span className="neg-negocio__texto">
+                                <strong>{n.nombre || "Sin nombre"}</strong>
+                                <span className="pp-sub">{unir([nombreTipo(n), capitalizar(n.ciudad) || "Sin ciudad"])}</span>
+                              </span>
+                            </span>
+                          </td>
+                          <td data-label="Estado"><ChipEstado tono={est.tono}>{est.label}</ChipEstado></td>
+                          <td data-label="Plan">{n.plan ? n.plan.nombre : <span className="pp-tenue">Sin plan</span>}</td>
+                          <td data-label="Calificación">
+                            {n.tipo === "TALLER"
+                              ? <Calificacion rating={n.calificacion} calificaciones={n.calificaciones} compacta />
+                              : <span className="pp-tenue">No aplica</span>}
+                          </td>
+                          <td data-label="Actividad" className="neg-actividad">
+                            {act.texto}<span className="pp-sub">{act.detalle}</span>
+                          </td>
+                          <td data-label="Perfil">
+                            <span className="neg-perfil" title={perfil.completo ? undefined : `Falta: ${perfil.faltan.join(", ")}`}>
+                              <BarraProgreso valor={perfil.pct} tono={perfil.completo ? "ok" : "acento"}
+                                etiqueta={`Perfil de ${n.nombre}: ${perfil.completos} de ${perfil.total} datos`} />
+                              <span className={perfil.completo ? "neg-perfil__ok" : "neg-perfil__falta"}>
+                                {perfil.completo ? "Completo" : `Falta ${perfil.faltan.join(", ")}`}
+                              </span>
+                            </span>
+                          </td>
+                          <td data-label="Registro" className="neg-fecha">{formatoFecha(n.registrado)}</td>
+                          <td className="ui-table__acciones">
+                            <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" aria-expanded={abiertoAqui}
+                              aria-controls={abiertoAqui ? `neg-gestion-${k}` : undefined}
+                              aria-label={`${abiertoAqui ? "Cerrar" : "Gestionar"} ${n.nombre}`}
+                              onClick={() => { setAbierto(abiertoAqui ? null : k); setErrorAccion(null); }}>
+                              {abiertoAqui ? "Cerrar" : n.estado === "PENDIENTE" ? "Revisar" : "Gestionar"}
+                            </button>
+                          </td>
+                        </tr>
+                        {abiertoAqui && (
+                          <tr className="neg-fila-gestion">
+                            <td colSpan={8}>
+                              <Gestion n={n} planes={planes} procesando={procesando} error={errorAccion}
+                                onAprobar={aprobar} onRechazar={rechazar} onCambiarPlan={cambiarPlan} onAlternar={alternar} />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <nav className="pp-paginas" aria-label="Páginas de negocios">
+            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + items.length} de {total}</span>
+            {paginas > 1 && (
+              <span className="pp-paginas__botones">
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
+                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
+                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
+                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
+              </span>
+            )}
+          </nav>
+        </>
       )}
     </div>
   );

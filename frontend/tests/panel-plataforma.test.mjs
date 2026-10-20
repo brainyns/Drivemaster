@@ -2,7 +2,9 @@
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
-import { barras, urgentesDashboard } from "../src/pages/admin/plataformaAdmin.js";
+import {
+  SIN_PLAN, actividadNegocio, barras, estadoNegocio, filtrosInicialesNegocios, perfilNegocio, urgentesDashboard,
+} from "../src/pages/admin/plataformaAdmin.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
@@ -44,4 +46,39 @@ test("Dashboard: cifras con Indicador, lo urgente con acceso directo y estados d
     "onReintentar", "<Esqueleto", "BarraProgreso", "ui-table--tarjetas", "Lo urgente primero", "urgentesDashboard("]);
   assert.ok(p.includes("dashboardPlataforma(token)"), "el mismo endpoint");
   assert.ok(p.includes("ir(u.pagina, u.preset)"));
+});
+
+test("Tiendas y talleres: perfil completo según los datos que pide el backend a cada tipo", () => {
+  assert.deepEqual(perfilNegocio({ tipo: "TIENDA", datosPorCompletar: [] }), { completos: 3, total: 3, pct: 100, completo: true, faltan: [] });
+  const taller = perfilNegocio({ tipo: "TALLER", datosPorCompletar: ["teléfono"] });
+  assert.equal(taller.completos, 3);
+  assert.equal(taller.total, 4);
+  assert.equal(taller.pct, 75);
+  assert.equal(taller.completo, false);
+  assert.equal(perfilNegocio({ tipo: "TIENDA" }).completo, true, "sin la lista no inventa faltantes");
+});
+
+test("Tiendas y talleres: estado con texto, la pausa de un aprobado, actividad y filtros desde el dashboard", () => {
+  assert.deepEqual(estadoNegocio({ estado: "PENDIENTE", activo: true }), { label: "Pendiente", plural: "Pendientes", tono: "aviso" });
+  assert.deepEqual(estadoNegocio({ estado: "APROBADO", activo: false }), { label: "En pausa", tono: "apagado" });
+  assert.equal(estadoNegocio({ estado: "RECHAZADO", activo: false }).label, "Rechazado");
+  assert.deepEqual(actividadNegocio({ tipo: "TIENDA", productos: 1, productosActivos: 1 }), { texto: "1 producto", detalle: "1 activo" });
+  assert.equal(actividadNegocio({ tipo: "TALLER", ordenes: 12, ordenesEntregadas: 8 }).texto, "12 órdenes");
+  assert.equal(actividadNegocio({ tipo: "TALLER" }).texto, "0 órdenes", "un taller sin órdenes no rompe la fila");
+  assert.deepEqual(filtrosInicialesNegocios("TALLER"), { tipo: "TALLER", estado: "", plan: "" });
+  assert.equal(filtrosInicialesNegocios({ abrir: "x" }).tipo, "");
+  assert.equal(SIN_PLAN, "SIN_PLAN", "el mismo valor que entiende el backend");
+});
+
+test("Tiendas y talleres: sistema compartido, filtros por tipo, estado y plan, y carga, vacío y error con Reintentar", () => {
+  const p = usaSistemaCompartido("NegociosPlataforma.jsx", ["EncabezadoPagina", "<LogoNegocio", "url={n.logoUrl}", "<Calificacion",
+    "ChipEstado", "BarraProgreso", "<Alerta", "onReintentar", "<EstadoVacio", "<Esqueleto", "<Campo", "ui-buscador",
+    "ui-table--tarjetas", 'aria-label="Tipo de negocio"', 'aria-label="Estado de aprobación"', "SIN_PLAN", "Limpiar filtros"]);
+  // Las mismas llamadas de siempre
+  for (const llamada of ["negociosPlataforma(", "resolverAprobacionTaller", "resolverAprobacionTienda", "activarDesactivarTaller",
+    "activarDesactivarTienda", "activarPlan(", "listarPlanes("]) {
+    assert.ok(p.includes(llamada), `falta ${llamada}`);
+  }
+  assert.ok(!p.includes("toFixed("), "la calificación la muestra Calificacion (con «Nuevo»)");
+  assert.ok(leer("../src/App.jsx").includes("filtroInicial={idSeleccionado} />") && leer("../src/pages/DashboardPlataforma.jsx").includes('ir("negocios", "TALLER")'));
 });

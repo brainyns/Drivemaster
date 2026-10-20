@@ -706,7 +706,7 @@ function App() {
     // ADMIN: solo aprueba o rechaza; SUPERADMIN: gestión completa (y la lista unificada "Tiendas y talleres")
     if (pagina === "aprobaciones" && user?.rol === "ADMIN") return <AprobacionesAdmin token={token} />;
     if (pagina === "aprobaciones")     return <Aprobaciones         token={token} />;
-    if (pagina === "negocios")         return <NegociosPlataforma   token={token} />;
+    if (pagina === "negocios")         return <NegociosPlataforma key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado} />;
     if (pagina === "informes-tienda")  return <InformesTienda       token={token} onIr={(p) => irA(p)} />;
     if (pagina === "asistente-tienda") return <AsistenteTienda      token={token} />;
     if (pagina === "liquidaciones")    return <Liquidaciones        />;

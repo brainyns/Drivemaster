@@ -42,3 +42,53 @@ export function barras(conteos = {}, etiquetas = {}, orden = []) {
   const total = claves.reduce((s, k) => s + conteos[k], 0);
   return claves.map((k) => ({ clave: k, etiqueta: etiquetas[k] || k, n: conteos[k], pct: total ? (conteos[k] / total) * 100 : 0 }));
 }
+
+// ─── Tiendas y talleres ─────────────────────────────────────────────────────
+
+/** Estado de aprobación con su texto y tono de ChipEstado. */
+export const ESTADOS_NEGOCIO = {
+  PENDIENTE: { label: "Pendiente", plural: "Pendientes", tono: "aviso" },
+  APROBADO: { label: "Aprobado", plural: "Aprobados", tono: "ok" },
+  RECHAZADO: { label: "Rechazado", plural: "Rechazados", tono: "error" },
+};
+
+export const TIPOS_NEGOCIO = [
+  { valor: "", label: "Tiendas y talleres" },
+  { valor: "TIENDA", label: "Tiendas" },
+  { valor: "TALLER", label: "Talleres" },
+];
+
+/** Valor del filtro de plan para los negocios sin suscripción activa (el backend lo entiende igual). */
+export const SIN_PLAN = "SIN_PLAN";
+
+// Los datos que pide el backend para operar (PlataformaNegociosService.faltantesTienda / faltantesTaller)
+const DATOS_PERFIL = { TIENDA: 3, TALLER: 4 };
+
+/** Perfil completo: cuántos de los datos obligatorios tiene, el porcentaje y qué le falta. */
+export function perfilNegocio(n = {}) {
+  const faltan = n.datosPorCompletar || [];
+  const total = DATOS_PERFIL[n.tipo] || Math.max(faltan.length, 1);
+  const completos = Math.max(0, total - faltan.length);
+  return { completos, total, pct: (completos / total) * 100, completo: faltan.length === 0, faltan };
+}
+
+/** Estado que se muestra: el de aprobación y, si está aprobado pero apagado, "En pausa". */
+export function estadoNegocio(n = {}) {
+  if (n.estado === "APROBADO" && n.activo === false) return { label: "En pausa", tono: "apagado" };
+  return ESTADOS_NEGOCIO[n.estado] || { label: n.estado || "Sin estado", tono: "info" };
+}
+
+/** Filtros al llegar desde el dashboard ("TIENDA" o "TALLER"); cualquier otro valor, sin filtro. */
+export function filtrosInicialesNegocios(preset) {
+  return { tipo: preset === "TIENDA" || preset === "TALLER" ? preset : "", estado: "", plan: "" };
+}
+
+/** Lo que muestra la columna Actividad: productos de la tienda u órdenes del taller. */
+export function actividadNegocio(n = {}) {
+  if (n.tipo === "TIENDA") {
+    const t = n.productos || 0;
+    return { texto: `${num(t)} ${plural(t, "producto", "productos")}`, detalle: `${num(n.productosActivos || 0)} ${plural(n.productosActivos || 0, "activo", "activos")}` };
+  }
+  const t = n.ordenes || 0;
+  return { texto: `${num(t)} ${plural(t, "orden", "órdenes")}`, detalle: `${num(n.ordenesEntregadas || 0)} ${plural(n.ordenesEntregadas || 0, "entregada", "entregadas")}` };
+}

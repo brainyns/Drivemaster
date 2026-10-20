@@ -67,7 +67,7 @@ export async function usuariosPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/usuarios${consulta(filtros)}`, { headers: headers(token) }), "No se pudieron cargar los usuarios.");
 }
 
-/** Tiendas y talleres en una lista (solo SUPERADMIN). Filtros: tipo, estado, q, pagina, tamano. */
+/** Tiendas y talleres en una lista (solo SUPERADMIN). Filtros: tipo, estado, plan (código o SIN_PLAN), q, pagina, tamano. */
 export async function negociosPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/negocios${consulta(filtros)}`, { headers: headers(token) }), "No se pudieron cargar los negocios.");
 }

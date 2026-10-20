@@ -182,11 +182,11 @@ export default function DashboardPlataforma({ token, onIr }) {
           <Indicador icono="box" titulo="Tiendas" valor={num(d.tiendas.registradas)}
             tono={d.tiendas.pendientes > 0 ? "accion" : undefined}
             pie={`${num(d.tiendas.aprobadas)} aprobadas · ${num(d.tiendas.pendientes)} por aprobar`}
-            onClick={() => ir("negocios")} />
+            onClick={() => ir("negocios", "TIENDA")} />
           <Indicador icono="tool" titulo="Talleres" valor={num(d.talleres.registradas)}
             tono={d.talleres.pendientes > 0 ? "accion" : undefined}
             pie={`${num(d.talleres.aprobadas)} aprobados · ${num(d.talleres.pendientes)} por aprobar`}
-            onClick={() => ir("negocios")} />
+            onClick={() => ir("negocios", "TALLER")} />
           <Indicador icono="users" titulo="Clientes" valor={num(d.clientes.total)}
             pie={`+${num(d.clientes.nuevos7Dias)} en 7 días · +${num(d.clientes.nuevos30Dias)} en 30`}
             onClick={() => ir("clientes")} />

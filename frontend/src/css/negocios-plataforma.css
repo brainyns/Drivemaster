@@ -1,0 +1,59 @@
+/* ── Tiendas y talleres del SUPERADMIN (prefijo neg-, BEM) ─────────────────
+   Filtros, paginación y estados comunes son de panel-plataforma.css (pp-); tabla, chips, logo, calificación,
+   barra de avance y campos, de ui.css. Aquí solo la celda del negocio, el perfil y el panel de gestión de una
+   fila. Tokens --ui-*, los dos temas. */
+
+.neg-negocio { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.neg-negocio__texto { display: grid; gap: 2px; min-width: 0; }
+.neg-negocio__texto strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+
+.neg-actividad { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.neg-fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Perfil: la barra y, debajo, "Completo" o lo que falta */
+.neg-perfil { display: grid; gap: 4px; min-width: 120px; max-width: 180px; }
+.neg-perfil__ok { font-size: 0.78rem; font-weight: 600; color: var(--ui-ok); }
+.neg-perfil__falta { font-size: 0.78rem; line-height: 1.35; color: var(--ui-muted); overflow-wrap: anywhere; }
+
+/* La fila abierta y su panel se leen como un solo bloque */
+.neg-fila--abierta > td { background: var(--ui-surface-2); border-bottom-color: transparent; }
+.neg-fila-gestion > td { padding: 4px 16px 18px; background: var(--ui-surface-2); }
+
+.neg-gestion { display: grid; gap: 14px; }
+
+.neg-gestion__datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.neg-gestion .neg-gestion__motivo { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--ui-text); max-width: 75ch; }
+
+.neg-gestion__fila { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; }
+.neg-gestion__campo { flex: 0 1 240px; min-width: 200px; }
+.neg-gestion__campo--ancho { flex: 1 1 360px; }
+/* El botón se alinea con el control, no con la ayuda ni el error del campo */
+.neg-gestion__fila > .ui-btn { margin-bottom: 1px; }
+.neg-pausar.ui-btn { color: var(--ui-error); }
+
+@media (max-width: 760px) {
+  /* En la tarjeta cada dato va a la derecha de su etiqueta */
+  .ui-table--tarjetas .neg-perfil { justify-items: end; max-width: 60%; }
+  .ui-table--tarjetas .neg-perfil .ui-progreso { width: 120px; }
+  .ui-table--tarjetas .neg-actividad { white-space: normal; }
+  .ui-table--tarjetas .neg-actividad .pp-sub { display: inline; margin-left: 6px; }
+
+  /* La gestión sigue a su tarjeta, pegada a ella */
+  .ui-table--tarjetas .neg-fila--abierta { border-bottom-left-radius: 0; border-bottom-right-radius: 0; background: var(--ui-surface-2); }
+  .ui-table--tarjetas .neg-fila--abierta > td { background: none; }
+  .ui-table--tarjetas .neg-fila-gestion { margin-top: -10px; border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; background: var(--ui-surface-2); }
+  .ui-table--tarjetas .neg-fila-gestion > td { display: block; padding: 0; text-align: left; background: none; }
+  .neg-gestion__campo, .neg-gestion__campo--ancho { flex-basis: 100%; }
+  .neg-gestion__fila > .ui-btn { flex: 1 1 auto; min-height: 44px; }
+}
