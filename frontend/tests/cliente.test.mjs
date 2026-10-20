@@ -104,3 +104,10 @@ test("Soporte y cotizaciones del pie lleva a Solicitar diagnóstico sin pasar el
   assert.ok(linea.includes("onClick={() => onSolicitarDiagnostico?.()}"), linea);
   assert.ok(!footer.includes("onClick={onIrSolicitud}"));
 });
+
+test("Resultado del pago: siempre con la cabecera pública, sin el menú lateral del panel aunque haya sesión", () => {
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.match(app, /const PAGINAS_SIEMPRE_PUBLICAS = \["pago-resultado"\];/);
+  const usarPanel = app.slice(app.indexOf("const usarPanel"), app.indexOf("const usarPanel") + 400);
+  assert.ok(usarPanel.includes("PAGINAS_SIEMPRE_PUBLICAS.includes(pagina)"), "usarPanel debe excluirla");
+});

@@ -149,6 +149,10 @@ const PAGINAS_CLIENTE = [
 // Catálogo marketplace: se consulta sin sesión y no usa el panel lateral aunque haya una.
 const PAGINAS_MARKETPLACE = ["producto-marketplace", "carrito-marketplace"];
 
+// Vuelta de Wompi: siempre con la cabecera pública, haya o no sesión y sea cual sea el rol (antes, con sesión,
+// caía dentro del panel: menú lateral y doble cabecera).
+const PAGINAS_SIEMPRE_PUBLICAS = ["pago-resultado"];
+
 // Secciones del panel del taller (cada una es una entrada del menú lateral).
 const SECCION_TALLER = {
   "taller-inicio":      "inicio",
@@ -739,7 +743,8 @@ function App() {
 
   const esCliente = user?.rol === "CLIENTE";
   // El registro de negocios es público: nunca va dentro del panel, aunque haya sesión.
-  const usarPanel = pagina === "catalogo" || pagina === "registro-negocio" || PAGINAS_MARKETPLACE.includes(pagina) || (esCliente && PAGINAS_CLIENTE.includes(pagina)) ? false
+  const usarPanel = pagina === "catalogo" || pagina === "registro-negocio" || PAGINAS_MARKETPLACE.includes(pagina)
+    || PAGINAS_SIEMPRE_PUBLICAS.includes(pagina) || (esCliente && PAGINAS_CLIENTE.includes(pagina)) ? false
     : !!user && pagina !== "catalogo";
 
   return (
