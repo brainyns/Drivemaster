@@ -7,14 +7,32 @@ import DrawerAdmin from "../components/admin/DrawerAdmin";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import { capitalizar } from "../utils/formato";
 import Calificacion from "../components/ui/Calificacion";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Indicador from "../components/ui/Indicador";
+import ChipEstado from "../components/ui/ChipEstado";
+import LogoNegocio from "../components/ui/LogoNegocio";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Campo from "../components/ui/Campo";
+import CampoClave from "../components/ui/CampoClave";
+import Icon from "../components/public/Icon";
 import { promedioDeTalleres } from "../utils/calificacion";
-import "../css/admin-talleres.css";
+// El panel lateral y el diálogo (DrawerAdmin, ConfirmacionAdmin) traen su estilo de admin-base.css
 import "../css/admin-base.css";
+import "../css/dashboard-plataforma.css";
+import "../css/panel-plataforma.css";
+import "../css/servicios-plataforma.css";
 
-const ESTADO_LABEL = {
-  SOLICITADA: "Solicitada", COTIZADA: "Cotizada", PAGADA: "Pagada",
-  EN_PROCESO: "En proceso", FINALIZADA: "Finalizada", CANCELADA: "Cancelada",
-  REASIGNADA: "Reasignada",
+// Estado de cada orden con el formato de catálogo de ChipEstado
+const ESTADO_ORDEN = {
+  SOLICITADA: { label: "Solicitada", tono: "info" },
+  COTIZADA: { label: "Cotizada", tono: "apagado" },
+  PAGADA: { label: "Pagada", tono: "aviso" },
+  EN_PROCESO: { label: "En proceso", tono: "proceso" },
+  FINALIZADA: { label: "Finalizada", tono: "ok" },
+  CANCELADA: { label: "Cancelada", tono: "error" },
+  REASIGNADA: { label: "Reasignada", tono: "apagado" },
 };
 
 const VACIO = {
@@ -34,23 +52,13 @@ function formatPrecio(v) {
   return v.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 }
 
-function BadgeOrden({ estado }) {
-  const variante = {
-    FINALIZADA: "exito",
-    EN_PROCESO: "info",
-    PAGADA: "pendiente",
-    COTIZADA: "neutro",
-    CANCELADA: "peligro",
-  }[estado] || "neutro";
-  return <span className={`adm-badge adm-badge--${variante}`}>{ESTADO_LABEL[estado] || estado}</span>;
-}
-
 export default function AdminTalleres() {
   // Crear, editar y pausar talleres es del SUPERADMIN; el ADMIN solo los ve y revisa sus servicios
   const puedeGestionar = getUser()?.rol === "SUPERADMIN";
   const token = getToken();
   const [talleres, setTalleres] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [cargado, setCargado] = useState(false);
   const [error, setError] = useState(null);
   const [formAbierto, setFormAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
@@ -69,6 +77,7 @@ export default function AdminTalleres() {
     setError(null);
     try {
       setTalleres(await listarTalleres(token));
+      setCargado(true);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -76,11 +85,13 @@ export default function AdminTalleres() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { cargar(); }, []);
 
   const abrirNuevo = () => {
     setEditandoId(null);
     setForm(VACIO);
+    setError(null);
     setFormAbierto(true);
   };
 
@@ -93,6 +104,7 @@ export default function AdminTalleres() {
       precioManoObra: t.precioManoObra ?? "",
       correoUsuario: "", passwordUsuario: "",
     });
+    setError(null);
     setFormAbierto(true);
   };
 
@@ -137,7 +149,7 @@ export default function AdminTalleres() {
   };
 
   const verPedidos = async (t) => {
-    setPedidosDe({ id: t.id, nombre: t.nombre });
+    setPedidosDe({ id: t.id, nombre: t.nombre, logoUrl: t.logoUrl });
     setCargandoPedidos(true);
     setError(null);
     try {
@@ -189,195 +201,170 @@ export default function AdminTalleres() {
   };
 
   const cerrarForm = () => { if (!guardando) setFormAbierto(false); };
+  const cambiar = (campo) => (e) => setForm({ ...form, [campo]: e.target.value });
+  const limpiar = () => { setBusqueda(""); setFiltro("todos"); };
 
   return (
-    <div className="adm-pagina">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Servicios</h1>
-          <p className="adm-encabezado__sub">
-            Talleres aliados conectados a DriveMaster. Desde aquí los activas, editas su
-            tarifa de mano de obra y revisas los servicios que les hicieron.
-          </p>
-        </div>
-        <div className="adm-encabezado__lado">
-          {!cargando && (
-            <span className="adm-encabezado__dato">
-              {visibles.length} de {talleres.length} taller{talleres.length === 1 ? "" : "es"}
-            </span>
-          )}
-          {puedeGestionar && (
-            <button type="button" className="adm-btn adm-btn--primario" onClick={abrirNuevo}>Nuevo taller</button>
-          )}
-        </div>
-      </header>
+    <div className="ss-panel--plataforma pp-root srv-root">
+      <EncabezadoPagina titulo="Servicios"
+        descripcion="Talleres aliados conectados a DriveMaster. Desde aquí los activas, editas su tarifa de mano de obra y revisas los servicios que les hicieron."
+        acciones={puedeGestionar && (
+          <button type="button" className="ui-btn ui-btn--primario" onClick={abrirNuevo}>
+            <Icon name="plus" size={16} /> Nuevo taller
+          </button>
+        )} />
 
-      {error && !formAbierto && !pedidosDe && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
+      {error && !formAbierto && !pedidosDe && (
+        <Alerta className="pp-bloque-sep" onReintentar={!cargado ? cargar : undefined} reintentando={cargando}
+          onCerrar={cargado ? () => setError(null) : undefined}>
+          {error}
+        </Alerta>
+      )}
 
-      <section className="at-stats" aria-label="Resumen de talleres">
-        <div className="at-stat">
-          <span className="at-stat-value">{resumen.total}</span>
-          <span className="at-stat-label">Talleres registrados</span>
-        </div>
-        <div className="at-stat">
-          <span className="at-stat-value at-stat-value--ok">{resumen.activos}</span>
-          <span className="at-stat-label">Recibiendo servicios</span>
-        </div>
-        <div className="at-stat">
-          <span className="at-stat-value">{resumen.inactivos}</span>
-          <span className="at-stat-label">Pausados</span>
-        </div>
-        <div className="at-stat">
-          <span className="at-stat-value">
-            {resumen.promedio != null ? resumen.promedio.toFixed(1) : "—"}
-          </span>
-          <span className="at-stat-label">Calificación promedio</span>
-        </div>
-      </section>
+      {cargado && (
+        <section className="ui-indicadores pp-seccion" aria-label="Resumen de talleres">
+          <Indicador icono="tool" titulo="Talleres registrados" valor={resumen.total} />
+          <Indicador titulo="Recibiendo servicios" valor={resumen.activos} tono={resumen.activos > 0 ? "ok" : undefined} />
+          <Indicador titulo="Pausados" valor={resumen.inactivos} />
+          <Indicador icono="star" titulo="Calificación promedio"
+            valor={resumen.promedio != null ? resumen.promedio.toFixed(1) : "Sin datos"}
+            pie={resumen.promedio != null ? "De los talleres que ya tienen calificaciones" : "Ningún taller tiene calificaciones aún"} />
+        </section>
+      )}
 
-      <div className="adm-filtros" role="search" aria-label="Filtros de talleres">
-        <nav className="adm-pestanas" aria-label="Filtrar por estado">
+      <div className="pp-filtros pp-bloque-sep">
+        <div className="ui-buscador">
+          <Icon name="search" size={18} />
+          <label htmlFor="srv-busqueda" className="ui-sr">Buscar por nombre, ciudad o especialidad</label>
+          <input id="srv-busqueda" className="ui-field__input" type="search" placeholder="Nombre, ciudad o especialidad"
+            value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+        </div>
+        <div className="ui-filtros" role="group" aria-label="Filtrar por estado">
           {FILTROS.map(f => (
-            <button
-              key={f.k}
-              type="button"
-              aria-pressed={filtro === f.k}
-              className={`adm-pestana${filtro === f.k ? " adm-pestana--activa" : ""}`}
-              onClick={() => setFiltro(f.k)}
-            >
-              {f.l}
-              <span className="adm-pestana__n">{conteoFiltro[f.k]}</span>
+            <button key={f.k} type="button" className="ui-chip" aria-pressed={filtro === f.k} onClick={() => setFiltro(f.k)}>
+              {f.l} {cargado && <span className="ui-chip__contador">{conteoFiltro[f.k]}</span>}
             </button>
           ))}
-        </nav>
-        <span className="adm-filtros__separador" />
-        <label className="adm-campo adm-campo--ancho">
-          <span>Buscar</span>
-          <input
-            type="search"
-            placeholder="Nombre, ciudad o especialidad"
-            value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
-          />
-        </label>
+        </div>
       </div>
 
-      <div className="adm-tarjeta" aria-busy={cargando}>
-        {cargando ? (
-          <div className="adm-cargando">Cargando talleres…</div>
-        ) : visibles.length === 0 ? (
-          <div className="adm-vacio">
-            <p>
-              {talleres.length === 0
-                ? "Todavía no hay talleres. Registra el primer taller aliado para que los clientes puedan cotizar servicios."
-                : "Ningún taller coincide con la búsqueda. Prueba con otro nombre, ciudad o especialidad, o cambia el filtro."}
-            </p>
-            {talleres.length === 0 ? (
-              puedeGestionar && <button type="button" className="adm-btn adm-btn--primario" onClick={abrirNuevo}>Registrar primer taller</button>
-            ) : (
-              <button type="button" className="adm-btn" onClick={() => { setBusqueda(""); setFiltro("todos"); }}>
-                Limpiar filtros
+      {!cargado ? (
+        cargando && <Esqueleto variante="lista" cantidad={5} texto="Cargando talleres…" />
+      ) : visibles.length === 0 ? (
+        talleres.length === 0 ? (
+          <EstadoVacio icono="tool" titulo="Todavía no hay talleres"
+            texto="Registra el primer taller aliado para que los clientes puedan cotizar servicios.">
+            {puedeGestionar && (
+              <button type="button" className="ui-btn ui-btn--primario" onClick={abrirNuevo}>
+                <Icon name="plus" size={16} /> Registrar primer taller
               </button>
             )}
-          </div>
+          </EstadoVacio>
         ) : (
-          <div className="adm-tabla-wrap">
-            <table className="adm-tabla adm-tabla--tarjetas">
+          <EstadoVacio icono="search" titulo="Ningún taller coincide"
+            texto="Prueba con otro nombre, ciudad o especialidad, o cambia el filtro.">
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={limpiar}>Limpiar filtros</button>
+          </EstadoVacio>
+        )
+      ) : (
+        <div className={`ui-card ui-table-card${cargando ? " pp-actualizando" : ""}`} aria-busy={cargando}>
+          <div className="ui-table-wrap">
+            <table className="ui-table ui-table--tarjetas srv-tabla">
+              <caption className="ui-sr">Talleres aliados</caption>
               <thead>
                 <tr>
-                  <th>Taller</th>
-                  <th>Ciudad</th>
-                  <th>Especialidades</th>
-                  <th className="adm-tabla__der">Mano de obra</th>
-                  <th>Calificación</th>
-                  <th>Estado</th>
-                  <th className="adm-tabla__der">Acciones</th>
+                  <th scope="col">Taller</th>
+                  <th scope="col">Ciudad</th>
+                  <th scope="col">Especialidades</th>
+                  <th scope="col" className="pp-num">Mano de obra</th>
+                  <th scope="col">Calificación</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col"><span className="ui-sr">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
-                {visibles.map(t => (
-                  <tr key={t.id}>
-                    <td data-label="Taller">
-                      <strong>{t.nombre}</strong>
-                      {t.direccion && <span className="adm-tabla__sub">{t.direccion}</span>}
-                    </td>
-                    <td data-label="Ciudad">{capitalizar(t.ciudad) || "—"}</td>
-                    <td data-label="Especialidades">
-                      {(t.especialidades || []).length === 0 ? "—" : (
-                        <span className="adm-badges">
-                          {(t.especialidades || []).slice(0, 2).map(s => (
-                            <span className="adm-badge adm-badge--neutro" key={s}>{s}</span>
-                          ))}
-                          {(t.especialidades || []).length > 2 && (
-                            <span className="adm-badge adm-badge--neutro">+{(t.especialidades || []).length - 2}</span>
-                          )}
+                {visibles.map(t => {
+                  const esp = t.especialidades || [];
+                  return (
+                    <tr key={t.id}>
+                      <td className="ui-table__titulo">
+                        <span className="srv-taller">
+                          <LogoNegocio url={t.logoUrl} nombre={t.nombre} />
+                          <span className="srv-taller__texto">
+                            <strong>{t.nombre}</strong>
+                            {t.direccion && <span className="pp-sub">{t.direccion}</span>}
+                          </span>
                         </span>
-                      )}
-                    </td>
-                    <td data-label="Mano de obra" className="adm-tabla__der">{formatPrecio(t.precioManoObra)}</td>
-                    <td data-label="Calificación"><Calificacion rating={t.rating} calificaciones={t.calificaciones} compacta /></td>
-                    <td data-label="Estado">
-                      <span className={`adm-badge ${t.activo ? "adm-badge--exito" : "adm-badge--neutro"}`}>
-                        {t.activo ? "Activo" : "Pausado"}
-                      </span>
-                    </td>
-                    <td className="adm-tabla__der adm-tabla__celda--ancha">
-                      <div className="adm-tabla__acciones">
-                        <button type="button" className="adm-btn adm-btn--chico" onClick={() => verPedidos(t)}>Servicios</button>
+                      </td>
+                      <td data-label="Ciudad">{capitalizar(t.ciudad) || <span className="pp-tenue">Sin ciudad</span>}</td>
+                      <td data-label="Especialidades">
+                        {esp.length === 0 ? <span className="pp-tenue">Sin especialidades</span> : (
+                          <span className="srv-especialidades" title={esp.join(", ")}>
+                            {esp.slice(0, 2).map(s => <span className="srv-especialidad" key={s}>{s}</span>)}
+                            {esp.length > 2 && <span className="srv-especialidad" aria-label={`y ${esp.length - 2} más`}>+{esp.length - 2}</span>}
+                          </span>
+                        )}
+                      </td>
+                      <td data-label="Mano de obra" className="pp-num">{formatPrecio(t.precioManoObra)}</td>
+                      <td data-label="Calificación"><Calificacion rating={t.rating} calificaciones={t.calificaciones} compacta /></td>
+                      <td data-label="Estado">
+                        <ChipEstado tono={t.activo ? "ok" : "apagado"}>{t.activo ? "Activo" : "Pausado"}</ChipEstado>
+                      </td>
+                      <td className="ui-table__acciones">
+                        <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => verPedidos(t)}
+                          aria-label={`Servicios de ${t.nombre}`}>Servicios</button>
                         {puedeGestionar && (
                           <>
-                            <button type="button" className="adm-btn adm-btn--chico" onClick={() => abrirEditar(t)}>Editar</button>
+                            <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => abrirEditar(t)}
+                              aria-label={`Editar ${t.nombre}`}><Icon name="pencil" size={14} /> Editar</button>
                             {t.activo ? (
-                              <button type="button" className="adm-btn adm-btn--chico adm-btn--peligro" onClick={() => setPausando(t)}>Pausar</button>
+                              <button type="button" className="ui-btn ui-btn--texto ui-btn--chico srv-peligro" onClick={() => setPausando(t)}
+                                aria-label={`Pausar ${t.nombre}`}>Pausar</button>
                             ) : (
-                              <button type="button" className="adm-btn adm-btn--chico adm-btn--primario" onClick={() => handleToggleActivo(t)}>Activar</button>
+                              <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" onClick={() => handleToggleActivo(t)}
+                                aria-label={`Activar ${t.nombre}`}>Activar</button>
                             )}
                           </>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {pedidosDe && (
-        <DrawerAdmin
-          titulo={pedidosDe.nombre}
-          encabezado={<span className="adm-badge adm-badge--chico adm-badge--info">Historial del taller</span>}
-          onCerrar={() => setPedidosDe(null)}
-        >
-          {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
-          {cargandoPedidos ? (
-            <div className="adm-cargando">Cargando servicios…</div>
-          ) : pedidos.length === 0 ? (
-            <p className="adm-vacio">Este taller todavía no tiene servicios registrados.</p>
-          ) : (
-            <div className="adm-tarjeta">
-              <table className="adm-tabla adm-tabla--tarjetas">
-                <thead>
-                  <tr>
-                    <th>Vehículo</th>
-                    <th>Repuesto</th>
-                    <th className="adm-tabla__der">Total</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pedidos.map(p => (
-                    <tr key={p.id}>
-                      <td data-label="Vehículo">{p.vehiculoDescripcion || "—"}</td>
-                      <td data-label="Repuesto">{p.productoNombre || "—"}</td>
-                      <td data-label="Total" className="adm-tabla__der">{formatPrecio(p.total)}</td>
-                      <td data-label="Estado"><BadgeOrden estado={p.estado} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <DrawerAdmin titulo={pedidosDe.nombre} etiqueta={`Servicios de ${pedidosDe.nombre}`}
+          encabezado={(
+            <div className="srv-drawer__cabecera">
+              <LogoNegocio url={pedidosDe.logoUrl} nombre={pedidosDe.nombre} tamano="mediano" />
+              <ChipEstado tono="info">Historial del taller</ChipEstado>
             </div>
+          )}
+          onCerrar={() => setPedidosDe(null)}>
+          {error && <Alerta>{error}</Alerta>}
+          {cargandoPedidos ? (
+            <Esqueleto variante="lista" cantidad={3} texto="Cargando servicios…" />
+          ) : pedidos.length === 0 ? (
+            !error && <EstadoVacio icono="tool" nivel={3} titulo="Sin servicios todavía" texto="Este taller todavía no tiene servicios registrados." />
+          ) : (
+            <ul className="srv-ordenes">
+              {pedidos.map(p => (
+                <li key={p.id} className="srv-orden">
+                  <span className="srv-orden__texto">
+                    <strong>{p.vehiculoDescripcion || "Vehículo sin descripción"}</strong>
+                    <span className="pp-sub">{p.productoNombre || "Sin repuesto"}</span>
+                  </span>
+                  <span className="srv-orden__lado">
+                    <span className="srv-orden__total">{formatPrecio(p.total)}</span>
+                    <ChipEstado catalogo={ESTADO_ORDEN} estado={p.estado} />
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </DrawerAdmin>
       )}
@@ -385,50 +372,44 @@ export default function AdminTalleres() {
       {formAbierto && (
         <DrawerAdmin
           titulo={editandoId ? "Datos del taller" : "Registrar taller aliado"}
-          encabezado={<span className="adm-badge adm-badge--chico adm-badge--info">{editandoId ? "Editar" : "Nuevo"}</span>}
+          encabezado={<ChipEstado tono="info">{editandoId ? "Editar" : "Nuevo"}</ChipEstado>}
           onCerrar={cerrarForm}
           pie={(
             <>
-              <button type="button" className="adm-btn" onClick={cerrarForm} disabled={guardando}>Cancelar</button>
-              <button type="submit" form="at-form" className={`adm-btn adm-btn--primario${guardando ? " adm-btn--cargando" : ""}`}
-                disabled={guardando} aria-busy={guardando}>
+              <button type="button" className="ui-btn ui-btn--secundario" onClick={cerrarForm} disabled={guardando}>Cancelar</button>
+              <button type="submit" form="srv-form" className="ui-btn ui-btn--primario" disabled={guardando} aria-busy={guardando}>
                 {guardando ? "Guardando…" : editandoId ? "Guardar cambios" : "Crear taller"}
               </button>
             </>
           )}
         >
-          <form id="at-form" onSubmit={handleGuardar} className="adm-drawer__form">
-            <section className="adm-drawer__bloque">
-              <h3 className="adm-drawer__subtitulo">Identidad</h3>
-              <label className="adm-campo adm-campo--bloque">
-                <span>Nombre</span>
-                <input required value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
-              </label>
-              <div className="adm-drawer__fila">
-                <label className="adm-campo">
-                  <span>Ciudad</span>
-                  <input required value={form.ciudad} onChange={e => setForm({ ...form, ciudad: e.target.value })} />
-                </label>
-                <label className="adm-campo">
-                  <span>Precio mano de obra</span>
-                  <input type="number" step="any" required value={form.precioManoObra} onChange={e => setForm({ ...form, precioManoObra: e.target.value })} />
-                </label>
+          <form id="srv-form" onSubmit={handleGuardar} className="srv-form">
+            <section className="srv-form__bloque" aria-labelledby="srv-identidad">
+              <h3 id="srv-identidad" className="srv-form__titulo">Identidad</h3>
+              <Campo id="srv-nombre" label="Nombre">
+                <input className="ui-field__input" required value={form.nombre} onChange={cambiar("nombre")} />
+              </Campo>
+              <div className="ui-form__campos ui-form__campos--2">
+                <Campo id="srv-ciudad" label="Ciudad">
+                  <input className="ui-field__input" required value={form.ciudad} onChange={cambiar("ciudad")} />
+                </Campo>
+                <Campo id="srv-mano-obra" label="Precio mano de obra" ayuda="En pesos, sin puntos.">
+                  <input className="ui-field__input" type="number" step="any" min="0" inputMode="decimal" required
+                    value={form.precioManoObra} onChange={cambiar("precioManoObra")} />
+                </Campo>
               </div>
-              <label className="adm-campo adm-campo--bloque">
-                <span>Dirección</span>
-                <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} />
-              </label>
-              <label className="adm-campo adm-campo--bloque">
-                <span>Especialidades</span>
-                <input placeholder="Frenos, suspensión, eléctrico" value={form.especialidades} onChange={e => setForm({ ...form, especialidades: e.target.value })} />
-                <span className="adm-campo__ayuda">Sepáralas con comas.</span>
-              </label>
+              <Campo id="srv-direccion" label="Dirección" opcional>
+                <input className="ui-field__input" value={form.direccion} onChange={cambiar("direccion")} />
+              </Campo>
+              <Campo id="srv-especialidades" label="Especialidades" opcional ayuda="Sepáralas con comas.">
+                <input className="ui-field__input" placeholder="Frenos, suspensión, eléctrico" value={form.especialidades} onChange={cambiar("especialidades")} />
+              </Campo>
             </section>
 
-            <section className="adm-drawer__bloque">
-              <h3 className="adm-drawer__subtitulo">Ubicación en el mapa</h3>
+            <section className="srv-form__bloque" aria-labelledby="srv-ubicacion">
+              <h3 id="srv-ubicacion" className="srv-form__titulo">Ubicación en el mapa</h3>
               <SelectorUbicacion
-                id="at-mapa"
+                id="srv-mapa"
                 ciudad={form.ciudad}
                 value={form.latitud === "" || form.longitud === "" ? null : { latitud: Number(form.latitud), longitud: Number(form.longitud) }}
                 onChange={({ latitud, longitud }) => setForm((f) => ({ ...f, latitud, longitud }))}
@@ -436,22 +417,21 @@ export default function AdminTalleres() {
             </section>
 
             {!editandoId && (
-              <section className="adm-drawer__bloque">
-                <h3 className="adm-drawer__subtitulo">Acceso del taller</h3>
-                <p className="adm-encabezado__sub adm-campo__ayuda">Se crea el usuario con el que el taller iniciará sesión.</p>
-                <div className="adm-drawer__fila">
-                  <label className="adm-campo">
-                    <span>Correo</span>
-                    <input type="email" required value={form.correoUsuario} onChange={e => setForm({ ...form, correoUsuario: e.target.value })} />
-                  </label>
-                  <label className="adm-campo">
-                    <span>Contraseña</span>
-                    <input type="password" required value={form.passwordUsuario} onChange={e => setForm({ ...form, passwordUsuario: e.target.value })} />
-                  </label>
+              <section className="srv-form__bloque" aria-labelledby="srv-acceso">
+                <h3 id="srv-acceso" className="srv-form__titulo">Acceso del taller</h3>
+                <p className="srv-form__ayuda">Se crea el usuario con el que el taller iniciará sesión.</p>
+                <div className="ui-form__campos ui-form__campos--2">
+                  <Campo id="srv-correo" label="Correo">
+                    <input className="ui-field__input" type="email" inputMode="email" autoComplete="off" required
+                      value={form.correoUsuario} onChange={cambiar("correoUsuario")} />
+                  </Campo>
+                  <Campo id="srv-clave" label="Contraseña">
+                    <CampoClave autoComplete="new-password" required value={form.passwordUsuario} onChange={cambiar("passwordUsuario")} />
+                  </Campo>
                 </div>
               </section>
             )}
-            {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
+            {error && <Alerta>{error}</Alerta>}
           </form>
         </DrawerAdmin>
       )}

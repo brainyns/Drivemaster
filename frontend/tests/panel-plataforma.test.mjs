@@ -143,3 +143,14 @@ test("Liquidaciones: sistema compartido, estados con texto y el número de trans
   }
   assert.ok(p.includes("deshabilitado={esRepartos && esManual && !numero.trim()}"));
 });
+
+test("Servicios: sistema compartido, cifras con Indicador y el formulario con Campo, sin cambiar las llamadas", () => {
+  const p = usaSistemaCompartido("AdminTalleres.jsx", ["EncabezadoPagina", "<Indicador", "ChipEstado", "<LogoNegocio", "<Alerta",
+    "onReintentar", "<EstadoVacio", "<Esqueleto", "<Campo", "CampoClave", "ui-buscador", "ui-table--tarjetas",
+    'aria-label="Filtrar por estado"', "DrawerAdmin", "ConfirmacionAdmin"], ["adm-", "db-kpi", "at-stat", "admin-talleres.css"]);
+  for (const llamada of ["listarTalleres(token)", "crearTaller(token, payload)", "actualizarTaller(token, editandoId, payload)",
+    "activarDesactivarTaller(token, t.id, !t.activo)", "ordenesPorTallerAdmin(token, t.id)"]) {
+    assert.ok(p.includes(llamada), `falta ${llamada}`);
+  }
+  assert.ok(p.includes('getUser()?.rol === "SUPERADMIN"'), "el ADMIN sigue sin crear, editar ni pausar");
+});

@@ -1,0 +1,58 @@
+/* ── Servicios: talleres aliados (ADMIN y SUPERADMIN, prefijo srv-, BEM) ────
+   Cifras, chips, buscador, tabla, campos, avisos y estados son de ui.css y panel-plataforma.css (pp-); el panel
+   lateral y el diálogo, de admin-base.css. Aquí la celda del taller, las especialidades, el historial de
+   servicios y los bloques del formulario. Tokens --ui-*, los dos temas. */
+
+.srv-taller { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.srv-taller__texto { display: grid; gap: 2px; min-width: 0; }
+.srv-taller__texto strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+
+.srv-especialidades { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+
+.srv-especialidad {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-line-soft);
+  font-size: 0.75rem;
+  color: var(--ui-text);
+  white-space: nowrap;
+}
+
+.srv-peligro.ui-btn { color: var(--ui-error); }
+/* Con y sin ícono, los botones de la fila quedan a la misma altura */
+.srv-tabla .ui-table__acciones .ui-btn { vertical-align: middle; }
+
+/* ── Historial de servicios (panel lateral) ─────────────────────────────── */
+.srv-drawer__cabecera { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+
+.srv-ordenes { display: grid; margin: 0; padding: 0; list-style: none; }
+
+.srv-orden {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.srv-orden:first-child { border-top: 0; padding-top: 0; }
+.srv-orden__texto { display: grid; gap: 2px; min-width: 0; }
+.srv-orden__texto strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+.srv-orden__lado { display: grid; justify-items: end; gap: 4px; flex-shrink: 0; }
+.srv-orden__total { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── Formulario del taller (panel lateral) ──────────────────────────────── */
+.srv-form { display: grid; gap: 22px; }
+.srv-form__bloque { display: grid; gap: 14px; }
+.srv-form__bloque + .srv-form__bloque { padding-top: 20px; border-top: 1px solid var(--ui-line-soft); }
+
+.srv-root .srv-form__titulo,
+.srv-form__titulo { margin: 0; font-family: var(--ui-font); font-size: 0.9rem; font-weight: 700; color: var(--ui-text); }
+
+.srv-form .srv-form__ayuda { margin: -6px 0 0; font-size: 0.8125rem; color: var(--ui-muted); }
+
+@media (max-width: 760px) {
+  .ui-table--tarjetas .srv-especialidades { justify-content: flex-end; }
+}
