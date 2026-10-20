@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { buscarRepuestos } from "../../services/repuestoService";
 import { ESTADO_OFERTA, formatPrecio } from "./estadosServicio";
+import Icon from "../public/Icon";
 
 /**
  * Ventana del buscador de repuestos en todas las tiendas (aprobadas y activas).
@@ -85,7 +86,7 @@ function VentanaBuscador({ token, solicitud, elegidos, onElegir, onCerrar }) {
               Para {solicitud.vehiculoDescripcion} · inventario de todas las tiendas aprobadas
             </span>
           </div>
-          <button type="button" className="ss-btn-icono" onClick={onCerrar} aria-label="Cerrar buscador">×</button>
+          <button type="button" className="ss-btn-icono" onClick={onCerrar} aria-label="Cerrar buscador"><Icon name="close" size={16} /></button>
         </header>
 
         <form className="ss-modal__filtros" onSubmit={enviar}>
@@ -166,7 +167,7 @@ function TarjetaOferta({ oferta: o, categoria, elegido, onElegir }) {
   return (
     <article className={`ss-oferta${o.seleccionable ? "" : " ss-oferta--bloqueada"}${elegido ? " ss-oferta--elegida" : ""}`}>
       <div className="ss-oferta__foto">
-        {o.imagenUrl ? <img src={o.imagenUrl} alt="" loading="lazy" /> : <span aria-hidden="true">🔧</span>}
+        {o.imagenUrl ? <img src={o.imagenUrl} alt="" loading="lazy" /> : <Icon name="tool" size={20} />}
         <span className={`ss-estado ss-estado--${estado.tono} ss-oferta__compat`}><span className="ss-estado__punto" />{estado.label}</span>
       </div>
       <div className="ss-oferta__cuerpo">

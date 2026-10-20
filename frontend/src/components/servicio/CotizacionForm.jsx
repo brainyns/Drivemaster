@@ -4,6 +4,7 @@ import CotizacionDetalle from "./CotizacionDetalle";
 import AlertaPrediccionCotizacion from "./AlertaPrediccionCotizacion";
 import { formatPrecio } from "./estadosServicio";
 import "../../css/cotizacion.css";
+import Icon from "../public/Icon";
 
 const lineaVacia = () => ({ descripcion: "", modalidad: "ITEM", valor: "", horas: "" });
 
@@ -92,7 +93,7 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
             )}
             {lineas.length > 1 && (
               <button type="button" className="sv-btn-outline ct-linea__quitar" aria-label="Quitar línea"
-                onClick={() => { setVista(null); setLineas((p) => p.filter((_, i) => i !== n)); }}>×</button>
+                onClick={() => { setVista(null); setLineas((p) => p.filter((_, i) => i !== n)); }}><Icon name="close" size={16} /></button>
             )}
           </div>
         ))}

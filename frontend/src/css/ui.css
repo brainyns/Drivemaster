@@ -78,6 +78,8 @@
 .ui-volver:hover { color: var(--ui-text); background: var(--ui-hover); }
 .ui-volver:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
 .ui-volver__icono { transform: rotate(180deg); }
+/* Ícono dentro de un texto o enlace que no es flex ("Volver al catálogo" de las pantallas públicas) */
+.ui-icono-linea { flex-shrink: 0; margin-right: 6px; vertical-align: -3px; }
 
 /* ── Pasos (Pasos) ─────────────────────────────────────────────────────── */
 .ui-pasos { margin-top: 28px; }

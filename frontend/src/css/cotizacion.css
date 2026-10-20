@@ -110,7 +110,8 @@
 .ct-linea__desc { flex: 1 1 240px; width: auto; }
 .ct-linea__modalidad { flex: 0 0 130px; width: auto; }
 .ct-linea__num { flex: 0 0 140px; width: auto; }
-.ct-linea__quitar { padding: 6px 12px; }
+.ct-linea__quitar { display: inline-grid; place-items: center; padding: 6px 12px; }
+.ct-estrella svg { display: block; fill: currentColor; stroke: none; }
 
 .ct-previa {
   margin-top: var(--sp-md);

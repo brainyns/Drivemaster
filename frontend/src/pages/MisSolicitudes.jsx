@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { getToken } from "../services/authService";
 import { crearPago, verificarPago, getWompiRedirectUrl } from "../services/solicitudService";
 import "../css/solicitudes.css";
+import Icon from "../components/public/Icon";
 
 const ESTADOS = {
   PENDIENTE: "Pendiente",
@@ -91,7 +92,7 @@ export default function MisSolicitudes({ onVolver }) {
             <p className="sq-subtitle">Consulta el estado de tus solicitudes de compra.</p>
           </div>
           {onVolver && (
-            <button className="sq-volver" onClick={onVolver}>← Volver al catálogo</button>
+            <button className="sq-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver al catálogo</button>
           )}
         </div>
       </div>

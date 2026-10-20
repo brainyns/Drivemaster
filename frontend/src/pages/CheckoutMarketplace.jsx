@@ -6,6 +6,7 @@ import PagoLocal from "../components/servicio/PagoLocal";
 import { guardarPagoPendiente } from "../components/marketplace/pagoPendiente";
 import "../css/marketplace.css";
 import "../css/cotizacion.css";
+import Icon from "../components/public/Icon";
 
 const CLAVE_VEHICULO = "marketplaceVehiculoId";
 
@@ -138,7 +139,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
     <div className="dm-page mk-pagina">
       {header}
       <main className="dm-container mk-contenido">
-        <button className="mk-enlace mk-volver" onClick={onVolverCarrito}>← Volver al carrito</button>
+        <button className="mk-enlace mk-volver" onClick={onVolverCarrito}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver al carrito</button>
         <div className="mk-titulo">
           <h1>Entrega y pago</h1>
           <p>Elige cómo recibir el pedido de cada tienda. Pagas una sola vez con Wompi.</p>

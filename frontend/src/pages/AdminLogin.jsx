@@ -2,6 +2,7 @@ import { useState } from "react";
 import { loginInterno } from "../services/authService";
 import Logo from "../components/Logo";
 import "../css/Login.css";
+import Icon from "../components/public/Icon";
 
 export default function AdminLogin({ onLogin, onVolver }) {
   const [correo, setCorreo] = useState("");
@@ -66,7 +67,7 @@ export default function AdminLogin({ onLogin, onVolver }) {
 
         <p className="auth-footer">
           <button type="button" className="link-button" onClick={onVolver}>
-            ← Volver al inicio de sesión de clientes
+            <Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver al inicio de sesión de clientes
           </button>
         </p>
       </div>

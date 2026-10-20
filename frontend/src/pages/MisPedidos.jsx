@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { getToken } from "../services/authService";
 import { misOrdenes } from "../services/ordenServicioService";
 import "../css/mis-pedidos.css";
+import Icon from "../components/public/Icon";
 
 const API = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
 
@@ -161,7 +162,7 @@ export default function MisPedidos({ onVolver }) {
     <div className="mis-pedidos-page">
       <div className="mis-pedidos-header">
         <h1>Historial de compras</h1>
-        <button className="mis-pedidos-volver" onClick={onVolver}>← Volver al catálogo</button>
+        <button className="mis-pedidos-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver al catálogo</button>
       </div>
 
       {cargando ? (

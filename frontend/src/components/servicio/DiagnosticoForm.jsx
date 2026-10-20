@@ -3,6 +3,7 @@ import { registrarDiagnostico } from "../../services/solicitudServicioService";
 import SubidaFotos from "./SubidaFotos";
 import BuscadorRepuestos from "./BuscadorRepuestos";
 import { ESTADO_OFERTA, TEXTO_CONFIRMACION, URGENCIAS, formatPrecio } from "./estadosServicio";
+import Icon from "../public/Icon";
 
 const MIN_HALLAZGOS = 10;
 
@@ -185,7 +186,7 @@ export default function DiagnosticoForm({ token, solicitud, mecanicos, onGuardad
                     onChange={(e) => actualizar(r.productoId, { cantidad: Math.max(1, Math.min(99, Number(e.target.value) || 1)) })} />
                   <span className="ss-repuesto__precio">{formatPrecio((r.precio || 0) * (r.cantidad || 0))}</span>
                   <button type="button" className="ss-btn-icono" onClick={() => quitar(r.productoId)}
-                    aria-label={`Quitar ${r.nombre}`}>×</button>
+                    aria-label={`Quitar ${r.nombre}`}><Icon name="close" size={16} /></button>
                 </div>
                 {r.requiereConfirmacion && (
                   <div className="ss-confirmar">

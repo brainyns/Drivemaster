@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { confirmarRecepcion } from "../../services/solicitudServicioService";
 import { formatFechaHora } from "./estadosServicio";
+import Icon from "../public/Icon";
 
 /**
  * El cliente confirma que recibió el vehículo. La calificación al taller es
@@ -48,7 +49,7 @@ export default function ConfirmarRecepcion({ token, solicitud, onConfirmada }) {
           <button key={n} type="button" role="radio" aria-checked={calificacion === n}
             aria-label={`${n} de 5`} className={`ct-estrella${n <= calificacion ? " ct-estrella--activa" : ""}`}
             onClick={() => setCalificacion(calificacion === n ? 0 : n)} disabled={enviando}>
-            ★
+            <Icon name="star" size={24} />
           </button>
         ))}
       </div>

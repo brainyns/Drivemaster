@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { abrirCapa, manejarTeclas } from "./capaModal";
+import Icon from "../public/Icon";
 
 /**
  * Panel lateral del panel de administración. En móvil ocupa toda la pantalla.
@@ -28,7 +29,7 @@ export default function DrawerAdmin({ titulo, encabezado, pie, onCerrar, childre
             {encabezado}
             <h2 className="adm-drawer__titulo">{titulo}</h2>
           </div>
-          <button type="button" className="adm-drawer__cerrar" onClick={onCerrar} aria-label="Cerrar">×</button>
+          <button type="button" className="adm-drawer__cerrar" onClick={onCerrar} aria-label="Cerrar"><Icon name="close" size={16} /></button>
         </header>
         <div className="adm-drawer__cuerpo">{children}</div>
         {pie && <footer className="adm-drawer__pie">{pie}</footer>}

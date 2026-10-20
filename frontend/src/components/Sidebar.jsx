@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Logo from "./Logo";
 import "../css/sidebar.css";
+import Icon from "./public/Icon";
 
 const Icons = {
   dashboard:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
@@ -23,7 +24,7 @@ const Icons = {
 };
 
 const menu = [
-  { key: "dashboard-main", label: "Dashboard",   icon: "dashboard"   },
+  { key: "dashboard-main", label: "Inicio",   icon: "dashboard"   },
   { key: "productos",      label: "Productos",   icon: "productos"   },
   { key: "clientes",       label: "Clientes",    icon: "clientes"    },
   { key: "pedidos-envios", label: "Pedidos y envíos", icon: "compras" },
@@ -36,7 +37,7 @@ const menu = [
     key: "reportes", label: "Reportes", icon: "reportes",
     subItems: [
       { key: "reportes-plataforma", label: "Reportes de plataforma", icon: "repProductos" },
-      { key: "rep-servicios",       label: "Reporte Servicios",      icon: "repServicios" },
+      { key: "rep-servicios",       label: "Reporte de servicios",      icon: "repServicios" },
     ],
   },
   { key: "usuarios", label: "Usuarios", icon: "admin" },
@@ -163,7 +164,7 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar, resumenTaller
       {/* Volver al catálogo */}
       <div className="sidebar-footer">
         <button className="sidebar-catalogo-btn" onClick={() => handleNav("catalogo")}>
-          ← Volver al catálogo
+          <Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver al catálogo
         </button>
       </div>
       </aside>

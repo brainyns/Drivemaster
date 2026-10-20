@@ -4,6 +4,7 @@ import { getToken } from "../services/authService";
 import { crearSolicitud, comprarInmediata, crearPagoVenta, getWompiRedirectUrl } from "../services/solicitudService";
 import "../css/checkout.css";
 import "../css/clientes.css";
+import Icon from "../components/public/Icon";
 
 const formatPrecio = (p) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(p || 0);
@@ -242,7 +243,7 @@ export default function CheckoutPage({
     <div className="checkout-page">
       <div className="checkout-header">
         <h1>Enviar solicitud</h1>
-        {onVolver && <button className="checkout-volver" onClick={onVolver}>← Volver</button>}
+        {onVolver && <button className="checkout-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver</button>}
       </div>
 
       {mensaje && (

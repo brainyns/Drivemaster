@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { subirFotoServicio } from "../../services/solicitudServicioService";
+import Icon from "../public/Icon";
 
 const MAX_MB = 5;
 
@@ -51,7 +52,7 @@ export default function SubidaFotos({ token, fotos, onChange, max = 5, deshabili
           <div className="ss-fotos__item" key={url}>
             <img src={url} alt="Foto adjunta" loading="lazy" />
             {!deshabilitado && (
-              <button type="button" className="ss-fotos__quitar" onClick={() => quitar(url)} aria-label="Quitar foto">×</button>
+              <button type="button" className="ss-fotos__quitar" onClick={() => quitar(url)} aria-label="Quitar foto"><Icon name="close" size={16} /></button>
             )}
           </div>
         ))}

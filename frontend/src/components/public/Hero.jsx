@@ -19,7 +19,7 @@ export default function Hero({ onVerCatalogo, onSolicitarDiagnostico }) {
           className="dm-hero__image"
           src={HERO_IMAGE}
           alt="Vehículo en un taller"
-          fetchpriority="high"
+          fetchPriority="high"
           decoding="async"
           loading="eager"
           onError={() => setImagenOk(false)}

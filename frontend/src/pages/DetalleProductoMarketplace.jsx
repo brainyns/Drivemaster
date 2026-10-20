@@ -8,6 +8,7 @@ import { limitarCantidad } from "../hooks/useCarrito";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
 import TiendaVendedor from "../components/marketplace/TiendaVendedor";
 import "../css/marketplace.css";
+import Icon from "../components/public/Icon";
 
 const CLAVE_VEHICULO = "marketplaceVehiculoId";
 
@@ -59,7 +60,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
     <div className="dm-page mk-pagina">
       {header}
       <main className="dm-container mk-contenido">
-        <button className="mk-enlace mk-volver" onClick={onVolver}>← Volver al catálogo</button>
+        <button className="mk-enlace mk-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver al catálogo</button>
 
         <section className="mk-detalle">
           <div className="mk-detalle__imagen">

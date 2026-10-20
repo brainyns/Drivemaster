@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getToken } from "../services/authService";
 import { obtenerVehiculo, repuestosCompatibles, historialVehiculo } from "../services/vehiculoService";
 import "../css/servicios.css";
+import Icon from "../components/public/Icon";
 
 const formatPrecio = (p) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(p || 0);
@@ -50,7 +51,7 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
           <h1 className="sv-title">{vehiculo ? `${vehiculo.marca} ${vehiculo.modelo} ${vehiculo.anio}` : "Vehículo"}</h1>
           <p className="sv-subtitle">Placa {vehiculo?.placa} · Diagnóstico, repuestos e historial</p>
         </div>
-        {onVolver && <button className="sv-volver" onClick={onVolver}>← Mis vehículos</button>}
+        {onVolver && <button className="sv-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Mis vehículos</button>}
       </div>
 
       {error && <p style={{ color: "var(--error)" }}>{error}</p>}
