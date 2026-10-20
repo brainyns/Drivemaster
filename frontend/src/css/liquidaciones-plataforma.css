@@ -1,0 +1,27 @@
+/* ── Liquidaciones y reembolsos (SUPERADMIN, prefijo liq-, BEM) ────────────
+   Chips, cifra, tabla, avisos y estados son de ui.css y panel-plataforma.css (pp-); el diálogo, de
+   admin-base.css. Aquí las celdas de la tabla y la fila fallida. Tokens --ui-*, los dos temas. */
+
+.liq-resumen { grid-template-columns: minmax(0, 320px); }
+
+.liq-fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.liq-ref { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; white-space: nowrap; }
+.pp-sub.liq-ref { white-space: normal; overflow-wrap: anywhere; }
+.liq-texto { min-width: 11ch; max-width: 36ch; overflow-wrap: break-word; }
+.liq-estado { min-width: 180px; }
+.liq-estado .pp-sub { margin-top: 6px; line-height: 1.45; }
+.liq-fallo.pp-sub { color: var(--ui-error); }
+.liq-acciones .pp-sub { max-width: 22ch; margin-left: auto; white-space: normal; text-align: right; }
+
+/* La línea fallida se tiñe apenas: el chip y el motivo dicen qué pasó */
+.liq-fila--fallida > td { background: color-mix(in srgb, var(--ui-error) 5%, transparent); }
+
+@media (max-width: 760px) {
+  .liq-resumen { grid-template-columns: minmax(0, 1fr); }
+  .ui-table--tarjetas .liq-estado { flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+  .ui-table--tarjetas .liq-estado .pp-sub { flex-basis: 100%; text-align: right; }
+  .ui-table--tarjetas .liq-texto { max-width: none; }
+  .ui-table--tarjetas .liq-fila--fallida { border-color: color-mix(in srgb, var(--ui-error) 45%, var(--ui-line)); }
+  .ui-table--tarjetas .liq-fila--fallida > td { background: none; }
+  .ui-table--tarjetas .liq-acciones { flex-wrap: wrap; }
+}

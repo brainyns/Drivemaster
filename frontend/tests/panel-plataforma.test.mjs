@@ -134,3 +134,12 @@ test("Problemas de envío: sistema compartido, decisión con motivo en Campo y l
   assert.ok(p.includes("problemasDeEnvio(token)") && p.includes("resolverProblemaEnvio(token, pedido.id, resolucion, motivo.trim())"));
   assert.ok(p.includes("deshabilitado={!motivo.trim()}"), "sin motivo no se puede decidir");
 });
+
+test("Liquidaciones: sistema compartido, estados con texto y el número de transferencia obligatorio en modo manual", () => {
+  const p = usaSistemaCompartido("Liquidaciones.jsx", ["EncabezadoPagina", "ChipEstado", "<Indicador", "<Alerta", "onReintentar",
+    "<EstadoVacio", "<Esqueleto", "<Campo", "ui-table--tarjetas", 'aria-label="Tipo"', 'aria-label="Estado"', "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
+  for (const llamada of ["listarRepartos(token, estado)", "listarReembolsos(token, estado)", "liquidarReparto(token, id,", "marcarReembolsado(token, id,", "obtenerModo(token)"]) {
+    assert.ok(p.includes(llamada), `falta ${llamada}`);
+  }
+  assert.ok(p.includes("deshabilitado={esRepartos && esManual && !numero.trim()}"));
+});
