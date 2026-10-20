@@ -41,6 +41,8 @@ public class PlataformaNegociosService {
 
     static final String TIENDA = "TIENDA";
     static final String TALLER = "TALLER";
+    /** Filtro por plan: los negocios sin suscripción activa. */
+    static final String SIN_PLAN = "SIN_PLAN";
     static final int TAMANO_MAXIMO = 50;
     static final int TAMANO_POR_DEFECTO = 20;
     private static final Set<String> ESTADOS = Set.of(EstadoAprobacion.PENDIENTE, EstadoAprobacion.APROBADO, EstadoAprobacion.RECHAZADO);
@@ -58,13 +60,19 @@ public class PlataformaNegociosService {
 
     // ─── Vista completa (SUPERADMIN) ─────────────────────────────────────────
 
+    public NegociosRespuesta negocios(String tipo, String estado, String q, int pagina, int tamano) {
+        return negocios(tipo, estado, q, null, pagina, tamano);
+    }
+
     /**
      * @param tipo TIENDA o TALLER (vacío = ambos)
      * @param estado PENDIENTE, APROBADO o RECHAZADO (vacío = todos); las cuentas anteriores al marketplace cuentan como aprobadas
+     * @param plan código del plan activo, o SIN_PLAN para los que no tienen (vacío = todos)
      */
-    public NegociosRespuesta negocios(String tipo, String estado, String q, int pagina, int tamano) {
+    public NegociosRespuesta negocios(String tipo, String estado, String q, String plan, int pagina, int tamano) {
         String t = tipo == null ? "" : tipo.trim().toUpperCase();
         String e = estado == null ? "" : estado.trim().toUpperCase();
+        String p = plan == null ? "" : plan.trim().toUpperCase();
         boolean conTiendas = t.isEmpty() || TIENDA.equals(t);
         boolean conTalleres = t.isEmpty() || TALLER.equals(t);
         if (!e.isEmpty() && !ESTADOS.contains(e)) {
@@ -82,7 +90,7 @@ public class PlataformaNegociosService {
                         !Boolean.FALSE.equals(x.getActivo()), x.getFechaRegistro(), x.getMotivoRechazo(),
                         planes.get(TIENDA + ":" + x.getId()), null, 0,
                         total.getOrDefault(x.getId(), 0L), activos.getOrDefault(x.getId(), 0L), null, null,
-                        faltantesTienda(x)));
+                        faltantesTienda(x), x.getLogoUrl()));
             }
         }
         if (conTalleres) {
@@ -97,8 +105,11 @@ public class PlataformaNegociosService {
                 filas.add(new NegocioFila(TALLER, x.getId(), x.getNombre(), x.getCiudad(), estadoDe(x.getEstadoAprobacion()),
                         !Boolean.FALSE.equals(x.getActivo()), x.getFechaRegistro(), x.getMotivoRechazo(),
                         planes.get(TALLER + ":" + x.getId()), calificacion, n != null ? (long) n[1] : 0,
-                        null, null, o[0], o[1], faltantesTaller(x)));
+                        null, null, o[0], o[1], faltantesTaller(x), x.getLogoUrl()));
             }
+        }
+        if (!p.isEmpty()) {
+            filas.removeIf(f -> SIN_PLAN.equals(p) ? f.plan() != null : f.plan() == null || !p.equalsIgnoreCase(f.plan().codigo()));
         }
 
         // Los más recientes primero; los pendientes siempre arriba para que se vean

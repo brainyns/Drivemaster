@@ -19,12 +19,13 @@ public final class NegociosPlataformaDTO {
      * productos* son de las tiendas y ordenes* de los talleres. calificacion es el promedio de las calificaciones
      * que dieron los clientes (null si todavía no tiene; las tiendas aún no se califican).
      * datosPorCompletar: qué le falta para operar bien en el marketplace (vacío = completo).
+     * logoUrl: el logo o la foto que subió el negocio (null = la pantalla muestra sus iniciales).
      */
     public record NegocioFila(String tipo, String id, String nombre, String ciudad, String estado, boolean activo,
                               LocalDateTime registrado, String motivoRechazo, PlanActual plan,
                               Double calificacion, long calificaciones,
                               Long productos, Long productosActivos, Long ordenes, Long ordenesEntregadas,
-                              List<String> datosPorCompletar) {}
+                              List<String> datosPorCompletar, String logoUrl) {}
 
     public record NegociosRespuesta(ConsultasPlataformaDTO.Pagina<NegocioFila> negocios, Map<String, Long> porEstado) {}
 

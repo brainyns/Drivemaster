@@ -178,6 +178,35 @@ class PlataformaNegociosTest {
     }
 
     @Test
+    void cadaFilaTraeElLogoDelNegocioYSeFiltraPorPlan() {
+        datos();
+        Tienda conLogo = Tienda.builder().id("t1").nombre("Repuestos Norte").logoUrl("https://res.cloudinary.com/x/logo.png")
+                .estadoAprobacion("APROBADO").build();
+        when(mongo.find(any(Query.class), eq(Tienda.class))).thenReturn(List.of(conLogo));
+
+        NegociosRespuesta todos = servicio.negocios(null, null, null, 0, 20);
+        NegocioFila tienda = todos.negocios().items().stream().filter(f -> f.id().equals("t1")).findFirst().orElseThrow();
+        assertEquals("https://res.cloudinary.com/x/logo.png", tienda.logoUrl());
+        assertNull(todos.negocios().items().stream().filter(f -> f.id().equals("w1")).findFirst().orElseThrow().logoUrl());
+
+        // Solo t1 tiene suscripción activa (BASICO)
+        datos();
+        NegociosRespuesta basico = servicio.negocios(null, null, null, "basico", 0, 20);
+        assertEquals(List.of("t1"), basico.negocios().items().stream().map(NegocioFila::id).toList());
+        assertEquals(1, basico.negocios().total(), "el total cuenta solo los del plan");
+
+        datos();
+        NegociosRespuesta sinPlan = servicio.negocios(null, null, null, "SIN_PLAN", 0, 20);
+        assertEquals(3, sinPlan.negocios().total());
+        assertTrue(sinPlan.negocios().items().stream().allMatch(f -> f.plan() == null));
+
+        datos();
+        assertEquals(0, servicio.negocios(null, null, null, "PREMIUM", 0, 20).negocios().total());
+        datos();
+        assertEquals(4, servicio.negocios(null, null, null, " ", 0, 20).negocios().total(), "vacío = todos");
+    }
+
+    @Test
     void elAdminSoloRecibeLosPendientesConLoMinimoParaDecidir() {
         Tienda pendiente = Tienda.builder().id("t2").nombre("Frenos Sur").ciudad("Cali").nit("900123").estadoAprobacion("PENDIENTE")
                 .fechaRegistro(LocalDateTime.of(2026, 10, 5, 10, 0)).build();

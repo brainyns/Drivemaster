@@ -74,9 +74,10 @@ public class PlataformaController {
             @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String q,
+            @RequestParam(required = false) String plan,
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "20") int tamano) {
-        return ResponseEntity.ok(negocios.negocios(tipo, estado, q, pagina, tamano));
+        return ResponseEntity.ok(negocios.negocios(tipo, estado, q, plan, pagina, tamano));
     }
 
     /** ADMIN y SUPERADMIN: negocios por revisar, con lo mínimo para aprobarlos o rechazarlos. */
