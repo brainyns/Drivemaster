@@ -3,6 +3,7 @@ import Modal from "./Modal";
 import Icon from "./Icon";
 import { detalleProducto } from "../../services/catalogoService";
 import "../../css/product-detail.css";
+import { etiquetaCategoria } from "../../utils/categorias";
 
 const formatPrecio = (precio) => {
   if (!precio && precio !== 0) return "Consultar";
@@ -81,7 +82,7 @@ export default function ProductDetail({
   }, [inicial.id, vehiculo?.id]);
 
   const nombre = producto.nombre || "Sin nombre";
-  const categoria = producto.categoria || "Repuesto";
+  const categoria = etiquetaCategoria(producto.categoria) || "Repuesto";
   const marca = producto.marca || null;
   const tienda = producto.tienda;
   const encargo = producto.tipo === "ENCARGO";

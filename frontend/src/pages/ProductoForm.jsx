@@ -15,6 +15,7 @@ import {
   campoVacio, compatDeLista, errorImagen, margen as calcularMargen, mismaCompat, validarFormulario,
 } from "./tienda/reglasProducto";
 import "../css/producto-form.css";
+import { etiquetaCategoria } from "../utils/categorias";
 
 /**
  * Sugerencias de la IA para el producto (solo TIENDA): categoría de la lista y compatibilidades "por confirmar".
@@ -63,7 +64,7 @@ function SugerenciasIA({ form, setForm, token }) {
               <p className="pfm-ia__titulo"><ChipEstado tono="aviso">Por confirmar</ChipEstado> Categoría</p>
               {datos.categoria ? (
                 <div className="pfm-ia__fila">
-                  <span><strong>{datos.categoria}</strong> (de tu lista de categorías)</span>
+                  <span><strong>{etiquetaCategoria(datos.categoria)}</strong> (de tu lista de categorías)</span>
                   {form.categoria === datos.categoria
                     ? <ChipEstado tono="ok">Aplicada</ChipEstado>
                     : <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => setForm((p) => ({ ...p, categoria: datos.categoria }))}>Aplicar</button>}
@@ -313,7 +314,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 <Campo id="pfm-categoria" label="Categoría" error={errores.categoria}>
                   <select className="ui-field__input" name="categoria" value={form.categoria} onChange={handleChange}>
                     <option value="">Elegir categoría</option>
-                    {CATEGORIAS.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {CATEGORIAS.map((c) => <option key={c} value={c}>{etiquetaCategoria(c)}</option>)}
                   </select>
                 </Campo>
                 <Campo id="pfm-codigo" label="Código SKU" error={errores.codigo} ayuda="Único dentro de tu tienda.">

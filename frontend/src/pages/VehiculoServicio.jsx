@@ -3,6 +3,7 @@ import { getToken } from "../services/authService";
 import { obtenerVehiculo, repuestosCompatibles, historialVehiculo } from "../services/vehiculoService";
 import "../css/servicios.css";
 import Icon from "../components/public/Icon";
+import { etiquetaCategoria } from "../utils/categorias";
 
 const formatPrecio = (p) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(p || 0);
@@ -78,7 +79,7 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
           {repuestos.map(r => (
             <div className="sv-card" key={r.productoId}>
               <h3>{r.nombre}</h3>
-              <span className="sv-card-meta">{r.marca} · {r.categoria}</span>
+              <span className="sv-card-meta">{r.marca} · {etiquetaCategoria(r.categoria)}</span>
               <span className="sv-card-meta">Stock: {r.stockActual}</span>
               {r.tiendaNombre && (
                 <span className="sv-card-meta">Vende: {r.tiendaNombre}{r.tiendaCiudad ? ` · ${r.tiendaCiudad}` : ""}</span>

@@ -96,3 +96,15 @@ test("El asistente no se muestra en el acceso y en celular sube por encima de la
   // Una animación con fill "both" sobre transform deja al contenedor como bloque de lo fijo: la barra no quedaba abajo
   assert.ok(!/animation: pt-in [^;]*\bboth\b/.test(leerArchivo("../src/css/panel-taller.css")));
 });
+
+test("Categorías: con tilde en la interfaz, sin cambiar el valor guardado ni el de los filtros", async () => {
+  const { etiquetaCategoria } = await import("../src/utils/categorias.js");
+  const { CATEGORIAS } = await import("../src/pages/tienda/reglasProducto.js");
+  assert.equal(etiquetaCategoria("Suspension y Direccion"), "Suspensión y Dirección");
+  assert.equal(etiquetaCategoria("Frenos"), "Frenos");
+  assert.equal(etiquetaCategoria(null), null);
+  assert.ok(CATEGORIAS.includes("Suspension y Direccion"), "el valor guardado no cambia");
+  const leerArchivo = (r) => readFileSync(new URL(r, import.meta.url), "utf8");
+  assert.ok(leerArchivo("../src/pages/ProductoForm.jsx").includes("<option key={c} value={c}>{etiquetaCategoria(c)}</option>"));
+  assert.ok(leerArchivo("../src/components/public/CatalogFilters.jsx").includes("onChange={() => onCategoriaChange(c)}"), "el filtro sigue con el valor");
+});

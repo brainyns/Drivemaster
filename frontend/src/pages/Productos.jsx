@@ -15,6 +15,7 @@ import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
 import { FILTROS, NIVEL, coincide, contar, nivelStock, ordenar, porEncargo, publicado, resumen } from "./tienda/productosTienda";
 import "../css/productos.css";
+import { etiquetaCategoria } from "../utils/categorias";
 
 /** Stock con su número y, si pide atención, el chip con texto (el color nunca va solo). */
 function Stock({ p }) {
@@ -207,7 +208,7 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
                               </span>
                             </span>
                           </td>
-                          <td data-label="Categoría">{p.categoria || <span className="prt-tenue">Sin categoría</span>}</td>
+                          <td data-label="Categoría">{etiquetaCategoria(p.categoria) || <span className="prt-tenue">Sin categoría</span>}</td>
                           <td data-label="Precio" className="ui-table__num"><span className="ui-precio">{formatPrecio(p.precioVenta)}</span></td>
                           <td data-label="Stock"><Stock p={p} /></td>
                           <td data-label="Catálogo">

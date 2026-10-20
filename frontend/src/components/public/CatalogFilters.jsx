@@ -1,5 +1,6 @@
 import Icon from "./Icon";
 import "../../css/catalog.css";
+import { etiquetaCategoria } from "../../utils/categorias";
 
 /**
  * Panel lateral de filtros del catálogo global. En móvil se despliega debajo de la barra de
@@ -77,7 +78,7 @@ export default function CatalogFilters({
                 checked={categoriaActiva === c}
                 onChange={() => onCategoriaChange(c)}
               />
-              <span>{c}</span>
+              <span>{etiquetaCategoria(c)}</span>
             </label>
           ))}
         </fieldset>

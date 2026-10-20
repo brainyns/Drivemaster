@@ -1,5 +1,6 @@
 import Icon from "./Icon";
 import "../../css/product-card.css";
+import { etiquetaCategoria } from "../../utils/categorias";
 
 const formatPrecio = (precio) => {
   if (!precio && precio !== 0) return "Consultar";
@@ -63,7 +64,7 @@ function EstadoStock({ producto }) {
 /** Tarjeta de un producto del catálogo global: de DriveMaster o de cualquier tienda aprobada. */
 export default function ProductCard({ producto, onClick }) {
   const nombre = producto.nombre || "Sin nombre";
-  const categoria = producto.categoria || "Repuesto";
+  const categoria = etiquetaCategoria(producto.categoria) || "Repuesto";
   const tienda = producto.tienda;
   const marca = producto.marca || null;
   const imagen = producto.imagenUrl || null;

@@ -9,6 +9,7 @@ import ImagenProducto from "../components/marketplace/ImagenProducto";
 import TiendaVendedor from "../components/marketplace/TiendaVendedor";
 import "../css/marketplace.css";
 import Icon from "../components/public/Icon";
+import { etiquetaCategoria } from "../utils/categorias";
 
 const CLAVE_VEHICULO = "marketplaceVehiculoId";
 
@@ -73,7 +74,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
               <EtiquetaCompatibilidad producto={producto} />
             </div>
             <h1>{producto.nombre}</h1>
-            <p className="mk-tarjeta__meta">{[producto.marca, producto.categoria, producto.referencia && `Ref. ${producto.referencia}`].filter(Boolean).join(" · ")}</p>
+            <p className="mk-tarjeta__meta">{[producto.marca, etiquetaCategoria(producto.categoria), producto.referencia && `Ref. ${producto.referencia}`].filter(Boolean).join(" · ")}</p>
             <AvisoCompatibilidad producto={producto} />
 
             <p className="mk-detalle__precio">{formatPrecio(producto.precio)}</p>

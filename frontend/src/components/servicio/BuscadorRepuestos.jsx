@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { buscarRepuestos } from "../../services/repuestoService";
 import { ESTADO_OFERTA, formatPrecio } from "./estadosServicio";
 import Icon from "../public/Icon";
+import { etiquetaCategoria } from "../../utils/categorias";
 
 /**
  * Ventana del buscador de repuestos en todas las tiendas (aprobadas y activas).
@@ -173,7 +174,7 @@ function TarjetaOferta({ oferta: o, categoria, elegido, onElegir }) {
       <div className="ss-oferta__cuerpo">
         <strong className="ss-oferta__nombre">{o.nombre}</strong>
         <span className="ss-oferta__ref">
-          {[o.referencia && `Ref. ${o.referencia}`, o.marca, categoria].filter(Boolean).join(" · ")}
+          {[o.referencia && `Ref. ${o.referencia}`, o.marca, etiquetaCategoria(categoria)].filter(Boolean).join(" · ")}
         </span>
         <span className="ss-oferta__tienda">{o.tiendaNombre}</span>
         <span className="ss-oferta__dato">

@@ -10,6 +10,7 @@ import { unir } from "../utils/formato";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/listas-plataforma.css";
+import { etiquetaCategoria } from "../utils/categorias";
 
 const TAMANO = 20;
 const cop = (n) => (n == null ? "—" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n));
@@ -169,7 +170,7 @@ export default function ProductosPlataforma({ token }) {
                           </span>
                         </td>
                         <td data-label="Tienda">{p.tienda || <span className="pp-tenue">Sin tienda</span>}</td>
-                        <td data-label="Categoría">{p.categoria || <span className="pp-tenue">Sin categoría</span>}</td>
+                        <td data-label="Categoría">{etiquetaCategoria(p.categoria) || <span className="pp-tenue">Sin categoría</span>}</td>
                         <td data-label="Stock" className={`pp-num${sinStock ? " lst-agotado" : ""}`}>
                           {p.tipo === "ENCARGO" ? "Bajo pedido" : (p.stock ?? 0)}
                         </td>
