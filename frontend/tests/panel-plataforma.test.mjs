@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  SIN_PLAN, actividadNegocio, barras, estadoNegocio, filtrosInicialesNegocios, perfilNegocio, urgentesDashboard,
+  SIN_PLAN, actividadNegocio, barras, chipRevision, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
+  perfilNegocio, urgentesDashboard,
 } from "../src/pages/admin/plataformaAdmin.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
@@ -81,4 +82,32 @@ test("Tiendas y talleres: sistema compartido, filtros por tipo, estado y plan, y
   }
   assert.ok(!p.includes("toFixed("), "la calificación la muestra Calificacion (con «Nuevo»)");
   assert.ok(leer("../src/App.jsx").includes("filtroInicial={idSeleccionado} />") && leer("../src/pages/DashboardPlataforma.jsx").includes('ir("negocios", "TALLER")'));
+});
+
+test("Aprobaciones: los anteriores al marketplace cuentan como aprobados, búsqueda sin tildes y los recientes primero", () => {
+  const negocios = [
+    { tipo: "TALLER", id: "w1", nombre: "Mecánica Bogotá", estadoAprobacion: null, activo: true, fechaRegistro: "2026-01-01T00:00:00" },
+    { tipo: "TIENDA", id: "t1", nombre: "Frenos Sur", nit: "900123", estadoAprobacion: "PENDIENTE", fechaRegistro: "2026-10-01T00:00:00" },
+    { tipo: "TIENDA", id: "t2", nombre: "Baterías Norte", correoContacto: "ventas@norte.co", estadoAprobacion: "PENDIENTE", fechaRegistro: "2026-10-05T00:00:00" },
+    { tipo: "TALLER", id: "w2", nombre: "Taller Cerrado", estadoAprobacion: "APROBADO", activo: false },
+  ];
+  assert.deepEqual(conteoRevision(negocios), { PENDIENTE: 2, APROBADO: 2, RECHAZADO: 0 });
+  assert.deepEqual(conteoRevision(negocios, "TIENDA"), { PENDIENTE: 2, APROBADO: 0, RECHAZADO: 0 });
+  assert.deepEqual(filtrarRevision(negocios, { estado: "PENDIENTE" }).map((n) => n.id), ["t2", "t1"]);
+  assert.deepEqual(filtrarRevision(negocios, { estado: "APROBADO", busqueda: "bogota" }).map((n) => n.id), ["w1"]);
+  assert.deepEqual(filtrarRevision(negocios, { estado: "PENDIENTE", busqueda: "900123" }).map((n) => n.id), ["t1"]);
+  assert.deepEqual(filtrarRevision(negocios, { estado: "PENDIENTE", busqueda: "norte.co" }).map((n) => n.id), ["t2"]);
+  assert.deepEqual(chipRevision(negocios[0]), { label: "Activo", tono: "ok" });
+  assert.deepEqual(chipRevision(negocios[3]), { label: "Inactivo", tono: "apagado" });
+  assert.equal(chipRevision(negocios[1]).tono, "aviso");
+});
+
+test("Aprobaciones: sistema compartido, detalle con Dato y confirmación con Campo, y las mismas llamadas", () => {
+  const p = usaSistemaCompartido("Aprobaciones.jsx", ["EncabezadoPagina", "ChipEstado", "<LogoNegocio", "<Alerta", "onReintentar",
+    "<EstadoVacio", "<Esqueleto", "<Campo", "<Dato", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado de revisión"',
+    'aria-label="Tipo de negocio"', "DrawerAdmin", "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
+  for (const llamada of ["listarTalleres(token)", "listarTiendas(token)", "listarPlanes(token)", "resolverAprobacionTaller",
+    "resolverAprobacionTienda", "activarDesactivarTaller", "activarDesactivarTienda", "activarPlan("]) {
+    assert.ok(p.includes(llamada), `falta ${llamada}`);
+  }
 });

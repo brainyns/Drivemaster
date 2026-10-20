@@ -92,3 +92,37 @@ export function actividadNegocio(n = {}) {
   const t = n.ordenes || 0;
   return { texto: `${num(t)} ${plural(t, "orden", "órdenes")}`, detalle: `${num(n.ordenesEntregadas || 0)} ${plural(n.ordenesEntregadas || 0, "entregada", "entregadas")}` };
 }
+
+// ─── Aprobaciones ───────────────────────────────────────────────────────────
+
+/** Estado de revisión: los negocios anteriores al marketplace no tienen estado y cuentan como aprobados. */
+export const estadoRevision = (n = {}) => n.estadoAprobacion || "APROBADO";
+
+/** Chip de la fila: pendiente o rechazado; un aprobado dice si está activo o inactivo. */
+export function chipRevision(n = {}) {
+  const e = estadoRevision(n);
+  if (e === "PENDIENTE") return { label: "Pendiente", tono: "aviso" };
+  if (e === "RECHAZADO") return { label: "Rechazado", tono: "error" };
+  return n.activo ? { label: "Activo", tono: "ok" } : { label: "Inactivo", tono: "apagado" };
+}
+
+export const correoNegocio = (n = {}) => n.correoUsuario || n.correoContacto || "";
+
+/** Sin tildes ni mayúsculas, para buscar "Bogotá" escribiendo "bogota". */
+const normalizar = (t) => (t || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+/** Cuántos hay en cada estado con el tipo elegido ("" = ambos). */
+export function conteoRevision(negocios = [], tipo = "") {
+  const c = { PENDIENTE: 0, APROBADO: 0, RECHAZADO: 0 };
+  negocios.forEach((n) => { if (!tipo || n.tipo === tipo) c[estadoRevision(n)] = (c[estadoRevision(n)] || 0) + 1; });
+  return c;
+}
+
+/** Los de un estado y tipo que coinciden con la búsqueda (nombre, NIT o correo), los más recientes primero. */
+export function filtrarRevision(negocios = [], { estado = "PENDIENTE", tipo = "", busqueda = "" } = {}) {
+  const q = normalizar(busqueda.trim());
+  return negocios
+    .filter((n) => estadoRevision(n) === estado && (!tipo || n.tipo === tipo))
+    .filter((n) => !q || [n.nombre, n.nit, correoNegocio(n)].some((v) => normalizar(v).includes(q)))
+    .sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
+}

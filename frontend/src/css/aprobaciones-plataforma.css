@@ -1,0 +1,56 @@
+/* ── Aprobaciones del SUPERADMIN (prefijo apr-, BEM) ──────────────────────
+   Filtros y estados son de panel-plataforma.css (pp-); tabla, chips, datos y campos, de ui.css; el panel lateral
+   y el diálogo, de admin-base.css. Aquí la fila que se abre, la celda del negocio y el contenido del detalle.
+   Tokens --ui-*, los dos temas. */
+
+.apr-negocio { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.apr-negocio__texto { display: grid; gap: 2px; min-width: 0; }
+.apr-negocio__texto strong { font-size: 0.9rem; overflow-wrap: anywhere; }
+.apr-contacto { overflow-wrap: anywhere; }
+.apr-fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Toda la fila abre el detalle */
+.apr-fila { cursor: pointer; transition: background-color var(--ui-dur) ease; }
+.apr-fila:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }
+.apr-fila--seleccionada > td { background: var(--ui-surface-2); }
+
+@media (hover: hover) {
+  .apr-fila:hover > td { background: var(--ui-surface-2); }
+}
+
+.apr-peligro.ui-btn { color: var(--ui-error); }
+
+/* ── Detalle (dentro del panel lateral) ─────────────────────────────────── */
+.apr-detalle__cabecera { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.apr-detalle__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.apr-detalle__bloque { display: grid; gap: 12px; }
+.apr-detalle__bloque + .apr-detalle__bloque { padding-top: 18px; border-top: 1px solid var(--ui-line-soft); }
+
+.apr-root .apr-detalle__titulo,
+.apr-detalle__titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.apr-detalle__nota { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-size: 0.85rem; color: var(--ui-muted); }
+.apr-coordenadas { font-size: 0.8rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+
+.apr-detalle__fila { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 12px; }
+.apr-detalle__campo { flex: 1 1 220px; }
+/* El botón queda a la altura del control, no de la ayuda */
+.apr-detalle__fila > .ui-btn { margin-top: 26px; }
+
+.apr-motivo { min-height: 96px; resize: vertical; }
+
+@media (max-width: 760px) {
+  .ui-table--tarjetas .apr-contacto { overflow-wrap: anywhere; }
+  .ui-table--tarjetas .apr-fila--seleccionada { background: var(--ui-surface-2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apr-fila { transition: none; }
+}
