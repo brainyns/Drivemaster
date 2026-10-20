@@ -148,9 +148,9 @@
   max-width: 640px;
   margin: var(--sp-xl) auto;
   padding: var(--sp-xl);
+  /* Confirmación como Alerta de éxito: borde fino teñido, sin franja */
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-top: 4px solid var(--ui-info);
+  border: 1px solid color-mix(in srgb, var(--ui-ok) 35%, var(--border));
   border-radius: var(--ui-r-lg);
   display: flex;
   flex-direction: column;
@@ -625,7 +625,6 @@
   background: var(--ui-bg);
   color: var(--ui-text);
   border: 1px solid var(--ui-line);
-  border-top: 4px solid var(--ui-info);
   border-radius: var(--ui-r-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   animation: ssModalVentana var(--dur-med) var(--ease-out);

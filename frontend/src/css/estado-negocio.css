@@ -1,19 +1,20 @@
 /* ── Estado de revisión de un taller o tienda ───────────────────────────── */
 
+/* Con el estilo de Alerta (ui.css): fondo y borde fino teñidos con el tono, sin franja lateral */
 .estado-negocio {
-  --en-acento: #18487A;
+  --en-acento: var(--ui-info);
+  --en-fondo: var(--ui-info-bg);
   max-width: 640px;
   margin: var(--sp-xl) auto;
   padding: var(--sp-xl);
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-line);
-  border-left: 4px solid var(--en-acento);
+  background: var(--en-fondo);
+  border: 1px solid color-mix(in srgb, var(--en-acento) 35%, transparent);
   border-radius: var(--ui-r-lg);
   color: var(--ui-text);
 }
 
-.estado-negocio--rechazado { --en-acento: var(--ui-error); }
-.estado-negocio--inactivo  { --en-acento: var(--ui-aviso); }
+.estado-negocio--rechazado { --en-acento: var(--ui-error); --en-fondo: var(--ui-error-bg); }
+.estado-negocio--inactivo  { --en-acento: var(--ui-aviso); --en-fondo: var(--ui-aviso-bg); }
 
 .estado-negocio__eyebrow {
   display: inline-block;

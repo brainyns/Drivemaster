@@ -137,10 +137,9 @@ body:has(.sv-root) { background: var(--dm-bg); }
   padding: 3px 10px;
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--ui-text);
-  background: var(--ui-hover);
-  border-left: 3px solid var(--primary);
-  border-radius: var(--ui-r-sm);
+  color: var(--primary-text);
+  background: var(--primary-soft);
+  border-radius: var(--ui-r-full);
 }
 .sv-anteriores__enlace {
   padding: 0;
