@@ -169,7 +169,7 @@
 
 .dm-compat--incompatible {
   color: var(--ui-error);
-  background: rgba(201, 47, 47, 0.1);
+  background: color-mix(in srgb, var(--dm-red) 10%, transparent);
 }
 
 /* ── Precio / stock ─────────────────────────────────────────────────────── */

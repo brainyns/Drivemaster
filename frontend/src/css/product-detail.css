@@ -78,14 +78,14 @@
 .dm-detail__compat > svg { flex-shrink: 0; }
 
 .dm-detail__compat.is-ok {
-  background: rgba(69, 118, 89, 0.1);
-  border-color: rgba(69, 118, 89, 0.32);
+  background: color-mix(in srgb, var(--dm-green) 10%, transparent);
+  border-color: color-mix(in srgb, var(--dm-green) 32%, transparent);
   color: var(--ui-ok);
 }
 
 .dm-detail__compat.is-no {
-  background: rgba(201, 47, 47, 0.08);
-  border-color: rgba(201, 47, 47, 0.28);
+  background: color-mix(in srgb, var(--dm-red) 8%, transparent);
+  border-color: color-mix(in srgb, var(--dm-red) 28%, transparent);
   color: var(--ui-error);
 }
 

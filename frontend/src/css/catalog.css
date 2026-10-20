@@ -95,8 +95,8 @@
 }
 
 .dm-cat-vehicle.is-identified {
-  border-color: rgba(69, 118, 89, 0.4);
-  background: rgba(69, 118, 89, 0.07);
+  border-color: color-mix(in srgb, var(--dm-green) 40%, transparent);
+  background: color-mix(in srgb, var(--dm-green) 7%, transparent);
 }
 
 .dm-cat-vehicle > div:nth-child(2) {
@@ -388,7 +388,7 @@
   flex-wrap: wrap;
   margin: 0 0 16px;
   padding: 12px 16px;
-  border: 1px solid rgba(242, 140, 40, 0.5);
+  border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
   border-radius: 6px;
   background: var(--dm-orange-soft);
   color: var(--dm-text);

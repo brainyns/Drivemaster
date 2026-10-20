@@ -53,11 +53,11 @@
   border-radius: 6px; padding: 10px 14px; margin: 10px 0; font-size: 0.9rem; line-height: 1.45;
   border: 1px solid var(--dm-line); background: var(--dm-surface);
 }
-.mk-aviso--error { border-color: rgba(201, 47, 47, 0.5); background: rgba(201, 47, 47, 0.1); color: var(--dm-text); }
-.mk-aviso--aviso { border-color: rgba(242, 140, 40, 0.5); background: var(--dm-orange-soft); }
-.mk-aviso--ok { border-color: rgba(69, 118, 89, 0.5); background: rgba(69, 118, 89, 0.12); }
+.mk-aviso--error { border-color: color-mix(in srgb, var(--dm-red) 50%, transparent); background: color-mix(in srgb, var(--dm-red) 10%, transparent); color: var(--dm-text); }
+.mk-aviso--aviso { border-color: color-mix(in srgb, var(--primary) 50%, transparent); background: var(--dm-orange-soft); }
+.mk-aviso--ok { border-color: color-mix(in srgb, var(--dm-green) 50%, transparent); background: color-mix(in srgb, var(--dm-green) 12%, transparent); }
 .mk-toast {
-  background: rgba(69, 118, 89, 0.14); border: 1px solid rgba(69, 118, 89, 0.5);
+  background: color-mix(in srgb, var(--dm-green) 14%, transparent); border: 1px solid color-mix(in srgb, var(--dm-green) 50%, transparent);
   border-radius: 6px; padding: 8px 12px; font-size: 0.9rem; margin: 10px 0;
 }
 
@@ -68,8 +68,8 @@
   background: var(--dm-surface-2); color: var(--dm-muted);
 }
 .mk-etiqueta--ok { color: var(--ui-ok); border-color: transparent; background: var(--ui-ok-bg); }
-.mk-etiqueta--error { color: var(--ui-error); border-color: rgba(201, 47, 47, 0.6); background: rgba(201, 47, 47, 0.1); }
-.mk-etiqueta--aviso { color: var(--dm-orange-text); border-color: rgba(242, 140, 40, 0.6); background: var(--dm-orange-soft); }
+.mk-etiqueta--error { color: var(--ui-error); border-color: color-mix(in srgb, var(--dm-red) 60%, transparent); background: color-mix(in srgb, var(--dm-red) 10%, transparent); }
+.mk-etiqueta--aviso { color: var(--dm-orange-text); border-color: color-mix(in srgb, var(--primary) 60%, transparent); background: var(--dm-orange-soft); }
 
 /* ── Formularios ──────────────────────────────────────────────────────── */
 .mk-campo { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
@@ -296,7 +296,7 @@
 /* Otras tiendas con el mismo repuesto */
 .mk-otras { margin-top: 4px; border: 1px dashed var(--dm-line); border-radius: 8px; background: var(--dm-bg); }
 .mk-otras summary { cursor: pointer; padding: 9px 12px; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.mk-otras__ahorro { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(69, 118, 89, 0.15); color: var(--ui-ok); }
+.mk-otras__ahorro { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--dm-green) 15%, transparent); color: var(--ui-ok); }
 .mk-otras ul { list-style: none; margin: 0; padding: 0 12px 8px; }
 .mk-otras li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 8px 0; border-top: 1px solid var(--dm-line-soft); }
 .mk-otras__tienda { display: flex; flex-direction: column; min-width: 0; font-size: 0.84rem; }

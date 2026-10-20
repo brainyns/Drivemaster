@@ -45,8 +45,8 @@
 .estado-negocio__motivo {
   margin-top: var(--sp-md);
   padding: var(--sp-md);
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: color-mix(in srgb, var(--error) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 25%, transparent);
   border-radius: var(--ui-r-lg);
   font-size: 0.9rem;
   line-height: 1.5;

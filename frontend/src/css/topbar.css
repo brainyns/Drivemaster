@@ -460,7 +460,7 @@
 }
 
 .tb-perfil-logout:hover {
-  background: rgba(239,68,68,0.08);
+  background: color-mix(in srgb, var(--error) 8%, transparent);
 }
 
 .tb-perfil-logout .tb-perfil-item-ico { color: var(--ui-error); }

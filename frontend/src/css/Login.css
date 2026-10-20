@@ -363,7 +363,7 @@
 
 .auth-card input:not(.ui-field__input):focus {
   border-color: var(--dm-orange);
-  box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.16);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
 }
 
 .input-toggle {
@@ -403,8 +403,8 @@
   font-size: var(--fs-texto);
   line-height: 1.6;
   color: var(--dm-red);
-  background: rgba(201, 47, 47, 0.09);
-  border: 1px solid rgba(201, 47, 47, 0.26);
+  background: color-mix(in srgb, var(--dm-red) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dm-red) 26%, transparent);
   border-radius: 4px;
   padding: 10px 12px;
 }
@@ -444,7 +444,7 @@
 .auth-card button[type="submit"]:not(.ui-btn):hover:not(:disabled) {
   background: var(--dm-orange-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(242, 140, 40, 0.18);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .auth-card button[type="submit"]:not(.ui-btn):active:not(:disabled) {
