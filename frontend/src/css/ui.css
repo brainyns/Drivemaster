@@ -1247,6 +1247,8 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 }
 
 .ui-progreso--ok .ui-progreso__barra { background: var(--ui-ok); }
+.ui-progreso--aviso .ui-progreso__barra { background: var(--ui-aviso); }
+.ui-progreso--error .ui-progreso__barra { background: var(--ui-error); }
 
 /* ── Filtros (grupo de ui-chip) y búsqueda de una lista ────────────────── */
 .ui-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

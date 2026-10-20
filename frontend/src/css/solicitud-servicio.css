@@ -5,8 +5,8 @@
 .ss-detalle,
 .ss-form,
 .ss-modal {
-  --ss-navy:  #0C2240;
-  --ss-steel: #18487A;
+  --ss-navy:  var(--dm-navy);
+  --ss-steel: var(--dm-navy-2);
 }
 
 .ss-eyebrow {
@@ -61,12 +61,12 @@
   margin: 0 0 var(--sp-md);
 }
 
-.ss-alerta { background: rgba(239, 68, 68, 0.1);  border: 1px solid rgba(239, 68, 68, 0.3);  color: var(--error); }
-.ss-aviso  { background: rgba(24, 72, 122, 0.12); border: 1px solid rgba(24, 72, 122, 0.4); color: var(--text); }
-.ss-exito  { background: rgba(34, 197, 94, 0.1);  border: 1px solid rgba(34, 197, 94, 0.3);  color: var(--success); }
+.ss-alerta { background: var(--ui-error-bg); border: 1px solid color-mix(in srgb, var(--ui-error) 35%, transparent); color: var(--ui-error); }
+.ss-aviso  { background: var(--ui-info-bg); border: 1px solid color-mix(in srgb, var(--ui-info) 40%, transparent); color: var(--text); }
+.ss-exito  { background: var(--ui-ok-bg); border: 1px solid color-mix(in srgb, var(--ui-ok) 35%, transparent); color: var(--ui-ok); }
 
 .ss-btn-peligro { background: var(--error); }
-.ss-btn-peligro:hover { background: #dc2626; }
+.ss-btn-peligro:hover { background: color-mix(in srgb, var(--error) 85%, #000); }
 
 .ss-textarea,
 .ss-input {
@@ -150,7 +150,7 @@
   padding: var(--sp-xl);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-top: 4px solid #18487A;
+  border-top: 4px solid var(--ui-info);
   border-radius: var(--r-lg);
   display: flex;
   flex-direction: column;
@@ -294,13 +294,12 @@
 }
 
 .ss-estado__punto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.ss-estado--info    { background: rgba(24, 72, 122, 0.18); color: #6ea8e0; }
-.ss-estado--aviso   { background: rgba(245, 158, 11, 0.15); color: var(--amber-text); }
-.ss-estado--proceso { background: rgba(139, 92, 246, 0.15); color: var(--purple); }
-.ss-estado--ok      { background: rgba(34, 197, 94, 0.15);  color: var(--success); }
-.ss-estado--error   { background: rgba(239, 68, 68, 0.15);  color: var(--error); }
+.ss-estado--info    { background: var(--ui-info-bg);  color: var(--ui-info); }
+.ss-estado--aviso   { background: var(--ui-aviso-bg); color: var(--ui-aviso); }
+.ss-estado--proceso { background: var(--ui-info-bg);  color: var(--ui-info); }
+.ss-estado--ok      { background: var(--ui-ok-bg);    color: var(--ui-ok); }
+.ss-estado--error   { background: var(--ui-error-bg); color: var(--ui-error); }
 
-html[data-theme="light"] .ss-estado--info { color: #18487A; }
 
 /* ── Tarjetas de lista ── */
 .ss-tarjeta {
@@ -399,9 +398,10 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
 }
 
 .ss-timeline__item--actual .ss-timeline__marca {
-  background: #18487A;
-  border-color: #18487A;
-  box-shadow: 0 0 0 4px rgba(24, 72, 122, 0.25);
+  /* --ui-info: el navy en tema claro y un azul legible sobre el fondo oscuro */
+  background: var(--ui-info);
+  border-color: var(--ui-info);
+  box-shadow: 0 0 0 4px var(--ui-info-bg);
 }
 
 .ss-timeline__cabecera {
@@ -448,7 +448,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
   padding: 0 0.4rem;
   border-radius: var(--r-full);
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   font-size: 0.72rem;
   text-align: center;
 }
@@ -516,7 +516,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
   border-radius: var(--r-full);
   font-size: 0.7rem;
   font-weight: 600;
-  background: rgba(24, 72, 122, 0.2);
+  background: var(--ui-info-bg);
   color: var(--text);
 }
 
@@ -571,7 +571,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
   margin-top: var(--sp-sm);
   padding: var(--sp-sm) var(--sp-md);
   border-radius: var(--r-sm);
-  background: rgba(245, 158, 11, 0.08);
+  background: var(--ui-aviso-bg);
 }
 
 .ss-confirmar .ss-estado { align-self: flex-start; }
@@ -624,7 +624,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
   background: var(--ui-bg);
   color: var(--ui-text);
   border: 1px solid var(--ui-line);
-  border-top: 4px solid #18487A;
+  border-top: 4px solid var(--ui-info);
   border-radius: var(--ui-r-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   animation: ssModalVentana var(--dur-med) var(--ease-out);
@@ -737,7 +737,7 @@ html[data-theme="light"] .ss-estado--info { color: #18487A; }
   transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast);
 }
 
-.ss-switch input:checked + .ss-switch__pista { background: #18487A; border-color: #18487A; }
+.ss-switch input:checked + .ss-switch__pista { background: var(--ui-info); border-color: var(--ui-info); }
 .ss-switch input:checked + .ss-switch__pista::after { transform: translateX(16px); background: #fff; }
 .ss-switch input:focus-visible + .ss-switch__pista { box-shadow: 0 0 0 3px var(--primary-glow); }
 

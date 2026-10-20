@@ -1,0 +1,91 @@
+/* ── Resultado del pago (cliente, prefijo pr-, BEM) ─────────────────────────
+   Cabecera y botones son de ui.css. Aquí la tarjeta centrada, el ícono del resultado y el indicador de
+   carga. Solo tokens --ui-*: se lee igual en los dos temas. */
+
+.pr-root {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+}
+
+.pr-tarjeta {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  box-shadow: var(--ui-sombra-1);
+}
+
+.pr-marca {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+}
+
+.pr-marca--ok { color: var(--ui-ok); background: var(--ui-ok-bg); }
+.pr-marca--aviso { color: var(--ui-aviso); background: var(--ui-aviso-bg); }
+.pr-marca--error { color: var(--ui-error); background: var(--ui-error-bg); }
+.pr-marca--espera { color: var(--ui-info); background: var(--ui-info-bg); }
+
+.pr-root .pr-titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ui-text);
+  text-wrap: balance;
+}
+
+.pr-root .pr-texto {
+  max-width: 60ch;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--ui-text);
+  text-wrap: pretty;
+}
+
+.pr-root .pr-nota,
+.pr-root .pr-transaccion {
+  max-width: 60ch;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ui-muted);
+}
+
+.pr-transaccion { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+.pr-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.pr-acciones:empty { display: none; }
+
+/* Indicador de que se sigue consultando: anillo con el acento sobre la línea del tema */
+.pr-girando {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--ui-line);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: pr-girar 0.9s linear infinite;
+}
+
+@keyframes pr-girar { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pr-girando { animation-duration: 2.4s; }
+}

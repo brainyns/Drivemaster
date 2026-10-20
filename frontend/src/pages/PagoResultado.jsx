@@ -5,7 +5,9 @@ import {
   clasificar, debeReintentar, conLimiteDeTiempo, TiempoAgotado,
   INTERVALO_REINTENTO_MS, LIMITE_VERIFICACION_MS,
 } from "./estadoPago";
-import "../css/solicitudes.css";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Icon from "../components/public/Icon";
+import "../css/pago-resultado.css";
 
 // Pagos del marketplace (el backend envía "concepto"); las compras no lo traen.
 const TEXTO_MARKETPLACE = {
@@ -23,6 +25,12 @@ function lugar(concepto) {
 
 // Si el servidor tarda más que esto en la primera consulta, se avisa que puede estar iniciándose.
 const AVISO_LENTO_MS = 8000;
+
+// Ícono del resultado: el color acompaña al título, que siempre dice qué pasó
+const MARCAS = { ok: "check", aviso: "alert", error: "close", espera: "clock" };
+const Marca = ({ tono }) => (
+  <span className={`pr-marca pr-marca--${tono}`} aria-hidden="true"><Icon name={MARCAS[tono]} size={28} /></span>
+);
 
 export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServicios, onCompraCatalogoPagada, onIrMisCompras }) {
   const token = getToken();
@@ -116,16 +124,17 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
   };
 
   const transaccion = transaccionId && (
-    <p style={{ margin: "0 0 20px", fontSize: "13px", color: "#6b7280" }}>Transacción: {transaccionId}</p>
+    <p className="pr-transaccion">Transacción: {transaccionId}</p>
   );
   const enCurso = (texto) => (
     <>
-      <div className="checkout-spinner" style={{ margin: "0 auto 12px" }} />
-      <p style={{ margin: "0 0 20px", fontSize: "13px", color: "#6b7280" }}>{texto}</p>
+      <span className="pr-girando" aria-hidden="true" />
+      <p className="pr-nota" role="status">{texto}</p>
     </>
   );
   const botonConsultar = !consultando && transaccionId && (
-    <button className="sq-btn sq-btn-view sq-btn--md" style={{ marginRight: "8px" }} onClick={consultarDeNuevo}>
+    <button type="button" className="ui-btn ui-btn--secundario" onClick={consultarDeNuevo}>
+      <Icon name="refresh" size={16} />
       Consultar de nuevo
     </button>
   );
@@ -134,10 +143,10 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
   if (fase === "VERIFICANDO") {
     cuerpo = (
       <>
-        <div className="checkout-spinner" style={{ margin: "0 auto 16px" }} />
-        <p>Verificando tu pago...</p>
+        <span className="pr-girando" aria-hidden="true" />
+        <h2 className="pr-titulo" role="status">Verificando tu pago…</h2>
         {lento && (
-          <p style={{ margin: "8px 0 0", color: "#6b7280" }}>
+          <p className="pr-nota">
             El servidor está tardando en responder: si llevaba un rato sin uso, puede tardar hasta un minuto en iniciarse.
             No cierres esta página ni vuelvas a pagar.
           </p>
@@ -147,11 +156,11 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
   } else if (fase === "APROBADO" && concepto && aplicacion?.aplicado === false) {
     cuerpo = (
       <>
-        <div style={{ fontSize: "56px", marginBottom: "8px" }}>⚠️</div>
-        <h2 style={{ margin: "0 0 8px", color: "#b45309" }}>
+        <Marca tono="aviso" />
+        <h2 className="pr-titulo">
           {aplicacion.reembolsoPendiente ? "Recibimos tu pago, pero no se pudo aplicar" : "Estamos confirmando tu pago"}
         </h2>
-        <p style={{ margin: "0 0 20px", color: "#374151" }}>
+        <p className="pr-texto">
           {aplicacion.reembolsoPendiente
             ? "Te enviamos un correo con el motivo. DriveMaster te devolverá el dinero."
             : `Revisa el estado ${concepto === "CATALOGO" ? "de tu compra" : "de tu solicitud"} en unos segundos en ${lugar(concepto)}.`}
@@ -161,15 +170,15 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
   } else if (fase === "APROBADO") {
     cuerpo = (
       <>
-        <div style={{ fontSize: "56px", marginBottom: "8px" }}>✅</div>
-        <h2 style={{ margin: "0 0 8px", color: "#065f46" }}>¡Pago exitoso!</h2>
+        <Marca tono="ok" />
+        <h2 className="pr-titulo">¡Pago exitoso!</h2>
         {concepto ? (
           <>
-            <p style={{ margin: "0 0 4px", color: "#374151" }}>{TEXTO_MARKETPLACE[concepto]}</p>
-            <p style={{ margin: "0 0 4px", color: "#374151" }}>Te enviamos el comprobante de pago por correo.</p>
+            <p className="pr-texto">{TEXTO_MARKETPLACE[concepto]}</p>
+            <p className="pr-texto">Te enviamos el comprobante de pago por correo.</p>
           </>
         ) : (
-          <p style={{ margin: "0 0 4px", color: "#374151" }}>Tu pedido fue confirmado y ya está en proceso.</p>
+          <p className="pr-texto">Tu pedido fue confirmado y ya está en proceso.</p>
         )}
         {transaccion}
       </>
@@ -178,13 +187,13 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
     // Nunca "no se hizo ningún cobro": el banco todavía puede aprobarlo
     cuerpo = (
       <>
-        <div style={{ fontSize: "56px", marginBottom: "8px" }}>⏳</div>
-        <h2 style={{ margin: "0 0 8px", color: "#b45309" }}>Tu pago está en proceso</h2>
-        <p style={{ margin: "0 0 8px", color: "#374151" }}>
+        <Marca tono="espera" />
+        <h2 className="pr-titulo">Tu pago está en proceso</h2>
+        <p className="pr-texto">
           Tu banco (PSE) o Nequi todavía no lo confirma. No vuelvas a pagar.
         </p>
         {consultando ? enCurso("Seguimos consultando cada pocos segundos…") : (
-          <p style={{ margin: "0 0 8px", color: "#374151" }}>
+          <p className="pr-texto">
             Cuando se confirme te llegará un correo y lo verás en {lugar(concepto)}. Si el banco lo rechaza, no se hará ningún cobro.
           </p>
         )}
@@ -194,11 +203,11 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
   } else if (fase === "RECHAZADO") {
     cuerpo = (
       <>
-        <div style={{ fontSize: "56px", marginBottom: "8px" }}>❌</div>
+        <Marca tono="error" />
         {concepto ? (
           <>
-            <h2 style={{ margin: "0 0 8px", color: "#b91c1c" }}>Pago no aprobado</h2>
-            <p style={{ margin: "0 0 20px", color: "#374151" }}>
+            <h2 className="pr-titulo">Pago no aprobado</h2>
+            <p className="pr-texto">
               No se hizo ningún cobro. {concepto === "CATALOGO"
                 ? "Tu carrito sigue guardado: puedes intentarlo de nuevo."
                 : "Puedes intentarlo de nuevo desde “Mis servicios”."}
@@ -206,8 +215,8 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
           </>
         ) : (
           <>
-            <h2 style={{ margin: "0 0 8px", color: "#b91c1c" }}>Pago rechazado</h2>
-            <p style={{ margin: "0 0 20px", color: "#374151" }}>Tu pago no fue aprobado. Intenta nuevamente.</p>
+            <h2 className="pr-titulo">Pago rechazado</h2>
+            <p className="pr-texto">Tu pago no fue aprobado. Intenta nuevamente.</p>
           </>
         )}
       </>
@@ -215,14 +224,14 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
   } else if (fase === "SIN_RESPUESTA") {
     cuerpo = (
       <>
-        <div style={{ fontSize: "56px", marginBottom: "8px" }}>⚠️</div>
-        <h2 style={{ margin: "0 0 8px", color: "#b45309" }}>El servidor no responde</h2>
-        <p style={{ margin: "0 0 8px", color: "#374151" }}>
+        <Marca tono="aviso" />
+        <h2 className="pr-titulo">El servidor no responde</h2>
+        <p className="pr-texto">
           No pudimos comunicarnos con DriveMaster: puede estar iniciándose después de un rato sin uso.
           Tu pago no se pierde, Wompi nos lo confirma por su cuenta. No vuelvas a pagar.
         </p>
         {consultando ? enCurso("Reintentando…") : (
-          <p style={{ margin: "0 0 8px", color: "#374151" }}>Prueba de nuevo en un minuto.</p>
+          <p className="pr-texto">Prueba de nuevo en un minuto.</p>
         )}
         {transaccion}
       </>
@@ -230,15 +239,15 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
   } else {
     cuerpo = (
       <>
-        <div style={{ fontSize: "56px", marginBottom: "8px" }}>⚠️</div>
-        <h2 style={{ margin: "0 0 8px", color: "#b45309" }}>No se pudo verificar el pago</h2>
+        <Marca tono="aviso" />
+        <h2 className="pr-titulo">No se pudo verificar el pago</h2>
         {!transaccionId ? (
-          <p style={{ margin: "0 0 20px", color: "#374151" }}>
+          <p className="pr-texto">
             No encontramos una transacción para verificar. Si realizaste el pago, pronto quedará confirmado.
           </p>
         ) : (
           <>
-            <p style={{ margin: "0 0 8px", color: "#374151" }}>
+            <p className="pr-texto">
               {falloAlVolver && "Volviste de Wompi, pero no pudimos confirmar el pago en ese momento. "}
               Si realizaste el pago, se confirmará automáticamente y lo verás en {lugar(concepto)}. No vuelvas a pagar sin revisarlo antes.
             </p>
@@ -253,25 +262,24 @@ export default function PagoResultado({ onIrSolicitudes, onPagoExitoso, onIrServ
   let botonSalir = null;
   if (fase !== "VERIFICANDO") {
     botonSalir = concepto === "CATALOGO" ? (
-      <button className="sq-btn sq-btn-approve sq-btn--md" onClick={salir(onIrMisCompras)}>Ver mis compras</button>
+      <button type="button" className="ui-btn ui-btn--primario" onClick={salir(onIrMisCompras)}>Ver mis compras</button>
     ) : concepto ? (
-      <button className="sq-btn sq-btn-approve sq-btn--md" onClick={salir(onIrServicios)}>Ver mis servicios</button>
+      <button type="button" className="ui-btn ui-btn--primario" onClick={salir(onIrServicios)}>Ver mis servicios</button>
     ) : (
-      <button className="sq-btn sq-btn-approve sq-btn--md" onClick={salir(onIrSolicitudes)}>Ver mis solicitudes</button>
+      <button type="button" className="ui-btn ui-btn--primario" onClick={salir(onIrSolicitudes)}>Ver mis solicitudes</button>
     );
   }
 
   return (
-    <div className="sq-root">
-      <div className="sq-header">
-        <h1 className="sq-title">Resultado del pago</h1>
-        <p className="sq-subtitle">Confirmación de tu pago en línea.</p>
-      </div>
-      <div className="sq-empty" style={{ padding: "48px 24px", textAlign: "center" }}>
+    <div className="pr-root">
+      <EncabezadoPagina titulo="Resultado del pago" descripcion="Confirmación de tu pago en línea." />
+      <section className="pr-tarjeta" aria-live="polite">
         {cuerpo}
-        {fase !== "VERIFICANDO" && fase !== "APROBADO" && fase !== "RECHAZADO" && botonConsultar}
-        {botonSalir}
-      </div>
+        <div className="pr-acciones">
+          {fase !== "VERIFICANDO" && fase !== "APROBADO" && fase !== "RECHAZADO" && botonConsultar}
+          {botonSalir}
+        </div>
+      </section>
     </div>
   );
 }

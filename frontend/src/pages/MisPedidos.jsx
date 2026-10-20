@@ -22,15 +22,16 @@ function headers(token) {
   return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 }
 
-const COLORES = {
-  PAGADA: "#3b82f6",
-  APROBADO: "#22c55e",
-  COMPLETADA: "#22c55e",
-  ENTREGADO: "#22c55e",
-  EN_CAMINO: "#f59e0b",
-  ANULADA: "#6b7280",
-  CANCELADA: "#ef4444",
-  PENDIENTE_PAGO: "#f59e0b",
+// Estado de cada compra: texto y tono del sistema (ui-badge), que cambia con el tema
+const ESTADOS_COMPRA = {
+  PAGADA: { label: "Pagada", tono: "info" },
+  APROBADO: { label: "Aprobado", tono: "ok" },
+  COMPLETADA: { label: "Completada", tono: "ok" },
+  ENTREGADO: { label: "Entregado", tono: "ok" },
+  EN_CAMINO: { label: "En camino", tono: "aviso" },
+  ANULADA: { label: "Anulada", tono: "neutro" },
+  CANCELADA: { label: "Cancelada", tono: "error" },
+  PENDIENTE_PAGO: { label: "Pendiente de pago", tono: "aviso" },
 };
 
 const PASOS_SEGUIMIENTO = [
@@ -48,14 +49,20 @@ function pasoSeguimiento(estado) {
 
 // Estados del ciclo de una orden de taller. El estado vive en la orden, no en
 // la venta: por eso el historial de compras mostraba todo congelado en PAGADA.
-const COLORES_ORDEN = {
-  SOLICITADA: "#f59e0b",
-  COTIZADA: "#8b5cf6",
-  PAGADA: "#3b82f6",
-  EN_PROCESO: "#f59e0b",
-  FINALIZADA: "#22c55e",
-  CANCELADA: "#ef4444",
+const ESTADOS_ORDEN = {
+  SOLICITADA: { label: "Solicitada", tono: "aviso" },
+  COTIZADA: { label: "Cotizada", tono: "acento" },
+  PAGADA: { label: "Pagada", tono: "info" },
+  EN_PROCESO: { label: "En proceso", tono: "aviso" },
+  FINALIZADA: { label: "Finalizada", tono: "ok" },
+  CANCELADA: { label: "Cancelada", tono: "error" },
 };
+
+/** Píldora de estado con su texto; un estado desconocido se muestra tal cual, en aviso. */
+function Pildora({ catalogo, estado, className }) {
+  const e = catalogo[estado] || { label: estado || "Pendiente", tono: "aviso" };
+  return <span className={`ui-badge ui-badge--${e.tono} ${className}`}>{e.label}</span>;
+}
 
 const PASOS_TALLER = [
   { key: "COTIZADA", label: "Cotizada" },
@@ -94,9 +101,7 @@ function CitasAgendadas({ ordenes, ahora }) {
             <div className="mis-citas-detalle">
               <strong>{o.vehiculoDescripcion}</strong>
               <span>{o.tallerNombre} · {o.productoNombre}</span>
-              <span className="mis-citas-estado" style={{ background: COLORES_ORDEN[o.estado] || "#f59e0b" }}>
-                {o.estado}
-              </span>
+              <Pildora catalogo={ESTADOS_ORDEN} estado={o.estado} className="mis-citas-estado" />
             </div>
             <button
               className="mis-citas-cancelar"
@@ -176,12 +181,7 @@ export default function MisPedidos({ onVolver }) {
                   <div key={o.id} className="mis-pedidos-card">
                     <div className="mis-pedidos-card-top">
                       <span className="mis-pedidos-card-id">#{o.id?.slice(-8).toUpperCase() || "N/A"}</span>
-                      <span
-                        className="mis-pedidos-card-estado"
-                        style={{ background: COLORES_ORDEN[o.estado] || "#f59e0b" }}
-                      >
-                        {o.estado}
-                      </span>
+                      <Pildora catalogo={ESTADOS_ORDEN} estado={o.estado} className="mis-pedidos-card-estado" />
                     </div>
 
                     {paso >= 0 && (
@@ -238,12 +238,7 @@ export default function MisPedidos({ onVolver }) {
                   <div key={v.id} className="mis-pedidos-card">
                     <div className="mis-pedidos-card-top">
                       <span className="mis-pedidos-card-id">#{v.id?.slice(-8).toUpperCase() || "N/A"}</span>
-                      <span
-                        className="mis-pedidos-card-estado"
-                        style={{ background: COLORES[v.estado] || "#f59e0b" }}
-                      >
-                        {v.estado || "Pendiente"}
-                      </span>
+                      <Pildora catalogo={ESTADOS_COMPRA} estado={v.estado} className="mis-pedidos-card-estado" />
                     </div>
                     {paso >= 0 && (
                       <div className="mis-pedidos-track">

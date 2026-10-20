@@ -65,7 +65,7 @@
 
 .mis-pedidos-count {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-primary);
   font-size: 11px;
   font-weight: 700;
   min-width: 20px;
@@ -106,9 +106,9 @@
 
 /* ─── Citas agendadas ─── */
 .mis-citas {
-    background: var(--surface2, #161b22);
-    border: 1px solid var(--border2, #30363d);
-    border-left: 3px solid #f97316;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-left: 1px solid var(--border2);
     border-radius: 10px;
     padding: 16px;
     margin-bottom: 8px;
@@ -123,7 +123,7 @@
 
 .mis-citas-sub {
     font-size: 12px;
-    color: var(--muted, #8b949e);
+    color: var(--muted);
     margin: 0 0 14px;
     }
 
@@ -135,14 +135,14 @@
     gap: 14px;
     flex-wrap: wrap;
     padding: 12px;
-    background: var(--surface, #0d1117);
-    border: 1px solid var(--border2, #30363d);
+    background: var(--surface);
+    border: 1px solid var(--border2);
     border-radius: 8px;
 }
 
 .mis-citas-when { display: flex; flex-direction: column; min-width: 92px; }
 .mis-citas-fecha { font-size: 13px; font-weight: 600; }
-.mis-citas-hora { font-size: 18px; font-weight: 700; color: #f97316; }
+.mis-citas-hora { font-size: 18px; font-weight: 700; color: var(--primary-text); }
 
 .mis-citas-detalle { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 180px; font-size: 13px; }
 .mis-citas-detalle strong { font-size: 14px; }
@@ -152,21 +152,20 @@
     margin-top: 4px;
     padding: 2px 8px;
     border-radius: 999px;
-    color: #fff;
     font-size: 11px;
     }
 
 .mis-citas-cancelar {
     background: none;
-    border: 1px solid var(--border2, #30363d);
+    border: 1px solid var(--border2);
     border-radius: 6px;
-    color: var(--muted, #8b949e);
+    color: var(--muted);
     padding: 6px 10px;
     font-size: 12px;
     cursor: pointer;
     }
 
-.mis-citas-cancelar:hover:not(:disabled) { color: #f97316; border-color: #f97316; }
+.mis-citas-cancelar:hover:not(:disabled) { color: var(--primary-text); border-color: var(--primary); }
 .mis-citas-cancelar:disabled { opacity: 0.4; cursor: not-allowed; }
 
 @media (max-width: 640px) {
@@ -202,7 +201,6 @@
 .mis-pedidos-card-estado {
   font-size: 11px;
   font-weight: 600;
-  color: #fff;
   padding: 4px 10px;
   border-radius: 4px;
   text-transform: uppercase;

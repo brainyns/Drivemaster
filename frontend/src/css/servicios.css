@@ -88,11 +88,11 @@ body:has(.sv-root) { background: var(--dm-bg); }
 
 .sv-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-full); font-size: 0.8rem; font-weight: 600; }
 .sv-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.sv-badge-cotizada  { background: rgba(245,158,11,0.15); color: var(--amber-text); }
-.sv-badge-pagada    { background: rgba(59,130,246,0.15); color: var(--blue); }
-.sv-badge-proceso   { background: rgba(139,92,246,0.15); color: var(--purple); }
-.sv-badge-finalizada{ background: rgba(34,197,94,0.15);  color: var(--success); }
-.sv-badge-cancelada { background: rgba(239,68,68,0.15);  color: var(--error); }
+.sv-badge-cotizada  { background: var(--ui-aviso-bg); color: var(--ui-aviso); }
+.sv-badge-pagada    { background: var(--ui-info-bg);  color: var(--ui-info); }
+.sv-badge-proceso   { background: var(--ui-info-bg);  color: var(--ui-info); }
+.sv-badge-finalizada{ background: var(--ui-ok-bg);    color: var(--ui-ok); }
+.sv-badge-cancelada { background: var(--ui-error-bg); color: var(--ui-error); }
 
 .sv-list { display: flex; flex-direction: column; gap: var(--sp-md); }
 

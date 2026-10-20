@@ -195,7 +195,7 @@
 
 .ct-pedido__entrega {
   padding: var(--sp-sm) var(--sp-md);
-  border-left: 4px solid #18487A;
+  border: 1px solid var(--border2);
   background: var(--surface2);
   border-radius: var(--r-sm);
   font-size: 0.9rem;
@@ -277,9 +277,35 @@
   color: var(--border2);
 }
 
-.ct-estrella--activa { color: #E8450A; }
+.ct-estrella--activa { color: var(--ui-aviso); } /* el mismo de Estrellas (ui.css) */
 
 .ct-estrella:focus-visible {
   outline: 2px solid var(--primary);
   border-radius: 4px;
 }
+
+/* ── Probabilidad de aprobación (AlertaPrediccionCotizacion, prefijo apc-) ──
+   Tono por nivel de riesgo con los tokens --ui-* (los dos temas); chip y barra son de ui.css. */
+.apc {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 16px 20px;
+  border: 1px solid var(--apc-borde, var(--ui-line));
+  border-radius: var(--ui-r-lg);
+  background: var(--apc-fondo, var(--ui-surface));
+}
+
+.apc--ok { --apc-borde: color-mix(in srgb, var(--ui-ok) 45%, var(--ui-line)); --apc-fondo: var(--ui-ok-bg); --apc-acento: var(--ui-ok); }
+.apc--aviso { --apc-borde: color-mix(in srgb, var(--ui-aviso) 45%, var(--ui-line)); --apc-fondo: var(--ui-aviso-bg); --apc-acento: var(--ui-aviso); }
+.apc--error { --apc-borde: color-mix(in srgb, var(--ui-error) 45%, var(--ui-line)); --apc-fondo: var(--ui-error-bg); --apc-acento: var(--ui-error); }
+
+.apc__cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.apc__origen { font-size: 0.75rem; font-weight: 600; color: var(--ui-muted); }
+.apc .apc__titulo { margin: 4px 0 0; font-size: 1rem; font-weight: 600; color: var(--ui-text); }
+.apc__cifra { font-weight: 700; color: var(--apc-acento, var(--ui-text)); font-variant-numeric: tabular-nums; }
+.apc__cifras { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 0.8rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+.apc__sugerencias { padding-top: 10px; border-top: 1px dashed var(--ui-line); }
+.apc__sugerencias-titulo { font-size: 0.8rem; font-weight: 600; color: var(--ui-text); }
+.apc__sugerencias ul { margin: 6px 0 0 16px; padding: 0; font-size: 0.8rem; line-height: 1.5; color: var(--ui-muted); }
+.apc__motor { text-align: right; font-size: 0.75rem; color: var(--ui-muted); }
