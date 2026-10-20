@@ -1,0 +1,23 @@
+/* ── Mi perfil del personal interno (prefijo pfa-, BEM) ────────────────────
+   Secciones, datos, campos, cifras y avisos son de ui.css y panel-plataforma.css (pp-). Aquí solo las dos
+   columnas y el bloque de cifras secundarias. Tokens --ui-*, los dos temas. */
+
+.pfa-columnas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.pfa-root .ui-seccion__desc .ui-badge { vertical-align: middle; }
+
+.pfa-secundarios {
+  padding: 16px 20px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+}
+
+@media (max-width: 960px) {
+  .pfa-columnas { grid-template-columns: minmax(0, 1fr); }
+}

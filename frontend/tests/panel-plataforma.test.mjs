@@ -183,3 +183,11 @@ test("Reporte de servicios: cifras con Indicador, rankings con BarraProgreso y e
     "<EstadoVacio", "<Esqueleto", 'aria-label="Periodo"'], ["adm-", "rp-kpi", "style={{", "admin-base.css"]);
   assert.ok(p.includes("getReportesServicios(token, periodo)"), "el mismo endpoint");
 });
+
+test("Mi perfil: sistema compartido, la misma validación de la contraseña con el error en su campo", () => {
+  const p = usaSistemaCompartido("PerfilAdmin.jsx", ["EncabezadoPagina", "ChipEstado", "<Indicador", "<Alerta", "onReintentar", "<Esqueleto",
+    "<Campo", "CampoClave", "<Dato", "ui-seccion"], ["adm-", "db-kpi", "pf-", "perfil.css\""]);
+  assert.ok(p.includes("getPerfil(token)") && p.includes("cambiarPassword(token, passActual, passNueva)"));
+  assert.ok(p.includes('"Las contraseñas no coinciden"') && p.includes('"La nueva contraseña debe tener al menos 6 caracteres"'));
+  assert.ok(p.includes("error={errores.confirmar}") && p.includes("error={errores.nueva}"));
+});
