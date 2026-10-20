@@ -154,6 +154,30 @@ class PlataformaNegociosTest {
     }
 
     @Test
+    void unTallerSinCalificacionesYNegociosSinLogoNoRompenLaLista() {
+        // Desde el recálculo de calificaciones, un taller sin notas de clientes guarda rating null (y 0 calificaciones)
+        Taller nuevo = Taller.builder().id("w4").nombre("Taller Nuevo").ciudad("Pasto").estadoAprobacion("PENDIENTE")
+                .rating(null).calificaciones(0).logoUrl(null).fechaRegistro(LocalDateTime.of(2026, 10, 10, 10, 0)).build();
+        Tienda sinLogo = Tienda.builder().id("t3").nombre("Sin Logo").ciudad("Pasto").logoUrl(null)
+                .estadoAprobacion("APROBADO").fechaRegistro(LocalDateTime.of(2026, 10, 1, 10, 0)).build();
+        when(mongo.find(any(Query.class), eq(Tienda.class))).thenReturn(List.of(sinLogo));
+        when(mongo.find(any(Query.class), eq(Taller.class))).thenReturn(List.of(nuevo));
+        AggregationResults<Document> vacio = resultado();
+        when(mongo.aggregate(any(Aggregation.class), eq(Producto.class), eq(Document.class))).thenReturn(vacio);
+        when(mongo.aggregate(any(Aggregation.class), eq(OrdenServicio.class), eq(Document.class))).thenReturn(vacio);
+
+        for (String tipo : new String[]{null, "TIENDA", "TALLER"}) {
+            NegociosRespuesta r = assertDoesNotThrow(() -> servicio.negocios(tipo, null, null, 0, 20), "tipo " + tipo);
+            assertFalse(r.negocios().items().isEmpty(), "tipo " + tipo);
+        }
+
+        NegocioFila taller = servicio.negocios("TALLER", null, null, 0, 20).negocios().items().get(0);
+        assertNull(taller.calificacion(), "sin calificaciones es un taller nuevo, no un 0");
+        assertEquals(0L, taller.calificaciones());
+        assertEquals(0L, taller.ordenes());
+    }
+
+    @Test
     void elAdminSoloRecibeLosPendientesConLoMinimoParaDecidir() {
         Tienda pendiente = Tienda.builder().id("t2").nombre("Frenos Sur").ciudad("Cali").nit("900123").estadoAprobacion("PENDIENTE")
                 .fechaRegistro(LocalDateTime.of(2026, 10, 5, 10, 0)).build();

@@ -92,7 +92,8 @@ public class PlataformaNegociosService {
             for (Taller x : talleres) {
                 long[] o = ordenes.getOrDefault(x.getId(), new long[2]);
                 double[] n = notas.get(x.getId());
-                Double calificacion = n != null ? n[0] : x.getRating();
+                // Double.valueOf: con n[0] primitivo el ternario desempaquetaría getRating(), que es null en un taller sin calificaciones
+                Double calificacion = n != null ? Double.valueOf(n[0]) : x.getRating();
                 filas.add(new NegocioFila(TALLER, x.getId(), x.getNombre(), x.getCiudad(), estadoDe(x.getEstadoAprobacion()),
                         !Boolean.FALSE.equals(x.getActivo()), x.getFechaRegistro(), x.getMotivoRechazo(),
                         planes.get(TALLER + ":" + x.getId()), calificacion, n != null ? (long) n[1] : 0,
