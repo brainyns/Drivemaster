@@ -48,6 +48,7 @@ export default function Login({
   const [intentado, setIntentado] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fotoOk, setFotoOk] = useState(true);
   const googleBtnRef = useRef(null);
 
   const handleGoogleResponse = async (response) => {
@@ -128,7 +129,17 @@ export default function Login({
   return (
     <div className="auth-page auth-page--client">
       <aside className="auth-aside">
-        <div className="auth-aside__photo" aria-hidden="true" />
+        {/* La foto carga primero (es lo primero que se ve); si falla, queda el color de fondo del panel */}
+        <picture className="auth-aside__photo" aria-hidden="true">
+          {fotoOk && (
+            <>
+              <source type="image/webp" sizes="(max-width: 980px) 100vw, 50vw"
+                srcSet="/images/drivemaster-hero-800.webp 800w, /images/drivemaster-hero-1440.webp 1440w" />
+              <img src="/images/drivemaster-hero.jpg" alt="" width="1800" height="1200"
+                fetchPriority="high" loading="eager" decoding="async" onError={() => setFotoOk(false)} />
+            </>
+          )}
+        </picture>
 
         <div className="auth-aside__body">
           <h2 className="auth-aside__title">

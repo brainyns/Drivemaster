@@ -80,44 +80,50 @@
   .auth-points { margin-top: 28px; gap: 14px; }
 }
 
-/* Foto de contexto: sitúa el proyecto sin competir con el texto. */
+/* Foto del carro, como en el hero de la landing: a color y sin filtros. El panel es oscuro en los dos temas
+   (es una foto), así que sus colores no siguen al tema: --auth-foto-fondo es el mismo del hero (#141517) y
+   queda a la vista mientras la foto carga o si no carga. */
+.auth-aside {
+  --auth-foto-fondo: #141517;
+  --auth-sombra: 20, 21, 23; /* el mismo color en RGB, para los degradados */
+  --auth-texto-suave: #B9BBBC; /* el texto de apoyo del hero: 9:1 sobre el fondo */
+}
+
 .auth-aside__photo {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: #0D0E10 url("/images/drivemaster-hero.jpg") 60% 50% / cover no-repeat;
-  filter: grayscale(0.45) contrast(1.08) brightness(0.64);
+  background: var(--auth-foto-fondo);
 }
 
+.auth-aside__photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 62% 50%;
+}
+
+/* El degradado va solo detrás del texto (a la izquierda y abajo): el carro, a la derecha, queda limpio */
 .auth-aside__photo::after {
   content: "";
   position: absolute;
   inset: 0;
   background:
-    /* Más oscuro a la izquierda, detrás del texto, para que no quede sobre los faros */
     linear-gradient(
       to right,
-      rgba(13, 14, 16, 0.8) 0%,
-      rgba(13, 14, 16, 0.55) 45%,
-      transparent 78%
+      rgba(var(--auth-sombra), 0.92) 0%,
+      rgba(var(--auth-sombra), 0.86) 46%,
+      rgba(var(--auth-sombra), 0.3) 68%,
+      transparent 86%
     ),
-    linear-gradient(
-      to top,
-      #0D0E10 3%,
-      rgba(13, 14, 16, 0.88) 34%,
-      rgba(13, 14, 16, 0.66) 66%,
-      rgba(13, 14, 16, 0.4) 100%
-    ),
-    radial-gradient(
-      circle at 84% 6%,
-      rgba(242, 140, 40, 0.2) 0%,
-      rgba(242, 140, 40, 0.04) 45%,
-      transparent 62%
-    );
+    linear-gradient(to top, rgba(var(--auth-sombra), 0.85) 0%, transparent 26%);
 }
 
 .auth-aside__body {
   max-width: 430px;
+  /* Respaldo de legibilidad si un reflejo claro de la foto queda detrás de una línea */
+  text-shadow: 0 1px 14px rgba(var(--auth-sombra), 0.9);
 }
 
 .auth-eyebrow {
@@ -152,7 +158,7 @@
 .auth-aside__lead {
   font-size: 1.0625rem;
   line-height: 1.8;
-  color: rgba(245, 245, 243, 0.72);
+  color: var(--auth-texto-suave);
   max-width: 380px;
 }
 
@@ -171,7 +177,7 @@
   gap: 11px;
   font-size: var(--fs-texto);
   line-height: 1.5;
-  color: rgba(245, 245, 243, 0.78);
+  color: var(--auth-texto-suave);
 }
 
 .auth-points svg {
@@ -219,7 +225,7 @@
   font-size: var(--fs-etiqueta);
   font-weight: 700;
   letter-spacing: 2.6px;
-  color: rgba(245, 245, 243, 0.62);
+  color: var(--auth-texto-suave);
 }
 
 /* ── Card ────────────────────────────────────────────────────────────────── */
@@ -596,10 +602,37 @@
 @media (max-width: 980px) {
   .auth-page--client {
     grid-template-columns: minmax(0, 1fr);
+    /* La franja de la foto arriba y el formulario justo debajo, sin hueco */
+    grid-template-rows: auto 1fr;
   }
 
+  .auth-page--client .auth-main { align-items: flex-start; }
+
+  /* En pantallas angostas la foto no desaparece: queda como franja arriba, con el título encima */
   .auth-aside {
+    position: relative;
+    height: 220px;
+    min-height: 0;
+    padding: 24px;
+    justify-content: flex-end;
+  }
+
+  .auth-aside__lead,
+  .auth-points,
+  .auth-aside > .auth-aside__foot {
     display: none;
+  }
+
+  .auth-aside__title {
+    margin-bottom: 0;
+    font-size: 2.25rem;
+    letter-spacing: -1px;
+  }
+
+  .auth-aside__photo img { object-position: 58% 55%; }
+
+  .auth-aside__photo::after {
+    background: linear-gradient(to top, rgba(var(--auth-sombra), 0.9) 0%, rgba(var(--auth-sombra), 0.45) 45%, transparent 75%);
   }
 
   .auth-main {
