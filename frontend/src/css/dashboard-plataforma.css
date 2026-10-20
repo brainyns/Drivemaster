@@ -123,35 +123,6 @@
 .dp-gestion > td { background: rgba(127, 127, 127, .06); padding: .75rem 1rem; }
 .dp-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* ── Reporte de servicios (SUPERADMIN) ───────────────────────────────────────
-   Usa reportes.css, compartida con pantallas ocultas del modelo viejo que se dejan
-   como están: la armonización va acotada a .rp-root--servicios. */
-.rp-root--servicios { background: var(--ui-bg); color: var(--ui-text); padding: 1.5rem 1.75rem 2.5rem; }
-.rp-root--servicios .rp-page-header { padding: 0 0 1.25rem; align-items: flex-end; }
-.rp-root--servicios .rp-h { margin: 0 0 .25rem; font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; line-height: 1.2; }
-.rp-root--servicios .rp-sub { font-size: .875rem; line-height: 1.55; color: var(--ui-muted); }
-.rp-root--servicios .rp-kpi-grid { margin-bottom: 1.25rem; }
-.rp-root--servicios .rp-kpi,
-.rp-root--servicios .rp-panel { background: var(--ui-surface); border-color: var(--ui-line); border-radius: var(--ui-r-lg); box-shadow: var(--ui-sombra-1); }
-.rp-root--servicios .rp-kpi::before { display: none; }
-.rp-root--servicios .rp-kpi-label,
-.rp-root--servicios .rp-kpi-sub { color: var(--ui-muted); }
-.rp-root--servicios .rp-kpi-val { font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.rp-root--servicios .rp-kpi-val.green { color: var(--ui-ok); }
-.rp-root--servicios .rp-kpi-val.red { color: var(--ui-error); }
-.rp-root--servicios .rp-kpi-val.blue { color: var(--ui-info); }
-.rp-root--servicios .rp-panel-header { padding: 18px 20px 12px; border-bottom-color: var(--ui-line); }
-.rp-root--servicios .rp-panel-title { font-size: .95rem; font-weight: 600; }
-.rp-root--servicios .rp-empty { padding: 1rem 20px 1.25rem; color: var(--ui-muted); font-size: .875rem; }
-.rp-root--servicios .rp-badge { border-radius: var(--ui-r-sm); }
-.rp-root--servicios .rp-badge.nuevo { background: var(--ui-ok-bg); color: var(--ui-ok); }
-.rp-root--servicios .rp-period-tabs { background: var(--ui-surface-2); border-color: var(--ui-line); border-radius: var(--ui-r-md); }
-.rp-root--servicios .rp-period-tab { color: var(--ui-muted); border-radius: var(--ui-r-sm); transition: background-color var(--ui-dur) ease, color var(--ui-dur) ease; }
-.rp-root--servicios .rp-period-tab.active { background: var(--primary); color: var(--on-primary); }
-.rp-root--servicios .rp-chart-bar-bg { background: var(--ui-surface-2); border-radius: var(--ui-r-sm); }
-.rp-root--servicios .rp-chart-bar { background: var(--primary); border-radius: var(--ui-r-sm); }
-@media (max-width: 640px) { .rp-root--servicios { padding: 1rem 1rem 2rem; } }
-
 /* ── Liquidaciones y Problemas de envío (SUPERADMIN y ADMIN) ─────────────────
    Usan estilos del flujo de servicio (ss-, sv-) que comparten con el taller y el
    cliente: aquí solo se les da margen de página y se apuntan sus tokens a --ui-*. */

@@ -177,3 +177,9 @@ test("Reportes de plataforma: sistema compartido, comisión con Indicador y la c
   assert.ok(leer("../src/pages/DashboardPlataforma.jsx").includes('ir("reportes-plataforma", "comision")'));
   assert.ok(leer("../src/App.jsx").includes("<ReportesPlataforma key={idSeleccionado || \"ventas\"} token={token} filtroInicial={idSeleccionado} />"));
 });
+
+test("Reporte de servicios: cifras con Indicador, rankings con BarraProgreso y error con Reintentar sin perder el período", () => {
+  const p = usaSistemaCompartido("ReportesServicios.jsx", ["EncabezadoPagina", "<Indicador", "BarraProgreso", "<Alerta", "onReintentar",
+    "<EstadoVacio", "<Esqueleto", 'aria-label="Periodo"'], ["adm-", "rp-kpi", "style={{", "admin-base.css"]);
+  assert.ok(p.includes("getReportesServicios(token, periodo)"), "el mismo endpoint");
+});

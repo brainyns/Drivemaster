@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { getReportesServicios } from "../services/reporteService";
-import "../css/reportes.css";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Indicador from "../components/ui/Indicador";
+import BarraProgreso from "../components/ui/BarraProgreso";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
 import "../css/dashboard-plataforma.css";
-import "../css/admin-base.css";
+import "../css/panel-plataforma.css";
 
 const PERIODOS = [
   { k: "dia", l: "Hoy" },
@@ -15,8 +20,34 @@ const fmt = (n) =>
 
 const pct = (n) => `${Math.round(n || 0)}%`;
 
+/** Ranking como barras: se lee el orden de un vistazo, sin tabular. La barra es relativa al primero. */
+function Ranking({ id, titulo, nota, filas }) {
+  const max = Math.max(...filas.map((f) => f.n), 1);
+  return (
+    <section className="pp-bloque" aria-labelledby={id}>
+      <div className="pp-bloque__cabecera">
+        <h2 id={id} className="pp-bloque__titulo">{titulo}</h2>
+        <span className="pp-bloque__nota">{nota}</span>
+      </div>
+      {filas.length === 0 ? <p className="pp-bloque__vacio">Sin datos en este período.</p> : (
+        <ul className="pp-barras">
+          {filas.map((f) => (
+            <li key={f.clave} className="pp-barras__fila pp-barras__fila--ranking">
+              <span className="pp-barras__etiqueta" title={f.nombre}>{f.nombre || "Sin nombre"}</span>
+              <BarraProgreso valor={(f.n / max) * 100} etiqueta={`${f.nombre || "Sin nombre"}: ${f.n} órdenes`} />
+              <strong>{f.n}</strong>
+              <span className="pp-tenue">{pct(f.participacion)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export default function ReportesServicios({ token }) {
   const [periodo, setPeriodo] = useState("mes");
+  const [version, setVersion] = useState(0);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -28,153 +59,81 @@ export default function ReportesServicios({ token }) {
       .catch((e) => { if (!cancelado) setError(e.message); })
       .finally(() => { if (!cancelado) setCargando(false); });
     return () => { cancelado = true; };
-  }, [periodo, token]);
+  }, [periodo, token, version]);
 
   const cambiarPeriodo = (k) => {
     setError(null);
     setCargando(true);
     setPeriodo(k);
   };
-
-  if (error) return <div className="adm-pagina rp-root--servicios"><p className="adm-alerta adm-alerta--error" role="alert">{error}</p></div>;
+  const reintentar = () => { setError(null); setCargando(true); setVersion((v) => v + 1); };
 
   const sinOrdenes = data && data.totalOrdenes === 0;
   const tasaCierre = data && data.ordenesFacturadas > 0
     ? (data.ordenesFinalizadas * 100) / data.ordenesFacturadas
     : 0;
 
-  // El ranking se dibuja como barras: se lee el orden de un vistazo, sin tabular.
-  const barrasTalleres = data?.talleresPreferidos?.slice(0, 6) || [];
-  const maxTalleres = Math.max(...barrasTalleres.map((t) => t.ordenes), 1);
-  const barrasProductos = data?.productosMasSolicitados?.slice(0, 6) || [];
-  const maxProductos = Math.max(...barrasProductos.map((p) => p.ordenes), 1);
+  const talleres = (data?.talleresPreferidos?.slice(0, 6) || [])
+    .map((t) => ({ clave: t.tallerId || t.nombre, nombre: t.nombre, n: t.ordenes, participacion: t.participacion }));
+  const productos = (data?.productosMasSolicitados?.slice(0, 6) || [])
+    .map((p) => ({ clave: p.productoId || p.nombre, nombre: p.nombre, n: p.ordenes, participacion: (p.ordenes * 100) / (data.totalOrdenes || 1) }));
 
   return (
-    <div className="adm-pagina rp-root--servicios">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Reporte de servicios</h1>
-          <p className="adm-encabezado__sub">Órdenes de taller facturadas y estado del trabajo en cada una.</p>
-        </div>
-        <nav className="adm-pestanas" aria-label="Periodo">
-          {PERIODOS.map((p) => (
-            <button
-              key={p.k}
-              type="button"
-              aria-pressed={periodo === p.k}
-              className={`adm-pestana${periodo === p.k ? " adm-pestana--activa" : ""}`}
-              onClick={() => cambiarPeriodo(p.k)}
-            >
-              {p.l}
-            </button>
-          ))}
-        </nav>
-      </header>
+    <div className="ss-panel--plataforma pp-root">
+      <EncabezadoPagina titulo="Reporte de servicios"
+        descripcion="Órdenes de taller facturadas y estado del trabajo en cada una." />
 
-      {cargando ? (
-        <div className="adm-tarjeta"><div className="adm-cargando">Cargando…</div></div>
+      <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Periodo">
+        {PERIODOS.map((p) => (
+          <button key={p.k} type="button" className="ui-chip" aria-pressed={periodo === p.k} onClick={() => cambiarPeriodo(p.k)}>{p.l}</button>
+        ))}
+      </div>
+
+      {error ? (
+        <Alerta onReintentar={reintentar}>{error}</Alerta>
+      ) : cargando ? (
+        <>
+          <div className="ui-indicadores pp-seccion" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => <span key={i} className="ui-skeleton pp-esqueleto-indicador" />)}
+          </div>
+          <Esqueleto variante="lista" cantidad={3} texto="Calculando el reporte…" />
+        </>
       ) : sinOrdenes ? (
-        <div className="adm-tarjeta">
-          <p className="adm-vacio">No se registraron servicios de taller en este período.</p>
-        </div>
+        <EstadoVacio icono="tool" titulo="Sin servicios en este período"
+          texto="No se registraron servicios de taller. Prueba con un período más largo." />
       ) : (
         <>
-          <div className="rp-kpi-grid">
-            <div className="rp-kpi">
-              <p className="rp-kpi-label">Órdenes creadas</p>
-              <p className="rp-kpi-val">{data.totalOrdenes}</p>
-              <p className="rp-kpi-sub">{data.ordenesFacturadas} ya facturadas</p>
+          <section className="pp-seccion" aria-labelledby="rsv-ordenes">
+            <h2 id="rsv-ordenes" className="pp-titulo">Órdenes</h2>
+            <div className="ui-indicadores">
+              <Indicador titulo="Órdenes creadas" valor={data.totalOrdenes} pie={`${data.ordenesFacturadas} ya facturadas`} />
+              <Indicador titulo="En proceso" valor={data.ordenesEnProceso} pie="Talleres trabajando ahora" />
+              <Indicador titulo="Finalizadas" valor={data.ordenesFinalizadas} tono="ok" pie={`${pct(tasaCierre)} de lo facturado`} />
+              <Indicador titulo="Canceladas" valor={data.ordenesCanceladas} pie="No entraron a facturación" />
             </div>
-            <div className="rp-kpi">
-              <p className="rp-kpi-label">En proceso</p>
-              <p className="rp-kpi-val orange">{data.ordenesEnProceso}</p>
-              <p className="rp-kpi-sub">Talleres trabajando ahora</p>
-            </div>
-            <div className="rp-kpi">
-              <p className="rp-kpi-label">Finalizadas</p>
-              <p className="rp-kpi-val green">{data.ordenesFinalizadas}</p>
-              <p className="rp-kpi-sub">{pct(tasaCierre)} de lo facturado</p>
-            </div>
-            <div className="rp-kpi">
-              <p className="rp-kpi-label">Canceladas</p>
-              <p className="rp-kpi-val red">{data.ordenesCanceladas}</p>
-              <p className="rp-kpi-sub">No entraron a facturación</p>
-            </div>
-            <div className="rp-kpi">
-              <p className="rp-kpi-label">Ingresos por servicios</p>
-              <p className="rp-kpi-val" style={{ fontSize: "1.15rem" }}>{fmt(data.ingresosTotales)}</p>
-              <p className="rp-kpi-sub">Repuestos y mano de obra</p>
-            </div>
-            <div className="rp-kpi">
-              <p className="rp-kpi-label">Ticket promedio</p>
-              <p className="rp-kpi-val" style={{ fontSize: "1.15rem" }}>{fmt(data.ticketPromedio)}</p>
-              <p className="rp-kpi-sub">Por orden facturada</p>
-            </div>
-            <div className="rp-kpi">
-              <p className="rp-kpi-label">Citas futuras</p>
-              <p className="rp-kpi-val">{data.citasAgendadas}</p>
-              <p className="rp-kpi-sub">Ingreso de vehículo agendado</p>
-            </div>
-            <div className="rp-kpi">
-              <p className="rp-kpi-label">Esperando inicio</p>
-              <p className="rp-kpi-val">{data.citasPendientes}</p>
-              <p className="rp-kpi-sub">Cobradas, sin trabajar aún</p>
-            </div>
-            <div className="rp-kpi">
-              <p className="rp-kpi-label">Con retraso</p>
-              <p className={`rp-kpi-val${data.ordenesRetrasadas > 0 ? " red" : ""}`}>{data.ordenesRetrasadas}</p>
-              <p className="rp-kpi-sub">Sin avance hace varios días</p>
-            </div>
-          </div>
+          </section>
 
-          <div className="rp-two-col" style={{ marginTop: "1.25rem" }}>
-            <section className="adm-tarjeta">
-              <div className="adm-tarjeta__cabecera">
-                <h2 className="adm-tarjeta__titulo">Talleres con más servicios</h2>
-                <span className="adm-badge adm-badge--neutro">Órdenes vigentes</span>
-              </div>
-              <div className="rp-chart">
-                {barrasTalleres.length === 0 ? (
-                  <p className="adm-vacio">Sin datos</p>
-                ) : barrasTalleres.map((t) => (
-                  <div className="rp-chart-row" key={t.tallerId || t.nombre}>
-                    <span className="rp-chart-label" title={t.nombre}>{t.nombre || "—"}</span>
-                    <div className="rp-chart-bar-bg">
-                      <div className="rp-chart-bar" style={{ width: `${(t.ordenes / maxTalleres) * 100}%` }}>
-                        <span className="rp-chart-bar-val">{t.ordenes}</span>
-                      </div>
-                    </div>
-                    <span className="rp-chart-label" style={{ width: 52, textAlign: "right" }}>
-                      {pct(t.participacion)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
+          <section className="pp-seccion" aria-labelledby="rsv-dinero">
+            <h2 id="rsv-dinero" className="pp-titulo">Dinero</h2>
+            <div className="ui-indicadores">
+              <Indicador titulo="Ingresos por servicios" valor={fmt(data.ingresosTotales)} pie="Repuestos y mano de obra" />
+              <Indicador titulo="Ticket promedio" valor={fmt(data.ticketPromedio)} pie="Por orden facturada" />
+            </div>
+          </section>
 
-            <section className="adm-tarjeta">
-              <div className="adm-tarjeta__cabecera">
-                <h2 className="adm-tarjeta__titulo">Repuestos más solicitados</h2>
-                <span className="adm-badge adm-badge--neutro">Por orden</span>
-              </div>
-              <div className="rp-chart">
-                {barrasProductos.length === 0 ? (
-                  <p className="adm-vacio">Sin datos</p>
-                ) : barrasProductos.map((p) => (
-                  <div className="rp-chart-row" key={p.productoId || p.nombre}>
-                    <span className="rp-chart-label" title={p.nombre}>{p.nombre || "—"}</span>
-                    <div className="rp-chart-bar-bg">
-                      <div className="rp-chart-bar" style={{ width: `${(p.ordenes / maxProductos) * 100}%` }}>
-                        <span className="rp-chart-bar-val">{p.ordenes}</span>
-                      </div>
-                    </div>
-                    <span className="rp-chart-label" style={{ width: 52, textAlign: "right" }}>
-                      {pct((p.ordenes * 100) / (data.totalOrdenes || 1))}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
+          <section className="pp-seccion" aria-labelledby="rsv-agenda">
+            <h2 id="rsv-agenda" className="pp-titulo">Agenda</h2>
+            <div className="ui-indicadores">
+              <Indicador icono="calendar" titulo="Citas futuras" valor={data.citasAgendadas} pie="Ingreso de vehículo agendado" />
+              <Indicador titulo="Esperando inicio" valor={data.citasPendientes} pie="Cobradas, sin trabajar aún" />
+              <Indicador icono="clock" titulo="Con retraso" valor={data.ordenesRetrasadas}
+                tono={data.ordenesRetrasadas > 0 ? "accion" : undefined} pie="Sin avance hace varios días" />
+            </div>
+          </section>
+
+          <div className="pp-columnas">
+            <Ranking id="rsv-talleres" titulo="Talleres con más servicios" nota="Órdenes vigentes" filas={talleres} />
+            <Ranking id="rsv-productos" titulo="Repuestos más solicitados" nota="Por orden" filas={productos} />
           </div>
         </>
       )}

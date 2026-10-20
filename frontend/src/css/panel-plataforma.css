@@ -151,3 +151,12 @@
 @media (prefers-reduced-motion: reduce) {
   .pp-actualizando { transition: none; }
 }
+
+/* Ranking: nombre, barra relativa al primero, cifra y participación */
+.pp-barras__fila--ranking { grid-template-columns: minmax(110px, 200px) minmax(0, 1fr) 4ch 5ch; }
+.pp-barras__fila--ranking .pp-tenue { text-align: right; font-variant-numeric: tabular-nums; }
+.pp-barras__etiqueta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .pp-barras__fila--ranking { grid-template-columns: minmax(0, 1fr) 4ch 5ch; }
+}
