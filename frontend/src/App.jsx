@@ -4,11 +4,6 @@ import TopBar                from "./components/TopBar";
 import Productos             from "./pages/Productos";
 import ProductoForm          from "./pages/ProductoForm";
 import AjusteInventarioForm  from "./pages/AjusteInventarioForm";
-import Clientes              from "./pages/Clientes";
-import ClienteForm           from "./pages/ClienteForm";
-import Ventas                from "./pages/Ventas";
-import VentaForm             from "./pages/VentaForm";
-import VentaDetalle          from "./pages/VentaDetalle";
 import Compras               from "./pages/Compras";
 import CompraForm            from "./pages/CompraForm";
 import CompraDetalle         from "./pages/CompraDetalle";
@@ -18,19 +13,14 @@ import Movimientos           from "./pages/Movimientos";
 import Login                 from "./pages/Login";
 import AdminLogin            from "./pages/AdminLogin";
 import Register              from "./pages/Register";
+import EncabezadoPagina      from "./components/ui/EncabezadoPagina";
 import Usuarios              from "./pages/Usuarios";
 import CatalogoPage          from "./pages/CatalogoPage";
-import DashboardMain         from "./pages/DashboardMain";
-import InventarioClientes    from "./pages/InventarioClientes";
-import ReportesClientes      from "./pages/ReportesClientes";
-import InventarioProductos   from "./pages/InventarioProductos";
-import ReportesProductos     from "./pages/ReportesProductos";
 import ReportesServicios     from "./pages/ReportesServicios";
 import MisPedidos            from "./pages/MisPedidos";
 import MisSolicitudes        from "./pages/MisSolicitudes";
 import PagoResultado         from "./pages/PagoResultado";
 import CheckoutPage          from "./pages/CheckoutPage";
-import SolicitudesAdmin      from "./pages/SolicitudesAdmin";
 import DashboardPlataforma   from "./pages/DashboardPlataforma";
 import DashboardOperacion    from "./pages/DashboardOperacion";
 import ProductosPlataforma   from "./pages/ProductosPlataforma";
@@ -90,12 +80,6 @@ const TITULOS = {
   "productoNuevo":   "Nuevo producto",
   "productoEditar":  "Editar producto",
   "clientes":        "Clientes",
-  "clienteNuevo":    "Nuevo cliente",
-  "clienteEditar":   "Editar cliente",
-  "ventas":          "Ventas",
-  "ventaNueva":      "Nueva venta",
-  "ventaDetalle":    "Detalle de venta",
-  "solicitudes":     "Solicitudes",
   "compras":         "Compras",
   "compraNueva":     "Nueva compra",
   "compraDetalle":   "Detalle de compra",
@@ -104,10 +88,6 @@ const TITULOS = {
   "proveedorEditar": "Editar proveedor",
   "movimientos":     "Inventario",
   "usuarios":        "Usuarios",
-  "inv-clientes":    "Inventario de clientes",
-  "rep-clientes":    "Reportes de clientes",
-  "inv-productos":   "Inventario de productos",
-  "rep-productos":   "Reportes de productos",
   "rep-servicios":   "Reporte de Servicios",
   "reportes-plataforma": "Reportes de la plataforma",
   "mis-solicitudes": "Mis solicitudes",
@@ -362,8 +342,7 @@ function App() {
     SUPERADMIN: [
       "dashboard-main",
       "productos", "productoNuevo", "productoEditar",
-      "clientes", "clienteNuevo", "clienteEditar",
-      // Ventas, Solicitudes e Historial anterior (flujo anterior) están ocultos para todos los roles: sin ruta
+      "clientes",
       "rep-servicios", "reportes-plataforma",
       "usuarios",
       "pedidos-envios",
@@ -659,19 +638,18 @@ function App() {
       <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
     );
 
-    // SUPERADMIN: panel de la plataforma. ADMIN: su resumen operativo. El dashboard de ventas queda para el VENDEDOR.
+    // SUPERADMIN: panel de la plataforma. ADMIN: su resumen operativo. VENDEDOR: rol retirado, solo un aviso.
     if (pagina === "dashboard-main") {
       if (user?.rol === "SUPERADMIN") return <DashboardPlataforma token={token} onIr={(p, id) => irA(p, id)} />;
       if (user?.rol === "ADMIN") return <DashboardOperacion token={token} onIr={(p, id) => irA(p, id)} />;
       if (user?.rol === "VENDEDOR") {
         return (
-          <div className="db-root dp-root">
-            <h1 className="db-h1">El rol de vendedor se retiró</h1>
-            <p className="db-sub">Pide a un superadmin que reasigne tu cuenta a administrador o que la desactive.</p>
+          <div className="ss-panel--plataforma">
+            <EncabezadoPagina titulo="El rol de vendedor se retiró"
+              descripcion="Pide a un superadmin que reasigne tu cuenta a administrador o que la desactive." />
           </div>
         );
       }
-      return <DashboardMain token={token} />;
     }
 
     // SUPERADMIN: catálogo global de solo lectura; la TIENDA y el VENDEDOR siguen con su gestión de productos
@@ -682,16 +660,6 @@ function App() {
     if (pagina === "inventarioAjuste") return <AjusteInventarioForm productoId={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
 
     if (pagina === "clientes" && user?.rol === "SUPERADMIN") return <ClientesPlataforma token={token} />;
-    if (pagina === "clientes")         return <Clientes             onNuevo={() => irA("clienteNuevo")} onEditar={id => irA("clienteEditar", id)} token={token} />;
-    if (pagina === "clienteNuevo")     return <ClienteForm          onVolver={() => irA("clientes")} token={token} />;
-    if (pagina === "clienteEditar")    return <ClienteForm          id={idSeleccionado} onVolver={() => irA("clientes")} token={token} />;
-
-    if (pagina === "ventas")           return <Ventas               onNueva={() => irA("ventaNueva")} onDetalle={id => irA("ventaDetalle", id)} token={token} />;
-    if (pagina === "ventaNueva")       return <VentaForm            onVolver={() => irA("ventas")} token={token} />;
-    if (pagina === "ventaDetalle")     return <VentaDetalle         id={idSeleccionado} onVolver={() => irA("ventas")} token={token} />;
-
-    if (pagina === "solicitudes")      return <SolicitudesAdmin     token={token} />;
-
     if (pagina === "compras")          return <Compras              onNueva={() => irA("compraNueva")} onDetalle={id => irA("compraDetalle", id)} token={token} />;
     if (pagina === "compraNueva")      return <CompraForm           onVolver={() => irA("compras")} token={token} />;
     if (pagina === "compraDetalle")    return <CompraDetalle        id={idSeleccionado} onVolver={() => irA("compras")} token={token} />;
@@ -720,23 +688,8 @@ function App() {
     if (pagina === "pedidos-envios")   return <PedidosEnvios key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado} />;
     if (pagina === "mi-tienda")        return <DatosMiTienda        token={token} onGuardado={(t) => setTiendaIncompleta(!t.datosCompletos)} />;
 
-    // Historial anterior: reportes sobre las ventas del flujo viejo, de solo lectura y etiquetados
-    const conAvisoHistorial = (contenido) => (
-      <>
-        <div className="dp-historial" role="note">
-          <strong>Historial anterior · solo lectura</strong>
-          Estos datos salen de las ventas del flujo anterior (compra normal de DriveMaster) y no incluyen las compras
-          del catálogo nuevo. Para esas usa «Reportes de plataforma».
-        </div>
-        {contenido}
-      </>
-    );
     if (pagina === "reportes-plataforma") return <ReportesPlataforma key={idSeleccionado || "ventas"} token={token} filtroInicial={idSeleccionado} />;
-    if (pagina === "inv-clientes")     return conAvisoHistorial(<InventarioClientes   token={token} />);
-    if (pagina === "rep-clientes")     return conAvisoHistorial(<ReportesClientes     token={token} />);
-    if (pagina === "inv-productos")    return conAvisoHistorial(<InventarioProductos  token={token} />);
-    if (pagina === "rep-productos")    return conAvisoHistorial(<ReportesProductos    token={token} />);
-  if (pagina === "rep-servicios")     return <ReportesServicios    token={token} />;
+    if (pagina === "rep-servicios")    return <ReportesServicios    token={token} />;
 
     return <div style={{ padding: "40px" }}>Seleccione una sección válida.</div>;
   };

@@ -1,13 +1,6 @@
 /* Paneles del SUPERADMIN, del ADMIN y de la tienda: margen de página y puente de las hojas compartidas (ss-, sv-)
    hacia los tokens --ui-*. Las pantallas usan ui.css y panel-plataforma.css (pp-); aquí no queda nada más. */
 
-/* ── Reportes e historial ──────────────────────────────────── */
-.dp-historial {
-  border: 1px solid var(--ui-line); border-left: 4px solid var(--ui-aviso); border-radius: var(--ui-r-lg);
-  padding: .7rem 1rem; margin: 1rem 1.75rem 0; font-size: .82rem; line-height: 1.45;
-}
-.dp-historial strong { display: block; margin-bottom: .15rem; }
-
 /* ── Liquidaciones y Problemas de envío (SUPERADMIN y ADMIN) ─────────────────
    Usan estilos del flujo de servicio (ss-, sv-) que comparten con el taller y el
    cliente: aquí solo se les da margen de página y se apuntan sus tokens a --ui-*. */
