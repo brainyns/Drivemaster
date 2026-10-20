@@ -13,7 +13,7 @@
   width: 40px;
   height: 40px;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--ui-r-lg);
   background: var(--ui-surface-2);
   border: 1px solid var(--ui-line-soft);
   color: var(--ui-muted);

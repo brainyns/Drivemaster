@@ -34,14 +34,14 @@ body:has(.sv-root) { background: var(--dm-bg); }
 
 .sv-volver {
   background: none; border: 1px solid var(--border2); color: var(--text);
-  border-radius: var(--r-md); padding: 8px 14px; cursor: pointer;
+  border-radius: var(--ui-r-lg); padding: 8px 14px; cursor: pointer;
 }
 .sv-volver:hover { border-color: var(--primary); color: var(--primary-text); }
 
 .sv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-md); }
 
 .sv-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--ui-r-lg);
   padding: var(--sp-lg); display: flex; flex-direction: column; gap: 8px;
 }
 
@@ -49,7 +49,7 @@ body:has(.sv-root) { background: var(--dm-bg); }
 .sv-card-meta { color: var(--text-muted); font-size: 0.9rem; }
 .sv-card-foto {
   width: 100%; height: 150px; object-fit: cover;
-  border-radius: var(--r-md); border: 1px solid var(--border);
+  border-radius: var(--ui-r-lg); border: 1px solid var(--border);
 }
 
 /* Misma medida que los botones del panel (adm-btn): alto 36px, radio de tarjeta, texto oscuro sobre el naranja */
@@ -83,10 +83,10 @@ body:has(.sv-root) { background: var(--dm-bg); }
 .sv-field label { font-size: 0.85rem; color: var(--text-muted); }
 .sv-field input, .sv-field select, .sv-field textarea {
   background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-  border-radius: var(--r-sm); padding: 10px 12px; font-family: inherit; min-width: 0;
+  border-radius: var(--ui-r-md); padding: 10px 12px; font-family: inherit; min-width: 0;
 }
 
-.sv-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-full); font-size: 0.8rem; font-weight: 600; }
+.sv-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--ui-r-full); font-size: 0.8rem; font-weight: 600; }
 .sv-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .sv-badge-cotizada  { background: var(--ui-aviso-bg); color: var(--ui-aviso); }
 .sv-badge-pagada    { background: var(--ui-info-bg);  color: var(--ui-info); }
@@ -97,12 +97,12 @@ body:has(.sv-root) { background: var(--dm-bg); }
 .sv-list { display: flex; flex-direction: column; gap: var(--sp-md); }
 
 .sv-row {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--ui-r-lg);
   padding: var(--sp-lg); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--sp-md);
 }
 
 .sv-quote-box {
-  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--ui-r-lg);
   padding: var(--sp-lg); margin-top: var(--sp-md);
 }
 .sv-quote-line { display: flex; justify-content: space-between; padding: 6px 0; }
@@ -130,7 +130,7 @@ body:has(.sv-root) { background: var(--dm-bg); }
   padding: var(--sp-lg);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-lg);
+  border-radius: var(--ui-r-lg);
 }
 .sv-anterior__cita {
   align-self: flex-start;

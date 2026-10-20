@@ -50,7 +50,7 @@
 
 /* ── Avisos ───────────────────────────────────────────────────────────── */
 .mk-aviso {
-  border-radius: 6px; padding: 10px 14px; margin: 10px 0; font-size: 0.9rem; line-height: 1.45;
+  border-radius: var(--ui-r-md); padding: 10px 14px; margin: 10px 0; font-size: 0.9rem; line-height: 1.45;
   border: 1px solid var(--dm-line); background: var(--dm-surface);
 }
 .mk-aviso--error { border-color: color-mix(in srgb, var(--dm-red) 50%, transparent); background: color-mix(in srgb, var(--dm-red) 10%, transparent); color: var(--dm-text); }
@@ -58,13 +58,13 @@
 .mk-aviso--ok { border-color: color-mix(in srgb, var(--dm-green) 50%, transparent); background: color-mix(in srgb, var(--dm-green) 12%, transparent); }
 .mk-toast {
   background: color-mix(in srgb, var(--dm-green) 14%, transparent); border: 1px solid color-mix(in srgb, var(--dm-green) 50%, transparent);
-  border-radius: 6px; padding: 8px 12px; font-size: 0.9rem; margin: 10px 0;
+  border-radius: var(--ui-r-md); padding: 8px 12px; font-size: 0.9rem; margin: 10px 0;
 }
 
 /* ── Etiquetas ────────────────────────────────────────────────────────── */
 .mk-etiqueta {
   display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px;
-  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--dm-line);
+  padding: 3px 8px; border-radius: var(--ui-r-full); border: 1px solid var(--dm-line);
   background: var(--dm-surface-2); color: var(--dm-muted);
 }
 .mk-etiqueta--ok { color: var(--ui-ok); border-color: transparent; background: var(--ui-ok-bg); }
@@ -79,7 +79,7 @@
 .mk-campo input, .mk-campo select, .mk-campo textarea,
 .mk-input {
   background: var(--dm-surface); color: var(--dm-text); border: 1px solid var(--dm-line);
-  border-radius: 5px; padding: 10px 12px; font: inherit; min-height: 42px; width: 100%; box-sizing: border-box;
+  border-radius: var(--ui-r-md); padding: 10px 12px; font: inherit; min-height: 42px; width: 100%; box-sizing: border-box;
 }
 .mk-campo textarea { min-height: 84px; resize: vertical; }
 .mk-campo input:focus, .mk-campo select:focus, .mk-campo textarea:focus, .mk-input:focus {
@@ -88,7 +88,7 @@
 
 .mk-filtros {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
-  background: var(--dm-surface); border: 1px solid var(--dm-line); border-radius: 8px; padding: 14px;
+  background: var(--dm-surface); border: 1px solid var(--dm-line); border-radius: var(--ui-r-lg); padding: 14px;
 }
 
 /* ── Grilla y tarjetas ────────────────────────────────────────────────── */
@@ -97,7 +97,7 @@
 
 .mk-tarjeta {
   display: flex; flex-direction: column; background: var(--dm-surface);
-  border: 1px solid var(--dm-line); border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--dm-line); border-radius: var(--ui-r-lg); overflow: hidden;
 }
 .mk-tarjeta--agotado { opacity: 0.75; }
 .mk-tarjeta__imagen {
@@ -126,7 +126,7 @@
 
 /* ── Detalle ──────────────────────────────────────────────────────────── */
 .mk-detalle { display: grid; grid-template-columns: minmax(240px, 420px) 1fr; gap: 32px; margin-top: 12px; }
-.mk-detalle__imagen .mk-imagen { width: 100%; max-width: 420px; border-radius: 8px; }
+.mk-detalle__imagen .mk-imagen { width: 100%; max-width: 420px; border-radius: var(--ui-r-lg); }
 .mk-detalle__info h1 { font-size: clamp(1.4rem, 2.6vw, 2rem); margin: 10px 0 4px; }
 .mk-detalle__precio { font-size: 2rem; font-weight: 800; margin: 14px 0 2px; }
 .mk-detalle__compra { display: flex; gap: 12px; align-items: flex-end; margin-top: 16px; flex-wrap: wrap; }
@@ -136,7 +136,7 @@
 .mk-tienda__cabecera { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .mk-tienda .mk-tienda__cabecera h2 { margin: 0; }
 .mk-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 0; }
-.mk-datos div { background: var(--dm-surface); border: 1px solid var(--dm-line); border-radius: 6px; padding: 10px 12px; }
+.mk-datos div { background: var(--dm-surface); border: 1px solid var(--dm-line); border-radius: var(--ui-r-md); padding: 10px 12px; }
 .mk-datos dt { color: var(--dm-muted); font-size: 0.76rem; font-weight: 700; margin-bottom: 2px; }
 .mk-datos dd { margin: 0; }
 
@@ -166,7 +166,7 @@
 .mk-opciones legend { font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; padding: 0; }
 .mk-opcion {
   display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; cursor: pointer;
-  border: 1px solid var(--dm-line); border-radius: 8px; background: var(--dm-surface);
+  border: 1px solid var(--dm-line); border-radius: var(--ui-r-lg); background: var(--dm-surface);
 }
 .mk-opcion input { margin-top: 4px; accent-color: var(--dm-orange); }
 .mk-opcion span { display: flex; flex-direction: column; gap: 2px; }
@@ -188,7 +188,7 @@
 
 .mk-pago {
   display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
-  margin-top: 22px; padding: 18px; background: var(--dm-surface); border: 1px solid var(--dm-orange); border-radius: 8px;
+  margin-top: 22px; padding: 18px; background: var(--dm-surface); border: 1px solid var(--dm-orange); border-radius: var(--ui-r-lg);
 }
 .mk-pago > div { display: flex; flex-direction: column; gap: 2px; }
 .mk-pago__total { font-size: 1.7rem; }
@@ -196,7 +196,7 @@
 .mk-compra__cabecera, .mk-pedido__cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 .mk-compra__cabecera h2 { margin: 0; }
 .mk-compra__resumen { display: flex; align-items: center; gap: 12px; }
-.mk-pedido { border: 1px solid var(--dm-line); border-radius: 8px; padding: 14px; margin-top: 12px; background: var(--dm-bg); }
+.mk-pedido { border: 1px solid var(--dm-line); border-radius: var(--ui-r-lg); padding: 14px; margin-top: 12px; background: var(--dm-bg); }
 .mk-pedido__cabecera h3 { margin: 0; font-size: 1rem; }
 .mk-pedido p { margin: 6px 0 0; }
 .mk-pedido__acciones { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
@@ -208,7 +208,7 @@
   padding: 16px; background: rgba(0, 0, 0, 0.6);
 }
 .mk-modal__caja {
-  width: min(480px, 100%); max-height: 90vh; overflow: auto; padding: 22px; border-radius: 10px;
+  width: min(480px, 100%); max-height: 90vh; overflow: auto; padding: 22px; border-radius: var(--ui-r-lg);
   background: var(--dm-surface); color: var(--dm-text); border: 1px solid var(--dm-line);
 }
 .mk-modal__caja:focus { outline: none; }
@@ -218,7 +218,7 @@
 /* ── Imagen de producto: marco cuadrado fijo, sin deformarse ──────────── */
 .mk-imagen {
   display: block; position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden;
-  border-radius: 8px; background: var(--dm-surface-2); border: 1px solid var(--dm-line);
+  border-radius: var(--ui-r-lg); background: var(--dm-surface-2); border: 1px solid var(--dm-line);
 }
 .mk-imagen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 6%; }
 .mk-imagen--vacia { background: repeating-linear-gradient(135deg, var(--dm-surface-2) 0 10px, var(--dm-surface) 10px 20px); }
@@ -226,7 +226,7 @@
 
 /* ── Etiquetas con ícono ─────────────────────────────────────────────── */
 .mk-chip {
-  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--ui-r-full);
   font-size: 0.74rem; font-weight: 700; border: 1px solid var(--dm-line); background: var(--dm-surface-2); color: var(--dm-text);
 }
 .mk-chip--ok { color: var(--ui-ok); border-color: transparent; background: var(--ui-ok-bg); }
@@ -240,17 +240,17 @@
 .mk-seccion > h2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 0; }
 .mk-grupo__paso {
   font-size: 0.68rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;
-  padding: 3px 9px; border-radius: 999px; background: var(--dm-orange); color: var(--dm-on-accent);
+  padding: 3px 9px; border-radius: var(--ui-r-full); background: var(--dm-orange); color: var(--dm-on-accent);
 }
 
-.mk-tienda-card { background: var(--dm-surface); border: 1px solid var(--dm-line); border-radius: 10px; overflow: hidden; }
+.mk-tienda-card { background: var(--dm-surface); border: 1px solid var(--dm-line); border-radius: var(--ui-r-lg); overflow: hidden; }
 .mk-tienda-card__cabecera {
   display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
   padding: 14px 18px; background: var(--dm-surface-2); border-bottom: 1px solid var(--dm-line);
 }
 .mk-tienda-card__quien { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .mk-tienda-card__avatar {
-  width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 38px; height: 38px; border-radius: var(--ui-r-lg); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   background: var(--dm-orange-soft); color: var(--dm-orange-text);
 }
 .mk-tienda-card__quien h3 { margin: 0; font-size: 1rem; line-height: 1.25; }
@@ -268,7 +268,7 @@
   padding: 16px 0; border-bottom: 1px solid var(--dm-line-soft);
 }
 .mk-linea:last-child { border-bottom: none; }
-.mk-linea__foto { width: 88px; padding: 0; border: none; background: none; cursor: pointer; border-radius: 8px; }
+.mk-linea__foto { width: 88px; padding: 0; border: none; background: none; cursor: pointer; border-radius: var(--ui-r-lg); }
 .mk-linea__foto:hover .mk-imagen { border-color: var(--dm-orange); }
 .mk-linea__info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .mk-linea__nombre { font-weight: 700; color: var(--dm-text); text-decoration: none; line-height: 1.3; font-size: 0.98rem; }
@@ -287,16 +287,16 @@
 .mk-linea__precios strong { font-size: 1.1rem; }
 .mk-linea__otras { grid-column: 1 / -1; }
 
-.mk-paso { display: inline-flex; align-items: stretch; border: 1px solid var(--dm-line); border-radius: 6px; overflow: hidden; background: var(--dm-surface); }
+.mk-paso { display: inline-flex; align-items: stretch; border: 1px solid var(--dm-line); border-radius: var(--ui-r-md); overflow: hidden; background: var(--dm-surface); }
 .mk-paso button { width: 40px; height: 40px; border: none; background: var(--dm-surface-2); color: var(--dm-text); font-size: 1.1rem; line-height: 1; cursor: pointer; }
 .mk-paso button:hover:not(:disabled) { background: var(--dm-orange-soft); color: var(--dm-orange-text); }
 .mk-paso button:disabled { opacity: 0.4; cursor: not-allowed; }
 .mk-paso output { min-width: 40px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
 
 /* Otras tiendas con el mismo repuesto */
-.mk-otras { margin-top: 4px; border: 1px dashed var(--dm-line); border-radius: 8px; background: var(--dm-bg); }
+.mk-otras { margin-top: 4px; border: 1px dashed var(--dm-line); border-radius: var(--ui-r-lg); background: var(--dm-bg); }
 .mk-otras summary { cursor: pointer; padding: 9px 12px; font-size: 0.82rem; font-weight: 600; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.mk-otras__ahorro { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--dm-green) 15%, transparent); color: var(--ui-ok); }
+.mk-otras__ahorro { font-size: 0.72rem; padding: 2px 8px; border-radius: var(--ui-r-full); background: color-mix(in srgb, var(--dm-green) 15%, transparent); color: var(--ui-ok); }
 .mk-otras ul { list-style: none; margin: 0; padding: 0 12px 8px; }
 .mk-otras li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px; align-items: center; padding: 8px 0; border-top: 1px solid var(--dm-line-soft); }
 .mk-otras__tienda { display: flex; flex-direction: column; min-width: 0; font-size: 0.84rem; }
@@ -308,7 +308,7 @@
 
 /* Resumen */
 .mk-resumen {
-  position: sticky; top: 92px; padding: 20px; border: 1px solid var(--dm-line); border-radius: 10px;
+  position: sticky; top: 92px; padding: 20px; border: 1px solid var(--dm-line); border-radius: var(--ui-r-lg);
   background: var(--dm-surface); display: flex; flex-direction: column; gap: 4px;
 }
 .mk-resumen h2 { margin: 0 0 8px; }
@@ -331,7 +331,7 @@
 }
 @media (max-width: 600px) {
   .mk-contenido { padding-left: 0; padding-right: 0; }
-  .mk-tienda-card { border-radius: 8px; }
+  .mk-tienda-card { border-radius: var(--ui-r-lg); }
   .mk-tienda-card__cabecera, .mk-tienda-card__pie { padding-left: 14px; padding-right: 14px; }
   .mk-lineas { padding: 0 14px; }
   .mk-linea { grid-template-columns: 72px minmax(0, 1fr); gap: 8px 14px; }
@@ -343,7 +343,7 @@
 }
 
 /* ── Bloques en tarjeta (entrega y pago, mis compras) ─────────────────── */
-.mk-grupo { background: var(--dm-surface); border: 1px solid var(--dm-line); border-radius: 10px; padding: 18px; margin-top: 18px; }
+.mk-grupo { background: var(--dm-surface); border: 1px solid var(--dm-line); border-radius: var(--ui-r-lg); padding: 18px; margin-top: 18px; }
 .mk-grupo h2 { margin: 0 0 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* ── Botones .dm-btn dentro de las pantallas de compras ───────────────────

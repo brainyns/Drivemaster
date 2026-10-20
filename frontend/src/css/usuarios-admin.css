@@ -20,7 +20,7 @@
 
 .usr-tu {
   padding: 1px 8px;
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
   background: var(--primary-soft);
   color: var(--primary-text);
   font-size: 0.72rem;

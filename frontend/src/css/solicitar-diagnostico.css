@@ -130,7 +130,7 @@
   top: 104px;
   gap: 0;
   padding: 22px;
-  border-radius: 12px;
+  border-radius: var(--ui-r-xl);
 }
 
 .sd-resumen__titulo {

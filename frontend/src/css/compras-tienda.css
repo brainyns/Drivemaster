@@ -20,7 +20,7 @@
   padding: 14px 16px;
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
-  border-radius: 12px;
+  border-radius: var(--ui-r-xl);
 }
 
 .cmp-filtro .ui-field__label { font-size: 0.8125rem; font-weight: 500; color: var(--ui-muted); }
@@ -59,7 +59,7 @@
   list-style: none;
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
 }
 
 .cmp-resultado {
@@ -72,7 +72,7 @@
   padding: 6px 8px;
   background: none;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--ui-r-lg);
   color: var(--ui-text);
   font: inherit;
   text-align: left;
@@ -81,7 +81,7 @@
 
 .cmp-resultado:hover { background: var(--ui-hover); }
 .cmp-resultado:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }
-.cmp-resultado__imagen.mk-imagen, .cmp-item__imagen.mk-imagen { width: 36px; border-radius: 8px; }
+.cmp-resultado__imagen.mk-imagen, .cmp-item__imagen.mk-imagen { width: 36px; border-radius: var(--ui-r-lg); }
 .cmp-resultado__texto, .cmp-item__texto { display: grid; gap: 1px; min-width: 0; }
 .cmp-resultado__texto strong, .cmp-item__texto strong { font-size: 0.875rem; overflow-wrap: anywhere; }
 .cmp-resultado__texto span, .cmp-item__texto span { font-size: 0.75rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }

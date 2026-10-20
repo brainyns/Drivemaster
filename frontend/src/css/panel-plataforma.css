@@ -16,7 +16,7 @@
   color: var(--ui-text);
 }
 
-.pp-esqueleto-indicador { height: 112px; border-radius: 12px; }
+.pp-esqueleto-indicador { height: 112px; border-radius: var(--ui-r-xl); }
 
 .pp-actualizado { font-size: 0.8125rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 

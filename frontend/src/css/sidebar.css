@@ -80,7 +80,7 @@
 
 .sidebar-item.activo::before {
   content: ""; position: absolute; left: -0.6rem; top: 8px; bottom: 8px;
-  width: 3px; border-radius: 0 2px 2px 0; background: var(--ui-brand-tinta);
+  width: 3px; border-radius: 0 var(--ui-r-sm) var(--ui-r-sm) 0; background: var(--ui-brand-tinta);
 }
 
 .sidebar-item-icon {
@@ -198,7 +198,7 @@
   margin-left: auto;
   min-width: 1.35rem;
   padding: 0 .4rem;
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
   background: var(--primary);
   color: var(--on-primary);
   font-size: .72rem;

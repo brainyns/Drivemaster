@@ -210,11 +210,11 @@
 .it-ranking__fila .it-cifra { color: var(--it-texto-2); flex: none; }
 .it-ranking__ventas { font-size: .78rem; color: var(--it-texto-2); }
 
-.it-hilo { display: block; height: 6px; border-radius: 99px; background: var(--it-barra-suave); overflow: hidden; }
+.it-hilo { display: block; height: 6px; border-radius: var(--ui-r-full); background: var(--it-barra-suave); overflow: hidden; }
 .it-hilo > span {
   display: block;
   height: 100%;
-  border-radius: 99px;
+  border-radius: var(--ui-r-full);
   background: var(--it-barra);
   transform-origin: left;
   animation: it-crece 520ms var(--it-ease) both;

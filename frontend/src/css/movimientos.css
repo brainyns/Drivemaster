@@ -14,7 +14,7 @@
 .ss-panel--tienda .mov-resultado {
   margin: 0;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   background: var(--primary-soft);
   font-size: 0.9rem;
   color: var(--ui-text);
@@ -31,7 +31,7 @@
 .mov-fecha .ui-field__input { min-height: 44px; padding-block: 8px; }
 
 .mov-producto { display: flex; align-items: center; gap: 10px; min-width: 200px; }
-.mov-producto__imagen.mk-imagen { flex-shrink: 0; width: 40px; border-radius: 8px; }
+.mov-producto__imagen.mk-imagen { flex-shrink: 0; width: 40px; border-radius: var(--ui-r-lg); }
 .mov-producto__texto { display: grid; gap: 2px; min-width: 0; }
 .mov-producto__texto strong { font-size: 0.875rem; overflow-wrap: anywhere; }
 .mov-producto__texto span { font-size: 0.75rem; color: var(--ui-muted); }

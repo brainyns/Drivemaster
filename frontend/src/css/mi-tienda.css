@@ -43,7 +43,7 @@
   padding: 10px 12px;
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   font-size: 0.8125rem;
   color: var(--ui-muted);
 }

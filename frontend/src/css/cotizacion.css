@@ -162,7 +162,7 @@
 .ct-tabla-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: var(--r-lg);
+  border-radius: var(--ui-r-lg);
   background: var(--surface);
 }
 
@@ -198,7 +198,7 @@
   padding: var(--sp-sm) var(--sp-md);
   border: 1px solid var(--border2);
   background: var(--surface2);
-  border-radius: var(--r-sm);
+  border-radius: var(--ui-r-md);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -227,7 +227,7 @@
   flex: 1 1 180px;
   padding: var(--sp-md);
   border: 1px solid var(--border);
-  border-radius: var(--r-lg);
+  border-radius: var(--ui-r-lg);
   background: var(--surface);
 }
 
@@ -282,7 +282,7 @@
 
 .ct-estrella:focus-visible {
   outline: 2px solid var(--primary);
-  border-radius: 4px;
+  border-radius: var(--ui-r-sm);
 }
 
 /* ── Probabilidad de aprobación (AlertaPrediccionCotizacion, prefijo apc-) ──

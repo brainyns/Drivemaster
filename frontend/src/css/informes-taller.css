@@ -5,7 +5,7 @@
 
 .ti-root { display: grid; gap: var(--ui-sp-5); }
 .ti-root > .ui-page-header { margin-bottom: 0; }
-.ti-esqueleto { height: 118px; border-radius: 12px; }
+.ti-esqueleto { height: 118px; border-radius: var(--ui-r-xl); }
 
 .ti-rejilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .ti-tarjeta__cuerpo { display: grid; gap: 14px; }
@@ -26,7 +26,7 @@
 }
 
 .ti-barras__nombre { overflow: hidden; color: var(--ui-text); text-overflow: ellipsis; white-space: nowrap; }
-.ti-barras__pista { height: 10px; overflow: hidden; border-radius: 999px; background: var(--ui-surface-2); }
+.ti-barras__pista { height: 10px; overflow: hidden; border-radius: var(--ui-r-full); background: var(--ui-surface-2); }
 
 .ti-barras__barra {
   display: block;

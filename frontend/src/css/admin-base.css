@@ -184,7 +184,7 @@
   border: 1px solid var(--ui-line);
   background: transparent;
   color: var(--ui-text);
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
   padding: .4rem .9rem;
   font: inherit;
   font-size: var(--fs-boton);
@@ -206,7 +206,7 @@
 .adm-pestana__n {
   min-width: 1.4em;
   padding: 0 .35rem;
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
   background: var(--ui-surface-2);
   color: var(--ui-muted);
   font-size: .72rem;
@@ -949,8 +949,8 @@
 
 /* ── Barra de nivel (stock) ─────────────────────────────────────────────── */
 .adm-nivel { display: flex; align-items: center; gap: .6rem; min-width: 110px; }
-.adm-nivel__pista { flex: 1; height: 6px; border-radius: 99px; background: var(--ui-surface-2); overflow: hidden; }
-.adm-nivel__relleno { display: block; height: 100%; border-radius: 99px; background: var(--ui-ok); }
+.adm-nivel__pista { flex: 1; height: 6px; border-radius: var(--ui-r-full); background: var(--ui-surface-2); overflow: hidden; }
+.adm-nivel__relleno { display: block; height: 100%; border-radius: var(--ui-r-full); background: var(--ui-ok); }
 .adm-nivel__relleno--pendiente { background: var(--ui-aviso); }
 .adm-nivel__relleno--peligro { background: var(--ui-error); }
 .adm-nivel__num { min-width: 2ch; font-weight: 600; font-variant-numeric: tabular-nums; }

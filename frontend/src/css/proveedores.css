@@ -7,7 +7,7 @@
 .prv-nombre strong { font-size: 0.9rem; overflow-wrap: anywhere; }
 .prv-tenue { color: var(--ui-muted); }
 .prv-enlace { color: var(--primary-text); text-underline-offset: 3px; overflow-wrap: anywhere; }
-.prv-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 4px; }
+.prv-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
 .prv-eliminar.ui-btn { color: var(--ui-error); }
 
 .prv-paginas {

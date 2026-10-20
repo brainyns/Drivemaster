@@ -28,7 +28,7 @@
   gap: 12px;
   margin: 0;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   background: var(--ui-ok-bg);
   font-size: 0.875rem;
   color: var(--ui-text);
@@ -51,7 +51,7 @@
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid var(--ui-line);
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   cursor: pointer;
 }
 
@@ -67,7 +67,7 @@
   margin: 0;
   padding: 14px 16px 16px;
   border: 1px solid var(--ui-line);
-  border-radius: 12px;
+  border-radius: var(--ui-r-xl);
   min-width: 0;
 }
 
@@ -77,7 +77,7 @@
 
 /* Foto */
 .pfm-foto { display: grid; gap: 12px; }
-.pfm-foto__imagen.mk-imagen { max-width: 220px; border-radius: 12px; }
+.pfm-foto__imagen.mk-imagen { max-width: 220px; border-radius: var(--ui-r-xl); }
 .pfm-foto__acciones { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .pfm-guardar { display: grid; gap: 8px; }

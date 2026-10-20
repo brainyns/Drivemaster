@@ -29,7 +29,7 @@
     padding: 14px 16px;
     background: var(--ui-surface-2);
     border: 1px solid var(--ui-line);
-    border-radius: 12px;
+    border-radius: var(--ui-r-xl);
   }
   .ui-table--tarjetas.rep-tabla tfoot td { padding: 6px 0; background: none; border: 0; }
 }

@@ -7,7 +7,7 @@
 .mt-especialidades li {
   padding: 4px 12px;
   border: 1px solid var(--ui-line);
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
   font-size: 0.82rem;
   font-weight: 500;
 }
@@ -54,7 +54,7 @@
   padding: 12px 14px;
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   box-shadow: var(--ui-sombra-1);
 }
 
@@ -70,7 +70,7 @@
   grid-row: 1 / span 4;
   align-self: center;
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: var(--ui-r-lg);
   background: var(--primary);
   color: var(--on-primary);
   font-size: 0.78rem;

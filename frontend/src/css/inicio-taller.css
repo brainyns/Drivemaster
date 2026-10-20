@@ -4,13 +4,13 @@
 
 .ini-alerta { margin-bottom: var(--ui-sp-4); }
 .ini-indicadores { margin-bottom: var(--ui-sp-5); }
-.ini-esqueleto { height: 124px; border-radius: 12px; }
+.ini-esqueleto { height: 124px; border-radius: var(--ui-r-xl); }
 
 /* El número de pendientes dentro del botón principal */
 .ini-contador {
   min-width: 1.5em;
   padding: 0 6px;
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
   background: color-mix(in srgb, var(--on-primary) 16%, transparent);
   font-size: 0.75rem;
   font-weight: 800;
@@ -30,7 +30,7 @@
   cursor: pointer;
 }
 
-.ini-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 4px; }
+.ini-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
 
 /* ── Lo urgente y la agenda ────────────────────────────────────────────── */
 .ini-columnas {
@@ -47,7 +47,7 @@
   padding: 20px;
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
-  border-radius: 12px;
+  border-radius: var(--ui-r-xl);
 }
 
 .ini-bloque__cabecera { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; }
@@ -103,7 +103,7 @@
   gap: 12px;
   align-items: baseline;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   background: var(--ui-surface-2);
 }
 

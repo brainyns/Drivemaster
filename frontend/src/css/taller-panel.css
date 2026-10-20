@@ -14,7 +14,6 @@
   --text-muted: var(--ui-muted); --text-secondary: var(--ui-muted); --muted: var(--ui-muted); --muted2: var(--ui-muted);
   --success: var(--ui-ok); --green: var(--ui-ok); --error: var(--ui-error); --red: var(--ui-error);
   --warning: var(--ui-aviso); --amber: var(--ui-aviso); --amber-text: var(--ui-aviso); --blue: var(--ui-info); --purple: var(--ui-info);
-  --r-sm: var(--ui-r-md); --r-md: var(--ui-r-lg); --r-lg: var(--ui-r-lg);
   color: var(--ui-text);
 }
 

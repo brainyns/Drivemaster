@@ -11,7 +11,7 @@
   overflow: hidden;
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
-  border-radius: 12px;
+  border-radius: var(--ui-r-xl);
   transition: border-color var(--ui-dur) ease;
 }
 
@@ -33,7 +33,7 @@
   transition: background-color var(--ui-dur) ease;
 }
 
-.tc-fila:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; border-radius: 12px; }
+.tc-fila:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; border-radius: var(--ui-r-xl); }
 
 @media (hover: hover) and (pointer: fine) {
   .tc-fila:hover { background: var(--ui-hover); }

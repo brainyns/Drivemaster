@@ -11,7 +11,7 @@
 
 .srv-especialidad {
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
   background: var(--ui-surface-2);
   border: 1px solid var(--ui-line-soft);
   font-size: 0.75rem;

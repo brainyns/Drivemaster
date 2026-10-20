@@ -19,7 +19,7 @@
 .prt-tabla td { vertical-align: middle; }
 
 .prt-producto { display: flex; align-items: center; gap: 12px; min-width: 220px; }
-.prt-producto__imagen.mk-imagen { flex-shrink: 0; width: 48px; border-radius: 10px; }
+.prt-producto__imagen.mk-imagen { flex-shrink: 0; width: 48px; border-radius: var(--ui-r-lg); }
 .prt-producto__texto { display: grid; gap: 2px; min-width: 0; }
 .prt-producto__texto strong { font-size: 0.9rem; overflow-wrap: anywhere; }
 .prt-producto__texto span { font-size: 0.78rem; color: var(--ui-muted); overflow-wrap: anywhere; }

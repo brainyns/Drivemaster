@@ -90,7 +90,7 @@
   background: var(--dm-surface);
   border: 1px solid var(--dm-line);
   padding: 22px;
-  border-radius: 7px;
+  border-radius: var(--ui-r-md);
   margin-bottom: 24px;
 }
 
@@ -153,7 +153,7 @@
   background: var(--dm-bg);
   padding: 0 14px;
   min-height: 46px;
-  border-radius: 5px;
+  border-radius: var(--ui-r-md);
   color: var(--dm-muted);
 }
 
@@ -174,7 +174,7 @@
 .dm-sort {
   background: var(--dm-surface);
   border: 1px solid var(--dm-line);
-  border-radius: 5px;
+  border-radius: var(--ui-r-md);
   font-size: 10px;
   padding: 14px 28px 14px 13px;
   min-height: 46px;
@@ -273,7 +273,7 @@
   background: var(--dm-surface);
   padding: 10px;
   font-size: 10px;
-  border-radius: 4px;
+  border-radius: var(--ui-r-sm);
   color: var(--dm-text);
 }
 
@@ -310,7 +310,7 @@
   margin-top: 25px;
   background: var(--dm-surface);
   padding: 21px;
-  border-radius: 5px;
+  border-radius: var(--ui-r-md);
 }
 
 .dm-filters__help svg {
@@ -365,7 +365,7 @@
     margin-bottom: 25px;
     padding: 20px;
     border: 1px solid var(--dm-line);
-    border-radius: 6px;
+    border-radius: var(--ui-r-md);
     background: var(--dm-surface-2);
   }
   .dm-filters__help { display: none; }
@@ -389,7 +389,7 @@
   margin: 0 0 16px;
   padding: 12px 16px;
   border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent);
-  border-radius: 6px;
+  border-radius: var(--ui-r-md);
   background: var(--dm-orange-soft);
   color: var(--dm-text);
   font-size: 13px;

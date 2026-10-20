@@ -9,8 +9,6 @@
   --bg-deep:      var(--dm-deep);
   --bg-card:      var(--dm-bg);
   --bg-input:     var(--dm-surface);
-  --radius-card:  12px;
-  --radius-input: 5px;
 }
 
 /* ── Page ────────────────────────────────────────────────────────────────── */
@@ -204,7 +202,7 @@
   gap: 9px;
   padding: 7px 13px;
   border: 1px solid rgba(245, 245, 243, 0.16);
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
   background: rgba(13, 14, 16, 0.44);
   backdrop-filter: blur(6px);
   font-size: var(--fs-etiqueta);
@@ -234,7 +232,7 @@
   max-width: 400px;
   background: var(--bg-card);
   border: 1px solid var(--dm-line);
-  border-radius: var(--radius-card);
+  border-radius: var(--ui-r-xl);
   padding: 40px 38px 32px;
   display: flex;
   flex-direction: column;
@@ -340,7 +338,7 @@
   width: 100%;
   background: var(--bg-input);
   border: 1px solid var(--dm-line);
-  border-radius: var(--radius-input);
+  border-radius: var(--ui-r-md);
   color: var(--dm-text);
   font-family: var(--dm-font);
   font-size: 1rem;
@@ -374,7 +372,7 @@
   padding: 6px;
   background: none;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--ui-r-sm);
   color: var(--dm-muted);
   cursor: pointer;
   transition: color 0.2s, background 0.2s;
@@ -405,7 +403,7 @@
   color: var(--dm-red);
   background: color-mix(in srgb, var(--dm-red) 9%, transparent);
   border: 1px solid color-mix(in srgb, var(--dm-red) 26%, transparent);
-  border-radius: 4px;
+  border-radius: var(--ui-r-sm);
   padding: 10px 12px;
 }
 
@@ -433,7 +431,7 @@
   background: var(--dm-orange);
   color: var(--dm-on-accent);
   border: 1px solid transparent;
-  border-radius: var(--radius-input);
+  border-radius: var(--ui-r-md);
   font-family: var(--dm-font);
   font-size: 1rem;
   font-weight: 600;
@@ -531,7 +529,7 @@
   padding: 9px 16px;
   background: none;
   border: 1px solid var(--dm-line);
-  border-radius: var(--radius-input);
+  border-radius: var(--ui-r-md);
   color: var(--dm-muted);
   font-family: var(--dm-font);
   font-size: var(--fs-texto);

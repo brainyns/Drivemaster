@@ -13,7 +13,7 @@
   padding: 24px;
   background: var(--ui-surface);
   border: 1px solid var(--ui-line);
-  border-radius: 12px;
+  border-radius: var(--ui-r-xl);
 }
 
 .mv-formulario .mv-formulario__titulo {
@@ -51,7 +51,7 @@
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border: 1px solid var(--ui-line);
-  border-radius: 8px;
+  border-radius: var(--ui-r-lg);
 }
 
 .mv-formulario__alerta { margin-top: 18px; }
@@ -73,7 +73,7 @@
   width: max-content;
   max-width: 200px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--ui-r-md);
   background: var(--ui-bg);
   color: var(--ui-error);
   font-size: 0.75rem;
@@ -86,7 +86,7 @@
   margin-top: 4px;
   padding: 12px;
   border: 1px solid var(--ui-line);
-  border-radius: 10px;
+  border-radius: var(--ui-r-lg);
   font-size: 0.85rem;
 }
 
@@ -146,7 +146,7 @@
   flex-shrink: 0;
   width: 34px;
   height: 20px;
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
   background: var(--ui-line);
   transition: background-color var(--ui-dur) ease;
 }

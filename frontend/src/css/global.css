@@ -77,10 +77,6 @@
   --dm-display:     'DM Sans', sans-serif;
 
   /* Border radius */
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 16px;
-  --r-full: 9999px;
 
   /* Spacing */
   --sp-xs: 0.25rem;
@@ -133,9 +129,13 @@
   --ui-error:     #F58A8A;  --ui-error-bg:  rgba(245, 138, 138, 0.12);
   --ui-info:      #80B0E5;  --ui-info-bg:   rgba(128, 176, 229, 0.12);
 
-  --ui-r-sm: 4px;   /* etiquetas */
-  --ui-r-md: 6px;   /* campos y botones */
-  --ui-r-lg: 8px;   /* tarjetas, tablas y menús */
+  /* La única escala de radios de la app (antes convivía con --r-* y con valores sueltos en px) */
+  --ui-r-sm: 4px;      /* etiquetas */
+  --ui-r-md: 6px;      /* campos y botones */
+  --ui-r-lg: 8px;      /* tarjetas, tablas y menús */
+  --ui-r-xl: 12px;     /* paneles grandes, fotos y bloques destacados */
+  --ui-r-2xl: 16px;    /* globos del chat y piezas de la portada */
+  --ui-r-full: 9999px; /* píldoras y chips */
 
   --ui-sp-1: 4px;  --ui-sp-2: 8px;  --ui-sp-3: 12px; --ui-sp-4: 16px;
   --ui-sp-5: 24px; --ui-sp-6: 32px; --ui-sp-7: 48px;
@@ -266,7 +266,7 @@ code, pre, .mono { font-family: var(--ui-mono); }
 .theme-toggle {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--ui-r-lg);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);

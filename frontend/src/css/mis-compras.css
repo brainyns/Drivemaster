@@ -38,7 +38,7 @@
   text-align: center;
   color: var(--ui-muted);
   background: var(--ui-hover);
-  border-radius: 999px;
+  border-radius: var(--ui-r-full);
 }
 
 .mc-pestana[aria-selected="true"] .mc-pestana__contador { color: var(--on-primary); background: var(--primary); }
