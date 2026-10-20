@@ -168,3 +168,12 @@ test("Clientes: lista de solo lectura con el sistema compartido y sin datos pers
   assert.ok(p.includes("clientesPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO })"));
   for (const dato of ["telefono", "direccion", "documento"]) assert.ok(!p.includes(`c.${dato}`), `no muestra ${dato}`);
 });
+
+test("Reportes de plataforma: sistema compartido, comisión con Indicador y la comisión del dashboard abre su reporte", () => {
+  const p = usaSistemaCompartido("ReportesPlataforma.jsx", ["EncabezadoPagina", "<Indicador", "<Alerta", "onReintentar", "<EstadoVacio",
+    "<Esqueleto", "ui-table--tarjetas", 'aria-label="Reporte"', "<tfoot>"]);
+  for (const llamada of ["reporteVentasPlataforma(", "reporteProductosPlataforma(", "reporteClientesPlataforma(",
+    "reporteServiciosPlataforma(", "reporteComisionPlataforma("]) assert.ok(p.includes(llamada), `falta ${llamada}`);
+  assert.ok(leer("../src/pages/DashboardPlataforma.jsx").includes('ir("reportes-plataforma", "comision")'));
+  assert.ok(leer("../src/App.jsx").includes("<ReportesPlataforma key={idSeleccionado || \"ventas\"} token={token} filtroInicial={idSeleccionado} />"));
+});

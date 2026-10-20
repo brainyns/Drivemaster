@@ -727,7 +727,7 @@ function App() {
         {contenido}
       </>
     );
-    if (pagina === "reportes-plataforma") return <ReportesPlataforma token={token} />;
+    if (pagina === "reportes-plataforma") return <ReportesPlataforma key={idSeleccionado || "ventas"} token={token} filtroInicial={idSeleccionado} />;
     if (pagina === "inv-clientes")     return conAvisoHistorial(<InventarioClientes   token={token} />);
     if (pagina === "rep-clientes")     return conAvisoHistorial(<ReportesClientes     token={token} />);
     if (pagina === "inv-productos")    return conAvisoHistorial(<InventarioProductos  token={token} />);

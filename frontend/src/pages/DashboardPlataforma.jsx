@@ -203,7 +203,7 @@ export default function DashboardPlataforma({ token, onIr }) {
             pie="Pagos aprobados que pasaron por la plataforma. No es ingreso de DriveMaster." />
           <Indicador titulo="Comisión registrada" valor={cop(d.dinero.comisionRegistrada)} tono="ok"
             pie={`Informativa, al ${d.dinero.comisionPct}% vigente en cada pago. No es dinero cobrado.`}
-            onClick={() => ir("reportes-plataforma")} />
+            onClick={() => ir("reportes-plataforma", "comision")} />
           <Indicador titulo="Por liquidar a negocios" valor={cop(d.dinero.porLiquidar)}
             pie="Ya habilitado para pagar a talleres y tiendas." onClick={() => ir("liquidaciones")} />
         </div>

@@ -1,0 +1,35 @@
+/* ── Reportes de la plataforma (SUPERADMIN, prefijo rep-, BEM) ─────────────
+   Chips, cifras, tabla, avisos y estados son de ui.css y panel-plataforma.css (pp-). Aquí la nota de cada
+   reporte con su período y la fila de totales. Tokens --ui-*, los dos temas. */
+
+.rep-cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
+
+.rep-root .rep-nota {
+  flex: 1 1 360px;
+  max-width: 75ch;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ui-muted);
+  text-wrap: pretty;
+}
+
+/* Totales: se separan de las filas con una línea y fondo propio */
+.rep-tabla tfoot td {
+  padding: 12px 16px;
+  background: var(--ui-surface-2);
+  border-top: 1px solid var(--ui-line);
+  color: var(--ui-text);
+}
+
+@media (max-width: 760px) {
+  .ui-table--tarjetas.rep-tabla tfoot { display: block; margin-top: 10px; }
+  .ui-table--tarjetas.rep-tabla tfoot tr {
+    display: block;
+    padding: 14px 16px;
+    background: var(--ui-surface-2);
+    border: 1px solid var(--ui-line);
+    border-radius: 12px;
+  }
+  .ui-table--tarjetas.rep-tabla tfoot td { padding: 6px 0; background: none; border: 0; }
+}
