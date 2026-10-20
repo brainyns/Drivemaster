@@ -161,3 +161,10 @@ test("Productos: catálogo de solo lectura con el sistema compartido, los mismos
   assert.ok(p.includes("productosPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO })"));
   for (const accion of ["Editar", "Eliminar", "Nuevo producto"]) assert.ok(!p.includes(accion), `solo lectura: sobra ${accion}`);
 });
+
+test("Clientes: lista de solo lectura con el sistema compartido y sin datos personales de más", () => {
+  const p = usaSistemaCompartido("ClientesPlataforma.jsx", ["EncabezadoPagina", "ChipEstado", "<LogoNegocio", "<Alerta", "onReintentar",
+    "<EstadoVacio", "<Esqueleto", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado de la cuenta"']);
+  assert.ok(p.includes("clientesPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO })"));
+  for (const dato of ["telefono", "direccion", "documento"]) assert.ok(!p.includes(`c.${dato}`), `no muestra ${dato}`);
+});

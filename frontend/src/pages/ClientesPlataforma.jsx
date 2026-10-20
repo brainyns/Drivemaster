@@ -1,135 +1,172 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { clientesPlataforma } from "../services/plataformaService";
-import "../css/dashboard.css";
-import "../css/dashboard-plataforma.css";
-import "../css/admin-base.css";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import LogoNegocio from "../components/ui/LogoNegocio";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Icon from "../components/public/Icon";
 import { capitalizar } from "../utils/formato";
+import "../css/dashboard-plataforma.css";
+import "../css/panel-plataforma.css";
+import "../css/listas-plataforma.css";
 
 const TAMANO = 20;
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
-const FILTROS_INICIALES = { q: "", ciudad: "", estado: "" };
+const FILTROS_INICIALES = { ciudad: "", estado: "" };
+const ESTADOS = [
+  { valor: "", label: "Todos" },
+  { valor: "activos", label: "Activos" },
+  { valor: "inactivos", label: "Inactivos" },
+];
 
 /**
  * Clientes registrados, solo lectura y solo lo necesario para monitorear: nombre, correo parcial, ciudad,
  * cuántas compras y servicios llevan. No se muestra teléfono, dirección ni documento.
  */
 export default function ClientesPlataforma({ token }) {
-  const [borrador, setBorrador] = useState(FILTROS_INICIALES);
+  const [busqueda, setBusqueda] = useState("");
+  const [q, setQ] = useState("");
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
   const [pagina, setPagina] = useState(0);
-  const [estado, setEstado] = useState({ clave: null, datos: null, error: null });
+  const [datos, setDatos] = useState(null); // { clientes: { items, total }, ciudades }
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
 
-  const clave = JSON.stringify([filtros, pagina]);
+  // La búsqueda va al servidor; espera a que se deje de escribir
+  useEffect(() => {
+    const termino = busqueda.trim();
+    if (termino === q) return undefined;
+    const id = setTimeout(() => { setQ(termino); setPagina(0); }, 300);
+    return () => clearTimeout(id);
+  }, [busqueda, q]);
+
+  const cargar = useCallback(async (vivo = () => true) => {
+    setCargando(true);
+    try {
+      const r = await clientesPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO });
+      if (!vivo()) return;
+      setDatos(r);
+      setError(null);
+    } catch (e) {
+      if (vivo()) setError(e.message);
+    } finally {
+      if (vivo()) setCargando(false);
+    }
+  }, [token, filtros, q, pagina]);
 
   useEffect(() => {
-    let vivo = true;
-    clientesPlataforma(token, { ...filtros, pagina, tamano: TAMANO })
-      .then((datos) => { if (vivo) setEstado({ clave, datos, error: null }); })
-      .catch((e) => { if (vivo) setEstado({ clave, datos: null, error: e.message }); });
-    return () => { vivo = false; };
-  }, [token, filtros, pagina, clave]);
+    let activo = true;
+    const id = setTimeout(() => cargar(() => activo), 0);
+    return () => { activo = false; clearTimeout(id); };
+  }, [cargar]);
 
-  const cargando = estado.clave !== clave;
-  const respuesta = estado.datos;
-  const lista = respuesta?.clientes;
-  const paginas = lista ? Math.max(1, Math.ceil(lista.total / lista.tamano)) : 1;
+  const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
+  const poner = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(0); };
+  const limpiar = () => { setBusqueda(""); setQ(""); setFiltros(FILTROS_INICIALES); setPagina(0); };
+  const hayFiltros = q !== "" || Object.values(filtros).some((v) => v !== "");
 
-  const aplicar = (e) => {
-    e.preventDefault();
-    setPagina(0);
-    setFiltros(borrador);
-  };
-  const cambiar = (campo) => (e) => {
-    const siguiente = { ...borrador, [campo]: e.target.value };
-    setBorrador(siguiente);
-    if (campo !== "q") { setPagina(0); setFiltros(siguiente); }
-  };
-  const limpiar = () => { setBorrador(FILTROS_INICIALES); setFiltros(FILTROS_INICIALES); setPagina(0); };
-  const hayFiltros = Object.values(filtros).some((v) => v !== "");
+  const lista = datos?.clientes;
+  const items = lista?.items || [];
+  const total = lista?.total || 0;
+  const paginas = Math.max(1, Math.ceil(total / TAMANO));
 
   return (
-    <div className="adm-pagina">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Clientes</h1>
-          <p className="adm-encabezado__sub">Clientes registrados en la plataforma, solo lectura.</p>
-        </div>
-        {lista && <span className="adm-encabezado__dato">{lista.total} {lista.total === 1 ? "cliente" : "clientes"}</span>}
-      </header>
+    <div className="ss-panel--plataforma pp-root lst-root">
+      <EncabezadoPagina titulo="Clientes"
+        descripcion="Clientes registrados en la plataforma, solo lectura. Sin teléfono, dirección ni documento." />
 
-      <form className="adm-filtros" onSubmit={aplicar} role="search" aria-label="Filtros de clientes">
-        <label className="adm-campo adm-campo--ancho">
-          <span>Buscar</span>
-          <input type="search" value={borrador.q} onChange={cambiar("q")} placeholder="Nombre o correo" />
-        </label>
-        <label className="adm-campo">
-          <span>Ciudad</span>
-          <select value={borrador.ciudad} onChange={cambiar("ciudad")}>
+      <div className="pp-filtros">
+        <div className="ui-buscador">
+          <Icon name="search" size={18} />
+          <label htmlFor="cli-busqueda" className="ui-sr">Buscar por nombre o correo</label>
+          <input id="cli-busqueda" className="ui-field__input" type="search" placeholder="Nombre o correo"
+            value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+        </div>
+        <label className="pp-filtros__select">
+          Ciudad
+          <select className="ui-field__input" value={filtros.ciudad} onChange={(e) => poner({ ciudad: e.target.value })}>
             <option value="">Todas</option>
-            {(respuesta?.ciudades || []).map((c) => <option key={c} value={c}>{c}</option>)}
+            {(datos?.ciudades || []).map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
-        <label className="adm-campo">
-          <span>Estado</span>
-          <select value={borrador.estado} onChange={cambiar("estado")}>
-            <option value="">Todos</option>
-            <option value="activos">Activos</option>
-            <option value="inactivos">Inactivos</option>
-          </select>
-        </label>
-        <div className="adm-filtros__acciones">
-          <button type="submit" className="adm-btn">Buscar</button>
-          {hayFiltros && <button type="button" className="adm-btn adm-btn--sutil" onClick={limpiar}>Limpiar</button>}
+        <div className="ui-filtros" role="group" aria-label="Estado de la cuenta">
+          {ESTADOS.map((x) => (
+            <button key={x.valor || "todos"} type="button" className="ui-chip" aria-pressed={filtros.estado === x.valor}
+              onClick={() => poner({ estado: x.valor })}>{x.label}</button>
+          ))}
         </div>
-      </form>
-
-      {estado.error && <div className="adm-alerta adm-alerta--error" role="alert">{estado.error}</div>}
-
-      <div className="adm-tarjeta" aria-busy={cargando}>
-        {!lista && !estado.error ? (
-          <div className="adm-cargando">Cargando clientes…</div>
-        ) : lista && lista.items.length === 0 ? (
-          <p className="adm-vacio">{hayFiltros ? "Ningún cliente coincide con los filtros." : "Todavía no hay clientes."}</p>
-        ) : lista && (
-          <div className="adm-tabla-wrap">
-            <table className="adm-tabla adm-tabla--tarjetas">
-              <thead>
-                <tr>
-                  <th>Cliente</th><th>Ciudad</th><th>Estado</th><th>Registro</th>
-                  <th className="adm-tabla__der">Compras</th><th className="adm-tabla__der">Servicios</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lista.items.map((c) => (
-                  <tr key={c.id}>
-                    <td data-label="Cliente">
-                      <strong>{c.nombre || "Sin nombre"}</strong>
-                      <span className="adm-tabla__sub">{c.correo || "—"}</span>
-                    </td>
-                    <td data-label="Ciudad">{capitalizar(c.ciudad) || "—"}</td>
-                    <td data-label="Estado">
-                      <span className={`adm-badge ${c.activo ? "adm-badge--exito" : "adm-badge--neutro"}`}>
-                        {c.activo ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
-                    <td data-label="Registro">{fecha(c.registrado)}</td>
-                    <td className="adm-tabla__der" data-label="Compras">{c.compras}</td>
-                    <td className="adm-tabla__der" data-label="Servicios">{c.servicios}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {hayFiltros && <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={limpiar}>Limpiar filtros</button>}
       </div>
 
-      {lista && lista.total > lista.tamano && (
-        <nav className="adm-paginacion" aria-label="Paginación">
-          <button type="button" className="adm-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
-          <span>Página {pagina + 1} de {paginas}</span>
-          <button type="button" className="adm-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-        </nav>
+      {error && <Alerta className="pp-bloque-sep" onReintentar={reintentar} reintentando={reintentando}>{error}</Alerta>}
+
+      {!datos ? (
+        !error && <Esqueleto variante="lista" cantidad={6} texto="Cargando clientes…" />
+      ) : items.length === 0 ? (
+        hayFiltros ? (
+          <EstadoVacio icono="search" titulo="Ningún cliente coincide" texto="Prueba con otro nombre o correo, o quita algún filtro.">
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={limpiar}>Limpiar filtros</button>
+          </EstadoVacio>
+        ) : (
+          <EstadoVacio icono="users" titulo="Todavía no hay clientes"
+            texto="Los clientes aparecen aquí cuando se registran para comprar en el catálogo o pedir un servicio." />
+        )
+      ) : (
+        <>
+          <div className={`ui-card ui-table-card${cargando ? " pp-actualizando" : ""}`} aria-busy={cargando}>
+            <div className="ui-table-wrap">
+              <table className="ui-table ui-table--tarjetas">
+                <caption className="ui-sr">Clientes registrados</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Ciudad</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Registro</th>
+                    <th scope="col" className="pp-num">Compras</th>
+                    <th scope="col" className="pp-num">Servicios</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((c) => (
+                    <tr key={c.id}>
+                      <td className="ui-table__titulo">
+                        <span className="lst-item">
+                          <LogoNegocio nombre={c.nombre} />
+                          <span className="lst-item__texto">
+                            <strong>{c.nombre || "Sin nombre"}</strong>
+                            <span className="pp-sub lst-correo">{c.correo || "Sin correo"}</span>
+                          </span>
+                        </span>
+                      </td>
+                      <td data-label="Ciudad">{capitalizar(c.ciudad) || <span className="pp-tenue">Sin ciudad</span>}</td>
+                      <td data-label="Estado"><ChipEstado tono={c.activo ? "ok" : "apagado"}>{c.activo ? "Activo" : "Inactivo"}</ChipEstado></td>
+                      <td data-label="Registro" className="lst-fecha">{fecha(c.registrado)}</td>
+                      <td data-label="Compras" className="pp-num">{c.compras}</td>
+                      <td data-label="Servicios" className="pp-num">{c.servicios}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <nav className="pp-paginas" aria-label="Páginas de clientes">
+            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + items.length} de {total}</span>
+            {paginas > 1 && (
+              <span className="pp-paginas__botones">
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
+                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
+                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
+                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
+              </span>
+            )}
+          </nav>
+        </>
       )}
     </div>
   );
