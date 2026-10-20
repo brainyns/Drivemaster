@@ -1,127 +1,12 @@
-/* Panel de la plataforma (SUPERADMIN). Reutiliza las tarjetas del dashboard (db-*) y solo agrega lo propio (dp-*). */
-
-.dp-acciones { display: flex; align-items: center; gap: .75rem; }
-
-.dp-btn {
-  border: 1px solid var(--ui-line);
-  background: var(--card, transparent);
-  color: var(--ui-text);
-  border-radius: var(--ui-r-lg);
-  padding: .45rem .9rem;
-  font: inherit;
-  font-size: .8rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.dp-btn:hover:not(:disabled) { border-color: var(--primary); }
-.dp-btn:disabled { opacity: .6; cursor: default; }
-
-.dp-seccion {
-  font-size: .78rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--ui-muted);
-  margin: 1.6rem 0 .7rem;
-}
-
-.dp-alertas { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .25rem; }
-.dp-alertas__ok { margin: 0; font-size: .85rem; color: var(--ui-muted); }
-
-.dp-alerta {
-  border: 1px solid var(--ui-line);
-  background: transparent;
-  color: var(--ui-text);
-  border-radius: 999px;
-  padding: .4rem .9rem;
-  font: inherit;
-  font-size: .82rem;
-  cursor: pointer;
-}
-.dp-alerta strong { font-size: .95rem; }
-.dp-alerta:hover { border-color: var(--primary); }
-.dp-alerta--critica { border-color: var(--ui-error); }
-.dp-alerta--critica strong { color: var(--ui-error); }
-
-.dp-kpi__detalle { margin: .35rem 0 0; font-size: .75rem; color: var(--ui-muted); line-height: 1.35; }
-
-.dp-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-top: 1.1rem; }
-.dp-der, .db-table .dp-der { text-align: right; font-variant-numeric: tabular-nums; }
-
-.dp-barras { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .55rem; }
-.db-card > .dp-barras { margin: 0; padding: 0 20px 20px; }
-.dp-barras li { display: grid; grid-template-columns: minmax(110px, 160px) 1fr auto; gap: .75rem; align-items: center; font-size: .82rem; }
-.dp-barras__pista { height: 8px; border-radius: 99px; background: var(--ui-line); overflow: hidden; }
-.dp-barras__pista > span { display: block; height: 100%; border-radius: 99px; background: var(--primary); }
-
-@media (max-width: 640px) {
-  .dp-dos { grid-template-columns: 1fr; }
-  .dp-barras li { grid-template-columns: 1fr auto; }
-  .dp-barras__pista { grid-column: 1 / -1; order: 3; }
-}
-
-/* ── Panel operativo del ADMIN ─────────────────────────────── */
-.dp-tareas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem; }
-.dp-tarea { background: var(--ui-surface); box-shadow: var(--ui-sombra-1); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); padding: 1.1rem 1.2rem; display: grid; gap: .5rem; align-content: start; }
-.dp-tarea--critica { border-color: var(--ui-error); }
-.dp-tarea__n { margin: 0; font-size: 2.2rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
-.dp-tarea--critica .dp-tarea__n { color: var(--ui-error); }
-.dp-tarea__titulo { margin: 0; font-size: .95rem; font-weight: 700; }
-.dp-tarea__detalle { margin: 0; font-size: .82rem; color: var(--ui-muted); line-height: 1.45; }
-.dp-tarea .dp-btn { justify-self: start; margin-top: .25rem; }
-
-/* ── Listas de solo lectura (productos, clientes) ──────────── */
-.dp-filtros { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; margin: 0 0 1rem; }
-.dp-campo { display: grid; gap: .3rem; font-size: .75rem; color: var(--ui-muted); font-weight: 600; min-width: 150px; }
-.dp-campo--ancho { flex: 1 1 260px; }
-.dp-campo input, .dp-campo select {
-  border: 1px solid var(--ui-line);
-  background: var(--card, transparent);
-  color: var(--ui-text);
-  border-radius: var(--ui-r-lg);
-  padding: .5rem .65rem;
-  font: inherit;
-  font-size: .85rem;
-}
-.dp-filtros__acciones { display: flex; gap: .5rem; }
-.dp-btn--sutil { background: transparent; color: var(--ui-muted); }
-
-.dp-lista { padding: .5rem 0 0; }
-.dp-sub-celda { display: block; font-size: .74rem; color: var(--ui-muted); margin-top: .15rem; }
-.dp-etiqueta { display: inline-block; border-radius: var(--ui-r-sm); padding: .15rem .55rem; font-size: .72rem; font-weight: 700; border: 1px solid var(--ui-line); white-space: nowrap; }
-.dp-etiqueta--ok { color: var(--ui-ok); border-color: var(--ui-ok); }
-.dp-etiqueta--no { color: var(--ui-muted); }
-
-.dp-paginacion { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; font-size: .82rem; color: var(--ui-muted); }
-
-/* ── Pedidos y envíos ──────────────────────────────────────── */
-.dp-pestanas { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1rem 0 .9rem; }
-.dp-pestana {
-  border: 1px solid var(--ui-line); background: transparent; color: var(--ui-text);
-  border-radius: 999px; padding: .35rem .85rem; font: inherit; font-size: .8rem; cursor: pointer;
-}
-.dp-pestana:hover { border-color: var(--primary); }
-.dp-pestana--activa { border-color: var(--primary); font-weight: 700; }
-.dp-pestana__n { margin-left: .25rem; color: var(--ui-muted); font-weight: 600; }
-.dp-alerta--activa { background: rgba(214, 69, 69, .12); }
-.dp-campo--check { display: flex; align-items: center; gap: .45rem; min-width: 0; padding-bottom: .5rem; }
-.dp-campo--check input { width: auto; }
-.dp-fila--alerta td:first-child { box-shadow: inset 3px 0 0 var(--ui-error); }
-.dp-etiqueta--alerta { color: var(--ui-error); border-color: var(--ui-error); }
+/* Paneles del SUPERADMIN, del ADMIN y de la tienda: margen de página y puente de las hojas compartidas (ss-, sv-)
+   hacia los tokens --ui-*. Las pantallas usan ui.css y panel-plataforma.css (pp-); aquí no queda nada más. */
 
 /* ── Reportes e historial ──────────────────────────────────── */
-.dp-nota { margin: 0; flex: 1 1 320px; font-size: .78rem; color: var(--ui-muted); line-height: 1.45; padding-bottom: .5rem; }
 .dp-historial {
   border: 1px solid var(--ui-line); border-left: 4px solid var(--ui-aviso); border-radius: var(--ui-r-lg);
   padding: .7rem 1rem; margin: 1rem 1.75rem 0; font-size: .82rem; line-height: 1.45;
 }
 .dp-historial strong { display: block; margin-bottom: .15rem; }
-
-/* ── Tiendas y talleres / aprobaciones ─────────────────────── */
-.dp-aviso { border: 1px solid var(--ui-ok); color: var(--ui-ok); border-radius: var(--ui-r-lg); padding: .55rem .9rem; margin: 0 0 .75rem; font-size: .84rem; }
-.dp-acciones-fila { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; margin-top: .6rem; }
-.dp-gestion > td { background: rgba(127, 127, 127, .06); padding: .75rem 1rem; }
-.dp-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ── Liquidaciones y Problemas de envío (SUPERADMIN y ADMIN) ─────────────────
    Usan estilos del flujo de servicio (ss-, sv-) que comparten con el taller y el

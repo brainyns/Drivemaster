@@ -3,8 +3,22 @@ import { negociosPendientes } from "../services/plataformaService";
 import { resolverAprobacionTaller } from "../services/tallerService";
 import { resolverAprobacionTienda } from "../services/tiendaService";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
-import { capitalizar, formatoFecha } from "../utils/formato";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import LogoNegocio from "../components/ui/LogoNegocio";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Campo from "../components/ui/Campo";
+import { capitalizar, formatoFecha, unir } from "../utils/formato";
+// El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
 import "../css/admin-base.css";
+import "../css/dashboard-plataforma.css";
+import "../css/panel-plataforma.css";
+import "../css/aprobaciones-plataforma.css";
+
+const clave = (n) => `${n.tipo}-${n.id}`;
+const nombreTipo = (n) => (n.tipo === "TIENDA" ? "Tienda" : "Taller");
 
 /**
  * Aprobaciones del ADMIN: solo los negocios pendientes y dos decisiones, aprobar o rechazar (con motivo). El plan,
@@ -19,19 +33,20 @@ export default function AprobacionesAdmin({ token }) {
   const [procesando, setProcesando] = useState(null);
   const [aviso, setAviso] = useState(null);
   const [errorAccion, setErrorAccion] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
 
-  const cargar = useCallback(() => {
+  const cargar = useCallback(() => (
     negociosPendientes(token)
       .then((lista) => setEstado({ lista, error: null }))
-      .catch((e) => setEstado((p) => ({ ...p, error: e.message })));
-  }, [token]);
+      .catch((e) => setEstado((p) => ({ ...p, error: e.message })))
+  ), [token]);
 
   useEffect(() => {
     const t = setTimeout(cargar, 0);
     return () => clearTimeout(t);
   }, [cargar]);
 
-  const clave = (n) => `${n.tipo}-${n.id}`;
+  const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
   const llamar = (n) => (n.tipo === "TALLER" ? resolverAprobacionTaller : resolverAprobacionTienda);
 
   const ejecutar = async (n, decision, mensaje) => {
@@ -66,61 +81,66 @@ export default function AprobacionesAdmin({ token }) {
   const { lista, error } = estado;
 
   return (
-    <div className="adm-pagina">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Aprobaciones</h1>
-          <p className="adm-encabezado__sub">
-            Negocios que esperan tu revisión. Aprobarlos los activa con el plan de prueba; al rechazarlos se les envía el motivo.
-          </p>
-        </div>
-        {lista && <span className="adm-encabezado__dato">{lista.length} {lista.length === 1 ? "pendiente" : "pendientes"}</span>}
-      </header>
+    <div className="ss-panel--plataforma pp-root apr-root">
+      <EncabezadoPagina titulo="Aprobaciones"
+        descripcion="Negocios que esperan tu revisión. Aprobarlos los activa con el plan de prueba; al rechazarlos se les envía el motivo." />
 
-      {aviso && <p className="adm-alerta adm-alerta--exito" role="status">{aviso}</p>}
-      {(error || (errorAccion && !confirmacion)) && <p className="adm-alerta adm-alerta--error" role="alert">{errorAccion || error}</p>}
+      {aviso && <Alerta tono="ok" className="pp-bloque-sep" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
+      {errorAccion && !confirmacion && <Alerta className="pp-bloque-sep" onCerrar={() => setErrorAccion(null)}>{errorAccion}</Alerta>}
+      {error && (
+        <Alerta className="pp-bloque-sep" onReintentar={reintentar} reintentando={reintentando}>
+          {lista ? `No pudimos actualizar la lista: ${error}` : error}
+        </Alerta>
+      )}
 
-      <div className="adm-tarjeta" aria-busy={!lista && !error}>
-        {!lista && !error ? (
-          <div className="adm-cargando">Cargando…</div>
-        ) : lista && lista.length === 0 ? (
-          <p className="adm-vacio">Todo al día: no hay negocios pendientes de revisión.</p>
-        ) : lista && (
-          <div className="adm-tabla-wrap">
-            <table className="adm-tabla adm-tabla--tarjetas">
+      {!lista ? (
+        !error && <Esqueleto variante="lista" cantidad={4} texto="Cargando negocios pendientes…" />
+      ) : lista.length === 0 ? (
+        <EstadoVacio icono="check" titulo="Todo al día"
+          texto="No hay negocios pendientes de revisión. Cuando una tienda o un taller se registre, aparece aquí." />
+      ) : (
+        <div className="ui-card ui-table-card">
+          <div className="ui-table-wrap">
+            <table className="ui-table ui-table--tarjetas">
+              <caption className="ui-sr">{lista.length} {lista.length === 1 ? "negocio pendiente" : "negocios pendientes"} de revisión</caption>
               <thead>
                 <tr>
-                  <th>Negocio</th><th>Ciudad</th><th>NIT</th><th>Datos</th><th>Registro</th>
-                  <th className="adm-tabla__der">Acciones</th>
+                  <th scope="col">Negocio</th>
+                  <th scope="col">Ciudad</th>
+                  <th scope="col">NIT</th>
+                  <th scope="col">Datos</th>
+                  <th scope="col">Registro</th>
+                  <th scope="col"><span className="ui-sr">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
                 {lista.map((n) => {
                   const ocupado = procesando === clave(n);
+                  const faltan = n.datosPorCompletar || [];
                   return (
                     <tr key={clave(n)}>
-                      <td data-label="Negocio">
-                        <span className="adm-tabla__nombre">
-                          <strong>{n.nombre || "Sin nombre"}</strong>
-                          <span className="adm-badge adm-badge--chico adm-badge--info">{n.tipo === "TIENDA" ? "Tienda" : "Taller"}</span>
+                      <td className="ui-table__titulo">
+                        <span className="apr-negocio">
+                          <LogoNegocio nombre={n.nombre} />
+                          <span className="apr-negocio__texto">
+                            <strong>{n.nombre || "Sin nombre"}</strong>
+                            <span className="pp-sub">{unir([nombreTipo(n), n.direccion || "Sin dirección"])}</span>
+                          </span>
                         </span>
-                        <span className="adm-tabla__sub">{n.direccion || "Sin dirección"}</span>
                       </td>
-                      <td data-label="Ciudad">{capitalizar(n.ciudad) || "—"}</td>
-                      <td data-label="NIT">{n.nit || "No registrado"}</td>
+                      <td data-label="Ciudad">{capitalizar(n.ciudad) || <span className="pp-tenue">Sin ciudad</span>}</td>
+                      <td data-label="NIT">{n.nit || <span className="pp-tenue">No registrado</span>}</td>
                       <td data-label="Datos">
-                        {n.datosPorCompletar.length > 0
-                          ? <span className="adm-badge adm-badge--pendiente">Falta: {n.datosPorCompletar.join(", ")}</span>
-                          : <span className="adm-badge adm-badge--exito">Completos</span>}
+                        {faltan.length > 0
+                          ? <ChipEstado tono="aviso">Falta: {faltan.join(", ")}</ChipEstado>
+                          : <ChipEstado tono="ok">Completos</ChipEstado>}
                       </td>
-                      <td data-label="Registro">{formatoFecha(n.registrado)}</td>
-                      <td className="adm-tabla__der adm-tabla__celda--ancha">
-                        <div className="adm-tabla__acciones">
-                          <button type="button" className="adm-btn adm-btn--chico adm-btn--peligro" disabled={ocupado}
-                            onClick={() => pedir("rechazar", n)}>Rechazar</button>
-                          <button type="button" className="adm-btn adm-btn--chico adm-btn--primario" disabled={ocupado}
-                            onClick={() => pedir("aprobar", n)}>Aprobar</button>
-                        </div>
+                      <td data-label="Registro" className="apr-fecha">{formatoFecha(n.registrado)}</td>
+                      <td className="ui-table__acciones">
+                        <button type="button" className="ui-btn ui-btn--texto ui-btn--chico apr-peligro" disabled={ocupado}
+                          onClick={() => pedir("rechazar", n)} aria-label={`Rechazar ${n.nombre}`}>Rechazar</button>
+                        <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" disabled={ocupado}
+                          onClick={() => pedir("aprobar", n)} aria-label={`Aprobar ${n.nombre}`}>Aprobar</button>
                       </td>
                     </tr>
                   );
@@ -128,8 +148,8 @@ export default function AprobacionesAdmin({ token }) {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {confirmacion && (
         <ConfirmacionAdmin
@@ -145,12 +165,11 @@ export default function AprobacionesAdmin({ token }) {
           onCancelar={() => { setConfirmacion(null); setErrorAccion(null); }}
         >
           {confirmacion.accion === "rechazar" && (
-            <label className="adm-campo adm-campo--bloque">
-              <span>Motivo (se le envía al negocio)</span>
-              <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} required />
-            </label>
+            <Campo id="apra-motivo" label="Motivo" ayuda="Se le envía al negocio por correo.">
+              <textarea className="ui-field__input apr-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} required />
+            </Campo>
           )}
-          {errorAccion && <p className="adm-alerta adm-alerta--error" role="alert">{errorAccion}</p>}
+          {errorAccion && <Alerta>{errorAccion}</Alerta>}
         </ConfirmacionAdmin>
       )}
     </div>

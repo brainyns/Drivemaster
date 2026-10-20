@@ -191,3 +191,11 @@ test("Mi perfil: sistema compartido, la misma validación de la contraseña con 
   assert.ok(p.includes('"Las contraseñas no coinciden"') && p.includes('"La nueva contraseña debe tener al menos 6 caracteres"'));
   assert.ok(p.includes("error={errores.confirmar}") && p.includes("error={errores.nueva}"));
 });
+
+test("ADMIN: Tu resumen y Aprobaciones usan el sistema compartido, con las mismas llamadas", () => {
+  const d = usaSistemaCompartido("DashboardOperacion.jsx", ["EncabezadoPagina", "<Indicador", "<Alerta", "onReintentar"], ["adm-", "db-", "dp-"]);
+  assert.ok(d.includes("operacionPlataforma(token)") && d.includes("onIr?.(t.ir, t.preset)"));
+  const a = usaSistemaCompartido("AprobacionesAdmin.jsx", ["EncabezadoPagina", "ChipEstado", "<LogoNegocio", "<Alerta", "onReintentar",
+    "<EstadoVacio", "<Esqueleto", "<Campo", "ui-table--tarjetas", "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
+  assert.ok(a.includes("negociosPendientes(token)") && a.includes("!motivo.trim()"));
+});
