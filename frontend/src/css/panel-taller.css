@@ -8,7 +8,9 @@
 .pt-root {
   /* Ancho completo, como el resto de paneles */
   padding: 1.5rem 1.75rem 2.5rem;
-  animation: pt-in 0.4s var(--ease-out) both;
+  /* backwards y no both: con both la animación de transform sigue en efecto al terminar y .pt-root pasa a ser el
+     bloque contenedor de lo fijo, así que la barra de acción del celular quedaba al final del contenido */
+  animation: pt-in 0.4s var(--ease-out) backwards;
 }
 
 @keyframes pt-in {

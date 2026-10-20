@@ -12,8 +12,8 @@
 }
 .dm-view {
   position: relative;
-  animation: dm-view-fade-in 0.45s var(--ease-out) both;
-  will-change: opacity, transform;
+  /* backwards y sin will-change fijo: si no, la vista queda como bloque contenedor de lo fijo que tenga dentro */
+  animation: dm-view-fade-in 0.45s var(--ease-out) backwards;
 }
 
 @keyframes dm-view-fade-in {

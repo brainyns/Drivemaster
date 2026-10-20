@@ -85,3 +85,14 @@ test("las tablas pasan a tarjetas en celular con la etiqueta de cada dato", () =
   assert.match(css, /\.ui-table--tarjetas td\[data-label\]::before \{\s*content: attr\(data-label\);/);
   assert.match(css, /\.ui-table--tarjetas td\.ui-table__titulo/);
 });
+
+test("El asistente no se muestra en el acceso y en celular sube por encima de la barra de acción fija", () => {
+  const leerArchivo = (r) => readFileSync(new URL(r, import.meta.url), "utf8");
+  const chat = leerArchivo("../src/components/chat/chat.css");
+  assert.match(chat, /body:has\(\.auth-page\) \.chat-widget-container \{ display: none; \}/);
+  assert.match(chat, /body:has\(\.ui-barra-movil\) \.chat-widget-container/);
+  assert.match(chat, /bottom: var\(--chat-abajo, 20px\)/);
+  assert.ok(leerArchivo("../src/components/ui/BarraAccionMovil.jsx").includes('"--alto-barra-movil"'), "la barra publica su alto");
+  // Una animación con fill "both" sobre transform deja al contenedor como bloque de lo fijo: la barra no quedaba abajo
+  assert.ok(!/animation: pt-in [^;]*\bboth\b/.test(leerArchivo("../src/css/panel-taller.css")));
+});

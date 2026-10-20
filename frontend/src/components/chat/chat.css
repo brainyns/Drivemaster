@@ -38,7 +38,7 @@
 
     position: fixed;
     right: 20px;
-    bottom: 20px;
+    bottom: var(--chat-abajo, 20px);
     z-index: 1000;
     display: flex;
     flex-direction: column;
@@ -479,4 +479,17 @@ html[data-theme="light"] .chat-widget-container {
     .chat-widget-container .chat-header-actions { gap: 8px; }
     .chat-widget-container .header-icon-btn { width: 40px; height: 40px; }
     .chat-widget-container .chat-input-container { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ── Convivencia con el resto de la pantalla ───────────────────────────────
+   En las pantallas de acceso (login, registro, acceso interno, registro de negocio, y el login que aparece al abrir
+   una página protegida sin sesión) el asistente no se muestra: en celular el globo tapaba "Iniciar sesión".
+   Con una barra de acción fija abajo (ui-barra-movil: carrito, diagnóstico, solicitudes, pedidos…) sube por encima
+   de ella en vez de taparla. */
+body:has(.auth-page) .chat-widget-container { display: none; }
+
+@media (max-width: 1023px) {
+  body:has(.ui-barra-movil) .chat-widget-container {
+    --chat-abajo: calc(var(--alto-barra-movil, 72px) + 16px); /* el alto ya incluye el margen seguro de abajo */
+  }
 }
