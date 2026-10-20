@@ -224,8 +224,10 @@
   .pt-card-done { align-items: flex-start; }
 }
 
+/* El margen del contenedor en celular vive solo aquí (antes taller-panel.css lo pisaba con otra regla) */
+@media (max-width: 640px) { .pt-root { padding: 1rem 1rem 2rem; } }
+
 @media (max-width: 560px) {
-  .pt-root { padding: var(--sp-md, 16px); }
   .pt-card { padding: var(--sp-md, 16px); }
   .pt-flow { padding: var(--sp-md, 16px); }
 }

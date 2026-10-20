@@ -34,5 +34,4 @@
   box-shadow: var(--ui-sombra-1);
 }
 .tp-root .ss-bloque__titulo { font-size: var(--fs-subtitulo); }
-@media (max-width: 640px) { .pt-root { padding: 1rem 1rem 2rem; } }
 
