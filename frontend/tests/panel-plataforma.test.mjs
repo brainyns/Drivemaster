@@ -154,3 +154,10 @@ test("Servicios: sistema compartido, cifras con Indicador y el formulario con Ca
   }
   assert.ok(p.includes('getUser()?.rol === "SUPERADMIN"'), "el ADMIN sigue sin crear, editar ni pausar");
 });
+
+test("Productos: catálogo de solo lectura con el sistema compartido, los mismos filtros y el mismo endpoint", () => {
+  const p = usaSistemaCompartido("ProductosPlataforma.jsx", ["EncabezadoPagina", "ChipEstado", "<Alerta", "onReintentar", "<EstadoVacio",
+    "<Esqueleto", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado del producto"', '"sin-stock"', "nuevosDias", "tiendaId"]);
+  assert.ok(p.includes("productosPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO })"));
+  for (const accion of ["Editar", "Eliminar", "Nuevo producto"]) assert.ok(!p.includes(accion), `solo lectura: sobra ${accion}`);
+});
