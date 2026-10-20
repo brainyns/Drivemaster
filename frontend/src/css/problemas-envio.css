@@ -1,0 +1,24 @@
+/* ── Problemas de envío (ADMIN y SUPERADMIN, prefijo pre-, BEM) ────────────
+   Chips, tabla, avisos y estados son de ui.css y panel-plataforma.css (pp-); el diálogo, de admin-base.css.
+   Aquí las celdas del reclamo y la resolución. Tokens --ui-*, los dos temas. */
+
+.pre-ref { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.pre-fecha, .pre-despacho { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pre-despacho .pp-sub { white-space: normal; }
+
+/* El reclamo es la voz del cliente: se lee completo y entre comillas */
+.pre-reclamo { min-width: 220px; max-width: 42ch; line-height: 1.5; overflow-wrap: anywhere; }
+.pre-reclamo q { quotes: "«" "»"; }
+
+.pre-resolucion { min-width: 200px; }
+.pre-resolucion .pp-sub { margin-top: 6px; line-height: 1.45; }
+
+.pre-peligro.ui-btn { color: var(--ui-error); }
+.pre-motivo { min-height: 96px; resize: vertical; }
+
+@media (max-width: 760px) {
+  .ui-table--tarjetas .pre-reclamo { max-width: none; min-width: 0; text-align: right; }
+  .ui-table--tarjetas .pre-resolucion { flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+  .ui-table--tarjetas .pre-resolucion .pp-sub { flex-basis: 100%; text-align: right; }
+  .ui-table--tarjetas .pre-despacho { white-space: normal; }
+}

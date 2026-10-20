@@ -127,3 +127,10 @@ test("Pedidos y envíos: sistema compartido, alertas que filtran y carga, vacío
     'aria-label="Pedidos que piden atención"', "filtrosInicialesPedidos(filtroInicial)"], ["adm-", "db-kpi", "admin-base.css", "dp-alerta"]);
   assert.ok(p.includes("pedidosPlataforma(token") && p.includes('estado: filtros.estado === "PROBLEMA"'), "el mismo endpoint y filtros");
 });
+
+test("Problemas de envío: sistema compartido, decisión con motivo en Campo y las mismas llamadas", () => {
+  const p = usaSistemaCompartido("ProblemasEnvios.jsx", ["EncabezadoPagina", "ChipEstado", "<Alerta", "onReintentar", "<EstadoVacio",
+    "<Esqueleto", "<Campo", "ui-table--tarjetas", 'aria-label="Problemas por estado"', "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
+  assert.ok(p.includes("problemasDeEnvio(token)") && p.includes("resolverProblemaEnvio(token, pedido.id, resolucion, motivo.trim())"));
+  assert.ok(p.includes("deshabilitado={!motivo.trim()}"), "sin motivo no se puede decidir");
+});

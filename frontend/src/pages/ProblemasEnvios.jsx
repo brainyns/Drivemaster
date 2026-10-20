@@ -3,13 +3,23 @@ import { getToken } from "../services/authService";
 import { problemasDeEnvio, resolverProblemaEnvio } from "../services/pedidoTiendaService";
 import { formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
-import { capitalizar } from "../utils/formato";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Campo from "../components/ui/Campo";
+import { capitalizar, unir } from "../utils/formato";
+// El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
 import "../css/admin-base.css";
+import "../css/dashboard-plataforma.css";
+import "../css/panel-plataforma.css";
+import "../css/problemas-envio.css";
 
 const abierto = (p) => p.estado === "DESPACHADO" && !p.resolucionProblema;
 const RESOLUCION = {
-  ENTREGA_CONFIRMADA_POR_ADMIN: "Entrega confirmada",
-  REEMBOLSO: "Reembolsado al cliente",
+  ENTREGA_CONFIRMADA_POR_ADMIN: { label: "Entrega confirmada", tono: "ok" },
+  REEMBOLSO: { label: "Reembolsado al cliente", tono: "error" },
 };
 
 /**
@@ -21,6 +31,7 @@ export default function ProblemasEnvios() {
   const token = getToken();
   const [problemas, setProblemas] = useState(null);
   const [error, setError] = useState(null);
+  const [reintentando, setReintentando] = useState(false);
   const [aviso, setAviso] = useState(null);
   const [ver, setVer] = useState("ABIERTOS");
   const [decision, setDecision] = useState(null); // { pedido, resolucion }
@@ -44,6 +55,8 @@ export default function ProblemasEnvios() {
       .catch((e) => { if (vivo) setError(e.message); });
     return () => { vivo = false; };
   }, [token]);
+
+  const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
 
   const abiertos = useMemo(() => (problemas || []).filter(abierto), [problemas]);
   const resueltos = useMemo(() => (problemas || []).filter((p) => !abierto(p)), [problemas]);
@@ -91,118 +104,107 @@ export default function ProblemasEnvios() {
   }[decision.resolucion];
 
   return (
-    <div className="adm-pagina">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Problemas de envío</h1>
-          <p className="adm-encabezado__sub">
-            Envíos del catálogo en los que el cliente dijo que algo salió mal. Mientras no los resuelvas, la tienda no cobra ese pedido.
-          </p>
-        </div>
-        {problemas && <span className="adm-encabezado__dato">{abiertos.length} {abiertos.length === 1 ? "abierto" : "abiertos"}</span>}
-      </header>
+    <div className="ss-panel--plataforma pp-root pre-root">
+      <EncabezadoPagina titulo="Problemas de envío"
+        descripcion="Envíos del catálogo en los que el cliente dijo que algo salió mal. Mientras no los resuelvas, la tienda no cobra ese pedido." />
 
-      {error && <p className="adm-alerta adm-alerta--error" role="alert">{error}</p>}
-      {aviso && (
-        <p className="adm-alerta adm-alerta--exito" role="status">
-          {aviso}{" "}
-          <button type="button" className="adm-btn adm-btn--chico adm-btn--sutil" onClick={() => setAviso(null)}>Cerrar</button>
-        </p>
+      {aviso && <Alerta tono="ok" className="pp-bloque-sep" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
+      {error && (
+        <Alerta className="pp-bloque-sep" onReintentar={reintentar} reintentando={reintentando}>
+          {problemas ? `No pudimos actualizar la lista: ${error}` : error}
+        </Alerta>
       )}
 
-      <div className="adm-filtros">
-        <nav className="adm-pestanas" aria-label="Problemas por estado">
-          <button type="button" className={`adm-pestana${ver === "ABIERTOS" ? " adm-pestana--activa" : ""}`}
-            aria-pressed={ver === "ABIERTOS"} onClick={() => setVer("ABIERTOS")}>
-            Abiertos<span className="adm-pestana__n">{abiertos.length}</span>
-          </button>
-          <button type="button" className={`adm-pestana${ver === "RESUELTOS" ? " adm-pestana--activa" : ""}`}
-            aria-pressed={ver === "RESUELTOS"} onClick={() => setVer("RESUELTOS")}>
-            Resueltos<span className="adm-pestana__n">{resueltos.length}</span>
-          </button>
-        </nav>
+      <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Problemas por estado">
+        <button type="button" className="ui-chip" aria-pressed={ver === "ABIERTOS"} onClick={() => setVer("ABIERTOS")}>
+          Abiertos {problemas && <span className="ui-chip__contador">{abiertos.length}</span>}
+        </button>
+        <button type="button" className="ui-chip" aria-pressed={ver === "RESUELTOS"} onClick={() => setVer("RESUELTOS")}>
+          Resueltos {problemas && <span className="ui-chip__contador">{resueltos.length}</span>}
+        </button>
       </div>
 
-      <div className="adm-tarjeta" aria-busy={!problemas && !error}>
-        {!problemas && !error ? (
-          <div className="adm-cargando">Cargando…</div>
-        ) : problemas && visibles.length === 0 ? (
-          <p className="adm-vacio">{ver === "ABIERTOS" ? "No hay problemas de envío abiertos." : "Aún no has resuelto ningún problema."}</p>
-        ) : problemas && (
-          <div className="adm-tabla-wrap">
-            <table className="adm-tabla adm-tabla--tarjetas">
+      {!problemas ? (
+        !error && <Esqueleto variante="lista" cantidad={4} texto="Cargando problemas de envío…" />
+      ) : visibles.length === 0 ? (
+        ver === "ABIERTOS" ? (
+          <EstadoVacio icono="check" titulo="No hay problemas de envío abiertos"
+            texto="Cuando un cliente reporte que su envío no llegó o llegó mal, aparece aquí para que decidas." />
+        ) : (
+          <EstadoVacio icono="file" titulo="Aún no has resuelto ningún problema"
+            texto="Las decisiones que tomes quedan aquí, con el motivo, quién las tomó y cuándo." />
+        )
+      ) : (
+        <div className="ui-card ui-table-card">
+          <div className="ui-table-wrap">
+            <table className="ui-table ui-table--tarjetas pre-tabla">
+              <caption className="ui-sr">Problemas de envío {ver === "ABIERTOS" ? "abiertos" : "resueltos"}</caption>
               <thead>
                 <tr>
-                  <th>Pedido</th><th>Destino</th><th className="adm-tabla__der">Monto</th><th>Despacho</th>
-                  <th>Reclamo del cliente</th><th>{ver === "ABIERTOS" ? "Reportado" : "Resolución"}</th>
-                  {ver === "ABIERTOS" && <th className="adm-tabla__der">Acciones</th>}
+                  <th scope="col">Pedido</th>
+                  <th scope="col">Destino</th>
+                  <th scope="col" className="pp-num">Monto</th>
+                  <th scope="col">Despacho</th>
+                  <th scope="col">Reclamo del cliente</th>
+                  <th scope="col">{ver === "ABIERTOS" ? "Reportado" : "Resolución"}</th>
+                  {ver === "ABIERTOS" && <th scope="col"><span className="ui-sr">Acciones</span></th>}
                 </tr>
               </thead>
               <tbody>
-                {visibles.map((p) => (
-                  <tr key={p.id} className={abierto(p) ? "adm-tabla__fila--alerta" : ""}>
-                    <td data-label="Pedido">
-                      <strong>#{refSolicitud(p.id)}</strong>
-                      <span className="adm-tabla__sub">{p.tiendaNombre}</span>
-                    </td>
-                    <td data-label="Destino">{capitalizar(p.envioCiudad) || "—"}</td>
-                    <td className="adm-tabla__der" data-label="Monto">{formatPrecio(p.total)}</td>
-                    <td data-label="Despacho">
-                      {formatFechaHora(p.fechaDespacho)}
-                      {p.notaDespacho && <span className="adm-tabla__sub">{p.notaDespacho}</span>}
-                    </td>
-                    <td data-label="Reclamo del cliente" className="adm-tabla__celda--ancha">«{p.problemaDetalle}»</td>
-                    {abierto(p) ? (
-                      <>
-                        <td data-label="Reportado" className="adm-tabla__nowrap">{formatFechaHora(p.fechaProblema)}</td>
-                        <td className="adm-tabla__der adm-tabla__celda--ancha">
-                          <div className="adm-tabla__acciones">
-                            <button type="button" className="adm-btn adm-btn--chico" onClick={() => pedir(p, "CONFIRMAR_ENTREGA")}>
+                {visibles.map((p) => {
+                  const res = RESOLUCION[p.resolucionProblema];
+                  return (
+                    <tr key={p.id}>
+                      <td className="ui-table__titulo">
+                        <strong className="pre-ref">#{refSolicitud(p.id)}</strong>
+                        <span className="pp-sub">{p.tiendaNombre}</span>
+                      </td>
+                      <td data-label="Destino">{capitalizar(p.envioCiudad) || <span className="pp-tenue">Sin ciudad</span>}</td>
+                      <td data-label="Monto" className="pp-num">{formatPrecio(p.total)}</td>
+                      <td data-label="Despacho" className="pre-despacho">
+                        {formatFechaHora(p.fechaDespacho)}
+                        {p.notaDespacho && <span className="pp-sub">{p.notaDespacho}</span>}
+                      </td>
+                      <td data-label="Reclamo del cliente" className="pre-reclamo"><q>{p.problemaDetalle}</q></td>
+                      {abierto(p) ? (
+                        <>
+                          <td data-label="Reportado" className="pre-fecha">{formatFechaHora(p.fechaProblema)}</td>
+                          <td className="ui-table__acciones">
+                            <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => pedir(p, "CONFIRMAR_ENTREGA")}
+                              aria-label={`Sí se entregó el pedido #${refSolicitud(p.id)}`}>
                               Sí se entregó
                             </button>
-                            <button type="button" className="adm-btn adm-btn--chico adm-btn--peligro" onClick={() => pedir(p, "REEMBOLSAR")}>
+                            <button type="button" className="ui-btn ui-btn--texto ui-btn--chico pre-peligro" onClick={() => pedir(p, "REEMBOLSAR")}
+                              aria-label={`Reembolsar el pedido #${refSolicitud(p.id)}`}>
                               Reembolsar
                             </button>
-                          </div>
+                          </td>
+                        </>
+                      ) : (
+                        <td data-label="Resolución" className="pre-resolucion">
+                          <ChipEstado tono={res?.tono || "info"}>{res?.label || p.resolucionProblema || "Resuelto"}</ChipEstado>
+                          <span className="pp-sub">
+                            {unir([p.fechaResolucionProblema && formatFechaHora(p.fechaResolucionProblema),
+                              p.resueltoPor && `por ${p.resueltoPor}`, p.motivoResolucion && `Motivo: ${p.motivoResolucion}`])}
+                          </span>
                         </td>
-                      </>
-                    ) : (
-                      <td data-label="Resolución">
-                        <span className={`adm-badge ${p.resolucionProblema === "REEMBOLSO" ? "adm-badge--peligro" : "adm-badge--exito"}`}>
-                          {RESOLUCION[p.resolucionProblema] || p.resolucionProblema || "Resuelto"}
-                        </span>
-                        <span className="adm-tabla__sub">
-                          {[p.fechaResolucionProblema && formatFechaHora(p.fechaResolucionProblema),
-                            p.resueltoPor && `por ${p.resueltoPor}`,
-                            p.motivoResolucion && `Motivo: ${p.motivoResolucion}`].filter(Boolean).join(" · ")}
-                        </span>
-                      </td>
-                    )}
-                  </tr>
-                ))}
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {decision && (
-        <ConfirmacionAdmin
-          titulo={textos.titulo}
-          texto={textos.mensaje}
-          confirmar={textos.textoConfirmar}
-          variante={textos.variante}
-          cargando={resolviendo}
-          deshabilitado={!motivo.trim()}
-          onConfirmar={resolver}
-          onCancelar={() => setDecision(null)}
-        >
-          <label className="adm-campo adm-campo--bloque">
-            <span>Motivo de tu decisión</span>
-            <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} required />
-            <span className="adm-campo__ayuda">Queda registrado con tu nombre y fecha.</span>
-          </label>
-          {errorDecision && <p className="adm-alerta adm-alerta--error" role="alert">{errorDecision}</p>}
+        <ConfirmacionAdmin titulo={textos.titulo} texto={textos.mensaje} confirmar={textos.textoConfirmar} variante={textos.variante}
+          cargando={resolviendo} deshabilitado={!motivo.trim()} onConfirmar={resolver} onCancelar={() => setDecision(null)}>
+          <Campo id="pre-motivo" label="Motivo de tu decisión" ayuda="Queda registrado con tu nombre y fecha.">
+            <textarea className="ui-field__input pre-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} required />
+          </Campo>
+          {errorDecision && <Alerta>{errorDecision}</Alerta>}
         </ConfirmacionAdmin>
       )}
     </div>
