@@ -126,3 +126,32 @@ export function filtrarRevision(negocios = [], { estado = "PENDIENTE", tipo = ""
     .filter((n) => !q || [n.nombre, n.nit, correoNegocio(n)].some((v) => normalizar(v).includes(q)))
     .sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
 }
+
+// ─── Pedidos y envíos ───────────────────────────────────────────────────────
+
+/** Estados de un pedido de tienda en el orden en que avanza, con el formato de catálogo de ChipEstado. */
+export const ESTADOS_PEDIDO = {
+  PENDIENTE: { label: "Por despachar", tono: "aviso" },
+  EN_PREPARACION: { label: "En preparación", tono: "proceso" },
+  DESPACHADO: { label: "Despachado", tono: "proceso" },
+  LISTO_PARA_RETIRAR: { label: "Listo para retirar", tono: "proceso" },
+  RECIBIDO: { label: "Recibido", tono: "ok" },
+  RETIRADO: { label: "Retirado", tono: "ok" },
+  ENTREGADO: { label: "Entregado", tono: "ok" },
+  NO_DESPACHADO: { label: "No despachado", tono: "error" },
+  NO_ENTREGADO: { label: "No entregado", tono: "error" },
+};
+
+/** Referencia corta y legible del pedido (los últimos 6 caracteres del id). */
+export const refPedido = (id) => `#${String(id || "").slice(-6).toUpperCase()}`;
+
+/** Filtros al llegar desde el dashboard ("atrasados"); cualquier otro valor, sin filtro. */
+export function filtrosInicialesPedidos(preset) {
+  return { estado: "", tiendaId: "", entrega: "", atrasados: preset === "atrasados" };
+}
+
+/** Estados con pedidos, en el orden en que avanza un pedido (los desconocidos al final). */
+export function estadosConPedidos(porEstado = {}) {
+  const orden = Object.keys(ESTADOS_PEDIDO);
+  return [...orden.filter((e) => porEstado[e]), ...Object.keys(porEstado).filter((e) => !orden.includes(e) && porEstado[e])];
+}

@@ -1,0 +1,27 @@
+/* ── Pedidos y envíos (ADMIN y SUPERADMIN, prefijo ped-, BEM) ──────────────
+   Filtros, paginación y estados comunes son de panel-plataforma.css (pp-); tabla, chips y avisos, de ui.css.
+   Aquí los chips de alerta, la fila con alerta y las celdas del pedido. Tokens --ui-*, los dos temas. */
+
+/* Chip de alerta: el número de pedidos atrasados o con problema, que filtra la lista al tocarlo */
+.ped-alerta.ui-chip { color: var(--ui-error); border-color: color-mix(in srgb, var(--ui-error) 45%, var(--ui-line)); }
+.ped-alerta.ui-chip svg { color: currentColor; }
+
+.ped-alerta.ui-chip[aria-pressed="true"],
+.ped-alerta.ui-chip[aria-pressed="true"]:hover {
+  color: var(--ui-error);
+  background: var(--ui-error-bg);
+  border-color: var(--ui-error);
+}
+
+/* La fila con alerta se tiñe apenas: el chip de la columna Alerta dice qué pasa */
+.ped-fila--alerta > td { background: color-mix(in srgb, var(--ui-error) 5%, transparent); }
+
+.ped-ref { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.ped-destino { overflow-wrap: anywhere; }
+.ped-alertas { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+
+@media (max-width: 760px) {
+  .ui-table--tarjetas .ped-fila--alerta { border-color: color-mix(in srgb, var(--ui-error) 45%, var(--ui-line)); }
+  .ui-table--tarjetas .ped-fila--alerta > td { background: none; }
+  .ui-table--tarjetas .ped-alertas { justify-content: flex-end; }
+}

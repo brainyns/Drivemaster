@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  SIN_PLAN, actividadNegocio, barras, chipRevision, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
+  ESTADOS_PEDIDO, SIN_PLAN, actividadNegocio, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
   perfilNegocio, urgentesDashboard,
 } from "../src/pages/admin/plataformaAdmin.js";
 
@@ -110,4 +110,20 @@ test("Aprobaciones: sistema compartido, detalle con Dato y confirmación con Cam
     "resolverAprobacionTienda", "activarDesactivarTaller", "activarDesactivarTienda", "activarPlan("]) {
     assert.ok(p.includes(llamada), `falta ${llamada}`);
   }
+});
+
+test("Pedidos y envíos: estados en el orden del pedido con tono, referencia corta y atrasados desde el dashboard", () => {
+  assert.deepEqual(estadosConPedidos({ ENTREGADO: 4, PENDIENTE: 2, RARO: 1, DESPACHADO: 0 }), ["PENDIENTE", "ENTREGADO", "RARO"]);
+  assert.equal(ESTADOS_PEDIDO.PENDIENTE.label, "Por despachar");
+  assert.equal(ESTADOS_PEDIDO.NO_ENTREGADO.tono, "error");
+  assert.equal(refPedido("66f0a1b2c3d4e5f6a7b8c9d0"), "#B8C9D0");
+  assert.equal(filtrosInicialesPedidos("atrasados").atrasados, true);
+  assert.equal(filtrosInicialesPedidos({ abrir: "x" }).atrasados, false);
+});
+
+test("Pedidos y envíos: sistema compartido, alertas que filtran y carga, vacío y error con Reintentar", () => {
+  const p = usaSistemaCompartido("PedidosEnvios.jsx", ["EncabezadoPagina", "ChipEstado", "catalogo={ESTADOS_PEDIDO}", "<Alerta",
+    "onReintentar", "<EstadoVacio", "<Esqueleto", "ui-table--tarjetas", 'aria-label="Estado del pedido"',
+    'aria-label="Pedidos que piden atención"', "filtrosInicialesPedidos(filtroInicial)"], ["adm-", "db-kpi", "admin-base.css", "dp-alerta"]);
+  assert.ok(p.includes("pedidosPlataforma(token") && p.includes('estado: filtros.estado === "PROBLEMA"'), "el mismo endpoint y filtros");
 });

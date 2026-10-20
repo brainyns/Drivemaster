@@ -1,43 +1,42 @@
 import { useCallback, useEffect, useState } from "react";
 import { pedidosPlataforma } from "../services/plataformaService";
-import "../css/dashboard.css";
+import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import ChipEstado from "../components/ui/ChipEstado";
+import Alerta from "../components/ui/Alerta";
+import EstadoVacio from "../components/ui/EstadoVacio";
+import Esqueleto from "../components/ui/Esqueleto";
+import Icon from "../components/public/Icon";
+import { ESTADOS_PEDIDO, estadosConPedidos, filtrosInicialesPedidos, refPedido } from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
-import "../css/admin-base.css";
+import "../css/panel-plataforma.css";
+import "../css/pedidos-plataforma.css";
 
 const TAMANO = 20;
 const REFRESCO_MS = 30000;
 
-const ESTADOS = {
-  PENDIENTE: "Por despachar",
-  EN_PREPARACION: "En preparación",
-  DESPACHADO: "Despachado",
-  LISTO_PARA_RETIRAR: "Listo para retirar",
-  RECIBIDO: "Recibido",
-  RETIRADO: "Retirado",
-  ENTREGADO: "Entregado",
-  NO_DESPACHADO: "No despachado",
-  NO_ENTREGADO: "No entregado",
-};
-// Los que se muestran como pestañas, en el orden en que avanza un pedido
-const PESTANAS = ["PENDIENTE", "EN_PREPARACION", "DESPACHADO", "LISTO_PARA_RETIRAR", "RECIBIDO", "RETIRADO", "ENTREGADO", "NO_DESPACHADO", "NO_ENTREGADO"];
+const ENTREGAS = [
+  { valor: "", label: "Envío y retiro" },
+  { valor: "ENVIO", label: "Envío a domicilio" },
+  { valor: "RETIRO", label: "Retiro en tienda" },
+];
 
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }) : "—");
-
-const FILTROS_INICIALES = { estado: "", tiendaId: "", entrega: "", atrasados: false };
+const hora = (d) => d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
 /**
  * Monitor de pedidos y envíos de todas las tiendas (ADMIN y SUPERADMIN). Solo lectura y sin datos del cliente:
  * estado, tienda, destino (ciudad), días desde el pago y alertas de atraso. Se actualiza solo cada 30 segundos.
  */
 export default function PedidosEnvios({ token, filtroInicial }) {
-  const [filtros, setFiltros] = useState(() => (filtroInicial === "atrasados" ? { ...FILTROS_INICIALES, atrasados: true } : FILTROS_INICIALES));
+  const [filtros, setFiltros] = useState(() => filtrosInicialesPedidos(filtroInicial));
   const [pagina, setPagina] = useState(0);
   const [estado, setEstado] = useState({ datos: null, error: null, actualizado: null });
   const [cargando, setCargando] = useState(true);
 
   const cargar = useCallback(() => {
     setCargando(true);
-    pedidosPlataforma(token, { ...filtros, atrasados: filtros.atrasados ? "true" : "", pagina, tamano: TAMANO })
+    return pedidosPlataforma(token, { ...filtros, atrasados: filtros.atrasados ? "true" : "", pagina, tamano: TAMANO })
       .then((datos) => setEstado({ datos, error: null, actualizado: new Date() }))
       .catch((e) => setEstado((previo) => ({ ...previo, error: e.message })))
       .finally(() => setCargando(false));
@@ -51,133 +50,158 @@ export default function PedidosEnvios({ token, filtroInicial }) {
 
   const { datos, error, actualizado } = estado;
   const lista = datos?.pedidos;
-  const paginas = lista ? Math.max(1, Math.ceil(lista.total / lista.tamano)) : 1;
+  const items = lista?.items || [];
+  const total = lista?.total || 0;
+  const paginas = lista ? Math.max(1, Math.ceil(total / (lista.tamano || TAMANO))) : 1;
   const hayFiltros = filtros.estado !== "" || filtros.tiendaId !== "" || filtros.entrega !== "" || filtros.atrasados;
+  const totalPedidos = Object.values(datos?.porEstado || {}).reduce((s, n) => s + n, 0);
 
   const poner = (cambio) => { setPagina(0); setFiltros((f) => ({ ...f, ...cambio })); };
 
   return (
-    <div className="adm-pagina">
-      <header className="adm-encabezado">
-        <div>
-          <h1 className="adm-encabezado__titulo">Pedidos y envíos</h1>
-          <p className="adm-encabezado__sub">Lo que se vende en las tiendas y los envíos y retiros en curso. Se actualiza cada 30 segundos.</p>
-        </div>
-        <div className="adm-encabezado__lado dp-acciones">
-          {actualizado && (
-            <span className="adm-encabezado__dato">
-              Actualizado {actualizado.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-            </span>
-          )}
-          <button type="button" className="adm-btn" onClick={cargar} disabled={cargando}>{cargando ? "Actualizando…" : "Actualizar"}</button>
-        </div>
-      </header>
+    <div className="ss-panel--plataforma pp-root ped-root">
+      <EncabezadoPagina titulo="Pedidos y envíos"
+        descripcion="Lo que se vende en las tiendas y los envíos y retiros en curso. Se actualiza cada 30 segundos."
+        acciones={(
+          <>
+            {actualizado && <span className="pp-actualizado">Actualizado a las {hora(actualizado)}</span>}
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={cargar} disabled={cargando} aria-busy={cargando}>
+              <Icon name="refresh" size={16} /> {cargando && datos ? "Actualizando…" : "Actualizar"}
+            </button>
+          </>
+        )} />
 
       {datos && (datos.atrasados > 0 || datos.problemasAbiertos > 0) && (
-        <section aria-label="Alertas" className="dp-alertas">
+        <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Pedidos que piden atención">
           {datos.atrasados > 0 && (
-            <button type="button" className={`dp-alerta dp-alerta--critica${filtros.atrasados ? " dp-alerta--activa" : ""}`}
+            <button type="button" className="ui-chip ped-alerta" aria-pressed={filtros.atrasados}
               onClick={() => poner({ atrasados: !filtros.atrasados })}>
-              <strong>{datos.atrasados}</strong> pedido(s) sin despachar fuera del plazo
+              <Icon name="clock" size={15} />
+              {plural(datos.atrasados, "pedido sin despachar", "pedidos sin despachar")} fuera del plazo
             </button>
           )}
           {datos.problemasAbiertos > 0 && (
-            <button type="button" className={`dp-alerta dp-alerta--critica${filtros.estado === "PROBLEMA" ? " dp-alerta--activa" : ""}`}
+            <button type="button" className="ui-chip ped-alerta" aria-pressed={filtros.estado === "PROBLEMA"}
               onClick={() => poner({ estado: filtros.estado === "PROBLEMA" ? "" : "PROBLEMA" })}>
-              <strong>{datos.problemasAbiertos}</strong> problema(s) de envío abierto(s)
+              <Icon name="alert" size={15} />
+              {plural(datos.problemasAbiertos, "problema de envío abierto", "problemas de envío abiertos")}
             </button>
           )}
-        </section>
+        </div>
       )}
 
       {datos && (
-        <div className="adm-pestanas" role="tablist" aria-label="Estado del pedido">
-          <button type="button" role="tab" aria-selected={filtros.estado === ""} className={`adm-pestana${filtros.estado === "" ? " adm-pestana--activa" : ""}`}
-            onClick={() => poner({ estado: "" })}>Todos</button>
-          {PESTANAS.filter((e) => datos.porEstado[e]).map((e) => (
-            <button key={e} type="button" role="tab" aria-selected={filtros.estado === e}
-              className={`adm-pestana${filtros.estado === e ? " adm-pestana--activa" : ""}`} onClick={() => poner({ estado: e })}>
-              {ESTADOS[e]} <span className="adm-pestana__n">{datos.porEstado[e]}</span>
+        <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Estado del pedido">
+          <button type="button" className="ui-chip" aria-pressed={filtros.estado === ""} onClick={() => poner({ estado: "" })}>
+            Todos <span className="ui-chip__contador">{totalPedidos}</span>
+          </button>
+          {estadosConPedidos(datos.porEstado).map((e) => (
+            <button key={e} type="button" className="ui-chip" aria-pressed={filtros.estado === e} onClick={() => poner({ estado: e })}>
+              {ESTADOS_PEDIDO[e]?.label || e} <span className="ui-chip__contador">{datos.porEstado[e]}</span>
             </button>
           ))}
         </div>
       )}
 
-      <form className="adm-filtros" onSubmit={(e) => e.preventDefault()} aria-label="Filtros de pedidos">
-        <label className="adm-campo">
-          <span>Tienda</span>
-          <select value={filtros.tiendaId} onChange={(e) => poner({ tiendaId: e.target.value })}>
+      <div className="pp-filtros">
+        <label className="pp-filtros__select">
+          Tienda
+          <select className="ui-field__input" value={filtros.tiendaId} onChange={(e) => poner({ tiendaId: e.target.value })}>
             <option value="">Todas</option>
             {(datos?.tiendas || []).map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
           </select>
         </label>
-        <label className="adm-campo">
-          <span>Entrega</span>
-          <select value={filtros.entrega} onChange={(e) => poner({ entrega: e.target.value })}>
-            <option value="">Envío y retiro</option>
-            <option value="ENVIO">Envío a domicilio</option>
-            <option value="RETIRO">Retiro en tienda</option>
-          </select>
-        </label>
-        <label className="adm-campo adm-campo--check">
-          <input type="checkbox" checked={filtros.atrasados} onChange={(e) => poner({ atrasados: e.target.checked })} />
-          <span>Solo atrasados</span>
-        </label>
+        <div className="ui-filtros" role="group" aria-label="Entrega">
+          {ENTREGAS.map((x) => (
+            <button key={x.valor || "todas"} type="button" className="ui-chip" aria-pressed={filtros.entrega === x.valor}
+              onClick={() => poner({ entrega: x.valor })}>{x.label}</button>
+          ))}
+        </div>
+        <button type="button" className="ui-chip" aria-pressed={filtros.atrasados} onClick={() => poner({ atrasados: !filtros.atrasados })}>
+          Solo atrasados
+        </button>
         {hayFiltros && (
-          <div className="adm-filtros__acciones">
-            <button type="button" className="adm-btn adm-btn--sutil" onClick={() => poner(FILTROS_INICIALES)}>Limpiar</button>
-          </div>
-        )}
-      </form>
-
-      {error && <div className="adm-alerta adm-alerta--error" role="alert">{error}{datos ? " (se muestran los últimos datos)" : ""}</div>}
-
-      <div className="adm-tarjeta" aria-busy={cargando}>
-        {!lista && !error ? (
-          <div className="adm-cargando">Cargando pedidos…</div>
-        ) : lista && lista.items.length === 0 ? (
-          <p className="adm-vacio">{hayFiltros ? "Ningún pedido coincide con los filtros." : "Todavía no hay pedidos."}</p>
-        ) : lista && (
-          <div className="adm-tabla-wrap">
-            <table className="adm-tabla adm-tabla--tarjetas">
-              <thead>
-                <tr>
-                  <th>Pedido</th><th>Tienda</th><th>Estado</th><th>Entrega</th><th>Destino</th>
-                  <th className="adm-tabla__der">Artículos</th><th className="adm-tabla__der">Días desde el pago</th><th>Alerta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lista.items.map((p) => (
-                  <tr key={p.id} className={p.atrasado || p.problemaAbierto ? "adm-tabla__fila--alerta" : ""}>
-                    <td data-label="Pedido">
-                      <strong>#{String(p.id).slice(-6).toUpperCase()}</strong>
-                      <span className="adm-tabla__sub">{p.origen === "TALLER" ? "Cotización de taller" : "Compra del catálogo"} · {fecha(p.fechaPago)}</span>
-                    </td>
-                    <td data-label="Tienda">{p.tienda || "—"}</td>
-                    <td data-label="Estado"><span className="adm-badge adm-badge--neutro">{ESTADOS[p.estado] || p.estado}</span></td>
-                    <td data-label="Entrega">{p.entrega === "ENVIO" ? "Envío" : p.entrega === "RETIRO" ? "Retiro" : "—"}</td>
-                    <td data-label="Destino">{p.destino || "—"}</td>
-                    <td className="adm-tabla__der" data-label="Artículos">{p.articulos}</td>
-                    <td className="adm-tabla__der" data-label="Días desde el pago">{p.diasDesdePago}</td>
-                    <td data-label="Alerta">
-                      {p.atrasado && <span className="adm-badge adm-badge--peligro">Atrasado · plazo {fecha(p.plazoDespacho)}</span>}
-                      {p.problemaAbierto && <span className="adm-badge adm-badge--peligro">Problema de envío</span>}
-                      {!p.atrasado && !p.problemaAbierto && "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => poner(filtrosInicialesPedidos())}>Limpiar filtros</button>
         )}
       </div>
 
-      {lista && lista.total > lista.tamano && (
-        <nav className="adm-paginacion" aria-label="Paginación">
-          <button type="button" className="adm-btn" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>Anterior</button>
-          <span>Página {pagina + 1} de {paginas}</span>
-          <button type="button" className="adm-btn" disabled={pagina + 1 >= paginas} onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-        </nav>
+      {error && (
+        <Alerta tono={datos ? "aviso" : "error"} className="pp-bloque-sep" onReintentar={cargar} reintentando={cargando}>
+          {datos ? `No pudimos actualizar los pedidos: se muestran los de las ${hora(actualizado)}.` : error}
+        </Alerta>
+      )}
+
+      {!lista ? (
+        !error && <Esqueleto variante="lista" cantidad={6} texto="Cargando pedidos…" />
+      ) : items.length === 0 ? (
+        hayFiltros ? (
+          <EstadoVacio icono="search" titulo="Ningún pedido coincide" texto="Prueba con otra tienda, estado o forma de entrega.">
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => poner(filtrosInicialesPedidos())}>Limpiar filtros</button>
+          </EstadoVacio>
+        ) : (
+          <EstadoVacio icono="box" titulo="Todavía no hay pedidos"
+            texto="Cuando un cliente compre en el catálogo o un taller pida repuestos de una cotización, el pedido aparece aquí." />
+        )
+      ) : (
+        <>
+          <div className={`ui-card ui-table-card${cargando ? " pp-actualizando" : ""}`} aria-busy={cargando}>
+            <div className="ui-table-wrap">
+              <table className="ui-table ui-table--tarjetas ped-tabla">
+                <caption className="ui-sr">Pedidos de las tiendas con su estado, entrega y alertas</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Pedido</th>
+                    <th scope="col">Tienda</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Entrega</th>
+                    <th scope="col">Destino</th>
+                    <th scope="col" className="pp-num">Artículos</th>
+                    <th scope="col" className="pp-num">Días desde el pago</th>
+                    <th scope="col">Alerta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((p) => {
+                    const conAlerta = p.atrasado || p.problemaAbierto;
+                    return (
+                      <tr key={p.id} className={conAlerta ? "ped-fila--alerta" : undefined}>
+                        <td className="ui-table__titulo">
+                          <strong className="ped-ref">{refPedido(p.id)}</strong>
+                          <span className="pp-sub">{p.origen === "TALLER" ? "Cotización de taller" : "Compra del catálogo"} · pagado {fecha(p.fechaPago)}</span>
+                        </td>
+                        <td data-label="Tienda">{p.tienda || <span className="pp-tenue">Sin tienda</span>}</td>
+                        <td data-label="Estado"><ChipEstado catalogo={ESTADOS_PEDIDO} estado={p.estado} /></td>
+                        <td data-label="Entrega">{p.entrega === "ENVIO" ? "Envío" : p.entrega === "RETIRO" ? "Retiro" : p.origen === "TALLER" ? "Al taller" : <span className="pp-tenue">Sin definir</span>}</td>
+                        <td data-label="Destino" className="ped-destino">{p.destino || <span className="pp-tenue">Sin destino</span>}</td>
+                        <td data-label="Artículos" className="pp-num">{p.articulos}</td>
+                        <td data-label="Días desde el pago" className="pp-num">{p.diasDesdePago}</td>
+                        <td data-label="Alerta">
+                          <span className="ped-alertas">
+                            {p.atrasado && <ChipEstado tono="error">Atrasado · plazo {fecha(p.plazoDespacho)}</ChipEstado>}
+                            {p.problemaAbierto && <ChipEstado tono="error">Problema de envío</ChipEstado>}
+                            {!conAlerta && <span className="pp-tenue">Sin alertas</span>}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <nav className="pp-paginas" aria-label="Páginas de pedidos">
+            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + items.length} de {total}</span>
+            {paginas > 1 && (
+              <span className="pp-paginas__botones">
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
+                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
+                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
+                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
+              </span>
+            )}
+          </nav>
+        </>
       )}
     </div>
   );
