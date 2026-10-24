@@ -9,6 +9,7 @@ import TallerInicio from "./taller/TallerInicio";
 import TallerMiTaller from "./taller/TallerMiTaller";
 import TallerCotizaciones from "./taller/TallerCotizaciones";
 import TallerInformes from "./taller/TallerInformes";
+import TallerAgenda from "./taller/TallerAgenda";
 import OrdenesAnteriores from "./taller/OrdenesAnteriores";
 import { destinoSeccion, ordenesPorAtender } from "./taller/resumenTaller";
 import "../css/servicios.css";
@@ -76,12 +77,14 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         )}
         {seccion === "solicitudes" && (
           <TallerSolicitudes key={`${destino.filtro || "responder"}-${destino.abrir || ""}`} filtroInicial={destino.filtro}
-            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined} />
+            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined}
+            textoAfuera={destino.volverA === "taller-agenda" ? "Agenda" : "Inicio"} />
         )}
         {seccion === "trabajos" && (
           <TallerSolicitudes key={`${destino.filtro || "repuestos"}-${destino.abrir || ""}`} modo="trabajos" filtroInicial={destino.filtro}
             abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined} />
         )}
+        {seccion === "agenda" && <TallerAgenda taller={taller} irA={irA} />}
         {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}
         {seccion === "informes" && <TallerInformes />}
         {seccion === "mitaller" && (

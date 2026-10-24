@@ -170,7 +170,8 @@ test("Desde Inicio se abre la solicitud concreta y Volver regresa a Inicio, sin 
   assert.ok(inicio.includes('irA(u.pagina, { filtro: u.filtro, abrir: u.s.id, volverA: "taller-inicio" })'));
   const solicitudes = leer("../src/pages/TallerSolicitudes.jsx");
   assert.ok(solicitudes.includes("useState(abrirInicial)"), "abre el detalle directamente");
-  assert.ok(solicitudes.includes('textoVolver={desdeAfuera ? "Inicio" : textos.volver}'));
+  assert.ok(solicitudes.includes('textoAfuera = "Inicio"') && solicitudes.includes("textoVolver={desdeAfuera ? textoAfuera : textos.volver}"),
+    "Volver nombra la página de origen (Inicio, o Agenda si se abrió desde allá)");
   assert.ok(!leer("../src/App.jsx").includes("react-router"), "sin router nuevo");
 });
 
@@ -228,4 +229,35 @@ test("Horario por días: mismas reglas que el backend, 12 h cada 30 min, copiar 
   const p = leer("../src/pages/taller/TallerMiTaller.jsx");
   assert.ok(!p.includes("<textarea"), "el horario ya no es texto libre");
   assert.ok(p.includes("Copiar lunes a todos los días hábiles") && p.includes('textoGuardar="Guardar horario"'));
+});
+
+test("Agenda: rejilla del mes de lunes a domingo, semana del celular y citas agrupadas por día local", async () => {
+  const c = await import("../src/pages/taller/calendario.js");
+  const rejilla = c.rejillaMes(new Date(2026, 9, 15));
+  assert.equal(rejilla.length, 6);
+  assert.equal(c.claveDia(rejilla[0][0]), "2026-09-28", "octubre de 2026 empieza en jueves: la rejilla arranca el lunes anterior");
+  assert.ok(rejilla.every((s) => s[0].getDay() === 1 && s[6].getDay() === 0));
+  assert.deepEqual(c.semanaDe(new Date(2026, 9, 24)).map(c.claveDia), [
+    "2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25"]);
+  assert.equal(c.tituloSemana(c.semanaDe(new Date(2026, 9, 1))), "28 de septiembre al 4 de octubre");
+  assert.equal(c.tituloMes(new Date(2026, 9, 1)), "octubre de 2026");
+
+  const porDia = c.citasPorDia([
+    { id: "b", fechaRevision: "2026-10-20T15:00:00" },
+    { id: "a", fechaRevision: "2026-10-20T08:30:00" },
+    { id: "x", fechaRevision: null },
+  ]);
+  assert.deepEqual(Object.keys(porDia), ["2026-10-20"]);
+  assert.deepEqual(porDia["2026-10-20"].map((x) => x.id), ["a", "b"]);
+
+  const h = await import("../src/pages/taller/horarioTaller.js");
+  const semana = h.semanaPorDefecto();
+  assert.equal(h.abreEseDia(semana, new Date(2026, 9, 25)), false, "el domingo cierra");
+  assert.equal(h.abreEseDia(null, new Date(2026, 9, 25)), true, "sin horario, todos abiertos");
+
+  const inicio = leer("../src/pages/taller/TallerInicio.jsx");
+  assert.equal((inicio.match(/irA\("taller-agenda"\)/g) || []).length, 3, "Ver agenda (cabecera y widget) y Citas de hoy");
+  assert.ok(leer("../src/App.jsx").includes('"taller-agenda":      "agenda"'));
+  const agenda = leer("../src/pages/taller/TallerAgenda.jsx");
+  assert.ok(agenda.includes('volverA: "taller-agenda"') && agenda.includes("(max-width: 767px)"));
 });

@@ -103,6 +103,7 @@ const TITULOS = {
   "taller-panel":    "Inicio del taller",
   "taller-inicio":   "Inicio del taller",
   "taller-solicitudes": "Solicitudes",
+  "taller-agenda":   "Agenda",
   "taller-trabajos": "Trabajos",
   "taller-cotizaciones": "Cotizaciones",
   "taller-mitaller": "Mi taller",
@@ -142,6 +143,8 @@ const SECCION_TALLER = {
   "taller-mitaller":    "mitaller",
   "taller-informes":    "informes",
   "taller-anteriores":  "anteriores",
+  // Sin entrada propia en el menú: se abre desde Inicio ("Ver agenda" y "Agenda de hoy")
+  "taller-agenda":      "agenda",
 };
 
 // Página inicial de cada rol después de iniciar sesión.

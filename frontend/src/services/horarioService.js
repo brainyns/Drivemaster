@@ -32,3 +32,10 @@ export async function guardarHorario(token, tallerId, franjas) {
   if (res.status === 403) throw new Error("Tu taller aún no está aprobado, así que todavía no puedes editar el horario.");
   return handle(res, "No se pudo guardar el horario");
 }
+
+/** Citas de revisión del taller entre dos días (YYYY-MM-DD, ambos incluidos), con los campos de la bandeja. */
+export async function citasDelTaller(token, tallerId, desde, hasta) {
+  const qs = new URLSearchParams({ desde, hasta });
+  const res = await apiFetch(`${BASE}/${encodeURIComponent(tallerId)}/citas?${qs}`, { headers: headers(token) });
+  return handle(res, "No se pudieron cargar las citas");
+}

@@ -81,7 +81,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                 <Icon name="file" size={16} /> Crear cotización
               </button>
             )}
-            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-solicitudes", "agendadas")}>
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-agenda")}>
               <Icon name="calendar" size={16} /> Ver agenda
             </button>
           </>
@@ -124,7 +124,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                 onClick={() => irA("taller-solicitudes", "responder")} />
               <Indicador icono="calendar" titulo="Citas de hoy" valor={datos.hoy.length}
                 pie={datos.hoy.length > 0 ? `La primera a las ${hora(datos.hoy[0].fechaRevision)}` : "Sin revisiones agendadas hoy"}
-                onClick={() => irA("taller-solicitudes", "agendadas")} />
+                onClick={() => irA("taller-agenda")} />
               <Indicador icono="file" titulo="Cotizaciones pendientes" valor={datos.porCotizar.length + datos.esperandoCliente.length}
                 tono={datos.porCotizar.length > 0 ? "accion" : undefined}
                 pie={`${datos.porCotizar.length} por cotizar · ${datos.esperandoCliente.length} esperando al cliente`}
@@ -186,7 +186,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
             <section className="ini-bloque" aria-labelledby="ini-agenda">
               <div className="ini-bloque__cabecera">
                 <h2 id="ini-agenda" className="ini-bloque__titulo">Agenda de hoy</h2>
-                <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("taller-solicitudes", "agendadas")}>
+                <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("taller-agenda")}>
                   Ver agenda
                 </button>
               </div>

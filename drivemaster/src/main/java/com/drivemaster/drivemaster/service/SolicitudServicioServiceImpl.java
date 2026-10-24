@@ -31,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -254,6 +255,14 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     public List<SolicitudServicioDTO> bandejaTaller(String correoTaller) {
         Taller taller = tallerService.obtenerPorUsuario(correoTaller);
         return ordenRepository.findByFlujoAndTallerIdOrderByFechaCreacionDesc(EstadoOrden.FLUJO_MARKETPLACE, taller.getId())
+                .stream().map(o -> toDTO(o, Vista.TALLER)).toList();
+    }
+
+    @Override
+    public List<SolicitudServicioDTO> citasTaller(String tallerId, LocalDate desde, LocalDate hasta) {
+        return ordenRepository.citasDelTaller(EstadoOrden.FLUJO_MARKETPLACE, tallerId, desde.atStartOfDay(),
+                        hasta.plusDays(1).atStartOfDay(),
+                        List.of(EstadoOrden.CANCELADA, EstadoOrden.RECHAZADA, EstadoOrden.REASIGNADA))
                 .stream().map(o -> toDTO(o, Vista.TALLER)).toList();
     }
 

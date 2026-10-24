@@ -186,7 +186,7 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
  * Bandeja de solicitudes de diagnóstico del taller: responder (aceptar con cita o
  * rechazar), asignar mecánico, registrar el diagnóstico y elegir repuestos.
  */
-export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial, abrirInicial = null, onVolver }) {
+export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial, abrirInicial = null, onVolver, textoAfuera = "Inicio" }) {
   const token = getToken();
   const FILTROS = modo === "trabajos" ? FILTROS_TRABAJOS : FILTROS_SOLICITUDES;
   const textos = TEXTOS[modo];
@@ -360,7 +360,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
     return (
       <div className="ss-panel st-root st-detalle">
         <EncabezadoPagina titulo={s.vehiculoDescripcion} onVolver={cerrarDetalle}
-          textoVolver={desdeAfuera ? "Inicio" : textos.volver}>
+          textoVolver={desdeAfuera ? textoAfuera : textos.volver}>
           <p className="st-detalle__meta">
             <ChipEstado estado={s.estado} catalogo={ESTADOS} />
             {enPruebas && <ChipEstado tono="info">En pruebas</ChipEstado>}

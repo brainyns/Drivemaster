@@ -1,0 +1,166 @@
+/* ── Agenda del taller ─────────────────────────────────────────────────────
+   Prefijo ag-, BEM. Cabecera, avisos, chips y botones son de ui.css; aquí la navegación, el mes, el panel del día
+   y la semana del celular. Tokens --ui-* y --primary*, los dos temas. */
+
+.ag-alerta { margin-bottom: var(--ui-sp-4); }
+
+.ag-enlace {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Navegación: ‹ título › Hoy */
+.ag-nav { display: flex; align-items: center; gap: 8px; margin-bottom: var(--ui-sp-4); }
+.ag-nav__titulo { flex: 1; margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--ui-text); }
+.ag-nav__titulo::first-letter { text-transform: uppercase; }
+.ag-nav__flecha { padding-inline: 8px; }
+.ag-nav__izq { transform: rotate(90deg); }
+.ag-nav__der { transform: rotate(-90deg); }
+
+/* Mes + panel del día al lado */
+.ag-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--ui-sp-4); align-items: start; }
+
+.ag-mes {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-xl);
+}
+
+.ag-mes__fila { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.ag-mes__dia-semana { padding: 4px 0 6px; font-size: 0.75rem; font-weight: 600; text-align: center; color: var(--ui-muted); }
+
+.ag-dia {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-height: 76px;
+  padding: 8px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line-soft);
+  border-radius: var(--ui-r-md);
+  color: var(--ui-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ag-dia:hover { border-color: var(--ui-muted); }
+.ag-dia:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+.ag-dia__numero { font-size: 0.875rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Cuántas citas tiene el día */
+.ag-dia__citas {
+  align-self: flex-end;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border-radius: var(--ui-r-full);
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ag-dia--fuera .ag-dia__numero { color: var(--ui-muted); opacity: 0.6; }
+
+/* Cerrado según el horario: gris */
+.ag-dia--cerrado { background: var(--ui-surface-2); }
+.ag-dia--cerrado .ag-dia__numero { color: var(--ui-muted); }
+
+/* Hoy: el acento naranja */
+.ag-dia--hoy { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.ag-dia--hoy .ag-dia__numero {
+  display: grid;
+  place-items: center;
+  width: 1.8em;
+  height: 1.8em;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  opacity: 1;
+}
+
+.ag-dia[aria-pressed="true"] { background: color-mix(in srgb, var(--primary) 8%, var(--ui-surface)); border-color: var(--primary); }
+
+.ag-hoy {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--ui-r-full);
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.ag-panel {
+  position: sticky;
+  top: var(--ui-sp-4);
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-xl);
+}
+
+.ag-panel__titulo { margin: 0; font-size: 1rem; font-weight: 700; color: var(--ui-text); }
+.ag-panel__titulo::first-letter { text-transform: uppercase; }
+.ag-panel__nota, .ag-vacio { margin: 0; font-size: 0.875rem; color: var(--ui-muted); }
+
+/* Lista de citas de un día */
+.ag-citas { display: grid; margin: 0; padding: 0; list-style: none; }
+
+.ag-cita {
+  display: grid;
+  grid-template-columns: 4.75rem minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.ag-cita:first-child { border-top: 0; padding-top: 0; }
+.ag-cita__hora { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ui-text); }
+.ag-cita__texto { display: grid; gap: 4px; min-width: 0; }
+.ag-cita__vehiculo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 600; color: var(--ui-text); }
+.ag-cita__meta { font-size: 0.85rem; color: var(--ui-muted); }
+.ag-cita__pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+
+/* Celular: la semana como lista de días */
+.ag-semana { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.ag-semana__dia {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+}
+
+.ag-semana__dia--hoy { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.ag-semana__dia--cerrado { background: var(--ui-surface-2); }
+.ag-semana__dia--cerrado .ag-semana__titulo { color: var(--ui-muted); }
+.ag-semana__titulo { margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--ui-text); }
+.ag-semana__titulo::first-letter { text-transform: uppercase; }
+.ag-semana__nota { margin-left: 8px; font-size: 0.8rem; font-weight: 500; color: var(--ui-muted); }
+
+@media (max-width: 1100px) {
+  .ag-cuerpo { grid-template-columns: minmax(0, 1fr); }
+  .ag-panel { position: static; }
+  .ag-dia { min-height: 60px; }
+}
