@@ -93,6 +93,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/google").permitAll()
                         .requestMatchers("/api/auth/login-interno").permitAll()
                         .requestMatchers("/api/auth/logout").authenticated()
+                        // Cambio del correo de la cuenta: solo talleres y tiendas, siempre sobre la cuenta de la sesión
+                        .requestMatchers("/api/cuenta/correo", "/api/cuenta/correo/**").hasAnyRole("TALLER", "TIENDA")
                         // Panel de plataforma: la gestión de usuarios es solo del SUPERADMIN.
                         // El ADMIN queda con la operación diaria (aprobaciones, servicios y problemas de envío).
                         .requestMatchers("/api/usuarios", "/api/usuarios/**").hasRole("SUPERADMIN")

@@ -40,6 +40,11 @@ public class TiendaController {
         return ResponseEntity.ok(tiendaService.actualizarMiTienda(auth.getName(), request));
     }
 
+    @PutMapping("/mi-tienda/telefono")
+    public ResponseEntity<TiendaDTO> telefono(@RequestBody Map<String, String> body, Authentication auth) {
+        return ResponseEntity.ok(tiendaService.actualizarTelefono(auth.getName(), body == null ? null : body.get("telefono")));
+    }
+
     // ─── Administración (rol ADMIN/SUPERADMIN) ───────────────
 
     @GetMapping

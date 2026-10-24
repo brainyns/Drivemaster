@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.config;
 
+import com.drivemaster.drivemaster.model.CambioCorreo;
 import com.drivemaster.drivemaster.model.CambioTaller;
 import com.drivemaster.drivemaster.model.HorarioTaller;
 import com.drivemaster.drivemaster.model.OrdenServicio;
@@ -28,6 +29,7 @@ import java.util.List;
  * - ordenes_servicio: bandeja y citas del taller, servicios del cliente, historial del vehículo y los vencimientos que
  *   revisa ReasignacionScheduler.
  * - horarios_taller y cambios_taller: todo se busca por tallerId.
+ * - cambios_correo: por usuarioId, y un TTL en "vence" para que los códigos olvidados no se acumulen.
  * - usuarios.correo único: solo si no hay correos repetidos. Si los hay, no se crea y se listan en el log para
  *   resolverlos a mano (ver MIGRACIONES_PENDIENTES.md).
  */
@@ -68,7 +70,28 @@ public class IndicesMongo implements ApplicationRunner {
                 .ensureIndex(new Index().on("tallerId", Sort.Direction.ASC).named("taller")));
         crear("cambios_taller", () -> mongoTemplate.indexOps(CambioTaller.class)
                 .ensureIndex(new Index().on("tallerId", Sort.Direction.ASC).named("taller")));
+        crear("cambios_correo", () -> {
+            IndexOperations pendientes = mongoTemplate.indexOps(CambioCorreo.class);
+            pendientes.ensureIndex(new Index().on("usuarioId", Sort.Direction.ASC).named("usuario"));
+            // TTL: MongoDB borra solo los cambios que vencieron sin confirmarse
+            pendientes.ensureIndex(new Index().on("vence", Sort.Direction.ASC).expire(0).named("vence_ttl"));
+        });
         correoUnico();
+        contarCorreosConMayusculas();
+    }
+
+    /** Solo informa: los correos guardados con mayúsculas o espacios se migran a mano (MIGRACIONES_PENDIENTES.md). */
+    void contarCorreosConMayusculas() {
+        try {
+            long n = mongoTemplate.count(new org.springframework.data.mongodb.core.query.Query(
+                    Criteria.where("correo").regex("[A-Z]|^\\s|\\s$")), Usuario.class);
+            if (n > 0) {
+                log.warn("Hay {} usuarios con el correo guardado con mayúsculas o espacios. El inicio de sesión los encuentra "
+                        + "igual; para normalizarlos ver MIGRACIONES_PENDIENTES.md.", n);
+            }
+        } catch (RuntimeException e) {
+            log.warn("No se pudieron contar los correos con mayúsculas: {}", e.getMessage());
+        }
     }
 
     /** Índice único de usuarios.correo, solo si no hay repetidos exactos. Nunca detiene el arranque. */

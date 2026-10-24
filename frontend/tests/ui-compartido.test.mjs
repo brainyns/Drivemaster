@@ -140,3 +140,49 @@ test("Conexión: a los 20 s o sin red, un error con mensaje claro; una cancelaci
   assert.ok(!/await fetch\(/.test(leerSrc("services/http.js") + leerSrc("services/authService.js")), "todo pasa por fetchConLimite");
   assert.ok(leerSrc("pages/Login.jsx").includes("onReintentar={error === MENSAJE_SIN_CONEXION"));
 });
+
+test("Contacto: teléfono colombiano, correo en minúsculas y código de 6 dígitos", async () => {
+  const { normalizarTelefono, errorTelefono, formatoTelefono, normalizarCorreo, errorCorreo, errorCodigo, MENSAJE_TELEFONO } =
+    await import("../src/pages/contactoNegocio.js");
+  assert.equal(normalizarTelefono("+57 300-123-4567"), "3001234567");
+  assert.equal(normalizarTelefono("(601) 234 5678"), "6012345678");
+  assert.equal(normalizarTelefono("2345678"), null, "los fijos viejos de 7 dígitos ya no sirven");
+  assert.equal(normalizarTelefono("609 123 4567"), null);
+  assert.equal(errorTelefono("300 123 4567"), null);
+  assert.equal(errorTelefono("123"), MENSAJE_TELEFONO);
+  assert.match(errorTelefono(""), /Escribe el número/);
+  assert.equal(formatoTelefono("3001234567"), "300 123 4567");
+  assert.equal(normalizarCorreo("  Ana.Perez@Gmail.COM "), "ana.perez@gmail.com");
+  assert.equal(errorCorreo("Ana@Demo.co"), null);
+  assert.match(errorCorreo("ana@demo"), /nombre@dominio/);
+  assert.equal(errorCodigo("123 456"), null);
+  assert.match(errorCodigo("12345"), /6 números/);
+});
+
+test("Contacto: Mi taller y Mi tienda usan la misma tarjeta, sin mandar al administrador", () => {
+  const src = (r) => readFileSync(new URL(`../src/${r}`, import.meta.url), "utf8");
+  const taller = src("pages/taller/TallerMiTaller.jsx");
+  const tienda = src("pages/DatosMiTienda.jsx");
+  for (const pagina of [taller, tienda]) {
+    assert.ok(pagina.includes("<SeccionContacto"), "la tarjeta compartida");
+    assert.ok(!/El correo de contacto lo cambia el administrador/.test(pagina));
+  }
+  assert.ok(!/nota=\{ADMIN\}>\s*<dl className="ui-datos">\s*<Dato etiqueta="Teléfono"/.test(taller), "Contacto ya no remite al administrador");
+  assert.ok(taller.includes("guardarTelefonoTaller(token") && tienda.includes("guardarTelefonoTienda(token"));
+
+  const tarjeta = src("components/ui/SeccionContacto.jsx");
+  assert.ok(tarjeta.includes('autoComplete="current-password"'), "pide la contraseña actual");
+  assert.ok(tarjeta.includes('autoComplete="one-time-code"'), "el código se puede pegar desde el correo");
+  assert.ok(tarjeta.includes("cancelarCambioCorreo"), "cancelar anula el código pendiente");
+
+  const auth = src("services/authService.js");
+  assert.ok(auth.includes("correo: normalizarCorreo(correo)"), "el login envía el correo en minúsculas");
+  assert.ok(auth.includes('new Event("auth:cuenta")') && src("App.jsx").includes('"auth:cuenta", onCuenta'),
+    "tras cambiar el correo, App toma la sesión nueva");
+
+  const css = src("css/ui.css");
+  assert.match(css, /\.ui-datos--contacto \{ grid-template-columns: minmax\(140px, max-content\) minmax\(0, 1fr\); \}/,
+    "el correo usa el resto de la fila");
+  assert.match(css, /@media \(max-width: 560px\) \{\s*\.ui-datos--contacto \{ grid-template-columns: minmax\(0, 1fr\); \}/,
+    "en celular se apilan");
+});

@@ -13,6 +13,15 @@ public interface UsuarioService {
 
     Usuario obtenerPorCorreo(String correo);
 
+    /**
+     * Busca la cuenta de un correo sin importar espacios ni mayúsculas (las cuentas antiguas pueden tenerlas). Vacío
+     * si no existe o si hay varias que solo se diferencian en mayúsculas.
+     */
+    java.util.Optional<Usuario> buscarPorCorreo(String correo);
+
+    /** true si el correo ya es de alguna cuenta, comparando sin mayúsculas ni espacios. */
+    boolean correoOcupado(String correo);
+
     Usuario obtenerPorId(String id);
 
     /** Varios usuarios en una sola consulta; los que no existen simplemente no vienen. */

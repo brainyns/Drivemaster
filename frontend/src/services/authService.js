@@ -60,6 +60,9 @@ export function getTokenExpiracion(token) {
   }
 }
 
+// Correo sin espacios y en minúsculas, como lo guarda el backend
+const normalizarCorreo = (correo) => String(correo ?? "").replace(/s+/g, "").toLowerCase();
+
 function guardarSesion(data) {
   if (data && data.token) {
     setSession(data.token, {
@@ -77,7 +80,7 @@ export async function login(correo, password) {
   const res = await fetchConLimite(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ correo, password }),
+    body: JSON.stringify({ correo: normalizarCorreo(correo), password }),
   });
   const data = await handleResponse(res);
   guardarSesion(data);
@@ -88,7 +91,7 @@ export async function loginInterno(correo, password) {
   const res = await fetchConLimite(`${API_BASE}/auth/login-interno`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ correo, password }),
+    body: JSON.stringify({ correo: normalizarCorreo(correo), password }),
   });
   const data = await handleResponse(res);
   guardarSesion(data);
@@ -110,7 +113,7 @@ export async function register(data) {
   const res = await fetchConLimite(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, correo: normalizarCorreo(data.correo) }),
   });
   const response = await handleResponse(res);
   guardarSesion(response);
@@ -147,6 +150,41 @@ export async function refreshToken() {
     window.dispatchEvent(new CustomEvent("auth:renovada", { detail: data.token }));
   }
   return data;
+}
+
+/**
+ * Cambio del correo de la cuenta (talleres y tiendas). Paso 1: con la contraseña actual, envía un código de 6
+ * dígitos al correo nuevo. Devuelve { correoNuevo, vence, intentosRestantes }.
+ */
+export async function solicitarCambioCorreo(passwordActual, correoNuevo) {
+  const res = await apiFetch(`${API_BASE}/cuenta/correo/solicitar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ passwordActual, correoNuevo: normalizarCorreo(correoNuevo) }),
+  });
+  return handleResponse(res);
+}
+
+/**
+ * Paso 2: con el código cambia el correo. El token lleva el correo, así que el backend devuelve una sesión nueva: se
+ * guarda y se avisa con "auth:cuenta" para que App tome el usuario y el token nuevos.
+ */
+export async function confirmarCambioCorreo(codigo) {
+  const res = await apiFetch(`${API_BASE}/cuenta/correo/confirmar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ codigo: String(codigo ?? "").replace(/s+/g, "") }),
+  });
+  const data = await handleResponse(res);
+  guardarSesion(data);
+  window.dispatchEvent(new Event("auth:cuenta"));
+  return data;
+}
+
+/** Descarta el código pendiente (deja de servir). */
+export async function cancelarCambioCorreo() {
+  const res = await apiFetch(`${API_BASE}/cuenta/correo`, { method: "DELETE" });
+  return handleResponse(res);
 }
 
 export async function logout() {

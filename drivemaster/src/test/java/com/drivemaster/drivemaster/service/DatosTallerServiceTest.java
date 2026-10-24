@@ -169,4 +169,31 @@ class DatosTallerServiceTest {
                 () -> servicio.actualizar("a@demo.com", ubicacion(120.0, -74.0)))));
         verify(tallerRepository, never()).save(any());
     }
+
+    @Test
+    void elTelefonoSeGuardaConSusDiezDigitosYQuedaRegistrado() {
+        a.setTelefono("3000000000");
+        servicio.actualizarTelefono("a@demo.com", "+57 310 555 1234");
+
+        assertEquals("3105551234", a.getTelefono());
+        verify(tallerRepository).save(a);
+        ArgumentCaptor<CambioTaller> cambio = ArgumentCaptor.forClass(CambioTaller.class);
+        verify(cambios).save(cambio.capture());
+        assertEquals(CambioTaller.TELEFONO, cambio.getValue().getCampo());
+        assertEquals("3000000000", cambio.getValue().getValorAnterior());
+    }
+
+    @Test
+    void unTelefonoQueNoEsColombianoNoSeGuarda() {
+        assertEquals(400, estado(assertThrows(ResponseStatusException.class,
+                () -> servicio.actualizarTelefono("a@demo.com", "12345"))));
+        verify(tallerRepository, never()).save(any());
+    }
+
+    @Test
+    void elTelefonoSePuedeCambiarAunqueElTallerEsteEnRevision() {
+        a.setEstadoAprobacion(EstadoAprobacion.PENDIENTE);
+        servicio.actualizarTelefono("a@demo.com", "601 234 5678");
+        assertEquals("6012345678", a.getTelefono());
+    }
 }

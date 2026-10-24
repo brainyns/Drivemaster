@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { actualizarMiTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
+import { actualizarMiTienda, guardarTelefonoTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
 import LogoEditable from "../components/ui/LogoEditable";
 import { cambiarResumenSemanal, probarResumenSemanal, resumenSemanal } from "../services/informesTiendaService";
 import { formatFecha, formatPrecio } from "../components/servicio/estadosServicio";
@@ -8,6 +8,7 @@ import TiendaVendedor from "../components/marketplace/TiendaVendedor";
 import CabeceraNegocio from "../components/ui/CabeceraNegocio";
 import VistaPrevia from "../components/ui/VistaPrevia";
 import SeccionEditable from "../components/ui/SeccionEditable";
+import SeccionContacto from "../components/ui/SeccionContacto";
 import ChipEstado from "../components/ui/ChipEstado";
 import Campo from "../components/ui/Campo";
 import Dato from "../components/ui/Dato";
@@ -16,7 +17,7 @@ import Alerta from "../components/ui/Alerta";
 import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
 import {
-  COSTO_ENVIO_MAX, comoLaVeElCliente, completitudTienda, errorCostoEnvio, errorHorarioTienda, errorTelefono, erroresUbicacion,
+  COSTO_ENVIO_MAX, comoLaVeElCliente, completitudTienda, errorCostoEnvio, errorHorarioTienda, erroresUbicacion,
 } from "./tienda/perfilTienda";
 import "../css/mi-tienda.css";
 
@@ -162,30 +163,6 @@ function FormEntrega({ tienda, token, onGuardado, onCancelar }) {
         </Campo>
       )}
       <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar entrega" />
-    </form>
-  );
-}
-
-function FormContacto({ tienda, token, onGuardado, onCancelar }) {
-  const [telefono, setTelefono] = useState(tienda.telefono || "");
-  const [errorCampo, setErrorCampo] = useState(null);
-  const { guardar, guardando, error } = useGuardar(token, onGuardado);
-
-  const enviar = (e) => {
-    e.preventDefault();
-    const err = errorTelefono(telefono);
-    setErrorCampo(err);
-    if (!err) guardar({ telefono: telefono.trim() });
-  };
-
-  return (
-    <form className="ui-form" onSubmit={enviar} noValidate>
-      <Campo id="mtd-telefono" label="Teléfono de la tienda" error={errorCampo}
-        ayuda="Lo usan DriveMaster y los talleres que te compran para coordinar entregas.">
-        <input className="ui-field__input ui-form__corto" type="tel" inputMode="tel" autoComplete="tel" maxLength={20} autoFocus
-          value={telefono} onChange={(e) => { setTelefono(e.target.value); if (errorCampo) setErrorCampo(null); }} />
-      </Campo>
-      <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar teléfono" />
     </form>
   );
 }
@@ -398,20 +375,26 @@ export default function DatosMiTienda({ token, onGuardado }) {
             )}
           </SeccionEditable>
 
-          <SeccionEditable id="mtd-contacto" icono="phone" titulo="Contacto"
+          <SeccionContacto id="mtd-contacto"
             descripcion="Por aquí te escriben DriveMaster y los talleres que te compran."
-            onEditar={() => abrir("contacto")} textoEditar={t.telefono ? "Editar" : "Agregar teléfono"}
-            editando={editando === "contacto"} aviso={avisoDe("contacto")}
-            nota={editando !== "contacto" && "El correo de contacto lo cambia el administrador de DriveMaster."}>
-            {editando === "contacto" ? (
-              <FormContacto tienda={t} token={token} onCancelar={cerrar} onGuardado={guardado("contacto", "Teléfono guardado.")} />
-            ) : (
-              <dl className="ui-datos">
-                <Dato etiqueta="Teléfono">{t.telefono}</Dato>
-                <Dato etiqueta="Correo de contacto">{t.correoContacto || t.correoUsuario}</Dato>
-              </dl>
+            telefono={t.telefono} correo={t.correoUsuario || t.correoContacto}
+            ayudaTelefono="Celular o fijo. Lo usan DriveMaster y los talleres que te compran para coordinar entregas."
+            guardarTelefono={(numero) => guardarTelefonoTienda(token, numero)}
+            onTelefonoGuardado={guardado("contacto", "Teléfono guardado.")}
+            editandoTelefono={editando === "contacto"} onEditarTelefono={() => abrir("contacto")} onCerrarTelefono={cerrar}
+            aviso={avisoDe("contacto")}
+            onCorreoCambiado={(nuevo) => {
+              // El backend también mueve el correo de contacto si era el de la cuenta
+              const contacto = !t.correoContacto || t.correoContacto.toLowerCase() === (t.correoUsuario || "").toLowerCase()
+                ? nuevo : t.correoContacto;
+              const nueva = { ...t, correoUsuario: nuevo, correoContacto: contacto };
+              setTienda(nueva);
+              onGuardado?.(nueva);
+            }}>
+            {t.correoContacto && t.correoUsuario && t.correoContacto.toLowerCase() !== t.correoUsuario.toLowerCase() && (
+              <Dato etiqueta="Correo de contacto" ancho><span className="ui-correo">{t.correoContacto}</span></Dato>
             )}
-          </SeccionEditable>
+          </SeccionContacto>
 
           <ResumenSemanal token={token} />
         </div>

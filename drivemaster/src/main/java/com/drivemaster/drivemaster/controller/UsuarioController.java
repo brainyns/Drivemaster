@@ -25,6 +25,7 @@ import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.service.CuentaNegocioService;
 import com.drivemaster.drivemaster.service.NotificacionService;
 import com.drivemaster.drivemaster.service.UsuarioService;
+import com.drivemaster.drivemaster.util.Correos;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -60,7 +61,8 @@ public class UsuarioController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo y contraseña son obligatorios");
         }
 
-        if (usuarioRepository.findByCorreo(request.getCorreo()).isPresent()) {
+        String correo = Correos.normalizar(request.getCorreo());
+        if (usuarioService.correoOcupado(correo)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Correo ya registrado");
         }
 
@@ -76,7 +78,7 @@ public class UsuarioController {
 
         Usuario usuario = Usuario.builder()
                 .nombre(request.getNombre())
-                .correo(request.getCorreo())
+                .correo(correo)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .rol(rol)
                 .permisos(permisos)

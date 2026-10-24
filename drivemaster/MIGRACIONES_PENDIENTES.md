@@ -174,6 +174,51 @@ db.usuarios.aggregate([
 Por cada correo, decide cuál cuenta se queda (la que tiene órdenes, vehículos o negocio asociado) y cambia el correo
 de las otras o bórralas (con respaldo previo, como en la sección de compras). Al reiniciar, el índice se crea solo.
 
-El índice distingue mayúsculas: el registro solo quita espacios, no pasa el correo a minúsculas. Si el log avisa de
-correos que "solo se diferencian en mayúsculas", son cuentas distintas para el sistema; conviene unificarlas y,
-más adelante, normalizar el correo a minúsculas al registrarse e iniciar sesión.
+El índice distingue mayúsculas. Si el log avisa de correos que "solo se diferencian en mayúsculas", son cuentas
+distintas para el sistema: hay que unificarlas a mano antes de la migración de la sección siguiente.
+
+## Correos en minúsculas (`usuarios.correo`, pendiente)
+
+Desde el cambio de la tarjeta Contacto, el registro (cliente, taller, tienda, alta por el SUPERADMIN y Google), el
+inicio de sesión y el cambio de correo guardan y buscan el correo **sin espacios y en minúsculas**
+(`util/Correos.java`). Los correos que ya estaban guardados **no se modificaron**. El inicio de sesión los sigue
+encontrando: `UsuarioServiceImpl.buscarPorCorreo` busca primero el valor exacto y, si no lo encuentra, compara sin
+mayúsculas. Si hay dos cuentas que solo se diferencian en mayúsculas, no elige ninguna.
+
+**Estado al 24 de octubre de 2026:** 1 de 43 usuarios tiene mayúsculas en el correo (rol TALLER), ninguno tiene
+espacios, y al pasarlos a minúsculas no chocaría con otra cuenta. Al arrancar, `IndicesMongo` escribe en el log cuántos
+quedan ("Hay N usuarios con el correo guardado con mayúsculas o espacios").
+
+### Cómo migrarlos
+
+1. **Respaldo** de `usuarios` y `tiendas`, como en las secciones anteriores
+   (`mongodump --uri="$URI" --collection=usuarios --out=respaldo-correos`, y lo mismo para `tiendas`).
+2. **Revisar choques** (debe devolver vacío; si no, unificar esas cuentas primero):
+   ```js
+   db.usuarios.aggregate([
+     { $match: { correo: { $type: "string" } } },
+     { $group: { _id: { $toLower: { $trim: { input: "$correo" } } }, n: { $sum: 1 }, ids: { $push: "$_id" } } },
+     { $match: { n: { $gt: 1 } } }
+   ])
+   ```
+3. **Ver cuáles cambian** (solo lectura):
+   ```js
+   db.usuarios.find({ correo: { $regex: /[A-Z]|^\s|\s$/ } }, { correo: 1, rol: 1 })
+   ```
+4. **Migrar** (usuarios y el correo de contacto de las tiendas):
+   ```js
+   db.usuarios.updateMany({ correo: { $regex: /[A-Z]|^\s|\s$/ } },
+     [{ $set: { correo: { $toLower: { $trim: { input: "$correo" } } } } }])
+   db.tiendas.updateMany({ correoContacto: { $regex: /[A-Z]|^\s|\s$/ } },
+     [{ $set: { correoContacto: { $toLower: { $trim: { input: "$correoContacto" } } } } }])
+   ```
+5. **Después:** quien tenga la sesión abierta con esas cuentas tendrá que volver a iniciar sesión, porque el token
+   lleva el correo anterior. Para iniciar sesión puede escribir el correo con o sin mayúsculas.
+
+Cuando el log ya no avise de correos con mayúsculas, se puede quitar la búsqueda sin mayúsculas de
+`buscarPorCorreo`, que es una expresión regular y no aprovecha el índice.
+
+## Cambios de correo pendientes (`cambios_correo`)
+
+La colección se crea sola. Guarda solo el hash del código (BCrypt), y el índice TTL `vence_ttl` borra los cambios que
+vencieron sin confirmarse. No hay nada que migrar.

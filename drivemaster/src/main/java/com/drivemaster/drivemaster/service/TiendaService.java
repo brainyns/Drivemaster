@@ -23,6 +23,9 @@ public interface TiendaService {
 
     TiendaDTO actualizarMiTienda(String correoUsuario, RegistroNegocioRequest request);
 
+    /** Solo el teléfono de la tienda de la sesión (celular o fijo colombiano, ver TelefonoColombia). */
+    TiendaDTO actualizarTelefono(String correoUsuario, String telefono);
+
     /** Tienda del usuario, solo si ya fue aprobada y está activa (403 en otro caso). */
     Tienda obtenerOperativaPorUsuario(String correoUsuario);
 

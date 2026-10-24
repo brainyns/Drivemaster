@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import MecanicosTaller from "../../components/servicio/MecanicosTaller";
 import HorarioSemanal, { HorarioResumen } from "../../components/servicio/HorarioSemanal";
 import { formatFecha, formatPrecio } from "../../components/servicio/estadosServicio";
-import { actualizarDatosTaller, actualizarUbicacionTaller, miTaller, subirLogoTaller } from "../../services/tallerService";
+import {
+  actualizarDatosTaller, actualizarUbicacionTaller, guardarTelefonoTaller, miTaller, subirLogoTaller,
+} from "../../services/tallerService";
 import { guardarHorario, obtenerHorario } from "../../services/horarioService";
 import {
   copiarLunesAHabiles, errorDia, franjasDesdeSemana, semanaDesdeFranjas, semanaPorDefecto,
@@ -11,6 +13,7 @@ import LogoNegocio from "../../components/ui/LogoNegocio";
 import SelectorUbicacion from "../../components/mapa/SelectorUbicacion";
 import DatosTallerCliente from "../../components/mapa/DatosTallerCliente";
 import SeccionEditable from "../../components/ui/SeccionEditable";
+import SeccionContacto from "../../components/ui/SeccionContacto";
 import Campo from "../../components/ui/Campo";
 import ChipEstado from "../../components/ui/ChipEstado";
 import Alerta from "../../components/ui/Alerta";
@@ -363,13 +366,15 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
 
           <MecanicosTaller token={token} onLista={onLista} />
 
-          <SeccionEditable id="mt-contacto" icono="phone" titulo="Contacto"
-            descripcion="Por aquí te escriben DriveMaster y los clientes con cita aceptada." nota={ADMIN}>
-            <dl className="ui-datos">
-              <Dato etiqueta="Teléfono">{taller.telefono}</Dato>
-              <Dato etiqueta="Correo de la cuenta">{taller.correoUsuario}</Dato>
-            </dl>
-          </SeccionEditable>
+          <SeccionContacto id="mt-contacto"
+            descripcion="Por aquí te escriben DriveMaster y los clientes con cita aceptada."
+            telefono={taller.telefono} correo={taller.correoUsuario}
+            ayudaTelefono="Celular o fijo. Lo ven los clientes con cita aceptada."
+            guardarTelefono={(numero) => guardarTelefonoTaller(token, numero)}
+            onTelefonoGuardado={guardado("contacto", "Teléfono guardado.")}
+            editandoTelefono={editando === "contacto"} onEditarTelefono={() => abrir("contacto")} onCerrarTelefono={cerrar}
+            aviso={avisoDe("contacto")}
+            onCorreoCambiado={(correoUsuario) => onActualizado?.({ ...taller, correoUsuario })} />
         </div>
 
         <aside className="ui-perfil__lateral">
