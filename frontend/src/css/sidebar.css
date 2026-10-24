@@ -89,6 +89,9 @@
   opacity: 0.5;
 }
 
+/* Los íconos que vienen de Icon.jsx (trazo 1.6) con el mismo grosor que los del menú */
+.sidebar-item-icon svg { stroke-width: 2; }
+
 .sidebar-item.activo .sidebar-item-icon { opacity: 1; }
 
 .sidebar-item:hover .sidebar-item-icon { opacity: 0.8; }

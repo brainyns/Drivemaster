@@ -143,7 +143,6 @@ const SECCION_TALLER = {
   "taller-mitaller":    "mitaller",
   "taller-informes":    "informes",
   "taller-anteriores":  "anteriores",
-  // Sin entrada propia en el menú: se abre desde Inicio ("Ver agenda" y "Agenda de hoy")
   "taller-agenda":      "agenda",
 };
 

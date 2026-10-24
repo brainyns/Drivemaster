@@ -88,7 +88,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}
         {seccion === "informes" && <TallerInformes />}
         {seccion === "mitaller" && (
-          <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller}
+          <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller} abrirSeccion={destino.filtro}
             onRecargar={cargar} onActualizado={setTaller} />
         )}
         {seccion === "anteriores" && (

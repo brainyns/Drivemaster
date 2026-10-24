@@ -173,8 +173,9 @@ function VistaCliente({ taller: datos }) {
 }
 
 /** Mi taller: identidad, qué tan completo está el perfil y cada sección editable por separado. */
-export default function TallerMiTaller({ taller, token, cargando, error, onRecargar, onActualizado }) {
-  const [editando, setEditando] = useState(null); // "servicios" | "horario" | "ubicacion"
+export default function TallerMiTaller({ taller, token, cargando, error, onRecargar, onActualizado, abrirSeccion = null }) {
+  // Desde el aviso del Inicio llega abrirSeccion="horario": la sección se abre ya en edición
+  const [editando, setEditando] = useState(abrirSeccion === "horario" ? "horario" : null); // "servicios" | "horario" | "ubicacion"
   const [aviso, setAviso] = useState(null); // { seccion, texto }
   const [activos, setActivos] = useState(0);
   const [avisoLogo, setAvisoLogo] = useState(null); // { tono, texto }
@@ -191,6 +192,10 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
       .catch(() => { if (vivo) setSemana(null); });
     return () => { vivo = false; };
   }, [token, tallerId]);
+
+  useEffect(() => {
+    if (abrirSeccion === "horario" && tallerId) document.getElementById("mt-horario")?.scrollIntoView({ block: "start" });
+  }, [abrirSeccion, tallerId]);
 
   if (!taller) {
     if (cargando) return <Esqueleto variante="formulario" cantidad={4} texto="Cargando los datos de tu taller…" />;
@@ -334,7 +339,9 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             onEditar={aprobado ? () => abrir("horario") : undefined}
             textoEditar={semana || taller.horario ? "Editar" : "Agregar horario"}
             editando={editando === "horario"} aviso={avisoDe("horario")}>
-            {editando === "horario" ? (
+            {editando === "horario" && semana === undefined ? (
+              <Esqueleto variante="formulario" cantidad={2} texto="Cargando tu horario…" />
+            ) : editando === "horario" ? (
               <FormHorario taller={taller} token={token} semanaInicial={semana} onCancelar={cerrar}
                 onGuardado={(guardada, t) => {
                   setSemana(guardada);

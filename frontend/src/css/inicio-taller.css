@@ -122,3 +122,23 @@
   .ini-urgente .ui-badge { grid-column: 1; grid-row: 2; justify-self: start; }
   .ini-urgente__accion { grid-column: 2; grid-row: 1 / span 2; min-height: 40px; }
 }
+
+/* Aviso discreto: falta el horario por días */
+.ini-aviso-horario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: var(--ui-sp-4);
+  padding: 12px 16px;
+  background: var(--ui-surface);
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--ui-line));
+  border-radius: var(--ui-r-xl);
+  color: var(--primary-text);
+}
+
+.ini-aviso-horario__texto { flex: 1; margin: 0; font-size: 0.9rem; line-height: 1.45; color: var(--ui-text); }
+
+@media (max-width: 560px) {
+  .ini-aviso-horario { flex-wrap: wrap; }
+  .ini-aviso-horario__texto { flex-basis: calc(100% - 32px); }
+}

@@ -283,3 +283,12 @@ test("Cita de revisión: solo días abiertos y horas dentro de las franjas (la h
   assert.ok(!p.includes('type="datetime-local"'), "ya no se escribe cualquier fecha y hora");
   assert.ok(p.includes("fechaRevision: `${fechaCita}T${horaCita}`"));
 });
+
+test("Inicio avisa si falta el horario por días y lleva a editarlo en Mi taller", () => {
+  const inicio = leer("../src/pages/taller/TallerInicio.jsx");
+  assert.ok(inicio.includes("setSinHorario(!filas?.length)"), "desaparece cuando ya hay horario guardado");
+  assert.ok(inicio.includes("Configura tu horario de atención para que tus citas se agenden en horas que sí puedes cumplir"));
+  assert.ok(inicio.includes('irA("taller-mitaller", "horario")'));
+  assert.ok(leer("../src/pages/taller/TallerMiTaller.jsx").includes('useState(abrirSeccion === "horario" ? "horario" : null)'));
+  assert.ok(leer("../src/pages/PanelTaller.jsx").includes("abrirSeccion={destino.filtro}"));
+});
