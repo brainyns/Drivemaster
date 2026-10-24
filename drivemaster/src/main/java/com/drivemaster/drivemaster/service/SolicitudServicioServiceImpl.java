@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -211,8 +212,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     @Override
     public List<SolicitudServicioDTO> misSolicitudes(String correoCliente) {
         Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);
-        return ordenRepository.findByFlujoAndUsuarioIdOrderByFechaCreacionDesc(EstadoOrden.FLUJO_MARKETPLACE, cliente.getId())
-                .stream().map(o -> toDTO(o, Vista.CLIENTE)).toList();
+        return toDTOs(ordenRepository.findByFlujoAndUsuarioIdOrderByFechaCreacionDesc(EstadoOrden.FLUJO_MARKETPLACE, cliente.getId()),
+                Vista.CLIENTE);
     }
 
     @Override
@@ -257,16 +258,15 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     @Override
     public List<SolicitudServicioDTO> bandejaTaller(String correoTaller) {
         Taller taller = tallerService.obtenerPorUsuario(correoTaller);
-        return ordenRepository.findByFlujoAndTallerIdOrderByFechaCreacionDesc(EstadoOrden.FLUJO_MARKETPLACE, taller.getId())
-                .stream().map(o -> toDTO(o, Vista.TALLER)).toList();
+        return toDTOs(ordenRepository.findByFlujoAndTallerIdOrderByFechaCreacionDesc(EstadoOrden.FLUJO_MARKETPLACE, taller.getId()),
+                Vista.TALLER);
     }
 
     @Override
     public List<SolicitudServicioDTO> citasTaller(String tallerId, LocalDate desde, LocalDate hasta) {
-        return ordenRepository.citasDelTaller(EstadoOrden.FLUJO_MARKETPLACE, tallerId, desde.atStartOfDay(),
-                        hasta.plusDays(1).atStartOfDay(),
-                        List.of(EstadoOrden.CANCELADA, EstadoOrden.RECHAZADA, EstadoOrden.REASIGNADA))
-                .stream().map(o -> toDTO(o, Vista.TALLER)).toList();
+        return toDTOs(ordenRepository.citasDelTaller(EstadoOrden.FLUJO_MARKETPLACE, tallerId, desde.atStartOfDay(),
+                hasta.plusDays(1).atStartOfDay(),
+                List.of(EstadoOrden.CANCELADA, EstadoOrden.RECHAZADA, EstadoOrden.REASIGNADA)), Vista.TALLER);
     }
 
     /**
@@ -655,7 +655,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         List<OrdenServicio> ordenes = estado != null && !estado.isBlank()
                 ? ordenRepository.findByFlujoAndEstadoOrderByFechaCreacionDesc(EstadoOrden.FLUJO_MARKETPLACE, estado.trim().toUpperCase())
                 : ordenRepository.findByFlujoOrderByFechaCreacionDesc(EstadoOrden.FLUJO_MARKETPLACE);
-        return ordenes.stream().map(o -> toDTO(o, Vista.ADMIN)).toList();
+        return toDTOs(ordenes, Vista.ADMIN);
     }
 
     @Override
@@ -723,7 +723,45 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         return limpia.length() > MAX_DIRECCION ? limpia.substring(0, MAX_DIRECCION).trim() : limpia;
     }
 
+    /**
+     * Lo que toDTO busca fuera de la orden (placa del vehículo, datos del taller y del cliente), cargado para varias
+     * órdenes a la vez: una consulta por colección en lugar de una por orden.
+     */
+    private record Relacionados(Map<String, Vehiculo> vehiculos, Map<String, Taller> talleres, Map<String, Usuario> clientes) {}
+
+    private Relacionados relacionados(List<OrdenServicio> ordenes, Vista vista) {
+        Set<String> vehiculoIds = new HashSet<>();
+        Set<String> tallerIds = new HashSet<>();
+        Set<String> clienteIds = new HashSet<>();
+        for (OrdenServicio o : ordenes) {
+            if (o.getVehiculoId() != null) vehiculoIds.add(o.getVehiculoId());
+            if (vista != Vista.TALLER && o.getTallerId() != null) tallerIds.add(o.getTallerId());
+            if (vista != Vista.CLIENTE && o.getUsuarioId() != null) clienteIds.add(o.getUsuarioId());
+        }
+        Map<String, Vehiculo> vehiculos = new HashMap<>();
+        Map<String, Taller> talleres = new HashMap<>();
+        Map<String, Usuario> clientes = new HashMap<>();
+        // Si una búsqueda falla, la orden se muestra igual sin ese dato (como cuando el vehículo o el cliente ya no existen)
+        try {
+            vehiculoService.obtenerEntidades(vehiculoIds).forEach(v -> vehiculos.put(v.getId(), v));
+        } catch (Exception ignorado) { /* sin placas */ }
+        if (!tallerIds.isEmpty()) tallerRepository.findAllById(tallerIds).forEach(t -> talleres.put(t.getId(), t));
+        try {
+            usuarioService.obtenerPorIds(clienteIds).forEach(u -> clientes.put(u.getId(), u));
+        } catch (Exception ignorado) { /* sin datos del cliente */ }
+        return new Relacionados(vehiculos, talleres, clientes);
+    }
+
+    private List<SolicitudServicioDTO> toDTOs(List<OrdenServicio> ordenes, Vista vista) {
+        Relacionados r = relacionados(ordenes, vista);
+        return ordenes.stream().map(o -> toDTO(o, vista, r)).toList();
+    }
+
     private SolicitudServicioDTO toDTO(OrdenServicio o, Vista vista) {
+        return toDTO(o, vista, relacionados(List.of(o), vista));
+    }
+
+    private SolicitudServicioDTO toDTO(OrdenServicio o, Vista vista, Relacionados r) {
         SolicitudServicioDTO.SolicitudServicioDTOBuilder b = SolicitudServicioDTO.builder()
                 .id(o.getId())
                 .estado(o.getEstado())
@@ -766,31 +804,24 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 .comentarioCalificacion(o.getComentarioCalificacion())
                 .eventos(o.getEventos());
 
-        try {
-            Vehiculo v = vehiculoService.obtenerEntidad(o.getVehiculoId());
-            b.vehiculoPlaca(v.getPlaca());
-        } catch (Exception ignorado) {
-            // vehículo eliminado: se muestra la descripción guardada
-        }
+        // Vehículo eliminado: sin placa, se muestra la descripción guardada
+        Vehiculo v = r.vehiculos().get(o.getVehiculoId());
+        if (v != null) b.vehiculoPlaca(v.getPlaca());
 
         // El cliente ve su propio punto en el mapa y la dirección, el teléfono y la ubicación del
         // taller asignado (para la ruta y el botón "Cómo llegar").
         if (vista != Vista.TALLER) {
             b.direccion(o.getDireccion()).latitud(o.getLatitud()).longitud(o.getLongitud());
-            if (o.getTallerId() != null) {
-                tallerRepository.findById(o.getTallerId()).ifPresent(t -> b
-                        .tallerDireccion(t.getDireccion()).tallerTelefono(t.getTelefono())
-                        .tallerLatitud(t.getLatitud()).tallerLongitud(t.getLongitud()));
+            Taller t = o.getTallerId() == null ? null : r.talleres().get(o.getTallerId());
+            if (t != null) {
+                b.tallerDireccion(t.getDireccion()).tallerTelefono(t.getTelefono())
+                        .tallerLatitud(t.getLatitud()).tallerLongitud(t.getLongitud());
             }
         }
         // El taller asignado y el ADMIN ven el contacto del cliente.
         if (vista != Vista.CLIENTE) {
-            try {
-                Usuario c = usuarioService.obtenerPorId(o.getUsuarioId());
-                b.clienteNombre(c.getNombre()).clienteTelefono(c.getTelefono()).clienteCorreo(c.getCorreo());
-            } catch (Exception ignorado) {
-                // cliente eliminado
-            }
+            Usuario c = r.clientes().get(o.getUsuarioId());
+            if (c != null) b.clienteNombre(c.getNombre()).clienteTelefono(c.getTelefono()).clienteCorreo(c.getCorreo());
         }
         return b.build();
     }

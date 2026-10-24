@@ -39,6 +39,11 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
+    public List<Usuario> obtenerPorIds(java.util.Collection<String> ids) {
+        return ids.isEmpty() ? List.of() : usuarioRepository.findAllById(ids);
+    }
+
+    @Override
     public Usuario actualizarUsuario(Usuario usuario) {
         return usuarioRepository.save(usuario);
     }

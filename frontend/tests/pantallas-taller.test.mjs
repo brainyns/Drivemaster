@@ -292,3 +292,11 @@ test("Inicio avisa si falta el horario por días y lleva a editarlo en Mi taller
   assert.ok(leer("../src/pages/taller/TallerMiTaller.jsx").includes('useState(abrirSeccion === "horario" ? "horario" : null)'));
   assert.ok(leer("../src/pages/PanelTaller.jsx").includes("abrirSeccion={destino.filtro}"));
 });
+
+test("Panel del taller: la bandeja y el taller se piden una vez en PanelTaller y llegan a Solicitudes y Trabajos", () => {
+  const solicitudes = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(!solicitudes.includes("bandejaSolicitudesTaller") && !solicitudes.includes("miTaller("), "Solicitudes no los vuelve a pedir");
+  assert.ok(solicitudes.includes("onReemplazar?.(actualizada)"));
+  const panel = leer("../src/pages/PanelTaller.jsx");
+  assert.equal((panel.match(/\{\.\.\.bandeja\}/g) || []).length, 2, "Solicitudes y Trabajos");
+});

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken } from "../services/authService";
-import { listarMecanicos, miTaller } from "../services/tallerService";
+import { listarMecanicos } from "../services/tallerService";
 import { obtenerHorario } from "../services/horarioService";
 import {
-  bandejaSolicitudesTaller, aceptarSolicitudServicio, rechazarSolicitudServicio, asignarMecanicoSolicitud,
+  aceptarSolicitudServicio, rechazarSolicitudServicio, asignarMecanicoSolicitud,
   iniciarInstalacion, marcarEnPruebas, marcarLista, marcarEntregada,
 } from "../services/solicitudServicioService";
 import { cotizacionesDeOrden } from "../services/cotizacionService";
@@ -187,14 +187,21 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
 /**
  * Bandeja de solicitudes de diagnóstico del taller: responder (aceptar con cita o
  * rechazar), asignar mecánico, registrar el diagnóstico y elegir repuestos.
+ *
+ * La bandeja y los datos del taller los carga PanelTaller una sola vez y llegan por props (solicitudes, taller);
+ * onReemplazar actualiza una solicitud sin recargar y onRecargar vuelve a pedir la bandeja. Aquí solo se cargan los
+ * mecánicos y el horario, que no usa ninguna otra sección.
  */
-export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial, abrirInicial = null, onVolver, textoAfuera = "Inicio" }) {
+export default function TallerSolicitudes({
+  modo = "solicitudes", filtroInicial, abrirInicial = null, onVolver, textoAfuera = "Inicio",
+  solicitudes = [], taller = null, cargandoBandeja = false, errorBandeja = null, onRecargar, onReemplazar,
+}) {
   const token = getToken();
   const FILTROS = modo === "trabajos" ? FILTROS_TRABAJOS : FILTROS_SOLICITUDES;
   const textos = TEXTOS[modo];
-  const [solicitudes, setSolicitudes] = useState([]);
   const [mecanicos, setMecanicos] = useState([]);
-  const [cargando, setCargando] = useState(true);
+  const [extrasListos, setExtrasListos] = useState(false);
+  const cargando = cargandoBandeja || !extrasListos;
   const [error, setError] = useState(null);
   const [filtro, setFiltro] = useState(FILTROS.some((f) => f.key === filtroInicial) ? filtroInicial : FILTROS[0].key);
   const [busqueda, setBusqueda] = useState("");
@@ -212,33 +219,38 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
   const [motivo, setMotivo] = useState("");
   const [editandoDiagnostico, setEditandoDiagnostico] = useState(false);
   const [cotizando, setCotizando] = useState(false);
-  const [tarifaHora, setTarifaHora] = useState(null);
   const [procesando, setProcesando] = useState(false);
   const [reintentando, setReintentando] = useState(false);
   const [errorFecha, setErrorFecha] = useState(null);
   const [ahora] = useState(() => Date.now());
 
-  const cargar = useCallback(async () => {
+  const tallerId = taller?.id;
+  const tarifaHora = taller?.tarifaHora || null;
+
+  const cargarExtras = useCallback(async () => {
     try {
-      const [bandeja, mecs, taller] = await Promise.all([
-        bandejaSolicitudesTaller(token), listarMecanicos(token), miTaller(token).catch(() => null),
+      const [mecs, filas] = await Promise.all([
+        listarMecanicos(token), tallerId ? obtenerHorario(token, tallerId).catch(() => []) : [],
       ]);
-      setSolicitudes(bandeja || []);
       setMecanicos(mecs || []);
-      setTarifaHora(taller?.tarifaHora || null);
-      setSemanaHorario(taller?.id ? semanaDesdeFranjas(await obtenerHorario(token, taller.id).catch(() => [])) : null);
+      setSemanaHorario(semanaDesdeFranjas(filas));
       setError(null);
     } catch (e) {
       setError(e.message);
     } finally {
-      setCargando(false);
+      setExtrasListos(true);
     }
-  }, [token]);
+  }, [token, tallerId]);
 
+  // Espera a que el panel tenga el taller: así los mecánicos y el horario se piden una sola vez
   useEffect(() => {
-    const id = setTimeout(cargar, 0);
+    if (cargandoBandeja) return undefined;
+    const id = setTimeout(cargarExtras, 0);
     return () => clearTimeout(id);
-  }, [cargar]);
+  }, [cargarExtras, cargandoBandeja]);
+
+  /** Vuelve a pedir la bandeja (la tiene PanelTaller) tras una acción que cambia más de una solicitud. */
+  const cargar = async () => { await onRecargar?.(); };
 
   // Abierta desde Inicio: el detalle empieza arriba, no a la altura donde estaba la lista de urgentes
   useEffect(() => {
@@ -283,8 +295,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
   };
 
   /** Reemplaza la solicitud actualizada en la lista sin recargar todo. */
-  const reemplazar = (actualizada) =>
-    setSolicitudes((prev) => prev.map((s) => (s.id === actualizada.id ? { ...s, ...actualizada } : s)));
+  const reemplazar = (actualizada) => onReemplazar?.(actualizada);
 
   const ejecutar = async (accion) => {
     setProcesando(true);
@@ -329,7 +340,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
 
   const reintentar = async () => {
     setReintentando(true);
-    await cargar();
+    await Promise.all([cargar(), cargarExtras()]);
     setReintentando(false);
   };
 
@@ -685,9 +696,10 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
     <div className="ss-panel st-root">
       <EncabezadoPagina titulo={textos.titulo} descripcion={textos.descripcion} />
 
-      {error && (
-        <Alerta className="st-alerta" onReintentar={reintentar} reintentando={reintentando} onCerrar={() => setError(null)}>
-          {error}
+      {(error || errorBandeja) && (
+        <Alerta className="st-alerta" onReintentar={reintentar} reintentando={reintentando}
+          onCerrar={error ? () => setError(null) : undefined}>
+          {error || errorBandeja}
         </Alerta>
       )}
 

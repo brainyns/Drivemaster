@@ -15,5 +15,8 @@ public interface UsuarioService {
 
     Usuario obtenerPorId(String id);
 
+    /** Varios usuarios en una sola consulta; los que no existen simplemente no vienen. */
+    java.util.List<Usuario> obtenerPorIds(java.util.Collection<String> ids);
+
     Usuario actualizarUsuario(Usuario usuario);
 }

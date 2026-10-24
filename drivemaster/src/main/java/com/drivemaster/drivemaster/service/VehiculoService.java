@@ -19,6 +19,9 @@ public interface VehiculoService {
 
     Vehiculo obtenerEntidad(String vehiculoId);
 
+    /** Varios vehículos en una sola consulta; los que no existen simplemente no vienen. */
+    List<Vehiculo> obtenerEntidades(java.util.Collection<String> ids);
+
     VehiculoDTO obtenerDeUsuario(String correoUsuario, String vehiculoId);
 
     List<RepuestoCompatibleDTO> buscarRepuestosCompatibles(String correoUsuario, String vehiculoId);

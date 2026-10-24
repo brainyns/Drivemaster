@@ -81,6 +81,11 @@ public class VehiculoServiceImpl implements VehiculoService {
     }
 
     @Override
+    public List<Vehiculo> obtenerEntidades(java.util.Collection<String> ids) {
+        return ids.isEmpty() ? List.of() : vehiculoRepository.findAllById(ids);
+    }
+
+    @Override
     public VehiculoDTO obtenerDeUsuario(String correoUsuario, String vehiculoId) {
         Vehiculo vehiculo = validarPropiedad(correoUsuario, vehiculoId);
         return toDTO(vehiculo);
