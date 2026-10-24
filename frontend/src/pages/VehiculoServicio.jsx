@@ -3,6 +3,7 @@ import { getToken } from "../services/authService";
 import { obtenerVehiculo, repuestosCompatibles, historialVehiculo } from "../services/vehiculoService";
 import "../css/servicios.css";
 import Icon from "../components/public/Icon";
+import Alerta from "../components/ui/Alerta";
 import { etiquetaCategoria } from "../utils/categorias";
 
 const formatPrecio = (p) =>
@@ -55,7 +56,7 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
         {onVolver && <button className="sv-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Mis vehículos</button>}
       </div>
 
-      {error && <p style={{ color: "var(--error)" }}>{error}</p>}
+      {error && <Alerta onReintentar={cargarTodo} reintentando={cargando} onCerrar={() => setError("")}>{error}</Alerta>}
 
       {/* ── Diagnóstico ──────────────────────────────────── */}
       <div className="sv-quote-box">

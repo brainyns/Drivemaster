@@ -108,3 +108,35 @@ test("Categorías: con tilde en la interfaz, sin cambiar el valor guardado ni el
   assert.ok(leerArchivo("../src/pages/ProductoForm.jsx").includes("<option key={c} value={c}>{etiquetaCategoria(c)}</option>"));
   assert.ok(leerArchivo("../src/components/public/CatalogFilters.jsx").includes("onChange={() => onCategoriaChange(c)}"), "el filtro sigue con el valor");
 });
+
+test("Conexión: a los 20 s o sin red, un error con mensaje claro; una cancelación propia no cuenta como falta de conexión", async () => {
+  const { fetchConLimite, ErrorConexion, MENSAJE_SIN_CONEXION, LIMITE_MS, esErrorConexion } = await import("../src/services/conexion.js");
+  assert.equal(LIMITE_MS, 20000);
+  const original = globalThis.fetch;
+  try {
+    // Servidor que nunca responde: se rinde al vencer el límite
+    globalThis.fetch = (_u, { signal }) => new Promise((_, rechazar) => signal.addEventListener("abort", () => rechazar(new DOMException("x", "AbortError"))));
+    await assert.rejects(fetchConLimite("/api", {}, 20), (e) => e instanceof ErrorConexion && e.message === MENSAJE_SIN_CONEXION);
+
+    // Sin red: fetch lanza TypeError
+    globalThis.fetch = async () => { throw new TypeError("Failed to fetch"); };
+    await assert.rejects(fetchConLimite("/api"), (e) => esErrorConexion(e));
+
+    // Quien llama cancela (p. ej. el buscador de direcciones): se respeta su AbortError
+    globalThis.fetch = (_u, { signal }) => new Promise((_, rechazar) => signal.addEventListener("abort", () => rechazar(new DOMException("x", "AbortError"))));
+    const propio = new AbortController();
+    const p = fetchConLimite("/api", { signal: propio.signal }, 1000);
+    propio.abort();
+    await assert.rejects(p, (e) => e.name === "AbortError");
+
+    // Respuesta normal: pasa tal cual
+    globalThis.fetch = async () => ({ ok: true, status: 200 });
+    assert.equal((await fetchConLimite("/api")).status, 200);
+  } finally {
+    globalThis.fetch = original;
+  }
+
+  const leerSrc = (r) => readFileSync(new URL(`../src/${r}`, import.meta.url), "utf8");
+  assert.ok(!/await fetch\(/.test(leerSrc("services/http.js") + leerSrc("services/authService.js")), "todo pasa por fetchConLimite");
+  assert.ok(leerSrc("pages/Login.jsx").includes("onReintentar={error === MENSAJE_SIN_CONEXION"));
+});

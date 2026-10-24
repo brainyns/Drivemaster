@@ -1,4 +1,5 @@
 import { apiFetch } from "./http";
+import { fetchConLimite } from "./conexion";
 
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
 
@@ -73,7 +74,7 @@ function guardarSesion(data) {
 }
 
 export async function login(correo, password) {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  const res = await fetchConLimite(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ correo, password }),
@@ -84,7 +85,7 @@ export async function login(correo, password) {
 }
 
 export async function loginInterno(correo, password) {
-  const res = await fetch(`${API_BASE}/auth/login-interno`, {
+  const res = await fetchConLimite(`${API_BASE}/auth/login-interno`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ correo, password }),
@@ -95,7 +96,7 @@ export async function loginInterno(correo, password) {
 }
 
 export async function googleLogin(idToken) {
-  const res = await fetch(`${API_BASE}/auth/google`, {
+  const res = await fetchConLimite(`${API_BASE}/auth/google`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken }),
@@ -106,7 +107,7 @@ export async function googleLogin(idToken) {
 }
 
 export async function register(data) {
-  const res = await fetch(`${API_BASE}/auth/register`, {
+  const res = await fetchConLimite(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -128,7 +129,7 @@ export async function refreshToken() {
     throw new Error("No hay sesión");
   }
 
-  const res = await fetch(`${API_BASE}/auth/refresh`, {
+  const res = await fetchConLimite(`${API_BASE}/auth/refresh`, {
     method: "POST",
     headers: refresh
       ? { "Content-Type": "application/json" }
@@ -151,7 +152,7 @@ export async function refreshToken() {
 export async function logout() {
   const token = getToken();
   try {
-    await fetch(`${API_BASE}/auth/logout`, {
+    await fetchConLimite(`${API_BASE}/auth/logout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

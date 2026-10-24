@@ -1,4 +1,5 @@
 import { apiFetch } from "./http";
+import { fetchConLimite } from "./conexion";
 const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/cotizaciones`;
 
 // Cotizaciones del marketplace. Las funciones *Publica usan el token del correo:
@@ -50,14 +51,14 @@ export function responderCotizacion(token, cotizacionId, accion, motivo) {
 // ─── Enlace del correo (sin sesión) ────────────────────────────────────────
 
 export async function consultarCotizacionPublica(tokenEnlace) {
-  const res = await fetch(`${BASE}/publica/consultar`, {
+  const res = await fetchConLimite(`${BASE}/publica/consultar`, {
     method: "POST", headers: headers(null), body: JSON.stringify({ token: tokenEnlace }),
   });
   return handle(res, "Enlace no válido o vencido");
 }
 
 export async function responderCotizacionPublica(tokenEnlace, accion, motivo) {
-  const res = await fetch(`${BASE}/publica/responder`, {
+  const res = await fetchConLimite(`${BASE}/publica/responder`, {
     method: "POST", headers: headers(null), body: JSON.stringify({ token: tokenEnlace, accion, motivo }),
   });
   return handle(res, "No se pudo enviar tu respuesta");

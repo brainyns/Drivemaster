@@ -4,6 +4,7 @@ import Logo from "../components/Logo";
 import Campo from "../components/ui/Campo";
 import CampoClave from "../components/ui/CampoClave";
 import Alerta from "../components/ui/Alerta";
+import { MENSAJE_SIN_CONEXION } from "../services/conexion";
 import "../css/Login.css";
 
 const CORREO_VALIDO = /^\S+@\S+\.\S+$/;
@@ -212,7 +213,8 @@ export default function Login({
               />
             </Campo>
 
-            {error && <Alerta>{error}</Alerta>}
+            {/* Sin conexión (servidor dormido o sin red): se puede reintentar sin volver a escribir */}
+            {error && <Alerta onReintentar={error === MENSAJE_SIN_CONEXION ? () => handleSubmit({ preventDefault() {} }) : undefined} reintentando={loading}>{error}</Alerta>}
 
             <button type="submit" className="ui-btn ui-btn--primario ui-btn--grande ui-btn--bloque auth-enviar"
               disabled={loading} aria-busy={loading}>

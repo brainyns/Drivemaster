@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { loginInterno } from "../services/authService";
 import Logo from "../components/Logo";
+import Alerta from "../components/ui/Alerta";
+import { MENSAJE_SIN_CONEXION } from "../services/conexion";
 import "../css/Login.css";
 import Icon from "../components/public/Icon";
 
@@ -58,7 +60,7 @@ export default function AdminLogin({ onLogin, onVolver }) {
             </div>
           </label>
 
-          {error && <p className="auth-error">{error}</p>}
+          {error && <Alerta onReintentar={error === MENSAJE_SIN_CONEXION ? () => handleSubmit({ preventDefault() {} }) : undefined} reintentando={loading}>{error}</Alerta>}
 
           <button type="submit" disabled={loading}>
             {loading ? "Ingresando..." : "Entrar"}
