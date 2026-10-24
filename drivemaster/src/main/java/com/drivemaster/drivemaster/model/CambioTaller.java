@@ -2,7 +2,6 @@ package com.drivemaster.drivemaster.model;
 
 import lombok.*;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -22,7 +21,7 @@ public class CambioTaller {
     @Id
     private String id;
 
-    @Indexed
+    // Indexado por IndicesMongo (la creación automática de índices está apagada)
     private String tallerId;
 
     private String campo;

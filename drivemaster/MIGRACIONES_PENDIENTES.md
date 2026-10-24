@@ -149,3 +149,31 @@ con el primer `PUT /api/talleres/{id}/horario`. No hay datos que mover a mano.
 ```js
 db.talleres.updateMany({}, { $unset: { horario: "" } })
 ```
+
+## Índices de MongoDB e índice único de `usuarios.correo`
+
+Los crea `config/IndicesMongo.java` en cada arranque (`ensureIndex` no hace nada si ya existen). La creación
+automática de Spring Data (`spring.data.mongodb.auto-index-creation`) sigue apagada a propósito: con ella, un índice
+que no se puede crear (por ejemplo, el único con correos repetidos) detiene el arranque; aquí solo deja un aviso.
+
+- `ordenes_servicio`: `taller_flujo_fecha`, `usuario_flujo_fecha`, `taller_cita`, `vehiculo_estado`, `flujo_estado`.
+- `horarios_taller` y `cambios_taller`: `taller`.
+- `usuarios`: `correo_unico` (único y parcial: solo los documentos con `correo` de tipo texto).
+
+**Si el log dice "No se creó el índice único de usuarios.correo: hay N correos repetidos"**, el índice no existe hasta
+resolverlos. Los correos salen enmascarados en el log; para verlos completos:
+
+```js
+db.usuarios.aggregate([
+  { $match: { correo: { $type: "string" } } },
+  { $group: { _id: "$correo", n: { $sum: 1 }, ids: { $push: "$_id" }, roles: { $push: "$rol" } } },
+  { $match: { n: { $gt: 1 } } }
+])
+```
+
+Por cada correo, decide cuál cuenta se queda (la que tiene órdenes, vehículos o negocio asociado) y cambia el correo
+de las otras o bórralas (con respaldo previo, como en la sección de compras). Al reiniciar, el índice se crea solo.
+
+El índice distingue mayúsculas: el registro solo quita espacios, no pasa el correo a minúsculas. Si el log avisa de
+correos que "solo se diferencian en mayúsculas", son cuentas distintas para el sistema; conviene unificarlas y,
+más adelante, normalizar el correo a minúsculas al registrarse e iniciar sesión.
