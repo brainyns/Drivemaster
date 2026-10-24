@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -109,6 +110,39 @@ class HorarioTallerServiceTest {
         a.setEstadoAprobacion(EstadoAprobacion.PENDIENTE);
         var e = assertThrows(ResponseStatusException.class, () -> servicio.reemplazar("A", "a@demo.com", List.of()));
         assertEquals(403, estado(e));
+    }
+
+    private static HorarioTaller fila(DiaSemana dia, String desde, String hasta, int orden) {
+        return HorarioTaller.builder().tallerId("A").diaSemana(dia).abierto(true)
+                .horaApertura(LocalTime.parse(desde)).horaCierre(LocalTime.parse(hasta)).orden(orden).build();
+    }
+
+    @Test
+    void laCitaSoloEnDiasAbiertosYDentroDeSusFranjas() {
+        when(horarios.findByTallerId("A")).thenReturn(List.of(
+                fila(DiaSemana.LUNES, "08:00", "12:00", 0), fila(DiaSemana.LUNES, "14:00", "18:00", 1),
+                HorarioTaller.builder().tallerId("A").diaSemana(DiaSemana.DOMINGO).abierto(false).build()));
+        // 2026-10-26 es lunes; 2026-10-25, domingo
+        servicio.validarCita("A", LocalDateTime.of(2026, 10, 26, 8, 0));
+        servicio.validarCita("A", LocalDateTime.of(2026, 10, 26, 17, 30));
+
+        var e = assertThrows(ResponseStatusException.class, () -> servicio.validarCita("A", LocalDateTime.of(2026, 10, 26, 12, 30)));
+        assertEquals(400, estado(e));
+        assertEquals("La revisión a las 12:30 p. m. queda fuera de tu horario del lunes (8:00 a. m.–12:00 p. m. y 2:00 p. m.–6:00 p. m.)",
+                e.getReason());
+        assertThrows(ResponseStatusException.class, () -> servicio.validarCita("A", LocalDateTime.of(2026, 10, 26, 18, 0)),
+                "la hora de cierre ya no recibe citas");
+
+        e = assertThrows(ResponseStatusException.class, () -> servicio.validarCita("A", LocalDateTime.of(2026, 10, 25, 10, 0)));
+        assertEquals("Tu taller está cerrado los domingos. Elige otro día para la revisión", e.getReason());
+        e = assertThrows(ResponseStatusException.class, () -> servicio.validarCita("A", LocalDateTime.of(2026, 10, 27, 10, 0)));
+        assertEquals("Tu taller está cerrado los martes. Elige otro día para la revisión", e.getReason());
+    }
+
+    @Test
+    void sinHorarioConfiguradoLaCitaNoSeRestringe() {
+        when(horarios.findByTallerId("A")).thenReturn(List.of());
+        servicio.validarCita("A", LocalDateTime.of(2026, 10, 25, 23, 0));
     }
 
     @Test

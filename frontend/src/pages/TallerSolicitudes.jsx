@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken } from "../services/authService";
 import { listarMecanicos, miTaller } from "../services/tallerService";
+import { obtenerHorario } from "../services/horarioService";
 import {
   bandejaSolicitudesTaller, aceptarSolicitudServicio, rechazarSolicitudServicio, asignarMecanicoSolicitud,
   iniciarInstalacion, marcarEnPruebas, marcarLista, marcarEntregada,
@@ -15,6 +16,7 @@ import {
   ESTADOS, ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
 import { tiempoRelativo } from "./taller/resumenTaller";
+import { errorDiaCita, hora12, horasDeCita, semanaDesdeFranjas } from "./taller/horarioTaller";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
@@ -200,7 +202,11 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
   // Desde Inicio se abre directamente una solicitud (abrirInicial); su "Volver" regresa allá (onVolver)
   const [seleccionadaId, setSeleccionadaId] = useState(abrirInicial);
 
-  const [fechaRevision, setFechaRevision] = useState("");
+  // La cita se elige en dos partes: el día y una hora dentro del horario del taller ("YYYY-MM-DD" y "HH:mm")
+  const [fechaCita, setFechaCita] = useState("");
+  const [horaCita, setHoraCita] = useState("");
+  // Horario por días del taller; null si aún no lo configura (entonces cualquier día y hora)
+  const [semanaHorario, setSemanaHorario] = useState(null);
   const [mecanicoAceptar, setMecanicoAceptar] = useState("");
   const [rechazando, setRechazando] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -220,6 +226,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
       setSolicitudes(bandeja || []);
       setMecanicos(mecs || []);
       setTarifaHora(taller?.tarifaHora || null);
+      setSemanaHorario(taller?.id ? semanaDesdeFranjas(await obtenerHorario(token, taller.id).catch(() => [])) : null);
       setError(null);
     } catch (e) {
       setError(e.message);
@@ -265,7 +272,8 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
     alInicio();
     setSeleccionadaId(s.id);
     setErrorFecha(null);
-    setFechaRevision("");
+    setFechaCita("");
+    setHoraCita("");
     setMecanicoAceptar(s.mecanicoId || "");
     setRechazando(false);
     setMotivo("");
@@ -290,15 +298,19 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
     }
   };
 
+  const errorDia = errorDiaCita(semanaHorario, fechaCita);
+  const horasCita = fechaCita && !errorDia ? horasDeCita(semanaHorario, fechaCita) : [];
+
   const aceptar = () => {
-    if (!fechaRevision) {
-      setErrorFecha("Elige la fecha y la hora de la revisión.");
-      document.getElementById("ss-fecha-revision")?.focus();
+    const problema = !fechaCita ? "Elige el día de la revisión." : errorDia || (!horaCita ? "Elige la hora de la revisión." : null);
+    if (problema) {
+      setErrorFecha(problema);
+      document.getElementById(fechaCita && !errorDia ? "ss-hora-revision" : "ss-fecha-revision")?.focus();
       return;
     }
     ejecutar(async () => {
       reemplazar(await aceptarSolicitudServicio(token, seleccionada.id, {
-        fechaRevision, mecanicoId: mecanicoAceptar || null,
+        fechaRevision: `${fechaCita}T${horaCita}`, mecanicoId: mecanicoAceptar || null,
       }));
     });
   };
@@ -418,9 +430,17 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
                 {!rechazando ? (
                   <>
                     <div className="st-form">
-                      <Campo id="ss-fecha-revision" label="Fecha y hora de la revisión" error={errorFecha}>
-                        <input className="ui-field__input" type="datetime-local" min={ahoraParaInput()} value={fechaRevision}
-                          onChange={(e) => { setFechaRevision(e.target.value); setErrorFecha(null); }} />
+                      <Campo id="ss-fecha-revision" label="Día de la revisión" error={errorDia || (!fechaCita && errorFecha)}
+                        ayuda={semanaHorario ? "Solo los días que abre tu taller." : "Configura tu horario en Mi taller para limitar los días y las horas."}>
+                        <input className="ui-field__input" type="date" min={ahoraParaInput().slice(0, 10)} value={fechaCita}
+                          onChange={(e) => { setFechaCita(e.target.value); setHoraCita(""); setErrorFecha(null); }} />
+                      </Campo>
+                      <Campo id="ss-hora-revision" label="Hora" error={fechaCita && !errorDia && !horaCita ? errorFecha : null}>
+                        <select className="ui-field__input" value={horaCita} disabled={!horasCita.length}
+                          onChange={(e) => { setHoraCita(e.target.value); setErrorFecha(null); }}>
+                          <option value="">{fechaCita ? "Elige la hora" : "Primero elige el día"}</option>
+                          {horasCita.map((h) => <option key={h} value={h}>{hora12(h)}</option>)}
+                        </select>
                       </Campo>
                       <Campo id="ss-mecanico-aceptar" label="Mecánico" opcional
                         ayuda={mecanicosActivos.length === 0 ? "Aún no tienes mecánicos activos: agrégalos en Mi taller." : undefined}>

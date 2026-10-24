@@ -90,7 +90,8 @@ test("Solicitudes y Trabajos: filtros con chips, búsqueda con etiqueta y estado
 test("Detalle de solicitud: título h1, volver, error de la cita en su campo y barra inferior", () => {
   const pagina = leer("../src/pages/TallerSolicitudes.jsx");
   assert.ok(pagina.includes("<EncabezadoPagina titulo={s.vehiculoDescripcion} onVolver={cerrarDetalle}"), "cabecera con volver");
-  assert.ok(pagina.includes('<Campo id="ss-fecha-revision" label="Fecha y hora de la revisión" error={errorFecha}>'));
+  assert.ok(pagina.includes('<Campo id="ss-fecha-revision" label="Día de la revisión" error={errorDia || (!fechaCita && errorFecha)}'));
+  assert.ok(pagina.includes('<Campo id="ss-hora-revision" label="Hora" error={fechaCita && !errorDia && !horaCita ? errorFecha : null}>'));
   assert.ok(pagina.includes("<BarraAccionMovil etiqueta={barra.etiqueta}"), "acción principal en la barra del celular");
   assert.ok(!pagina.includes("← "), "volver sin flecha de texto");
   assert.ok(pagina.includes("aceptarSolicitudServicio(token, seleccionada.id, {"), "misma llamada para aceptar");
@@ -260,4 +261,25 @@ test("Agenda: rejilla del mes de lunes a domingo, semana del celular y citas agr
   assert.ok(leer("../src/App.jsx").includes('"taller-agenda":      "agenda"'));
   const agenda = leer("../src/pages/taller/TallerAgenda.jsx");
   assert.ok(agenda.includes('volverA: "taller-agenda"') && agenda.includes("(max-width: 767px)"));
+});
+
+test("Cita de revisión: solo días abiertos y horas dentro de las franjas (la hora de cierre no cuenta)", async () => {
+  const h = await import("../src/pages/taller/horarioTaller.js");
+  const semana = h.semanaPorDefecto(); // L-V 8–12 y 2–6, sábado 8–1, domingo cerrado
+  const antes = new Date(2026, 0, 1, 9, 0);
+  const lunes = h.horasDeCita(semana, "2026-10-26", antes);
+  assert.equal(lunes[0], "08:00");
+  assert.ok(lunes.includes("11:30") && !lunes.includes("12:00") && !lunes.includes("13:30") && lunes.includes("14:00"));
+  assert.equal(lunes.at(-1), "17:30", "a las 6:00 p. m. ya cerró");
+  assert.equal(h.errorDiaCita(semana, "2026-10-25", antes), "Tu taller está cerrado los domingos. Elige otro día.");
+  assert.equal(h.errorDiaCita(semana, "2026-10-31", antes), null, "el sábado abre");
+
+  const hoyTarde = new Date(2026, 9, 26, 17, 45);
+  assert.deepEqual(h.horasDeCita(semana, "2026-10-26", hoyTarde), [], "hoy, solo las horas que no han pasado");
+  assert.match(h.errorDiaCita(semana, "2026-10-26", hoyTarde), /Ya no quedan horas/);
+  assert.equal(h.horasDeCita(null, "2026-10-25", antes).length, 48, "sin horario configurado, cualquier hora");
+
+  const p = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(!p.includes('type="datetime-local"'), "ya no se escribe cualquier fecha y hora");
+  assert.ok(p.includes("fechaRevision: `${fechaCita}T${horaCita}`"));
 });

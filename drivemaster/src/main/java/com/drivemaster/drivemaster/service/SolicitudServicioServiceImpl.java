@@ -69,6 +69,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private final BuscadorRepuestosService buscador;
     private final LiquidacionService liquidacion;
     private final CalificacionTallerService calificaciones;
+    private final HorarioTallerService horarios;
 
     public SolicitudServicioServiceImpl(OrdenServicioRepository ordenRepository,
                                         TallerRepository tallerRepository,
@@ -83,7 +84,9 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                                         ProductoService productoService,
                                         BuscadorRepuestosService buscador,
                                         LiquidacionService liquidacion,
-                                        CalificacionTallerService calificaciones) {
+                                        CalificacionTallerService calificaciones,
+                                        HorarioTallerService horarios) {
+        this.horarios = horarios;
         this.calificaciones = calificaciones;
         this.liquidacion = liquidacion;
         this.productoService = productoService;
@@ -285,6 +288,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         if (!r.getFechaRevision().isAfter(ahora)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de revisión debe ser futura");
         }
+        // Solo en un día y una hora en que el taller atiende (si ya configuró su horario por días)
+        horarios.validarCita(taller.getId(), r.getFechaRevision());
         Mecanico mecanico = mecanicoActivo(taller, r.getMecanicoId());
 
         boolean pagoRequerido = parametros.pagoDiagnosticoRequerido();

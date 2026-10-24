@@ -120,3 +120,26 @@ export function horasParaCita(semana, fecha) {
   return OPCIONES_HORA.map((o) => o.valor)
     .filter((h) => d.franjas.some((f) => aMinutos(h) >= aMinutos(f.apertura) && aMinutos(h) < aMinutos(f.cierre)));
 }
+
+/** Las horas para citar en un día ("YYYY-MM-DD"); si es hoy, solo las que aún no pasan. */
+export function horasDeCita(semana, clave, ahora = new Date()) {
+  const [a, m, d] = clave.split("-").map(Number);
+  const fecha = new Date(a, m - 1, d);
+  const horas = horasParaCita(semana, fecha);
+  if (fecha.toDateString() !== ahora.toDateString()) return horas;
+  const minutos = ahora.getHours() * 60 + ahora.getMinutes();
+  return horas.filter((h) => aMinutos(h) > minutos);
+}
+
+/** Por qué no se puede citar ese día, o null si se puede. */
+export function errorDiaCita(semana, clave, ahora = new Date()) {
+  if (!clave) return null;
+  const [a, m, d] = clave.split("-").map(Number);
+  const fecha = new Date(a, m - 1, d);
+  if (!abreEseDia(semana, fecha)) {
+    const nombre = diaDeFecha(semana, fecha) && DIAS[(fecha.getDay() + 6) % 7].nombre.toLowerCase();
+    return `Tu taller está cerrado los ${nombre.endsWith("s") ? nombre : `${nombre}s`}. Elige otro día.`;
+  }
+  if (!horasDeCita(semana, clave, ahora).length) return "Ya no quedan horas de atención ese día. Elige otro.";
+  return null;
+}

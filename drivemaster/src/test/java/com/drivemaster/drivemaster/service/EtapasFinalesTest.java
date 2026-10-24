@@ -56,7 +56,8 @@ class EtapasFinalesTest {
         service = new SolicitudServicioServiceImpl(ordenRepository, mock(TallerRepository.class), vehiculoService,
                 usuarioService, tallerService, mock(CloudinaryService.class), new TransicionOrdenService(mongoTemplate),
                 mock(AsignacionTallerService.class), mock(ParametrosMarketplace.class), avisos,
-                mock(ProductoService.class), mock(BuscadorRepuestosService.class), liquidacion, calificaciones);
+                mock(ProductoService.class), mock(BuscadorRepuestosService.class), liquidacion, calificaciones,
+                mock(HorarioTallerService.class));
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).tallerId("t1").usuarioId("u1")
                 .vehiculoId("v1").mecanicoNombre("Carlos").eventos(new ArrayList<>()).build();

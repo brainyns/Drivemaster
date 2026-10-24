@@ -111,6 +111,29 @@ public class HorarioTallerService {
     }
 
     /**
+     * Rechaza con 400 una cita de revisión fuera del horario del taller: un día que cierra o una hora fuera de sus
+     * franjas (la hora de cierre ya no cuenta). Si el taller aún no configura su horario por días, no restringe.
+     */
+    public void validarCita(String tallerId, LocalDateTime fecha) {
+        List<HorarioTaller> franjas = franjasDe(tallerId);
+        if (franjas.isEmpty()) return;
+        DiaSemana dia = DiaSemana.de(fecha.getDayOfWeek());
+        List<HorarioTaller> delDia = franjas.stream().filter(f -> f.getDiaSemana() == dia && f.isAbierto()).toList();
+        String nombreDia = nombre(dia).toLowerCase();
+        if (delDia.isEmpty()) {
+            throw invalido("Tu taller está cerrado los " + (nombreDia.endsWith("s") ? nombreDia : nombreDia + "s")
+                    + ". Elige otro día para la revisión");
+        }
+        LocalTime hora = fecha.toLocalTime();
+        boolean dentro = delDia.stream()
+                .anyMatch(f -> !hora.isBefore(f.getHoraApertura()) && hora.isBefore(f.getHoraCierre()));
+        if (!dentro) {
+            throw invalido("La revisión a las " + hora12(hora) + " queda fuera de tu horario del " + nombreDia
+                    + " (" + textoFranjas(delDia) + ")");
+        }
+    }
+
+    /**
      * Valida el cuerpo y lo agrupa por día (lista vacía = cerrado), cada día con sus franjas de la más temprana a la
      * más tarde. Rechaza con 400 y un mensaje que nombra el día.
      */
