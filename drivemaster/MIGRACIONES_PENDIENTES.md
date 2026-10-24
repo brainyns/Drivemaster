@@ -177,7 +177,7 @@ de las otras o bórralas (con respaldo previo, como en la sección de compras). 
 El índice distingue mayúsculas. Si el log avisa de correos que "solo se diferencian en mayúsculas", son cuentas
 distintas para el sistema: hay que unificarlas a mano antes de la migración de la sección siguiente.
 
-## Correos en minúsculas (`usuarios.correo`, pendiente)
+## Correos en minúsculas (`usuarios.correo`, aplicada el 24 de octubre de 2026)
 
 Desde el cambio de la tarjeta Contacto, el registro (cliente, taller, tienda, alta por el SUPERADMIN y Google), el
 inicio de sesión y el cambio de correo guardan y buscan el correo **sin espacios y en minúsculas**
@@ -185,9 +185,11 @@ inicio de sesión y el cambio de correo guardan y buscan el correo **sin espacio
 encontrando: `UsuarioServiceImpl.buscarPorCorreo` busca primero el valor exacto y, si no lo encuentra, compara sin
 mayúsculas. Si hay dos cuentas que solo se diferencian en mayúsculas, no elige ninguna.
 
-**Estado al 24 de octubre de 2026:** 1 de 43 usuarios tiene mayúsculas en el correo (rol TALLER), ninguno tiene
-espacios, y al pasarlos a minúsculas no chocaría con otra cuenta. Al arrancar, `IndicesMongo` escribe en el log cuántos
-quedan ("Hay N usuarios con el correo guardado con mayúsculas o espacios").
+**Aplicada el 24 de octubre de 2026** con los pasos de abajo: había 1 de 43 usuarios con mayúsculas (rol TALLER), sin
+choques; `updateMany` modificó 1 usuario y 0 tiendas, y la verificación quedó en 0 en `usuarios.correo` y en
+`tiendas.correoContacto`. El respaldo previo (`usuarios` y `tiendas`) quedó fuera del repositorio, en
+`Downloads/respaldo-correos-2026-10-24`. Si vuelve a aparecer alguno, al arrancar `IndicesMongo` escribe en el log
+cuántos hay ("Hay N usuarios con el correo guardado con mayúsculas o espacios") y estos pasos sirven igual.
 
 ### Cómo migrarlos
 
