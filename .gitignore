@@ -21,3 +21,8 @@ replay_pid*.log
 
 # Volcado local del classpath de Maven (rutas de un equipo concreto; no es parte del proyecto)
 drivemaster/cp_new.txt
+
+# Herramientas de asistentes de IA para diseño (se usan en local, no son parte de la app)
+.agents/
+.gemini/
+skills-lock.json
