@@ -188,3 +188,16 @@ test("Logo del taller: mismas reglas que el backend e iniciales de respaldo en t
   assert.ok(leer("../src/pages/taller/TallerMiTaller.jsx").includes("subirLogoTaller(token, archivo)"));
   assert.equal((leer("../src/components/mapa/MapaTalleres.jsx").match(/<LogoNegocio/g) || []).length, 2, "lista y popup");
 });
+
+test("Solicitudes: estado vacío neutro y compacto, contador en todas las pestañas y enlace a lo que falta cotizar", () => {
+  const p = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(!p.includes('icono: "message"'), "sin el globo de chat (parecido al de WhatsApp)");
+  assert.ok(p.includes('icono: "inbox"'));
+  assert.ok(p.includes('<span className="ui-chip__contador">{conteo[f.key]}</span>'), "el contador sale también en 0");
+  assert.ok(p.includes("compacto>") && p.includes("conteo.diagnosticadas > 0"), "el enlace sale solo si hay algo por cotizar");
+  assert.ok(leer("../src/css/ui.css").includes(".ui-vacio--compacto"));
+
+  const menu = leer("../src/components/Sidebar.jsx");
+  assert.match(menu, /label: "Solicitudes", icon: "bandeja"/);
+  assert.match(menu, /label: "Mi taller",\s+icon: "garaje"/);
+});

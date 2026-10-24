@@ -486,6 +486,10 @@
   color: var(--ui-muted);
 }
 
+/* Compacto: deja ver lo que sigue debajo en vez de ocupar la pantalla */
+.ui-vacio--compacto { padding: 28px 20px; }
+.ui-vacio--compacto .ui-vacio__icono { width: 48px; height: 48px; margin-bottom: 2px; }
+
 .ui-vacio__acciones {
   display: flex;
   flex-wrap: wrap;

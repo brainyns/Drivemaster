@@ -14,6 +14,12 @@ const PATHS = {
     </>
   ),
   check: <path d="m5 12 4 4L19 6" />,
+  inbox: (
+    <>
+      <path d="M5.5 5h13L21 13v6H3v-6z" />
+      <path d="M3 13h5l1.5 3h5L16 13h5" />
+    </>
+  ),
   shield: (
     <>
       <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z" />

@@ -58,7 +58,7 @@ const TEXTOS = {
     titulo: "Solicitudes",
     descripcion: "Diagnósticos que te asignan: respóndelos, agenda la revisión y registra lo que encuentres.",
     volver: "Solicitudes",
-    icono: "message",
+    icono: "inbox",
     vacio: {
       responder: ["Estás al día", "No tienes solicitudes nuevas. Te avisaremos por correo cuando llegue una."],
       agendadas: ["Sin revisiones agendadas", "Al aceptar una solicitud eliges la fecha y la hora de la revisión."],
@@ -676,7 +676,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
           {FILTROS.map((f) => (
             <button key={f.key} type="button" className="ui-chip" aria-pressed={filtro === f.key} onClick={() => setFiltro(f.key)}>
               {f.label}
-              {conteo[f.key] > 0 && <span className="ui-chip__contador">{conteo[f.key]}</span>}
+              <span className="ui-chip__contador">{conteo[f.key]}</span>
             </button>
           ))}
         </div>
@@ -701,7 +701,15 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
             <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setBusqueda("")}>Limpiar búsqueda</button>
           </EstadoVacio>
         ) : (
-          <EstadoVacio icono={textos.icono} titulo={tituloVacio} texto={textoVacio} />
+          <EstadoVacio icono={textos.icono} titulo={tituloVacio} texto={textoVacio} compacto>
+            {/* Sin nada por responder, lo siguiente que pide trabajo son los diagnósticos por cotizar */}
+            {modo === "solicitudes" && filtro === "responder" && conteo.diagnosticadas > 0 && (
+              <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setFiltro("diagnosticadas")}>
+                Tienes {conteo.diagnosticadas} {conteo.diagnosticadas === 1 ? "diagnóstico" : "diagnósticos"} por cotizar
+                · Ir a cotizar <Icon name="arrow" size={16} />
+              </button>
+            )}
+          </EstadoVacio>
         )
       ) : modo === "trabajos" ? (
         <ul className="st-lista">{visibles.map(tarjetaTrabajo)}</ul>
