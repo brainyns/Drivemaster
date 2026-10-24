@@ -94,7 +94,7 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
       {/* ── Historial ────────────────────────────────────── */}
       <h2 className="sv-section-title">Historial de servicios</h2>
       {historial.length === 0 ? (
-        <p className="sv-empty">Este vehículo aún no tiene servicios finalizados.</p>
+        <p className="sv-empty">Este vehículo aún no tiene servicios terminados. Aparecen aquí cuando el taller lo entrega.</p>
       ) : (
         <div className="sv-list">
           {historial.map(h => (
@@ -102,8 +102,13 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
               <div>
                 <h3 style={{ margin: 0 }}>{h.productoNombre}</h3>
                 <span className="sv-card-meta">
-                  Taller {h.tallerNombre} · {h.fechaFinalizacion ? new Date(h.fechaFinalizacion).toLocaleDateString("es-CO") : ""}
+                  Taller {h.tallerNombre}{h.fechaFinalizacion ? ` · ${new Date(h.fechaFinalizacion).toLocaleDateString("es-CO")}` : ""}
                 </span>
+                {/* Marketplace: los repuestos de la cotización; en el flujo anterior el repuesto es el título */}
+                {h.repuestos?.length > 0 && (
+                  <div className="sv-card-meta">Repuestos: {h.repuestos.join(", ")}</div>
+                )}
+                {h.flujo === "MARKETPLACE" && !h.repuestos?.length && <div className="sv-card-meta">Solo mano de obra</div>}
                 {h.observaciones && <div className="sv-card-meta">"{h.observaciones}"</div>}
               </div>
               <strong>{formatPrecio(h.total)}</strong>

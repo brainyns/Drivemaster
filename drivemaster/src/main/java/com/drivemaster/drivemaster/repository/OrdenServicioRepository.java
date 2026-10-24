@@ -18,6 +18,8 @@ public interface OrdenServicioRepository extends MongoRepository<OrdenServicio, 
 
     List<OrdenServicio> findByVehiculoIdAndEstadoOrderByFechaFinalizacionDesc(String vehiculoId, String estado);
 
+    List<OrdenServicio> findByVehiculoIdAndEstadoIn(String vehiculoId, Collection<String> estados);
+
     // ─── Marketplace (flujo = MARKETPLACE) ───
 
     List<OrdenServicio> findByFlujoAndUsuarioIdOrderByFechaCreacionDesc(String flujo, String usuarioId);
