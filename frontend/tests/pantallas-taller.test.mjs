@@ -43,7 +43,7 @@ test("Mi taller edita por sección y solo con los endpoints que ya existen", () 
     assert.ok(pagina.includes(`id="${seccion}"`), `existe la sección ${seccion}`);
   }
   assert.ok(pagina.includes("actualizarDatosTaller(token, { tarifaHora: Number(tarifa) })"), "la tarifa viaja sola");
-  assert.ok(pagina.includes("actualizarDatosTaller(token, { horario })"), "el horario viaja solo");
+  assert.ok(pagina.includes("guardarHorario(token, taller.id, franjasDesdeSemana(semana))"), "el horario viaja completo, por días");
   assert.ok(pagina.includes("<SelectorUbicacion"), "usa el selector de mapa existente");
   assert.ok(pagina.includes("<Calificacion rating={taller.rating} calificaciones={taller.calificaciones} />"),
     "la calificación real del DTO (promedio y cantidad)");
@@ -200,4 +200,32 @@ test("Solicitudes: estado vacío neutro y compacto, contador en todas las pesta�
   const menu = leer("../src/components/Sidebar.jsx");
   assert.match(menu, /label: "Solicitudes", icon: "bandeja"/);
   assert.match(menu, /label: "Mi taller",\s+icon: "garaje"/);
+});
+
+test("Horario por días: mismas reglas que el backend, 12 h cada 30 min, copiar el lunes y el cuerpo del PUT", async () => {
+  const h = await import("../src/pages/taller/horarioTaller.js");
+  assert.equal(h.OPCIONES_HORA.length, 48);
+  assert.deepEqual(h.OPCIONES_HORA[0], { valor: "00:00", texto: "12:00 a. m." });
+  assert.equal(h.hora12("14:30"), "2:30 p. m.");
+  assert.equal(h.hora12("12:00"), "12:00 p. m.");
+
+  const dia = (franjas, abierto = true) => ({ dia: "LUNES", abierto, franjas });
+  assert.equal(h.errorDia(dia([{ apertura: "08:00", cierre: "12:00" }, { apertura: "12:00", cierre: "18:00" }])), null);
+  assert.match(h.errorDia(dia([{ apertura: "18:00", cierre: "08:00" }])), /cierre debe ser después/);
+  assert.match(h.errorDia(dia([{ apertura: "08:00", cierre: "13:00" }, { apertura: "12:00", cierre: "18:00" }])), /se cruzan/);
+  assert.equal(h.errorDia(dia([], false)), null, "un día cerrado no tiene nada que validar");
+
+  const semana = h.semanaPorDefecto().map((d) => (d.dia === "LUNES" ? { ...d, franjas: [{ apertura: "07:00", cierre: "17:00" }] } : d));
+  const copiada = h.copiarLunesAHabiles(semana);
+  assert.ok(["MARTES", "MIERCOLES", "JUEVES", "VIERNES"].every((c) => copiada.find((d) => d.dia === c).franjas[0].apertura === "07:00"));
+  assert.equal(copiada.find((d) => d.dia === "SABADO").franjas[0].cierre, "13:00", "el sábado no cambia");
+
+  const cuerpo = h.franjasDesdeSemana(copiada);
+  assert.deepEqual(cuerpo.find((f) => f.diaSemana === "DOMINGO"), { diaSemana: "DOMINGO", abierto: false, horaApertura: null, horaCierre: null, orden: 0 });
+  assert.deepEqual(h.semanaDesdeFranjas(cuerpo), copiada, "ida y vuelta sin perder nada");
+  assert.equal(h.semanaDesdeFranjas([]), null, "sin horario configurado");
+
+  const p = leer("../src/pages/taller/TallerMiTaller.jsx");
+  assert.ok(!p.includes("<textarea"), "el horario ya no es texto libre");
+  assert.ok(p.includes("Copiar lunes a todos los días hábiles") && p.includes('textoGuardar="Guardar horario"'));
 });

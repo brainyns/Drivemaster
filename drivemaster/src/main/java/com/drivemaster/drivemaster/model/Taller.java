@@ -44,7 +44,15 @@ public class Taller {
     // Valor de la hora de mano de obra, para cotizar por horas además de por ítem.
     private Double tarifaHora;
 
-    // Horario de atención en texto libre (ej. "L-V 8:00-18:00, S 8:00-13:00").
+    /**
+     * Horario de atención en texto (ej. "Lun a Vie 8:00 a. m.–6:00 p. m.; Sáb 8:00 a. m.–1:00 p. m.").
+     *
+     * @deprecated El horario de verdad es la colección horarios_taller (HorarioTaller). Este texto lo regenera
+     * HorarioTallerService al guardar el horario estructurado y lo sigue leyendo el cliente (mapa y lista de talleres).
+     * Los talleres que no han configurado el horario estructurado conservan aquí el texto libre que escribieron.
+     * TODO: retirarlo cuando el cliente lea HorarioTaller y todos los talleres tengan su horario estructurado.
+     */
+    @Deprecated
     private String horario;
 
     // Logo o foto del local (URL de Cloudinary); lo sube el dueño desde Mi taller o el administrador.

@@ -142,6 +142,9 @@ public class SecurityConfig {
                         // El ADMIN solo ve la lista de talleres y los aprueba o rechaza; crear, editar y pausar es del SUPERADMIN
                         .requestMatchers(HttpMethod.PATCH, "/api/talleres/*/aprobacion").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/talleres").hasAnyRole("SUPERADMIN", "ADMIN")
+                        // Horario y citas de un taller: el dueño (solo el suyo, lo valida HorarioTallerService) y el personal lo consultan
+                        .requestMatchers(HttpMethod.GET, "/api/talleres/*/horario", "/api/talleres/*/citas").hasAnyRole("TALLER", "SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/talleres/*/horario").hasRole("TALLER")
                         .requestMatchers("/api/talleres", "/api/talleres/**").hasRole("SUPERADMIN")
 
                         // Marketplace: solicitudes de diagnóstico (el acceso a cada solicitud lo valida el servicio)

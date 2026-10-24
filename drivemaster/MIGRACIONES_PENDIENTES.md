@@ -132,3 +132,20 @@ Para deshacer, justo después de ejecutarla y antes de que entren datos nuevos:
 
 - No borra las imágenes de los productos en Cloudinary (quedan en la nube; se pueden limpiar a mano).
 - No toca los productos que no tienen tienda (el informe dice cuántos son); si existen, no aparecen en ningún catálogo.
+
+## Horario de atención estructurado (`horarios_taller`)
+
+El proyecto no usa Flyway ni Liquibase y los talleres viven en MongoDB: la colección `horarios_taller` se crea sola
+con el primer `PUT /api/talleres/{id}/horario`. No hay datos que mover a mano.
+
+- `talleres.horario` (texto libre) **queda deprecado pero no se borra**. Al guardar el horario estructurado se
+  reescribe con un resumen generado ("Lun a Vie 8:00 a. m.–6:00 p. m.; …"), porque el mapa y la lista que ve el
+  cliente siguen leyéndolo. Los talleres que aún no configuran el horario conservan su texto tal cual.
+- El texto libre no se convierte automáticamente en franjas: cada taller lo carga en Mi taller › Horario de atención.
+- Mientras un taller no tenga horario estructurado, la cita de revisión no se restringe por horario.
+- Pendiente (TODO en `Taller.java`): cuando el cliente lea `horarios_taller` y todos los talleres activos tengan su
+  horario, retirar el campo:
+
+```js
+db.talleres.updateMany({}, { $unset: { horario: "" } })
+```
