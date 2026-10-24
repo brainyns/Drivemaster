@@ -92,6 +92,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
                         .requestMatchers("/api/auth/google").permitAll()
                         .requestMatchers("/api/auth/login-interno").permitAll()
+                        // ¿Olvidaste tu contraseña? Sin sesión; limitado por IP y por correo (RecuperacionClaveService)
+                        .requestMatchers(HttpMethod.POST, "/api/auth/recuperar/solicitar", "/api/auth/recuperar/confirmar").permitAll()
                         .requestMatchers("/api/auth/logout").authenticated()
                         // Cambio del correo de la cuenta: solo talleres y tiendas, siempre sobre la cuenta de la sesión
                         .requestMatchers("/api/cuenta/correo", "/api/cuenta/correo/**").hasAnyRole("TALLER", "TIENDA")

@@ -153,6 +153,29 @@ export async function refreshToken() {
 }
 
 /**
+ * "¿Olvidaste tu contraseña?" (sin sesión). Paso 1: responde siempre el mismo mensaje, exista o no la cuenta.
+ * Devuelve { mensaje }.
+ */
+export async function solicitarRecuperacion(correo) {
+  const res = await fetchConLimite(`${API_BASE}/auth/recuperar/solicitar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo: normalizarCorreo(correo) }),
+  });
+  return handleResponse(res);
+}
+
+/** Paso 2: con el código cambia la contraseña; el backend cierra todas las sesiones de la cuenta. */
+export async function confirmarRecuperacion(correo, codigo, nuevaPassword) {
+  const res = await fetchConLimite(`${API_BASE}/auth/recuperar/confirmar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correo: normalizarCorreo(correo), codigo: String(codigo ?? "").replace(/s+/g, ""), nuevaPassword }),
+  });
+  return handleResponse(res);
+}
+
+/**
  * Cambio del correo de la cuenta (talleres y tiendas). Paso 1: con la contraseña actual, envía un código de 6
  * dígitos al correo nuevo. Devuelve { correoNuevo, vence, intentosRestantes }.
  */

@@ -186,3 +186,26 @@ test("Contacto: Mi taller y Mi tienda usan la misma tarjeta, sin mandar al admin
   assert.match(css, /@media \(max-width: 560px\) \{\s*\.ui-datos--contacto \{ grid-template-columns: minmax\(0, 1fr\); \}/,
     "en celular se apilan");
 });
+
+test("Recuperar contraseña: validación de los dos pasos con las reglas del registro", async () => {
+  const { erroresSolicitud, erroresConfirmacion } = await import("../src/pages/recuperarClave.js");
+  assert.match(erroresSolicitud("").correo, /correo de tu cuenta/);
+  assert.match(erroresSolicitud("ana@demo").correo, /nombre@dominio/);
+  assert.deepEqual(erroresSolicitud(" Ana@Demo.com "), {});
+  assert.deepEqual(erroresConfirmacion({ codigo: "123456", password: "nueva12", confirmar: "nueva12" }), {});
+  assert.deepEqual(Object.keys(erroresConfirmacion({ codigo: "12", password: "12345", confirmar: "x" })),
+    ["codigo", "password", "confirmar"], "en el orden del formulario");
+  assert.match(erroresConfirmacion({ codigo: "123456", password: "x".repeat(129), confirmar: "x".repeat(129) }).password, /Máximo 128/);
+});
+
+test("Recuperar contraseña: enlace en el login, sin sesión y sin revelar cuentas", () => {
+  const src = (r) => readFileSync(new URL(`../src/${r}`, import.meta.url), "utf8");
+  const login = src("pages/Login.jsx");
+  assert.ok(login.includes("¿Olvidaste tu contraseña?") && login.includes("<RecuperarClave"));
+  const pantalla = src("components/auth/RecuperarClave.jsx");
+  assert.ok(pantalla.includes('autoComplete="one-time-code"') && pantalla.includes('autoComplete="new-password"'));
+  assert.ok(pantalla.includes("setAviso(mensaje)"), "muestra el mensaje del backend, igual exista o no la cuenta");
+  const auth = src("services/authService.js");
+  assert.match(auth, /solicitarRecuperacion[\s\S]*?fetchConLimite\(`\$\{API_BASE\}\/auth\/recuperar\/solicitar`/, "no usa apiFetch: no hay sesión");
+  assert.match(auth, /confirmarRecuperacion[\s\S]*?\/auth\/recuperar\/confirmar/);
+});

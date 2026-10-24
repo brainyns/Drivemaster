@@ -4,6 +4,7 @@ import com.drivemaster.drivemaster.model.CambioCorreo;
 import com.drivemaster.drivemaster.model.CambioTaller;
 import com.drivemaster.drivemaster.model.HorarioTaller;
 import com.drivemaster.drivemaster.model.OrdenServicio;
+import com.drivemaster.drivemaster.model.RecuperacionClave;
 import com.drivemaster.drivemaster.model.Usuario;
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -29,7 +30,8 @@ import java.util.List;
  * - ordenes_servicio: bandeja y citas del taller, servicios del cliente, historial del vehículo y los vencimientos que
  *   revisa ReasignacionScheduler.
  * - horarios_taller y cambios_taller: todo se busca por tallerId.
- * - cambios_correo: por usuarioId, y un TTL en "vence" para que los códigos olvidados no se acumulen.
+ * - cambios_correo y recuperaciones_clave: por usuarioId o correo, y un TTL en "vence" para que los códigos
+ *   olvidados no se acumulen.
  * - usuarios.correo único: solo si no hay correos repetidos. Si los hay, no se crea y se listan en el log para
  *   resolverlos a mano (ver MIGRACIONES_PENDIENTES.md).
  */
@@ -74,6 +76,11 @@ public class IndicesMongo implements ApplicationRunner {
             IndexOperations pendientes = mongoTemplate.indexOps(CambioCorreo.class);
             pendientes.ensureIndex(new Index().on("usuarioId", Sort.Direction.ASC).named("usuario"));
             // TTL: MongoDB borra solo los cambios que vencieron sin confirmarse
+            pendientes.ensureIndex(new Index().on("vence", Sort.Direction.ASC).expire(0).named("vence_ttl"));
+        });
+        crear("recuperaciones_clave", () -> {
+            IndexOperations pendientes = mongoTemplate.indexOps(RecuperacionClave.class);
+            pendientes.ensureIndex(new Index().on("correo", Sort.Direction.ASC).named("correo"));
             pendientes.ensureIndex(new Index().on("vence", Sort.Direction.ASC).expire(0).named("vence_ttl"));
         });
         correoUnico();

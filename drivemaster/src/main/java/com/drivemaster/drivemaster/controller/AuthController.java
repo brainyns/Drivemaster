@@ -267,6 +267,10 @@ public class AuthController {
         if (Boolean.FALSE.equals(usuario.getActivo()) || Boolean.TRUE.equals(usuario.getBloqueado())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "La cuenta no está activa");
         }
+        // Tras recuperar la contraseña, los tokens anteriores no renuevan la sesión
+        if (jwtUtil.emitidoAntesDe(token, usuario.getSesionesDesde())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesión expirada, inicie sesión nuevamente");
+        }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         return ResponseEntity.ok(construirSesion(usuario, userDetails));

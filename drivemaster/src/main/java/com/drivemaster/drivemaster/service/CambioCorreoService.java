@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.HtmlUtils;
 
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -31,11 +30,10 @@ import java.time.Instant;
 @Service
 public class CambioCorreoService {
 
-    public static final Duration VIGENCIA = Duration.ofMinutes(15);
-    public static final int MAX_INTENTOS = 5;
+    public static final Duration VIGENCIA = CodigoVerificacion.VIGENCIA;
+    public static final int MAX_INTENTOS = CodigoVerificacion.MAX_INTENTOS;
 
     private static final Logger log = LoggerFactory.getLogger(CambioCorreoService.class);
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UsuarioService usuarioService;
     private final UsuarioRepository usuarioRepository;
@@ -44,11 +42,12 @@ public class CambioCorreoService {
     private final PasswordEncoder passwordEncoder;
     private final EmailsService emailsService;
     private final LimiteIntentos limiteIntentos;
+    private final CodigoVerificacion codigos;
 
     public CambioCorreoService(UsuarioService usuarioService, UsuarioRepository usuarioRepository,
                                CambioCorreoRepository cambios, TiendaRepository tiendaRepository,
                                PasswordEncoder passwordEncoder, EmailsService emailsService,
-                               LimiteIntentos limiteIntentos) {
+                               LimiteIntentos limiteIntentos, CodigoVerificacion codigos) {
         this.usuarioService = usuarioService;
         this.usuarioRepository = usuarioRepository;
         this.cambios = cambios;
@@ -56,6 +55,7 @@ public class CambioCorreoService {
         this.passwordEncoder = passwordEncoder;
         this.emailsService = emailsService;
         this.limiteIntentos = limiteIntentos;
+        this.codigos = codigos;
     }
 
     /** Lo que ve quien pidió el código: a qué correo se envió y cuándo vence. */
@@ -88,20 +88,20 @@ public class CambioCorreoService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ese correo ya está registrado en DriveMaster");
         }
 
-        String codigo = String.format("%06d", RANDOM.nextInt(1_000_000));
+        CodigoVerificacion.Generado codigo = codigos.generar();
         Instant ahora = Instant.now();
         cambios.deleteByUsuarioId(usuario.getId()); // un código nuevo anula el anterior
         CambioCorreo cambio = cambios.save(CambioCorreo.builder()
                 .usuarioId(usuario.getId())
                 .correoNuevo(nuevo)
-                .codigoHash(passwordEncoder.encode(codigo))
+                .codigoHash(codigo.hash())
                 .vence(ahora.plus(VIGENCIA))
                 .intentos(0)
                 .creado(ahora)
                 .build());
 
         try {
-            emailsService.enviarEmail(nuevo, "Tu código para cambiar el correo - DriveMaster", correoCodigo(codigo));
+            emailsService.enviarEmail(nuevo, "Tu código para cambiar el correo - DriveMaster", correoCodigo(codigo.codigo()));
         } catch (RuntimeException e) {
             cambios.delete(cambio);
             log.warn("No se pudo enviar el código de cambio de correo de la cuenta {}: {}", usuario.getId(), e.getMessage());
@@ -118,27 +118,7 @@ public class CambioCorreoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "No tienes un cambio de correo pendiente. Empieza de nuevo"));
 
-        if (Instant.now().isAfter(cambio.getVence())) {
-            cambios.delete(cambio);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código venció. Pide uno nuevo");
-        }
-        if (cambio.getIntentos() >= MAX_INTENTOS) {
-            cambios.delete(cambio);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Agotaste los " + MAX_INTENTOS + " intentos. Pide un código nuevo");
-        }
-        String limpio = codigo == null ? "" : codigo.replaceAll("\\s+", "");
-        if (!limpio.matches("\\d{6}") || !passwordEncoder.matches(limpio, cambio.getCodigoHash())) {
-            cambio.setIntentos(cambio.getIntentos() + 1);
-            int quedan = MAX_INTENTOS - cambio.getIntentos();
-            if (quedan <= 0) {
-                cambios.delete(cambio);
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Código incorrecto. Agotaste los " + MAX_INTENTOS + " intentos: pide un código nuevo");
-            }
-            cambios.save(cambio);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Código incorrecto. Te " + (quedan == 1 ? "queda 1 intento" : "quedan " + quedan + " intentos"));
-        }
+        codigos.verificar(cambio, codigo, () -> cambios.save(cambio), () -> cambios.delete(cambio));
 
         String nuevo = cambio.getCorreoNuevo();
         // Alguien pudo registrarse con ese correo mientras llegaba el código

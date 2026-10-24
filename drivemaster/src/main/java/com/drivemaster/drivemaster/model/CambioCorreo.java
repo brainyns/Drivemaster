@@ -16,7 +16,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CambioCorreo {
+public class CambioCorreo implements com.drivemaster.drivemaster.service.CodigoVerificacion.Pendiente {
 
     @Id
     private String id;

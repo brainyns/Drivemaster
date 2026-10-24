@@ -4,6 +4,7 @@ import Logo from "../components/Logo";
 import Campo from "../components/ui/Campo";
 import CampoClave from "../components/ui/CampoClave";
 import Alerta from "../components/ui/Alerta";
+import RecuperarClave from "../components/auth/RecuperarClave";
 import { MENSAJE_SIN_CONEXION } from "../services/conexion";
 import "../css/Login.css";
 
@@ -50,6 +51,9 @@ export default function Login({
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fotoOk, setFotoOk] = useState(true);
+  // "¿Olvidaste tu contraseña?" se resuelve dentro de la misma tarjeta; al terminar vuelve aquí con el aviso
+  const [recuperando, setRecuperando] = useState(false);
+  const [avisoOk, setAvisoOk] = useState(null);
   const googleBtnRef = useRef(null);
 
   const handleGoogleResponse = async (response) => {
@@ -185,10 +189,25 @@ export default function Login({
             <Marca onInicio={onVolver} />
           </div>
 
+          {recuperando ? (
+            <RecuperarClave correoInicial={correo}
+              onVolver={() => setRecuperando(false)}
+              onListo={(mensaje, correoCuenta) => {
+                setRecuperando(false);
+                setCorreo(correoCuenta);
+                setPassword("");
+                setIntentado(false);
+                setError(null);
+                setAvisoOk(mensaje);
+              }} />
+          ) : (
+          <>
           <h1>Iniciar sesión</h1>
           <p className="auth-subtitle">
             Ingresa con tu correo o con Google para continuar.
           </p>
+
+          {avisoOk && <Alerta tono="ok" onCerrar={() => setAvisoOk(null)}>{avisoOk}</Alerta>}
 
           <form onSubmit={handleSubmit} noValidate>
             <Campo id="auth-correo" label="Correo electrónico" error={errores.correo}>
@@ -212,6 +231,11 @@ export default function Login({
                 autoComplete="current-password"
               />
             </Campo>
+
+            <button type="button" className="link-button auth-olvido"
+              onClick={() => { setError(null); setAvisoOk(null); setRecuperando(true); }}>
+              ¿Olvidaste tu contraseña?
+            </button>
 
             {/* Sin conexión (servidor dormido o sin red): se puede reintentar sin volver a escribir */}
             {error && <Alerta onReintentar={error === MENSAJE_SIN_CONEXION ? () => handleSubmit({ preventDefault() {} }) : undefined} reintentando={loading}>{error}</Alerta>}
@@ -265,6 +289,8 @@ export default function Login({
               </svg>
               Volver al catálogo
             </button>
+          )}
+          </>
           )}
 
           <p className="auth-version">© 2026 DriveMaster</p>

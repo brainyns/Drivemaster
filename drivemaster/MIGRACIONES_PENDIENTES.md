@@ -220,7 +220,8 @@ cuántos hay ("Hay N usuarios con el correo guardado con mayúsculas o espacios"
 Cuando el log ya no avise de correos con mayúsculas, se puede quitar la búsqueda sin mayúsculas de
 `buscarPorCorreo`, que es una expresión regular y no aprovecha el índice.
 
-## Cambios de correo pendientes (`cambios_correo`)
+## Cambios de correo y recuperaciones de contraseña (`cambios_correo`, `recuperaciones_clave`)
 
-La colección se crea sola. Guarda solo el hash del código (BCrypt), y el índice TTL `vence_ttl` borra los cambios que
+Las colecciones se crean solas. `usuarios.sesionesDesde` (nuevo, opcional) solo se llena al recuperar la contraseña;
+las cuentas sin ese campo no cambian. Guarda solo el hash del código (BCrypt), y el índice TTL `vence_ttl` borra los cambios que
 vencieron sin confirmarse. No hay nada que migrar.

@@ -103,7 +103,15 @@ public class JwtUtil {
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {
-        return extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token);
+        boolean cerrada = userDetails instanceof DetallesUsuario d && emitidoAntesDe(token, d.getSesionesDesde());
+        return extractUsername(token).equals(userDetails.getUsername()) && !isTokenExpired(token) && !cerrada;
+    }
+
+    /** true si el token se emitió antes de desde (sesiones cerradas en bloque). Sin desde, ninguno lo está. */
+    public boolean emitidoAntesDe(String token, java.time.Instant desde) {
+        if (desde == null) return false;
+        Date emitido = extractClaim(token, Claims::getIssuedAt);
+        return emitido == null || emitido.toInstant().isBefore(desde);
     }
 
     private Key getSigningKey() {

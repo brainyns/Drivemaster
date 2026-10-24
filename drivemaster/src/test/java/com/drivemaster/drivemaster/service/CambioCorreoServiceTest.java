@@ -46,7 +46,7 @@ class CambioCorreoServiceTest {
         tiendas = mock(TiendaRepository.class);
         emails = mock(EmailsService.class);
         servicio = new CambioCorreoService(usuarioService, usuarioRepository, cambios, tiendas, encoder, emails,
-                new LimiteIntentos());
+                new LimiteIntentos(), new CodigoVerificacion(encoder));
         Usuario cuenta = Usuario.builder().id("u1").correo("tienda@demo.com").password(encoder.encode("secreta1")).rol("TIENDA").build();
         when(usuarioService.obtenerPorCorreo("tienda@demo.com")).thenReturn(cuenta);
         when(cambios.save(any())).thenAnswer(i -> {
