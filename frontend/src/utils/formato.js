@@ -26,3 +26,23 @@ export const formatoFecha = (f) =>
 
 export const formatoCop = (n) =>
   (n == null ? "—" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n));
+
+/**
+ * Duración en minutos, en texto corto: "45 min", "3 h", "3 h 20 min", "1 d 4 h". Menos de un minuto es "< 1 min"
+ * (no "0 min", que parece un error). null o undefined → "—".
+ */
+export function duracionMinutos(min) {
+  if (min == null) return "—";
+  const total = Math.round(min);
+  if (min > 0 && total < 1) return "< 1 min";
+  if (total < 60) return `${total} min`;
+  if (total < 1440) {
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return m ? `${h} h ${m} min` : `${h} h`;
+  }
+  const d = Math.floor(total / 1440);
+  const h = Math.round((total % 1440) / 60);
+  if (h === 24) return `${d + 1} d`;
+  return h ? `${d} d ${h} h` : `${d} d`;
+}

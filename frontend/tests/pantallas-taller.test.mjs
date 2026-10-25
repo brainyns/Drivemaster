@@ -332,3 +332,19 @@ test("Informes: barras con el color de su fase, vacías en 0, sin respuesta repe
   assert.ok(!pagina.includes('titulo="Respuesta promedio"'), "el promedio queda solo en Tiempo de respuesta");
   assert.ok(pagina.includes("Sin costo:"));
 });
+
+test("Informes: el tiempo de respuesta llega en minutos y se muestra en min, h o d", async () => {
+  const { duracionMinutos } = await import("../src/utils/formato.js");
+  assert.equal(duracionMinutos(null), "—");
+  assert.equal(duracionMinutos(0.4), "< 1 min");
+  assert.equal(duracionMinutos(2.5), "3 min");
+  assert.equal(duracionMinutos(45), "45 min");
+  assert.equal(duracionMinutos(180), "3 h");
+  assert.equal(duracionMinutos(200), "3 h 20 min");
+  assert.equal(duracionMinutos(1680), "1 d 4 h");
+  assert.equal(duracionMinutos(2880), "2 d");
+  assert.equal(duracionMinutos(2870), "2 d");
+  const pagina = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(pagina.includes("duracionMinutos(tiempo.minutosPromedio)") && !pagina.includes("horasPromedio"));
+  assert.ok(pagina.includes("Total histórico"), "los ingresos dicen que no dependen del periodo");
+});

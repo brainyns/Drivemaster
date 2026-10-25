@@ -125,24 +125,44 @@ class InformesTallerTest {
         assertEquals(0.0, i.ingresos().manoDeObra().liquidado());
     }
 
+    /** Evento hecho por un taller (actor TALLER con su id), como los deja TransicionOrdenService. */
+    private static EventoOrden eventoTaller(String tallerId, String estado, LocalDateTime fecha) {
+        return EventoOrden.builder().estado(estado).fecha(fecha).actorRol(EstadoOrden.TALLER).actorId(tallerId).build();
+    }
+
     @Test
-    void elTiempoDeRespuestaSaleDeLaLineaDeTiempo() {
+    void elTiempoDeRespuestaVaDeLaAsignacionALaRespuestaDelTaller() {
         LocalDateTime base = LocalDateTime.of(2026, 10, 2, 8, 0);
+        // Acepta y agenda a las 2 h (sin pago de diagnóstico pasa directo a EN_REVISION)
         OrdenServicio dosHoras = solicitud("s1", "A", EstadoOrden.EN_REVISION, base,
-                evento(EstadoOrden.ASIGNADA_A_TALLER, base), evento(EstadoOrden.EN_REVISION, base.plusHours(2)));
-        // Reasignada: cuenta desde la ÚLTIMA asignación anterior a la revisión
+                evento(EstadoOrden.ASIGNADA_A_TALLER, base), eventoTaller("A", EstadoOrden.EN_REVISION, base.plusHours(2)));
+        // Reasignada: otro taller rechazó primero; cuenta desde la ÚLTIMA asignación hasta la respuesta de A
         OrdenServicio reasignada = solicitud("s2", "A", EstadoOrden.EN_REVISION, base,
-                evento(EstadoOrden.ASIGNADA_A_TALLER, base), evento(EstadoOrden.ASIGNADA_A_TALLER, base.plusHours(5)),
-                evento(EstadoOrden.EN_REVISION, base.plusHours(9)));
-        OrdenServicio sinRevision = solicitud("s3", "A", EstadoOrden.ASIGNADA_A_TALLER, base,
+                evento(EstadoOrden.ASIGNADA_A_TALLER, base), eventoTaller("B", EstadoOrden.REASIGNADA, base.plusHours(1)),
+                evento(EstadoOrden.ASIGNADA_A_TALLER, base.plusHours(5)), eventoTaller("A", EstadoOrden.EN_REVISION, base.plusHours(9)));
+        // Con pago de diagnóstico: acepta a las 3 h y EN_REVISION llega al pagar el cliente; se mide hasta la aceptación
+        OrdenServicio conPago = solicitud("s3", "A", EstadoOrden.EN_REVISION, base,
+                evento(EstadoOrden.ASIGNADA_A_TALLER, base), eventoTaller("A", EstadoOrden.ASIGNADA_A_TALLER, base.plusHours(3)),
+                evento(EstadoOrden.EN_REVISION, base.plusHours(20)));
+        OrdenServicio sinRespuesta = solicitud("s4", "A", EstadoOrden.ASIGNADA_A_TALLER, base,
                 evento(EstadoOrden.ASIGNADA_A_TALLER, base));
-        when(ordenes.findByTallerIdOrderByFechaCreacionDesc("A")).thenReturn(List.of(dosHoras, reasignada, sinRevision));
+        when(ordenes.findByTallerIdOrderByFechaCreacionDesc("A")).thenReturn(List.of(dosHoras, reasignada, conPago, sinRespuesta));
 
         var t = informes("A").tiempoRespuesta();
 
-        assertEquals(2, t.muestra());
-        assertEquals(3.0, t.horasPromedio());
-        assertEquals(3.0, t.horasMediana());
+        assertEquals(3, t.muestra());
+        assertEquals(180.0, t.minutosPromedio());
+        assertEquals(180.0, t.minutosMediana());
+    }
+
+    @Test
+    void unaRespuestaDeMinutosNoSeRedondeaACero() {
+        LocalDateTime base = LocalDateTime.of(2026, 10, 2, 8, 0);
+        OrdenServicio rapida = solicitud("s1", "A", EstadoOrden.EN_REVISION, base,
+                evento(EstadoOrden.ASIGNADA_A_TALLER, base), eventoTaller("A", EstadoOrden.EN_REVISION, base.plusSeconds(150)));
+        when(ordenes.findByTallerIdOrderByFechaCreacionDesc("A")).thenReturn(List.of(rapida));
+
+        assertEquals(2.5, informes("A").tiempoRespuesta().minutosPromedio());
     }
 
     @Test
@@ -150,7 +170,7 @@ class InformesTallerTest {
         Informes i = informes("A");
 
         assertEquals(0, i.tiempoRespuesta().muestra());
-        assertNull(i.tiempoRespuesta().horasPromedio());
+        assertNull(i.tiempoRespuesta().minutosPromedio());
         assertEquals(0, i.calificacion().total());
         assertNull(i.calificacion().promedio());
         assertEquals(0, i.calificacion().recientes().size());

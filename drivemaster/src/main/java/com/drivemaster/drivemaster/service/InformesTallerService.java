@@ -78,7 +78,7 @@ public class InformesTallerService {
                 .toList();
 
         return new Informes(ahora, m, servicios(delPeriodo), ingresos(tallerId, todas),
-                tiempoRespuesta(delPeriodo), calificacion(marketplace));
+                tiempoRespuesta(tallerId, delPeriodo), calificacion(marketplace));
     }
 
     // ─── Servicios por estado ────────────────────────────────────────────────
@@ -124,35 +124,46 @@ public class InformesTallerService {
         return new Monto(v[0], (long) v[1], v[2], (long) v[3]);
     }
 
-    // ─── Tiempo de respuesta: ASIGNADA_A_TALLER → EN_REVISION, de la línea de tiempo ──────────
+    // ─── Tiempo de respuesta: asignación → primera respuesta del taller, de la línea de tiempo ──────────
 
-    private TiempoRespuesta tiempoRespuesta(List<OrdenServicio> ordenes) {
-        List<Double> horas = new ArrayList<>();
+    private TiempoRespuesta tiempoRespuesta(String tallerId, List<OrdenServicio> ordenes) {
+        List<Double> minutos = new ArrayList<>();
         for (OrdenServicio o : ordenes) {
-            Double h = horasDeRespuesta(o.getEventos());
-            if (h != null) horas.add(h);
+            Double m = minutosDeRespuesta(tallerId, o.getEventos());
+            if (m != null) minutos.add(m);
         }
-        if (horas.isEmpty()) return new TiempoRespuesta(0, null, null);
-        horas.sort(Comparator.naturalOrder());
-        double promedio = horas.stream().mapToDouble(Double::doubleValue).average().orElse(0);
-        int n = horas.size();
-        double mediana = n % 2 == 1 ? horas.get(n / 2) : (horas.get(n / 2 - 1) + horas.get(n / 2)) / 2;
+        if (minutos.isEmpty()) return new TiempoRespuesta(0, null, null);
+        minutos.sort(Comparator.naturalOrder());
+        double promedio = minutos.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        int n = minutos.size();
+        double mediana = n % 2 == 1 ? minutos.get(n / 2) : (minutos.get(n / 2 - 1) + minutos.get(n / 2)) / 2;
         return new TiempoRespuesta(n, redondear(promedio), redondear(mediana));
     }
 
-    /** Horas desde la última asignación al taller anterior a la primera revisión; null si falta alguno de los dos eventos. */
-    static Double horasDeRespuesta(List<EventoOrden> eventos) {
+    /**
+     * Minutos desde que la solicitud se asignó a este taller hasta que el taller respondió: su primer evento después
+     * de la asignación (aceptar y agendar la cita, o rechazar). Con reasignaciones cuenta la última asignación anterior
+     * a esa respuesta. No usa EN_REVISION: con pago de diagnóstico ese paso llega cuando paga el cliente, no cuando
+     * responde el taller. null si el taller aún no responde o falta la asignación.
+     */
+    static Double minutosDeRespuesta(String tallerId, List<EventoOrden> eventos) {
         if (eventos == null) return null;
-        LocalDateTime revision = eventos.stream()
-                .filter(e -> EstadoOrden.EN_REVISION.equals(e.getEstado()) && e.getFecha() != null)
+        LocalDateTime respuesta = eventos.stream()
+                .filter(e -> e.getFecha() != null && esDelTaller(tallerId, e))
                 .map(EventoOrden::getFecha).min(Comparator.naturalOrder()).orElse(null);
-        if (revision == null) return null;
+        if (respuesta == null) return null;
+        // La aceptación con pago de diagnóstico también queda en ASIGNADA_A_TALLER, pero la hace el taller: no es asignación
         LocalDateTime asignada = eventos.stream()
                 .filter(e -> EstadoOrden.ASIGNADA_A_TALLER.equals(e.getEstado()) && e.getFecha() != null
-                        && !e.getFecha().isAfter(revision))
+                        && !EstadoOrden.TALLER.equals(e.getActorRol()) && !e.getFecha().isAfter(respuesta))
                 .map(EventoOrden::getFecha).max(Comparator.naturalOrder()).orElse(null);
         if (asignada == null) return null;
-        return Duration.between(asignada, revision).toMinutes() / 60.0;
+        return Duration.between(asignada, respuesta).toSeconds() / 60.0;
+    }
+
+    /** Evento hecho por este taller (el actor TALLER guarda el id del taller; otro taller que rechazó antes no cuenta). */
+    private static boolean esDelTaller(String tallerId, EventoOrden e) {
+        return EstadoOrden.TALLER.equals(e.getActorRol()) && (e.getActorId() == null || e.getActorId().equals(tallerId));
     }
 
     // ─── Calificación: solo con lo que el cliente calificó, sin promedios inventados ───────────

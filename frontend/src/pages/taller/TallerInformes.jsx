@@ -3,6 +3,7 @@ import { getToken } from "../../services/authService";
 import { informesTaller } from "../../services/informesTallerService";
 import { formatPrecio } from "../../components/servicio/estadosServicio";
 import { ESTADOS_TALLER, faseDe } from "../../components/servicio/estadosTaller";
+import { duracionMinutos } from "../../utils/formato";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
 import Indicador from "../../components/ui/Indicador";
 import Alerta from "../../components/ui/Alerta";
@@ -14,12 +15,6 @@ import "../../css/informes-taller.css";
 const PERIODOS = [3, 6, 12];
 // Menos calificaciones que esto: se muestran, pero se avisa que el promedio aún dice poco.
 const MINIMO_REPRESENTATIVO = 5;
-
-const horas = (h) => {
-  if (h == null) return "—";
-  if (h < 1) return `${Math.round(h * 60)} min`;
-  return h < 48 ? `${h.toLocaleString("es-CO", { maximumFractionDigits: 1 })} h` : `${Math.round(h / 24)} d`;
-};
 
 const decimal = (n) => n.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -100,7 +95,7 @@ function Ingresos({ ingresos }) {
   const conDiagnostico = diagnostico.liquidado + diagnostico.pendiente > 0;
   const hay = manoDeObra.liquidado + manoDeObra.pendiente > 0 || conDiagnostico;
   return (
-    <Tarjeta id="ti-ingresos" titulo="Ingresos por mano de obra">
+    <Tarjeta id="ti-ingresos" titulo="Ingresos por mano de obra · Total histórico">
       {hay ? (
         <div className="ti-dineros">
           <Dinero titulo="Mano de obra" monto={manoDeObra} />
@@ -119,7 +114,7 @@ function Ingresos({ ingresos }) {
         </p>
       )}
       <p className="ti-nota">
-        Es el total de todos tus servicios, no solo del periodo. “Pendiente” es lo que aún no se te ha pagado.
+        Total histórico: suma todos tus servicios y no cambia con el filtro de 3, 6 o 12 meses. “Pendiente” es lo que aún no se te ha pagado.
         {anulado > 0 && ` Hay ${formatPrecio(anulado)} anulados que no cuentan.`}
       </p>
       {anteriores.ordenes > 0 && (
@@ -137,16 +132,18 @@ function TiempoRespuesta({ tiempo }) {
     <Tarjeta id="ti-tiempo" titulo="Tiempo de respuesta">
       {tiempo.muestra === 0 ? (
         <p className="ti-vacio">
-          Aún no hay revisiones que medir. Se calcula desde que se te asigna una solicitud hasta que pasa a revisión.
+          Aún no hay respuestas que medir. Se calcula desde que se te asigna una solicitud hasta que la aceptas y
+          agendas la revisión, o la rechazas.
         </p>
       ) : (
         <>
           <dl className="ti-duo">
-            <div><dt>Promedio</dt><dd>{horas(tiempo.horasPromedio)}</dd></div>
-            <div><dt>Mediana</dt><dd>{horas(tiempo.horasMediana)}</dd></div>
+            <div><dt>Promedio</dt><dd>{duracionMinutos(tiempo.minutosPromedio)}</dd></div>
+            <div><dt>Mediana</dt><dd>{duracionMinutos(tiempo.minutosMediana)}</dd></div>
           </dl>
           <p className="ti-nota">
-            Basado en {tiempo.muestra} {tiempo.muestra === 1 ? "solicitud" : "solicitudes"} del periodo, desde la asignación hasta la revisión.
+            Basado en {tiempo.muestra} {tiempo.muestra === 1 ? "solicitud" : "solicitudes"} del periodo, desde la asignación
+            hasta que respondes (aceptas y agendas, o rechazas).
           </p>
         </>
       )}
@@ -250,8 +247,8 @@ export default function TallerInformes() {
             <div className="ui-indicadores ti-indicadores">
               <Indicador icono="tool" titulo="Servicios" valor={d.servicios.total}
                 pie={`${entregados} ${entregados === 1 ? "entregado" : "entregados"} en ${d.mesesConsultados} meses`} />
-              <Indicador titulo="Mano de obra liquidada" valor={formatPrecio(d.ingresos.manoDeObra.liquidado)} tono="ok"
-                pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} pendiente`} />
+              <Indicador titulo="Mano de obra liquidada (total histórico)" valor={formatPrecio(d.ingresos.manoDeObra.liquidado)} tono="ok"
+                pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} pendiente · no depende del periodo`} />
               <Indicador icono="star" titulo="Calificación"
                 valor={d.calificacion.promedio == null ? "Nuevo" : decimal(d.calificacion.promedio)}
                 pie={d.calificacion.total > 0 ? `${d.calificacion.total} de clientes` : "Sin calificaciones aún"} />

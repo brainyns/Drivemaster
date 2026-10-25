@@ -28,10 +28,11 @@ public final class InformesTallerDTO {
     public record Ingresos(Monto manoDeObra, Monto diagnostico, double anulado, Anteriores anteriores) {}
 
     /**
-     * Horas entre ASIGNADA_A_TALLER y EN_REVISION, tomadas de la línea de tiempo de cada solicitud. Sin muestra no hay
-     * promedio: horasPromedio y horasMediana son null.
+     * Minutos (con un decimal) entre la asignación al taller y su primera respuesta (aceptar y agendar, o rechazar),
+     * tomados de la línea de tiempo de cada solicitud. El frontend los muestra en min, h o d. Sin muestra no hay
+     * promedio: minutosPromedio y minutosMediana son null.
      */
-    public record TiempoRespuesta(long muestra, Double horasPromedio, Double horasMediana) {}
+    public record TiempoRespuesta(long muestra, Double minutosPromedio, Double minutosMediana) {}
 
     public record Comentario(int calificacion, String comentario, LocalDateTime fecha) {}
 
