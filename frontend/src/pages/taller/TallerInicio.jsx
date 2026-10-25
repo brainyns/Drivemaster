@@ -63,7 +63,9 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
       hoy: citasDeHoy(solicitudes, ahora),
       porCotizar: solicitudes.filter((s) => s.estado === "DIAGNOSTICADA"),
       esperandoCliente: solicitudes.filter((s) => s.estado === "COTIZADA" || s.estado === "APROBADA"),
-      enCurso: solicitudes.filter((s) => enTaller(s) || esperaRepuestos(s)),
+      // Lo listo para entregar tiene su propia tarjeta: en curso es lo que todavía se trabaja
+      enCurso: solicitudes.filter((s) => (enTaller(s) || esperaRepuestos(s)) && s.estado !== "LISTA"),
+      listos: solicitudes.filter((s) => s.estado === "LISTA"),
       urgentes: urgentes(solicitudes, ahora),
       proximas: proximasCitas(solicitudes, ahora),
     };
@@ -145,21 +147,24 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
           <section aria-labelledby="ini-dia">
             <h2 id="ini-dia" className="ui-sr">Resumen del día</h2>
             <div className="ui-indicadores ini-indicadores">
-              <Indicador icono="message" titulo="Solicitudes nuevas" valor={datos.responder.length}
+              <Indicador icono="message" titulo="Solicitudes nuevas" valor={datos.responder.length} fase="nueva"
                 tono={datos.responder.length > 0 ? "accion" : undefined}
                 pie={primera?.fechaLimiteRespuesta ? `La más urgente vence ${tiempoRelativo(primera.fechaLimiteRespuesta, ahora)}` : "Estás al día"}
                 onClick={() => irA("taller-solicitudes", "responder")} />
-              <Indicador icono="calendar" titulo="Citas de hoy" valor={datos.hoy.length}
+              <Indicador icono="calendar" titulo="Citas de hoy" valor={datos.hoy.length} fase="nueva"
                 pie={datos.hoy.length > 0 ? `La primera a las ${hora(datos.hoy[0].fechaRevision)}` : "Sin revisiones agendadas hoy"}
                 onClick={() => irA("taller-agenda")} />
               <Indicador icono="file" titulo="Cotizaciones pendientes" valor={datos.porCotizar.length + datos.esperandoCliente.length}
-                tono={datos.porCotizar.length > 0 ? "accion" : undefined}
+                fase="cotizacion" tono={datos.porCotizar.length > 0 ? "accion" : undefined}
                 pie={`${datos.porCotizar.length} por cotizar · ${datos.esperandoCliente.length} esperando al cliente`}
                 onClick={() => irA(datos.porCotizar.length > 0 ? "taller-solicitudes" : "taller-cotizaciones",
                   datos.porCotizar.length > 0 ? "diagnosticadas" : undefined)} />
-              <Indicador icono="tool" titulo="Servicios en curso" valor={datos.enCurso.length}
+              <Indicador icono="tool" titulo="Servicios en curso" valor={datos.enCurso.length} fase="curso"
                 pie={datos.enCurso.length > 0 ? "Esperando repuestos o en el taller" : "Ningún vehículo en curso"}
                 onClick={() => irA("taller-trabajos", datos.enCurso.some(enTaller) ? "entaller" : "repuestos")} />
+              <Indicador icono="check" titulo="Listos para entregar" valor={datos.listos.length} fase="lista"
+                pie={datos.listos.length > 0 ? "El cliente ya fue avisado por correo" : "Ningún vehículo esperando entrega"}
+                onClick={() => irA("taller-trabajos", "entaller")} />
               {ingresos && (
                 <Indicador titulo="Mano de obra" pie="Total histórico de tus servicios" onClick={() => irA("taller-informes")}>
                   {/* Dentro de un botón solo cabe contenido en línea: spans en vez de dl */}

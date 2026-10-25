@@ -348,3 +348,10 @@ test("Informes: el tiempo de respuesta llega en minutos y se muestra en min, h o
   assert.ok(pagina.includes("duracionMinutos(tiempo.minutosPromedio)") && !pagina.includes("horasPromedio"));
   assert.ok(pagina.includes("Total histórico"), "los ingresos dicen que no dependen del periodo");
 });
+
+test("Inicio: tarjetas de estado con el color de su fase y una propia para lo listo para entregar", () => {
+  const pagina = leer("../src/pages/taller/TallerInicio.jsx");
+  for (const fase of ["nueva", "cotizacion", "curso", "lista"]) assert.ok(pagina.includes(`fase="${fase}"`), fase);
+  assert.ok(pagina.includes('titulo="Listos para entregar" valor={datos.listos.length}'));
+  assert.ok(pagina.includes('s.estado !== "LISTA"'), "lo listo no se cuenta también como en curso");
+});
