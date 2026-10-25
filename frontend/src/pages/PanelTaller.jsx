@@ -100,7 +100,8 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         )}
         {seccion === "trabajos" && (
           <TallerSolicitudes key={`${destino.filtro || "repuestos"}-${destino.abrir || ""}`} modo="trabajos" filtroInicial={destino.filtro}
-            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined} {...bandeja} />
+            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined}
+            textoAfuera={destino.volverA === "taller-cotizaciones" ? "Cotizaciones" : "Inicio"} {...bandeja} />
         )}
         {seccion === "agenda" && <TallerAgenda taller={taller} irA={irA} />}
         {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}

@@ -68,6 +68,51 @@
 
 .tc-detalle { padding: 4px 18px 18px; border-top: 1px solid var(--ui-line-soft); }
 
+/* Acciones de una aprobada y sus versiones anteriores */
+.tc-acciones { display: grid; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ui-line-soft); }
+.tc-acciones__botones { display: flex; flex-wrap: wrap; gap: 8px; }
+.tc-versiones { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.tc-version { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--ui-line-soft); border-radius: var(--ui-r-lg); }
+
+.tc-version__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 14px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--ui-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tc-version__fila .tc-fila__meta { flex: 1 1 auto; }
+.tc-version__fila:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
+
+/* Imprimir: solo la cotización elegida, en blanco y negro legible y sin botones ni el asistente */
+@media print {
+  body:has(.tc-item--imprimir) * { visibility: hidden; }
+  .tc-item--imprimir, .tc-item--imprimir * { visibility: visible; }
+  .tc-item--imprimir {
+    position: absolute;
+    inset: 0 0 auto 0;
+    border: 0;
+    box-shadow: none;
+    color: #000;
+    background: #fff;
+    /* También desde el tema oscuro: texto negro sobre papel blanco */
+    --ui-text: #000; --ui-muted: #444; --ui-surface: #fff; --ui-line-soft: #ccc;
+    --text: #000; --text-muted: #444; --border2: #999; --primary-text: #000;
+  }
+  .tc-item--imprimir .tc-fila__chevron,
+  .tc-item--imprimir .tc-acciones,
+  .tc-item--imprimir .ct-totales__fila--info { display: none; }
+  .tc-item--imprimir .tc-detalle { border-top: 1px solid #ccc; }
+}
+
 @media (max-width: 600px) {
   .tc-fila { grid-template-columns: minmax(0, 1fr) 20px; padding: 14px 16px; }
   .tc-fila__vehiculo { grid-column: 1; }

@@ -10,7 +10,7 @@ import Alerta from "../../components/ui/Alerta";
 import EstadoVacio from "../../components/ui/EstadoVacio";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Icon from "../../components/public/Icon";
-import { FILTROS, VACIO, vencida, vencePronto, contarPorFiltro, filtrar } from "./filtrosCotizaciones";
+import { FILTROS, VACIO, vencida, vencePronto, contarPorFiltro, filtrar, otrasVersiones } from "./filtrosCotizaciones";
 import "../../css/servicios.css";
 import "../../css/solicitud-servicio.css";
 import "../../css/cotizacion.css";
@@ -29,6 +29,53 @@ function diasRestantes(fecha, ahora) {
   return d === 0 ? "vence hoy" : `vence en ${d} d`;
 }
 
+/**
+ * Acciones de una cotización aprobada: ir al trabajo, imprimirla y ver las versiones anteriores de la misma
+ * solicitud (vienen en la misma lista del taller, no hace falta pedirlas). El PDF depende del backend.
+ */
+function AccionesAprobada({ cotizacion: c, versiones, ahora, onImprimir, onIrAlTrabajo }) {
+  const [verVersiones, setVerVersiones] = useState(false);
+  const [versionAbierta, setVersionAbierta] = useState(null);
+  return (
+    <div className="tc-acciones">
+      <div className="tc-acciones__botones">
+        {onIrAlTrabajo && (
+          <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" onClick={onIrAlTrabajo}>
+            <Icon name="tool" size={16} /> Ir al trabajo
+          </button>
+        )}
+        <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={onImprimir}>
+          <Icon name="file" size={16} /> Imprimir
+        </button>
+        {versiones.length > 0 && (
+          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" aria-expanded={verVersiones}
+            aria-controls={`tc-versiones-${c.id}`} onClick={() => setVerVersiones((v) => !v)}>
+            {verVersiones ? "Ocultar versiones anteriores" : `Historial de versiones (${versiones.length})`}
+          </button>
+        )}
+      </div>
+      {verVersiones && (
+        <ul id={`tc-versiones-${c.id}`} className="tc-versiones" aria-label="Versiones anteriores">
+          {versiones.map((v) => {
+            const abierta = versionAbierta === v.id;
+            return (
+              <li key={v.id} className="tc-version">
+                <button type="button" className="tc-version__fila" aria-expanded={abierta}
+                  onClick={() => setVersionAbierta(abierta ? null : v.id)}>
+                  <span className="tc-fila__meta">v{v.version} · emitida {formatFechaHora(v.fechaEmision)}</span>
+                  <span className="ui-precio">{formatPrecio(v.total)}</span>
+                  <ChipEstado estado={vencida(v, ahora) ? "VENCIDA" : v.estado} catalogo={ESTADOS_COTIZACION_TALLER} />
+                </button>
+                {abierta && <CotizacionDetalle cotizacion={v} mostrarComision sinEstado />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /** Cotizaciones del taller en una sola lista: emitidas, aprobadas, rechazadas y vencidas. */
 export default function TallerCotizaciones({ irA }) {
   const token = getToken();
@@ -38,6 +85,7 @@ export default function TallerCotizaciones({ irA }) {
   const [reintentando, setReintentando] = useState(false);
   const [filtro, setFiltro] = useState("emitidas");
   const [abierta, setAbierta] = useState(null);
+  const [imprimiendo, setImprimiendo] = useState(null);
   const [ahora] = useState(() => Date.now());
 
   const cargar = useCallback(async () => {
@@ -55,6 +103,15 @@ export default function TallerCotizaciones({ irA }) {
     const id = setTimeout(cargar, 0);
     return () => clearTimeout(id);
   }, [cargar]);
+
+  // Imprimir: se marca la cotización (solo ella sale en papel, ver @media print) y se abre el diálogo del navegador
+  useEffect(() => {
+    if (!imprimiendo) return undefined;
+    const fin = () => setImprimiendo(null);
+    window.addEventListener("afterprint", fin, { once: true });
+    const id = setTimeout(() => window.print(), 0);
+    return () => { clearTimeout(id); window.removeEventListener("afterprint", fin); };
+  }, [imprimiendo]);
 
   const reintentar = async () => {
     setReintentando(true);
@@ -116,7 +173,7 @@ export default function TallerCotizaciones({ irA }) {
             const abierto = abierta === c.id;
             const rechazada = c.estado === "RECHAZADA";
             return (
-              <li key={c.id} className={`tc-item${abierto ? " tc-item--abierto" : ""}`}>
+              <li key={c.id} className={`tc-item${abierto ? " tc-item--abierto" : ""}${imprimiendo === c.id ? " tc-item--imprimir" : ""}`}>
                 <button type="button" className="tc-fila" aria-expanded={abierto} aria-controls={`tc-detalle-${c.id}`}
                   onClick={() => setAbierta(abierto ? null : c.id)}>
                   <span className="tc-fila__vehiculo">
@@ -141,6 +198,13 @@ export default function TallerCotizaciones({ irA }) {
                 {abierto && (
                   <div id={`tc-detalle-${c.id}`} className="tc-detalle">
                     <CotizacionDetalle cotizacion={c} mostrarComision sinEstado />
+                    {c.estado === "APROBADA" && (
+                      <AccionesAprobada cotizacion={c} versiones={otrasVersiones(cotizaciones, c)} ahora={ahora}
+                        onImprimir={() => setImprimiendo(c.id)}
+                        onIrAlTrabajo={irA && c.ordenId
+                          ? () => irA("taller-trabajos", { abrir: c.ordenId, volverA: "taller-cotizaciones" })
+                          : undefined} />
+                    )}
                   </div>
                 )}
               </li>

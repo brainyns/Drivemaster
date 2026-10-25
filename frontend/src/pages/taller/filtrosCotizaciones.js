@@ -12,6 +12,10 @@ export const vencePronto = (c, ahora) =>
   c.estado === "EMITIDA" && !!c.vigenciaHasta && !vencida(c, ahora)
   && new Date(c.vigenciaHasta).getTime() - ahora <= DIAS_VENCE_PRONTO * 86400000;
 
+/** Las otras versiones de la misma solicitud (mismo ordenId), de la más nueva a la más vieja. */
+export const otrasVersiones = (cotizaciones, c) =>
+  cotizaciones.filter((x) => x.ordenId === c.ordenId && x.id !== c.id).sort((a, b) => (b.version || 0) - (a.version || 0));
+
 /** En este orden se muestran las pestañas. */
 export const FILTROS = [
   { key: "emitidas", label: "Emitidas", filtro: (c, ahora) => c.estado === "EMITIDA" && !vencida(c, ahora) },

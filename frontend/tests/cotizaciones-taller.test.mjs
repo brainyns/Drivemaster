@@ -67,3 +67,14 @@ test("el detalle deja solo \"Total a pagar\" si no hay anticipo y dice cuánto r
     "\"Total\" solo aparece con anticipo");
   assert.ok(detalle.includes("c.subtotalManoObra + (c.ivaManoObra ??"), "recibe = mano de obra con su IVA");
 });
+
+test("aprobadas: ir al trabajo, imprimir solo esa cotización y sus versiones anteriores de la misma lista", async () => {
+  const { otrasVersiones } = await import("../src/pages/taller/filtrosCotizaciones.js");
+  const lista = [cot("v2", "APROBADA", { ordenId: "o1", version: 2 }), cot("v1", "REEMPLAZADA", { ordenId: "o1", version: 1 }),
+    cot("otra", "EMITIDA", { ordenId: "o2", version: 1 }), cot("v3", "RECHAZADA", { ordenId: "o1", version: 3 })];
+  assert.deepEqual(otrasVersiones(lista, lista[0]).map((c) => c.id), ["v3", "v1"]);
+  assert.ok(pagina.includes('irA("taller-trabajos", { abrir: c.ordenId, volverA: "taller-cotizaciones" })'));
+  assert.ok(pagina.includes("window.print()"));
+  const css = readFileSync(new URL("../src/css/cotizaciones-taller.css", import.meta.url), "utf8");
+  assert.match(css, /@media print/);
+});
