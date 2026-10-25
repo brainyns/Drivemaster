@@ -33,7 +33,7 @@
   height: 100%;
   min-width: 4px;
   border-radius: inherit;
-  background: var(--primary);
+  background: var(--fase, var(--primary));
   transform-origin: left;
   animation: ti-crece 0.5s var(--ui-ease) both;
 }

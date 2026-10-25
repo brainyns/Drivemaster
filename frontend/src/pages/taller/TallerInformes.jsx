@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getToken } from "../../services/authService";
 import { informesTaller } from "../../services/informesTallerService";
 import { formatPrecio } from "../../components/servicio/estadosServicio";
-import { ESTADOS_TALLER } from "../../components/servicio/estadosTaller";
+import { ESTADOS_TALLER, faseDe } from "../../components/servicio/estadosTaller";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
 import Indicador from "../../components/ui/Indicador";
 import Alerta from "../../components/ui/Alerta";
@@ -33,16 +33,19 @@ function Tarjeta({ id, titulo, children }) {
   );
 }
 
-/** Barras horizontales con el nombre y el valor en texto; la barra solo acompaña. */
+/**
+ * Barras horizontales con el nombre y el valor en texto; la barra solo acompaña. fase (opcional, tercer valor de
+ * cada fila) la pinta con el color de esa fase. Un valor 0 deja la pista vacía.
+ */
 function Barras({ filas }) {
   const tope = Math.max(1, ...filas.map(([, n]) => n));
   return (
     <ul className="ti-barras">
-      {filas.map(([nombre, n]) => (
-        <li key={nombre} className="ti-barras__fila">
+      {filas.map(([nombre, n, fase]) => (
+        <li key={nombre} className={`ti-barras__fila${fase ? ` ui-fase--${fase}` : ""}`}>
           <span className="ti-barras__nombre">{nombre}</span>
           <span className="ti-barras__pista" aria-hidden="true">
-            <span className="ti-barras__barra" style={{ width: `${(n * 100) / tope}%` }} />
+            {n > 0 && <span className="ti-barras__barra" style={{ width: `${(n * 100) / tope}%` }} />}
           </span>
           <span className="ti-barras__valor">{n}</span>
         </li>
@@ -53,7 +56,7 @@ function Barras({ filas }) {
 
 function ServiciosPorEstado({ servicios }) {
   const filas = Object.entries(servicios.porEstado).filter(([, n]) => n > 0)
-    .map(([estado, n]) => [ESTADOS_TALLER[estado]?.label || estado, n]);
+    .map(([estado, n]) => [ESTADOS_TALLER[estado]?.label || estado, n, faseDe(estado)]);
   return (
     <Tarjeta id="ti-servicios" titulo="Servicios por estado">
       {filas.length === 0 ? (
@@ -94,13 +97,20 @@ function Dinero({ titulo, monto }) {
 
 function Ingresos({ ingresos }) {
   const { manoDeObra, diagnostico, anulado, anteriores } = ingresos;
-  const hay = manoDeObra.liquidado + manoDeObra.pendiente + diagnostico.liquidado + diagnostico.pendiente > 0;
+  const conDiagnostico = diagnostico.liquidado + diagnostico.pendiente > 0;
+  const hay = manoDeObra.liquidado + manoDeObra.pendiente > 0 || conDiagnostico;
   return (
     <Tarjeta id="ti-ingresos" titulo="Ingresos por mano de obra">
       {hay ? (
         <div className="ti-dineros">
           <Dinero titulo="Mano de obra" monto={manoDeObra} />
-          <Dinero titulo="Diagnóstico" monto={diagnostico} />
+          {/* Sin cobros de diagnóstico, dos $0 no dicen nada: se rotula sin costo */}
+          {conDiagnostico ? <Dinero titulo="Diagnóstico" monto={diagnostico} /> : (
+            <div className="ti-dinero">
+              <h3 className="ti-dinero__titulo">Diagnóstico</h3>
+              <p className="ti-nota">Sin costo: tus diagnósticos no han generado cobros.</p>
+            </div>
+          )}
         </div>
       ) : (
         <p className="ti-vacio">
@@ -242,8 +252,6 @@ export default function TallerInformes() {
                 pie={`${entregados} ${entregados === 1 ? "entregado" : "entregados"} en ${d.mesesConsultados} meses`} />
               <Indicador titulo="Mano de obra liquidada" valor={formatPrecio(d.ingresos.manoDeObra.liquidado)} tono="ok"
                 pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} pendiente`} />
-              <Indicador icono="clock" titulo="Respuesta promedio" valor={horas(d.tiempoRespuesta.horasPromedio)}
-                pie={d.tiempoRespuesta.muestra > 0 ? `${d.tiempoRespuesta.muestra} medidas` : "Sin revisiones aún"} />
               <Indicador icono="star" titulo="Calificación"
                 valor={d.calificacion.promedio == null ? "Nuevo" : decimal(d.calificacion.promedio)}
                 pie={d.calificacion.total > 0 ? `${d.calificacion.total} de clientes` : "Sin calificaciones aún"} />

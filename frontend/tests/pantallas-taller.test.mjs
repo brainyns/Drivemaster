@@ -324,3 +324,11 @@ test("Trabajos: el historial del taller va resumido, sin su propio nombre y con 
   assert.ok(linea.includes("if (m[1] !== mecanicoAnterior) mecanico = m[1];"), "el mecánico solo si cambia");
   assert.ok(linea.includes("Ver historial ("), "botón para el historial completo");
 });
+
+test("Informes: barras con el color de su fase, vacías en 0, sin respuesta repetida y diagnóstico sin costo", () => {
+  const pagina = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(pagina.includes("{n > 0 && <span className=\"ti-barras__barra\""), "una barra en 0 no pinta nada");
+  assert.ok(pagina.includes("faseDe(estado)]"), "cada estado con el color de su fase");
+  assert.ok(!pagina.includes('titulo="Respuesta promedio"'), "el promedio queda solo en Tiempo de respuesta");
+  assert.ok(pagina.includes("Sin costo:"));
+});
