@@ -24,7 +24,30 @@
 }
 
 .st-tarjeta:hover { transform: none; }
-.st-tarjeta--boton { padding-right: 52px; }
+/* Solicitudes: tarjeta compacta (síntomas en una línea, los datos en una sola fila) para ver más sin scroll */
+.st-tarjeta--boton { gap: 6px; padding: 14px 18px; }
+.st-tarjeta--boton .st-tarjeta__sintomas { -webkit-line-clamp: 1; }
+
+.st-tarjeta__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 16px;
+}
+
+.st-tarjeta__ver {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: var(--fs-boton);
+  font-weight: 700;
+  color: var(--primary-text);
+  white-space: nowrap;
+}
+
+.st-tarjeta__ver svg { transition: transform var(--ui-dur) var(--ui-ease); }
 .st-tarjeta--trabajo { cursor: default; gap: 14px; }
 
 .st-tarjeta__cabecera {
@@ -69,18 +92,9 @@
 .st-tarjeta__meta .ui-placa--chica { margin: 0 6px 0 0; }
 .st-root .st-tarjeta__nota { margin: 0; font-size: 0.875rem; color: var(--ui-muted); }
 
-.st-tarjeta__flecha {
-  position: absolute;
-  top: 50%;
-  right: 18px;
-  color: var(--ui-muted);
-  transform: translateY(-50%);
-  transition: transform var(--ui-dur) var(--ui-ease), color var(--ui-dur) ease;
-}
-
 @media (hover: hover) and (pointer: fine) {
   .st-tarjeta--boton:hover { border-color: var(--ui-muted); }
-  .st-tarjeta--boton:hover .st-tarjeta__flecha { transform: translate(3px, -50%); color: var(--ui-text); }
+  .st-tarjeta--boton:hover .st-tarjeta__ver svg { transform: translateX(3px); }
 }
 
 .st-tarjeta--boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
@@ -176,13 +190,12 @@
   .st-form { grid-template-columns: minmax(0, 1fr); }
   .st-detalle__mecanico { max-width: none; }
   .st-tarjeta { padding: 16px; }
-  .st-tarjeta--boton { padding-right: 44px; }
-  .st-tarjeta__flecha { right: 14px; }
+  .st-tarjeta--boton { padding: 12px 14px; }
   .st-barra .ui-buscador { max-width: none; }
   .st-tarjeta__acciones .ui-btn { flex: 1 1 auto; min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .st-tarjeta, .st-tarjeta__flecha { transition: none; }
-  .st-tarjeta--boton:hover .st-tarjeta__flecha { transform: translateY(-50%); }
+  .st-tarjeta, .st-tarjeta__ver svg { transition: none; }
+  .st-tarjeta--boton:hover .st-tarjeta__ver svg { transform: none; }
 }

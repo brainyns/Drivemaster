@@ -764,19 +764,19 @@ export default function TallerSolicitudes({
                   </span>
                 </span>
                 <span className="st-tarjeta__sintomas">{s.sintomas}</span>
-                <span className="st-tarjeta__meta">
-                  #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}
-                  {[s.barrio, s.ciudad].some(Boolean) && ` · ${[s.barrio, s.ciudad].filter(Boolean).join(", ")}`}
-                  {s.distanciaTallerKm != null && ` · ${s.distanciaTallerKm.toFixed(1)} km`}
-                </span>
-                {(s.fechaRevision || s.mecanicoNombre || porResponder(s)) && (
+                <span className="st-tarjeta__pie">
                   <span className="st-tarjeta__meta">
-                    {porResponder(s) && `Responde antes del ${formatFechaHora(s.fechaLimiteRespuesta)}`}
-                    {s.fechaRevision && <><Icon name="calendar" size={14} /> Revisión: {formatFechaHora(s.fechaRevision)}</>}
+                    #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}
+                    {[s.barrio, s.ciudad].some(Boolean) && ` · ${[s.barrio, s.ciudad].filter(Boolean).join(", ")}`}
+                    {s.distanciaTallerKm != null && ` · ${s.distanciaTallerKm.toFixed(1)} km`}
+                    {s.fechaRevision && <> · <Icon name="calendar" size={14} /> Revisión: {formatFechaHora(s.fechaRevision)}</>}
                     {s.mecanicoNombre && ` · ${s.mecanicoNombre}`}
                   </span>
-                )}
-                <Icon name="arrow" size={18} className="st-tarjeta__flecha" />
+                  {/* Toda la tarjeta abre el detalle; esto solo lo dice con texto */}
+                  <span className="st-tarjeta__ver" aria-hidden="true">
+                    Ver solicitud <Icon name="arrow" size={16} />
+                  </span>
+                </span>
               </button>
             </li>
           ))}

@@ -300,3 +300,18 @@ test("Panel del taller: la bandeja y el taller se piden una vez en PanelTaller y
   const panel = leer("../src/pages/PanelTaller.jsx");
   assert.equal((panel.match(/\{\.\.\.bandeja\}/g) || []).length, 2, "Solicitudes y Trabajos");
 });
+
+test("Solicitudes: el día de la semana sale de la fecha real, no de un texto fijo", async () => {
+  const { formatFechaHora } = await import("../src/components/servicio/estadosServicio.js");
+  const dia = (f) => new Date(f).toLocaleDateString("es-CO", { weekday: "short" });
+  for (const f of ["2026-10-19T09:00:00", "2026-10-22T15:30:00", "2026-10-25T18:00:00"]) {
+    assert.ok(formatFechaHora(f).startsWith(dia(f)), `${f} empieza por ${dia(f)}`);
+  }
+  assert.notEqual(dia("2026-10-19T09:00:00"), dia("2026-10-22T15:30:00"));
+});
+
+test("Solicitudes: toda la tarjeta abre el detalle y lo dice con \"Ver solicitud\"", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(pagina.includes('className="ss-tarjeta st-tarjeta st-tarjeta--boton" onClick={() => abrir(s)}'));
+  assert.ok(pagina.includes("Ver solicitud <Icon"));
+});
