@@ -67,13 +67,13 @@ export function urgentes(solicitudes, ahora = Date.now()) {
   });
   citasDeHoy(solicitudes, ahora).forEach((s) => items.push({
     s, orden: 1, clave: new Date(s.fechaRevision).getTime(),
-    estado: s.estado === "EN_REVISION" ? "En revisión hoy" : "Cita hoy", tono: "info",
+    estado: s.estado === "EN_REVISION" ? "En revisión hoy" : "Cita hoy", tono: "nueva",
     accion: s.estado === "EN_REVISION" ? "Diagnosticar" : "Ver cita", pagina: "taller-solicitudes", filtro: "agendadas",
   }));
   const resto = [
-    { filtro: (s) => s.estado === "DIAGNOSTICADA", estado: "Por cotizar", tono: "acento", accion: "Cotizar", pagina: "taller-solicitudes", f: "diagnosticadas" },
-    { filtro: (s) => s.estado === "REPUESTOS_PEDIDOS", estado: "Repuestos en camino", tono: "info", accion: "Confirmar llegada", pagina: "taller-trabajos", f: "repuestos" },
-    { filtro: (s) => s.estado === "LISTA", estado: "Lista para entregar", tono: "ok", accion: "Entregar", pagina: "taller-trabajos", f: "entaller" },
+    { filtro: (s) => s.estado === "DIAGNOSTICADA", estado: "Por cotizar", tono: "cotizacion", accion: "Cotizar", pagina: "taller-solicitudes", f: "diagnosticadas" },
+    { filtro: (s) => s.estado === "REPUESTOS_PEDIDOS", estado: "Esperando repuestos", tono: "curso", accion: "Confirmar llegada", pagina: "taller-trabajos", f: "repuestos" },
+    { filtro: (s) => s.estado === "LISTA", estado: "Lista para entregar", tono: "lista", accion: "Entregar", pagina: "taller-trabajos", f: "entaller" },
   ];
   resto.forEach((r, i) => solicitudes.filter(r.filtro).forEach((s) => items.push({
     s, orden: 2 + i, clave: new Date(s.fechaCreacion || 0).getTime(),

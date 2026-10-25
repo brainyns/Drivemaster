@@ -98,7 +98,11 @@
   cursor: pointer;
 }
 
-.st-tarjeta__abrir:hover .st-tarjeta__titulo { text-decoration: underline; text-underline-offset: 3px; }
+/* El vehículo no es un enlace aparte: como en Solicitudes, Inicio y Cotizaciones, el título nunca va subrayado
+   y lo que se abre se marca con el borde de la tarjeta */
+@media (hover: hover) and (pointer: fine) {
+  .st-tarjeta--trabajo:has(.st-tarjeta__abrir:hover) { border-color: var(--ui-muted); }
+}
 .st-tarjeta__abrir:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 4px; border-radius: var(--ui-r-lg); }
 
 .st-tarjeta .ui-pasos { margin-top: 0; }

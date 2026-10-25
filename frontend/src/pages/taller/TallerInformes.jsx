@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { getToken } from "../../services/authService";
 import { informesTaller } from "../../services/informesTallerService";
-import { ESTADOS, formatPrecio } from "../../components/servicio/estadosServicio";
+import { formatPrecio } from "../../components/servicio/estadosServicio";
+import { ESTADOS_TALLER } from "../../components/servicio/estadosTaller";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
 import Indicador from "../../components/ui/Indicador";
 import Alerta from "../../components/ui/Alerta";
@@ -52,7 +53,7 @@ function Barras({ filas }) {
 
 function ServiciosPorEstado({ servicios }) {
   const filas = Object.entries(servicios.porEstado).filter(([, n]) => n > 0)
-    .map(([estado, n]) => [ESTADOS[estado]?.label || estado, n]);
+    .map(([estado, n]) => [ESTADOS_TALLER[estado]?.label || estado, n]);
   return (
     <Tarjeta id="ti-servicios" titulo="Servicios por estado">
       {filas.length === 0 ? (

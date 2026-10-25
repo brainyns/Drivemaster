@@ -17,6 +17,9 @@
   color: var(--ui-text);
 }
 
+/* El botón flotante del asistente (60 px a 20 px del borde) no tapa lo último de cada página */
+.pt-root.tp-root { padding-bottom: calc(2.5rem + 88px); }
+
 /* ── Hojas compartidas dentro del panel del taller ──────────────────────────
    Texto oscuro sobre el naranja, como en el resto del panel (fuera del taller no cambian). */
 .tp-root .sv-btn,

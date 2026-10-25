@@ -8,8 +8,8 @@ const ACTOR = {
   SISTEMA: "DriveMaster",
 };
 
-/** Avance de la solicitud: cada evento con su fecha, quién lo hizo y la nota. */
-export default function LineaTiempo({ eventos = [] }) {
+/** Avance de la solicitud: cada evento con su fecha, quién lo hizo y la nota. catalogo da el nombre de cada estado. */
+export default function LineaTiempo({ eventos = [], catalogo = ESTADOS }) {
   if (!eventos.length) return null;
   const ordenados = [...eventos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
@@ -20,7 +20,7 @@ export default function LineaTiempo({ eventos = [] }) {
           <span className="ss-timeline__marca" aria-hidden="true" />
           <div className="ss-timeline__cuerpo">
             <div className="ss-timeline__cabecera">
-              <strong>{ESTADOS[e.estado]?.label || e.estado}</strong>
+              <strong>{catalogo[e.estado]?.label || e.estado}</strong>
               <time>{formatFechaHora(e.fecha)}</time>
             </div>
             {e.nota && <p className="ss-timeline__nota">{e.nota}</p>}

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken } from "../../services/authService";
 import { cotizacionesDelTaller } from "../../services/cotizacionService";
 import CotizacionDetalle from "../../components/servicio/CotizacionDetalle";
-import { ESTADOS_COTIZACION, formatFechaHora, formatPrecio } from "../../components/servicio/estadosServicio";
+import { formatFechaHora, formatPrecio } from "../../components/servicio/estadosServicio";
+import { ESTADOS_COTIZACION_TALLER } from "../../components/servicio/estadosTaller";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
 import ChipEstado from "../../components/ui/ChipEstado";
 import Alerta from "../../components/ui/Alerta";
@@ -131,7 +132,7 @@ export default function TallerCotizaciones({ irA }) {
                     )}
                   </span>
                   <span className="tc-fila__total ui-precio">{formatPrecio(c.total)}</span>
-                  <ChipEstado estado={vencida(c, ahora) ? "VENCIDA" : c.estado} catalogo={ESTADOS_COTIZACION} />
+                  <ChipEstado estado={vencida(c, ahora) ? "VENCIDA" : c.estado} catalogo={ESTADOS_COTIZACION_TALLER} />
                   <Icon name="chevron" size={18} className="tc-fila__chevron" />
                 </button>
                 {abierto && (

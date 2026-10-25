@@ -363,6 +363,20 @@
 .ui-badge--acento { color: var(--primary-text); background: var(--primary-soft); }
 .ui-badge--neutro { color: var(--ui-muted); background: var(--ui-hover); }
 
+/* Fases del panel del taller: --fase es el color de la fase, para chips, indicadores y barras */
+.ui-fase--nueva      { --fase: var(--fase-nueva);      --fase-bg: var(--fase-nueva-bg); }
+.ui-fase--cotizacion { --fase: var(--fase-cotizacion); --fase-bg: var(--fase-cotizacion-bg); }
+.ui-fase--curso      { --fase: var(--fase-curso);      --fase-bg: var(--fase-curso-bg); }
+.ui-fase--lista      { --fase: var(--fase-lista);      --fase-bg: var(--fase-lista-bg); }
+.ui-fase--entregada  { --fase: var(--fase-entregada);  --fase-bg: var(--fase-entregada-bg); }
+.ui-fase--cancelada  { --fase: var(--fase-cancelada);  --fase-bg: var(--fase-cancelada-bg); }
+.ui-badge--fase-nueva      { color: var(--fase-nueva);      background: var(--fase-nueva-bg); }
+.ui-badge--fase-cotizacion { color: var(--fase-cotizacion); background: var(--fase-cotizacion-bg); }
+.ui-badge--fase-curso      { color: var(--fase-curso);      background: var(--fase-curso-bg); }
+.ui-badge--fase-lista      { color: var(--fase-lista);      background: var(--fase-lista-bg); }
+.ui-badge--fase-entregada  { color: var(--fase-entregada);  background: var(--fase-entregada-bg); }
+.ui-badge--fase-cancelada  { color: var(--fase-cancelada);  background: var(--fase-cancelada-bg); }
+
 /* ── Chip seleccionable (filtros, sugerencias) ─────────────────────────── */
 .ui-chip {
   display: inline-flex;

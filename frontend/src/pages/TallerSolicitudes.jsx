@@ -13,8 +13,9 @@ import DiagnosticoForm from "../components/servicio/DiagnosticoForm";
 import CotizacionForm from "../components/servicio/CotizacionForm";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
 import {
-  ESTADOS, ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
+  ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
+import { ESTADOS_TALLER, estadoDeSolicitud } from "../components/servicio/estadosTaller";
 import { tiempoRelativo } from "./taller/resumenTaller";
 import { errorDiaCita, hora12, horasDeCita, semanaDesdeFranjas } from "./taller/horarioTaller";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
@@ -44,7 +45,7 @@ const enTaller = (s) => ["REPUESTOS_RECIBIDOS", "EN_INSTALACION", "LISTA"].inclu
 const FILTROS_SOLICITUDES = [
   { key: "responder", label: "Por responder", filtro: porResponder },
   { key: "agendadas", label: "Agendadas", filtro: agendada },
-  { key: "diagnosticadas", label: "Diagnosticadas", filtro: (s) => s.estado === "DIAGNOSTICADA" },
+  { key: "diagnosticadas", label: "Por cotizar", filtro: (s) => s.estado === "DIAGNOSTICADA" },
   { key: "cerradas", label: "Cerradas", filtro: (s) => ["CANCELADA", "RECHAZADA", "REASIGNADA"].includes(s.estado) },
 ];
 
@@ -81,7 +82,13 @@ const TEXTOS = {
   },
 };
 
-const PASOS_TRABAJO = ["Repuestos", "Instalación", "Pruebas", "Lista", "Entregada"];
+/** Chip de estado con el nombre y el color de fase del panel del taller (estadosTaller.js). */
+function ChipEstadoSolicitud({ s }) {
+  const { label, tono } = estadoDeSolicitud(s);
+  return <ChipEstado tono={tono}>{label}</ChipEstado>;
+}
+
+const PASOS_TRABAJO =["Repuestos", "Instalación", "Pruebas", "Lista", "Entregada"];
 
 /** Paso actual de un trabajo en el taller (0 = repuestos recibidos … 4 = entregada), o -1 si aún espera repuestos. */
 function pasoDeTrabajo(s) {
@@ -377,7 +384,7 @@ export default function TallerSolicitudes({
       : s.estado === "DIAGNOSTICADA" && !cotizando && !editandoDiagnostico
         ? { etiqueta: "Diagnóstico listo", texto: "Cotizar", onClick: () => setCotizando(true) }
         : accion
-          ? { etiqueta: ESTADOS[s.estado]?.label, texto: accion.texto, onClick: () => ejecutar(accion.ejecutar) }
+          ? { etiqueta: ESTADOS_TALLER[s.estado]?.label, texto: accion.texto, onClick: () => ejecutar(accion.ejecutar) }
           : null;
 
     return (
@@ -385,7 +392,7 @@ export default function TallerSolicitudes({
         <EncabezadoPagina titulo={s.vehiculoDescripcion} onVolver={cerrarDetalle}
           textoVolver={desdeAfuera ? textoAfuera : textos.volver}>
           <p className="st-detalle__meta">
-            <ChipEstado estado={s.estado} catalogo={ESTADOS} />
+            <ChipEstadoSolicitud s={s} />
             {enPruebas && <ChipEstado tono="info">En pruebas</ChipEstado>}
             {s.vehiculoPlaca && <span className="ui-placa">{s.vehiculoPlaca}</span>}
             <span>Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
@@ -620,7 +627,7 @@ export default function TallerSolicitudes({
 
           <aside className="ss-detalle__lateral" aria-labelledby="st-avance">
             <h2 id="st-avance" className="ss-bloque__titulo">Avance</h2>
-            <LineaTiempo eventos={s.eventos} />
+            <LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} />
           </aside>
         </div>
 
@@ -645,7 +652,7 @@ export default function TallerSolicitudes({
         <button type="button" className="st-tarjeta__abrir" onClick={() => abrir(s)}>
           <span className="st-tarjeta__cabecera">
             <strong className="st-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
-            <ChipEstado estado={s.estado} catalogo={ESTADOS} />
+            <ChipEstadoSolicitud s={s} />
           </span>
           <span className="st-tarjeta__meta">
             {s.vehiculoPlaca && <span className="ui-placa ui-placa--chica">{s.vehiculoPlaca}</span>}
@@ -674,7 +681,7 @@ export default function TallerSolicitudes({
             {abierta ? "Ocultar avance" : "Ver avance"}
           </button>
         </div>
-        {abierta && <div id={`st-linea-${s.id}`} className="st-tarjeta__linea"><LineaTiempo eventos={s.eventos} /></div>}
+        {abierta && <div id={`st-linea-${s.id}`} className="st-tarjeta__linea"><LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} /></div>}
       </li>
     );
   };
@@ -753,7 +760,7 @@ export default function TallerSolicitudes({
                 <span className="st-tarjeta__cabecera">
                   <strong className="st-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
                   <span className="st-tarjeta__chips">
-                    {chipPlazo(s) || <ChipEstado estado={s.estado} catalogo={ESTADOS} />}
+                    {chipPlazo(s) || <ChipEstadoSolicitud s={s} />}
                   </span>
                 </span>
                 <span className="st-tarjeta__sintomas">{s.sintomas}</span>
