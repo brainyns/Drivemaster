@@ -12,6 +12,10 @@ const formatPct = (v) => (v == null ? "" : `${Number.isInteger(v) ? v : v.toFixe
 export default function CotizacionDetalle({ cotizacion: c, mostrarComision = false, sinEstado = false }) {
   const repuestos = (c.items || []).filter((i) => i.tipo === "REPUESTO");
   const manoObra = (c.items || []).filter((i) => i.tipo === "MANO_OBRA");
+  // Lo del taller es la mano de obra con su IVA (la comisión es informativa: no se le resta)
+  const recibe = c.subtotalManoObra != null
+    ? c.subtotalManoObra + (c.ivaManoObra ?? Math.round((c.subtotalManoObra * (c.ivaPct || 0)) / 100))
+    : null;
 
   return (
     <div className="ct-detalle">
@@ -64,16 +68,30 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
       <dl className="ct-totales">
         <div className="ct-totales__fila"><dt>Subtotal</dt><dd>{formatPrecio(c.subtotal)}</dd></div>
         <div className="ct-totales__fila"><dt>IVA ({formatPct(c.ivaPct)})</dt><dd>{formatPrecio(c.iva)}</dd></div>
-        <div className="ct-totales__fila"><dt>Total</dt><dd>{formatPrecio(c.total)}</dd></div>
+        {/* Sin anticipo, el total y el total a pagar son la misma cifra: solo queda el segundo */}
         {c.anticipoDiagnostico > 0 && (
-          <div className="ct-totales__fila ct-totales__fila--descuento">
-            <dt>Diagnóstico ya pagado</dt><dd>− {formatPrecio(c.anticipoDiagnostico)}</dd>
-          </div>
+          <>
+            <div className="ct-totales__fila"><dt>Total</dt><dd>{formatPrecio(c.total)}</dd></div>
+            <div className="ct-totales__fila ct-totales__fila--descuento">
+              <dt>Diagnóstico ya pagado</dt><dd>− {formatPrecio(c.anticipoDiagnostico)}</dd>
+            </div>
+          </>
         )}
         <div className="ct-totales__fila ct-totales__fila--final"><dt>Total a pagar</dt><dd>{formatPrecio(c.totalAPagar)}</dd></div>
+        {mostrarComision && recibe != null && (
+          <div className="ct-totales__fila ct-totales__fila--recibe">
+            <dt>
+              Recibes
+              <span className="ss-meta">
+                Mano de obra con su IVA{c.anticipoDiagnostico > 0 ? ", incluido el diagnóstico ya pagado" : ""}. Los repuestos van a la tienda.
+              </span>
+            </dt>
+            <dd>{formatPrecio(recibe)}</dd>
+          </div>
+        )}
         {mostrarComision && c.comisionInformativa != null && (
           <div className="ct-totales__fila ct-totales__fila--info">
-            <dt>Comisión DriveMaster (informativa)</dt><dd>{formatPrecio(c.comisionInformativa)}</dd>
+            <dt>Comisión DriveMaster (informativa, hoy no se descuenta)</dt><dd>{formatPrecio(c.comisionInformativa)}</dd>
           </div>
         )}
       </dl>

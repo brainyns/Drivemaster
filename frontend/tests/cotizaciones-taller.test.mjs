@@ -46,3 +46,24 @@ test("la tarjeta rechazada muestra la fecha de rechazo y el motivo si existe", (
   assert.ok(pagina.includes("rechazada && c.motivoRespuesta &&"), "el motivo solo aparece si el cliente lo dejó");
   assert.ok(pagina.includes("formatPrecio(c.total)") && pagina.includes("<ChipEstado estado="), "valor y etiqueta de estado");
 });
+
+test("Vence pronto: emitida y vigente a 2 días o menos; ni vencida ni las de más plazo", async () => {
+  const { vencePronto } = await import("../src/pages/taller/filtrosCotizaciones.js");
+  assert.ok(vencePronto(cot("p", "EMITIDA", { vigenciaHasta: "2026-10-14T00:00:00Z" }), ahora));
+  assert.ok(!vencePronto(COTIZACIONES[0], ahora), "a 2,5 días todavía no");
+  assert.ok(!vencePronto(COTIZACIONES[1], ahora), "la vencida va en gris, no como vence pronto");
+  assert.ok(!vencePronto(cot("a", "APROBADA", { vigenciaHasta: "2026-10-13T00:00:00Z" }), ahora));
+  assert.ok(pagina.includes('<ChipEstado tono="aviso">Vence pronto</ChipEstado>'));
+});
+
+test("todas las pestañas muestran su contador, también en cero", () => {
+  assert.ok(pagina.includes('<span className="ui-chip__contador">{conteo[f.key]}</span>'));
+  assert.ok(!pagina.includes("conteo[f.key] > 0 &&"));
+});
+
+test("el detalle deja solo \"Total a pagar\" si no hay anticipo y dice cuánto recibe el taller", () => {
+  const detalle = readFileSync(new URL("../src/components/servicio/CotizacionDetalle.jsx", import.meta.url), "utf8");
+  assert.match(detalle, /\{c\.anticipoDiagnostico > 0 && \(\s*<>\s*<div className="ct-totales__fila"><dt>Total<\/dt>/,
+    "\"Total\" solo aparece con anticipo");
+  assert.ok(detalle.includes("c.subtotalManoObra + (c.ivaManoObra ??"), "recibe = mano de obra con su IVA");
+});

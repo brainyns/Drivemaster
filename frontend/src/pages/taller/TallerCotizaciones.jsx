@@ -10,7 +10,7 @@ import Alerta from "../../components/ui/Alerta";
 import EstadoVacio from "../../components/ui/EstadoVacio";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Icon from "../../components/public/Icon";
-import { FILTROS, VACIO, vencida, contarPorFiltro, filtrar } from "./filtrosCotizaciones";
+import { FILTROS, VACIO, vencida, vencePronto, contarPorFiltro, filtrar } from "./filtrosCotizaciones";
 import "../../css/servicios.css";
 import "../../css/solicitud-servicio.css";
 import "../../css/cotizacion.css";
@@ -93,7 +93,7 @@ export default function TallerCotizaciones({ irA }) {
           <button key={f.key} type="button" className="ui-chip" aria-pressed={filtro === f.key}
             onClick={() => { setFiltro(f.key); setAbierta(null); }}>
             {f.label}
-            {conteo[f.key] > 0 && <span className="ui-chip__contador">{conteo[f.key]}</span>}
+            <span className="ui-chip__contador">{conteo[f.key]}</span>
           </button>
         ))}
       </div>
@@ -132,7 +132,10 @@ export default function TallerCotizaciones({ irA }) {
                     )}
                   </span>
                   <span className="tc-fila__total ui-precio">{formatPrecio(c.total)}</span>
-                  <ChipEstado estado={vencida(c, ahora) ? "VENCIDA" : c.estado} catalogo={ESTADOS_COTIZACION_TALLER} />
+                  <span className="tc-fila__chips">
+                    <ChipEstado estado={vencida(c, ahora) ? "VENCIDA" : c.estado} catalogo={ESTADOS_COTIZACION_TALLER} />
+                    {vencePronto(c, ahora) && <ChipEstado tono="aviso">Vence pronto</ChipEstado>}
+                  </span>
                   <Icon name="chevron" size={18} className="tc-fila__chevron" />
                 </button>
                 {abierto && (

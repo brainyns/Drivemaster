@@ -57,6 +57,7 @@
 }
 
 .tc-fila__total { font-size: 1rem; }
+.tc-fila__chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 
 .tc-fila__chevron {
   color: var(--ui-muted);
@@ -72,7 +73,7 @@
   .tc-fila__vehiculo { grid-column: 1; }
   .tc-fila__chevron { grid-column: 2; grid-row: 1; align-self: start; }
   .tc-fila__total { grid-column: 1; }
-  .tc-fila .ui-badge { grid-column: 1; justify-self: start; }
+  .tc-fila__chips { grid-column: 1; justify-content: flex-start; }
   .tc-detalle { padding: 4px 16px 16px; }
 }
 

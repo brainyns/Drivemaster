@@ -91,6 +91,20 @@
   font-style: italic;
 }
 
+/* Lo que le queda al taller (solo en su vista): en verde, con una línea que dice de dónde sale */
+.ct-totales__fila--recibe {
+  align-items: baseline;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: var(--ui-r-md);
+  background: var(--ui-ok-bg);
+  color: var(--ui-ok);
+  font-weight: 700;
+}
+
+.ct-totales__fila--recibe dt { display: grid; gap: 2px; }
+.ct-totales__fila--recibe .ss-meta { font-size: 0.75rem; font-weight: 400; color: var(--text-muted); }
+
 /* ── Formulario del taller ── */
 .ct-form {
   display: flex;
