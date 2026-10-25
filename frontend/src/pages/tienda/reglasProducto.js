@@ -171,3 +171,9 @@ export function margen(precioCompra, precioVenta) {
   const venta = Number(precioVenta);
   return compra > 0 && venta > 0 ? Math.round(((venta - compra) / compra) * 1000) / 10 : null;
 }
+
+/** Precio que ve el cliente: el de venta (sin IVA) más el IVA del parámetro (ivaRate en fracción, 0.19). null si no hay precio. */
+export function precioConIva(precioVenta, ivaRate) {
+  const venta = Number(precioVenta);
+  return venta > 0 && typeof ivaRate === "number" && ivaRate >= 0 ? Math.round(venta * (1 + ivaRate)) : null;
+}

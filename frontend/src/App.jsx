@@ -661,8 +661,8 @@ function App() {
     // SUPERADMIN: catálogo global de solo lectura; la TIENDA y el VENDEDOR siguen con su gestión de productos
     if (pagina === "productos" && user?.rol === "SUPERADMIN") return <ProductosPlataforma token={token} />;
     if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} esTienda={esTienda} />;
-    if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
-    if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
+    if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} esTienda={esTienda} ivaRate={ivaRate} />;
+    if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} esTienda={esTienda} ivaRate={ivaRate} />;
     if (pagina === "inventarioAjuste") return <AjusteInventarioForm productoId={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
 
     if (pagina === "clientes" && user?.rol === "SUPERADMIN") return <ClientesPlataforma token={token} />;

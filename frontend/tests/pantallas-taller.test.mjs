@@ -365,3 +365,9 @@ test("Trabajos: un botón con el siguiente paso de cada etapa y los montos de un
   assert.equal((pagina.match(/cotizacionesDelTaller\(token\)/g) || []).length, 1, "una sola petición, no una por trabajo");
   assert.ok(pagina.includes("cotizacionesPorId[s.cotizacionId]"), "cada trabajo toma su cotización por id");
 });
+
+test("Trabajos: pasar a lista sin pruebas pide confirmación", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(pagina.includes("onClick={() => setConfirmandoSinPruebas(true)}"), "el botón abre la confirmación");
+  assert.match(pagina, /<ConfirmarAccion titulo="¿Marcar como lista sin registrar pruebas\?"/);
+});

@@ -26,11 +26,13 @@ import Esqueleto from "../components/ui/Esqueleto";
 import Pasos from "../components/ui/Pasos";
 import Campo from "../components/ui/Campo";
 import BarraAccionMovil from "../components/ui/BarraAccionMovil";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
 import "../css/solicitudes-taller.css";
+import "../css/marketplace.css"; // el diálogo de ConfirmarAccion
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 const TONO_URGENCIA = { BAJA: "ok", MEDIA: "info", ALTA: "aviso", CRITICA: "error" };
@@ -245,6 +247,7 @@ export default function TallerSolicitudes({
   const [motivo, setMotivo] = useState("");
   const [editandoDiagnostico, setEditandoDiagnostico] = useState(false);
   const [cotizando, setCotizando] = useState(false);
+  const [confirmandoSinPruebas, setConfirmandoSinPruebas] = useState(false);
   const [procesando, setProcesando] = useState(false);
   const [reintentando, setReintentando] = useState(false);
   const [errorFecha, setErrorFecha] = useState(null);
@@ -321,6 +324,7 @@ export default function TallerSolicitudes({
     setMotivo("");
     setEditandoDiagnostico(false);
     setCotizando(false);
+    setConfirmandoSinPruebas(false);
     setError(null);
   };
 
@@ -642,11 +646,18 @@ export default function TallerSolicitudes({
                     {/* Las pruebas son opcionales en el backend: se puede pasar directo a lista */}
                     {s.estado === "EN_INSTALACION" && !enPruebas && (
                       <button type="button" className="ui-btn ui-btn--secundario" disabled={procesando}
-                        onClick={() => ejecutar(async () => reemplazar(await marcarLista(token, s.id)))}>
+                        onClick={() => setConfirmandoSinPruebas(true)}>
                         Marcar como lista sin pruebas
                       </button>
                     )}
                   </div>
+                )}
+                {confirmandoSinPruebas && (
+                  <ConfirmarAccion titulo="¿Marcar como lista sin registrar pruebas?"
+                    mensaje="El vehículo pasa a lista para entregar y avisamos al cliente por correo. Las pruebas ya no se podrán registrar."
+                    textoConfirmar="Sí, marcar como lista"
+                    onCancelar={() => setConfirmandoSinPruebas(false)}
+                    onConfirmar={async () => { reemplazar(await marcarLista(token, s.id)); setConfirmandoSinPruebas(false); }} />
                 )}
               </section>
             )}

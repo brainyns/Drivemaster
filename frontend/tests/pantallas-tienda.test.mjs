@@ -337,3 +337,13 @@ test("Inventario: el error real del backend llega a la pantalla (stock insuficie
   assert.ok(!servicio.includes("Error al registrar movimiento"));
   assert.match(servicio, /throw await errorDeRespuesta\(res, "No se pudo registrar el movimiento/);
 });
+
+test("Producto: el precio de venta es sin IVA y muestra lo que verá el cliente con el IVA del parámetro", async () => {
+  const { precioConIva } = await import("../src/pages/tienda/reglasProducto.js");
+  assert.equal(precioConIva("100000", 0.19), 119000);
+  assert.equal(precioConIva("", 0.19), null);
+  assert.equal(precioConIva("50000", null), null, "sin el parámetro no se inventa un precio");
+  const pagina = readFileSync(new URL("../src/pages/ProductoForm.jsx", import.meta.url), "utf8");
+  assert.ok(pagina.includes('label="Precio de venta (sin IVA)"'));
+  assert.ok(pagina.includes("El cliente verá: ${formatoCop(paraCliente)} con IVA"));
+});

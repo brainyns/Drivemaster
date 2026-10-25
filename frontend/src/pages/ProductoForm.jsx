@@ -12,10 +12,11 @@ import ImagenProducto from "../components/marketplace/ImagenProducto";
 import Icon from "../components/public/Icon";
 import {
   ANO_ACTUAL, CATEGORIAS, COMPAT_VACIA, MARCAS_REPUESTO, MARCAS_VEHICULO, MARCAS_VEHICULO_LISTA, TIPOS_IMAGEN,
-  campoVacio, compatDeLista, errorImagen, margen as calcularMargen, mismaCompat, validarFormulario,
+  campoVacio, compatDeLista, errorImagen, margen as calcularMargen, mismaCompat, precioConIva, validarFormulario,
 } from "./tienda/reglasProducto";
 import "../css/producto-form.css";
 import { etiquetaCategoria } from "../utils/categorias";
+import { formatoCop } from "../utils/formato";
 
 /**
  * Sugerencias de la IA para el producto (solo TIENDA): categoría de la lista y compatibilidades "por confirmar".
@@ -120,7 +121,7 @@ function Dinero(props) {
   );
 }
 
-function ProductoForm({ id, onVolver, token, esTienda = false }) {
+function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null }) {
   const esEdicion = Boolean(id);
 
   const [form, setForm] = useState({
@@ -270,6 +271,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
   };
 
   const margen = calcularMargen(form.precioCompra, form.precioVenta);
+  const paraCliente = precioConIva(form.precioVenta, ivaRate);
   const compatErrores = errores.compatibilidad || [];
   const cantidadErrores = Object.keys(errores).filter((k) => k !== "compatibilidad").length
     + compatErrores.filter(Boolean).reduce((s, e) => s + Object.keys(e).length, 0);
@@ -434,7 +436,10 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 <Campo id="pfm-compra" label="Precio de compra" error={errores.precioCompra}>
                   <Dinero name="precioCompra" value={form.precioCompra} onChange={handleChange} />
                 </Campo>
-                <Campo id="pfm-venta" label="Precio de venta" error={errores.precioVenta}>
+                <Campo id="pfm-venta" label="Precio de venta (sin IVA)" error={errores.precioVenta}
+                  ayuda={paraCliente != null
+                    ? `El cliente verá: ${formatoCop(paraCliente)} con IVA (${Math.round(ivaRate * 100)} %)`
+                    : "DriveMaster le suma el IVA al cobrar."}>
                   <Dinero name="precioVenta" value={form.precioVenta} onChange={handleChange} />
                 </Campo>
               </div>
