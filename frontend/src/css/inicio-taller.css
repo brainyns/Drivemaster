@@ -112,6 +112,28 @@
 .ini-agenda__texto strong { font-size: 0.9rem; overflow-wrap: anywhere; }
 .ini-agenda__texto span { font-size: 0.8rem; color: var(--ui-muted); }
 
+/* Hoy y lo que viene, en dos grupos con su propio título: "sin citas hoy" no se mezcla con la próxima */
+.ini-root .ini-agenda__grupo {
+  margin: 4px 0 -4px;
+  font-family: var(--ui-font);
+  font-size: var(--fs-etiqueta);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+.ini-root .ini-agenda__grupo ~ .ini-agenda__grupo { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--ui-line-soft); }
+.ini-agenda__cita--proxima { grid-template-columns: 150px minmax(0, 1fr); background: none; border: 1px solid var(--ui-line-soft); }
+.ini-agenda__cita--proxima .ini-agenda__hora { font-size: 0.85rem; font-weight: 700; color: var(--ui-text); }
+
+/* Mano de obra: lo pendiente y lo recibido son dos cifras con su nombre, no una cifra y una nota */
+.ini-dinero { display: grid; gap: 6px; }
+.ini-dinero__fila { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.ini-dinero__etiqueta { font-size: 0.8125rem; color: var(--ui-muted); }
+.ini-dinero__valor { font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ini-dinero__pendiente .ini-dinero__valor { color: var(--ui-aviso); }
+.ini-dinero__recibido .ini-dinero__valor { color: var(--ui-ok); }
+
 @media (max-width: 960px) {
   .ini-columnas { grid-template-columns: minmax(0, 1fr); }
 }

@@ -879,6 +879,17 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 .ui-indicador--accion .ui-indicador__valor { color: var(--primary-text); }
 .ui-indicador--ok .ui-indicador__valor { color: var(--ui-ok); }
 
+/* Con fase (panel del taller): un punto junto al título y la cifra en el color de la fase (como ChipEstado) */
+.ui-indicador--fase .ui-indicador__titulo::before {
+  content: "";
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fase);
+}
+.ui-indicador--fase .ui-indicador__valor { color: var(--fase); }
+
 /* ── Sección editable por partes (SeccionEditable) ─────────────────────── */
 .ui-seccion {
   display: grid;

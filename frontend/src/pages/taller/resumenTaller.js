@@ -13,12 +13,14 @@ export const esperaRepuestos = (s) => s.estado === "PAGADA" || s.estado === "REP
 /** Trabajo ya en el taller: repuestos recibidos hasta la entrega al cliente. */
 export const enTaller = (s) => ["REPUESTOS_RECIBIDOS", "EN_INSTALACION", "LISTA"].includes(s.estado);
 
-/** Próxima revisión agendada (la más cercana que aún no pasó). */
-export function proximaRevision(solicitudes, ahora = Date.now()) {
+/** Próximas citas de revisión, de mañana en adelante (las de hoy son citasDeHoy), de la más cercana a la más lejana. */
+export function proximasCitas(solicitudes, ahora = Date.now(), cantidad = 3) {
+  const manana = new Date(ahora);
+  manana.setHours(24, 0, 0, 0);
   return solicitudes
-    .filter((s) => s.fechaRevision && ["ASIGNADA_A_TALLER", "EN_REVISION"].includes(s.estado)
-      && new Date(s.fechaRevision).getTime() >= ahora)
-    .sort((a, b) => new Date(a.fechaRevision) - new Date(b.fechaRevision))[0] || null;
+    .filter((s) => agendada(s) && s.fechaRevision && new Date(s.fechaRevision).getTime() >= manana.getTime())
+    .sort((a, b) => new Date(a.fechaRevision) - new Date(b.fechaRevision))
+    .slice(0, cantidad);
 }
 
 /** Cuánto falta (o cuánto pasó) para una fecha, en texto corto. */

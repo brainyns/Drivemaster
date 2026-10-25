@@ -11,7 +11,7 @@ import EstadoVacio from "../../components/ui/EstadoVacio";
 import Esqueleto from "../../components/ui/Esqueleto";
 import BarraAccionMovil from "../../components/ui/BarraAccionMovil";
 import Icon from "../../components/public/Icon";
-import { citasDeHoy, enTaller, esperaRepuestos, porResponder, proximaRevision, tiempoRelativo, urgentes } from "./resumenTaller";
+import { citasDeHoy, enTaller, esperaRepuestos, porResponder, proximasCitas, tiempoRelativo, urgentes } from "./resumenTaller";
 import { datosCalificacion } from "../../utils/calificacion";
 import "../../css/inicio-taller.css";
 
@@ -65,7 +65,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
       esperandoCliente: solicitudes.filter((s) => s.estado === "COTIZADA" || s.estado === "APROBADA"),
       enCurso: solicitudes.filter((s) => enTaller(s) || esperaRepuestos(s)),
       urgentes: urgentes(solicitudes, ahora),
-      proxima: proximaRevision(solicitudes, ahora),
+      proximas: proximasCitas(solicitudes, ahora),
     };
   }, [solicitudes, ahora]);
 
@@ -161,10 +161,19 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                 pie={datos.enCurso.length > 0 ? "Esperando repuestos o en el taller" : "Ningún vehículo en curso"}
                 onClick={() => irA("taller-trabajos", datos.enCurso.some(enTaller) ? "entaller" : "repuestos")} />
               {ingresos && (
-                <Indicador titulo="Mano de obra por cobrar" valor={formatPrecio(ingresos.pendiente)}
-                  tono={ingresos.pendiente > 0 ? "ok" : undefined}
-                  pie={`${formatPrecio(ingresos.liquidado)} ya liquidados en total`}
-                  onClick={() => irA("taller-informes")} />
+                <Indicador titulo="Mano de obra" pie="Total histórico de tus servicios" onClick={() => irA("taller-informes")}>
+                  {/* Dentro de un botón solo cabe contenido en línea: spans en vez de dl */}
+                  <span className="ini-dinero">
+                    <span className="ini-dinero__fila ini-dinero__pendiente">
+                      <span className="ini-dinero__etiqueta">Pendiente de cobro</span>
+                      <span className="ini-dinero__valor">{formatPrecio(ingresos.pendiente)}</span>
+                    </span>
+                    <span className="ini-dinero__fila ini-dinero__recibido">
+                      <span className="ini-dinero__etiqueta">Ya recibido</span>
+                      <span className="ini-dinero__valor">{formatPrecio(ingresos.liquidado)}</span>
+                    </span>
+                  </span>
+                </Indicador>
               )}
               {taller && (
                 <Indicador icono="star" titulo="Calificación" valor={calificacion.nuevo ? "Nuevo" : calificacion.promedio}
@@ -217,6 +226,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                   Ver agenda
                 </button>
               </div>
+              <h3 className="ini-agenda__grupo">Citas de hoy</h3>
               {datos.hoy.length > 0 ? (
                 <ol className="ini-agenda">
                   {datos.hoy.map((s) => (
@@ -229,13 +239,25 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                     </li>
                   ))}
                 </ol>
-              ) : datos.proxima ? (
-                <p className="ini-bloque__vacio">
-                  Hoy no tienes citas. La próxima es el <strong>{formatFechaHora(datos.proxima.fechaRevision)}</strong>
-                  {" "}({datos.proxima.vehiculoDescripcion}).
-                </p>
               ) : (
-                <p className="ini-bloque__vacio">No tienes revisiones agendadas. Al aceptar una solicitud eliges la fecha.</p>
+                <p className="ini-bloque__vacio">Hoy no tienes revisiones agendadas.</p>
+              )}
+
+              <h3 className="ini-agenda__grupo">Próximas citas</h3>
+              {datos.proximas.length > 0 ? (
+                <ol className="ini-agenda">
+                  {datos.proximas.map((s) => (
+                    <li key={s.id} className="ini-agenda__cita ini-agenda__cita--proxima">
+                      <time className="ini-agenda__hora" dateTime={s.fechaRevision}>{formatFechaHora(s.fechaRevision)}</time>
+                      <span className="ini-agenda__texto">
+                        <strong>{s.vehiculoDescripcion}</strong>
+                        <span>{s.mecanicoNombre ? `Mecánico: ${s.mecanicoNombre}` : "Sin mecánico asignado"}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="ini-bloque__vacio">Nada agendado para los próximos días. Al aceptar una solicitud eliges la fecha.</p>
               )}
             </section>
           </div>
