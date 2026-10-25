@@ -90,6 +90,19 @@
 }
 
 .st-tarjeta__meta .ui-placa--chica { margin: 0 6px 0 0; }
+
+/* Trabajos: montos de la cotización aprobada en una línea */
+.st-tarjeta__dinero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  font-size: 0.8125rem;
+  color: var(--ui-muted);
+}
+
+.st-tarjeta__dinero strong { margin-left: 4px; font-size: 0.875rem; color: var(--ui-text); }
+.st-tarjeta__dinero-nota { font-size: var(--fs-pequeno); }
 .st-root .st-tarjeta__nota { margin: 0; font-size: 0.875rem; color: var(--ui-muted); }
 
 @media (hover: hover) and (pointer: fine) {

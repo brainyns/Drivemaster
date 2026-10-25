@@ -6,7 +6,7 @@ import {
   aceptarSolicitudServicio, rechazarSolicitudServicio, asignarMecanicoSolicitud,
   iniciarInstalacion, marcarEnPruebas, marcarLista, marcarEntregada,
 } from "../services/solicitudServicioService";
-import { cotizacionesDeOrden } from "../services/cotizacionService";
+import { cotizacionesDeOrden, cotizacionesDelTaller } from "../services/cotizacionService";
 import { pedidosDeOrden, confirmarRepuestosRecibidos } from "../services/pedidoTiendaService";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import DiagnosticoForm from "../components/servicio/DiagnosticoForm";
@@ -88,7 +88,25 @@ function ChipEstadoSolicitud({ s }) {
   return <ChipEstado tono={tono}>{label}</ChipEstado>;
 }
 
-const PASOS_TRABAJO =["Repuestos", "Instalación", "Pruebas", "Lista", "Entregada"];
+/**
+ * Montos de la cotización aprobada de un trabajo, en una línea: total, repuestos y mano de obra, cada uno con su IVA
+ * (así suman el total). Sin cotización (aún cargando o si falló la consulta) no muestra nada.
+ */
+function ResumenEconomico({ cotizacion: c }) {
+  if (!c) return null;
+  const repuestos = (c.subtotalRepuestos || 0) + (c.ivaRepuestos || 0);
+  const manoObra = (c.subtotalManoObra || 0) + (c.ivaManoObra || 0);
+  return (
+    <span className="st-tarjeta__dinero">
+      <span>Total aprobado <strong className="ui-precio">{formatPrecio(c.total)}</strong></span>
+      <span>Repuestos <strong className="ui-precio">{formatPrecio(repuestos)}</strong></span>
+      <span>Mano de obra <strong className="ui-precio">{formatPrecio(manoObra)}</strong></span>
+      <span className="st-tarjeta__dinero-nota">IVA incluido</span>
+    </span>
+  );
+}
+
+const PASOS_TRABAJO = ["Repuestos", "Instalación", "Pruebas", "Lista", "Entregada"];
 
 /** Paso actual de un trabajo en el taller (0 = repuestos recibidos … 4 = entregada), o -1 si aún espera repuestos. */
 function pasoDeTrabajo(s) {
@@ -207,6 +225,7 @@ export default function TallerSolicitudes({
   const FILTROS = modo === "trabajos" ? FILTROS_TRABAJOS : FILTROS_SOLICITUDES;
   const textos = TEXTOS[modo];
   const [mecanicos, setMecanicos] = useState([]);
+  const [cotizacionesPorId, setCotizacionesPorId] = useState({});
   const [extrasListos, setExtrasListos] = useState(false);
   const cargando = cargandoBandeja || !extrasListos;
   const [error, setError] = useState(null);
@@ -236,18 +255,22 @@ export default function TallerSolicitudes({
 
   const cargarExtras = useCallback(async () => {
     try {
-      const [mecs, filas] = await Promise.all([
+      // En Trabajos, todas las cotizaciones del taller en una sola petición; cada trabajo toma la suya por id.
+      // Si falla, los trabajos se muestran sin el resumen de montos.
+      const [mecs, filas, cots] = await Promise.all([
         listarMecanicos(token), tallerId ? obtenerHorario(token, tallerId).catch(() => []) : [],
+        modo === "trabajos" ? cotizacionesDelTaller(token).catch(() => []) : [],
       ]);
       setMecanicos(mecs || []);
       setSemanaHorario(semanaDesdeFranjas(filas));
+      setCotizacionesPorId(Object.fromEntries((cots || []).map((c) => [c.id, c])));
       setError(null);
     } catch (e) {
       setError(e.message);
     } finally {
       setExtrasListos(true);
     }
-  }, [token, tallerId]);
+  }, [token, tallerId, modo]);
 
   // Espera a que el panel tenga el taller: así los mecánicos y el horario se piden una sola vez
   useEffect(() => {
@@ -360,15 +383,22 @@ export default function TallerSolicitudes({
     );
   }
 
-  /** Acción que corresponde a este trabajo, para resolverla sin abrir el detalle (o desde la barra del celular). */
+  /**
+   * Siguiente paso del trabajo según su etapa, para resolverlo sin abrir el detalle (o desde la barra del celular):
+   * repuestos recibidos → instalación → pruebas → lista → entrega. Pagada (el sistema pide los repuestos) y
+   * entregada no tienen paso del taller.
+   */
   const accionRapida = (s) => {
     if (s.estado === "REPUESTOS_PEDIDOS") return {
-      texto: "Confirmar repuestos recibidos",
+      texto: "Marcar repuestos recibidos",
       ejecutar: async () => { await confirmarRepuestosRecibidos(token, s.id); await cargar(); },
     };
     if (s.estado === "REPUESTOS_RECIBIDOS") return { texto: "Iniciar instalación", ejecutar: async () => reemplazar(await iniciarInstalacion(token, s.id)) };
-    if (s.estado === "EN_INSTALACION") return { texto: "Marcar lista", ejecutar: async () => reemplazar(await marcarLista(token, s.id)) };
-    if (s.estado === "LISTA") return { texto: "Marcar entregada", ejecutar: async () => reemplazar(await marcarEntregada(token, s.id)) };
+    if (s.estado === "EN_INSTALACION" && s.subestado !== "EN_PRUEBAS") {
+      return { texto: "Registrar pruebas", ejecutar: async () => reemplazar(await marcarEnPruebas(token, s.id)) };
+    }
+    if (s.estado === "EN_INSTALACION") return { texto: "Marcar como lista", ejecutar: async () => reemplazar(await marcarLista(token, s.id)) };
+    if (s.estado === "LISTA") return { texto: "Entregar", ejecutar: async () => reemplazar(await marcarEntregada(token, s.id)) };
     return null;
   };
 
@@ -603,18 +633,17 @@ export default function TallerSolicitudes({
                       : " · Esperando la confirmación del cliente"}
                   </p>
                 )}
-                {(accion || (s.estado === "EN_INSTALACION" && !enPruebas)) && (
+                {accion && (
                   <div className="ui-form-pie">
+                    <button type="button" className="ui-btn ui-btn--primario" disabled={procesando} aria-busy={procesando}
+                      onClick={() => ejecutar(accion.ejecutar)}>
+                      {accion.texto}
+                    </button>
+                    {/* Las pruebas son opcionales en el backend: se puede pasar directo a lista */}
                     {s.estado === "EN_INSTALACION" && !enPruebas && (
                       <button type="button" className="ui-btn ui-btn--secundario" disabled={procesando}
-                        onClick={() => ejecutar(async () => reemplazar(await marcarEnPruebas(token, s.id)))}>
-                        Marcar en pruebas (opcional)
-                      </button>
-                    )}
-                    {accion && (
-                      <button type="button" className="ui-btn ui-btn--primario" disabled={procesando} aria-busy={procesando}
-                        onClick={() => ejecutar(accion.ejecutar)}>
-                        {accion.texto}
+                        onClick={() => ejecutar(async () => reemplazar(await marcarLista(token, s.id)))}>
+                        Marcar como lista sin pruebas
                       </button>
                     )}
                   </div>
@@ -661,6 +690,7 @@ export default function TallerSolicitudes({
             {` · ${s.mecanicoNombre ? `Mecánico: ${s.mecanicoNombre}` : "Sin mecánico asignado"}`}
             {enEstadoDesde(s) && ` · en este estado ${enEstadoDesde(s)}`}
           </span>
+          <ResumenEconomico cotizacion={cotizacionesPorId[s.cotizacionId]} />
         </button>
 
         {paso >= 0 ? (

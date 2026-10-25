@@ -355,3 +355,13 @@ test("Inicio: tarjetas de estado con el color de su fase y una propia para lo li
   assert.ok(pagina.includes('titulo="Listos para entregar" valor={datos.listos.length}'));
   assert.ok(pagina.includes('s.estado !== "LISTA"'), "lo listo no se cuenta también como en curso");
 });
+
+test("Trabajos: un botón con el siguiente paso de cada etapa y los montos de una sola petición", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  for (const paso of ["Marcar repuestos recibidos", "Iniciar instalación", "Registrar pruebas", "Marcar como lista", "Entregar"]) {
+    assert.ok(pagina.includes(`texto: "${paso}"`), paso);
+  }
+  assert.ok(!pagina.includes('s.estado === "ENTREGADA") return {'), "entregados sin botón");
+  assert.equal((pagina.match(/cotizacionesDelTaller\(token\)/g) || []).length, 1, "una sola petición, no una por trabajo");
+  assert.ok(pagina.includes("cotizacionesPorId[s.cotizacionId]"), "cada trabajo toma su cotización por id");
+});
