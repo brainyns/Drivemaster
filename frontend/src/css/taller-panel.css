@@ -17,6 +17,27 @@
   color: var(--ui-text);
 }
 
+/* ── Historial (LineaTiempo): el punto en el naranja de la marca, no en azul ── */
+.tp-root .ss-timeline__marca { border-color: color-mix(in srgb, var(--primary) 45%, var(--ui-line)); }
+.tp-root .ss-timeline__item--actual .ss-timeline__marca {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+.tp-root .ss-timeline__ver { margin-top: 8px; }
+
+/* ── Etapas del trabajo (Pasos): hecho, en curso y pendiente se distinguen sin depender solo del color ──
+   Hecho: tramo lleno y marca con check sobre naranja suave. Actual: tramo a medias y marca llena con halo.
+   Pendiente: tramo gris, marca punteada y texto apagado. */
+.tp-root .ui-pasos__paso--hecho { color: var(--ui-text); }
+.tp-root .ui-pasos__paso--hecho .ui-pasos__marca { background: var(--primary-soft); }
+.tp-root .ui-pasos__paso--actual::before {
+  background: linear-gradient(to right, var(--primary) 50%, color-mix(in srgb, var(--primary) 25%, var(--ui-line)) 50%);
+}
+.tp-root .ui-pasos__paso--actual .ui-pasos__marca { box-shadow: 0 0 0 3px var(--primary-soft); }
+.tp-root .ui-pasos__paso--pendiente .ui-pasos__marca { border-style: dashed; }
+.tp-root .ui-pasos__paso--pendiente .ui-pasos__nombre { opacity: 0.75; }
+
 /* El botón flotante del asistente (60 px a 20 px del borde) no tapa lo último de cada página */
 .pt-root.tp-root { padding-bottom: calc(2.5rem + 88px); }
 

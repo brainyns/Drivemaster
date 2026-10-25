@@ -627,7 +627,7 @@ export default function TallerSolicitudes({
 
           <aside className="ss-detalle__lateral" aria-labelledby="st-avance">
             <h2 id="st-avance" className="ss-bloque__titulo">Avance</h2>
-            <LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} />
+            <LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} vistaTaller resumida />
           </aside>
         </div>
 
@@ -678,10 +678,10 @@ export default function TallerSolicitudes({
           )}
           <button type="button" className="ui-btn ui-btn--secundario" aria-expanded={abierta} aria-controls={`st-linea-${s.id}`}
             onClick={() => setLineaAbierta(abierta ? null : s.id)}>
-            {abierta ? "Ocultar avance" : "Ver avance"}
+            {abierta ? "Ocultar historial" : "Ver historial"}
           </button>
         </div>
-        {abierta && <div id={`st-linea-${s.id}`} className="st-tarjeta__linea"><LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} /></div>}
+        {abierta && <div id={`st-linea-${s.id}`} className="st-tarjeta__linea"><LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} vistaTaller /></div>}
       </li>
     );
   };

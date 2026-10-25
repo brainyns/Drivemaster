@@ -315,3 +315,12 @@ test("Solicitudes: toda la tarjeta abre el detalle y lo dice con \"Ver solicitud
   assert.ok(pagina.includes('className="ss-tarjeta st-tarjeta st-tarjeta--boton" onClick={() => abrir(s)}'));
   assert.ok(pagina.includes("Ver solicitud <Icon"));
 });
+
+test("Trabajos: el historial del taller va resumido, sin su propio nombre y con el mecánico solo cuando cambia", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(pagina.includes("<LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} vistaTaller resumida />"));
+  const linea = leer("../src/components/servicio/LineaTiempo.jsx");
+  assert.ok(linea.includes('vistaTaller && e.actorRol === "TALLER" ? null'), "el taller no se ve a sí mismo en cada evento");
+  assert.ok(linea.includes("if (m[1] !== mecanicoAnterior) mecanico = m[1];"), "el mecánico solo si cambia");
+  assert.ok(linea.includes("Ver historial ("), "botón para el historial completo");
+});
