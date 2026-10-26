@@ -865,6 +865,23 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   transition: transform var(--ui-dur) var(--ui-ease), color var(--ui-dur) ease;
 }
 
+/* Nota de ayuda junto a un título (Indicador ayuda): se abre al pasar el mouse o al enfocar el ícono */
+.ui-ayuda { position: relative; display: inline-flex; }
+.ui-ayuda__boton {
+  display: inline-grid; place-items: center; padding: 2px; border: 0; border-radius: 50%;
+  background: none; color: var(--ui-muted); cursor: help;
+}
+.ui-ayuda__boton:hover { color: var(--ui-text); }
+.ui-ayuda__boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+.ui-ayuda__nota {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: min(260px, 70vw); padding: 8px 10px;
+  font-size: 0.78rem; font-weight: 500; line-height: 1.45; color: var(--ui-text);
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); box-shadow: var(--ui-sombra-2);
+  opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--ui-dur) ease;
+}
+.ui-ayuda:hover .ui-ayuda__nota, .ui-ayuda__boton:focus-visible + .ui-ayuda__nota { opacity: 1; visibility: visible; }
+
 .ui-indicador--enlace { cursor: pointer; transition: border-color var(--ui-dur) ease, transform var(--ui-dur) var(--ui-ease); }
 .ui-indicador--enlace:active { transform: scale(0.98); }
 .ui-indicador--enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }

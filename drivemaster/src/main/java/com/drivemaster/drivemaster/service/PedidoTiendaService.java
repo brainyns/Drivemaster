@@ -91,13 +91,16 @@ public class PedidoTiendaService {
 
     /**
      * Lo que la tienda puede ver de un pedido. De la persona que compró solo lo necesario para despachar:
-     * nunca sus identificadores internos (cliente, compra, pago) ni su nombre de cuenta; y la dirección,
+     * nunca sus identificadores internos (cliente, compra, pago) ni su nombre completo (en un retiro, solo nombre e
+     * inicial del apellido, para reconocerlo en el mostrador); y la dirección,
      * el teléfono y quien recibe solo si el pedido es con envío (en retiro esos datos ni se guardan).
      * Los pedidos de talleres conservan los datos del taller, que la tienda necesita para entregar.
      */
     public static PedidoTienda paraTienda(PedidoTienda p) {
         if (p == null) return null;
-        PedidoTienda vista = p.toBuilder().clienteId(null).clienteNombre(null).compraId(null).pagoId(null).build();
+        // En un retiro la tienda ve solo el nombre y la inicial del apellido ("Laura M."), para reconocer a quien llega
+        String nombreRetiro = PedidoTienda.RETIRO.equals(p.getEntrega()) ? nombreEInicial(p.getClienteNombre()) : null;
+        PedidoTienda vista = p.toBuilder().clienteId(null).clienteNombre(nombreRetiro).compraId(null).pagoId(null).build();
         if (!PedidoTienda.ENVIO.equals(p.getEntrega())) {
             vista.setEnvioReceptor(null);
             vista.setEnvioTelefono(null);
@@ -106,6 +109,19 @@ public class PedidoTiendaService {
             vista.setEnvioIndicaciones(null);
         }
         return vista;
+    }
+
+    /**
+     * "Laura Gómez" → "Laura G.". El usuario guarda el nombre en un solo campo: con hasta tres palabras el apellido es
+     * la segunda ("Laura Gómez Pérez" → "Laura G."); con cuatro o más, la penúltima ("Laura María Gómez Pérez" →
+     * "Laura G."). Una sola palabra queda tal cual; vacío → null.
+     */
+    static String nombreEInicial(String nombre) {
+        if (nombre == null || nombre.isBlank()) return null;
+        String[] partes = nombre.trim().split("\\s+");
+        if (partes.length == 1) return partes[0];
+        String apellido = partes[partes.length >= 4 ? partes.length - 2 : 1];
+        return partes[0] + " " + apellido.substring(0, apellido.offsetByCodePoints(0, 1)).toUpperCase() + ".";
     }
 
     /** ADMIN: pedidos con un problema reportado, abiertos y resueltos. */

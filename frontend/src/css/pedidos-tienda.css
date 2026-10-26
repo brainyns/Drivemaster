@@ -14,6 +14,15 @@
   margin-bottom: var(--ui-sp-4);
 }
 
+/* Pestañas: las principales con su cifra (también 0) y debajo los filtros de consulta, más discretos */
+.pdt-pestanas { display: grid; gap: 8px; min-width: 0; }
+.pdt-pestana__cero { opacity: 0.6; }
+.pdt-secundarios { align-items: center; gap: 2px 4px; }
+.pdt-secundarios__titulo { margin-right: 4px; font-size: 0.8125rem; color: var(--ui-muted); }
+.pdt-secundario.ui-btn { color: var(--ui-muted); }
+.pdt-secundario.ui-btn[aria-pressed="true"] { color: var(--primary-text); text-decoration: underline; text-underline-offset: 3px; }
+.pdt-root .pdt-ayuda { margin: 0; font-size: 0.8125rem; line-height: 1.45; color: var(--ui-muted); }
+
 /* ── Lista: una fila por pedido ──────────────────────────────────────── */
 .pdt-lista { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 

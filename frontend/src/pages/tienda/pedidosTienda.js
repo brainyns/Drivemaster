@@ -14,13 +14,17 @@ export const plazoVencido = (p, ahora = Date.now()) =>
 /** Pide algo a la tienda: prepararlo, despacharlo o entregarlo con el código. */
 export const pideAccion = (p) => porDespachar(p) || p.estado === "LISTO_PARA_RETIRAR";
 
-/** Pestañas en este orden; "Por atender" junta todo lo que pide acción y abre la página. */
+/**
+ * Pestañas en este orden. Las principales son el trabajo del día ("Por atender" junta todo lo que pide acción y abre
+ * la página); las secundarias (principal: false) son consultas e historial y van como filtros aparte.
+ */
 export const FILTROS = [
-  { key: "ATENDER", label: "Por atender", filtro: pideAccion },
+  { key: "ATENDER", label: "Por atender", principal: true, filtro: pideAccion,
+    ayuda: "Por atender incluye los pedidos nuevos, los que están en preparación y los listos para entregar." },
+  { key: "PREPARACION", label: "En preparación", principal: true, filtro: (p) => p.estado === "EN_PREPARACION" },
+  { key: "LISTOS", label: "Listos para entregar", principal: true, filtro: (p) => p.estado === "LISTO_PARA_RETIRAR" },
+  { key: "EN_CAMINO", label: "En camino", principal: true, filtro: (p) => p.estado === "DESPACHADO" },
   { key: "NUEVOS", label: "Nuevos", filtro: (p) => p.estado === "PENDIENTE" },
-  { key: "PREPARACION", label: "En preparación", filtro: (p) => p.estado === "EN_PREPARACION" },
-  { key: "LISTOS", label: "Listos para retirar", filtro: (p) => p.estado === "LISTO_PARA_RETIRAR" },
-  { key: "EN_CAMINO", label: "En camino", filtro: (p) => p.estado === "DESPACHADO" },
   { key: "ENTREGADOS", label: "Entregados", filtro: (p) => ["RECIBIDO", "RETIRADO", "ENTREGADO"].includes(p.estado) },
   { key: "CANCELADOS", label: "Cancelados", filtro: (p) => ["NO_DESPACHADO", "NO_ENTREGADO"].includes(p.estado) },
   { key: "TODOS", label: "Todos", filtro: () => true },
@@ -30,7 +34,7 @@ export const VACIOS = {
   ATENDER: ["Estás al día", "No tienes pedidos por preparar, despachar ni entregar. Te avisamos por correo cuando llegue uno."],
   NUEVOS: ["Sin pedidos nuevos", "Los pedidos pagados llegan aquí y te avisamos por correo."],
   PREPARACION: ["Nada en preparación", "Aquí quedan los pedidos por encargo mientras consigues el repuesto."],
-  LISTOS: ["Nada listo para retirar", "Cuando marques un pedido de retiro como listo, espera aquí al cliente y su código."],
+  LISTOS: ["Nada listo para entregar", "Cuando marques un pedido de retiro como listo, espera aquí al cliente y su código."],
   EN_CAMINO: ["Nada en camino", "Los envíos despachados esperan aquí la confirmación del cliente."],
   ENTREGADOS: ["Aún sin entregas", "Los pedidos entregados, retirados o recibidos quedan aquí como historial."],
   CANCELADOS: ["Ningún pedido cancelado", "Aquí quedan los que no se pudieron despachar o entregar."],
@@ -54,10 +58,14 @@ export function ordenarPorUrgencia(pedidos, ahora = Date.now()) {
   });
 }
 
-/** Para quién es el pedido. Del cliente que compra solo se ve lo necesario: en un retiro, nada. */
+/**
+ * Para quién es el pedido. Del cliente que compra solo se ve lo necesario: en un envío, quien recibe; en un retiro,
+ * el nombre y la inicial del apellido que manda el backend ("Laura M."). El texto genérico es solo el respaldo de
+ * pedidos sin nombre.
+ */
 export function destinatario(p) {
   if (esEnvio(p)) return p.envioReceptor || "Cliente";
-  if (esRetiro(p)) return "Cliente que retira en tu tienda";
+  if (esRetiro(p)) return p.clienteNombre || "Cliente que retira en tu tienda";
   return p.tallerNombre || "Taller";
 }
 
@@ -71,7 +79,7 @@ export const cantidadProductos = (p) => (p.items || []).reduce((s, i) => s + (Nu
 export function coincide(p, termino) {
   const q = (termino || "").trim().toLowerCase().replace(/^#/, "");
   if (!q) return true;
-  return [refSolicitud(p.id), p.id, p.envioReceptor, p.tallerNombre, p.vehiculoDescripcion,
+  return [refSolicitud(p.id), p.id, p.envioReceptor, p.clienteNombre, p.tallerNombre, p.vehiculoDescripcion,
     ...(p.items || []).map((i) => i.productoNombre)]
     .some((x) => x && String(x).toLowerCase().includes(q));
 }

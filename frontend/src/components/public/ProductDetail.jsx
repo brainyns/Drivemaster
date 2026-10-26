@@ -139,8 +139,8 @@ export default function ProductDetail({
               <dt>Disponibilidad</dt>
               <dd>
                 {encargo
-                  ? `Bajo pedido${producto.diasEntrega ? ` · ${producto.diasEntrega} días` : ""}`
-                  : sinStock ? "Sin stock" : `${producto.stock}${producto.stock >= 20 ? "+" : ""} unidades`}
+                  ? `Bajo pedido${producto.diasEntrega ? ` · ${producto.diasEntrega} ${producto.diasEntrega === 1 ? "día" : "días"}` : ""}`
+                  : sinStock ? "Sin stock" : `${producto.stock}${producto.stock >= 20 ? "+" : ""} ${producto.stock === 1 ? "unidad" : "unidades"}`}
               </dd>
             </div>
             {tienda && (

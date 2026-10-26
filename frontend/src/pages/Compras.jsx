@@ -10,6 +10,7 @@ import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
 import { filtrarCompras, refCompra, resumenCompras, unidades } from "./tienda/comprasTienda";
+import { plural } from "../utils/formato";
 import "../css/compras-tienda.css";
 
 const POR_PAGINA = 15;
@@ -95,7 +96,7 @@ function Compras({ onNueva, onDetalle, token }) {
           <section aria-labelledby="cmp-resumen" className="cmp-alerta">
             <h2 id="cmp-resumen" className="ui-sr">Resumen de compras</h2>
             <div className="ui-indicadores">
-              <Indicador titulo="Compras" valor={datos.total} pie={`${datos.unidades.toLocaleString("es-CO")} unidades en total`} />
+              <Indicador titulo="Compras" valor={datos.total} pie={`${plural(datos.unidades, "unidad", "unidades")} en total`} />
               <Indicador titulo="Este mes" valor={formatPrecio(datos.mes)}
                 pie={datos.comprasMes > 0 ? `${datos.comprasMes} ${datos.comprasMes === 1 ? "compra" : "compras"}` : "Sin compras este mes"} />
               <Indicador titulo="Total gastado" valor={formatPrecio(datos.gastado)} pie="En todo el historial" />

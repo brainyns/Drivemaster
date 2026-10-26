@@ -692,13 +692,15 @@ class PedidoTiendaServiceTest {
     }
 
     @Test
-    void laTiendaNoVeLosIdentificadoresNiElNombreDelClienteDeUnRetiro() {
+    void laTiendaNoVeLosIdentificadoresNiElNombreCompletoDelClienteDeUnRetiro() {
         PedidoTienda retiro = catalogo(PedidoTienda.RETIRO, PedidoTienda.LISTO_PARA_RETIRAR, "ABCD-1234");
+        retiro.setClienteNombre("Laura Gómez Pérez");
 
         PedidoTienda vista = PedidoTiendaService.paraTienda(retiro);
 
         assertNull(vista.getClienteId());
-        assertNull(vista.getClienteNombre());
+        // Solo el nombre y la inicial del apellido, para reconocer a quien llega a retirar
+        assertEquals("Laura G.", vista.getClienteNombre());
         assertNull(vista.getCompraId());
         assertNull(vista.getPagoId());
         assertNull(vista.getEnvioDireccion());
@@ -711,6 +713,15 @@ class PedidoTiendaServiceTest {
         assertEquals(PedidoTienda.RETIRO, vista.getEntrega());
         // El original no se toca
         assertEquals("u1", retiro.getClienteId());
+    }
+
+    @Test
+    void elNombreDelRetiroQuedaEnNombreEInicial() {
+        assertEquals("Ana", PedidoTiendaService.nombreEInicial(" Ana "));
+        assertEquals("Laura G.", PedidoTiendaService.nombreEInicial("Laura gómez"));
+        assertEquals("Laura G.", PedidoTiendaService.nombreEInicial("Laura María Gómez Pérez"));
+        assertNull(PedidoTiendaService.nombreEInicial("  "));
+        assertNull(PedidoTiendaService.nombreEInicial(null));
     }
 
     @Test
@@ -729,6 +740,8 @@ class PedidoTiendaServiceTest {
         assertEquals("Cra 10 # 20-30", vista.getEnvioDireccion());
         assertEquals("Medellín", vista.getEnvioCiudad());
         assertNull(vista.getClienteId());
+        // En un envío basta quien recibe: el nombre de la cuenta no llega
+        assertNull(vista.getClienteNombre());
         assertNull(vista.getPagoId());
 
         // Aunque por error un retiro trajera dirección, la vista la quita

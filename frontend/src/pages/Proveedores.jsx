@@ -195,7 +195,7 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
       )}
 
       {eliminando && (
-        <ConfirmarAccion titulo={`¿Eliminar a ${eliminando.nombre}?`} peligro textoConfirmar="Eliminar proveedor"
+        <ConfirmarAccion titulo={`¿Eliminar a ${eliminando.nombre}?`} peligro textoConfirmar="Eliminar"
           mensaje="Sale de tu directorio y no podrás elegirlo en compras nuevas. Las compras que ya le hiciste quedan registradas, pero sin sus datos. No se puede deshacer."
           onConfirmar={confirmarEliminar} onCancelar={() => setEliminando(null)} />
       )}

@@ -13,7 +13,9 @@ const pedido = (id, estado, extra = {}) => ({ id: `0000000${id}`, estado, items:
 
 test("Pedidos: cada pestaña tiene su vacío y los contadores cuentan por estado", () => {
   assert.deepEqual(FILTROS.map((f) => f.label),
-    ["Por atender", "Nuevos", "En preparación", "Listos para retirar", "En camino", "Entregados", "Cancelados", "Todos"]);
+    ["Por atender", "En preparación", "Listos para entregar", "En camino", "Nuevos", "Entregados", "Cancelados", "Todos"]);
+  // Las cuatro primeras son las pestañas principales; el resto, filtros de consulta
+  assert.deepEqual(FILTROS.filter((f) => f.principal).map((f) => f.key), ["ATENDER", "PREPARACION", "LISTOS", "EN_CAMINO"]);
   for (const f of FILTROS) assert.ok(VACIOS[f.key], f.key);
   const c = contar([pedido(1, "PENDIENTE"), pedido(2, "EN_PREPARACION"), pedido(3, "LISTO_PARA_RETIRAR"),
     pedido(4, "DESPACHADO"), pedido(5, "RETIRADO"), pedido(6, "NO_DESPACHADO")]);
@@ -39,7 +41,9 @@ test("Pedidos: búsqueda por número o quién recibe, sin datos del cliente en u
   assert.ok(coincide(envio, "laura"));
   assert.ok(!coincide(envio, "pedro"));
   assert.equal(destinatario(envio), "Laura Gómez");
-  assert.equal(destinatario(pedido(2, "PENDIENTE", { origen: "CATALOGO", entrega: "RETIRO" })), "Cliente que retira en tu tienda");
+  assert.equal(destinatario(pedido(2, "PENDIENTE", { origen: "CATALOGO", entrega: "RETIRO", clienteNombre: "Laura M." })), "Laura M.");
+  assert.equal(destinatario(pedido(2, "PENDIENTE", { origen: "CATALOGO", entrega: "RETIRO" })), "Cliente que retira en tu tienda",
+    "sin nombre, el texto de respaldo");
   assert.equal(destinatario(pedido(3, "PENDIENTE", { tallerNombre: "AutoMax" })), "AutoMax");
 });
 
@@ -59,7 +63,7 @@ test("Pedidos: la acción del estado y el historial salen de los datos del pedid
 test("Pedidos usa el sistema compartido y no cambia las llamadas del flujo", () => {
   const pagina = leer("../src/pages/PedidosTienda.jsx");
   for (const pieza of ["<EncabezadoPagina", "<ChipEstado", "<Alerta", "<EstadoVacio", "<Esqueleto", "<Historial", "<BarraAccionMovil",
-    "ui-field__input--codigo", 'className="ui-chip" aria-pressed={filtro === f.key}']) {
+    "ui-field__input--codigo", 'className="ui-chip pdt-pestana" aria-pressed={filtro === f.key}']) {
     assert.ok(pagina.includes(pieza), `usa ${pieza}`);
   }
   for (const llamada of ["validarCodigoRetiro(token, pedido.id, limpio)", "marcarListoParaRetirar(token, p.id)",
@@ -112,7 +116,8 @@ test("Productos: stock con aviso, publicado u oculto, filtros y lo que necesita 
   const lista = [p("Zeta"), p("Alfa", { stockActual: 2 }), p("Beta", { stockActual: 0, activo: false })];
   assert.deepEqual(contar(lista), { TODOS: 3, POCO: 1, AGOTADOS: 1, PUBLICADOS: 2, OCULTOS: 1 });
   assert.deepEqual(ordenar(lista).map((x) => x.nombre), ["Beta", "Alfa", "Zeta"]);
-  assert.deepEqual(resumen(lista), { total: 3, publicados: 2, atencion: 2, valor: 12000 });
+  assert.deepEqual(resumen(lista), { total: 3, publicados: 2, atencion: 2, valor: 12000, valorCosto: 0 });
+  assert.equal(resumen([p("Costo", { precioCompra: 600 })]).valorCosto, 6000, "el mismo stock a precio de compra");
   assert.ok(coincide(p("Pastillas", { marca: "Bosch" }), "bosch"));
 });
 

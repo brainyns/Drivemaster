@@ -16,12 +16,13 @@ import Icon from "../components/public/Icon";
 import { FILTROS, NIVEL, coincide, contar, nivelStock, ordenar, porEncargo, publicado, resumen } from "./tienda/productosTienda";
 import "../css/productos.css";
 import { etiquetaCategoria } from "../utils/categorias";
+import { plural } from "../utils/formato";
 
 /** Stock con su número y, si pide atención, el chip con texto (el color nunca va solo). */
 function Stock({ p }) {
   const nivel = nivelStock(p);
   if (nivel === "encargo") {
-    return <ChipEstado tono="info">Por encargo{p.diasEntregaEncargo ? ` · ${p.diasEntregaEncargo} días` : ""}</ChipEstado>;
+    return <ChipEstado tono="info">Por encargo{p.diasEntregaEncargo ? ` · ${plural(p.diasEntregaEncargo, "día")}` : ""}</ChipEstado>;
   }
   return (
     <span className="prt-stock">
@@ -153,7 +154,9 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
                   tono={datos.atencion > 0 ? "accion" : undefined}
                   pie={datos.atencion > 0 ? "Agotados o con poco stock" : "Todo con stock suficiente"}
                   onClick={datos.atencion > 0 ? () => setFiltro(conteo.AGOTADOS > 0 ? "AGOTADOS" : "POCO") : undefined} />
-                <Indicador titulo="Valor del inventario" valor={formatPrecio(datos.valor)} pie="Precio de venta × stock" />
+                <Indicador titulo="Valor del inventario" valor={formatPrecio(datos.valor)}
+                  ayuda="Lo que recibirías si vendes todo el stock a tu precio de venta (sin IVA). No es lo que te costó comprarlo."
+                  pie={datos.valorCosto > 0 ? `Precio de venta × stock · A costo: ${formatPrecio(datos.valorCosto)}` : "Precio de venta × stock"} />
               </div>
             </section>
 
@@ -235,12 +238,12 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
                 </div>
               </div>
             )}
-            <p className="prt-pie">Mostrando {visibles.length} de {productos.length} productos</p>
+            <p className="prt-pie">Mostrando {visibles.length} de {plural(productos.length, "producto")}</p>
           </>
         )}
 
         {eliminando && (
-          <ConfirmarAccion titulo={`¿Eliminar “${eliminando.nombre}”?`} peligro textoConfirmar="Eliminar producto"
+          <ConfirmarAccion titulo={`¿Eliminar “${eliminando.nombre}”?`} peligro textoConfirmar="Eliminar"
             mensaje="Sale de tu catálogo y de tu inventario. Esta acción no se puede deshacer."
             onConfirmar={confirmarEliminar} onCancelar={() => setEliminando(null)} />
         )}

@@ -3,7 +3,7 @@ import { getToken } from "../../services/authService";
 import { informesTaller } from "../../services/informesTallerService";
 import { formatPrecio } from "../../components/servicio/estadosServicio";
 import { ESTADOS_TALLER, faseDe } from "../../components/servicio/estadosTaller";
-import { duracionMinutos, textoPeriodo } from "../../utils/formato";
+import { duracionMinutos, plural, textoPeriodo } from "../../utils/formato";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
 import Indicador from "../../components/ui/Indicador";
 import Alerta from "../../components/ui/Alerta";
@@ -280,7 +280,7 @@ export default function TallerInformes() {
                 pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} pendiente en ${d.mesesConsultados} meses`} />
               <Indicador icono="star" titulo="Calificación"
                 valor={d.calificacion.promedio == null ? "Nuevo" : decimal(d.calificacion.promedio)}
-                pie={d.calificacion.total > 0 ? `${d.calificacion.total} de clientes en ${d.mesesConsultados} meses` : "Sin calificaciones en el periodo"} />
+                pie={d.calificacion.total > 0 ? `${plural(d.calificacion.total, "calificación", "calificaciones")} de clientes en ${d.mesesConsultados} meses` : "Sin calificaciones en el periodo"} />
             </div>
           </section>
 

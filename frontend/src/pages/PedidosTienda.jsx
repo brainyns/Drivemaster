@@ -20,6 +20,7 @@ import {
   historialPedido, metodoEntrega, ordenarPorUrgencia, plazoVencido, porDespachar, subtotal, textoPlazo, tieneEncargo,
 } from "./tienda/pedidosTienda";
 import { destinoSeccion } from "../utils/navegacion";
+import { plural } from "../utils/formato";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/pedidos-tienda.css";
@@ -296,7 +297,7 @@ export default function PedidosTienda({ param, irA }) {
                         <span className="pdt-item__meta">
                           {i.cantidad} × {formatPrecio(i.precioUnitario)}
                           {i.disponibilidad === "ENCARGO" && (
-                            <ChipEstado tono="info">Encargo{i.diasEntrega ? ` · ${i.diasEntrega} días` : ""}</ChipEstado>
+                            <ChipEstado tono="info">Encargo{i.diasEntrega ? ` · ${plural(i.diasEntrega, "día")}` : ""}</ChipEstado>
                           )}
                         </span>
                       </span>
@@ -453,13 +454,28 @@ export default function PedidosTienda({ param, irA }) {
       {aviso && <Alerta tono="ok" className="pdt-alerta" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
 
       <div className="pdt-barra">
-        <div className="ui-filtros" role="group" aria-label="Pedidos por estado">
-          {FILTROS.map((f) => (
-            <button key={f.key} type="button" className="ui-chip" aria-pressed={filtro === f.key} onClick={() => setFiltro(f.key)}>
-              {f.label}
-              {conteo[f.key] > 0 && <span className="ui-chip__contador">{conteo[f.key]}</span>}
-            </button>
-          ))}
+        <div className="pdt-pestanas">
+          {/* Principales: el trabajo del día, siempre con su cifra (0 si no hay) */}
+          <div className="ui-filtros" role="group" aria-label="Pedidos en curso">
+            {FILTROS.filter((f) => f.principal).map((f) => (
+              <button key={f.key} type="button" className="ui-chip pdt-pestana" aria-pressed={filtro === f.key} onClick={() => setFiltro(f.key)}>
+                {f.label}
+                <span className={`ui-chip__contador${conteo[f.key] ? "" : " pdt-pestana__cero"}`}>{conteo[f.key] || 0}</span>
+              </button>
+            ))}
+          </div>
+          <div className="ui-filtros pdt-secundarios" role="group" aria-label="Otros filtros de pedidos">
+            <span className="pdt-secundarios__titulo">Ver también:</span>
+            {FILTROS.filter((f) => !f.principal).map((f) => (
+              <button key={f.key} type="button" className="ui-btn ui-btn--texto ui-btn--chico pdt-secundario" aria-pressed={filtro === f.key}
+                onClick={() => setFiltro(f.key)}>
+                {f.label}{conteo[f.key] > 0 ? ` (${conteo[f.key]})` : ""}
+              </button>
+            ))}
+          </div>
+          {FILTROS.find((f) => f.key === filtro)?.ayuda && (
+            <p className="pdt-ayuda">{FILTROS.find((f) => f.key === filtro).ayuda}</p>
+          )}
         </div>
         <div className="ui-buscador pdt-buscador">
           <Icon name="search" size={18} />

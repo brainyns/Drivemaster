@@ -75,6 +75,12 @@ const PATHS = {
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" />
     </>
   ),
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5.5M12 7.5v.1" />
+    </>
+  ),
   alert: (
     <>
       <circle cx="12" cy="12" r="9" />

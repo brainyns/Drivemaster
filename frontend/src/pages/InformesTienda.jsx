@@ -93,7 +93,7 @@ function VentasPorMes({ ventas }) {
                 type="button"
                 className={`it-barra${i === indice ? " is-activa" : ""}${i === meses.length - 1 ? " is-actual" : ""}`}
                 style={{ "--h": `${Math.max(m.ventas > 0 ? 3 : 0, (m.ventas / max) * 100)}%`, "--i": i }}
-                aria-label={`${mesLargo(m.mes)}: ${num(m.pedidos)} pedidos, ${cop(m.ventas)}`}
+                aria-label={`${mesLargo(m.mes)}: ${num(m.pedidos)} ${m.pedidos === 1 ? "pedido" : "pedidos"}, ${cop(m.ventas)}`}
                 aria-pressed={i === indice}
                 onClick={() => setActivo(i)}
                 onMouseEnter={() => setActivo(i)}

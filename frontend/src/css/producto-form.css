@@ -3,6 +3,9 @@
    inferior son de ui.css; la foto es ImagenProducto del catálogo. Aquí la rejilla de dos columnas, el campo de
    dinero, el margen, los vehículos compatibles, la foto y las sugerencias de la IA. Tokens --ui-*, los dos temas. */
 
+/* En monitores grandes las dos columnas no se estiran más allá de una línea cómoda de leer */
+.pfm-root { max-width: 1200px; }
+
 .pfm-alerta { margin-bottom: var(--ui-sp-4); }
 
 .pfm-layout {
@@ -75,10 +78,23 @@
 .pfm-vehiculo__quitar.ui-btn { position: absolute; top: 6px; right: 8px; color: var(--ui-error); }
 .pfm-agregar.ui-btn { justify-self: start; }
 
-/* Foto */
-.pfm-foto { display: grid; gap: 12px; }
-.pfm-foto__imagen.mk-imagen { max-width: 220px; border-radius: var(--ui-r-xl); }
+/* Foto: miniatura y zona para soltar la imagen, con Cambiar y Quitar */
+.pfm-foto {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1.5px dashed var(--ui-line);
+  border-radius: var(--ui-r-xl);
+  transition: border-color var(--ui-dur) ease, background-color var(--ui-dur) ease;
+}
+.pfm-foto--arrastrando { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.pfm-foto__imagen.mk-imagen { width: 112px; border-radius: var(--ui-r-lg); }
+.pfm-foto__texto { display: grid; gap: 8px; min-width: 0; }
+.pfm-root .pfm-foto__ayuda { margin: 0; font-size: 0.85rem; line-height: 1.45; color: var(--ui-muted); }
 .pfm-foto__acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.pfm-foto .ui-field__error { grid-column: 1 / -1; }
 
 .pfm-guardar { display: grid; gap: 8px; }
 
@@ -113,5 +129,6 @@
 
 @media (max-width: 600px) {
   .pfm-opciones { grid-template-columns: minmax(0, 1fr); }
-  .pfm-foto__imagen.mk-imagen { max-width: none; }
+  .pfm-foto { grid-template-columns: 88px minmax(0, 1fr); }
+  .pfm-foto__imagen.mk-imagen { width: 88px; }
 }

@@ -143,6 +143,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
   const [imagenPreview, setImagenPreview] = useState(null);
   const [errorFoto, setErrorFoto] = useState(null);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const [arrastrando, setArrastrando] = useState(false);
   const fileInputRef = useRef(null);
   const resumenRef = useRef(null);
 
@@ -182,20 +183,30 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
     actualizar({ [name]: value });
   };
 
-  const handleImagenChange = (e) => {
-    const file = e.target.files[0];
+  // La foto llega del selector de archivos o arrastrada a la zona de la foto; las reglas son las mismas
+  const elegirImagen = (file) => {
     if (!file) return;
     const err = errorImagen(file);
     setErrorFoto(err);
-    if (err) { e.target.value = ""; return; }
+    if (err) { if (fileInputRef.current) fileInputRef.current.value = ""; return; }
     setImagenFile(file);
     setImagenPreview(URL.createObjectURL(file));
   };
 
+  const handleImagenChange = (e) => elegirImagen(e.target.files[0]);
+
+  const soltarImagen = (e) => {
+    e.preventDefault();
+    setArrastrando(false);
+    elegirImagen(e.dataTransfer.files?.[0]);
+  };
+
+  // Quitar también borra la foto ya guardada (imagenUrl vacía al guardar), no solo la recién elegida
   const eliminarImagenSeleccionada = () => {
     setImagenFile(null);
     setImagenPreview(null);
     setErrorFoto(null);
+    actualizar({ imagenUrl: null });
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -273,6 +284,8 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
   const margen = calcularMargen(form.precioCompra, form.precioVenta);
   const paraCliente = precioConIva(form.precioVenta, ivaRate);
   const compatErrores = errores.compatibilidad || [];
+  // Vehículos con algún dato escrito: se descartan si el producto queda universal
+  const vehiculosCargados = form.modelosCompatibles.filter((c) => !mismaCompat(c, COMPAT_VACIA) || !campoVacio(c.motor)).length;
   const cantidadErrores = Object.keys(errores).filter((k) => k !== "compatibilidad").length
     + compatErrores.filter(Boolean).reduce((s, e) => s + Object.keys(e).length, 0);
   const textoGuardar = guardando ? (subiendoImagen ? "Subiendo la foto…" : "Guardando…") : esEdicion ? "Guardar cambios" : "Guardar producto";
@@ -375,6 +388,13 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
                 </span>
               </label>
 
+              {form.compatibilidadUniversal && vehiculosCargados > 0 && (
+                <Alerta tono="aviso">
+                  Al guardar se quitan {vehiculosCargados === 1 ? "el vehículo que habías cargado" : `los ${vehiculosCargados} vehículos que habías cargado`}:
+                  un producto universal sirve a cualquier vehículo. Desmarca la casilla si quieres conservarlos.
+                </Alerta>
+              )}
+
               {!form.compatibilidadUniversal && (
                 <>
                   {form.modelosCompatibles.map((comp, index) => {
@@ -461,16 +481,26 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
 
           <SeccionEditable id="pfm-foto" icono="camera" titulo="Foto del producto"
             descripcion="Una foto clara sobre fondo liso ayuda a vender. JPG, PNG, WEBP o GIF, hasta 5 MB.">
-            <div className="pfm-foto">
-              <ImagenProducto src={imagenPreview} alt={imagenPreview ? "Foto del producto" : ""} className="pfm-foto__imagen" tamanioIcono={36} />
-              <div className="pfm-foto__acciones">
-                <button type="button" className="ui-btn ui-btn--secundario" onClick={() => fileInputRef.current?.click()}
-                  aria-describedby={errorFoto ? "pfm-foto-error" : undefined}>
-                  <Icon name="camera" size={16} /> {imagenPreview ? "Cambiar foto" : "Elegir foto"}
-                </button>
-                {imagenPreview && (
-                  <button type="button" className="ui-btn ui-btn--texto" onClick={eliminarImagenSeleccionada}>Quitar foto</button>
-                )}
+            <div className={`pfm-foto${arrastrando ? " pfm-foto--arrastrando" : ""}`}
+              onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setArrastrando(false); }}
+              onDrop={soltarImagen}>
+              <ImagenProducto src={imagenPreview} alt={imagenPreview ? "Foto del producto" : ""} className="pfm-foto__imagen" tamanioIcono={28} />
+              <div className="pfm-foto__texto">
+                <p className="pfm-foto__ayuda">
+                  {arrastrando ? "Suelta la foto aquí." : imagenPreview ? "Arrastra otra foto aquí para cambiarla." : "Arrastra la foto aquí o elígela de tu equipo."}
+                </p>
+                <div className="pfm-foto__acciones">
+                  <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => fileInputRef.current?.click()}
+                    aria-describedby={errorFoto ? "pfm-foto-error" : undefined}>
+                    <Icon name="camera" size={16} /> {imagenPreview ? "Cambiar" : "Elegir foto"}
+                  </button>
+                  {imagenPreview && (
+                    <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={eliminarImagenSeleccionada}>
+                      <Icon name="trash" size={14} /> Quitar
+                    </button>
+                  )}
+                </div>
               </div>
               {errorFoto && <p id="pfm-foto-error" className="ui-field__error" role="alert"><Icon name="alert" size={14} />{errorFoto}</p>}
               <input ref={fileInputRef} type="file" accept={TIPOS_IMAGEN.join(",")} onChange={handleImagenChange} hidden />

@@ -21,6 +21,15 @@ export function capitalizar(texto) {
 /** Une partes no vacías: unir(["Cra 1", "Centro"]) → "Cra 1 · Centro". */
 export const unir = (partes, separador = " · ") => partes.filter(Boolean).join(separador);
 
+/**
+ * Cantidad con su sustantivo en singular o plural: plural(1, "unidad", "unidades") → "1 unidad",
+ * plural(1200, "unidad", "unidades") → "1.200 unidades". Sin `muchos`, agrega una "s" al singular.
+ */
+export function plural(n, uno, muchos = `${uno}s`) {
+  const valor = Number(n) || 0;
+  return `${valor.toLocaleString("es-CO")} ${Math.abs(valor) === 1 ? uno : muchos}`;
+}
+
 export const formatoFecha = (f) =>
   (f ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 

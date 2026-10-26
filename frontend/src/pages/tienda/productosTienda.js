@@ -49,5 +49,7 @@ export function resumen(productos) {
     publicados: productos.filter(publicado).length,
     atencion: productos.filter((p) => ["agotado", "bajo"].includes(nivelStock(p))).length,
     valor: productos.reduce((s, p) => s + (Number(p.precioVenta) || 0) * Math.max(0, Number(p.stockActual) || 0), 0),
+    // El mismo stock a precio de compra (lo que costó); 0 si ningún producto tiene precio de compra
+    valorCosto: productos.reduce((s, p) => s + (Number(p.precioCompra) || 0) * Math.max(0, Number(p.stockActual) || 0), 0),
   };
 }

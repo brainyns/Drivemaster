@@ -209,3 +209,12 @@ test("Recuperar contraseña: enlace en el login, sin sesión y sin revelar cuent
   assert.match(auth, /solicitarRecuperacion[\s\S]*?fetchConLimite\(`\$\{API_BASE\}\/auth\/recuperar\/solicitar`/, "no usa apiFetch: no hay sesión");
   assert.match(auth, /confirmarRecuperacion[\s\S]*?\/auth\/recuperar\/confirmar/);
 });
+
+test("plural: singular con 1 y plural con el resto, con separador de miles", async () => {
+  const { plural } = await import("../src/utils/formato.js");
+  assert.equal(plural(1, "unidad", "unidades"), "1 unidad");
+  assert.equal(plural(0, "unidad", "unidades"), "0 unidades");
+  assert.equal(plural(1200, "unidad", "unidades"), "1.200 unidades");
+  assert.equal(plural(1, "producto"), "1 producto");
+  assert.equal(plural(3, "día"), "3 días");
+});
