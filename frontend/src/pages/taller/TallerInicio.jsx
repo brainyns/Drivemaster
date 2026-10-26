@@ -98,9 +98,10 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                 Responder solicitudes <span className="ini-contador">{datos.responder.length}</span>
               </button>
             )}
+            {/* Una cotización siempre nace de una solicitud diagnosticada: el botón lleva a las que esperan la suya */}
             {datos.porCotizar.length > 0 && (
               <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-solicitudes", "diagnosticadas")}>
-                <Icon name="file" size={16} /> Crear cotización
+                <Icon name="file" size={16} /> Por cotizar <span className="ini-contador">{datos.porCotizar.length}</span>
               </button>
             )}
             <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-agenda")}>

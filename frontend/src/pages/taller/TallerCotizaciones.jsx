@@ -134,11 +134,6 @@ export default function TallerCotizaciones({ irA }) {
         descripcion={conteo.emitidas > 0
           ? `${conteo.emitidas} esperando respuesta del cliente, por ${formatPrecio(pendienteTotal)}.`
           : "Lo que cotizaste, lo que aprobaron, lo que rechazaron y lo que se venció."}
-        acciones={irA && (
-          <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-solicitudes", "diagnosticadas")}>
-            <Icon name="file" size={16} /> Crear cotización
-          </button>
-        )}
       />
 
       {error && (

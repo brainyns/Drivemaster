@@ -451,3 +451,12 @@ test("IVA por taller: Mi taller elige si es responsable de IVA junto a la tarifa
   const servicio = leer("../src/services/tallerService.js");
   assert.ok(servicio.includes("JSON.stringify({ tarifaHora, horario, responsableIva })"));
 });
+
+test("Cotizar nace de una solicitud: Inicio lleva a Por cotizar (N) y Cotizaciones ya no crea", () => {
+  const inicio = leer("../src/pages/taller/TallerInicio.jsx");
+  assert.ok(!inicio.includes("Crear cotización"));
+  assert.match(inicio, /\{datos\.porCotizar\.length > 0 && \(\s*<button[^>]*onClick=\{\(\) => irA\("taller-solicitudes", "diagnosticadas"\)\}>\s*<Icon name="file" size=\{16\} \/> Por cotizar <span className="ini-contador">\{datos\.porCotizar\.length\}<\/span>/,
+    "solo con N > 0 y a las diagnosticadas sin cotizar");
+  const cotizaciones = leer("../src/pages/taller/TallerCotizaciones.jsx");
+  assert.ok(!cotizaciones.includes("Crear cotización"));
+});
