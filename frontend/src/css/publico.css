@@ -205,6 +205,8 @@ html[data-theme="light"] .dm-btn--dark:hover:not(:disabled) {
 .dm-btn--whatsapp:hover:not(:disabled) {
   background: var(--dm-surface);
 }
+/* El logo de WhatsApp en su verde de marca: es el único ícono con color propio (el resto usa currentColor) */
+.dm-btn--whatsapp .dm-btn__whatsapp { color: #25D366; stroke-width: 2; }
 
 /* ── Utilidades ─────────────────────────────────────────────────────────── */
 .dm-icon-btn {

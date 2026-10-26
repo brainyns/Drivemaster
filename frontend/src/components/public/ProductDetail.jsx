@@ -189,7 +189,7 @@ export default function ProductDetail({
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Icon name="message" size={19} /> Cotizar por WhatsApp
+            <Icon name="whatsapp" size={19} className="dm-btn__whatsapp" /> Cotizar por WhatsApp
           </a>
 
           {agregado && (

@@ -42,6 +42,13 @@ const PATHS = {
       <path d="M8 3v6m8 0v6m-6 0v6" />
     </>
   ),
+  // Logo de WhatsApp (globo con auricular): solo para el botón que abre WhatsApp; el color lo pone quien lo usa
+  whatsapp: (
+    <>
+      <path d="M21 11a9 9 0 0 1-13 8l-6 2 2-6A9 9 0 1 1 21 11Z" />
+      <path d="M8 8c0 4 4 7 7 7l1-2-3-1-1 1-2-2 1-1-1-3Z" />
+    </>
+  ),
   // Globo de chat simple (sin el auricular: con él se parecía al logo de WhatsApp)
   message: <path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5Z" />,
   bolt: <path d="m13 2-9 12h7l-1 8 10-13h-7z" />,
