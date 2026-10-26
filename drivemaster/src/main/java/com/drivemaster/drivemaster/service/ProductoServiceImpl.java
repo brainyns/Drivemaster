@@ -60,6 +60,7 @@ public class ProductoServiceImpl implements ProductoService {
 
         producto.setStockActual(
                 producto.getStockActual() != null ? producto.getStockActual() : 0);
+        if (Boolean.TRUE.equals(producto.getCompatibilidadUniversal())) producto.setModelosCompatibles(new java.util.ArrayList<>());
 
         return productoRepository.save(producto);
     }
@@ -76,13 +77,17 @@ public class ProductoServiceImpl implements ProductoService {
         existente.setPrecioCompra(producto.getPrecioCompra());
         existente.setPrecioVenta(producto.getPrecioVenta());
         existente.setStockMinimo(producto.getStockMinimo());
+        // Stock o encargo también se cambia al editar (antes se perdía sin aviso); el stock en sí solo lo mueven los movimientos
+        if ("STOCK".equals(producto.getTipo()) || "ENCARGO".equals(producto.getTipo())) existente.setTipo(producto.getTipo());
         existente.setImagenUrl(producto.getImagenUrl());
         // La tienda dueña no se cambia al editar.
         existente.setReferencia(producto.getReferencia());
         existente.setUbicacion(producto.getUbicacion());
         existente.setProveedorId(producto.getProveedorId());
-        existente.setDiasEntregaEncargo(producto.getDiasEntregaEncargo());
+        existente.setDiasEntregaEncargo("ENCARGO".equals(existente.getTipo()) ? producto.getDiasEntregaEncargo() : null);
         existente.setCompatibilidadUniversal(producto.getCompatibilidadUniversal());
+        // Universal sirve a cualquier vehículo: no se guardan modelos que lo contradigan
+        if (Boolean.TRUE.equals(producto.getCompatibilidadUniversal())) existente.setModelosCompatibles(new java.util.ArrayList<>());
 
         return productoRepository.save(existente);
     }
