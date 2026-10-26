@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -51,6 +52,11 @@ public class OrdenServicioDTO {
     private String metodoPago;
     private String referenciaPago;
     private LocalDateTime fechaPagoReportado;
+
+    // Historial del vehículo: de qué flujo viene (V1 o MARKETPLACE) y los repuestos instalados ("2 × Pastillas Brembo").
+    // En el flujo anterior el repuesto es uno solo y va en productoNombre; ahí repuestos queda vacío.
+    private String flujo;
+    private List<String> repuestos;
 
     /**
      * Umbrales (en días) para considerar que una orden se quedó quieta.

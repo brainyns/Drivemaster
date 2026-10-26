@@ -8,6 +8,7 @@ import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.repository.CambioTallerRepository;
 import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.util.Coordenadas;
+import com.drivemaster.drivemaster.util.TelefonoColombia;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -83,6 +84,21 @@ public class DatosTallerService {
             }
         }
         tallerRepository.save(taller);
+        return tallerService.miTaller(correo);
+    }
+
+    /**
+     * Teléfono de contacto del taller: celular o fijo colombiano (TelefonoColombia), guardado con sus 10 dígitos. No
+     * pide que el taller esté aprobado: mientras se revisa también debe poder corregir cómo lo contactan.
+     */
+    public TallerDTO actualizarTelefono(String correo, String telefono) {
+        Taller taller = tallerService.obtenerPorUsuario(correo);
+        String numero = TelefonoColombia.validar(telefono);
+        if (!numero.equals(taller.getTelefono())) {
+            registrar(taller.getId(), CambioTaller.TELEFONO, taller.getTelefono(), numero, correo, LocalDateTime.now());
+            taller.setTelefono(numero);
+            tallerRepository.save(taller);
+        }
         return tallerService.miTaller(correo);
     }
 

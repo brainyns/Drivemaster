@@ -2,7 +2,6 @@ package com.drivemaster.drivemaster.security;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -36,11 +35,9 @@ public class CustomUserDetailsService implements UserDetailsService {
             }
         }
 
-        return User.builder()
-                .username(usuario.getCorreo())
-                .password(usuario.getPassword() != null ? usuario.getPassword() : "")
-                .authorities(authorities)
-                .disabled(usuario.getActivo() != null && !usuario.getActivo())
-                .build();
+        return new DetallesUsuario(usuario.getCorreo(),
+                usuario.getPassword() != null ? usuario.getPassword() : "",
+                usuario.getActivo() == null || usuario.getActivo(),
+                authorities, usuario.getSesionesDesde());
     }
 }

@@ -2,6 +2,8 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.CrearOrdenServicioRequest;
 import com.drivemaster.drivemaster.dto.OrdenServicioDTO;
+import com.drivemaster.drivemaster.model.Cotizacion;
+import com.drivemaster.drivemaster.model.CotizacionItem;
 import com.drivemaster.drivemaster.model.DetalleVenta;
 import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.OrdenServicio;
@@ -11,6 +13,7 @@ import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.Vehiculo;
 import com.drivemaster.drivemaster.model.Venta;
+import com.drivemaster.drivemaster.repository.CotizacionRepository;
 import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +23,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -41,6 +48,7 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
     private final UsuarioService usuarioService;
     private final VentaService ventaService;
     private final MantenimientoService mantenimientoService;
+    private final CotizacionRepository cotizacionRepository;
 
     public OrdenServicioServiceImpl(OrdenServicioRepository ordenServicioRepository,
                                      VehiculoService vehiculoService,
@@ -48,7 +56,9 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
                                      ProductoService productoService,
                                      UsuarioService usuarioService,
                                      VentaService ventaService,
-                                     MantenimientoService mantenimientoService) {
+                                     MantenimientoService mantenimientoService,
+                                     CotizacionRepository cotizacionRepository) {
+        this.cotizacionRepository = cotizacionRepository;
         this.ordenServicioRepository = ordenServicioRepository;
         this.vehiculoService = vehiculoService;
         this.tallerService = tallerService;
@@ -326,8 +336,60 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
     public List<OrdenServicioDTO> historialPorVehiculo(String correoUsuario, String vehiculoId) {
         // Valida propiedad del vehículo (lanza 403/404 si no corresponde)
         vehiculoService.obtenerDeUsuario(correoUsuario, vehiculoId);
-        return ordenServicioRepository.findByVehiculoIdAndEstadoOrderByFechaFinalizacionDesc(vehiculoId, "FINALIZADA")
-                .stream().map(this::toDTO).collect(Collectors.toList());
+        List<OrdenServicio> ordenes = ordenServicioRepository
+                .findByVehiculoIdAndEstadoIn(vehiculoId, List.of("FINALIZADA", EstadoOrden.ENTREGADA)).stream()
+                .filter(o -> esFlujoV1(o) ? "FINALIZADA".equals(o.getEstado()) : EstadoOrden.ENTREGADA.equals(o.getEstado()))
+                .toList();
+        // Las cotizaciones de las órdenes del marketplace (total y repuestos), en una sola consulta
+        Map<String, Cotizacion> cotizaciones = cotizacionRepository.findAllById(ordenes.stream()
+                        .map(OrdenServicio::getCotizacionId).filter(Objects::nonNull).distinct().toList())
+                .stream().collect(Collectors.toMap(Cotizacion::getId, Function.identity()));
+        return ordenes.stream()
+                .map(o -> esFlujoV1(o) ? toDTO(o) : historialMarketplace(o, cotizaciones.get(o.getCotizacionId())))
+                .sorted(Comparator.comparing(OrdenServicioDTO::getFechaFinalizacion,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+    }
+
+    /**
+     * Un servicio del marketplace con la forma del historial: el trabajo (las fallas del diagnóstico), el taller, la
+     * fecha de entrega, los repuestos y el total de la cotización aprobada.
+     */
+    static OrdenServicioDTO historialMarketplace(OrdenServicio o, Cotizacion cotizacion) {
+        OrdenServicioDTO dto = new OrdenServicioDTO();
+        dto.setId(o.getId());
+        dto.setFlujo(EstadoOrden.FLUJO_MARKETPLACE);
+        dto.setEstado(o.getEstado());
+        dto.setVehiculoId(o.getVehiculoId());
+        dto.setVehiculoDescripcion(o.getVehiculoDescripcion());
+        dto.setTallerId(o.getTallerId());
+        dto.setTallerNombre(o.getTallerNombre());
+        dto.setFechaCreacion(o.getFechaCreacion());
+        dto.setFechaProgramada(o.getFechaProgramada());
+        dto.setFechaFinalizacion(o.getFechaEntrega());
+        List<String> fallas = o.getDiagnostico() != null && o.getDiagnostico().getFallas() != null
+                ? o.getDiagnostico().getFallas() : List.of();
+        dto.setProductoNombre(fallas.isEmpty() ? "Diagnóstico y reparación" : String.join(", ", fallas));
+        if (o.getComentarioCalificacion() != null && !o.getComentarioCalificacion().isBlank()) {
+            dto.setObservaciones(o.getComentarioCalificacion());
+        }
+        if (cotizacion != null) {
+            dto.setTotal(cotizacion.getTotal());
+            dto.setPrecioRepuesto(cotizacion.getSubtotalRepuestos());
+            dto.setPrecioManoObra(cotizacion.getSubtotalManoObra());
+            dto.setRepuestos(cotizacion.getItems() == null ? List.of() : cotizacion.getItems().stream()
+                    .filter(i -> CotizacionItem.REPUESTO.equals(i.getTipo()))
+                    .map(i -> (i.getCantidad() == null ? 1 : i.getCantidad()) + " × "
+                            + (i.getProductoNombre() != null ? i.getProductoNombre() : i.getDescripcion()))
+                    .toList());
+        } else {
+            // Sin la cotización (borrada): al menos los repuestos que eligió el taller
+            dto.setRepuestos(o.getRepuestos() == null ? List.of() : o.getRepuestos().stream()
+                    .map(r -> (r.getCantidad() == null ? 1 : r.getCantidad()) + " × "
+                            + (r.getProductoNombre() != null ? r.getProductoNombre() : r.getDescripcion()))
+                    .toList());
+        }
+        return dto;
     }
 
     // ─── Helpers ─────────────────────────────────────────────
@@ -387,7 +449,8 @@ public class OrdenServicioServiceImpl implements OrdenServicioService {
                 o.getFechaProgramada(), o.getCitaNotificada(),
                 OrdenServicioDTO.estaRetrasada(
                         o.getEstado(), o.getFechaCreacion(), o.getFechaPago(), o.getFechaInicio()),
-                o.getMetodoPago(), o.getReferenciaPago(), o.getFechaPagoReportado());
+                o.getMetodoPago(), o.getReferenciaPago(), o.getFechaPagoReportado(),
+                o.getFlujo(), null);
     }
 
     @Override

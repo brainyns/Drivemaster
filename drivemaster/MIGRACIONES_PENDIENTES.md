@@ -132,3 +132,96 @@ Para deshacer, justo después de ejecutarla y antes de que entren datos nuevos:
 
 - No borra las imágenes de los productos en Cloudinary (quedan en la nube; se pueden limpiar a mano).
 - No toca los productos que no tienen tienda (el informe dice cuántos son); si existen, no aparecen en ningún catálogo.
+
+## Horario de atención estructurado (`horarios_taller`)
+
+El proyecto no usa Flyway ni Liquibase y los talleres viven en MongoDB: la colección `horarios_taller` se crea sola
+con el primer `PUT /api/talleres/{id}/horario`. No hay datos que mover a mano.
+
+- `talleres.horario` (texto libre) **queda deprecado pero no se borra**. Al guardar el horario estructurado se
+  reescribe con un resumen generado ("Lun a Vie 8:00 a. m.–6:00 p. m.; …"), porque el mapa y la lista que ve el
+  cliente siguen leyéndolo. Los talleres que aún no configuran el horario conservan su texto tal cual.
+- El texto libre no se convierte automáticamente en franjas: cada taller lo carga en Mi taller › Horario de atención.
+- Mientras un taller no tenga horario estructurado, la cita de revisión no se restringe por horario.
+- Pendiente (TODO en `Taller.java`): cuando el cliente lea `horarios_taller` y todos los talleres activos tengan su
+  horario, retirar el campo:
+
+```js
+db.talleres.updateMany({}, { $unset: { horario: "" } })
+```
+
+## Índices de MongoDB e índice único de `usuarios.correo`
+
+Los crea `config/IndicesMongo.java` en cada arranque (`ensureIndex` no hace nada si ya existen). La creación
+automática de Spring Data (`spring.data.mongodb.auto-index-creation`) sigue apagada a propósito: con ella, un índice
+que no se puede crear (por ejemplo, el único con correos repetidos) detiene el arranque; aquí solo deja un aviso.
+
+- `ordenes_servicio`: `taller_flujo_fecha`, `usuario_flujo_fecha`, `taller_cita`, `vehiculo_estado`, `flujo_estado`.
+- `horarios_taller` y `cambios_taller`: `taller`.
+- `usuarios`: `correo_unico` (único y parcial: solo los documentos con `correo` de tipo texto).
+
+**Si el log dice "No se creó el índice único de usuarios.correo: hay N correos repetidos"**, el índice no existe hasta
+resolverlos. Los correos salen enmascarados en el log; para verlos completos:
+
+```js
+db.usuarios.aggregate([
+  { $match: { correo: { $type: "string" } } },
+  { $group: { _id: "$correo", n: { $sum: 1 }, ids: { $push: "$_id" }, roles: { $push: "$rol" } } },
+  { $match: { n: { $gt: 1 } } }
+])
+```
+
+Por cada correo, decide cuál cuenta se queda (la que tiene órdenes, vehículos o negocio asociado) y cambia el correo
+de las otras o bórralas (con respaldo previo, como en la sección de compras). Al reiniciar, el índice se crea solo.
+
+El índice distingue mayúsculas. Si el log avisa de correos que "solo se diferencian en mayúsculas", son cuentas
+distintas para el sistema: hay que unificarlas a mano antes de la migración de la sección siguiente.
+
+## Correos en minúsculas (`usuarios.correo`, aplicada el 24 de octubre de 2026)
+
+Desde el cambio de la tarjeta Contacto, el registro (cliente, taller, tienda, alta por el SUPERADMIN y Google), el
+inicio de sesión y el cambio de correo guardan y buscan el correo **sin espacios y en minúsculas**
+(`util/Correos.java`). Los correos que ya estaban guardados **no se modificaron**. El inicio de sesión los sigue
+encontrando: `UsuarioServiceImpl.buscarPorCorreo` busca primero el valor exacto y, si no lo encuentra, compara sin
+mayúsculas. Si hay dos cuentas que solo se diferencian en mayúsculas, no elige ninguna.
+
+**Aplicada el 24 de octubre de 2026** con los pasos de abajo: había 1 de 43 usuarios con mayúsculas (rol TALLER), sin
+choques; `updateMany` modificó 1 usuario y 0 tiendas, y la verificación quedó en 0 en `usuarios.correo` y en
+`tiendas.correoContacto`. El respaldo previo (`usuarios` y `tiendas`) quedó fuera del repositorio, en
+`Downloads/respaldo-correos-2026-10-24`. Si vuelve a aparecer alguno, al arrancar `IndicesMongo` escribe en el log
+cuántos hay ("Hay N usuarios con el correo guardado con mayúsculas o espacios") y estos pasos sirven igual.
+
+### Cómo migrarlos
+
+1. **Respaldo** de `usuarios` y `tiendas`, como en las secciones anteriores
+   (`mongodump --uri="$URI" --collection=usuarios --out=respaldo-correos`, y lo mismo para `tiendas`).
+2. **Revisar choques** (debe devolver vacío; si no, unificar esas cuentas primero):
+   ```js
+   db.usuarios.aggregate([
+     { $match: { correo: { $type: "string" } } },
+     { $group: { _id: { $toLower: { $trim: { input: "$correo" } } }, n: { $sum: 1 }, ids: { $push: "$_id" } } },
+     { $match: { n: { $gt: 1 } } }
+   ])
+   ```
+3. **Ver cuáles cambian** (solo lectura):
+   ```js
+   db.usuarios.find({ correo: { $regex: /[A-Z]|^\s|\s$/ } }, { correo: 1, rol: 1 })
+   ```
+4. **Migrar** (usuarios y el correo de contacto de las tiendas):
+   ```js
+   db.usuarios.updateMany({ correo: { $regex: /[A-Z]|^\s|\s$/ } },
+     [{ $set: { correo: { $toLower: { $trim: { input: "$correo" } } } } }])
+   db.tiendas.updateMany({ correoContacto: { $regex: /[A-Z]|^\s|\s$/ } },
+     [{ $set: { correoContacto: { $toLower: { $trim: { input: "$correoContacto" } } } } }])
+   ```
+5. **Después:** quien tenga la sesión abierta con esas cuentas tendrá que volver a iniciar sesión, porque el token
+   lleva el correo anterior. Para iniciar sesión puede escribir el correo con o sin mayúsculas.
+
+Cuando el log ya no avise de correos con mayúsculas, se puede quitar la búsqueda sin mayúsculas de
+`buscarPorCorreo`, que es una expresión regular y no aprovecha el índice.
+
+## Cambios de correo y recuperaciones de contraseña (`cambios_correo`, `recuperaciones_clave`)
+
+Las colecciones se crean solas. `usuarios.sesionesDesde` (nuevo, opcional) solo se llena al recuperar la contraseña;
+las cuentas sin ese campo no cambian. Guarda solo el hash del código (BCrypt), y el índice TTL `vence_ttl` borra los cambios que
+vencieron sin confirmarse. No hay nada que migrar.

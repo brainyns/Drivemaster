@@ -71,7 +71,7 @@ test("Pedidos usa el sistema compartido y no cambia las llamadas del flujo", () 
 });
 
 test("Mi tienda: perfil completo con lo que pide el catálogo y validación en línea", async () => {
-  const { completitudTienda, erroresUbicacion, errorHorarioTienda, errorTelefono, errorCostoEnvio, comoLaVeElCliente } =
+  const { completitudTienda, erroresUbicacion, errorHorarioTienda, errorCostoEnvio, comoLaVeElCliente } =
     await import("../src/pages/tienda/perfilTienda.js");
   const completa = { ciudad: "Cali", direccion: "Cra 1", horario: "L-V 8-18", latitud: 3.4, longitud: -76.5, telefono: "3001234567",
     logoUrl: "https://img/sol.png" };
@@ -84,9 +84,6 @@ test("Mi tienda: perfil completo con lo que pide el catálogo y validación en l
   assert.deepEqual(Object.keys(erroresUbicacion({ ciudad: "", direccion: "" })), ["ciudad", "direccion"]);
   assert.deepEqual(erroresUbicacion({ ciudad: "Cali", direccion: "Cra 1" }), {});
   assert.match(errorHorarioTienda(""), /Escribe tu horario/);
-  assert.equal(errorTelefono(""), null, "el teléfono es opcional");
-  assert.equal(errorTelefono("+57 300 123 4567"), null);
-  assert.match(errorTelefono("abc"), /teléfono válido/);
   assert.equal(errorCostoEnvio(false, ""), null, "sin envío no se valida el costo");
   assert.equal(errorCostoEnvio(true, "0"), null);
   assert.match(errorCostoEnvio(true, ""), /puede ser 0/);

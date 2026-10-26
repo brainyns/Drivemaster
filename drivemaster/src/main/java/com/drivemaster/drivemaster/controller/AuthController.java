@@ -33,6 +33,7 @@ import com.drivemaster.drivemaster.security.CustomUserDetailsService;
 import com.drivemaster.drivemaster.security.JwtUtil;
 import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.service.UsuarioService;
+import com.drivemaster.drivemaster.util.Correos;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -79,7 +80,9 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request, HttpServletResponse response) {
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreo(request.getCorreo());
+        // En minúsculas y sin espacios; las cuentas antiguas con mayúsculas también se encuentran
+        Optional<Usuario> usuarioOpt = usuarioService.buscarPorCorreo(request.getCorreo());
+        String cuenta = usuarioOpt.map(Usuario::getCorreo).orElse(Correos.normalizar(request.getCorreo()));
 
         if (usuarioOpt.isPresent()) {
             Usuario usuario = usuarioOpt.get();
@@ -101,16 +104,16 @@ public class AuthController {
 
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getCorreo(), request.getPassword()));
+                    new UsernamePasswordAuthenticationToken(cuenta, request.getPassword()));
         } catch (Exception e) {
             handleFailedLogin(usuarioOpt.orElse(null));
             throw new BadCredentialsException("Credenciales inválidas");
         }
 
-        Usuario usuario = usuarioService.obtenerPorCorreo(request.getCorreo());
+        Usuario usuario = usuarioService.obtenerPorCorreo(cuenta);
         resetFailedLogin(usuario);
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getCorreo());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(cuenta);
         AuthResponse sesion = construirSesion(usuario, userDetails);
 
         usuario.setUltimoLogin(Instant.now());
@@ -123,7 +126,9 @@ public class AuthController {
 
     @PostMapping("/login-interno")
     public ResponseEntity<?> loginInterno(@RequestBody AuthRequest request, HttpServletResponse response) {
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreo(request.getCorreo());
+        // En minúsculas y sin espacios; las cuentas antiguas con mayúsculas también se encuentran
+        Optional<Usuario> usuarioOpt = usuarioService.buscarPorCorreo(request.getCorreo());
+        String cuenta = usuarioOpt.map(Usuario::getCorreo).orElse(Correos.normalizar(request.getCorreo()));
 
         if (usuarioOpt.isPresent()) {
             Usuario usuario = usuarioOpt.get();
@@ -151,17 +156,17 @@ public class AuthController {
 
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getCorreo(), request.getPassword()));
+                    new UsernamePasswordAuthenticationToken(cuenta, request.getPassword()));
         } catch (Exception e) {
             handleFailedLogin(usuarioOpt.orElse(null));
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Credenciales inválidas"));
         }
 
-        Usuario usuario = usuarioService.obtenerPorCorreo(request.getCorreo());
+        Usuario usuario = usuarioService.obtenerPorCorreo(cuenta);
         resetFailedLogin(usuario);
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getCorreo());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(cuenta);
         AuthResponse sesion = construirSesion(usuario, userDetails);
 
         usuario.setUltimoLogin(Instant.now());
@@ -190,8 +195,11 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo y contraseña son obligatorios");
         }
 
-        Optional<Usuario> existing = usuarioRepository.findByCorreo(request.getCorreo());
-        if (existing.isPresent()) {
+        String correo = Correos.normalizar(request.getCorreo());
+        if (!Correos.valido(correo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe un correo válido, por ejemplo nombre@dominio.com");
+        }
+        if (usuarioService.correoOcupado(correo)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Correo ya registrado");
         }
 
@@ -200,7 +208,7 @@ public class AuthController {
 
         Usuario usuario = Usuario.builder()
                 .nombre(request.getNombre())
-                .correo(request.getCorreo())
+                .correo(correo)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .identificacion(request.getIdentificacion())
                 .proveedor("LOCAL")
@@ -258,6 +266,10 @@ public class AuthController {
         Usuario usuario = usuarioService.obtenerPorCorreo(username);
         if (Boolean.FALSE.equals(usuario.getActivo()) || Boolean.TRUE.equals(usuario.getBloqueado())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "La cuenta no está activa");
+        }
+        // Tras recuperar la contraseña, los tokens anteriores no renuevan la sesión
+        if (jwtUtil.emitidoAntesDe(token, usuario.getSesionesDesde())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesión expirada, inicie sesión nuevamente");
         }
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);

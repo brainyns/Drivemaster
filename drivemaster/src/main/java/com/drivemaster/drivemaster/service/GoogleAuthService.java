@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
+import com.drivemaster.drivemaster.util.Correos;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -40,11 +41,12 @@ public class GoogleAuthService {
             }
 
             GoogleIdToken.Payload payload = idToken.getPayload();
-            String email = payload.getEmail();
+            String email = Correos.normalizar(payload.getEmail());
             String nombre = (String) payload.get("name");
             String googleId = payload.getSubject();
 
-            Optional<Usuario> existente = usuarioRepository.findByCorreo(email);
+            Optional<Usuario> existente = usuarioRepository.findByCorreo(email)
+                    .or(() -> usuarioRepository.findByCorreoIgnoreCase(email).stream().findFirst());
             if (existente.isPresent()) {
                 Usuario usuario = existente.get();
                 if (usuario.getGoogleId() == null) {

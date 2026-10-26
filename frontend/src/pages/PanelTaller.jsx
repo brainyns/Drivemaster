@@ -9,6 +9,7 @@ import TallerInicio from "./taller/TallerInicio";
 import TallerMiTaller from "./taller/TallerMiTaller";
 import TallerCotizaciones from "./taller/TallerCotizaciones";
 import TallerInformes from "./taller/TallerInformes";
+import TallerAgenda from "./taller/TallerAgenda";
 import OrdenesAnteriores from "./taller/OrdenesAnteriores";
 import { destinoSeccion, ordenesPorAtender } from "./taller/resumenTaller";
 import "../css/servicios.css";
@@ -43,6 +44,24 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
     setCargando(false);
   }, [token]);
 
+  // Solo la bandeja: tras una acción en Solicitudes o Trabajos no hace falta pedir de nuevo el taller ni las órdenes
+  const recargarSolicitudes = useCallback(async () => {
+    try {
+      setSolicitudes((await bandejaSolicitudesTaller(token)) || []);
+      setError(null);
+    } catch (e) {
+      setError(e.message || "No se pudieron cargar las solicitudes.");
+    }
+  }, [token]);
+
+  /** Una solicitud actualizada por una acción reemplaza la suya en la bandeja, sin recargar. */
+  const reemplazarSolicitud = useCallback((actualizada) =>
+    setSolicitudes((prev) => prev.map((s) => (s.id === actualizada.id ? { ...s, ...actualizada } : s))), []);
+
+  // La bandeja y el taller se cargan aquí una vez y se pasan a cada sección (Solicitudes y Trabajos no los piden de nuevo)
+  const bandeja = { solicitudes, taller, cargandoBandeja: cargando, errorBandeja: error,
+    onRecargar: recargarSolicitudes, onReemplazar: reemplazarSolicitud };
+
   // Se recarga al cambiar de sección para que contadores y avisos no queden viejos.
   useEffect(() => {
     const id = setTimeout(cargar, 0);
@@ -76,16 +95,18 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         )}
         {seccion === "solicitudes" && (
           <TallerSolicitudes key={`${destino.filtro || "responder"}-${destino.abrir || ""}`} filtroInicial={destino.filtro}
-            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined} />
+            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined}
+            textoAfuera={destino.volverA === "taller-agenda" ? "Agenda" : "Inicio"} {...bandeja} />
         )}
         {seccion === "trabajos" && (
           <TallerSolicitudes key={`${destino.filtro || "repuestos"}-${destino.abrir || ""}`} modo="trabajos" filtroInicial={destino.filtro}
-            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined} />
+            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined} {...bandeja} />
         )}
+        {seccion === "agenda" && <TallerAgenda taller={taller} irA={irA} />}
         {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}
         {seccion === "informes" && <TallerInformes />}
         {seccion === "mitaller" && (
-          <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller}
+          <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller} abrirSeccion={destino.filtro}
             onRecargar={cargar} onActualizado={setTaller} />
         )}
         {seccion === "anteriores" && (

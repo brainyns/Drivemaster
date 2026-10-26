@@ -122,6 +122,16 @@ export async function activarDesactivarTaller(token, id, activo) {
 }
 
 /** El taller cambia su tarifa por hora y su horario. Solo viajan esos dos campos. */
+/** Solo el teléfono del taller de la sesión (celular o fijo colombiano). Devuelve el taller actualizado. */
+export async function guardarTelefonoTaller(token, telefono) {
+  const res = await apiFetch(`${BASE}/mi-taller/telefono`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify({ telefono }),
+  });
+  return handle(res, "No se pudo guardar el teléfono");
+}
+
 export async function actualizarDatosTaller(token, { tarifaHora, horario }) {
   const res = await apiFetch(`${BASE}/mi-taller/datos`, {
     method: "PATCH",

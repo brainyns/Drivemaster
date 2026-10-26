@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken } from "../services/authService";
-import { listarMecanicos, miTaller } from "../services/tallerService";
+import { listarMecanicos } from "../services/tallerService";
+import { obtenerHorario } from "../services/horarioService";
 import {
-  bandejaSolicitudesTaller, aceptarSolicitudServicio, rechazarSolicitudServicio, asignarMecanicoSolicitud,
+  aceptarSolicitudServicio, rechazarSolicitudServicio, asignarMecanicoSolicitud,
   iniciarInstalacion, marcarEnPruebas, marcarLista, marcarEntregada,
 } from "../services/solicitudServicioService";
 import { cotizacionesDeOrden } from "../services/cotizacionService";
@@ -15,6 +16,7 @@ import {
   ESTADOS, ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
 import { tiempoRelativo } from "./taller/resumenTaller";
+import { errorDiaCita, hora12, horasDeCita, semanaDesdeFranjas } from "./taller/horarioTaller";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
@@ -58,7 +60,7 @@ const TEXTOS = {
     titulo: "Solicitudes",
     descripcion: "Diagnósticos que te asignan: respóndelos, agenda la revisión y registra lo que encuentres.",
     volver: "Solicitudes",
-    icono: "message",
+    icono: "inbox",
     vacio: {
       responder: ["Estás al día", "No tienes solicitudes nuevas. Te avisaremos por correo cuando llegue una."],
       agendadas: ["Sin revisiones agendadas", "Al aceptar una solicitud eliges la fecha y la hora de la revisión."],
@@ -185,14 +187,21 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
 /**
  * Bandeja de solicitudes de diagnóstico del taller: responder (aceptar con cita o
  * rechazar), asignar mecánico, registrar el diagnóstico y elegir repuestos.
+ *
+ * La bandeja y los datos del taller los carga PanelTaller una sola vez y llegan por props (solicitudes, taller);
+ * onReemplazar actualiza una solicitud sin recargar y onRecargar vuelve a pedir la bandeja. Aquí solo se cargan los
+ * mecánicos y el horario, que no usa ninguna otra sección.
  */
-export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial, abrirInicial = null, onVolver }) {
+export default function TallerSolicitudes({
+  modo = "solicitudes", filtroInicial, abrirInicial = null, onVolver, textoAfuera = "Inicio",
+  solicitudes = [], taller = null, cargandoBandeja = false, errorBandeja = null, onRecargar, onReemplazar,
+}) {
   const token = getToken();
   const FILTROS = modo === "trabajos" ? FILTROS_TRABAJOS : FILTROS_SOLICITUDES;
   const textos = TEXTOS[modo];
-  const [solicitudes, setSolicitudes] = useState([]);
   const [mecanicos, setMecanicos] = useState([]);
-  const [cargando, setCargando] = useState(true);
+  const [extrasListos, setExtrasListos] = useState(false);
+  const cargando = cargandoBandeja || !extrasListos;
   const [error, setError] = useState(null);
   const [filtro, setFiltro] = useState(FILTROS.some((f) => f.key === filtroInicial) ? filtroInicial : FILTROS[0].key);
   const [busqueda, setBusqueda] = useState("");
@@ -200,38 +209,48 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
   // Desde Inicio se abre directamente una solicitud (abrirInicial); su "Volver" regresa allá (onVolver)
   const [seleccionadaId, setSeleccionadaId] = useState(abrirInicial);
 
-  const [fechaRevision, setFechaRevision] = useState("");
+  // La cita se elige en dos partes: el día y una hora dentro del horario del taller ("YYYY-MM-DD" y "HH:mm")
+  const [fechaCita, setFechaCita] = useState("");
+  const [horaCita, setHoraCita] = useState("");
+  // Horario por días del taller; null si aún no lo configura (entonces cualquier día y hora)
+  const [semanaHorario, setSemanaHorario] = useState(null);
   const [mecanicoAceptar, setMecanicoAceptar] = useState("");
   const [rechazando, setRechazando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [editandoDiagnostico, setEditandoDiagnostico] = useState(false);
   const [cotizando, setCotizando] = useState(false);
-  const [tarifaHora, setTarifaHora] = useState(null);
   const [procesando, setProcesando] = useState(false);
   const [reintentando, setReintentando] = useState(false);
   const [errorFecha, setErrorFecha] = useState(null);
   const [ahora] = useState(() => Date.now());
 
-  const cargar = useCallback(async () => {
+  const tallerId = taller?.id;
+  const tarifaHora = taller?.tarifaHora || null;
+
+  const cargarExtras = useCallback(async () => {
     try {
-      const [bandeja, mecs, taller] = await Promise.all([
-        bandejaSolicitudesTaller(token), listarMecanicos(token), miTaller(token).catch(() => null),
+      const [mecs, filas] = await Promise.all([
+        listarMecanicos(token), tallerId ? obtenerHorario(token, tallerId).catch(() => []) : [],
       ]);
-      setSolicitudes(bandeja || []);
       setMecanicos(mecs || []);
-      setTarifaHora(taller?.tarifaHora || null);
+      setSemanaHorario(semanaDesdeFranjas(filas));
       setError(null);
     } catch (e) {
       setError(e.message);
     } finally {
-      setCargando(false);
+      setExtrasListos(true);
     }
-  }, [token]);
+  }, [token, tallerId]);
 
+  // Espera a que el panel tenga el taller: así los mecánicos y el horario se piden una sola vez
   useEffect(() => {
-    const id = setTimeout(cargar, 0);
+    if (cargandoBandeja) return undefined;
+    const id = setTimeout(cargarExtras, 0);
     return () => clearTimeout(id);
-  }, [cargar]);
+  }, [cargarExtras, cargandoBandeja]);
+
+  /** Vuelve a pedir la bandeja (la tiene PanelTaller) tras una acción que cambia más de una solicitud. */
+  const cargar = async () => { await onRecargar?.(); };
 
   // Abierta desde Inicio: el detalle empieza arriba, no a la altura donde estaba la lista de urgentes
   useEffect(() => {
@@ -265,7 +284,8 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
     alInicio();
     setSeleccionadaId(s.id);
     setErrorFecha(null);
-    setFechaRevision("");
+    setFechaCita("");
+    setHoraCita("");
     setMecanicoAceptar(s.mecanicoId || "");
     setRechazando(false);
     setMotivo("");
@@ -275,8 +295,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
   };
 
   /** Reemplaza la solicitud actualizada en la lista sin recargar todo. */
-  const reemplazar = (actualizada) =>
-    setSolicitudes((prev) => prev.map((s) => (s.id === actualizada.id ? { ...s, ...actualizada } : s)));
+  const reemplazar = (actualizada) => onReemplazar?.(actualizada);
 
   const ejecutar = async (accion) => {
     setProcesando(true);
@@ -290,15 +309,19 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
     }
   };
 
+  const errorDia = errorDiaCita(semanaHorario, fechaCita);
+  const horasCita = fechaCita && !errorDia ? horasDeCita(semanaHorario, fechaCita) : [];
+
   const aceptar = () => {
-    if (!fechaRevision) {
-      setErrorFecha("Elige la fecha y la hora de la revisión.");
-      document.getElementById("ss-fecha-revision")?.focus();
+    const problema = !fechaCita ? "Elige el día de la revisión." : errorDia || (!horaCita ? "Elige la hora de la revisión." : null);
+    if (problema) {
+      setErrorFecha(problema);
+      document.getElementById(fechaCita && !errorDia ? "ss-hora-revision" : "ss-fecha-revision")?.focus();
       return;
     }
     ejecutar(async () => {
       reemplazar(await aceptarSolicitudServicio(token, seleccionada.id, {
-        fechaRevision, mecanicoId: mecanicoAceptar || null,
+        fechaRevision: `${fechaCita}T${horaCita}`, mecanicoId: mecanicoAceptar || null,
       }));
     });
   };
@@ -317,7 +340,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
 
   const reintentar = async () => {
     setReintentando(true);
-    await cargar();
+    await Promise.all([cargar(), cargarExtras()]);
     setReintentando(false);
   };
 
@@ -360,7 +383,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
     return (
       <div className="ss-panel st-root st-detalle">
         <EncabezadoPagina titulo={s.vehiculoDescripcion} onVolver={cerrarDetalle}
-          textoVolver={desdeAfuera ? "Inicio" : textos.volver}>
+          textoVolver={desdeAfuera ? textoAfuera : textos.volver}>
           <p className="st-detalle__meta">
             <ChipEstado estado={s.estado} catalogo={ESTADOS} />
             {enPruebas && <ChipEstado tono="info">En pruebas</ChipEstado>}
@@ -418,9 +441,17 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
                 {!rechazando ? (
                   <>
                     <div className="st-form">
-                      <Campo id="ss-fecha-revision" label="Fecha y hora de la revisión" error={errorFecha}>
-                        <input className="ui-field__input" type="datetime-local" min={ahoraParaInput()} value={fechaRevision}
-                          onChange={(e) => { setFechaRevision(e.target.value); setErrorFecha(null); }} />
+                      <Campo id="ss-fecha-revision" label="Día de la revisión" error={errorDia || (!fechaCita && errorFecha)}
+                        ayuda={semanaHorario ? "Solo los días que abre tu taller." : "Configura tu horario en Mi taller para limitar los días y las horas."}>
+                        <input className="ui-field__input" type="date" min={ahoraParaInput().slice(0, 10)} value={fechaCita}
+                          onChange={(e) => { setFechaCita(e.target.value); setHoraCita(""); setErrorFecha(null); }} />
+                      </Campo>
+                      <Campo id="ss-hora-revision" label="Hora" error={fechaCita && !errorDia && !horaCita ? errorFecha : null}>
+                        <select className="ui-field__input" value={horaCita} disabled={!horasCita.length}
+                          onChange={(e) => { setHoraCita(e.target.value); setErrorFecha(null); }}>
+                          <option value="">{fechaCita ? "Elige la hora" : "Primero elige el día"}</option>
+                          {horasCita.map((h) => <option key={h} value={h}>{hora12(h)}</option>)}
+                        </select>
                       </Campo>
                       <Campo id="ss-mecanico-aceptar" label="Mecánico" opcional
                         ayuda={mecanicosActivos.length === 0 ? "Aún no tienes mecánicos activos: agrégalos en Mi taller." : undefined}>
@@ -665,9 +696,10 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
     <div className="ss-panel st-root">
       <EncabezadoPagina titulo={textos.titulo} descripcion={textos.descripcion} />
 
-      {error && (
-        <Alerta className="st-alerta" onReintentar={reintentar} reintentando={reintentando} onCerrar={() => setError(null)}>
-          {error}
+      {(error || errorBandeja) && (
+        <Alerta className="st-alerta" onReintentar={reintentar} reintentando={reintentando}
+          onCerrar={error ? () => setError(null) : undefined}>
+          {error || errorBandeja}
         </Alerta>
       )}
 
@@ -676,7 +708,7 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
           {FILTROS.map((f) => (
             <button key={f.key} type="button" className="ui-chip" aria-pressed={filtro === f.key} onClick={() => setFiltro(f.key)}>
               {f.label}
-              {conteo[f.key] > 0 && <span className="ui-chip__contador">{conteo[f.key]}</span>}
+              <span className="ui-chip__contador">{conteo[f.key]}</span>
             </button>
           ))}
         </div>
@@ -701,7 +733,15 @@ export default function TallerSolicitudes({ modo = "solicitudes", filtroInicial,
             <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setBusqueda("")}>Limpiar búsqueda</button>
           </EstadoVacio>
         ) : (
-          <EstadoVacio icono={textos.icono} titulo={tituloVacio} texto={textoVacio} />
+          <EstadoVacio icono={textos.icono} titulo={tituloVacio} texto={textoVacio} compacto>
+            {/* Sin nada por responder, lo siguiente que pide trabajo son los diagnósticos por cotizar */}
+            {modo === "solicitudes" && filtro === "responder" && conteo.diagnosticadas > 0 && (
+              <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setFiltro("diagnosticadas")}>
+                Tienes {conteo.diagnosticadas} {conteo.diagnosticadas === 1 ? "diagnóstico" : "diagnósticos"} por cotizar
+                · Ir a cotizar <Icon name="arrow" size={16} />
+              </button>
+            )}
+          </EstadoVacio>
         )
       ) : modo === "trabajos" ? (
         <ul className="st-lista">{visibles.map(tarjetaTrabajo)}</ul>

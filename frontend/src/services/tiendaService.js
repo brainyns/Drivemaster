@@ -69,6 +69,16 @@ export async function subirLogoTienda(token, archivo) {
 }
 
 /** TIENDA: actualiza los datos públicos de su tienda (ciudad, dirección, horario, envío). */
+/** Solo el teléfono de la tienda de la sesión (celular o fijo colombiano). Devuelve la tienda actualizada. */
+export async function guardarTelefonoTienda(token, telefono) {
+  const res = await apiFetch(`${BASE}/mi-tienda/telefono`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify({ telefono }),
+  });
+  return handle(res, "No se pudo guardar el teléfono");
+}
+
 export async function actualizarMiTienda(token, datos) {
   const res = await apiFetch(`${BASE}/mi-tienda`, {
     method: "PUT",

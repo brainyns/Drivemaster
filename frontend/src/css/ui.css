@@ -486,6 +486,10 @@
   color: var(--ui-muted);
 }
 
+/* Compacto: deja ver lo que sigue debajo en vez de ocupar la pantalla */
+.ui-vacio--compacto { padding: 28px 20px; }
+.ui-vacio--compacto .ui-vacio__icono { width: 48px; height: 48px; margin-bottom: 2px; }
+
 .ui-vacio__acciones {
   display: flex;
   flex-wrap: wrap;
@@ -1091,6 +1095,20 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 .ui-form__campos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .ui-form__campos--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ui-datos__item--ancho { grid-column: 1 / -1; }
+
+/* Contacto (SeccionContacto): el teléfono ocupa lo que mide y el correo todo el resto, así no se parte a la mitad.
+   El overflow-wrap:anywhere de .ui-datos dd queda solo para un correo más largo que la fila completa. */
+.ui-datos--contacto { grid-template-columns: minmax(140px, max-content) minmax(0, 1fr); }
+.ui-contacto__acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; }
+.ui-contacto__nota { font-size: 0.8125rem; color: var(--ui-muted); }
+.ui-contacto__form { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ui-line); }
+.ui-contacto__paso { margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ui-text); }
+.ui-contacto__codigo { max-width: 12ch; font-size: 1.25rem; letter-spacing: 0.3em; font-variant-numeric: tabular-nums; }
+.ui-contacto__otro { justify-self: start; }
+
+@media (max-width: 560px) {
+  .ui-datos--contacto { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* Texto libre que respeta los saltos de línea (horarios, notas) */
 .ui-texto-pre { margin: 0; font-size: 1rem; line-height: 1.6; white-space: pre-line; color: var(--ui-text); }

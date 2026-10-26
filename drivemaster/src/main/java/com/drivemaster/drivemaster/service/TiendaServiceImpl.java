@@ -11,6 +11,7 @@ import com.drivemaster.drivemaster.repository.TiendaRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.util.Coordenadas;
+import com.drivemaster.drivemaster.util.TelefonoColombia;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -130,8 +131,16 @@ public class TiendaServiceImpl implements TiendaService {
         return toDTO(tiendaRepository.save(aplicarDatos(obtenerPorUsuario(correoUsuario), r)));
     }
 
+    @Override
+    public TiendaDTO actualizarTelefono(String correoUsuario, String telefono) {
+        Tienda tienda = obtenerPorUsuario(correoUsuario);
+        tienda.setTelefono(TelefonoColombia.validar(telefono));
+        return toDTO(tiendaRepository.save(tienda));
+    }
+
     private Tienda aplicarDatos(Tienda tienda, RegistroNegocioRequest r) {
-        if (r.getTelefono() != null) tienda.setTelefono(r.getTelefono());
+        // El teléfono tiene su propio endpoint; si llega por aquí, con la misma validación
+        if (r.getTelefono() != null) tienda.setTelefono(TelefonoColombia.validar(r.getTelefono()));
         if (r.getCiudad() != null && !r.getCiudad().isBlank()) tienda.setCiudad(r.getCiudad());
         if (r.getBarrio() != null) tienda.setBarrio(r.getBarrio());
         if (r.getDireccion() != null && !r.getDireccion().isBlank()) tienda.setDireccion(r.getDireccion());

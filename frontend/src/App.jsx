@@ -103,6 +103,7 @@ const TITULOS = {
   "taller-panel":    "Inicio del taller",
   "taller-inicio":   "Inicio del taller",
   "taller-solicitudes": "Solicitudes",
+  "taller-agenda":   "Agenda",
   "taller-trabajos": "Trabajos",
   "taller-cotizaciones": "Cotizaciones",
   "taller-mitaller": "Mi taller",
@@ -142,6 +143,7 @@ const SECCION_TALLER = {
   "taller-mitaller":    "mitaller",
   "taller-informes":    "informes",
   "taller-anteriores":  "anteriores",
+  "taller-agenda":      "agenda",
 };
 
 // Página inicial de cada rol después de iniciar sesión.
@@ -251,10 +253,14 @@ function App() {
   // apiFetch avisa cuando renovó el token o cuando la sesión ya no se pudo recuperar.
   useEffect(() => {
     const onRenovada = (e) => setToken(e.detail);
+    // Cambio de correo: el backend emitió una sesión nueva (el token lleva el correo)
+    const onCuenta = () => { setUser(getUser()); setToken(getToken()); };
     window.addEventListener("auth:renovada", onRenovada);
     window.addEventListener("auth:expirada", expirarSesion);
+    window.addEventListener("auth:cuenta", onCuenta);
     return () => {
       window.removeEventListener("auth:renovada", onRenovada);
+      window.removeEventListener("auth:cuenta", onCuenta);
       window.removeEventListener("auth:expirada", expirarSesion);
     };
   }, [expirarSesion]);

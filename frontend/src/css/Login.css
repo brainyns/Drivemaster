@@ -667,3 +667,8 @@
 }
 /* Login con los campos compartidos (components/ui/Campo y CampoClave): el botón respira un poco más */
 .auth-card .auth-enviar { margin-top: 6px; }
+
+/* "¿Olvidaste tu contraseña?" bajo la contraseña, y el paso del código (components/auth/RecuperarClave) */
+.auth-card .auth-olvido { align-self: flex-end; margin-top: -8px; }
+.auth-card .auth-codigo { max-width: 12ch; font-size: 1.25rem; letter-spacing: 0.3em; font-variant-numeric: tabular-nums; }
+.auth-card .auth-recuperar { margin-top: 17px; }

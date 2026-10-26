@@ -1,11 +1,19 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import MecanicosTaller from "../../components/servicio/MecanicosTaller";
+import HorarioSemanal, { HorarioResumen } from "../../components/servicio/HorarioSemanal";
 import { formatFecha, formatPrecio } from "../../components/servicio/estadosServicio";
-import { actualizarDatosTaller, actualizarUbicacionTaller, subirLogoTaller } from "../../services/tallerService";
+import {
+  actualizarDatosTaller, actualizarUbicacionTaller, guardarTelefonoTaller, miTaller, subirLogoTaller,
+} from "../../services/tallerService";
+import { guardarHorario, obtenerHorario } from "../../services/horarioService";
+import {
+  copiarLunesAHabiles, errorDia, franjasDesdeSemana, semanaDesdeFranjas, semanaPorDefecto,
+} from "./horarioTaller";
 import LogoNegocio from "../../components/ui/LogoNegocio";
 import SelectorUbicacion from "../../components/mapa/SelectorUbicacion";
 import DatosTallerCliente from "../../components/mapa/DatosTallerCliente";
 import SeccionEditable from "../../components/ui/SeccionEditable";
+import SeccionContacto from "../../components/ui/SeccionContacto";
 import Campo from "../../components/ui/Campo";
 import ChipEstado from "../../components/ui/ChipEstado";
 import Alerta from "../../components/ui/Alerta";
@@ -16,7 +24,7 @@ import VistaPrevia from "../../components/ui/VistaPrevia";
 import Dato from "../../components/ui/Dato";
 import PieFormulario from "../../components/ui/PieFormulario";
 import Icon from "../../components/public/Icon";
-import { HORARIO_MAX, comoLoVeElCliente, completitudPerfil, errorHorario, errorTarifa } from "./perfilTaller";
+import { comoLoVeElCliente, completitudPerfil, errorTarifa } from "./perfilTaller";
 import LogoEditable from "../../components/ui/LogoEditable";
 import "../../css/mi-taller.css";
 
@@ -56,20 +64,24 @@ function FormTarifa({ taller, token, onGuardado, onCancelar }) {
   );
 }
 
-function FormHorario({ taller, token, onGuardado, onCancelar }) {
-  const [horario, setHorario] = useState(taller?.horario ?? "");
+/**
+ * Horario por días: abierto o cerrado y sus franjas. Se guarda completo (PUT); el backend regenera el texto que ve el
+ * cliente, por eso al terminar se vuelven a pedir los datos del taller.
+ */
+function FormHorario({ taller, token, semanaInicial, onGuardado, onCancelar }) {
+  const [semana, setSemana] = useState(() => semanaInicial || semanaPorDefecto());
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const errorCampo = errorHorario(horario);
+  const conErrores = semana.some((d) => errorDia(d));
 
   const guardar = async (e) => {
     e.preventDefault();
-    if (errorCampo) return;
-    if (horario.trim() === (taller?.horario ?? "").trim()) { onCancelar(); return; }
+    if (conErrores) { setError("Revisa los días marcados antes de guardar."); return; }
     setGuardando(true);
     setError(null);
     try {
-      onGuardado(await actualizarDatosTaller(token, { horario }));
+      const guardada = semanaDesdeFranjas(await guardarHorario(token, taller.id, franjasDesdeSemana(semana)));
+      onGuardado(guardada, await miTaller(token).catch(() => taller));
     } catch (err) {
       setError(err.message);
       setGuardando(false);
@@ -78,12 +90,18 @@ function FormHorario({ taller, token, onGuardado, onCancelar }) {
 
   return (
     <form className="ui-form" onSubmit={guardar} noValidate>
-      <Campo id="mt-horario-texto" label="Horario de atención" error={errorCampo}
-        ayuda={`Texto libre, una línea por día o franja. ${horario.length}/${HORARIO_MAX} caracteres.`}>
-        <textarea className="ui-field__input" maxLength={HORARIO_MAX} rows={4} autoFocus value={horario}
-          placeholder={"Lunes a viernes: 8:00 a. m. – 6:00 p. m.\nSábados: 8:00 a. m. – 1:00 p. m."}
-          onChange={(e) => setHorario(e.target.value)} />
-      </Campo>
+      {!semanaInicial && taller?.horario && (
+        <Alerta tono="info">
+          Antes escribiste: <q>{taller.horario}</q>. Te proponemos un horario por días; ajústalo para que coincida.
+        </Alerta>
+      )}
+      <div className="mt-horario__barra">
+        <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico"
+          onClick={() => { setSemana(copiarLunesAHabiles(semana)); setError(null); }}>
+          Copiar lunes a todos los días hábiles
+        </button>
+      </div>
+      <HorarioSemanal semana={semana} onCambiar={(s) => { setSemana(s); setError(null); }} />
       <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar horario" />
     </form>
   );
@@ -158,12 +176,29 @@ function VistaCliente({ taller: datos }) {
 }
 
 /** Mi taller: identidad, qué tan completo está el perfil y cada sección editable por separado. */
-export default function TallerMiTaller({ taller, token, cargando, error, onRecargar, onActualizado }) {
-  const [editando, setEditando] = useState(null); // "servicios" | "horario" | "ubicacion"
+export default function TallerMiTaller({ taller, token, cargando, error, onRecargar, onActualizado, abrirSeccion = null }) {
+  // Desde el aviso del Inicio llega abrirSeccion="horario": la sección se abre ya en edición
+  const [editando, setEditando] = useState(abrirSeccion === "horario" ? "horario" : null); // "servicios" | "horario" | "ubicacion"
   const [aviso, setAviso] = useState(null); // { seccion, texto }
   const [activos, setActivos] = useState(0);
   const [avisoLogo, setAvisoLogo] = useState(null); // { tono, texto }
   const onLista = useCallback((lista) => setActivos(lista.filter((m) => m.activo !== false).length), []);
+  // Horario por días: undefined mientras carga, null si el taller aún no lo configura
+  const [semana, setSemana] = useState(undefined);
+  const tallerId = taller?.id;
+
+  useEffect(() => {
+    if (!tallerId) return undefined;
+    let vivo = true;
+    obtenerHorario(token, tallerId)
+      .then((filas) => { if (vivo) setSemana(semanaDesdeFranjas(filas)); })
+      .catch(() => { if (vivo) setSemana(null); });
+    return () => { vivo = false; };
+  }, [token, tallerId]);
+
+  useEffect(() => {
+    if (abrirSeccion === "horario" && tallerId) document.getElementById("mt-horario")?.scrollIntoView({ block: "start" });
+  }, [abrirSeccion, tallerId]);
 
   if (!taller) {
     if (cargando) return <Esqueleto variante="formulario" cantidad={4} texto="Cargando los datos de tu taller…" />;
@@ -305,27 +340,41 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
           <SeccionEditable id="mt-horario" icono="clock" titulo="Horario de atención"
             descripcion="Ayuda a proponer citas que sí puedes cumplir."
             onEditar={aprobado ? () => abrir("horario") : undefined}
-            textoEditar={taller.horario ? "Editar" : "Agregar horario"}
+            textoEditar={semana || taller.horario ? "Editar" : "Agregar horario"}
             editando={editando === "horario"} aviso={avisoDe("horario")}>
-            {editando === "horario" ? (
-              <FormHorario taller={taller} token={token} onCancelar={cerrar}
-                onGuardado={guardado("horario", "Horario guardado.")} />
+            {editando === "horario" && semana === undefined ? (
+              <Esqueleto variante="formulario" cantidad={2} texto="Cargando tu horario…" />
+            ) : editando === "horario" ? (
+              <FormHorario taller={taller} token={token} semanaInicial={semana} onCancelar={cerrar}
+                onGuardado={(guardada, t) => {
+                  setSemana(guardada);
+                  guardado("horario", "Horario guardado. Las citas nuevas solo se podrán agendar dentro de él.")(t);
+                }} />
+            ) : semana ? (
+              <HorarioResumen semana={semana} />
             ) : taller.horario ? (
-              <p className="ui-texto-pre">{taller.horario}</p>
+              <>
+                <p className="ui-texto-pre">{taller.horario}</p>
+                {semana === null && (
+                  <p className="ui-datos__falta">Configúralo por días para que las citas respeten tu horario.</p>
+                )}
+              </>
             ) : (
-              <p className="ui-datos__falta">Aún no escribes tu horario.</p>
+              <p className="ui-datos__falta">Aún no configuras tu horario.</p>
             )}
           </SeccionEditable>
 
           <MecanicosTaller token={token} onLista={onLista} />
 
-          <SeccionEditable id="mt-contacto" icono="phone" titulo="Contacto"
-            descripcion="Por aquí te escriben DriveMaster y los clientes con cita aceptada." nota={ADMIN}>
-            <dl className="ui-datos">
-              <Dato etiqueta="Teléfono">{taller.telefono}</Dato>
-              <Dato etiqueta="Correo de la cuenta">{taller.correoUsuario}</Dato>
-            </dl>
-          </SeccionEditable>
+          <SeccionContacto id="mt-contacto"
+            descripcion="Por aquí te escriben DriveMaster y los clientes con cita aceptada."
+            telefono={taller.telefono} correo={taller.correoUsuario}
+            ayudaTelefono="Celular o fijo. Lo ven los clientes con cita aceptada."
+            guardarTelefono={(numero) => guardarTelefonoTaller(token, numero)}
+            onTelefonoGuardado={guardado("contacto", "Teléfono guardado.")}
+            editandoTelefono={editando === "contacto"} onEditarTelefono={() => abrir("contacto")} onCerrarTelefono={cerrar}
+            aviso={avisoDe("contacto")}
+            onCorreoCambiado={(correoUsuario) => onActualizado?.({ ...taller, correoUsuario })} />
         </div>
 
         <aside className="ui-perfil__lateral">

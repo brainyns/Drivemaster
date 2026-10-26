@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatFechaHora, formatPrecio, refSolicitud } from "../../components/servicio/estadosServicio";
 import { informesTaller } from "../../services/informesTallerService";
+import { obtenerHorario } from "../../services/horarioService";
 import { getToken } from "../../services/authService";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
 import Indicador from "../../components/ui/Indicador";
@@ -30,6 +31,10 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
   const [ahora] = useState(() => Date.now());
   const [ingresos, setIngresos] = useState(null);
   const [reintentando, setReintentando] = useState(false);
+  // null hasta saberlo; true si el taller aún no guarda su horario por días
+  const [sinHorario, setSinHorario] = useState(null);
+  const tallerId = taller?.id;
+  const aprobado = taller?.estadoAprobacion === "APROBADO";
 
   // Mano de obra liquidada y por cobrar (el backend la da acumulada, no por periodo)
   useEffect(() => {
@@ -39,6 +44,16 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
       .catch(() => {});
     return () => { vivo = false; };
   }, []);
+
+  // Solo un taller aprobado puede guardar el horario; si la consulta falla, no se avisa nada
+  useEffect(() => {
+    if (!tallerId || !aprobado) return undefined;
+    let vivo = true;
+    obtenerHorario(getToken(), tallerId)
+      .then((filas) => { if (vivo) setSinHorario(!filas?.length); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, [tallerId, aprobado]);
 
   const datos = useMemo(() => {
     const responder = solicitudes.filter(porResponder)
@@ -81,7 +96,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                 <Icon name="file" size={16} /> Crear cotización
               </button>
             )}
-            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-solicitudes", "agendadas")}>
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-agenda")}>
               <Icon name="calendar" size={16} /> Ver agenda
             </button>
           </>
@@ -92,6 +107,18 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
         <Alerta className="ini-alerta" onReintentar={onRecargar ? reintentar : undefined} reintentando={reintentando}>
           No pudimos cargar tus solicitudes. {error}
         </Alerta>
+      )}
+
+      {sinHorario && (
+        <div className="ini-aviso-horario">
+          <Icon name="clock" size={20} />
+          <p className="ini-aviso-horario__texto">
+            Configura tu horario de atención para que tus citas se agenden en horas que sí puedes cumplir
+          </p>
+          <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => irA("taller-mitaller", "horario")}>
+            Configurar
+          </button>
+        </div>
       )}
 
       {anteriores.length > 0 && (
@@ -124,7 +151,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                 onClick={() => irA("taller-solicitudes", "responder")} />
               <Indicador icono="calendar" titulo="Citas de hoy" valor={datos.hoy.length}
                 pie={datos.hoy.length > 0 ? `La primera a las ${hora(datos.hoy[0].fechaRevision)}` : "Sin revisiones agendadas hoy"}
-                onClick={() => irA("taller-solicitudes", "agendadas")} />
+                onClick={() => irA("taller-agenda")} />
               <Indicador icono="file" titulo="Cotizaciones pendientes" valor={datos.porCotizar.length + datos.esperandoCliente.length}
                 tono={datos.porCotizar.length > 0 ? "accion" : undefined}
                 pie={`${datos.porCotizar.length} por cotizar · ${datos.esperandoCliente.length} esperando al cliente`}
@@ -186,7 +213,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
             <section className="ini-bloque" aria-labelledby="ini-agenda">
               <div className="ini-bloque__cabecera">
                 <h2 id="ini-agenda" className="ini-bloque__titulo">Agenda de hoy</h2>
-                <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("taller-solicitudes", "agendadas")}>
+                <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("taller-agenda")}>
                   Ver agenda
                 </button>
               </div>

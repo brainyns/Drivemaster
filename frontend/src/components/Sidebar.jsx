@@ -20,6 +20,10 @@ const Icons = {
   taller:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>,
   repServicios:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>,
   asistente:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>,
+  // El mismo calendario de Icon.jsx (Ver agenda, citas); el trazo lo iguala .sidebar-item-icon svg
+  agenda:      <Icon name="calendar" size={20} />,
+  bandeja:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5.5 5h13L21 13v6H3v-6z"/><path d="M3 13h5l1.5 3h5L16 13h5"/></svg>,
+  garaje:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21V9l9-6 9 6v12"/><path d="M7 21v-8h10v8M7 17h10"/></svg>,
   aprobaciones:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>,
 };
 
@@ -58,10 +62,11 @@ const menu = [
 // Taller: del primer aviso a la entrega. "Órdenes anteriores" solo aparece mientras quede alguna por atender.
 const MENU_TALLER = [
   { key: "taller-inicio",      label: "Inicio",      icon: "dashboard" },
-  { key: "taller-solicitudes", label: "Solicitudes", icon: "aprobaciones" },
+  { key: "taller-solicitudes", label: "Solicitudes", icon: "bandeja" },
+  { key: "taller-agenda",      label: "Agenda",      icon: "agenda" },
   { key: "taller-trabajos",    label: "Trabajos",    icon: "taller" },
   { key: "taller-cotizaciones", label: "Cotizaciones", icon: "compras" },
-  { key: "taller-mitaller",    label: "Mi taller",   icon: "admin" },
+  { key: "taller-mitaller",    label: "Mi taller",   icon: "garaje" },
   { key: "taller-informes",     label: "Informes",    icon: "reportes" },
   { key: "taller-anteriores",  label: "Órdenes anteriores", icon: "ventas" },
 ];

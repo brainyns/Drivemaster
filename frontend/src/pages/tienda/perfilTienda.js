@@ -2,7 +2,6 @@
 // componentes: lo prueban los tests con node --test. Los límites son los del backend (TiendaServiceImpl).
 
 export const COSTO_ENVIO_MAX = 500000;
-const TELEFONO = /^\+?[\d\s()-]{7,20}$/;
 
 const lleno = (s) => !!s && String(s).trim() !== "";
 
@@ -36,11 +35,6 @@ export function erroresUbicacion({ ciudad, direccion }) {
 
 export function errorHorarioTienda(horario) {
   return lleno(horario) ? null : "Escribe tu horario: el cliente lo necesita para pasar a retirar.";
-}
-
-export function errorTelefono(telefono) {
-  if (!lleno(telefono)) return null;
-  return TELEFONO.test(telefono.trim()) ? null : "Escribe un teléfono válido: solo números, espacios y el signo +.";
 }
 
 /** Error del costo de envío, o null. Sin envío no se valida (la tienda solo ofrece retiro). */

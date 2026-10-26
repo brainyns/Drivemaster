@@ -53,6 +53,10 @@ public class Usuario {
     @JsonIgnore
     private Instant fechaBloqueo;
 
+    // Los tokens emitidos antes de este momento ya no sirven (al recuperar la contraseña se cierran todas las sesiones)
+    @JsonIgnore
+    private Instant sesionesDesde;
+
     public boolean tienePermiso(String permiso) {
         return permisos != null && permisos.contains(permiso);
     }

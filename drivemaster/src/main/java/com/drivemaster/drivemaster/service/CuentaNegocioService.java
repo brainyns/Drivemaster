@@ -6,6 +6,7 @@ import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.repository.TiendaRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
+import com.drivemaster.drivemaster.util.Correos;
 import com.drivemaster.drivemaster.util.PlantillaCorreo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,8 +112,13 @@ public class CuentaNegocioService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "La contraseña debe tener al menos " + PASSWORD_MIN + " caracteres");
         }
-        String correoNormalizado = correo.trim();
-        if (usuarioRepository.existsByCorreo(correoNormalizado)) {
+        String correoNormalizado = Correos.normalizar(correo);
+        if (!Correos.valido(correoNormalizado)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe un correo válido, por ejemplo nombre@dominio.com");
+        }
+        // Exacto (usa el índice) y sin mayúsculas, por las cuentas antiguas guardadas con mayúsculas
+        if (usuarioRepository.existsByCorreo(correoNormalizado)
+                || !usuarioRepository.findByCorreoIgnoreCase(correoNormalizado).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un usuario con ese correo");
         }
 

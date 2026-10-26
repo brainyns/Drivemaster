@@ -23,6 +23,7 @@ import com.drivemaster.drivemaster.dto.cliente.DatosClienteRequest;
 import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
+import com.drivemaster.drivemaster.util.Correos;
 import com.drivemaster.drivemaster.util.PdfClienteBuilder;
 
 @RestController
@@ -58,8 +59,8 @@ public class ClienteController {
         if (datos.getCorreo() == null || datos.getCorreo().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El correo es obligatorio");
         }
-        String correo = datos.getCorreo().trim();
-        if (usuarioRepository.existsByCorreo(correo)) {
+        String correo = Correos.normalizar(datos.getCorreo());
+        if (usuarioRepository.existsByCorreo(correo) || !usuarioRepository.findByCorreoIgnoreCase(correo).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo ya está registrado");
         }
         if (datos.getPassword() != null && !datos.getPassword().isBlank() && datos.getPassword().length() < PASSWORD_MIN) {

@@ -7,6 +7,7 @@ import com.drivemaster.drivemaster.dto.SeleccionRepuestosRequest;
 import com.drivemaster.drivemaster.dto.SolicitudServicioDTO;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /** Solicitudes de diagnóstico del marketplace (OrdenServicio con flujo MARKETPLACE). */
@@ -26,6 +27,9 @@ public interface SolicitudServicioService {
 
     // ─── Taller ───
     List<SolicitudServicioDTO> bandejaTaller(String correoTaller);
+
+    // Citas de revisión aceptadas del taller entre dos días (ambos incluidos), para la agenda
+    List<SolicitudServicioDTO> citasTaller(String tallerId, LocalDate desde, LocalDate hasta);
 
     SolicitudServicioDTO aceptar(String correoTaller, String id, AceptarSolicitudRequest request);
 
