@@ -147,3 +147,15 @@
   .mt-horario__barra { justify-content: stretch; }
   .mt-horario__barra .ui-btn { width: 100%; }
 }
+
+/* Régimen de IVA del taller (formulario de tarifa) */
+.mt-iva { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.mt-iva__opcion {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; cursor: pointer;
+  border: 1px solid var(--ui-line); border-radius: var(--ui-r-md); background: var(--ui-surface);
+}
+.mt-iva__opcion:has(input:checked) { border-color: var(--ui-brand-tinta); background: var(--ui-activo-bg); }
+.mt-iva__opcion input { margin-top: 3px; accent-color: var(--ui-brand-tinta); }
+.mt-iva__opcion strong { display: block; font-size: 0.9rem; color: var(--ui-text); }
+.mt-iva__detalle { display: block; font-size: 0.8125rem; color: var(--ui-muted); }
+.mt-iva__nota { margin: 0; font-size: 0.8125rem; color: var(--ui-muted); }

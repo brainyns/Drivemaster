@@ -93,8 +93,10 @@ public final class EmailServicioBuilder {
                     .append("<td align=\"right\" style=\"padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;white-space:nowrap;\">")
                     .append(moneda(i.getSubtotal())).append("</td></tr>");
         }
+        StringBuilder iva = new StringBuilder();
+        for (CalculadoraCotizacion.LineaIva l : CalculadoraCotizacion.lineasIva(c)) iva.append(linea(l.texto(), l.monto()));
         String totales = linea("Subtotal", c.getSubtotal())
-                + linea("IVA (" + formatoPct(c.getIvaPct()) + ")", c.getIva())
+                + iva
                 + linea("Total", c.getTotal())
                 + (c.getAnticipoDiagnostico() != null && c.getAnticipoDiagnostico() > 0
                     ? linea("Diagnóstico ya pagado", -c.getAnticipoDiagnostico()) : "")
@@ -442,11 +444,6 @@ public final class EmailServicioBuilder {
         return "<tr><td style=\"padding:10px 0 0;" + borde + "font-size:15px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">" + e(concepto) + "</td>"
                 + "<td align=\"right\" style=\"padding:10px 0 0;" + borde + "font-size:15px;font-weight:700;color:"
                 + BrandConfig.colorPrimario() + ";\">" + monto + "</td></tr>";
-    }
-
-    private static String formatoPct(Double pct) {
-        if (pct == null) return "";
-        return (pct == Math.floor(pct) ? String.valueOf(pct.intValue()) : String.valueOf(pct)) + " %";
     }
 
     private static String e(String texto) {

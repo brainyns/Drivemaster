@@ -42,6 +42,8 @@ public class TallerDTO {
     private String motivoRechazo;
     private LocalDateTime fechaRegistro;
     private LocalDateTime fechaAprobacion;
+    // false: no responsable de IVA (su mano de obra y su diagnóstico van al 0 %)
+    private Boolean responsableIva;
     private String correoUsuario;
     private List<Mecanico> mecanicos;
     private String planActual;

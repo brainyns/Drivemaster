@@ -18,6 +18,7 @@ public class CambioTaller {
     public static final String HORARIO = "horario";
     public static final String UBICACION = "ubicacion";
     public static final String TELEFONO = "telefono";
+    public static final String RESPONSABLE_IVA = "responsableIva";
 
     @Id
     private String id;

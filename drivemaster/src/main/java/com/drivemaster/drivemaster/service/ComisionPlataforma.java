@@ -1,5 +1,7 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.model.Cotizacion;
+import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.mysql.PagoEntity;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
@@ -28,6 +30,31 @@ final class ComisionPlataforma {
     static BigDecimal baseSinIva(Double montoConIva, double ivaPct) {
         BigDecimal divisor = BigDecimal.valueOf(100).add(BigDecimal.valueOf(ivaPct));
         return Dinero.pesos(montoConIva).multiply(BigDecimal.valueOf(100)).divide(divisor, 0, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Base de la comisión del diagnóstico: siempre el precio base sin IVA. Desde el IVA por taller la solicitud lo trae
+     * congelado (tarifaDiagnosticoBase); las anteriores cobraban el parámetro con el IVA global incluido y se le quita.
+     */
+    static BigDecimal baseDiagnostico(OrdenServicio orden, Double montoPagado, double ivaGlobal) {
+        if (orden != null && orden.getTarifaDiagnosticoBase() != null) return Dinero.pesos(orden.getTarifaDiagnosticoBase());
+        return baseSinIva(montoPagado, ivaGlobal);
+    }
+
+    /**
+     * Base de la comisión del pago de una cotización: su subtotal antes de IVA menos la parte sin IVA del diagnóstico ya
+     * pagado (esa ya tuvo su comisión). Con dos porcentajes de IVA no sirve quitarle uno solo al monto pagado.
+     * El anticipo se lleva a su base con el IVA con que se cobró el diagnóstico: el de la solicitud o, en las
+     * anteriores al IVA por taller, el global (como se calculó su comisión).
+     * Las cotizaciones anteriores al IVA por taller (un solo ivaPct) siguen con la fórmula de antes.
+     */
+    static BigDecimal baseCotizacion(Cotizacion c, OrdenServicio orden, Double montoPagado, double ivaGlobal) {
+        if (c.getIvaRepuestosPct() == null || c.getIvaManoObraPct() == null) {
+            return baseSinIva(montoPagado, c.getIvaPct() != null ? c.getIvaPct() : ivaGlobal);
+        }
+        double ivaDiagnostico = orden != null && orden.getIvaDiagnosticoPct() != null ? orden.getIvaDiagnosticoPct() : ivaGlobal;
+        BigDecimal anticipoBase = baseSinIva(c.getAnticipoDiagnostico() != null ? c.getAnticipoDiagnostico() : 0, ivaDiagnostico);
+        return Dinero.pesos(c.getSubtotal()).subtract(anticipoBase).max(BigDecimal.ZERO);
     }
 
     /** Monto de la comisión en pesos enteros. */

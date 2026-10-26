@@ -1,8 +1,7 @@
 import Etiqueta from "./Etiqueta";
 import { ESTADOS_COTIZACION, formatFechaHora, formatPrecio } from "./estadosServicio";
+import { lineasIva } from "./desgloseIva";
 import "../../css/cotizacion.css";
-
-const formatPct = (v) => (v == null ? "" : `${Number.isInteger(v) ? v : v.toFixed(1)} %`);
 
 /**
  * Desglose de una cotización (repuestos, mano de obra, IVA, anticipo y total a
@@ -14,7 +13,7 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
   const manoObra = (c.items || []).filter((i) => i.tipo === "MANO_OBRA");
   // Lo del taller es la mano de obra con su IVA (la comisión es informativa: no se le resta)
   const recibe = c.subtotalManoObra != null
-    ? c.subtotalManoObra + (c.ivaManoObra ?? Math.round((c.subtotalManoObra * (c.ivaPct || 0)) / 100))
+    ? c.subtotalManoObra + (c.ivaManoObra ?? Math.round((c.subtotalManoObra * (c.ivaManoObraPct ?? c.ivaPct ?? 0)) / 100))
     : null;
 
   return (
@@ -67,7 +66,10 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
 
       <dl className="ct-totales">
         <div className="ct-totales__fila"><dt>Subtotal</dt><dd>{formatPrecio(c.subtotal)}</dd></div>
-        <div className="ct-totales__fila"><dt>IVA ({formatPct(c.ivaPct)})</dt><dd>{formatPrecio(c.iva)}</dd></div>
+        {/* Una línea si repuestos y mano de obra llevan el mismo IVA; si no (taller no responsable), una por tipo */}
+        {lineasIva(c).map((l) => (
+          <div key={l.texto} className="ct-totales__fila"><dt>{l.texto}</dt><dd>{formatPrecio(l.monto)}</dd></div>
+        ))}
         {/* Sin anticipo, el total y el total a pagar son la misma cifra: solo queda el segundo */}
         {c.anticipoDiagnostico > 0 && (
           <>

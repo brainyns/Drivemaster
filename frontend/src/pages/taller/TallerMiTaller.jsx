@@ -30,22 +30,35 @@ import "../../css/mi-taller.css";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
 
-/** Formulario de la tarifa por hora: solo viaja ese campo (el horario queda como estaba). */
+/** Régimen de IVA del taller: decide el IVA de su mano de obra y su diagnóstico (los repuestos llevan el IVA vigente). */
+const REGIMENES_IVA = [
+  { valor: true, titulo: "Responsable de IVA", detalle: "Tu mano de obra y el diagnóstico llevan el IVA vigente." },
+  { valor: false, titulo: "No responsable de IVA", detalle: "Tu mano de obra y el diagnóstico van al 0 %." },
+];
+
+const textoRegimenIva = (responsable) => (responsable === false ? "No responsable de IVA (0 %)" : "Responsable de IVA");
+
+/**
+ * Formulario de la tarifa por hora y el régimen de IVA: solo viajan esos dos campos (el horario queda como estaba).
+ * Sin tarifa todavía, se puede guardar solo el IVA.
+ */
 function FormTarifa({ taller, token, onGuardado, onCancelar }) {
   const [tarifa, setTarifa] = useState(taller?.tarifaHora != null ? String(taller.tarifaHora) : "");
+  const [responsableIva, setResponsableIva] = useState(taller?.responsableIva !== false);
   const [tocado, setTocado] = useState(false);
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const errorCampo = tocado ? errorTarifa(tarifa) : null;
+  const sinTarifa = taller?.tarifaHora == null && String(tarifa).trim() === "";
+  const errorCampo = tocado && !sinTarifa ? errorTarifa(tarifa) : null;
 
   const guardar = async (e) => {
     e.preventDefault();
     setTocado(true);
-    if (errorTarifa(tarifa)) return;
+    if (!sinTarifa && errorTarifa(tarifa)) return;
     setGuardando(true);
     setError(null);
     try {
-      onGuardado(await actualizarDatosTaller(token, { tarifaHora: Number(tarifa) }));
+      onGuardado(await actualizarDatosTaller(token, { tarifaHora: sinTarifa ? undefined : Number(tarifa), responsableIva }));
     } catch (err) {
       setError(err.message);
       setGuardando(false);
@@ -59,7 +72,17 @@ function FormTarifa({ taller, token, onGuardado, onCancelar }) {
         <input className="ui-field__input ui-form__corto" type="number" inputMode="numeric" min="1" step="any" autoFocus
           value={tarifa} onChange={(e) => setTarifa(e.target.value)} onBlur={() => setTocado(true)} />
       </Campo>
-      <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar tarifa" />
+      <fieldset className="mt-iva">
+        <legend className="ui-field__label">IVA de tu mano de obra</legend>
+        {REGIMENES_IVA.map((r) => (
+          <label key={String(r.valor)} className="mt-iva__opcion">
+            <input type="radio" name="mt-iva" checked={responsableIva === r.valor} onChange={() => setResponsableIva(r.valor)} />
+            <span><strong>{r.titulo}</strong><span className="mt-iva__detalle">{r.detalle}</span></span>
+          </label>
+        ))}
+        <p className="mt-iva__nota">Los repuestos siempre llevan el IVA vigente. Las cotizaciones que ya emitiste no cambian.</p>
+      </fieldset>
+      <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar" />
     </form>
   );
 }
@@ -291,7 +314,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             nota={editando !== "servicios" && "Los servicios que ofreces y el precio de mano de obra los cambia el administrador de DriveMaster."}>
             {editando === "servicios" ? (
               <FormTarifa taller={taller} token={token} onCancelar={cerrar}
-                onGuardado={guardado("servicios", "Tarifa guardada. Las cotizaciones nuevas usan este valor.")} />
+                onGuardado={guardado("servicios", "Cambios guardados. Las cotizaciones nuevas usan estos valores.")} />
             ) : (
               <dl className="ui-datos">
                 <div className="ui-datos__item ui-datos__item--ancho">
@@ -305,6 +328,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
                   </dd>
                 </div>
                 <Dato etiqueta="Tarifa por hora">{taller.tarifaHora > 0 && <span className="ui-precio">{formatPrecio(taller.tarifaHora)}</span>}</Dato>
+                <Dato etiqueta="IVA de tu mano de obra">{textoRegimenIva(taller.responsableIva)}</Dato>
                 <Dato etiqueta="Precio de mano de obra">{taller.precioManoObra != null && <span className="ui-precio">{formatPrecio(taller.precioManoObra)}</span>}</Dato>
               </dl>
             )}

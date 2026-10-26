@@ -21,6 +21,7 @@ import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
+import com.drivemaster.drivemaster.util.CalculadoraCotizacion;
 import com.drivemaster.drivemaster.util.Dinero;
 import com.drivemaster.drivemaster.util.PlazoHabil;
 import org.slf4j.Logger;
@@ -246,9 +247,12 @@ public class PagoMarketplaceService {
                 taller != null ? taller.getNombre() : null, pago.getMonto(), null));
 
         Map<String, Double> lineas = new LinkedHashMap<>();
-        lineas.put("Tarifa de diagnóstico (IVA incluido)", pago.getMonto());
-        ComisionPlataforma.registrar(repartoRepository, pago, ComisionPlataforma.baseSinIva(pago.getMonto(), parametros.ivaPct()),
-                parametros.comisionPct());
+        // Un taller no responsable de IVA cobra el diagnóstico sin IVA (las solicitudes anteriores no traen el dato)
+        boolean sinIva = enRevision.getIvaDiagnosticoPct() != null && enRevision.getIvaDiagnosticoPct() == 0;
+        lineas.put(sinIva ? "Tarifa de diagnóstico (sin IVA: el taller no es responsable de IVA)"
+                : "Tarifa de diagnóstico (IVA incluido)", pago.getMonto());
+        ComisionPlataforma.registrar(repartoRepository, pago,
+                ComisionPlataforma.baseDiagnostico(enRevision, pago.getMonto(), parametros.ivaPct()), parametros.comisionPct());
         avisos.comprobantePago(enRevision, pago, "la revisión y diagnóstico", lineas,
                 "Tu cita de revisión quedó confirmada. El valor se descontará de la cotización si la apruebas.");
         avisos.diagnosticoPagado(enRevision);
@@ -349,9 +353,8 @@ public class PagoMarketplaceService {
                 pedidos.isEmpty() ? "Cotización solo de mano de obra" : "Repuestos pedidos a " + pedidos.size() + " tienda(s)",
                 null, null);
 
-        double ivaPagado = cotizacion.getIvaPct() != null ? cotizacion.getIvaPct() : parametros.ivaPct();
-        ComisionPlataforma.registrar(repartoRepository, pago, ComisionPlataforma.baseSinIva(pago.getMonto(), ivaPagado),
-                parametros.comisionPct());
+        ComisionPlataforma.registrar(repartoRepository, pago,
+                ComisionPlataforma.baseCotizacion(cotizacion, pagada, pago.getMonto(), parametros.ivaPct()), parametros.comisionPct());
         avisos.comprobantePago(actualizada, pago, "la cotización v" + cotizacion.getVersion() + " de " + cotizacion.getTallerNombre(),
                 lineasCotizacion(cotizacion),
                 pedidos.isEmpty() ? "El taller ya puede empezar el trabajo."
@@ -364,7 +367,8 @@ public class PagoMarketplaceService {
         for (CotizacionItem item : repuestos(cotizacion)) {
             porTienda.computeIfAbsent(item.getTiendaId(), k -> new ArrayList<>()).add(item);
         }
-        double ivaPct = cotizacion.getIvaPct() != null ? cotizacion.getIvaPct() : 0;
+        // El IVA de la tienda es el de los repuestos (el global), no el de la mano de obra del taller
+        double ivaPct = cotizacion.pctRepuestos();
         List<PedidoTienda> pedidos = new ArrayList<>();
         LocalDateTime ahora = LocalDateTime.now();
         for (List<CotizacionItem> items : porTienda.values()) {
@@ -486,7 +490,8 @@ public class PagoMarketplaceService {
         Map<String, Double> lineas = new LinkedHashMap<>();
         if (c.getSubtotalRepuestos() != null && c.getSubtotalRepuestos() > 0) lineas.put("Repuestos", c.getSubtotalRepuestos());
         if (c.getSubtotalManoObra() != null && c.getSubtotalManoObra() > 0) lineas.put("Mano de obra", c.getSubtotalManoObra());
-        lineas.put("IVA", c.getIva());
+        // El comprobante desglosa el IVA igual que la cotización
+        CalculadoraCotizacion.lineasIva(c).forEach(l -> lineas.put(l.texto(), l.monto()));
         if (c.getAnticipoDiagnostico() != null && c.getAnticipoDiagnostico() > 0) {
             lineas.put("Diagnóstico ya pagado", -c.getAnticipoDiagnostico());
         }

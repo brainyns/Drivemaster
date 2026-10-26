@@ -21,6 +21,7 @@ import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
 import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
 import com.drivemaster.drivemaster.util.Coordenadas;
+import com.drivemaster.drivemaster.util.IvaTaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -293,11 +294,16 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         Mecanico mecanico = mecanicoActivo(taller, r.getMecanicoId());
 
         boolean pagoRequerido = parametros.pagoDiagnosticoRequerido();
+        // Mismo precio base para todos; el IVA se suma solo si el taller es responsable (IvaTaller)
+        double tarifaBase = parametros.tarifaDiagnostico();
+        double ivaDiagnosticoPct = IvaTaller.pct(taller, parametros.ivaPct());
         Update cambios = new Update()
                 .set("aceptadaPorTaller", true)
                 .set("fechaAceptacion", ahora)
                 .set("fechaProgramada", r.getFechaRevision())
-                .set("tarifaDiagnostico", parametros.tarifaDiagnostico())
+                .set("tarifaDiagnosticoBase", tarifaBase)
+                .set("ivaDiagnosticoPct", ivaDiagnosticoPct)
+                .set("tarifaDiagnostico", IvaTaller.conIva(tarifaBase, ivaDiagnosticoPct))
                 .unset("fechaLimiteRespuesta");
         if (mecanico != null) {
             cambios.set("mecanicoId", mecanico.getId()).set("mecanicoNombre", mecanico.getNombre());

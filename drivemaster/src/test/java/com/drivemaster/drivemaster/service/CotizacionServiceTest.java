@@ -158,6 +158,39 @@ class CotizacionServiceTest {
     }
 
     @Test
+    void unTallerNoResponsableDeIvaCotizaLaManoDeObraAlCero() {
+        taller.setResponsableIva(false);
+        when(cotizacionRepository.findFirstByOrdenIdOrderByVersionDesc("o1")).thenReturn(Optional.empty());
+
+        CotizacionDTO dto = service.emitir(CORREO_TALLER, "o1", pedido());
+
+        ArgumentCaptor<Cotizacion> guardada = ArgumentCaptor.forClass(Cotizacion.class);
+        verify(cotizacionRepository).save(guardada.capture());
+        Cotizacion c = guardada.getValue();
+        assertEquals(19.0, c.getIvaRepuestosPct());
+        assertEquals(0.0, c.getIvaManoObraPct());
+        assertNull(c.getIvaPct(), "con dos porcentajes no hay uno único");
+        assertEquals(17_100, c.getIvaRepuestos());
+        assertEquals(0, c.getIvaManoObra());
+        assertEquals(197_100, c.getTotal());
+        assertEquals(19.0, dto.getIvaRepuestosPct());
+        assertEquals(0.0, dto.getIvaManoObraPct());
+    }
+
+    @Test
+    void unTallerResponsableGuardaLosDosPorcentajesYElUnico() {
+        when(cotizacionRepository.findFirstByOrdenIdOrderByVersionDesc("o1")).thenReturn(Optional.empty());
+
+        service.emitir(CORREO_TALLER, "o1", pedido());
+
+        ArgumentCaptor<Cotizacion> guardada = ArgumentCaptor.forClass(Cotizacion.class);
+        verify(cotizacionRepository).save(guardada.capture());
+        assertEquals(19.0, guardada.getValue().getIvaPct());
+        assertEquals(19.0, guardada.getValue().getIvaRepuestosPct());
+        assertEquals(19.0, guardada.getValue().getIvaManoObraPct());
+    }
+
+    @Test
     void sinDiagnosticoPagadoNoHayAnticipo() {
         orden.setPagoDiagnosticoEstado(EstadoOrden.PAGO_NO_REQUERIDO);
         CotizacionDTO dto = service.previsualizar(CORREO_TALLER, "o1", pedido());

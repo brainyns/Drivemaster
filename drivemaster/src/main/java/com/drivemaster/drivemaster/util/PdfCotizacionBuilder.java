@@ -56,12 +56,12 @@ public final class PdfCotizacionBuilder {
 
     /**
      * Totales en el orden de la pantalla. Sin anticipo, el total y el total a pagar son la misma cifra: solo queda el
-     * segundo. El IVA va en una línea por porcentaje (ver {@link #lineasIva}).
+     * segundo. El IVA va desglosado como en la pantalla (ver {@link CalculadoraCotizacion#lineasIva}).
      */
     public static List<Linea> totales(Cotizacion c) {
         List<Linea> lineas = new ArrayList<>();
         lineas.add(new Linea("Subtotal", valor(c.getSubtotal())));
-        lineas.addAll(lineasIva(c));
+        for (CalculadoraCotizacion.LineaIva l : CalculadoraCotizacion.lineasIva(c)) lineas.add(new Linea(l.texto(), l.monto()));
         double anticipo = valor(c.getAnticipoDiagnostico());
         if (anticipo > 0) {
             lineas.add(new Linea("Total", valor(c.getTotal())));
@@ -69,11 +69,6 @@ public final class PdfCotizacionBuilder {
         }
         lineas.add(new Linea("Total a pagar", valor(c.getTotalAPagar())));
         return lineas;
-    }
-
-    /** IVA de la cotización: una sola línea con su porcentaje. */
-    public static List<Linea> lineasIva(Cotizacion c) {
-        return List.of(new Linea("IVA (" + pct(c.getIvaPct()) + ")", valor(c.getIva())));
     }
 
     public static byte[] construir(Cotizacion c, Taller taller) {
@@ -260,11 +255,6 @@ public final class PdfCotizacionBuilder {
         NumberFormat fmt = NumberFormat.getCurrencyInstance(LOCALE_CO);
         fmt.setMaximumFractionDigits(0);
         return fmt.format(valor(valor));
-    }
-
-    static String pct(Double pct) {
-        if (pct == null) return "";
-        return (pct == Math.floor(pct) ? String.valueOf(pct.intValue()) : String.valueOf(pct).replace('.', ',')) + " %";
     }
 
     private static String horas(Double h) {

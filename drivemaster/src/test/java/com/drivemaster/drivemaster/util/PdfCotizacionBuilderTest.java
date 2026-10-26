@@ -79,6 +79,23 @@ class PdfCotizacionBuilderTest {
     }
 
     @Test
+    void unTallerNoResponsableDesglosaElIvaPorTipo() throws Exception {
+        Cotizacion c = cotizacion(0);
+        c.setIvaPct(null);
+        c.setIvaRepuestosPct(19.0);
+        c.setIvaManoObraPct(0.0);
+        c.setIvaManoObra(0.0);
+        c.setIva(17_100.0);
+
+        var lineas = PdfCotizacionBuilder.totales(c);
+        String t = texto(PdfCotizacionBuilder.construir(c, null));
+
+        assertEquals(List.of("Subtotal", "IVA repuestos (19 %)", "IVA mano de obra (0 %)", "Total a pagar"),
+                lineas.stream().map(l -> l.texto()).toList());
+        assertTrue(t.contains("IVA repuestos (19 %)") && t.contains("IVA mano de obra (0 %)"));
+    }
+
+    @Test
     void sinTallerGuardadoUsaElNombreDeLaCotizacion() throws Exception {
         String t = texto(PdfCotizacionBuilder.construir(cotizacion(0), null));
 

@@ -15,6 +15,7 @@ import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.util.Coordenadas;
 import com.drivemaster.drivemaster.util.HaversineUtil;
+import com.drivemaster.drivemaster.util.IvaTaller;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -342,6 +343,7 @@ public class TallerServiceImpl implements TallerService {
                 .motivoRechazo(t.getMotivoRechazo())
                 .fechaRegistro(t.getFechaRegistro())
                 .fechaAprobacion(t.getFechaAprobacion())
+                .responsableIva(IvaTaller.esResponsable(t))
                 .correoUsuario(cuentaNegocioService.correoDe(t.getUsuarioId()))
                 .mecanicos(mecanicosDe(t))
                 .planActual(plan != null ? plan.getPlanCodigo() : null)

@@ -132,11 +132,12 @@ export async function guardarTelefonoTaller(token, telefono) {
   return handle(res, "No se pudo guardar el teléfono");
 }
 
-export async function actualizarDatosTaller(token, { tarifaHora, horario }) {
+/** Solo viajan los campos indicados (los undefined no se mandan y el backend los deja como estaban). */
+export async function actualizarDatosTaller(token, { tarifaHora, horario, responsableIva }) {
   const res = await apiFetch(`${BASE}/mi-taller/datos`, {
     method: "PATCH",
     headers: headers(token),
-    body: JSON.stringify({ tarifaHora, horario }),
+    body: JSON.stringify({ tarifaHora, horario, responsableIva }),
   });
   if (res.status === 403) throw new Error("Tu taller aún no está aprobado, así que todavía no puedes editar estos datos.");
   return handle(res, "No se pudieron guardar los cambios");

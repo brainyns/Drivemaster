@@ -13,10 +13,9 @@ import java.util.List;
  * orden puede tener varias versiones (el cliente pide cambios) y cada una
  * tiene su token de respuesta y su vigencia.
  *
- * Montos en COP, redondeados al peso. El IVA se calcula sobre los subtotales y el
- * anticipo (tarifa de diagnóstico ya pagada) se descuenta del total con IVA.
- * Pendiente: talleres o tiendas no responsables de IVA no deberían cobrarlo
- * (en v1 se aplica el parámetro IVA a todos).
+ * Montos en COP, redondeados al peso. El IVA se calcula sobre los subtotales (repuestos con el
+ * parámetro IVA, mano de obra según el taller) y el anticipo (tarifa de diagnóstico ya pagada) se
+ * descuenta del total con IVA. Pendiente: tiendas no responsables de IVA.
  */
 @Document(collection = "cotizaciones")
 @Data
@@ -53,7 +52,14 @@ public class Cotizacion {
     private Double subtotalRepuestos;
     private Double subtotalManoObra;
     private Double subtotal;
+    /**
+     * Porcentaje único de las cotizaciones anteriores al IVA por taller. En las nuevas solo se llena si los dos
+     * porcentajes coinciden. Para leer el IVA de cada tipo usa pctRepuestos() y pctManoObra(), nunca este campo.
+     */
     private Double ivaPct;
+    // IVA de los repuestos (parámetro IVA global) y de la mano de obra (según el taller: ver IvaTaller)
+    private Double ivaRepuestosPct;
+    private Double ivaManoObraPct;
     private Double ivaRepuestos;
     private Double ivaManoObra;
     private Double iva;
@@ -82,4 +88,14 @@ public class Cotizacion {
     private String emitidaPor;
     private LocalDateTime fechaRespuesta;
     private String motivoRespuesta;
+
+    /** IVA de los repuestos; las cotizaciones anteriores al IVA por taller usan su ivaPct único (o 0 si no hay). */
+    public double pctRepuestos() {
+        return ivaRepuestosPct != null ? ivaRepuestosPct : ivaPct != null ? ivaPct : 0;
+    }
+
+    /** IVA de la mano de obra; las cotizaciones anteriores al IVA por taller usan su ivaPct único (o 0 si no hay). */
+    public double pctManoObra() {
+        return ivaManoObraPct != null ? ivaManoObraPct : ivaPct != null ? ivaPct : 0;
+    }
 }

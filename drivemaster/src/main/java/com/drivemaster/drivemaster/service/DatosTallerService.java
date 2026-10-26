@@ -8,6 +8,7 @@ import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.repository.CambioTallerRepository;
 import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.util.Coordenadas;
+import com.drivemaster.drivemaster.util.IvaTaller;
 import com.drivemaster.drivemaster.util.TelefonoColombia;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,8 +21,9 @@ import java.util.Objects;
  * Edición de la tarifa por hora, el horario y la ubicación en el mapa por parte del propio taller. El taller sale de la
  * sesión; el cuerpo solo trae esos valores. Cada cambio deja un registro con quién, cuándo y el valor anterior.
  *
- * La tarifa por hora es el valor que usa el constructor de cotizaciones para la mano de obra por horas. Las cotizaciones
- * ya emitidas guardan su propio precio unitario y no cambian.
+ * La tarifa por hora es el valor que usa el constructor de cotizaciones para la mano de obra por horas, y responsableIva
+ * decide el IVA de la mano de obra y del diagnóstico (ver IvaTaller). Las cotizaciones ya emitidas guardan su propio
+ * precio unitario y sus porcentajes de IVA, y no cambian.
  */
 @Service
 public class DatosTallerService {
@@ -46,8 +48,10 @@ public class DatosTallerService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tu taller aún no está aprobado");
         }
         boolean conUbicacion = datos != null && (datos.getLatitud() != null || datos.getLongitud() != null);
-        if (datos == null || (datos.getTarifaHora() == null && datos.getHorario() == null && !conUbicacion)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica la tarifa por hora, el horario o la ubicación");
+        if (datos == null || (datos.getTarifaHora() == null && datos.getHorario() == null && !conUbicacion
+                && datos.getResponsableIva() == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Indica la tarifa por hora, si eres responsable de IVA, el horario o la ubicación");
         }
         if (conUbicacion) Coordenadas.validar(datos.getLatitud(), datos.getLongitud(), true);
 
@@ -66,6 +70,12 @@ public class DatosTallerService {
         if (nuevaTarifa != null && !Objects.equals(nuevaTarifa, taller.getTarifaHora())) {
             registrar(taller.getId(), CambioTaller.TARIFA_HORA, taller.getTarifaHora(), nuevaTarifa, correo, ahora);
             taller.setTarifaHora(nuevaTarifa);
+        }
+        // Se compara con lo efectivo: sin el dato el taller ya cuenta como responsable
+        if (datos.getResponsableIva() != null && datos.getResponsableIva() != IvaTaller.esResponsable(taller)) {
+            registrar(taller.getId(), CambioTaller.RESPONSABLE_IVA, IvaTaller.esResponsable(taller), datos.getResponsableIva(),
+                    correo, ahora);
+            taller.setResponsableIva(datos.getResponsableIva());
         }
         if (nuevoHorario != null && !Objects.equals(nuevoHorario.isEmpty() ? null : nuevoHorario, taller.getHorario())) {
             registrar(taller.getId(), CambioTaller.HORARIO, taller.getHorario(),

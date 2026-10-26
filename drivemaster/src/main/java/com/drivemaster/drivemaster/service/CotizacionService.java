@@ -18,6 +18,7 @@ import com.drivemaster.drivemaster.repository.CotizacionRepository;
 import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
 import com.drivemaster.drivemaster.util.CalculadoraCotizacion;
+import com.drivemaster.drivemaster.util.IvaTaller;
 import com.drivemaster.drivemaster.util.PdfCotizacionBuilder;
 import com.drivemaster.drivemaster.util.TokenSeguro;
 import org.slf4j.Logger;
@@ -526,9 +527,11 @@ public class CotizacionService {
         // El anticipo solo existe si el cliente pagó el diagnóstico
         double anticipo = EstadoOrden.PAGO_PAGADO.equals(orden.getPagoDiagnosticoEstado()) && orden.getTarifaDiagnostico() != null
                 ? orden.getTarifaDiagnostico() : 0;
-        double ivaPct = parametros.ivaPct();
+        // Repuestos con el IVA global; mano de obra con el del taller (0 % si no es responsable de IVA)
+        double ivaRepuestosPct = parametros.ivaPct();
+        double ivaManoObraPct = IvaTaller.pct(taller, ivaRepuestosPct);
         double comisionPct = parametros.comisionPct();
-        CalculadoraCotizacion.Totales t = CalculadoraCotizacion.calcular(items, ivaPct, anticipo, comisionPct);
+        CalculadoraCotizacion.Totales t = CalculadoraCotizacion.calcular(items, ivaRepuestosPct, ivaManoObraPct, anticipo, comisionPct);
 
         return Cotizacion.builder()
                 .ordenId(orden.getId())
@@ -540,7 +543,10 @@ public class CotizacionService {
                 .subtotalRepuestos(t.subtotalRepuestos())
                 .subtotalManoObra(t.subtotalManoObra())
                 .subtotal(t.subtotal())
-                .ivaPct(ivaPct)
+                // El porcentaje único solo si los dos coinciden: así nadie lo lee como el IVA de toda la cotización
+                .ivaPct(ivaRepuestosPct == ivaManoObraPct ? ivaRepuestosPct : null)
+                .ivaRepuestosPct(ivaRepuestosPct)
+                .ivaManoObraPct(ivaManoObraPct)
                 .ivaRepuestos(t.ivaRepuestos())
                 .ivaManoObra(t.ivaManoObra())
                 .iva(t.iva())

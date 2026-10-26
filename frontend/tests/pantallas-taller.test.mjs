@@ -42,7 +42,8 @@ test("Mi taller edita por sección y solo con los endpoints que ya existen", () 
   for (const seccion of ["mt-negocio", "mt-servicios", "mt-ubicacion", "mt-horario", "mt-contacto"]) {
     assert.ok(pagina.includes(`id="${seccion}"`), `existe la sección ${seccion}`);
   }
-  assert.ok(pagina.includes("actualizarDatosTaller(token, { tarifaHora: Number(tarifa) })"), "la tarifa viaja sola");
+  assert.ok(pagina.includes("actualizarDatosTaller(token, { tarifaHora: sinTarifa ? undefined : Number(tarifa), responsableIva })"),
+    "la tarifa viaja con el IVA del taller y nada más (el horario queda como estaba)");
   assert.ok(pagina.includes("guardarHorario(token, taller.id, franjasDesdeSemana(semana))"), "el horario viaja completo, por días");
   assert.ok(pagina.includes("<SelectorUbicacion"), "usa el selector de mapa existente");
   assert.ok(pagina.includes("<Calificacion rating={taller.rating} calificaciones={taller.calificaciones} />"),
@@ -423,4 +424,30 @@ test("Cotización en PDF: el taller lo descarga junto a Imprimir y el cliente de
   assert.match(taller, /> Imprimir\s*<\/button>\s*<BotonPdfCotizacion cotizacionId=\{c\.id\} \/>/, "junto a Imprimir en las aprobadas");
   const cliente = leer("../src/pages/MisServicios.jsx");
   assert.ok(cliente.includes("<BotonPdfCotizacion cotizacionId={vigente.id} />"), "también en la vista del cliente");
+});
+
+test("IVA por taller: una línea si los porcentajes coinciden y una por tipo si no", async () => {
+  const { lineasIva } = await import("../src/components/servicio/desgloseIva.js");
+  const base = { subtotalRepuestos: 100_000, subtotalManoObra: 50_000, ivaRepuestos: 19_000 };
+  assert.deepEqual(lineasIva({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 19, ivaManoObra: 9_500, iva: 28_500 }),
+    [{ texto: "IVA (19 %)", monto: 28_500 }]);
+  assert.deepEqual(lineasIva({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 0, ivaManoObra: 0, iva: 19_000 }), [
+    { texto: "IVA repuestos (19 %)", monto: 19_000 },
+    { texto: "IVA mano de obra (0 %)", monto: 0 },
+  ]);
+  assert.deepEqual(lineasIva({ ...base, subtotalRepuestos: 0, ivaRepuestosPct: 19, ivaManoObraPct: 0, ivaManoObra: 0, iva: 0 }),
+    [{ texto: "IVA mano de obra (0 %)", monto: 0 }], "solo los tipos que tiene la cotización");
+  assert.deepEqual(lineasIva({ ...base, ivaPct: 19, ivaManoObra: 9_500, iva: 28_500 }), [{ texto: "IVA (19 %)", monto: 28_500 }],
+    "las cotizaciones anteriores solo traen ivaPct");
+  const detalle = leer("../src/components/servicio/CotizacionDetalle.jsx");
+  assert.ok(detalle.includes("lineasIva(c).map("), "el detalle (cliente, página pública e impresión) usa el desglose");
+});
+
+test("IVA por taller: Mi taller elige si es responsable de IVA junto a la tarifa", () => {
+  const pagina = leer("../src/pages/taller/TallerMiTaller.jsx");
+  assert.ok(pagina.includes('name="mt-iva"'), "dos opciones: responsable o no");
+  assert.ok(pagina.includes("responsableIva }));"), "viaja al guardar");
+  assert.ok(pagina.includes("textoRegimenIva(taller.responsableIva)"), "se ve en los datos del taller");
+  const servicio = leer("../src/services/tallerService.js");
+  assert.ok(servicio.includes("JSON.stringify({ tarifaHora, horario, responsableIva })"));
 });

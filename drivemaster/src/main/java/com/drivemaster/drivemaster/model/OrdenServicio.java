@@ -105,8 +105,13 @@ public class OrdenServicio {
     private String mecanicoId;
     private String mecanicoNombre;
 
-    // Tarifa de diagnóstico, congelada al aceptar (ingreso del taller)
+    // Tarifa de diagnóstico, congelada al aceptar (ingreso del taller): lo que paga el cliente, con el IVA si lo lleva
     private Double tarifaDiagnostico;
+    // Desde el IVA por taller: precio base (parámetro TARIFA_DIAGNOSTICO, igual para todos) y su IVA (el del taller,
+    // 0 % si no es responsable). tarifaDiagnostico = base + IVA. Las solicitudes anteriores no los tienen: su tarifa
+    // era el parámetro con el IVA ya incluido.
+    private Double tarifaDiagnosticoBase;
+    private Double ivaDiagnosticoPct;
     // NO_REQUERIDO, PENDIENTE, PAGADO, VENCIDO (ver EstadoOrden)
     private String pagoDiagnosticoEstado;
     private LocalDateTime fechaLimitePagoDiagnostico;

@@ -38,6 +38,9 @@ public class CotizacionDTO {
     private Double subtotalManoObra;
     private Double subtotal;
     private Double ivaPct;
+    // Siempre llenos: las cotizaciones anteriores al IVA por taller repiten su ivaPct único en los dos
+    private Double ivaRepuestosPct;
+    private Double ivaManoObraPct;
     private Double ivaRepuestos;
     private Double ivaManoObra;
     private Double iva;
@@ -103,6 +106,8 @@ public class CotizacionDTO {
                 .subtotalManoObra(c.getSubtotalManoObra())
                 .subtotal(c.getSubtotal())
                 .ivaPct(c.getIvaPct())
+                .ivaRepuestosPct(c.pctRepuestos())
+                .ivaManoObraPct(c.pctManoObra())
                 .ivaRepuestos(c.getIvaRepuestos())
                 .ivaManoObra(c.getIvaManoObra())
                 .iva(c.getIva())
