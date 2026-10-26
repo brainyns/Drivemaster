@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { crearCompra } from "../services/compraService";
 import { listarProveedores } from "../services/proveedorService";
 import { listarProductosMiTienda } from "../services/productoService";
@@ -11,6 +11,7 @@ import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
+import BuscadorProducto from "../components/ui/BuscadorProducto";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
 import { METODOS_PAGO, agregarLinea, erroresCompra, erroresLinea } from "./tienda/comprasTienda";
@@ -19,7 +20,6 @@ import { avisar } from "../components/ui/avisar";
 import { plural } from "../utils/formato";
 import "../css/compras-tienda.css";
 
-const MAX_RESULTADOS = 6;
 const LINEA_VACIA = { producto: null, cantidad: "1", costo: "" };
 
 /**
@@ -30,7 +30,6 @@ function CompraForm({ onVolver, token }) {
   const [proveedores, setProveedores] = useState(null);
   const [productos, setProductos] = useState([]);
   const [proveedorId, setProveedorId] = useState("");
-  const [buscar, setBuscar] = useState("");
   const [linea, setLinea] = useState(LINEA_VACIA);
   const [tocadaLinea, setTocadaLinea] = useState(false);
   const [items, setItems] = useState([]);
@@ -49,11 +48,6 @@ function CompraForm({ onVolver, token }) {
   }, [token]);
 
   const proveedor = proveedores?.find((p) => p.id === proveedorId);
-  const resultados = useMemo(() => {
-    const q = buscar.trim().toLowerCase();
-    if (!q || linea.producto) return [];
-    return productos.filter((p) => [p.nombre, p.codigo, p.marca].some((x) => x && x.toLowerCase().includes(q))).slice(0, MAX_RESULTADOS);
-  }, [buscar, productos, linea.producto]);
   const erroresL = tocadaLinea ? erroresLinea(linea) : {};
   const erroresC = tocadaCompra ? erroresCompra({ proveedorId, items }) : {};
   const total = items.reduce((s, i) => s + i.subtotal, 0);
@@ -68,8 +62,8 @@ function CompraForm({ onVolver, token }) {
   };
 
   const elegir = (p) => {
+    // El costo se propone con el precio de compra del producto; la tienda lo puede cambiar
     setLinea({ producto: p, cantidad: "1", costo: p.precioCompra != null ? String(p.precioCompra) : "" });
-    setBuscar(p.nombre);
     setTocadaLinea(false);
     requestAnimationFrame(() => document.getElementById("cmp-cantidad")?.focus());
   };
@@ -80,9 +74,8 @@ function CompraForm({ onVolver, token }) {
     if (Object.keys(erroresLinea(linea)).length) return;
     setItems((prev) => agregarLinea(prev, linea));
     setLinea(LINEA_VACIA);
-    setBuscar("");
     setTocadaLinea(false);
-    document.getElementById("cmp-buscar")?.focus();
+    requestAnimationFrame(() => document.getElementById("cmp-buscar")?.focus());
   };
 
   const pedirConfirmacion = () => {
@@ -194,30 +187,9 @@ function CompraForm({ onVolver, token }) {
           <SeccionEditable id="cmp-productos" icono="box" titulo="Productos"
             descripcion="Busca en tu catálogo, elige el producto, la cantidad y el costo por unidad.">
             <form className="ui-form" onSubmit={agregar} noValidate>
-              <Campo id="cmp-buscar" label="Producto" error={erroresL.producto}
-                ayuda={linea.producto ? `Stock actual: ${linea.producto.stockActual ?? 0}` : "Por nombre, código o marca."}>
-                <input className="ui-field__input" type="search" value={buscar} autoComplete="off" placeholder="Ej. filtro de aceite"
-                  onChange={(e) => { setBuscar(e.target.value); if (linea.producto) setLinea(LINEA_VACIA); }} />
-              </Campo>
-              {resultados.length > 0 && (
-                <ul className="cmp-resultados" aria-label="Productos que coinciden">
-                  {resultados.map((p) => (
-                    <li key={p.id}>
-                      <button type="button" className="cmp-resultado" onClick={() => elegir(p)}>
-                        <ImagenProducto src={p.imagenUrl} className="cmp-resultado__imagen" tamanioIcono={16} />
-                        <span className="cmp-resultado__texto">
-                          <strong>{p.nombre}</strong>
-                          <span>{[p.codigo, `stock ${p.stockActual ?? 0}`].filter(Boolean).join(" · ")}</span>
-                        </span>
-                        <span className="cmp-tenue">{p.precioCompra != null ? formatPrecio(p.precioCompra) : ""}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {buscar.trim() && !linea.producto && resultados.length === 0 && (
-                <p className="cmp-tenue cmp-sin-resultados">Ningún producto de tu catálogo coincide con “{buscar.trim()}”.</p>
-              )}
+              {/* El mismo buscador que Inventario: nombre, SKU o referencia, con foto y stock */}
+              <BuscadorProducto id="cmp-buscar" productos={productos} elegido={linea.producto} error={erroresL.producto}
+                onElegir={(p) => (p ? elegir(p) : setLinea(LINEA_VACIA))} />
               <div className="ui-form__campos ui-form__campos--2">
                 <Campo id="cmp-cantidad" label="Cantidad" error={erroresL.cantidad}>
                   <input className="ui-field__input" type="number" min="1" inputMode="numeric" value={linea.cantidad}

@@ -90,7 +90,6 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.GET, "/api/compras/c1/pdf", "TIENDA"),
             ruta(HttpMethod.POST, "/api/compras/guardar", "TIENDA"),
             ruta(HttpMethod.POST, "/api/movimientos/registrar", "TIENDA"),
-            ruta(HttpMethod.PUT, "/inventario/ajuste/p1/5", "TIENDA"),
             ruta(HttpMethod.PUT, "/api/suscripciones/planes/basico", "SUPERADMIN"),
             ruta(HttpMethod.PUT, "/api/config/parametros/COMISION_PCT", "SUPERADMIN"),
             ruta(HttpMethod.POST, "/api/config/metodos-pago", "SUPERADMIN"),

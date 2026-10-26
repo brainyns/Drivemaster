@@ -125,7 +125,6 @@ public class SecurityConfig {
                         // Inventario: antes los movimientos eran públicos y cualquier usuario con
                         // sesión podía ajustar stock. TIENDA queda limitada a su inventario.
                         .requestMatchers("/api/movimientos", "/api/movimientos/**").hasRole("TIENDA")
-                        .requestMatchers("/inventario/**").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes/mis-solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes").hasAnyRole("SUPERADMIN", "VENDEDOR")
