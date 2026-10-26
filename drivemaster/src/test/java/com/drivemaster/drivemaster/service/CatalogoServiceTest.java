@@ -78,8 +78,11 @@ class CatalogoServiceTest {
         Tienda inactiva = tienda("F", "Bogotá", "Cra 7", "L-S", null);
         inactiva.setActivo(false);
         Tienda sinHorarioNulo = tienda("G", "Bogotá", "Cra 7", null, null);
+        // Archivada (la antigua DriveMaster): no se ve aunque haya quedado activa
+        Tienda archivada = tienda("H", "Bogotá", "Cra 7", "L-S", null);
+        archivada.setEstadoAprobacion(EstadoAprobacion.ARCHIVADO);
 
-        for (Tienda t : List.of(sinHorario, sinDireccion, sinCiudad, pendiente, inactiva, sinHorarioNulo)) {
+        for (Tienda t : List.of(sinHorario, sinDireccion, sinCiudad, pendiente, inactiva, sinHorarioNulo, archivada)) {
             assertFalse(CatalogoService.tiendaVisible(t), t.getId());
         }
         assertFalse(CatalogoService.tiendaVisible(null));
