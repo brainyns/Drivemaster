@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ESTADOS_PEDIDO, SIN_PLAN, actividadNegocio, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
+  ESTADOS_NEGOCIO, ESTADOS_PEDIDO, SIN_PLAN, actividadNegocio, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
   perfilNegocio, urgentesDashboard,
 } from "../src/pages/admin/plataformaAdmin.js";
 
@@ -71,15 +71,18 @@ test("Tiendas y talleres: estado con texto, la pausa de un aprobado, actividad y
   assert.equal(SIN_PLAN, "SIN_PLAN", "el mismo valor que entiende el backend");
 });
 
-test("Tiendas y talleres: sistema compartido, filtros por tipo, estado y plan, y carga, vacío y error con Reintentar", () => {
+test("Tiendas y talleres: sistema compartido, filtros por tipo y estado (sin planes), y carga, vacío y error con Reintentar", () => {
   const p = usaSistemaCompartido("NegociosPlataforma.jsx", ["EncabezadoPagina", "<LogoNegocio", "url={n.logoUrl}", "<Calificacion",
     "ChipEstado", "BarraProgreso", "<Alerta", "onReintentar", "<EstadoVacio", "<Esqueleto", "<Campo", "ui-buscador",
-    "ui-table--tarjetas", 'aria-label="Tipo de negocio"', 'aria-label="Estado de aprobación"', "SIN_PLAN", "Limpiar filtros"]);
+    "ui-table--tarjetas", 'aria-label="Tipo de negocio"', 'aria-label="Estado de aprobación"', "Limpiar filtros"]);
   // Las mismas llamadas de siempre
   for (const llamada of ["negociosPlataforma(", "resolverAprobacionTaller", "resolverAprobacionTienda", "activarDesactivarTaller",
-    "activarDesactivarTienda", "activarPlan(", "listarPlanes("]) {
+    "activarDesactivarTienda"]) {
     assert.ok(p.includes(llamada), `falta ${llamada}`);
   }
+  // Las suscripciones están apagadas (suscripciones.habilitadas=false): ni planes ni filtro por plan
+  for (const plan of ["activarPlan(", "listarPlanes(", "SIN_PLAN"]) assert.ok(!p.includes(plan), `sobra ${plan}`);
+  assert.equal(ESTADOS_NEGOCIO.ARCHIVADO.label, "Archivado");
   assert.ok(!p.includes("toFixed("), "la calificación la muestra Calificacion (con «Nuevo»)");
   assert.ok(leer("../src/App.jsx").includes("filtroInicial={idSeleccionado} />") && leer("../src/pages/DashboardPlataforma.jsx").includes('ir("negocios", "TALLER")'));
 });
@@ -106,10 +109,12 @@ test("Aprobaciones: sistema compartido, detalle con Dato y confirmación con Cam
   const p = usaSistemaCompartido("Aprobaciones.jsx", ["EncabezadoPagina", "ChipEstado", "<LogoNegocio", "<Alerta", "onReintentar",
     "<EstadoVacio", "<Esqueleto", "<Campo", "<Dato", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado de revisión"',
     'aria-label="Tipo de negocio"', "DrawerAdmin", "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
-  for (const llamada of ["listarTalleres(token)", "listarTiendas(token)", "listarPlanes(token)", "resolverAprobacionTaller",
-    "resolverAprobacionTienda", "activarDesactivarTaller", "activarDesactivarTienda", "activarPlan("]) {
+  for (const llamada of ["listarTalleres(token)", "listarTiendas(token)", "resolverAprobacionTaller",
+    "resolverAprobacionTienda", "activarDesactivarTaller", "activarDesactivarTienda"]) {
     assert.ok(p.includes(llamada), `falta ${llamada}`);
   }
+  // Se aprueba sin plan: DriveMaster cobra solo la comisión
+  assert.ok(p.includes("{ aprobado: true }") && !p.includes("listarPlanes(") && !p.includes("planCodigo"));
 });
 
 test("Pedidos y envíos: estados en el orden del pedido con tono, referencia corta y atrasados desde el dashboard", () => {

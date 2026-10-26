@@ -33,7 +33,7 @@ export function urgentesDashboard(a = {}) {
   return items.filter((x) => (x.n || 0) > 0).map(({ titulo, ...x }) => ({ ...x, titulo: titulo(x.n) }));
 }
 
-/** Filas de una lista de barras (órdenes por estado, suscripciones por plan) con su parte del total. */
+/** Filas de una lista de barras (p. ej. órdenes por estado) con su parte del total. */
 export function barras(conteos = {}, etiquetas = {}, orden = []) {
   const claves = [
     ...orden.filter((k) => conteos[k]),
@@ -50,6 +50,8 @@ export const ESTADOS_NEGOCIO = {
   PENDIENTE: { label: "Pendiente", plural: "Pendientes", tono: "aviso" },
   APROBADO: { label: "Aprobado", plural: "Aprobados", tono: "ok" },
   RECHAZADO: { label: "Rechazado", plural: "Rechazados", tono: "error" },
+  // Fuera de servicio sin borrar nada (la antigua tienda DriveMaster, duplicados): no vende ni cuenta en los indicadores
+  ARCHIVADO: { label: "Archivado", plural: "Archivados", tono: "apagado" },
 };
 
 export const TIPOS_NEGOCIO = [

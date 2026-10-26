@@ -236,7 +236,7 @@ function ResumenSemanal({ token }) {
 
 /**
  * Mi tienda: identidad, qué tan completo está el perfil y cada sección editable por separado. Sin ciudad, dirección
- * y horario los productos no aparecen en el catálogo. Lo administrativo (nombre, NIT, plan) se ve pero no se edita.
+ * y horario los productos no aparecen en el catálogo. Lo administrativo (nombre, NIT) se ve pero no se edita.
  */
 export default function DatosMiTienda({ token, onGuardado }) {
   const [tienda, setTienda] = useState(null);
@@ -309,11 +309,6 @@ export default function DatosMiTienda({ token, onGuardado }) {
             <ChipEstado tono={estado.tono}>{estado.texto}</ChipEstado>
             <ChipEstado tono={activa ? "ok" : "apagado"}>{activa ? "Activa" : "Inactiva"}</ChipEstado>
             <ChipEstado tono={t.datosCompletos ? "ok" : "aviso"}>{t.datosCompletos ? "Visible en el catálogo" : "Oculta del catálogo"}</ChipEstado>
-            {t.planActual && (
-              <ChipEstado tono="acento">
-                Plan {t.planActual.toLowerCase()}{t.planVence ? ` hasta ${formatFecha(t.planVence)}` : ""}
-              </ChipEstado>
-            )}
           </>
         )}
         meta={(
@@ -339,7 +334,6 @@ export default function DatosMiTienda({ token, onGuardado }) {
               <Dato etiqueta="Nombre de la tienda">{t.nombre}</Dato>
               <Dato etiqueta="NIT">{t.nit}</Dato>
               <Dato etiqueta="Fecha de registro">{t.fechaRegistro && formatFecha(t.fechaRegistro)}</Dato>
-              <Dato etiqueta="Plan">{t.planActual && `${t.planActual.toLowerCase()}${t.planVence ? `, vence el ${formatFecha(t.planVence)}` : ""}`}</Dato>
             </dl>
           </SeccionEditable>
 

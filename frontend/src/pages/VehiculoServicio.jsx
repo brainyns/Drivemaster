@@ -5,6 +5,7 @@ import "../css/servicios.css";
 import Icon from "../components/public/Icon";
 import Alerta from "../components/ui/Alerta";
 import { etiquetaCategoria } from "../utils/categorias";
+import { conPrefijo } from "../utils/negocio";
 
 const formatPrecio = (p) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(p || 0);
@@ -103,7 +104,7 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
               <div>
                 <h3 style={{ margin: 0 }}>{h.productoNombre}</h3>
                 <span className="sv-card-meta">
-                  Taller {h.tallerNombre}{h.fechaFinalizacion ? ` · ${new Date(h.fechaFinalizacion).toLocaleDateString("es-CO")}` : ""}
+                  {conPrefijo("Taller", h.tallerNombre)}{h.fechaFinalizacion ? ` · ${new Date(h.fechaFinalizacion).toLocaleDateString("es-CO")}` : ""}
                 </span>
                 {/* Marketplace: los repuestos de la cotización; en el flujo anterior el repuesto es el título */}
                 {h.repuestos?.length > 0 && (

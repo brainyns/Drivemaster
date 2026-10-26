@@ -271,11 +271,6 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
           <>
               <ChipEstado tono={aprobado ? "ok" : "aviso"}>{aprobado ? "Aprobado" : "Pendiente de aprobación"}</ChipEstado>
               <ChipEstado tono={activo ? "ok" : "apagado"}>{activo ? "Activo" : "Inactivo"}</ChipEstado>
-              {taller.planActual && (
-                <ChipEstado tono="acento">
-                  Plan {taller.planActual.toLowerCase()}{taller.planVence ? ` hasta ${formatFecha(taller.planVence)}` : ""}
-                </ChipEstado>
-              )}
           </>
         )}
         meta={(
@@ -300,7 +295,6 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
               <Dato etiqueta="Nombre del taller">{taller.nombre}</Dato>
               <Dato etiqueta="Ciudad">{taller.ciudad}</Dato>
               <Dato etiqueta="Fecha de registro">{taller.fechaRegistro && formatFecha(taller.fechaRegistro)}</Dato>
-              <Dato etiqueta="Plan">{taller.planActual && `${taller.planActual.toLowerCase()}${taller.planVence ? `, vence el ${formatFecha(taller.planVence)}` : ""}`}</Dato>
             </dl>
           </SeccionEditable>
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "../services/http";
 import { crearUsuario, eliminarUsuario, getUser } from "../services/authService";
-import { usuariosPlataforma } from "../services/plataformaService";
+import { enCursoUsuario, usuariosPlataforma } from "../services/plataformaService";
 import { errorDeRespuesta } from "../utils/errores";
 import { formatoFecha } from "../utils/formato";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
@@ -30,7 +30,7 @@ const ESTADOS = [
   { valor: "activos", label: "Activas" },
   { valor: "inactivos", label: "Inactivas" },
 ];
-const NUEVO = { nombre: "", correo: "", password: "", rol: "ADMIN" };
+const NUEVO = { nombre: "", correo: "", password: "", rol: "SUPERADMIN" };
 
 async function actualizarUsuario(id, body) {
   const res = await apiFetch(`${API_BASE}/usuarios/${id}`, {
@@ -132,13 +132,14 @@ function FormNuevo({ onCreado, onCancelar }) {
 }
 
 /** Editar nombre, contraseña y, en cuentas del equipo, el rol. */
-function FormEditar({ usuario, onGuardado, onCancelar }) {
+function FormEditar({ usuario, soyYo = false, onGuardado, onCancelar }) {
   const ref = useRef(null);
   const [form, setForm] = useState({ nombre: usuario.nombre, password: "", rol: usuario.rol });
   const [tocados, setTocados] = useState({});
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const editableRol = rolEditable(usuario.rol);
+  // Nadie se cambia el rol a sí mismo (también lo rechaza el backend)
+  const editableRol = rolEditable(usuario.rol) && !soyYo;
 
   useEffect(() => { enfocar(ref.current); }, []);
 
@@ -184,7 +185,7 @@ function FormEditar({ usuario, onGuardado, onCancelar }) {
           </Campo>
           {editableRol ? (
             <Campo id="usr-editar-rol" label="Rol"
-              ayuda={usuario.rol === "VENDEDOR" ? "El rol de vendedor se retiró: reasígnala a administrador o super admin, o desactívala." : undefined}>
+              ayuda={["VENDEDOR", "ADMIN"].includes(usuario.rol) ? "Este rol se retiró: pásala a super admin o desactívala." : undefined}>
               <select className="ui-field__input" name="rol" value={form.rol} onChange={cambiar}>
                 {!ROLES_DEL_EQUIPO.includes(usuario.rol) && <option value={usuario.rol} disabled>{etiquetaRol(usuario.rol)}</option>}
                 {ROLES_DEL_EQUIPO.map((r) => <option key={r} value={r}>{etiquetaRol(r)}</option>)}
@@ -194,7 +195,7 @@ function FormEditar({ usuario, onGuardado, onCancelar }) {
             <div className="ui-field usr-rol-fijo">
               <span className="ui-field__label">Rol</span>
               <p className="usr-rol-fijo__valor">{etiquetaRol(usuario.rol)}</p>
-              <p className="ui-field__ayuda">El rol de un cliente, una tienda o un taller no se cambia: su perfil depende de él.</p>
+              <p className="ui-field__ayuda">{soyYo ? "No puedes cambiar tu propio rol." : "El rol de un cliente, una tienda o un taller no se cambia: su perfil depende de él."}</p>
             </div>
           )}
         </div>
@@ -228,6 +229,13 @@ export default function Usuarios({ token }) {
 
   const [panel, setPanel] = useState(null); // "nuevo" | usuario en edición
   const [desactivando, setDesactivando] = useState(null);
+  // Pedidos o solicitudes en curso del negocio del usuario a desactivar (null mientras se consulta o si falla)
+  const [enCurso, setEnCurso] = useState(null);
+  const pedirDesactivar = (u) => {
+    setEnCurso(null);
+    setDesactivando(u);
+    if (u.rol === "TIENDA" || u.rol === "TALLER") enCursoUsuario(token, u.id).then(setEnCurso).catch(() => {});
+  };
   const [activando, setActivando] = useState(null);
   const [aviso, setAviso] = useState(null); // { tono, texto }
 
@@ -315,7 +323,7 @@ export default function Usuarios({ token }) {
           onCreado={(nombre) => { setPanel(null); setAviso({ tono: "ok", texto: `Creaste la cuenta de ${nombre}.` }); recargar(); }} />
       )}
       {panel && panel !== "nuevo" && (
-        <FormEditar key={panel.id} usuario={panel} onCancelar={() => setPanel(null)}
+        <FormEditar key={panel.id} usuario={panel} soyYo={Boolean(yo?.id && yo.id === panel.id)} onCancelar={() => setPanel(null)}
           onGuardado={(nombre) => { setPanel(null); setAviso({ tono: "ok", texto: `Guardaste los cambios de ${nombre}.` }); recargar(); }} />
       )}
 
@@ -416,7 +424,7 @@ export default function Usuarios({ token }) {
                             {u.activo ? (
                               !soyYo && (
                                 <button type="button" className="ui-btn ui-btn--texto ui-btn--chico usr-desactivar"
-                                  onClick={() => setDesactivando(u)} aria-label={`Desactivar a ${u.nombre}`}>
+                                  onClick={() => pedirDesactivar(u)} aria-label={`Desactivar a ${u.nombre}`}>
                                   Desactivar
                                 </button>
                               )
@@ -440,8 +448,8 @@ export default function Usuarios({ token }) {
       )}
 
       {desactivando && (
-        <ConfirmarAccion titulo={`¿Desactivar la cuenta de ${desactivando.nombre}?`} peligro textoConfirmar="Desactivar cuenta"
-          mensaje={avisoDesactivar(desactivando)}
+        <ConfirmarAccion titulo={`¿Desactivar a ${desactivando.nombre}?`} peligro textoConfirmar="Desactivar"
+          mensaje={avisoDesactivar(desactivando, enCurso)}
           onConfirmar={confirmarDesactivar} onCancelar={() => setDesactivando(null)} />
       )}
     </div>

@@ -13,6 +13,8 @@
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  /* Espacio para el globo del chat (fijo abajo a la derecha): nunca tapa la última fila de una lista */
+  padding-bottom: 96px;
 }
 
 /* ── SIDEBAR ── */

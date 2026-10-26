@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarTalleres, resolverAprobacionTaller, activarDesactivarTaller } from "../services/tallerService";
 import { listarTiendas, resolverAprobacionTienda, activarDesactivarTienda } from "../services/tiendaService";
-import { listarPlanes, activarPlan } from "../services/suscripcionService";
 import DrawerAdmin from "../components/admin/DrawerAdmin";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import MiniMapa from "../components/admin/MiniMapa";
@@ -31,18 +30,16 @@ const tieneUbicacion = (n) => n.latitud != null && n.longitud != null;
 const nombreTipo = (n) => (n.tipo === "TALLER" ? "Taller" : "Tienda");
 
 const CONFIRMACIONES = {
-  aprobar: { texto: "La cuenta quedará activa y podrá operar en el marketplace con el plan que elijas.", boton: "Aprobar", variante: "primario" },
+  aprobar: { texto: "La cuenta quedará activa y podrá operar en el marketplace.", boton: "Aprobar", variante: "primario" },
   rechazar: { texto: "El negocio recibirá el motivo por correo y no podrá operar.", boton: "Rechazar", variante: "peligro" },
   desactivar: { texto: "Dejará de aparecer para los clientes y no recibirá solicitudes ni pedidos hasta que lo actives otra vez.", boton: "Desactivar", variante: "peligro" },
   activar: { texto: "Volverá a aparecer para los clientes y a recibir solicitudes y pedidos.", boton: "Activar", variante: "primario" },
 };
 
-/** Detalle completo del negocio en el panel lateral. Su estado (plan elegido) se reinicia con cada negocio. */
-function DetalleNegocio({ negocio: n, planes, ocupado, error, onCerrar, onCambiarPlan, onPedir }) {
+/** Detalle completo del negocio en el panel lateral. */
+function DetalleNegocio({ negocio: n, ocupado, error, onCerrar, onPedir }) {
   const estado = estadoRevision(n);
   const chip = chipRevision(n);
-  const [plan, setPlan] = useState(n.planActual || "");
-  const planCambio = plan !== "" && plan !== (n.planActual || "");
 
   const pie = estado === "APROBADO" ? (
     n.activo
@@ -119,32 +116,13 @@ function DetalleNegocio({ negocio: n, planes, ocupado, error, onCerrar, onCambia
         )}
       </section>
 
-      {estado === "APROBADO" && (
-        <section className="apr-detalle__bloque" aria-labelledby="apr-plan">
-          <h3 id="apr-plan" className="apr-detalle__titulo">Plan</h3>
-          <div className="apr-detalle__fila">
-            <Campo id="apr-plan-vigente" label="Plan vigente" ayuda={n.planVence ? `Vence el ${formatoFecha(n.planVence)}` : undefined}
-              className="apr-detalle__campo">
-              <select className="ui-field__input" value={plan} onChange={(e) => setPlan(e.target.value)} disabled={ocupado}>
-                {!n.planActual && <option value="">Sin plan vigente</option>}
-                {planes.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
-              </select>
-            </Campo>
-            <button type="button" className="ui-btn ui-btn--primario" onClick={() => onCambiarPlan(n, plan)}
-              disabled={!planCambio || ocupado} aria-busy={ocupado}>
-              {ocupado ? "Guardando…" : "Cambiar plan"}
-            </button>
-          </div>
-        </section>
-      )}
     </DrawerAdmin>
   );
 }
 
-/** Panel del SUPERADMIN para validar y activar talleres y tiendas, y asignarles un plan. */
+/** Panel del SUPERADMIN para validar y activar talleres y tiendas. */
 export default function Aprobaciones({ token }) {
   const [negocios, setNegocios] = useState(null);
-  const [planes, setPlanes] = useState([]);
   const [filtro, setFiltro] = useState("PENDIENTE");
   const [tipo, setTipo] = useState("");
   const [busqueda, setBusqueda] = useState("");
@@ -156,21 +134,15 @@ export default function Aprobaciones({ token }) {
   const [seleccionado, setSeleccionado] = useState(null);
   // { accion: "aprobar" | "rechazar" | "desactivar" | "activar", negocio }
   const [confirmacion, setConfirmacion] = useState(null);
-  const [planInicial, setPlanInicial] = useState("PRUEBA");
   const [motivo, setMotivo] = useState("");
 
   const cargar = useCallback(async () => {
     try {
-      const [talleres, tiendas, planesData] = await Promise.all([
-        listarTalleres(token),
-        listarTiendas(token),
-        listarPlanes(token),
-      ]);
+      const [talleres, tiendas] = await Promise.all([listarTalleres(token), listarTiendas(token)]);
       setNegocios([
         ...talleres.map((t) => ({ ...t, tipo: "TALLER" })),
         ...tiendas.map((t) => ({ ...t, tipo: "TIENDA" })),
       ]);
-      setPlanes(planesData.filter((p) => p.activo));
       setErrorCarga(null);
     } catch (e) {
       setErrorCarga(e.message);
@@ -190,9 +162,6 @@ export default function Aprobaciones({ token }) {
   // 20 por página; vuelve a la primera al cambiar de filtro o de búsqueda (los contadores siguen contando todo)
   const pag = usePaginacion(visibles.length, [filtro, tipo, busqueda].join("|"));
   const enPagina = paginar(visibles, pag.pagina);
-
-  // Nombre visible del plan ("Básico") a partir de su código ("BASICO")
-  const nombrePlan = (codigo) => planes.find((p) => p.codigo === codigo)?.nombre || codigo;
 
   // El detalle se lee de la lista para mostrar los datos frescos tras cada acción
   const detalle = seleccionado ? lista.find((n) => clave(n) === seleccionado) : null;
@@ -215,7 +184,6 @@ export default function Aprobaciones({ token }) {
 
   const pedir = (accion, negocio) => {
     setError(null);
-    setPlanInicial("PRUEBA");
     setMotivo("");
     setConfirmacion({ accion, negocio });
   };
@@ -225,18 +193,13 @@ export default function Aprobaciones({ token }) {
     const resolver = n.tipo === "TALLER" ? resolverAprobacionTaller : resolverAprobacionTienda;
     const activar = n.tipo === "TALLER" ? activarDesactivarTaller : activarDesactivarTienda;
     if (accion === "aprobar") {
-      ejecutar(n, () => resolver(token, n.id, { aprobado: true, planCodigo: planInicial }), `${n.nombre} quedó aprobado y activo.`);
+      ejecutar(n, () => resolver(token, n.id, { aprobado: true }), `${n.nombre} quedó aprobado y activo.`);
     } else if (accion === "rechazar") {
       ejecutar(n, () => resolver(token, n.id, { aprobado: false, motivo: motivo.trim() }), `${n.nombre} fue rechazado.`);
     } else {
       const activo = accion === "activar";
       ejecutar(n, () => activar(token, n.id, activo), `${n.nombre} quedó ${activo ? "activo" : "desactivado"}.`);
     }
-  };
-
-  const cambiarPlan = (n, plan) => {
-    if (!plan || plan === n.planActual) return;
-    ejecutar(n, () => activarPlan(token, n.tipo, n.id, plan), `Plan de ${n.nombre} actualizado a ${nombrePlan(plan)}.`);
   };
 
   const abrirConTeclado = (e, n) => {
@@ -256,7 +219,7 @@ export default function Aprobaciones({ token }) {
   return (
     <div className="ss-panel--plataforma pp-root apr-root">
       <EncabezadoPagina titulo="Aprobaciones"
-        descripcion="Valida los talleres y tiendas que se registran, asígnales un plan y controla qué cuentas pueden operar." />
+        descripcion="Valida los talleres y tiendas que se registran y controla qué cuentas pueden operar." />
 
       {aviso && <Alerta tono="ok" className="pp-bloque-sep" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
 
@@ -314,7 +277,6 @@ export default function Aprobaciones({ token }) {
                   <th scope="col">Negocio</th>
                   <th scope="col">Ciudad</th>
                   <th scope="col">Contacto</th>
-                  <th scope="col">Plan</th>
                   <th scope="col">Estado</th>
                   <th scope="col">Registro</th>
                   <th scope="col"><span className="ui-sr">Acciones</span></th>
@@ -342,10 +304,6 @@ export default function Aprobaciones({ token }) {
                       <td data-label="Contacto" className="apr-contacto">
                         {correoNegocio(n) || <span className="pp-tenue">Sin correo</span>}
                         {n.telefono && <span className="pp-sub">{n.telefono}</span>}
-                      </td>
-                      <td data-label="Plan">
-                        {n.planActual ? nombrePlan(n.planActual) : <span className="pp-tenue">Sin plan</span>}
-                        {n.planVence && <span className="pp-sub">Vence {formatoFecha(n.planVence)}</span>}
                       </td>
                       <td data-label="Estado"><ChipEstado tono={chip.tono}>{chip.label}</ChipEstado></td>
                       <td data-label="Registro" className="apr-fecha">{formatoFecha(n.fechaRegistro)}</td>
@@ -375,8 +333,8 @@ export default function Aprobaciones({ token }) {
       )}
 
       {detalle && (
-        <DetalleNegocio key={seleccionado} negocio={detalle} planes={planes} ocupado={procesando === seleccionado}
-          error={confirmacion ? null : error} onCerrar={() => setSeleccionado(null)} onCambiarPlan={cambiarPlan} onPedir={pedir} />
+        <DetalleNegocio key={seleccionado} negocio={detalle} ocupado={procesando === seleccionado}
+          error={confirmacion ? null : error} onCerrar={() => setSeleccionado(null)} onPedir={pedir} />
       )}
 
       {confirmacion && (
@@ -384,13 +342,6 @@ export default function Aprobaciones({ token }) {
           cargando={procesando === clave(confirmacion.negocio)}
           deshabilitado={confirmacion.accion === "rechazar" && !motivo.trim()}
           onConfirmar={confirmar} onCancelar={() => { setConfirmacion(null); setError(null); }}>
-          {confirmacion.accion === "aprobar" && (
-            <Campo id="apr-plan-inicial" label="Plan inicial">
-              <select className="ui-field__input" value={planInicial} onChange={(e) => setPlanInicial(e.target.value)}>
-                {planes.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
-              </select>
-            </Campo>
-          )}
           {confirmacion.accion === "rechazar" && (
             <Campo id="apr-motivo" label="Motivo del rechazo" ayuda="Se le enviará al negocio por correo.">
               <textarea className="ui-field__input apr-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)}

@@ -2,7 +2,6 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { negociosPlataforma } from "../services/plataformaService";
 import { resolverAprobacionTaller, activarDesactivarTaller } from "../services/tallerService";
 import { resolverAprobacionTienda, activarDesactivarTienda } from "../services/tiendaService";
-import { listarPlanes, activarPlan } from "../services/suscripcionService";
 import { capitalizar, formatoFecha, unir } from "../utils/formato";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
@@ -16,7 +15,7 @@ import Esqueleto from "../components/ui/Esqueleto";
 import Campo from "../components/ui/Campo";
 import Icon from "../components/public/Icon";
 import {
-  ESTADOS_NEGOCIO, SIN_PLAN, TIPOS_NEGOCIO, actividadNegocio, estadoNegocio, filtrosInicialesNegocios, perfilNegocio,
+  ESTADOS_NEGOCIO, TIPOS_NEGOCIO, actividadNegocio, estadoNegocio, filtrosInicialesNegocios, perfilNegocio,
 } from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
@@ -27,12 +26,11 @@ const clave = (n) => `${n.tipo}-${n.id}`;
 const nombreTipo = (n) => (n.tipo === "TIENDA" ? "Tienda" : "Taller");
 
 /**
- * Lo que se hace con un negocio desde su fila: aprobar con un plan o rechazar con motivo (pendientes), y cambiar el
- * plan o pausar (aprobados). Las mismas llamadas de siempre; el resultado lo informa la pantalla.
+ * Lo que se hace con un negocio desde su fila: aprobar o rechazar con motivo (pendientes) y pausar o activar
+ * (aprobados). Sin planes: DriveMaster cobra solo la comisión. El resultado lo informa la pantalla.
  */
-function Gestion({ n, planes, procesando, onAprobar, onRechazar, onCambiarPlan, onAlternar, error }) {
+function Gestion({ n, procesando, onAprobar, onRechazar, onAlternar, error }) {
   const k = clave(n);
-  const [plan, setPlan] = useState(n.estado === "PENDIENTE" ? "PRUEBA" : n.plan?.codigo || "");
   const [rechazando, setRechazando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [errorMotivo, setErrorMotivo] = useState(null);
@@ -51,7 +49,6 @@ function Gestion({ n, planes, procesando, onAprobar, onRechazar, onCambiarPlan, 
           ? <li>{n.productosActivos ?? 0} de {n.productos ?? 0} productos activos</li>
           : <li>{n.ordenesEntregadas ?? 0} de {n.ordenes ?? 0} órdenes entregadas</li>}
         <li>{perfil.completo ? "Perfil completo" : `Le falta: ${perfil.faltan.join(", ")}`}</li>
-        {n.plan?.hasta && <li>Plan vigente hasta el {formatoFecha(n.plan.hasta)}</li>}
       </ul>
       {n.estado === "RECHAZADO" && n.motivoRechazo && (
         <p className="neg-gestion__motivo"><strong>Motivo del rechazo:</strong> {n.motivoRechazo}</p>
@@ -59,13 +56,8 @@ function Gestion({ n, planes, procesando, onAprobar, onRechazar, onCambiarPlan, 
 
       {n.estado === "PENDIENTE" && (
         <div className="neg-gestion__fila">
-          <Campo id={`neg-plan-${k}`} label="Plan al aprobar" className="neg-gestion__campo">
-            <select className="ui-field__input" value={plan} onChange={(e) => setPlan(e.target.value)}>
-              {planes.filter((p) => p.activo).map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
-            </select>
-          </Campo>
           <button type="button" className="ui-btn ui-btn--primario" disabled={ocupado} aria-busy={ocupado}
-            onClick={() => onAprobar(n, plan || "PRUEBA")}>
+            onClick={() => onAprobar(n)}>
             <Icon name="check" size={16} /> Aprobar
           </button>
           <button type="button" className="ui-btn ui-btn--secundario" aria-expanded={rechazando} disabled={ocupado}
@@ -90,16 +82,6 @@ function Gestion({ n, planes, procesando, onAprobar, onRechazar, onCambiarPlan, 
 
       {n.estado === "APROBADO" && (
         <div className="neg-gestion__fila">
-          <Campo id={`neg-plan-${k}`} label="Plan" className="neg-gestion__campo">
-            <select className="ui-field__input" value={plan} onChange={(e) => setPlan(e.target.value)}>
-              {!n.plan && <option value="">Sin plan</option>}
-              {planes.filter((p) => p.activo || p.codigo === n.plan?.codigo).map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
-            </select>
-          </Campo>
-          <button type="button" className="ui-btn ui-btn--primario" disabled={ocupado || !plan || plan === n.plan?.codigo}
-            onClick={() => onCambiarPlan(n, plan)}>
-            Cambiar plan
-          </button>
           <button type="button" className={`ui-btn ${n.activo ? "ui-btn--secundario neg-pausar" : "ui-btn--primario"}`}
             disabled={ocupado} aria-busy={ocupado} onClick={() => onAlternar(n)}>
             {n.activo ? "Pausar" : "Activar"}
@@ -113,8 +95,8 @@ function Gestion({ n, planes, procesando, onAprobar, onRechazar, onCambiarPlan, 
 }
 
 /**
- * Tiendas y talleres en una sola lista (SUPERADMIN): estado de aprobación, plan, calificación, actividad y perfil
- * completo. Desde aquí se aprueba, rechaza, pausa y cambia el plan. El ADMIN no ve esta pantalla: solo aprueba o
+ * Tiendas y talleres en una sola lista (SUPERADMIN): estado de aprobación, calificación, actividad y perfil
+ * completo. Desde aquí se aprueba, rechaza y pausa; los archivados se ven solo con su filtro. El ADMIN no ve esta pantalla: solo aprueba o
  * rechaza desde "Aprobaciones". filtroInicial ("TIENDA" o "TALLER") llega desde el dashboard.
  */
 export default function NegociosPlataforma({ token, filtroInicial }) {
@@ -128,7 +110,6 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
   const [error, setError] = useState(null);
   const [reintentando, setReintentando] = useState(false);
 
-  const [planes, setPlanes] = useState([]);
   const [abierto, setAbierto] = useState(null);
   const [procesando, setProcesando] = useState(null);
   const [errorAccion, setErrorAccion] = useState(null);
@@ -162,15 +143,10 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
     return () => { activo = false; clearTimeout(id); };
   }, [cargar, version]);
 
-  useEffect(() => {
-    let vivo = true;
-    listarPlanes(token).then((p) => { if (vivo) setPlanes(p || []); }).catch(() => {});
-    return () => { vivo = false; };
-  }, [token]);
 
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
   const poner = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(0); setAbierto(null); };
-  const hayFiltros = q !== "" || filtros.tipo !== "" || filtros.estado !== "" || filtros.plan !== "";
+  const hayFiltros = q !== "" || filtros.tipo !== "" || filtros.estado !== "";
   const limpiar = () => { setBusqueda(""); setQ(""); setFiltros(filtrosInicialesNegocios()); setPagina(0); };
 
   const ejecutar = async (n, accion, mensaje) => {
@@ -189,8 +165,8 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
     }
   };
 
-  const aprobar = (n, plan) => ejecutar(n,
-    () => (n.tipo === "TALLER" ? resolverAprobacionTaller : resolverAprobacionTienda)(token, n.id, { aprobado: true, planCodigo: plan }),
+  const aprobar = (n) => ejecutar(n,
+    () => (n.tipo === "TALLER" ? resolverAprobacionTaller : resolverAprobacionTienda)(token, n.id, { aprobado: true }),
     `${n.nombre} quedó aprobado.`);
   const rechazar = (n, motivo) => ejecutar(n,
     () => (n.tipo === "TALLER" ? resolverAprobacionTaller : resolverAprobacionTienda)(token, n.id, { aprobado: false, motivo }),
@@ -198,18 +174,18 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
   const alternar = (n) => ejecutar(n,
     () => (n.tipo === "TALLER" ? activarDesactivarTaller : activarDesactivarTienda)(token, n.id, !n.activo),
     n.activo ? `${n.nombre} quedó en pausa.` : `${n.nombre} volvió a estar activo.`);
-  const cambiarPlan = (n, plan) => ejecutar(n, () => activarPlan(token, n.tipo, n.id, plan), `Plan de ${n.nombre} actualizado.`);
 
   const lista = datos?.negocios;
   const items = lista?.items || [];
   const total = lista?.total || 0;
   const porEstado = datos?.porEstado || {};
-  const totalNegocios = Object.values(porEstado).reduce((s, n) => s + n, 0);
+  // "Todos" no incluye los archivados (como el backend): se ven solo con su filtro
+  const totalNegocios = Object.entries(porEstado).filter(([e]) => e !== "ARCHIVADO").reduce((s, [, n]) => s + n, 0);
 
   return (
     <div className="ss-panel--plataforma pp-root neg-root">
       <EncabezadoPagina titulo="Tiendas y talleres"
-        descripcion="Aprobación, plan, calificación, actividad y perfil de cada negocio del marketplace." />
+        descripcion="Aprobación, calificación, actividad y perfil de cada negocio del marketplace." />
 
       {aviso && <Alerta tono="ok" className="pp-bloque-sep" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
 
@@ -226,14 +202,6 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
               onClick={() => poner({ tipo: t.valor })}>{t.label}</button>
           ))}
         </div>
-        <label className="pp-filtros__select">
-          Plan
-          <select className="ui-field__input" value={filtros.plan} onChange={(e) => poner({ plan: e.target.value })}>
-            <option value="">Todos los planes</option>
-            <option value={SIN_PLAN}>Sin plan</option>
-            {planes.map((p) => <option key={p.codigo} value={p.codigo}>{p.nombre}</option>)}
-          </select>
-        </label>
       </div>
       <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Estado de aprobación">
         <button type="button" className="ui-chip" aria-pressed={filtros.estado === ""} onClick={() => poner({ estado: "" })}>
@@ -273,7 +241,6 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
                   <tr>
                     <th scope="col">Negocio</th>
                     <th scope="col">Estado</th>
-                    <th scope="col">Plan</th>
                     <th scope="col">Calificación</th>
                     <th scope="col">Actividad</th>
                     <th scope="col">Perfil</th>
@@ -301,7 +268,6 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
                             </span>
                           </td>
                           <td data-label="Estado"><ChipEstado tono={est.tono}>{est.label}</ChipEstado></td>
-                          <td data-label="Plan">{n.plan ? n.plan.nombre : <span className="pp-tenue">Sin plan</span>}</td>
                           <td data-label="Calificación">
                             {n.tipo === "TALLER"
                               ? <Calificacion rating={n.calificacion} calificaciones={n.calificaciones} compacta />
@@ -331,9 +297,9 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
                         </tr>
                         {abiertoAqui && (
                           <tr className="neg-fila-gestion">
-                            <td colSpan={8}>
-                              <Gestion n={n} planes={planes} procesando={procesando} error={errorAccion}
-                                onAprobar={aprobar} onRechazar={rechazar} onCambiarPlan={cambiarPlan} onAlternar={alternar} />
+                            <td colSpan={7}>
+                              <Gestion n={n} procesando={procesando} error={errorAccion}
+                                onAprobar={aprobar} onRechazar={rechazar} onAlternar={alternar} />
                             </td>
                           </tr>
                         )}

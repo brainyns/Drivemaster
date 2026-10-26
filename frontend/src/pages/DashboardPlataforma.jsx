@@ -13,6 +13,12 @@ import "../css/panel-plataforma.css";
 
 const REFRESCO_MS = 60000;
 
+/** "8 de oct" */
+const diaMes = (f) => {
+  if (!f) return null;
+  const d = new Date(f);
+  return `${d.getDate()} de ${d.toLocaleDateString("es-CO", { month: "short" }).replace(".", "")}`;
+};
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 const hora = (iso) => new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
@@ -104,7 +110,7 @@ export default function DashboardPlataforma({ token, onIr }) {
 
   const encabezado = (
     <EncabezadoPagina titulo="Panel de la plataforma"
-      descripcion="DriveMaster administra el marketplace, no vende: sus ingresos son la comisión y las suscripciones."
+      descripcion="DriveMaster administra el marketplace, no vende: su ingreso es la comisión del 10% sobre cada pago."
       acciones={(
         <>
           {d && <span className="pp-actualizado">Actualizado a las {hora(d.generadoEn)}</span>}
@@ -135,7 +141,6 @@ export default function DashboardPlataforma({ token, onIr }) {
 
   const urgentes = urgentesDashboard(d.alertas);
   const ordenes = barras(d.ordenesPorEstado, ESTADOS_ORDEN, Object.keys(ESTADOS_ORDEN));
-  const planes = barras(d.suscripcionesPorPlan);
 
   return (
     <div className="ss-panel--plataforma pp-root">
@@ -200,12 +205,24 @@ export default function DashboardPlataforma({ token, onIr }) {
         <h2 id="pp-dinero" className="pp-titulo">Dinero</h2>
         <div className="ui-indicadores">
           <Indicador titulo="Total movido" valor={cop(d.dinero.movido)}
-            pie="Pagos aprobados que pasaron por la plataforma. No es ingreso de DriveMaster." />
+            pie="Pagos aprobados que pasaron por la plataforma, con IVA y envío. No es ingreso de DriveMaster." />
+          {/* La base y la comisión salen de lo mismo: comisión = 10 % de la base (mismo período, sin reembolsos) */}
+          <Indicador titulo="Base de la comisión" valor={cop(d.dinero.baseComision)}
+            pie={`Valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}, sin reembolsos.`} />
           <Indicador titulo="Comisión registrada" valor={cop(d.dinero.comisionRegistrada)} tono="ok"
-            pie={`Informativa, al ${d.dinero.comisionPct}% vigente en cada pago. No es dinero cobrado.`}
+            pie={`${d.dinero.comisionPct} % sobre el valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}. Informativa: no es dinero cobrado.`}
             onClick={() => ir("reportes-plataforma", "comision")} />
-          <Indicador titulo="Por liquidar a negocios" valor={cop(d.dinero.porLiquidar)}
-            pie="Ya habilitado para pagar a talleres y tiendas." onClick={() => ir("liquidaciones")} />
+          {d.dinero.liquidacionAutomatica && !d.dinero.porLiquidar ? (
+            <Indicador titulo="Liquidado automáticamente (simulado)" valor={cop(d.dinero.liquidadoSimulado)}
+              pie={`La liquidación simulada paga a cada negocio al entregarse el pedido. Liquidado en total: ${cop(d.dinero.liquidado)}.`}
+              onClick={() => ir("liquidaciones")} />
+          ) : (
+            <Indicador titulo="Por liquidar a negocios" valor={cop(d.dinero.porLiquidar)}
+              pie={`Ya habilitado para pagar a talleres y tiendas. Liquidado en total: ${cop(d.dinero.liquidado)}.`}
+              onClick={() => ir("liquidaciones")} />
+          )}
+          <Indicador titulo="En espera de entrega" valor={cop(d.dinero.enEspera)}
+            pie="De los negocios: se habilita para pagar cuando el pedido se entrega o se recibe." />
         </div>
       </section>
 
@@ -228,10 +245,7 @@ export default function DashboardPlataforma({ token, onIr }) {
           ]} />
       </div>
 
-      <div className="pp-columnas">
-        <Barras id="pp-ordenes" titulo="Órdenes de servicio por estado" vacio="Todavía no hay órdenes de servicio." filas={ordenes} />
-        <Barras id="pp-planes" titulo="Suscripciones activas por plan" vacio="Todavía no hay suscripciones activas." filas={planes} />
-      </div>
+      <Barras id="pp-ordenes" titulo="Órdenes de servicio por estado" vacio="Todavía no hay órdenes de servicio." filas={ordenes} />
     </div>
   );
 }

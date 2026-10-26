@@ -169,7 +169,11 @@ export default function ProductosPlataforma({ token }) {
                             </span>
                           </span>
                         </td>
-                        <td data-label="Tienda">{p.tienda || <span className="pp-tenue">Sin tienda</span>}</td>
+                        <td data-label="Tienda">
+                          {p.tienda || <span className="pp-tenue">Sin tienda</span>}
+                          {/* Producto activo pero de una tienda en pausa o archivada: el cliente no lo ve */}
+                          {p.tienda && p.tiendaActiva === false && <span className="pp-sub">Tienda inactiva: no se ve en el catálogo</span>}
+                        </td>
                         <td data-label="Categoría">{etiquetaCategoria(p.categoria) || <span className="pp-tenue">Sin categoría</span>}</td>
                         <td data-label="Stock" className={`pp-num${sinStock ? " lst-agotado" : ""}`}>
                           {p.tipo === "ENCARGO" ? "Bajo pedido" : (p.stock ?? 0)}

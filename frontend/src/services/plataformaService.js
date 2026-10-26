@@ -62,6 +62,11 @@ export async function reporteComisionPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/reportes/comision${consulta(filtros)}`, { headers: headers(token) }), "No se pudo cargar el reporte de comisión.");
 }
 
+/** Pedidos de la tienda o solicitudes del taller que siguen en curso de un usuario (para avisar antes de desactivarlo). */
+export async function enCursoUsuario(token, id) {
+  return leer(await apiFetch(`${BASE}/usuarios/${encodeURIComponent(id)}/en-curso`, { headers: headers(token) }), "No se pudo revisar lo que tiene en curso.");
+}
+
 /** Usuarios del sistema (correo enmascarado). Filtros: q, rol, estado, pagina, tamano. */
 export async function usuariosPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/usuarios${consulta(filtros)}`, { headers: headers(token) }), "No se pudieron cargar los usuarios.");
