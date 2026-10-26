@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken } from "../../services/authService";
 import { cotizacionesDelTaller } from "../../services/cotizacionService";
 import CotizacionDetalle from "../../components/servicio/CotizacionDetalle";
+import BotonPdfCotizacion from "../../components/servicio/BotonPdfCotizacion";
 import { formatFechaHora, formatPrecio } from "../../components/servicio/estadosServicio";
 import { ESTADOS_COTIZACION_TALLER } from "../../components/servicio/estadosTaller";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
@@ -30,8 +31,8 @@ function diasRestantes(fecha, ahora) {
 }
 
 /**
- * Acciones de una cotización aprobada: ir al trabajo, imprimirla y ver las versiones anteriores de la misma
- * solicitud (vienen en la misma lista del taller, no hace falta pedirlas). El PDF depende del backend.
+ * Acciones de una cotización aprobada: ir al trabajo, imprimirla, descargar su PDF (lo genera el backend) y ver las
+ * versiones anteriores de la misma solicitud (vienen en la misma lista del taller, no hace falta pedirlas).
  */
 function AccionesAprobada({ cotizacion: c, versiones, ahora, onImprimir, onIrAlTrabajo }) {
   const [verVersiones, setVerVersiones] = useState(false);
@@ -47,6 +48,7 @@ function AccionesAprobada({ cotizacion: c, versiones, ahora, onImprimir, onIrAlT
         <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={onImprimir}>
           <Icon name="file" size={16} /> Imprimir
         </button>
+        <BotonPdfCotizacion cotizacionId={c.id} />
         {versiones.length > 0 && (
           <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" aria-expanded={verVersiones}
             aria-controls={`tc-versiones-${c.id}`} onClick={() => setVerVersiones((v) => !v)}>

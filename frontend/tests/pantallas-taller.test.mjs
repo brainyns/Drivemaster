@@ -413,3 +413,14 @@ test("Trabajos: pasar a lista sin pruebas pide confirmación", () => {
   assert.ok(pagina.includes("onClick={() => setConfirmandoSinPruebas(true)}"), "el botón abre la confirmación");
   assert.match(pagina, /<ConfirmarAccion titulo="¿Marcar como lista sin registrar pruebas\?"/);
 });
+
+test("Cotización en PDF: el taller lo descarga junto a Imprimir y el cliente desde su servicio", () => {
+  const servicio = leer("../src/services/cotizacionService.js");
+  assert.ok(servicio.includes("`${BASE}/${cotizacionId}/pdf`"), "lo genera el backend");
+  const boton = leer("../src/components/servicio/BotonPdfCotizacion.jsx");
+  assert.ok(boton.includes("Descargar PDF") && boton.includes('role="alert"'), "botón con su error a la vista");
+  const taller = leer("../src/pages/taller/TallerCotizaciones.jsx");
+  assert.match(taller, /> Imprimir\s*<\/button>\s*<BotonPdfCotizacion cotizacionId=\{c\.id\} \/>/, "junto a Imprimir en las aprobadas");
+  const cliente = leer("../src/pages/MisServicios.jsx");
+  assert.ok(cliente.includes("<BotonPdfCotizacion cotizacionId={vigente.id} />"), "también en la vista del cliente");
+});

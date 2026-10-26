@@ -6,7 +6,9 @@ import com.drivemaster.drivemaster.dto.RespuestaCotizacionRequest;
 import com.drivemaster.drivemaster.security.LimiteIntentos;
 import com.drivemaster.drivemaster.service.CotizacionService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -62,6 +64,18 @@ public class CotizacionController {
     @GetMapping("/orden/{ordenId}")
     public ResponseEntity<List<CotizacionDTO>> deOrden(@PathVariable String ordenId, Authentication auth) {
         return ResponseEntity.ok(service.deOrden(auth.getName(), ordenId));
+    }
+
+    /** PDF de la cotización (mismo contenido que la impresión). Solo el cliente dueño y el taller que la emitió. */
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> pdf(@PathVariable String id, Authentication auth) {
+        byte[] pdf = service.pdf(auth.getName(), id);
+        String ref = id.substring(Math.max(0, id.length() - 6)).toUpperCase();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Cotizacion-" + ref + ".pdf\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     @PostMapping("/{id}/responder")

@@ -9,6 +9,7 @@ import { misOrdenes } from "../services/ordenServicioService";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
 import RespuestaCotizacion from "../components/servicio/RespuestaCotizacion";
+import BotonPdfCotizacion from "../components/servicio/BotonPdfCotizacion";
 import PagoLocal from "../components/servicio/PagoLocal";
 import ConfirmarRecepcion from "../components/servicio/ConfirmarRecepcion";
 import {
@@ -92,6 +93,9 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
           <h2 className="ss-bloque__titulo">Cotización</h2>
           {error && <p className="ss-alerta" role="alert">{error}</p>}
           <CotizacionDetalle cotizacion={vigente} />
+          <div className="ss-acciones">
+            <BotonPdfCotizacion cotizacionId={vigente.id} />
+          </div>
           {vigente.puedeResponder && solicitud.estado === "COTIZADA" && <RespuestaCotizacion onResponder={responder} />}
           {solicitud.estado === "APROBADA" && pagoLocal && (
             <PagoLocal token={token} pago={pagoLocal} onCerrar={() => setPagoLocal(null)}

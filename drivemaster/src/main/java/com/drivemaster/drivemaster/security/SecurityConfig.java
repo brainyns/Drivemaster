@@ -182,6 +182,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/cotizaciones/taller").hasRole("TALLER")
                         .requestMatchers(HttpMethod.POST, "/api/cotizaciones/*/responder").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.GET, "/api/cotizaciones/orden/*").authenticated()
+                        // PDF: el servicio deja pasar solo al cliente dueño y al taller que la emitió
+                        .requestMatchers(HttpMethod.GET, "/api/cotizaciones/*/pdf").hasAnyRole("CLIENTE", "TALLER")
                         .requestMatchers("/api/cotizaciones/**").denyAll()
 
                         // Catálogo marketplace: la consulta es pública; la compra y sus códigos son del CLIENTE

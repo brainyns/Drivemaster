@@ -48,6 +48,8 @@ class PermisosPanelPlataformaTest {
     private static final List<Ruta> RUTAS = List.of(
             // Solo SUPERADMIN: usuarios, reportes, finanzas, proveedores y configuración
             ruta(HttpMethod.GET, "/api/cotizaciones/taller", "TALLER"),
+            // PDF de una cotización: además, el servicio solo deja al cliente dueño y al taller que la emitió
+            ruta(HttpMethod.GET, "/api/cotizaciones/c1/pdf", "CLIENTE", "TALLER"),
             ruta(HttpMethod.GET, "/api/talleres/mi-taller/informes", "TALLER"),
             ruta(HttpMethod.PATCH, "/api/talleres/mi-taller/datos", "TALLER"),
             ruta(HttpMethod.GET, "/api/usuarios", "SUPERADMIN"),

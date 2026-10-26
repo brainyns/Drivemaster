@@ -55,6 +55,7 @@ class CotizacionServiceTest {
     private LiquidacionService liquidacion;
     private CotizacionService service;
     private TallerService tallerService;
+    private UsuarioService usuarioService;
 
     private Taller taller;
     private OrdenServicio orden;
@@ -70,7 +71,7 @@ class CotizacionServiceTest {
         avisos = mock(AvisosSolicitudServicio.class);
         liquidacion = mock(LiquidacionService.class);
         tallerService = mock(TallerService.class);
-        UsuarioService usuarioService = mock(UsuarioService.class);
+        usuarioService = mock(UsuarioService.class);
         VehiculoService vehiculoService = mock(VehiculoService.class);
         ProductoService productoService = mock(ProductoService.class);
         BuscadorRepuestosService buscador = mock(BuscadorRepuestosService.class);
@@ -393,5 +394,57 @@ class CotizacionServiceTest {
         assertEquals(respondida, dto.getFechaRespuesta());
         assertEquals("Encontré un mejor precio", dto.getMotivoRespuesta());
         assertFalse(dto.isPuedeResponder());
+    }
+
+    // ─── PDF: solo el cliente dueño y el taller que la emitió ────────────────
+
+    private Cotizacion cotizacionParaPdf() {
+        Cotizacion c = Cotizacion.builder().id("c9").ordenId("o1").version(1).estado(Cotizacion.APROBADA)
+                .tallerId("t1").tallerNombre("AutoMax").usuarioId("u1").vehiculoDescripcion("Chevrolet Spark")
+                .items(new ArrayList<>(List.of(CotizacionItem.builder().tipo(CotizacionItem.MANO_OBRA).descripcion("Revisión")
+                        .modalidad(CotizacionItem.POR_ITEM).cantidad(1).precioUnitario(100_000.0).subtotal(100_000.0).build())))
+                .subtotal(100_000.0).ivaPct(19.0).iva(19_000.0).total(119_000.0).anticipoDiagnostico(0.0).totalAPagar(119_000.0)
+                .build();
+        when(cotizacionRepository.findById("c9")).thenReturn(Optional.of(c));
+        when(tallerService.obtenerEntidad("t1")).thenReturn(taller);
+        return c;
+    }
+
+    @Test
+    void elClienteDuenoYElTallerQueLaEmitioDescarganElPdf() {
+        cotizacionParaPdf();
+        when(usuarioService.obtenerPorCorreo(CORREO_TALLER))
+                .thenReturn(Usuario.builder().id("ut").correo(CORREO_TALLER).rol("TALLER").build());
+
+        byte[] delCliente = service.pdf(CORREO_CLIENTE, "c9");
+        byte[] delTaller = service.pdf(CORREO_TALLER, "c9");
+
+        assertEquals("%PDF", new String(delCliente, 0, 4));
+        assertEquals("%PDF", new String(delTaller, 0, 4));
+    }
+
+    @Test
+    void otroClienteOtroTallerYElAdminNoDescarganElPdf() {
+        cotizacionParaPdf();
+        when(usuarioService.obtenerPorCorreo("otro@demo.com"))
+                .thenReturn(Usuario.builder().id("u2").correo("otro@demo.com").rol("CLIENTE").build());
+        when(usuarioService.obtenerPorCorreo("otro-taller@demo.com"))
+                .thenReturn(Usuario.builder().id("ut2").correo("otro-taller@demo.com").rol("TALLER").build());
+        when(tallerService.obtenerPorUsuario("otro-taller@demo.com")).thenReturn(Taller.builder().id("t2").build());
+        when(usuarioService.obtenerPorCorreo("admin@demo.com"))
+                .thenReturn(Usuario.builder().id("ua").correo("admin@demo.com").rol("ADMIN").build());
+
+        for (String correo : List.of("otro@demo.com", "otro-taller@demo.com", "admin@demo.com")) {
+            ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.pdf(correo, "c9"), correo);
+            assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode(), "no revela que la cotización existe: " + correo);
+        }
+    }
+
+    @Test
+    void elPdfDeUnaCotizacionQueNoExisteEs404() {
+        when(cotizacionRepository.findById("nada")).thenReturn(Optional.empty());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.pdf(CORREO_CLIENTE, "nada"));
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
     }
 }

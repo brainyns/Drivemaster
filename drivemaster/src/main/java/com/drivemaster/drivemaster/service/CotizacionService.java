@@ -18,6 +18,7 @@ import com.drivemaster.drivemaster.repository.CotizacionRepository;
 import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
 import com.drivemaster.drivemaster.util.CalculadoraCotizacion;
+import com.drivemaster.drivemaster.util.PdfCotizacionBuilder;
 import com.drivemaster.drivemaster.util.TokenSeguro;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -198,6 +199,41 @@ public class CotizacionService {
                 .filter(c -> !EstadoOrden.TALLER.equals(actor) || orden.getTallerId().equals(c.getTallerId()))
                 .map(CotizacionDTO::completa)
                 .toList();
+    }
+
+    /**
+     * PDF de una cotización. Solo el cliente dueño de la cotización o el taller que la emitió; nadie más, ni otro
+     * taller ni el ADMIN. Cualquier otro recibe 404, para no revelar que la cotización existe.
+     */
+    public byte[] pdf(String correo, String cotizacionId) {
+        Cotizacion cotizacion = cotizacionRepository.findById(cotizacionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cotización no encontrada"));
+        Usuario usuario = usuarioService.obtenerPorCorreo(correo);
+        String actor = EstadoOrden.actorDeRol(usuario.getRol());
+        Taller taller = null;
+        boolean acceso;
+        if (EstadoOrden.CLIENTE.equals(actor)) {
+            acceso = usuario.getId().equals(cotizacion.getUsuarioId());
+        } else if (EstadoOrden.TALLER.equals(actor)) {
+            taller = tallerService.obtenerPorUsuario(correo);
+            acceso = taller.getId().equals(cotizacion.getTallerId());
+        } else {
+            acceso = false;
+        }
+        if (!acceso) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cotización no encontrada");
+        }
+        if (taller == null) taller = tallerDe(cotizacion);
+        return PdfCotizacionBuilder.construir(cotizacion, taller);
+    }
+
+    /** Taller de la cotización para los datos del PDF; si ya no existe, el PDF usa el nombre guardado en la cotización. */
+    private Taller tallerDe(Cotizacion cotizacion) {
+        try {
+            return cotizacion.getTallerId() != null ? tallerService.obtenerEntidad(cotizacion.getTallerId()) : null;
+        } catch (ResponseStatusException e) {
+            return null;
+        }
     }
 
     /** Todas las cotizaciones del taller de la sesión, la más reciente primero. El taller sale de la sesión, nunca de un parámetro. */
