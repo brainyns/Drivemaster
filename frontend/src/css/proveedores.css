@@ -10,18 +10,7 @@
 .prv-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
 .prv-eliminar.ui-btn { color: var(--ui-error); }
 
-.prv-paginas {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 12px;
-  font-size: 0.8125rem;
-  color: var(--ui-muted);
-}
 
-.prv-paginas__botones { display: inline-flex; align-items: center; gap: 10px; }
 
 @media (max-width: 600px) {
   .prv-barra .ui-buscador { max-width: none; }

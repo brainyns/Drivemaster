@@ -5,6 +5,8 @@ import { miTienda } from "../services/tiendaService";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import EstadoNegocio from "../components/EstadoNegocio";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import Indicador from "../components/ui/Indicador";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
@@ -107,6 +109,9 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
     const f = FILTROS.find((x) => x.key === filtro) || FILTROS[0];
     return ordenar(productos.filter(f.filtro).filter((p) => coincide(p, busqueda)));
   }, [productos, filtro, busqueda]);
+  // 20 por página; vuelve a la primera al cambiar de filtro o de búsqueda (los contadores siguen contando todo)
+  const pag = usePaginacion(visibles.length, filtro + "|" + busqueda);
+  const enPagina = paginar(visibles, pag.pagina);
 
   const titulo = "Productos";
   const descripcion = tienda
@@ -200,7 +205,7 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {visibles.map((p) => (
+                      {enPagina.map((p) => (
                         <tr key={p.id}>
                           <td data-label="Producto" className="ui-table__titulo">
                             <span className="prt-producto">
@@ -238,7 +243,7 @@ function Productos({ onNuevo, onEditar, token, esTienda = false }) {
                 </div>
               </div>
             )}
-            <p className="prt-pie">Mostrando {visibles.length} de {plural(productos.length, "producto")}</p>
+            <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de productos" />
           </>
         )}
 

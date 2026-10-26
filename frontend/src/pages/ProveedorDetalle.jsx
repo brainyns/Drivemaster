@@ -3,6 +3,8 @@ import { obtenerProveedor } from "../services/proveedorService";
 import { listarCompras } from "../services/compraService";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import Indicador from "../components/ui/Indicador";
 import ChipEstado from "../components/ui/ChipEstado";
 import Dato from "../components/ui/Dato";
@@ -44,6 +46,8 @@ export default function ProveedorDetalle({ id, onVolver, onEditar, onCompra, tok
   }, [cargar]);
 
   const datos = useMemo(() => comprasDeProveedor(compras || [], id), [compras, id]);
+  const pag = usePaginacion(datos.compras.length);
+  const enPagina = paginar(datos.compras, pag.pagina);
 
   if (!proveedor) {
     return (
@@ -105,7 +109,7 @@ export default function ProveedorDetalle({ id, onVolver, onEditar, onCompra, tok
                   </tr>
                 </thead>
                 <tbody>
-                  {datos.compras.map((c) => (
+                  {enPagina.map((c) => (
                     <tr key={c.id}>
                       <td data-label="Fecha">{formatoFecha(c.fecha)}</td>
                       <td data-label="Compra" className="ui-table__titulo"><strong className="cmp-ref">{refCompra(c.id)}</strong></td>
@@ -125,6 +129,9 @@ export default function ProveedorDetalle({ id, onVolver, onEditar, onCompra, tok
                   ))}
                 </tbody>
               </table>
+              <div className="ui-card__cuerpo">
+                <Paginacion pagina={pag.pagina} total={datos.compras.length} onCambiar={pag.cambiar} etiqueta="Páginas del historial de compras" />
+              </div>
             </div>
           )}
         </section>

@@ -218,3 +218,27 @@ test("plural: singular con 1 y plural con el resto, con separador de miles", asy
   assert.equal(plural(1, "producto"), "1 producto");
   assert.equal(plural(3, "día"), "3 días");
 });
+
+test("Paginación: 20 por página, el rango que se muestra y los números con huecos", async () => {
+  const { POR_PAGINA, paginar, paginasVisibles, rangoMostrado, totalPaginas } = await import("../src/components/ui/reglasPaginacion.js");
+  assert.equal(POR_PAGINA, 20);
+  const lista = Array.from({ length: 135 }, (_, i) => i + 1);
+  assert.equal(totalPaginas(135), 7);
+  assert.equal(totalPaginas(0), 1, "una lista vacía tiene una página");
+  assert.deepEqual(paginar(lista, 1).slice(0, 2), [1, 2]);
+  assert.deepEqual(paginar(lista, 7), lista.slice(120), "la última trae lo que sobra");
+  assert.deepEqual(rangoMostrado(1, 135), { desde: 1, hasta: 20 }, "Mostrando 1–20 de 135");
+  assert.deepEqual(rangoMostrado(7, 135), { desde: 121, hasta: 135 });
+  assert.deepEqual(rangoMostrado(1, 0), { desde: 0, hasta: 0 });
+  assert.deepEqual(paginasVisibles(1, 1), [1]);
+  assert.deepEqual(paginasVisibles(1, 7), [1, 2, 3, "…", 7]);
+  assert.deepEqual(paginasVisibles(6, 12), [1, "…", 4, 5, 6, 7, 8, "…", 12]);
+  assert.deepEqual(paginasVisibles(4, 7), [1, 2, 3, 4, 5, 6, 7], "sin huecos de un solo número");
+});
+
+test("Paginación: todas las listas del panel usan el mismo componente", () => {
+  const paginas = ["Productos", "Compras", "Proveedores", "Movimientos", "PedidosTienda", "ProveedorDetalle", "TallerSolicitudes",
+    "taller/TallerCotizaciones", "taller/OrdenesAnteriores", "Aprobaciones", "AdminTalleres", "Liquidaciones", "ProblemasEnvios",
+    "admin/RetirosSinRecoger", "Usuarios", "ClientesPlataforma", "NegociosPlataforma", "ProductosPlataforma", "PedidosEnvios"];
+  for (const p of paginas) assert.ok(leer(`../src/pages/${p}.jsx`).includes("<Paginacion "), `${p} usa <Paginacion>`);
+});

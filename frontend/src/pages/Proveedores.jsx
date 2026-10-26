@@ -4,6 +4,8 @@ import { listarCompras } from "../services/compraService";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import { ESTADOS_COMPRA, estadoCompra, refCompra, topProveedores } from "./tienda/comprasTienda";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import Indicador from "../components/ui/Indicador";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
@@ -16,7 +18,6 @@ import { coincideProveedor, recibePdf } from "./tienda/proveedoresTienda";
 import { formatoFecha, plural } from "../utils/formato";
 import "../css/proveedores.css";
 
-const POR_PAGINA = 15;
 
 /** Directorio de los proveedores de la tienda: a quién le compra y a dónde llega el PDF de cada compra. */
 export default function Proveedores({ onNuevo, onEditar, onDetalle, token }) {
@@ -25,7 +26,6 @@ export default function Proveedores({ onNuevo, onEditar, onDetalle, token }) {
   const [error, setError] = useState(null);
   const [reintentando, setReintentando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
-  const [pagina, setPagina] = useState(1);
   const [eliminando, setEliminando] = useState(null);
   const [exportando, setExportando] = useState(false);
   const [aviso, setAviso] = useState(null); // { tono, texto }
@@ -56,9 +56,9 @@ export default function Proveedores({ onNuevo, onEditar, onDetalle, token }) {
 
   const visibles = useMemo(() => proveedores.filter((p) => coincideProveedor(p, busqueda))
     .sort((a, b) => String(a.nombre || "").localeCompare(String(b.nombre || ""), "es")), [proveedores, busqueda]);
-  const totalPaginas = Math.max(1, Math.ceil(visibles.length / POR_PAGINA));
-  const paginaActual = Math.min(pagina, totalPaginas);
-  const enPagina = visibles.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+  // 20 por página; vuelve a la primera al cambiar la búsqueda
+  const pag = usePaginacion(visibles.length, busqueda);
+  const enPagina = paginar(visibles, pag.pagina);
   // El correo es opcional: la tarjeta cuenta a quién le llega el PDF y explica por qué a los demás no
   const recibenPdf = proveedores.filter(recibePdf).length;
   const sinCorreo = proveedores.filter((p) => !p.correo).length;
@@ -141,7 +141,7 @@ export default function Proveedores({ onNuevo, onEditar, onDetalle, token }) {
               <Icon name="search" size={18} />
               <label htmlFor="prv-busqueda" className="ui-sr">Buscar por nombre, NIT, correo o teléfono</label>
               <input id="prv-busqueda" className="ui-field__input" type="search" placeholder="Nombre, NIT, correo o teléfono"
-                value={busqueda} onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }} />
+                value={busqueda} onChange={(e) => { setBusqueda(e.target.value); }} />
             </div>
           </div>
 
@@ -201,18 +201,7 @@ export default function Proveedores({ onNuevo, onEditar, onDetalle, token }) {
                   </table>
                 </div>
               </div>
-              <nav className="prv-paginas" aria-label="Páginas de proveedores">
-                <span>Mostrando {(paginaActual - 1) * POR_PAGINA + 1}–{Math.min(paginaActual * POR_PAGINA, visibles.length)} de {visibles.length}</span>
-                {totalPaginas > 1 && (
-                  <span className="prv-paginas__botones">
-                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={paginaActual === 1}
-                      onClick={() => setPagina(paginaActual - 1)}>Anterior</button>
-                    <span aria-current="page">Página {paginaActual} de {totalPaginas}</span>
-                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={paginaActual === totalPaginas}
-                      onClick={() => setPagina(paginaActual + 1)}>Siguiente</button>
-                  </span>
-                )}
-              </nav>
+              <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de proveedores" />
             </>
           )}
 

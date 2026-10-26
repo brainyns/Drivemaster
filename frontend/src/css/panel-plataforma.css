@@ -112,19 +112,7 @@
 /* Mientras llega otra página o filtro, la lista anterior queda a la vista, atenuada */
 .pp-actualizando { opacity: 0.6; transition: opacity var(--ui-dur) ease; }
 
-.pp-paginas {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 12px;
-  font-size: 0.8125rem;
-  color: var(--ui-muted);
-  font-variant-numeric: tabular-nums;
-}
 
-.pp-paginas__botones { display: inline-flex; align-items: center; gap: 10px; }
 
 .pp-tenue { color: var(--ui-muted); }
 .pp-num, .ui-table th.pp-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }

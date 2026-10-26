@@ -5,6 +5,7 @@ import { resolverAprobacionTienda, activarDesactivarTienda } from "../services/t
 import { listarPlanes, activarPlan } from "../services/suscripcionService";
 import { capitalizar, formatoFecha, unir } from "../utils/formato";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Calificacion from "../components/ui/Calificacion";
 import LogoNegocio from "../components/ui/LogoNegocio";
@@ -202,7 +203,6 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
   const lista = datos?.negocios;
   const items = lista?.items || [];
   const total = lista?.total || 0;
-  const paginas = Math.max(1, Math.ceil(total / TAMANO));
   const porEstado = datos?.porEstado || {};
   const totalNegocios = Object.values(porEstado).reduce((s, n) => s + n, 0);
 
@@ -344,18 +344,7 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
               </table>
             </div>
           </div>
-          <nav className="pp-paginas" aria-label="Páginas de negocios">
-            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + items.length} de {total}</span>
-            {paginas > 1 && (
-              <span className="pp-paginas__botones">
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
-                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
-                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
-                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-              </span>
-            )}
-          </nav>
+          <Paginacion pagina={pagina + 1} total={total} porPagina={TAMANO} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de negocios" />
         </>
       )}
     </div>

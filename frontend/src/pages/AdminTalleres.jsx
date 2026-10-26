@@ -8,6 +8,8 @@ import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import { capitalizar } from "../utils/formato";
 import Calificacion from "../components/ui/Calificacion";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import Indicador from "../components/ui/Indicador";
 import ChipEstado from "../components/ui/ChipEstado";
 import LogoNegocio from "../components/ui/LogoNegocio";
@@ -189,6 +191,9 @@ export default function AdminTalleres() {
   }, [talleres, busqueda, filtro]);
 
   const conteoFiltro = { todos: resumen.total, activos: resumen.activos, inactivos: resumen.inactivos };
+  // 20 por página; vuelve a la primera al cambiar de filtro o de búsqueda
+  const pag = usePaginacion(visibles.length, filtro + "|" + busqueda);
+  const enPagina = paginar(visibles, pag.pagina);
 
   // Pausar un taller pide confirmación; activarlo no
   const [pausando, setPausando] = useState(null);
@@ -283,7 +288,7 @@ export default function AdminTalleres() {
                 </tr>
               </thead>
               <tbody>
-                {visibles.map(t => {
+                {enPagina.map(t => {
                   const esp = t.especialidades || [];
                   return (
                     <tr key={t.id}>
@@ -334,6 +339,9 @@ export default function AdminTalleres() {
             </table>
           </div>
         </div>
+      )}
+      {visibles.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de talleres" />
       )}
 
       {pedidosDe && (

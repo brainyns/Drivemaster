@@ -1426,3 +1426,25 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   .ui-indicador--enlace, .ui-indicador__flecha, .ui-seccion, .ui-progreso__barra { transition: none; }
   .ui-indicador--enlace:active, .ui-indicador--enlace:hover .ui-indicador__flecha { transform: none; }
 }
+
+/* ── Paginación de las listas (Paginacion): "Mostrando 1–20 de 135", anterior, números y siguiente ── */
+.ui-paginacion {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  margin-top: 12px; font-size: 0.8125rem; color: var(--ui-muted);
+}
+.ui-paginacion__texto { font-variant-numeric: tabular-nums; }
+.ui-paginacion__botones { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ui-paginacion__numeros { display: flex; align-items: center; gap: 2px; }
+.ui-paginacion__numero {
+  min-width: 34px; height: 34px; padding: 0 8px; border: 1px solid transparent; border-radius: var(--ui-r-md);
+  background: none; color: var(--ui-text); font: inherit; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.ui-paginacion__numero:hover { background: var(--ui-hover); }
+.ui-paginacion__numero[aria-current="page"] { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-text); cursor: default; }
+.ui-paginacion__numero:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+.ui-paginacion__hueco { min-width: 20px; text-align: center; }
+@media (max-width: 600px) {
+  .ui-paginacion { justify-content: center; }
+  .ui-paginacion__texto { width: 100%; text-align: center; }
+  .ui-paginacion__numero { min-width: 32px; height: 32px; }
+}

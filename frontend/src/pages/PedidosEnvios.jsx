@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { pedidosPlataforma } from "../services/plataformaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -52,7 +53,6 @@ export default function PedidosEnvios({ token, filtroInicial }) {
   const lista = datos?.pedidos;
   const items = lista?.items || [];
   const total = lista?.total || 0;
-  const paginas = lista ? Math.max(1, Math.ceil(total / (lista.tamano || TAMANO))) : 1;
   const hayFiltros = filtros.estado !== "" || filtros.tiendaId !== "" || filtros.entrega !== "" || filtros.atrasados;
   const totalPedidos = Object.values(datos?.porEstado || {}).reduce((s, n) => s + n, 0);
 
@@ -189,18 +189,7 @@ export default function PedidosEnvios({ token, filtroInicial }) {
               </table>
             </div>
           </div>
-          <nav className="pp-paginas" aria-label="Páginas de pedidos">
-            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + items.length} de {total}</span>
-            {paginas > 1 && (
-              <span className="pp-paginas__botones">
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
-                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
-                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
-                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-              </span>
-            )}
-          </nav>
+          <Paginacion pagina={pagina + 1} total={total} porPagina={lista?.tamano || TAMANO} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de pedidos" />
         </>
       )}
     </div>

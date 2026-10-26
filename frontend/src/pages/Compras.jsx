@@ -3,6 +3,8 @@ import { listarCompras } from "../services/compraService";
 import { listarProveedores } from "../services/proveedorService";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import Indicador from "../components/ui/Indicador";
 import Campo from "../components/ui/Campo";
 import Alerta from "../components/ui/Alerta";
@@ -14,7 +16,6 @@ import { ESTADOS_COMPRA, estadoCompra, filtrarCompras, refCompra, resumenCompras
 import { plural } from "../utils/formato";
 import "../css/compras-tienda.css";
 
-const POR_PAGINA = 15;
 const SIN_FILTROS = { busqueda: "", desde: "", hasta: "", minimo: "", maximo: "", estado: "" };
 const FILTROS_ESTADO = [["", "Todas"], ["PENDIENTE", "Pendientes"], ["RECIBIDA", "Recibidas"], ["CANCELADA", "Canceladas"]];
 const nombreMes = (ahora, menos) => new Date(new Date(ahora).getFullYear(), new Date(ahora).getMonth() - menos, 1)
@@ -37,7 +38,6 @@ function Compras({ onNueva, onDetalle, token }) {
   const [reintentando, setReintentando] = useState(false);
   const [filtros, setFiltros] = useState(SIN_FILTROS);
   const [masFiltros, setMasFiltros] = useState(false);
-  const [pagina, setPagina] = useState(1);
   const [ahora] = useState(() => Date.now());
 
   const cargar = useCallback(async () => {
@@ -65,13 +65,13 @@ function Compras({ onNueva, onDetalle, token }) {
   const datos = useMemo(() => resumenCompras(compras, ahora), [compras, ahora]);
   const top = useMemo(() => topProveedores(compras, nombreProveedor), [compras, nombreProveedor]);
   const conteoEstado = useMemo(() => Object.fromEntries(FILTROS_ESTADO.map(([k]) => [k, k ? compras.filter((c) => estadoCompra(c) === k).length : compras.length])), [compras]);
-  const totalPaginas = Math.max(1, Math.ceil(visibles.length / POR_PAGINA));
-  const paginaActual = Math.min(pagina, totalPaginas);
-  const enPagina = visibles.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+  // 20 por página; vuelve a la primera al cambiar los filtros o la búsqueda
+  const pag = usePaginacion(visibles.length, JSON.stringify(filtros));
+  const enPagina = paginar(visibles, pag.pagina);
   const filtrosExtra = [filtros.desde || filtros.hasta, filtros.minimo !== "" || filtros.maximo !== ""].filter(Boolean).length;
   const hayFiltros = filtros.busqueda || filtros.estado || filtrosExtra > 0;
 
-  const filtrar = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(1); };
+  const filtrar = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); };
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
 
   const nueva = (
@@ -232,18 +232,7 @@ function Compras({ onNueva, onDetalle, token }) {
                   </table>
                 </div>
               </div>
-              <nav className="cmp-paginas" aria-label="Páginas de compras">
-                <span>Mostrando {(paginaActual - 1) * POR_PAGINA + 1}–{Math.min(paginaActual * POR_PAGINA, visibles.length)} de {visibles.length}</span>
-                {totalPaginas > 1 && (
-                  <span className="cmp-paginas__botones">
-                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={paginaActual === 1}
-                      onClick={() => setPagina(paginaActual - 1)}>Anterior</button>
-                    <span aria-current="page">Página {paginaActual} de {totalPaginas}</span>
-                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={paginaActual === totalPaginas}
-                      onClick={() => setPagina(paginaActual + 1)}>Siguiente</button>
-                  </span>
-                )}
-              </nav>
+              <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de compras" />
             </>
           )}
         </>

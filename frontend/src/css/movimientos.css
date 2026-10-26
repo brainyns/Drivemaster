@@ -40,18 +40,7 @@
 .mov-tabla .ui-table__num svg { vertical-align: -1px; color: var(--ui-muted); }
 .mov-motivo { max-width: 280px; overflow-wrap: anywhere; }
 
-.mov-paginas {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 12px;
-  font-size: 0.8125rem;
-  color: var(--ui-muted);
-}
 
-.mov-paginas__botones { display: inline-flex; align-items: center; gap: 10px; }
 
 @media (max-width: 760px) {
   .mov-tipos { grid-template-columns: minmax(0, 1fr); }

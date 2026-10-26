@@ -37,18 +37,7 @@
 .usr-rol-fijo { align-content: start; }
 .usr-rol-fijo .usr-rol-fijo__valor { display: flex; align-items: center; min-height: 46px; margin: 0; font-weight: 600; color: var(--ui-text); }
 
-.usr-paginas {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 12px;
-  font-size: 0.8125rem;
-  color: var(--ui-muted);
-}
 
-.usr-paginas__botones { display: inline-flex; align-items: center; gap: 10px; }
 
 @media (max-width: 760px) {
   .usr-filtros .ui-buscador { max-width: none; flex-basis: 100%; }

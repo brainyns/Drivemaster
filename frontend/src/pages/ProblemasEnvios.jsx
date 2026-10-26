@@ -4,6 +4,8 @@ import { problemasDeEnvio, resolverProblemaEnvio } from "../services/pedidoTiend
 import { formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -62,6 +64,8 @@ export default function ProblemasEnvios() {
   const abiertos = useMemo(() => (problemas || []).filter(abierto), [problemas]);
   const resueltos = useMemo(() => (problemas || []).filter((p) => !abierto(p)), [problemas]);
   const visibles = ver === "ABIERTOS" ? abiertos : resueltos;
+  const pag = usePaginacion(visibles.length, ver);
+  const enPagina = paginar(visibles, pag.pagina);
 
   const pedir = (pedido, resolucion) => {
     setMotivo("");
@@ -152,7 +156,7 @@ export default function ProblemasEnvios() {
                 </tr>
               </thead>
               <tbody>
-                {visibles.map((p) => {
+                {enPagina.map((p) => {
                   const res = RESOLUCION[p.resolucionProblema];
                   return (
                     <tr key={p.id}>
@@ -197,6 +201,9 @@ export default function ProblemasEnvios() {
             </table>
           </div>
         </div>
+      )}
+      {visibles.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de problemas de envío" />
       )}
 
       {decision && (

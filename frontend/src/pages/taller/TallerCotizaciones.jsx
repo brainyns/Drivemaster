@@ -6,6 +6,8 @@ import BotonPdfCotizacion from "../../components/servicio/BotonPdfCotizacion";
 import { formatFechaHora, formatPrecio } from "../../components/servicio/estadosServicio";
 import { ESTADOS_COTIZACION_TALLER } from "../../components/servicio/estadosTaller";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
+import Paginacion from "../../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../../components/ui/reglasPaginacion";
 import ChipEstado from "../../components/ui/ChipEstado";
 import Alerta from "../../components/ui/Alerta";
 import EstadoVacio from "../../components/ui/EstadoVacio";
@@ -123,6 +125,9 @@ export default function TallerCotizaciones({ irA }) {
 
   const conteo = useMemo(() => contarPorFiltro(cotizaciones, ahora), [cotizaciones, ahora]);
   const visibles = filtrar(cotizaciones, filtro, ahora);
+  // 20 por página; vuelve a la primera al cambiar de pestaña (los contadores siguen contando todo)
+  const pag = usePaginacion(visibles.length, filtro);
+  const enPagina = paginar(visibles, pag.pagina);
   const pendienteTotal = cotizaciones
     .filter((c) => c.estado === "EMITIDA" && !vencida(c, ahora))
     .reduce((s, c) => s + (c.total || 0), 0);
@@ -166,7 +171,7 @@ export default function TallerCotizaciones({ irA }) {
         )
       ) : (
         <ul className="tc-lista">
-          {visibles.map((c) => {
+          {enPagina.map((c) => {
             const abierto = abierta === c.id;
             const rechazada = c.estado === "RECHAZADA";
             return (
@@ -208,6 +213,9 @@ export default function TallerCotizaciones({ irA }) {
             );
           })}
         </ul>
+      )}
+      {visibles.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de cotizaciones" />
       )}
     </div>
   );

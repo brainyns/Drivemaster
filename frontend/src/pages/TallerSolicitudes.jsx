@@ -19,6 +19,8 @@ import { ESTADOS_TALLER, estadoDeSolicitud } from "../components/servicio/estado
 import { tiempoRelativo } from "./taller/resumenTaller";
 import { errorDiaCita, hora12, horasDeCita, semanaDesdeFranjas } from "./taller/horarioTaller";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -299,6 +301,9 @@ export default function TallerSolicitudes({
     .filter(FILTROS.find((f) => f.key === filtro).filtro)
     .filter((s) => !termino || [s.vehiculoDescripcion, s.vehiculoPlaca, s.clienteNombre, refSolicitud(s.id)]
       .some((t) => t && String(t).toLowerCase().includes(termino)));
+  // 20 por página; vuelve a la primera al cambiar de pestaña o de búsqueda (los contadores siguen contando todo)
+  const pag = usePaginacion(visibles.length, modo + "|" + filtro + "|" + busqueda);
+  const enPagina = paginar(visibles, pag.pagina);
   const seleccionada = solicitudes.find((s) => s.id === seleccionadaId) || null;
   const mecanicosActivos = mecanicos.filter((m) => m.activo !== false);
 
@@ -792,10 +797,10 @@ export default function TallerSolicitudes({
           </EstadoVacio>
         )
       ) : modo === "trabajos" ? (
-        <ul className="st-lista">{visibles.map(tarjetaTrabajo)}</ul>
+        <ul className="st-lista">{enPagina.map(tarjetaTrabajo)}</ul>
       ) : (
         <ul className="st-lista">
-          {visibles.map((s) => (
+          {enPagina.map((s) => (
             <li key={s.id}>
               <button type="button" className="ss-tarjeta st-tarjeta st-tarjeta--boton" onClick={() => abrir(s)}>
                 <span className="st-tarjeta__cabecera">
@@ -822,6 +827,10 @@ export default function TallerSolicitudes({
             </li>
           ))}
         </ul>
+      )}
+      {visibles.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar}
+          etiqueta={modo === "trabajos" ? "Páginas de trabajos" : "Páginas de solicitudes"} />
       )}
     </div>
   );

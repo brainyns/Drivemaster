@@ -3,9 +3,6 @@
    inferior son de ui.css; la foto es ImagenProducto del catálogo. Aquí la rejilla de dos columnas, el campo de
    dinero, el margen, los vehículos compatibles, la foto y las sugerencias de la IA. Tokens --ui-*, los dos temas. */
 
-/* Usa todo el ancho disponible hasta 1440 px; solo en monitores muy anchos queda espacio a la derecha */
-.pfm-root { max-width: 1440px; }
-
 .pfm-alerta { margin-bottom: var(--ui-sp-4); }
 
 .pfm-layout {

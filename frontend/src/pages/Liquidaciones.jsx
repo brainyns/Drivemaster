@@ -4,6 +4,8 @@ import { listarRepartos, liquidarReparto, listarReembolsos, marcarReembolsado, o
 import { formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Indicador from "../components/ui/Indicador";
 import Alerta from "../components/ui/Alerta";
@@ -130,6 +132,9 @@ export default function Liquidaciones() {
 
   const abrirMarcar = (f) => { setMarcandoId(f.id); setNota(""); setNumero(""); setError(null); };
   const listaVacia = !cargando && !errorCarga && filas.length === 0;
+  // 20 por página; vuelve a la primera al cambiar de vista o de estado
+  const pag = usePaginacion(filas.length, vista + "|" + estado);
+  const enPagina = paginar(filas, pag.pagina);
 
   return (
     <div className="ss-panel--plataforma pp-root liq-root">
@@ -193,7 +198,7 @@ export default function Liquidaciones() {
                 </tr>
               </thead>
               <tbody>
-                {filas.map((f) => {
+                {enPagina.map((f) => {
                   const pagable = esRepartos ? sePuedePagar(f) : f.estado === "PENDIENTE";
                   return (
                     <tr key={f.id} className={f.estado === "FALLIDO" ? "liq-fila--fallida" : undefined}>
@@ -246,6 +251,9 @@ export default function Liquidaciones() {
             </table>
           </div>
         </div>
+      )}
+      {filas.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={filas.length} onCambiar={pag.cambiar} etiqueta="Páginas de liquidaciones" />
       )}
 
       {marcando && (

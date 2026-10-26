@@ -5,6 +5,7 @@ import { usuariosPlataforma } from "../services/plataformaService";
 import { errorDeRespuesta } from "../utils/errores";
 import { formatoFecha } from "../utils/formato";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -294,7 +295,6 @@ export default function Usuarios({ token }) {
   };
 
   const total = datos?.total || 0;
-  const paginas = Math.max(1, Math.ceil(total / TAMANO));
   const porRol = datos?.porRol || {};
   const totalCuentas = Object.values(porRol).reduce((s, n) => s + n, 0);
 
@@ -435,18 +435,7 @@ export default function Usuarios({ token }) {
               </table>
             </div>
           </div>
-          <nav className="usr-paginas" aria-label="Páginas de usuarios">
-            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + datos.items.length} de {total}</span>
-            {paginas > 1 && (
-              <span className="usr-paginas__botones">
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
-                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
-                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
-                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-              </span>
-            )}
-          </nav>
+          <Paginacion pagina={pagina + 1} total={total} porPagina={TAMANO} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de usuarios" />
         </>
       )}
 

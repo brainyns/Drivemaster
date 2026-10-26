@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { exportarMovimientos, listarMovimientos, registrarMovimiento } from "../services/movimientoService";
 import { listarProductos, listarProductosMiTienda } from "../services/productoService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import Indicador from "../components/ui/Indicador";
 import SeccionEditable from "../components/ui/SeccionEditable";
 import Campo from "../components/ui/Campo";
@@ -20,7 +22,6 @@ import {
 import { plural } from "../utils/formato";
 import "../css/movimientos.css";
 
-const POR_PAGINA = 15;
 const VACIO = { productoId: "", tipo: "ENTRADA", cantidad: "", motivo: "" };
 
 const fecha = (f) => (f ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—");
@@ -106,7 +107,6 @@ function Movimientos({ token, esTienda = false }) {
   const [reintentando, setReintentando] = useState(false);
   const [registrando, setRegistrando] = useState(false);
   const [filtros, setFiltros] = useState({ busqueda: "", tipo: "", desde: "", hasta: "" });
-  const [pagina, setPagina] = useState(1);
 
   const cargar = useCallback(async () => {
     try {
@@ -131,9 +131,9 @@ function Movimientos({ token, esTienda = false }) {
   const porId = useMemo(() => Object.fromEntries(productos.map((p) => [p.id, p])), [productos]);
   const visibles = useMemo(() => filtrarMovimientos(movimientos, filtros, (id) => porId[id]), [movimientos, filtros, porId]);
   const datos = useMemo(() => resumenMovimientos(movimientos), [movimientos]);
-  const totalPaginas = Math.max(1, Math.ceil(visibles.length / POR_PAGINA));
-  const paginaActual = Math.min(pagina, totalPaginas);
-  const enPagina = visibles.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+  // 20 por página; vuelve a la primera al cambiar los filtros o la búsqueda
+  const pag = usePaginacion(visibles.length, JSON.stringify(filtros));
+  const enPagina = paginar(visibles, pag.pagina);
   const hayFiltros = filtros.busqueda || filtros.tipo || filtros.desde || filtros.hasta;
   const [exportando, setExportando] = useState(null); // "xlsx" | "pdf" mientras se genera
   const exportar = async (formato) => {
@@ -148,7 +148,7 @@ function Movimientos({ token, esTienda = false }) {
     }
   };
 
-  const filtrar = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(1); };
+  const filtrar = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); };
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
   const guardado = async (texto) => {
     setRegistrando(false);
@@ -299,20 +299,7 @@ function Movimientos({ token, esTienda = false }) {
                   </table>
                 </div>
               </div>
-              <nav className="mov-paginas" aria-label="Páginas de movimientos">
-                <span>
-                  Mostrando {(paginaActual - 1) * POR_PAGINA + 1}–{Math.min(paginaActual * POR_PAGINA, visibles.length)} de {visibles.length}
-                </span>
-                {totalPaginas > 1 && (
-                  <span className="mov-paginas__botones">
-                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={paginaActual === 1}
-                      onClick={() => setPagina(paginaActual - 1)}>Anterior</button>
-                    <span aria-current="page">Página {paginaActual} de {totalPaginas}</span>
-                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={paginaActual === totalPaginas}
-                      onClick={() => setPagina(paginaActual + 1)}>Siguiente</button>
-                  </span>
-                )}
-              </nav>
+              <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de movimientos" />
             </>
           )}
         </>

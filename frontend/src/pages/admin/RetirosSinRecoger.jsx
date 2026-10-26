@@ -7,6 +7,8 @@ import Alerta from "../../components/ui/Alerta";
 import EstadoVacio from "../../components/ui/EstadoVacio";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Campo from "../../components/ui/Campo";
+import Paginacion from "../../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../../components/ui/reglasPaginacion";
 import { avisar } from "../../components/ui/avisar";
 import { capitalizar, unir } from "../../utils/formato";
 
@@ -47,6 +49,15 @@ export default function RetirosSinRecoger({ token }) {
   const decididos = useMemo(() => (lista || []).filter((r) => !abierto(r)), [lista]);
   // Los que se decidió seguir esperando siguen listos: se pueden cancelar si el cliente nunca llega
   const esperando = useMemo(() => decididos.filter((r) => r.resolucionRetiro === "SEGUIR_ESPERANDO" && r.estado === "LISTO_PARA_RETIRAR"), [decididos]);
+
+  // Una sola lista en orden: por decidir, los que se decidió seguir esperando (aún se pueden cancelar) y los demás
+  const filas = useMemo(() => [
+    ...pendientes.map((r) => ({ r, conEsperar: true })),
+    ...esperando.map((r) => ({ r, conEsperar: false })),
+    ...decididos.filter((r) => !esperando.includes(r)).map((r) => ({ r, decidido: true })),
+  ], [pendientes, esperando, decididos]);
+  const pag = usePaginacion(filas.length);
+  const enPagina = paginar(filas, pag.pagina);
 
   const pedir = (retiro, tipo) => { setMotivo(""); setErrorDecision(null); setDecision({ retiro, tipo }); };
 
@@ -158,13 +169,14 @@ export default function RetirosSinRecoger({ token }) {
                 </tr>
               </thead>
               <tbody>
-                {pendientes.map((r) => fila(r, acciones(r, true)))}
-                {esperando.map((r) => fila(r, acciones(r, false)))}
-                {decididos.filter((r) => !esperando.includes(r)).map((r) => fila(r, null))}
+                {enPagina.map(({ r, conEsperar, decidido }) => fila(r, decidido ? null : acciones(r, conEsperar)))}
               </tbody>
             </table>
           </div>
         </div>
+      )}
+      {filas.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={filas.length} onCambiar={pag.cambiar} etiqueta="Páginas de retiros sin recoger" />
       )}
 
       {decision && (

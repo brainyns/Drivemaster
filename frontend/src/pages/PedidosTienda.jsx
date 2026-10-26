@@ -6,6 +6,8 @@ import {
 import { listarProductosMiTienda } from "../services/productoService";
 import { ESTADOS_PEDIDO, MOTIVOS_NO_DESPACHO, formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -167,6 +169,9 @@ export default function PedidosTienda({ param, irA }) {
     return ordenarPorUrgencia(pedidos.filter(f.filtro).filter((p) => coincide(p, busqueda)), ahora);
   }, [pedidos, filtro, busqueda, ahora]);
   const abierto = pedidos.find((p) => p.id === abiertoId) || null;
+  // 20 por página; vuelve a la primera al cambiar de pestaña o de búsqueda (los contadores siguen contando todo)
+  const pag = usePaginacion(visibles.length, filtro + "|" + busqueda);
+  const enPagina = paginar(visibles, pag.pagina);
 
   const reiniciarFormularios = () => {
     setModo(null);
@@ -538,7 +543,7 @@ export default function PedidosTienda({ param, irA }) {
         ) : !error && <EstadoVacio icono="box" titulo={tituloVacio} texto={textoVacio} />
       ) : (
         <ul className="pdt-lista">
-          {visibles.map((p) => {
+          {enPagina.map((p) => {
             const accion = accionFila(p);
             return (
             <li key={p.id}>
@@ -577,6 +582,9 @@ export default function PedidosTienda({ param, irA }) {
             );
           })}
         </ul>
+      )}
+      {visibles.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de pedidos" />
       )}
     </div>
   );

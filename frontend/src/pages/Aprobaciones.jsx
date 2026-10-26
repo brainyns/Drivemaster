@@ -6,6 +6,8 @@ import DrawerAdmin from "../components/admin/DrawerAdmin";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import MiniMapa from "../components/admin/MiniMapa";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import LogoNegocio from "../components/ui/LogoNegocio";
 import Alerta from "../components/ui/Alerta";
@@ -185,6 +187,9 @@ export default function Aprobaciones({ token }) {
   const lista = useMemo(() => negocios || [], [negocios]);
   const conteo = useMemo(() => conteoRevision(lista, tipo), [lista, tipo]);
   const visibles = useMemo(() => filtrarRevision(lista, { estado: filtro, tipo, busqueda }), [lista, filtro, tipo, busqueda]);
+  // 20 por página; vuelve a la primera al cambiar de filtro o de búsqueda (los contadores siguen contando todo)
+  const pag = usePaginacion(visibles.length, [filtro, tipo, busqueda].join("|"));
+  const enPagina = paginar(visibles, pag.pagina);
 
   // Nombre visible del plan ("Básico") a partir de su código ("BASICO")
   const nombrePlan = (codigo) => planes.find((p) => p.codigo === codigo)?.nombre || codigo;
@@ -316,7 +321,7 @@ export default function Aprobaciones({ token }) {
                 </tr>
               </thead>
               <tbody>
-                {visibles.map((n) => {
+                {enPagina.map((n) => {
                   const k = clave(n);
                   const ocupado = procesando === k;
                   const chip = chipRevision(n);
@@ -364,6 +369,9 @@ export default function Aprobaciones({ token }) {
             </table>
           </div>
         </div>
+      )}
+      {visibles.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de negocios" />
       )}
 
       {detalle && (
