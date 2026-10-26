@@ -306,6 +306,27 @@ public final class EmailServicioBuilder {
                         + "la tienda lo pedirá al entregarte el pedido y solo sirve una vez."));
     }
 
+    /** Recordatorio de un pedido listo que el cliente aún no retira (a los 3 y a los 7 días). */
+    public static String clienteRecordatorioRetiro(String cliente, PedidoTienda p, long dias) {
+        return plantilla("Retiro", "Tu pedido te sigue esperando",
+                saludo(cliente)
+                + parrafo("<strong>" + e(p.getTiendaNombre()) + "</strong> tiene listo tu pedido desde hace " + dias
+                        + (dias == 1 ? " día" : " días") + " y aún no lo has retirado.")
+                + recuadro("Retíralo en: <strong>" + e(unir(p.getTiendaDireccion(), p.getTiendaCiudad())) + "</strong><br/>"
+                        + "Horario: " + e(p.getTiendaHorario()))
+                + parrafo("Lleva tu <strong>código de retiro</strong> (el del correo de tu compra o uno nuevo desde Mis compras). "
+                        + "Si no puedes pasar, escríbenos: si pasan 15 días sin retirarlo, DriveMaster revisa el pedido."));
+    }
+
+    /** El ADMIN canceló un retiro que nadie recogió: se le devuelve el dinero al cliente. */
+    public static String clienteRetiroCancelado(String cliente, PedidoTienda p, double monto) {
+        return plantilla("Retiro", "Cancelamos tu pedido sin retirar",
+                saludo(cliente)
+                + parrafo("Tu pedido en <strong>" + e(p.getTiendaNombre()) + "</strong> estuvo listo varios días y no se retiró, "
+                        + "así que lo cancelamos.")
+                + recuadro("Te devolvemos <strong>$" + String.format("%,.0f", monto) + "</strong> al medio de pago que usaste."));
+    }
+
     public static String clienteEnvioEnCamino(String cliente, PedidoTienda p, int diasAutoconfirmacion) {
         return plantilla("Envío", "Tu pedido va en camino",
                 saludo(cliente)

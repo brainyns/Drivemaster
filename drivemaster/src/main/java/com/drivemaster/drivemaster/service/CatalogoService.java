@@ -197,7 +197,7 @@ public class CatalogoService {
 
     public static TiendaCatalogoDTO aTiendaDTO(Tienda t) {
         return new TiendaCatalogoDTO(t.getId(), t.getNombre(), t.getCiudad(), t.getBarrio(), t.getDireccion(),
-                t.getHorario(), t.getCostoEnvio() != null, t.getCostoEnvio(), t.getLogoUrl());
+                t.getHorario(), t.getCostoEnvio() != null, t.getCostoEnvio(), t.getLogoUrl(), t.getHorarioSemanal());
     }
 
     /** Mismo repuesto = misma referencia; sin referencia, mismo nombre. Sin distinguir mayúsculas ni tildes. */

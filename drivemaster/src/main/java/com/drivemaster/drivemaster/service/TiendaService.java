@@ -26,6 +26,9 @@ public interface TiendaService {
     /** Solo el teléfono de la tienda de la sesión (celular o fijo colombiano, ver TelefonoColombia). */
     TiendaDTO actualizarTelefono(String correoUsuario, String telefono);
 
+    /** Reemplaza el horario por días de la tienda (mismas reglas que el del taller) y regenera el texto que ve el cliente. */
+    TiendaDTO guardarHorario(String correoUsuario, java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> franjas);
+
     /** Tienda del usuario, solo si ya fue aprobada y está activa (403 en otro caso). */
     Tienda obtenerOperativaPorUsuario(String correoUsuario);
 

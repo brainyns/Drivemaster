@@ -21,6 +21,7 @@ public class TiendaDTO {
     private Double latitud;
     private Double longitud;
     private String horario;
+    private java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> horarioSemanal;
     // null = no hace envíos (solo retiro)
     private Double costoEnvio;
     // false = "completar datos": sus productos no se muestran en el catálogo

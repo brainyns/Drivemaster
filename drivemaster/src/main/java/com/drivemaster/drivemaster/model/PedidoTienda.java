@@ -117,6 +117,14 @@ public class PedidoTienda {
     private LocalDateTime codigoRetiroBloqueadoHasta;
     private LocalDateTime fechaListoRetiro;
     private LocalDateTime fechaRetirado;
+    // Retiro que nadie recoge (RetiroPendienteService): recordatorios al cliente enviados (1 a los 3 días, 2 a los 7)
+    // y, a los 15 días, desde cuándo lo revisa el ADMIN. La decisión es suya: SEGUIR_ESPERANDO o REEMBOLSO.
+    private Integer recordatoriosRetiro;
+    private LocalDateTime revisionRetiroDesde;
+    private String resolucionRetiro;
+    private LocalDateTime fechaResolucionRetiro;
+    private String motivoResolucionRetiro;
+    private String retiroResueltoPor;
 
     // Envío: confirmación de recepción por el cliente
     private LocalDateTime fechaRecibidoCliente;

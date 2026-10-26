@@ -35,7 +35,11 @@ public class Tienda {
     private Double longitud;
 
     // Horario de atención al público (retiro de compras del catálogo). Obligatorio junto con dirección y ciudad.
+    // Con horarioSemanal es el resumen que se genera de él (como Taller.horario); las tiendas que aún no lo configuran
+    // por días conservan aquí el texto libre que escribieron.
     private String horario;
+    // Horario por días, con las mismas reglas que el del taller (HorarioSemanal). null = aún en texto libre.
+    private java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> horarioSemanal;
     // Costo fijo de envío de la tienda, en pesos. null = la tienda no hace envíos (solo retiro).
     private Double costoEnvio;
 

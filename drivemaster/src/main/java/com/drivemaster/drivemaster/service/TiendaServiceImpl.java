@@ -138,6 +138,20 @@ public class TiendaServiceImpl implements TiendaService {
         return toDTO(tiendaRepository.save(tienda));
     }
 
+    @Override
+    public TiendaDTO guardarHorario(String correoUsuario, java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> franjas) {
+        Tienda tienda = obtenerPorUsuario(correoUsuario);
+        var porDia = com.drivemaster.drivemaster.util.HorarioSemanal.validar(franjas);
+        if (porDia.values().stream().allMatch(java.util.List::isEmpty)) {
+            // El horario es obligatorio para vender: una semana toda cerrada es como no tenerlo
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Abre al menos un día: el cliente necesita saber cuándo pasar a retirar");
+        }
+        tienda.setHorarioSemanal(com.drivemaster.drivemaster.util.HorarioSemanal.semanaCompleta(porDia));
+        // El texto sigue llenándose: lo leen el catálogo, los pedidos con retiro (tiendaHorario) y tieneDatosCompletos
+        tienda.setHorario(com.drivemaster.drivemaster.util.HorarioSemanal.resumen(porDia));
+        return toDTO(tiendaRepository.save(tienda));
+    }
+
     private Tienda aplicarDatos(Tienda tienda, RegistroNegocioRequest r) {
         // El teléfono tiene su propio endpoint; si llega por aquí, con la misma validación
         if (r.getTelefono() != null) tienda.setTelefono(TelefonoColombia.validar(r.getTelefono()));
@@ -227,6 +241,7 @@ public class TiendaServiceImpl implements TiendaService {
                 .motivoRechazo(t.getMotivoRechazo())
                 .activo(t.getActivo())
                 .horario(t.getHorario())
+                .horarioSemanal(t.getHorarioSemanal())
                 .costoEnvio(t.getCostoEnvio())
                 .datosCompletos(t.tieneDatosCompletos())
                 .fechaRegistro(t.getFechaRegistro())

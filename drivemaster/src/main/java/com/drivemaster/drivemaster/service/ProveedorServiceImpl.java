@@ -77,6 +77,10 @@ public class ProveedorServiceImpl implements ProveedorService {
         actual.setTelefono(datos.getTelefono());
         actual.setCorreo(datos.getCorreo());
         actual.setEnviarPdfCompras(datos.getEnviarPdfCompras());
+        actual.setContacto(datos.getContacto());
+        actual.setDireccion(datos.getDireccion());
+        actual.setCondicionPago(datos.getCondicionPago());
+        actual.setDiasCredito(datos.getDiasCredito());
         return proveedorRepository.save(actual); // el dueño no cambia aunque el cuerpo traiga otro tiendaId
     }
 

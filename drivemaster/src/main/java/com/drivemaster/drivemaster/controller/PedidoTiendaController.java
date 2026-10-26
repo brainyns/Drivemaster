@@ -1,7 +1,9 @@
 package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.model.PedidoTienda;
+import com.drivemaster.drivemaster.dto.plataforma.RetiroSinRecogerDTO;
 import com.drivemaster.drivemaster.service.PedidoTiendaService;
+import com.drivemaster.drivemaster.service.RetiroPendienteService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,9 +22,25 @@ import java.util.Map;
 public class PedidoTiendaController {
 
     private final PedidoTiendaService service;
+    private final RetiroPendienteService retiros;
 
-    public PedidoTiendaController(PedidoTiendaService service) {
+    public PedidoTiendaController(PedidoTiendaService service, RetiroPendienteService retiros) {
         this.service = service;
+        this.retiros = retiros;
+    }
+
+    /** ADMIN: pedidos con retiro que llevan 15 días o más sin recogerse (abiertos y ya decididos). */
+    @GetMapping("/retiros-sin-recoger")
+    public ResponseEntity<List<RetiroSinRecogerDTO>> retirosSinRecoger() {
+        return ResponseEntity.ok(retiros.enRevision().stream().map(RetiroSinRecogerDTO::de).toList());
+    }
+
+    /** ADMIN: decide un retiro sin recoger (SEGUIR_ESPERANDO o REEMBOLSO), con motivo escrito. */
+    @PostMapping("/{id}/retiro/resolver")
+    public ResponseEntity<RetiroSinRecogerDTO> resolverRetiro(@PathVariable String id, @RequestBody Map<String, String> body,
+                                                              Authentication auth) {
+        return ResponseEntity.ok(RetiroSinRecogerDTO.de(retiros.resolver(auth.getName(), id,
+                body != null ? body.get("decision") : null, body != null ? body.get("motivo") : null)));
     }
 
     // ─── Tienda ──────────────────────────────────────────────────────────────

@@ -200,11 +200,11 @@ public class SecurityConfig {
                                 "/api/pagos-marketplace/cotizacion/*", "/api/pagos-marketplace/simular/*").hasRole("CLIENTE")
                         .requestMatchers("/api/pagos-marketplace/**").denyAll()
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/mios").hasRole("TIENDA")
-                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/problemas").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/problemas", "/api/pedidos-tienda/retiros-sin-recoger").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/pedidos-tienda/*/preparar", "/api/pedidos-tienda/*/despachar",
                                 "/api/pedidos-tienda/*/no-despachar", "/api/pedidos-tienda/*/listo-retiro").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/*/retiro/validar").hasRole("TIENDA")
-                        .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/*/problema/resolver").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/*/problema/resolver", "/api/pedidos-tienda/*/retiro/resolver").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/orden/*/recibidos").hasRole("TALLER")
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/orden/*").authenticated()
                         .requestMatchers("/api/pedidos-tienda/**").denyAll()

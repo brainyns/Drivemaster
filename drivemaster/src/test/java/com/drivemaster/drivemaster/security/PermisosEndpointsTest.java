@@ -6,6 +6,7 @@ import com.drivemaster.drivemaster.controller.TiendaController;
 import com.drivemaster.drivemaster.service.CatalogoService;
 import com.drivemaster.drivemaster.service.CompraCatalogoService;
 import com.drivemaster.drivemaster.service.PedidoTiendaService;
+import com.drivemaster.drivemaster.service.RetiroPendienteService;
 import com.drivemaster.drivemaster.service.RecepcionEnvioService;
 import com.drivemaster.drivemaster.service.TiendaService;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ class PermisosEndpointsTest {
     private MockMvc mvc;
 
     @MockBean private PedidoTiendaService pedidoTiendaService;
+    @MockBean private RetiroPendienteService retiroPendienteService;
     @MockBean private CatalogoService catalogoService;
     @MockBean private CompraCatalogoService compraCatalogoService;
     @MockBean private RecepcionEnvioService recepcionEnvioService;
@@ -228,5 +230,25 @@ class PermisosEndpointsTest {
                     || json.contains("Ana Cuenta") || json.contains("c-secreta") || json.contains("99") && json.contains("\"pagoId\":99"), json);
             org.junit.jupiter.api.Assertions.assertTrue(json.contains("\"pagoId\":null") && json.contains("\"clienteId\":null"), json);
         }
+    }
+
+    // ─── Retiros sin recoger: los decide solo ADMIN / SUPERADMIN ─────────────
+
+    @Test
+    void soloAdminYSuperadminVenYDecidenLosRetirosSinRecoger() throws Exception {
+        for (String rol : new String[]{"ADMIN", "SUPERADMIN"}) {
+            mvc.perform(get("/api/pedidos-tienda/retiros-sin-recoger").with(user("jefe@demo.com").roles(rol))).andExpect(status().isOk());
+            mvc.perform(post("/api/pedidos-tienda/p1/retiro/resolver").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"decision\":\"SEGUIR_ESPERANDO\",\"motivo\":\"Pasa el sábado\"}")
+                    .with(user("jefe@demo.com").roles(rol))).andExpect(status().isOk());
+        }
+        for (String rol : new String[]{"CLIENTE", "TIENDA", "TALLER"}) {
+            mvc.perform(get("/api/pedidos-tienda/retiros-sin-recoger").with(user("intruso@demo.com").roles(rol))).andExpect(status().isForbidden());
+            mvc.perform(post("/api/pedidos-tienda/p1/retiro/resolver").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"decision\":\"REEMBOLSO\",\"motivo\":\"x\"}")
+                    .with(user("intruso@demo.com").roles(rol))).andExpect(status().isForbidden());
+        }
+        verify(retiroPendienteService, times(2)).resolver(anyString(), org.mockito.ArgumentMatchers.eq("p1"),
+                org.mockito.ArgumentMatchers.eq("SEGUIR_ESPERANDO"), org.mockito.ArgumentMatchers.eq("Pasa el sábado"));
     }
 }

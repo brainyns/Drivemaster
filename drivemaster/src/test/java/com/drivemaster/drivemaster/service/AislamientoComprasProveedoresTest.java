@@ -74,7 +74,23 @@ class AislamientoComprasProveedoresTest {
 
         productoService = mock(ProductoService.class);
         movimientos = mock(MovimientoInventarioService.class);
-        compraService = new CompraServiceImpl(compraRepo, productoService, movimientos, proveedorService, mock(EmailsService.class));
+        // findAndModify en memoria: aplica el $set solo si la compra cumple el filtro (_id, tiendaId y estado)
+        org.springframework.data.mongodb.core.MongoTemplate mongo = mock(org.springframework.data.mongodb.core.MongoTemplate.class);
+        when(mongo.findAndModify(any(org.springframework.data.mongodb.core.query.Query.class),
+                any(org.springframework.data.mongodb.core.query.Update.class),
+                any(org.springframework.data.mongodb.core.FindAndModifyOptions.class), eq(Compra.class))).thenAnswer(i -> {
+            org.bson.Document filtro = ((org.springframework.data.mongodb.core.query.Query) i.getArgument(0)).getQueryObject();
+            Compra c = compras.get((String) filtro.get("_id"));
+            if (c == null || !filtro.get("tiendaId").equals(c.getTiendaId()) || !filtro.get("estado").equals(c.getEstado())) return null;
+            org.bson.Document set = (org.bson.Document) ((org.springframework.data.mongodb.core.query.Update) i.getArgument(1))
+                    .getUpdateObject().get("$set");
+            c.setEstado((String) set.get("estado"));
+            if (set.containsKey("fechaRecepcion")) c.setFechaRecepcion((java.time.LocalDateTime) set.get("fechaRecepcion"));
+            if (set.containsKey("fechaCancelacion")) c.setFechaCancelacion((java.time.LocalDateTime) set.get("fechaCancelacion"));
+            if (set.containsKey("motivoCancelacion")) c.setMotivoCancelacion((String) set.get("motivoCancelacion"));
+            return c;
+        });
+        compraService = new CompraServiceImpl(compraRepo, productoService, movimientos, proveedorService, mock(EmailsService.class), mongo);
 
         producto("pA", "A");
         producto("pB", "B");
@@ -279,5 +295,70 @@ class AislamientoComprasProveedoresTest {
         Proveedor cambio = proveedor("Alfa");
         cambio.setEnviarPdfCompras(false);
         assertEquals(Boolean.FALSE, proveedorService.actualizarEnTienda(alfa.getId(), cambio, "A").getEnviarPdfCompras());
+    }
+
+    @Test
+    void unaCompraPendienteSumaElStockSoloAlRecibirlaYUnaSolaVez() {
+        Proveedor provA = proveedorService.crearEnTienda(proveedor("Alfa"), "A");
+        Compra entrada = compraDe(provA.getId(), "pA", 4);
+        entrada.setEstado(Compra.PENDIENTE);
+        entrada.setMetodoPago("CREDITO");
+        entrada.setNumeroFactura("  FV-1020 ");
+
+        Compra pendiente = compraService.registrarCompra(entrada, tiendaA);
+        assertEquals(Compra.PENDIENTE, pendiente.getEstado());
+        assertEquals("FV-1020", pendiente.getNumeroFactura());
+        assertNull(pendiente.getFechaRecepcion());
+        verify(movimientos, never()).registrarMovimiento(anyString(), anyString(), any(), anyString(), anyString(), anyString());
+
+        Compra recibida = compraService.recibirCompra(pendiente.getId(), "A");
+        assertEquals(Compra.RECIBIDA, recibida.getEstado());
+        assertNotNull(recibida.getFechaRecepcion());
+        verify(movimientos, times(1)).registrarMovimiento(eq("pA"), eq("ENTRADA"), eq(4), anyString(), eq(pendiente.getId()), eq("uA"));
+
+        // Un segundo clic no vuelve a sumar, y una recibida no se cancela
+        assertEstado(HttpStatus.CONFLICT, () -> compraService.recibirCompra(pendiente.getId(), "A"));
+        assertEstado(HttpStatus.CONFLICT, () -> compraService.cancelarCompra(pendiente.getId(), "A", null));
+        verify(movimientos, times(1)).registrarMovimiento(anyString(), anyString(), any(), anyString(), anyString(), anyString());
+        // Otra tienda ni la ve
+        assertEstado(HttpStatus.NOT_FOUND, () -> compraService.recibirCompra(pendiente.getId(), "B"));
+    }
+
+    @Test
+    void unaCompraCanceladaNoTocaElStockNiSePuedeRecibir() {
+        Proveedor provA = proveedorService.crearEnTienda(proveedor("Alfa"), "A");
+        Compra entrada = compraDe(provA.getId(), "pA", 2);
+        entrada.setEstado(Compra.PENDIENTE);
+        Compra pendiente = compraService.registrarCompra(entrada, tiendaA);
+
+        Compra cancelada = compraService.cancelarCompra(pendiente.getId(), "A", "  El proveedor no tenía existencias ");
+        assertEquals(Compra.CANCELADA, cancelada.getEstado());
+        assertEquals("El proveedor no tenía existencias", cancelada.getMotivoCancelacion());
+        assertEstado(HttpStatus.CONFLICT, () -> compraService.recibirCompra(pendiente.getId(), "A"));
+        verify(movimientos, never()).registrarMovimiento(anyString(), anyString(), any(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void lasComprasAnterioresSinEstadoCuentanComoRecibidas() {
+        Proveedor provA = proveedorService.crearEnTienda(proveedor("Alfa"), "A");
+        Compra legado = compraService.registrarCompra(compraDe(provA.getId(), "pA", 1), tiendaA);
+        legado.setEstado(null); // como las guardadas antes de los estados
+        assertEquals(Compra.RECIBIDA, legado.estadoEfectivo());
+        assertEstado(HttpStatus.CONFLICT, () -> compraService.cancelarCompra(legado.getId(), "A", null));
+    }
+
+    @Test
+    void elEstadoInicialYElMetodoDePagoSeValidan() {
+        Proveedor provA = proveedorService.crearEnTienda(proveedor("Alfa"), "A");
+        Compra cancelada = compraDe(provA.getId(), "pA", 1);
+        cancelada.setEstado(Compra.CANCELADA);
+        Compra conCheque = compraDe(provA.getId(), "pA", 1);
+        conCheque.setMetodoPago("CHEQUE");
+        assertTrue(assertThrows(com.drivemaster.drivemaster.exception.DatosInvalidosException.class,
+                () -> compraService.registrarCompra(cancelada, tiendaA)).getCampos().containsKey("estado"));
+        assertTrue(assertThrows(com.drivemaster.drivemaster.exception.DatosInvalidosException.class,
+                () -> compraService.registrarCompra(conCheque, tiendaA)).getCampos().containsKey("metodoPago"));
+        // Sin estado: recibida, como siempre
+        assertEquals(Compra.RECIBIDA, compraService.registrarCompra(compraDe(provA.getId(), "pA", 1), tiendaA).getEstado());
     }
 }

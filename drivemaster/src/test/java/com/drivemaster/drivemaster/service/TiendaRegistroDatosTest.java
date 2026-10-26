@@ -149,4 +149,36 @@ class TiendaRegistroDatosTest {
         assertNull(dto.getHorario());
         assertNull(vieja.getHorario());
     }
+
+    private static com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO franja(com.drivemaster.drivemaster.model.DiaSemana dia,
+                                                                               String abre, String cierra) {
+        return com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO.builder().diaSemana(dia).abierto(abre != null)
+                .horaApertura(abre == null ? null : java.time.LocalTime.parse(abre))
+                .horaCierre(cierra == null ? null : java.time.LocalTime.parse(cierra)).build();
+    }
+
+    @Test
+    void elHorarioPorDiasUsaLasReglasDelTallerYRegeneraElTextoQueVeElCliente() {
+        Tienda tienda = Tienda.builder().id("t1").usuarioId("u1").horario("L-S 8am-6pm").build();
+        when(usuarioRepository.findByCorreo("tienda@demo.com")).thenReturn(Optional.of(Usuario.builder().id("u1").build()));
+        when(tiendaRepository.findByUsuarioId("u1")).thenReturn(Optional.of(tienda));
+        java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> semana = new java.util.ArrayList<>();
+        for (var d : java.util.List.of(com.drivemaster.drivemaster.model.DiaSemana.LUNES, com.drivemaster.drivemaster.model.DiaSemana.MARTES,
+                com.drivemaster.drivemaster.model.DiaSemana.MIERCOLES, com.drivemaster.drivemaster.model.DiaSemana.JUEVES,
+                com.drivemaster.drivemaster.model.DiaSemana.VIERNES)) {
+            semana.add(franja(d, "08:00", "18:00"));
+        }
+        semana.add(franja(com.drivemaster.drivemaster.model.DiaSemana.SABADO, "08:00", "13:00"));
+
+        TiendaDTO dto = service.guardarHorario("tienda@demo.com", semana);
+
+        assertEquals("Lun a Vie 8:00 a. m.–6:00 p. m.; Sáb 8:00 a. m.–1:00 p. m.; Dom cerrado", dto.getHorario());
+        assertEquals(7, dto.getHorarioSemanal().size(), "la semana completa, con el domingo cerrado");
+
+        // Mismas reglas que el taller: franjas que se cruzan o una semana toda cerrada no se guardan
+        semana.add(franja(com.drivemaster.drivemaster.model.DiaSemana.SABADO, "12:00", "14:00"));
+        assertThrows(ResponseStatusException.class, () -> service.guardarHorario("tienda@demo.com", semana));
+        assertThrows(ResponseStatusException.class, () -> service.guardarHorario("tienda@demo.com",
+                java.util.List.of(franja(com.drivemaster.drivemaster.model.DiaSemana.LUNES, null, null))));
+    }
 }

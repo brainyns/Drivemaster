@@ -36,6 +36,8 @@ public class Notificacion {
     public static final String PEDIDO_NO_DESPACHADO = "PEDIDO_NO_DESPACHADO";
     public static final String PEDIDO_ENVIADO = "PEDIDO_ENVIADO";
     public static final String PEDIDO_LISTO_RETIRO = "PEDIDO_LISTO_RETIRO";
+    public static final String RECORDATORIO_RETIRO = "RECORDATORIO_RETIRO";
+    public static final String RETIRO_CANCELADO = "RETIRO_CANCELADO";
     public static final String CODIGO_RETIRO = "CODIGO_RETIRO";
     public static final String PROBLEMA_ENVIO = "PROBLEMA_ENVIO";
     public static final String PROBLEMA_ENVIO_RESUELTO = "PROBLEMA_ENVIO_RESUELTO";

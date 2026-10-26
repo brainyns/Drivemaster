@@ -329,6 +329,35 @@ public class AvisosSolicitudServicio {
                 "Pasa por " + pedido.getTiendaNombre() + " con el código que te enviamos al correo.", "mis-compras", pedido.getCompraId());
     }
 
+    /** El cliente no ha retirado su pedido listo: recordatorio por correo y en la campanita. */
+    public void recordatorioRetiro(PedidoTienda pedido, long dias) {
+        usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(),
+                "Tu pedido te sigue esperando en " + pedido.getTiendaNombre(),
+                EmailServicioBuilder.clienteRecordatorioRetiro(c.getNombre(), pedido, dias)));
+        avisar(pedido.getClienteId(), Notificacion.RECORDATORIO_RETIRO, "Tu pedido te sigue esperando",
+                pedido.getTiendaNombre() + " tiene listo tu pedido hace " + dias + " días. Pasa con tu código de retiro.",
+                "mis-compras", pedido.getCompraId());
+    }
+
+    /** Un retiro lleva 15 días sin recogerse: lo revisa el ADMIN, que decide (no hay reembolso automático). */
+    public void retiroEnRevision(PedidoTienda pedido, long dias) {
+        alertaAdmin("Pedido sin retirar hace " + dias + " días", "problemas-envios",
+                "El pedido " + pedido.getId() + " de " + pedido.getTiendaNombre() + " está listo para retirar desde hace " + dias
+                        + " días y el cliente no lo ha recogido (ya recibió dos recordatorios). Total: "
+                        + Math.round(pedido.getTotal() != null ? pedido.getTotal() : 0)
+                        + " COP. Decide si se sigue esperando o se cancela con reembolso.");
+    }
+
+    /** El ADMIN canceló un retiro vencido con reembolso: se avisa al cliente. */
+    public void retiroCancelado(PedidoTienda pedido) {
+        double monto = pedido.getTotal() != null ? pedido.getTotal() : 0;
+        usuarioRepository.findById(pedido.getClienteId()).ifPresent(c -> enviar(c.getCorreo(),
+                "Cancelamos tu pedido sin retirar", EmailServicioBuilder.clienteRetiroCancelado(c.getNombre(), pedido, monto)));
+        avisar(pedido.getClienteId(), Notificacion.RETIRO_CANCELADO, "Cancelamos tu pedido sin retirar",
+                "No se retiró en " + pedido.getTiendaNombre() + ". Te devolveremos " + pesos(pedido.getTotal()) + ".",
+                "mis-compras", pedido.getCompraId());
+    }
+
     public void despachoAtrasado(PedidoTienda pedido) {
         alertaAdmin("Pedido sin despachar a tiempo", pedido.getTiendaNombre() + " no ha despachado el pedido "
                 + pedido.getId() + " para " + pedido.getTallerNombre() + " (solicitud " + pedido.getOrdenId() + "). "

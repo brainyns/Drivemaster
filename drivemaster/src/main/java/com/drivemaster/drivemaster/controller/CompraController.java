@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -41,6 +42,20 @@ public class CompraController {
     @PostMapping("/guardar")
     public ResponseEntity<Compra> guardar(@RequestBody Compra compra, Authentication auth) {
         return ResponseEntity.ok(compraService.registrarCompra(compra, alcanceTienda.tienda(auth)));
+    }
+
+    /** La mercancía de una compra pendiente llegó: pasa a RECIBIDA y se suma el stock. */
+    @PatchMapping("/{id}/recibir")
+    public ResponseEntity<Compra> recibir(@PathVariable String id, Authentication auth) {
+        return ResponseEntity.ok(compraService.recibirCompra(id, alcanceTienda.tienda(auth).getId()));
+    }
+
+    /** Una compra pendiente no va a llegar: pasa a CANCELADA (motivo opcional) sin tocar el stock. */
+    @PatchMapping("/{id}/cancelar")
+    public ResponseEntity<Compra> cancelar(@PathVariable String id, @RequestBody(required = false) Map<String, String> body,
+                                           Authentication auth) {
+        String motivo = body == null ? null : body.get("motivo");
+        return ResponseEntity.ok(compraService.cancelarCompra(id, alcanceTienda.tienda(auth).getId(), motivo));
     }
 
     @GetMapping("/{id}/pdf")
