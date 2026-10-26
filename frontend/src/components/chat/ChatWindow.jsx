@@ -3,6 +3,7 @@ import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
 import ChatLogo from './ChatLogo';
 import { sinMovimiento } from './movimiento';
+import { SUGERENCIAS } from './sugerencias';
 
 // Aviso de la burbuja de espera. El backend no informa en qué paso va el agente, así que no se
 // anuncian pasos ("Buscando en el catálogo…") que quizá no ocurren: solo se avisa si tarda.
@@ -12,20 +13,6 @@ const PISTAS = [
 const RETRASO_ESPERA = 380;
 const DISTANCIA_IR_FINAL = 140;
 
-const SUGERENCIAS = [
-  {
-    texto: 'Pastillas de freno', mensaje: 'Necesito pastillas de freno',
-    icono: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="2.5" /></svg>
-  },
-  {
-    texto: 'Filtro de aceite', mensaje: 'Busco un filtro de aceite',
-    icono: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" /></svg>
-  },
-  {
-    texto: 'Batería', mensaje: '¿Tienen batería para mi carro?',
-    icono: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M7 4v3M17 4v3M7 13h3M15.5 11.5v3M14 13h3" /></svg>
-  }
-];
 
 /** Burbuja "escribiendo" con tres puntos y un aviso que cambia si la respuesta tarda. */
 function BurbujaEspera() {
@@ -54,7 +41,7 @@ function BurbujaEspera() {
 // La conversación (mensajes, envío y sessionId) la maneja useChat en ChatWidget.
 const ChatWindow = ({
   messages, isTyping, onSend, onReintentar, onNuevaConversacion, onClose, onMinimize, isClosing,
-  inputValue, onInputChange, onVerProducto
+  inputValue, onInputChange, onVerProducto, entrada = '', pie
 }) => {
   // Una sugerencia se envía tal cual y no toca lo que el cliente tenga escrito en el campo.
   const onSugerencia = (texto) => { if (!isTyping) onSend(texto); };
@@ -166,7 +153,7 @@ const ChatWindow = ({
   const verSugerencias = soloSaludo && !vaciando;
 
   return (
-    <section className={`chat-window-container${isClosing ? ' cerrando' : ''}`} aria-label="Chat con el asistente de DriveMaster">
+    <section className={`chat-window-container${entrada}${isClosing ? ' cerrando' : ''}`} aria-label="Chat con el asistente de DriveMaster">
       <div className={`chat-header${isTyping ? ' escribiendo' : ''}`}>
         <div className="chat-header-left">
           <div className="chat-avatar">
@@ -234,6 +221,7 @@ const ChatWindow = ({
       </div>
 
       <ChatInput value={inputValue} onChange={onInputChange} onSend={enviarCampo} ocupado={isTyping} />
+      {pie}
     </section>
   );
 };
