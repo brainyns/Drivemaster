@@ -5,7 +5,9 @@ import com.drivemaster.drivemaster.dto.taller.InformesTallerDTO.Calificacion;
 import com.drivemaster.drivemaster.dto.taller.InformesTallerDTO.Comentario;
 import com.drivemaster.drivemaster.dto.taller.InformesTallerDTO.Informes;
 import com.drivemaster.drivemaster.dto.taller.InformesTallerDTO.Ingresos;
+import com.drivemaster.drivemaster.dto.taller.InformesTallerDTO.Mes;
 import com.drivemaster.drivemaster.dto.taller.InformesTallerDTO.Monto;
+import com.drivemaster.drivemaster.dto.taller.InformesTallerDTO.Semana;
 import com.drivemaster.drivemaster.dto.taller.InformesTallerDTO.Servicios;
 import com.drivemaster.drivemaster.dto.taller.InformesTallerDTO.TiempoRespuesta;
 import com.drivemaster.drivemaster.model.EstadoOrden;
@@ -18,11 +20,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -42,6 +46,8 @@ public class InformesTallerService {
     static final int MESES_POR_DEFECTO = 6;
     static final int MESES_MAXIMO = 24;
     static final int COMENTARIOS_RECIENTES = 5;
+    /** Semanas de la serie semanal (la de Inicio), contando la actual. */
+    static final int SEMANAS = 8;
     /** Orden en que se muestran los estados: del primer aviso a la entrega, y al final los cierres sin trabajo. */
     static final List<String> ESTADOS = List.of(
             EstadoOrden.ASIGNADA_A_TALLER, EstadoOrden.EN_REVISION, EstadoOrden.DIAGNOSTICADA, EstadoOrden.COTIZADA,
@@ -70,7 +76,7 @@ public class InformesTallerService {
         int m = meses(meses);
         // Inicio del primer mes en hora de Colombia, expresado en la hora del servidor (así se guardan las fechas)
         LocalDate inicio = hasta.minusMonths(m - 1L).atDay(1);
-        LocalDateTime desde = inicio.atStartOfDay(ZONA).withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
+        LocalDateTime desde = aServidor(inicio);
 
         List<OrdenServicio> todas = ordenRepository.findByTallerIdOrderByFechaCreacionDesc(tallerId);
         List<OrdenServicio> marketplace = todas.stream()
@@ -81,8 +87,69 @@ public class InformesTallerService {
                 .filter(o -> enPeriodo(o.getFechaCreacion(), desde))
                 .toList();
 
+        // Lo liquidado se pide una vez, desde lo más antiguo que piden la serie por mes y la de semanas
+        LocalDate lunesInicial = aColombia(ahora).with(DayOfWeek.MONDAY).minusWeeks(SEMANAS - 1L);
+        LocalDateTime desdeSemanas = aServidor(lunesInicial);
+        List<Object[]> liquidado = repartoRepository.liquidadoDesde(RepartoPago.TALLER, tallerId,
+                desdeSemanas.isBefore(desde) ? desdeSemanas : desde);
+
         return new Informes(ahora, m, inicio, servicios(delPeriodo), ingresos(tallerId, todas, desde),
-                tiempoRespuesta(tallerId, delPeriodo), calificacion(marketplace, desde));
+                tiempoRespuesta(tallerId, delPeriodo), calificacion(marketplace, desde),
+                serieMensual(YearMonth.from(inicio), m, marketplace, liquidado), serieSemanal(lunesInicial, liquidado));
+    }
+
+    // ─── Series: un punto por mes del periodo (o por semana), con 0 donde no hubo nada ─────────
+
+    static List<Mes> serieMensual(YearMonth primero, int meses, List<OrdenServicio> marketplace, List<Object[]> liquidado) {
+        Map<YearMonth, double[]> porMes = new LinkedHashMap<>();  // ingresos, entregados, solicitudes
+        for (int i = 0; i < meses; i++) porMes.put(primero.plusMonths(i), new double[3]);
+        for (Object[] fila : liquidado) {
+            double[] mes = porMes.get(mesDe(fila[0] instanceof LocalDateTime f ? f : null));
+            if (mes != null && fila[1] instanceof Number monto) mes[0] += monto.doubleValue();
+        }
+        for (OrdenServicio o : marketplace) {
+            double[] entregado = porMes.get(mesDe(fechaEntrega(o)));
+            if (entregado != null) entregado[1]++;
+            double[] creado = porMes.get(mesDe(o.getFechaCreacion()));
+            if (creado != null) creado[2]++;
+        }
+        List<Mes> serie = new ArrayList<>();
+        porMes.forEach((mes, v) -> serie.add(new Mes(mes.toString(), v[0], (long) v[1], (long) v[2])));
+        return serie;
+    }
+
+    static List<Semana> serieSemanal(LocalDate lunesInicial, List<Object[]> liquidado) {
+        double[] porSemana = new double[SEMANAS];
+        for (Object[] fila : liquidado) {
+            if (!(fila[0] instanceof LocalDateTime f) || !(fila[1] instanceof Number monto)) continue;
+            long semana = ChronoUnit.WEEKS.between(lunesInicial, aColombia(f));
+            if (!aColombia(f).isBefore(lunesInicial) && semana < SEMANAS) porSemana[(int) semana] += monto.doubleValue();
+        }
+        List<Semana> serie = new ArrayList<>();
+        for (int i = 0; i < SEMANAS; i++) serie.add(new Semana(lunesInicial.plusWeeks(i), porSemana[i]));
+        return serie;
+    }
+
+    /** Entrega: la fecha guardada al entregar; las solicitudes que no la tienen usan su evento ENTREGADA. */
+    private static LocalDateTime fechaEntrega(OrdenServicio o) {
+        if (!EstadoOrden.ENTREGADA.equals(o.getEstado())) return null;
+        if (o.getFechaEntrega() != null) return o.getFechaEntrega();
+        return o.getEventos() == null ? null : o.getEventos().stream()
+                .filter(e -> EstadoOrden.ENTREGADA.equals(e.getEstado()) && e.getFecha() != null)
+                .map(EventoOrden::getFecha).max(Comparator.naturalOrder()).orElse(null);
+    }
+
+    private static YearMonth mesDe(LocalDateTime fecha) {
+        return fecha == null ? null : YearMonth.from(aColombia(fecha));
+    }
+
+    /** Las fechas se guardan en la hora del servidor; los meses y semanas se cuentan en hora de Colombia. */
+    private static LocalDate aColombia(LocalDateTime fecha) {
+        return fecha.atZone(ZoneId.systemDefault()).withZoneSameInstant(ZONA).toLocalDate();
+    }
+
+    private static LocalDateTime aServidor(LocalDate dia) {
+        return dia.atStartOfDay(ZONA).withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
     }
 
     // ─── Servicios por estado ────────────────────────────────────────────────

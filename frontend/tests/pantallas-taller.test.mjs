@@ -348,6 +348,36 @@ test("Informes: el tiempo de respuesta llega en minutos y se muestra en min, h o
   assert.ok(pagina.includes("duracionMinutos(tiempo.minutosPromedio)") && !pagina.includes("horasPromedio"));
 });
 
+test("Gráfico: tope redondo del eje, barras en % y etiquetas de mes y semana", async () => {
+  const { topeEje, altoBarra, marcasEje, etiquetaMes, etiquetaSemana, pesosCorto } = await import("../src/components/ui/escalaGrafico.js");
+  assert.equal(topeEje(0), 1, "sin datos no se divide por cero");
+  assert.equal(topeEje(3), 5);
+  assert.equal(topeEje(87_000), 100_000);
+  assert.equal(topeEje(210_000), 250_000);
+  assert.equal(topeEje(1_000_000), 1_000_000);
+  assert.deepEqual(marcasEje(100), [0, 50, 100]);
+  assert.equal(altoBarra(25, 100), 25);
+  assert.equal(altoBarra(0, 1), 0);
+  assert.equal(altoBarra(-5, 100), 0);
+  assert.equal(etiquetaMes("2026-08"), "ago");
+  assert.equal(etiquetaMes("2026-08", true), "ago 2026");
+  assert.equal(etiquetaSemana("2026-10-05"), "5 oct");
+  assert.equal(pesosCorto(50_000), "$50 mil");
+  assert.equal(pesosCorto(1_250_000), "$1,3 M");
+  const grafico = leer("../src/components/ui/Grafico.jsx");
+  assert.ok(grafico.includes('<table className="ui-sr">'), "los datos también van en una tabla para lectores de pantalla");
+  assert.ok(grafico.includes("ui-graf__serie--${i + 1}"), "el color sale del orden de la serie");
+});
+
+test("Informes e Inicio: la serie mensual en Informes y la semanal en Inicio, en los espacios vacíos", () => {
+  const informes = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(informes.includes("<MesAMes serie={d.serieMensual} />"));
+  assert.match(informes, /<div className="ti-columna">\s*<TiempoRespuesta[^>]*\/>\s*<MesAMes/, "debajo del tiempo de respuesta");
+  const inicio = leer("../src/pages/taller/TallerInicio.jsx");
+  assert.ok(inicio.includes("setSemanas(d.serieSemanal || [])"));
+  assert.ok(inicio.includes('aria-labelledby="ini-semanas"'));
+});
+
 test("Informes e Inicio: todas las cifras siguen el periodo y no queda ningún total histórico", async () => {
   const { textoPeriodo } = await import("../src/utils/formato.js");
   assert.equal(textoPeriodo("2026-08-01", 3), "desde el 1 de agosto de 2026");

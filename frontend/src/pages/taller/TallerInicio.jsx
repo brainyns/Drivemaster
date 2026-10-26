@@ -11,6 +11,8 @@ import EstadoVacio from "../../components/ui/EstadoVacio";
 import Esqueleto from "../../components/ui/Esqueleto";
 import BarraAccionMovil from "../../components/ui/BarraAccionMovil";
 import Icon from "../../components/public/Icon";
+import Grafico from "../../components/ui/Grafico";
+import { etiquetaSemana, pesosCorto } from "../../components/ui/escalaGrafico";
 import { citasDeHoy, enTaller, esperaRepuestos, porResponder, proximasCitas, tiempoRelativo, urgentes } from "./resumenTaller";
 import { datosCalificacion } from "../../utils/calificacion";
 import "../../css/inicio-taller.css";
@@ -30,6 +32,8 @@ function saludo(ahora) {
 export default function TallerInicio({ taller, solicitudes, anteriores, cargando, error, onRecargar, irA }) {
   const [ahora] = useState(() => Date.now());
   const [ingresos, setIngresos] = useState(null);
+  // Lo liquidado en las últimas semanas (serieSemanal de los informes)
+  const [semanas, setSemanas] = useState(null);
   const [reintentando, setReintentando] = useState(false);
   // null hasta saberlo; true si el taller aún no guarda su horario por días
   const [sinHorario, setSinHorario] = useState(null);
@@ -40,7 +44,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
   useEffect(() => {
     let vivo = true;
     informesTaller(getToken(), 1)
-      .then((d) => { if (vivo) setIngresos(d.ingresos.manoDeObra); })
+      .then((d) => { if (vivo) { setIngresos(d.ingresos.manoDeObra); setSemanas(d.serieSemanal || []); } })
       .catch(() => {});
     return () => { vivo = false; };
   }, []);
@@ -190,41 +194,61 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
           </section>
 
           <div className="ini-columnas">
-            <section className="ini-bloque" aria-labelledby="ini-urgente">
-              <div className="ini-bloque__cabecera">
-                <h2 id="ini-urgente" className="ini-bloque__titulo">Lo urgente primero</h2>
-                {datos.urgentes.length > MAX_URGENTES && (
-                  <span className="ini-bloque__total">{MAX_URGENTES} de {datos.urgentes.length}</span>
+            {/* Columna izquierda: lo urgente y, debajo, los ingresos de las últimas semanas (llena el espacio junto a la agenda) */}
+            <div className="ini-columna">
+              <section className="ini-bloque" aria-labelledby="ini-urgente">
+                <div className="ini-bloque__cabecera">
+                  <h2 id="ini-urgente" className="ini-bloque__titulo">Lo urgente primero</h2>
+                  {datos.urgentes.length > MAX_URGENTES && (
+                    <span className="ini-bloque__total">{MAX_URGENTES} de {datos.urgentes.length}</span>
+                  )}
+                </div>
+                {datos.urgentes.length === 0 ? (
+                  <p className="ini-bloque__vacio">
+                    <Icon name="check" size={18} /> Nada pide tu atención ahora. Las solicitudes nuevas aparecerán aquí.
+                  </p>
+                ) : (
+                  <ul className="ini-urgentes">
+                    {datos.urgentes.slice(0, MAX_URGENTES).map((u) => (
+                      <li key={`${u.s.id}-${u.orden}`} className="ini-urgente">
+                        <div className="ini-urgente__texto">
+                          <strong className="ini-urgente__vehiculo">{u.s.vehiculoDescripcion || "Vehículo"}</strong>
+                          <span className="ini-urgente__meta">
+                            #{refSolicitud(u.s.id)}
+                            {[u.s.barrio, u.s.ciudad].some(Boolean) && ` · ${[u.s.barrio, u.s.ciudad].filter(Boolean).join(", ")}`}
+                            {u.orden === 1 && ` · ${hora(u.s.fechaRevision)}`}
+                            {u.s.mecanicoNombre && ` · ${u.s.mecanicoNombre}`}
+                          </span>
+                        </div>
+                        <ChipEstado tono={u.tono}>{u.estado}</ChipEstado>
+                        <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico ini-urgente__accion"
+                          onClick={() => irA(u.pagina, { filtro: u.filtro, abrir: u.s.id, volverA: "taller-inicio" })}
+                          aria-label={`${u.accion}: ${u.s.vehiculoDescripcion || "vehículo"} #${refSolicitud(u.s.id)}`}>
+                          {u.accion}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              </div>
-              {datos.urgentes.length === 0 ? (
-                <p className="ini-bloque__vacio">
-                  <Icon name="check" size={18} /> Nada pide tu atención ahora. Las solicitudes nuevas aparecerán aquí.
-                </p>
-              ) : (
-                <ul className="ini-urgentes">
-                  {datos.urgentes.slice(0, MAX_URGENTES).map((u) => (
-                    <li key={`${u.s.id}-${u.orden}`} className="ini-urgente">
-                      <div className="ini-urgente__texto">
-                        <strong className="ini-urgente__vehiculo">{u.s.vehiculoDescripcion || "Vehículo"}</strong>
-                        <span className="ini-urgente__meta">
-                          #{refSolicitud(u.s.id)}
-                          {[u.s.barrio, u.s.ciudad].some(Boolean) && ` · ${[u.s.barrio, u.s.ciudad].filter(Boolean).join(", ")}`}
-                          {u.orden === 1 && ` · ${hora(u.s.fechaRevision)}`}
-                          {u.s.mecanicoNombre && ` · ${u.s.mecanicoNombre}`}
-                        </span>
-                      </div>
-                      <ChipEstado tono={u.tono}>{u.estado}</ChipEstado>
-                      <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico ini-urgente__accion"
-                        onClick={() => irA(u.pagina, { filtro: u.filtro, abrir: u.s.id, volverA: "taller-inicio" })}
-                        aria-label={`${u.accion}: ${u.s.vehiculoDescripcion || "vehículo"} #${refSolicitud(u.s.id)}`}>
-                        {u.accion}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              </section>
+
+              {semanas?.length > 0 && (
+                <section className="ini-bloque" aria-labelledby="ini-semanas">
+                  <div className="ini-bloque__cabecera">
+                    <h2 id="ini-semanas" className="ini-bloque__titulo">Ingresos de las últimas {semanas.length} semanas</h2>
+                    <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("taller-informes")}>
+                      Ver informes
+                    </button>
+                  </div>
+                  <Grafico titulo={`Ingresos liquidados por semana, últimas ${semanas.length} semanas`}
+                    etiquetas={semanas.map((s) => etiquetaSemana(s.inicio))}
+                    detalles={semanas.map((s) => `Semana del ${etiquetaSemana(s.inicio)}`)}
+                    series={[{ nombre: "Ingresos liquidados", valores: semanas.map((s) => s.ingresosLiquidados) }]}
+                    formato={formatPrecio} formatoEje={pesosCorto} alto={120} />
+                  <p className="ini-bloque__nota">Mano de obra y diagnóstico ya pagados, por la semana en que se te pagaron.</p>
+                </section>
               )}
-            </section>
+            </div>
 
             <section className="ini-bloque" aria-labelledby="ini-agenda">
               <div className="ini-bloque__cabecera">

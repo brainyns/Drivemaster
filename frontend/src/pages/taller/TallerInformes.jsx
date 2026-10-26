@@ -10,6 +10,8 @@ import Alerta from "../../components/ui/Alerta";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Estrellas from "../../components/ui/Estrellas";
 import BarraProgreso from "../../components/ui/BarraProgreso";
+import Grafico from "../../components/ui/Grafico";
+import { etiquetaMes, pesosCorto } from "../../components/ui/escalaGrafico";
 import "../../css/informes-taller.css";
 
 const PERIODOS = [3, 6, 12];
@@ -152,6 +154,30 @@ function TiempoRespuesta({ tiempo }) {
   );
 }
 
+/** Un mes por columna (los meses sin nada van en 0). Pesos y conteos en gráficos separados: cada uno con su eje. */
+function MesAMes({ serie }) {
+  const etiquetas = serie.map((m) => etiquetaMes(m.mes));
+  const detalles = serie.map((m) => etiquetaMes(m.mes, true));
+  return (
+    <Tarjeta id="ti-mesames" titulo="Mes a mes">
+      <h3 className="ti-dinero__titulo">Ingresos liquidados</h3>
+      <Grafico titulo="Ingresos liquidados por mes" etiquetas={etiquetas} detalles={detalles}
+        series={[{ nombre: "Ingresos liquidados", valores: serie.map((m) => m.ingresosLiquidados) }]}
+        formato={formatPrecio} formatoEje={pesosCorto} />
+      <h3 className="ti-dinero__titulo">Solicitudes y servicios entregados</h3>
+      <Grafico titulo="Solicitudes y servicios entregados por mes" etiquetas={etiquetas} detalles={detalles}
+        series={[
+          { nombre: "Solicitudes", valores: serie.map((m) => m.solicitudes) },
+          { nombre: "Entregados", valores: serie.map((m) => m.entregados) },
+        ]} alto={120} />
+      <p className="ti-nota">
+        Ingresos: mano de obra y diagnóstico, en el mes en que se te pagaron. Solicitudes, en el mes en que llegaron;
+        entregados, en el mes de la entrega.
+      </p>
+    </Tarjeta>
+  );
+}
+
 function Calificacion({ calificacion, periodo }) {
   const filas = Object.entries(calificacion.distribucion).sort(([a], [b]) => b - a)
     .map(([estrellas, n]) => [`${estrellas} ${estrellas === "1" ? "estrella" : "estrellas"}`, n]);
@@ -261,7 +287,11 @@ export default function TallerInformes() {
           <div className="ti-rejilla">
             <ServiciosPorEstado servicios={d.servicios} />
             <Ingresos ingresos={d.ingresos} periodo={periodo} />
-            <TiempoRespuesta tiempo={d.tiempoRespuesta} />
+            {/* Columna izquierda: el tiempo de respuesta es corto y la serie llena el espacio junto a la calificación */}
+            <div className="ti-columna">
+              <TiempoRespuesta tiempo={d.tiempoRespuesta} />
+              <MesAMes serie={d.serieMensual} />
+            </div>
             <Calificacion calificacion={d.calificacion} periodo={periodo} />
           </div>
         </>

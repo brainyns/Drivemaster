@@ -40,7 +40,22 @@ public final class InformesTallerDTO {
     /** promedio es null mientras no haya calificaciones; distribucion cuenta de 1 a 5 estrellas. */
     public record Calificacion(long total, Double promedio, Map<Integer, Long> distribucion, List<Comentario> recientes) {}
 
-    /** periodoDesde: primer día del periodo (hora de Colombia); todas las cifras cuentan desde ahí. */
+    /**
+     * Un mes del periodo (mes = "yyyy-MM", hora de Colombia): lo liquidado al taller ese mes (mano de obra y
+     * diagnóstico, por la fecha en que se pagó), las solicitudes entregadas ese mes y las solicitudes creadas ese mes.
+     * Los meses sin datos van con 0.
+     */
+    public record Mes(String mes, double ingresosLiquidados, long entregados, long solicitudes) {}
+
+    /** Una semana (de lunes a domingo; inicio = el lunes) con lo liquidado al taller. */
+    public record Semana(LocalDate inicio, double ingresosLiquidados) {}
+
+    /**
+     * periodoDesde: primer día del periodo (hora de Colombia); todas las cifras cuentan desde ahí. serieMensual tiene un
+     * mes por cada mes del periodo, en orden; serieSemanal, las últimas SEMANAS semanas hasta la actual (no depende del
+     * periodo: es para Inicio).
+     */
     public record Informes(LocalDateTime generadoEn, int mesesConsultados, LocalDate periodoDesde, Servicios servicios,
-                           Ingresos ingresos, TiempoRespuesta tiempoRespuesta, Calificacion calificacion) {}
+                           Ingresos ingresos, TiempoRespuesta tiempoRespuesta, Calificacion calificacion,
+                           List<Mes> serieMensual, List<Semana> serieSemanal) {}
 }

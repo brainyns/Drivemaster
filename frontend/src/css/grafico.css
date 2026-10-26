@@ -1,0 +1,47 @@
+/* Gráfico de barras (components/ui/Grafico.jsx). Barras finas con la punta redondeada, guías tenues y el valor exacto
+   en un tooltip al pasar el puntero. */
+.ui-graf { margin: 0; display: grid; gap: 10px; }
+
+.ui-graf__leyenda { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 0.8125rem; color: var(--ui-muted); }
+.ui-graf__leyenda li { display: inline-flex; align-items: center; gap: 6px; }
+.ui-graf__muestra { width: 10px; height: 10px; border-radius: 2px; }
+
+.ui-graf__area { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+.ui-graf__eje {
+  display: flex; flex-direction: column; justify-content: space-between;
+  /* Un poco más alto que las barras para que cada número quede centrado en su guía */
+  height: calc(var(--graf-alto) + 1em); margin-top: -0.5em; line-height: 1;
+  font-size: 0.75rem; color: var(--ui-muted); text-align: right; font-variant-numeric: tabular-nums;
+}
+
+.ui-graf__plot { position: relative; display: flex; align-items: stretch; gap: 2px; }
+/* Las guías se miden sobre el alto de las barras, no sobre el de la columna con su etiqueta */
+.ui-graf__guias { position: absolute; top: 0; left: 0; right: 0; height: var(--graf-alto); pointer-events: none; }
+.ui-graf__guia { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid var(--ui-line-soft); }
+
+.ui-graf__col { position: relative; flex: 1 1 0; min-width: 0; display: grid; grid-template-rows: var(--graf-alto) 1.6rem; border-radius: var(--ui-r-sm); }
+.ui-graf__col:hover { background: var(--ui-hover); }
+.ui-graf__barras { display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 100%; }
+.ui-graf__barra { width: min(18px, 40%); min-height: 0; border-radius: 4px 4px 0 0; }
+.ui-graf__serie--1 { background: var(--ui-serie-1); }
+.ui-graf__serie--2 { background: var(--ui-serie-2); }
+.ui-graf__x { align-self: center; text-align: center; font-size: 0.75rem; color: var(--ui-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ui-graf__tip {
+  position: absolute; bottom: calc(100% - 8px); left: 50%; z-index: 2; transform: translate(-50%, 4px);
+  display: grid; gap: 2px; min-width: max-content; padding: 6px 10px;
+  border: 1px solid var(--ui-line); border-radius: var(--ui-r-md); background: var(--ui-surface); box-shadow: var(--ui-sombra-1);
+  font-size: 0.8125rem; color: var(--ui-text); font-variant-numeric: tabular-nums;
+  opacity: 0; pointer-events: none; transition: opacity var(--ui-dur) var(--ui-ease), transform var(--ui-dur) var(--ui-ease);
+}
+.ui-graf__tip span { color: var(--ui-muted); }
+.ui-graf__col:hover .ui-graf__tip { opacity: 1; transform: translate(-50%, 0); }
+/* En los bordes el tooltip no se sale de la tarjeta */
+.ui-graf__col:first-child .ui-graf__tip { left: 0; transform: translate(0, 4px); }
+.ui-graf__col:first-child:hover .ui-graf__tip { transform: translate(0, 0); }
+.ui-graf__col:last-child .ui-graf__tip { left: auto; right: 0; transform: translate(0, 4px); }
+.ui-graf__col:last-child:hover .ui-graf__tip { transform: translate(0, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-graf__tip { transition: none; }
+}

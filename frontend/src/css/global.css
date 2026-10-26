@@ -129,6 +129,10 @@
   --ui-error:     #F58A8A;  --ui-error-bg:  rgba(245, 138, 138, 0.12);
   --ui-info:      #80B0E5;  --ui-info-bg:   rgba(128, 176, 229, 0.12);
 
+  /* Series de los gráficos (Grafico.jsx), en este orden fijo; validadas para daltonismo y contraste en cada tema */
+  --ui-serie-1:   #5B93D6;
+  --ui-serie-2:   #C8741F;
+
   /* Fases de un servicio en el panel del taller (estadosTaller.js): un color por fase, en los dos temas */
   --fase-nueva:      #80B0E5;  --fase-nueva-bg:      rgba(128, 176, 229, 0.12);
   --fase-cotizacion: #F5A524;  --fase-cotizacion-bg: rgba(245, 165, 36, 0.12);
@@ -228,6 +232,8 @@ html[data-theme="light"] {
   --ui-aviso:     #92400E;  --ui-aviso-bg:  rgba(217, 119, 6, 0.10);
   --ui-error:     #B42318;  --ui-error-bg:  rgba(180, 35, 24, 0.08);
   --ui-info:      #18487A;  --ui-info-bg:   rgba(24, 72, 122, 0.08);
+  --ui-serie-1:   #2E6FB8;
+  --ui-serie-2:   #D4761E;
   --fase-nueva:      #1D5FA8;  --fase-nueva-bg:      rgba(29, 95, 168, 0.09);
   --fase-cotizacion: #92400E;  --fase-cotizacion-bg: rgba(217, 119, 6, 0.10);
   --fase-curso:      #6B3FA0;  --fase-curso-bg:      rgba(107, 63, 160, 0.09);

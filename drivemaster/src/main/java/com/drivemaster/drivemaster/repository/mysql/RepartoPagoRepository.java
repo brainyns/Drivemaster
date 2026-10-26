@@ -55,6 +55,15 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> 
     List<Object[]> resumenPorConceptoYEstadoDesde(@Param("tipo") String tipo, @Param("id") String id,
                                                   @Param("desde") LocalDateTime desde);
 
+    /**
+     * Lo liquidado a un beneficiario desde una fecha, línea por línea, para la serie por mes o semana:
+     * [fecha en que se liquidó (las antiguas sin esa fecha: la de creación), monto].
+     */
+    @Query("select coalesce(r.fechaLiquidacion, r.fechaCreacion), r.monto from RepartoPago r "
+            + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id and r.estado = 'LIQUIDADO' "
+            + "and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde")
+    List<Object[]> liquidadoDesde(@Param("tipo") String tipo, @Param("id") String id, @Param("desde") LocalDateTime desde);
+
     /** Líneas de comisión (registradas y anuladas) desde una fecha, para el reporte por mes. */
     @Query("select r from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA' and r.fechaCreacion >= :desde "
             + "order by r.fechaCreacion")

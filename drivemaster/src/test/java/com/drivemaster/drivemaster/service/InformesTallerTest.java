@@ -261,6 +261,77 @@ class InformesTallerTest {
         assertEquals(1L, s.porEstado().get(EstadoOrden.LISTA));
     }
 
+    /** Fecha en hora de Colombia expresada en la hora del servidor, como se guardan. */
+    private static LocalDateTime col(int a, int m, int d, int h) {
+        return LocalDateTime.of(a, m, d, h, 0).atZone(InformesTallerService.ZONA)
+                .withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
+    }
+
+    @Test
+    void laSerieMensualTieneCadaMesDelPeriodoConCeroDondeNoHuboNada() {
+        OrdenServicio entregada = solicitud("s1", "A", EstadoOrden.ENTREGADA, col(2026, 8, 3, 9));
+        entregada.setFechaEntrega(col(2026, 10, 2, 10));
+        // Sin fechaEntrega guardada: usa el evento ENTREGADA
+        OrdenServicio conEvento = solicitud("s2", "A", EstadoOrden.ENTREGADA, col(2026, 10, 1, 9),
+                evento(EstadoOrden.ENTREGADA, col(2026, 10, 5, 9)));
+        OrdenServicio cotizada = solicitud("s3", "A", EstadoOrden.COTIZADA, col(2026, 10, 6, 9));
+        OrdenServicio fuera = solicitud("s4", "A", EstadoOrden.ENTREGADA, col(2026, 6, 1, 9));
+        fuera.setFechaEntrega(col(2026, 7, 31, 23));
+        when(ordenes.findByTallerIdOrderByFechaCreacionDesc("A")).thenReturn(List.of(entregada, conEvento, cotizada, fuera));
+        when(reparto.liquidadoDesde(eq(RepartoPago.TALLER), eq("A"), any())).thenReturn(List.<Object[]>of(
+                new Object[]{col(2026, 8, 31, 23), 100_000.0},
+                new Object[]{col(2026, 10, 1, 0), 40_000.0},
+                new Object[]{col(2026, 10, 7, 12), 60_000.0},
+                new Object[]{col(2026, 7, 31, 23), 999_000.0}));
+
+        var serie = service.informes("A", 3, HASTA, AHORA).serieMensual();
+
+        assertEquals(List.of("2026-08", "2026-09", "2026-10"), serie.stream().map(m -> m.mes()).toList());
+        assertEquals(100_000.0, serie.get(0).ingresosLiquidados(), "el 31 a las 11 p. m. en Colombia sigue siendo agosto");
+        assertEquals(0.0, serie.get(1).ingresosLiquidados());
+        assertEquals(0, serie.get(1).entregados());
+        assertEquals(0, serie.get(1).solicitudes());
+        assertEquals(100_000.0, serie.get(2).ingresosLiquidados());
+        assertEquals(1, serie.get(0).solicitudes());
+        assertEquals(2, serie.get(2).entregados());
+        assertEquals(2, serie.get(2).solicitudes());
+    }
+
+    @Test
+    void lasSolicitudesDeLaSerieSumanLasDelPeriodo() {
+        when(ordenes.findByTallerIdOrderByFechaCreacionDesc("A")).thenReturn(List.of(
+                solicitud("s1", "A", EstadoOrden.COTIZADA, col(2026, 9, 3, 9)),
+                solicitud("s2", "A", EstadoOrden.CANCELADA, col(2026, 10, 3, 9)),
+                solicitud("s3", "A", EstadoOrden.LISTA, col(2026, 10, 4, 9))));
+
+        Informes i = service.informes("A", 6, HASTA, AHORA);
+
+        assertEquals(6, i.serieMensual().size());
+        assertEquals(i.servicios().total(), i.serieMensual().stream().mapToLong(m -> m.solicitudes()).sum());
+    }
+
+    @Test
+    void laSerieSemanalTieneOchoSemanasDeLunesADomingoHastaLaActual() {
+        // AHORA es jueves 8 de octubre de 2026: la semana actual empieza el lunes 5
+        when(reparto.liquidadoDesde(eq(RepartoPago.TALLER), eq("A"), any())).thenReturn(List.<Object[]>of(
+                new Object[]{col(2026, 10, 5, 0), 30_000.0},
+                new Object[]{col(2026, 10, 4, 23), 20_000.0},
+                new Object[]{col(2026, 8, 10, 8), 10_000.0},
+                new Object[]{col(2026, 8, 9, 8), 5_000.0}));
+
+        var semanas = service.informes("A", 1, HASTA, AHORA).serieSemanal();
+
+        assertEquals(InformesTallerService.SEMANAS, semanas.size());
+        assertEquals(LocalDate.of(2026, 8, 17), semanas.get(0).inicio());
+        assertEquals(LocalDate.of(2026, 10, 5), semanas.get(7).inicio());
+        assertEquals(30_000.0, semanas.get(7).ingresosLiquidados());
+        assertEquals(20_000.0, semanas.get(6).ingresosLiquidados(), "el domingo es de la semana anterior");
+        assertEquals(0.0, semanas.stream().limit(6).mapToDouble(s -> s.ingresosLiquidados()).sum(),
+                "lo de antes de la primera semana no entra");
+        // Con 1 mes, lo liquidado se pide desde el lunes de la primera semana (antes que el 1 de octubre)
+        verify(reparto).liquidadoDesde(RepartoPago.TALLER, "A", col(2026, 8, 17, 0));
+    }
+
     @Test
     void losMesesSeLimitanYLasSolicitudesViejasNoEntranAlPeriodo() {
         OrdenServicio reciente = solicitud("r", "A", EstadoOrden.COTIZADA, LocalDateTime.of(2026, 10, 3, 9, 0));
