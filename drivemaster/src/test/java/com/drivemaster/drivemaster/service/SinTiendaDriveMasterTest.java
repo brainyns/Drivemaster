@@ -56,6 +56,8 @@ class SinTiendaDriveMasterTest {
         com.drivemaster.drivemaster.model.Compatibilidad c = new com.drivemaster.drivemaster.model.Compatibilidad();
         c.setMarca("Chevrolet");
         c.setModelo("Spark");
+        c.setAnoDesde(2010);
+        c.setAnoHasta(2020);
         p.setModelosCompatibles(new java.util.ArrayList<>(List.of(c)));
         return p;
     }

@@ -242,4 +242,42 @@ class AislamientoComprasProveedoresTest {
         assertEstado(HttpStatus.NOT_FOUND, () -> compraService.generarPdfDeTienda(deB.getId(), "A"));
         assertNotNull(compraService.generarPdfDeTienda(deB.getId(), "B"));
     }
+
+    private static Proveedor conNit(String nombre, String nit) {
+        Proveedor p = proveedor(nombre);
+        p.setNit(nit);
+        return p;
+    }
+
+    @Test
+    void elNitNoSeRepiteDentroDeLaTiendaAunqueCambienLosPuntosOElDigitoDeVerificacion() {
+        proveedorService.crearEnTienda(conNit("Alfa", "900.123.456-7"), "A");
+
+        com.drivemaster.drivemaster.exception.DatosInvalidosException e = assertThrows(
+                com.drivemaster.drivemaster.exception.DatosInvalidosException.class,
+                () -> proveedorService.crearEnTienda(conNit("Otra", "900123456"), "A"));
+        assertEquals("Ya tienes un proveedor con este NIT.", e.getCampos().get("nit"));
+
+        // Otra tienda sí puede tener el mismo proveedor, y el nombre repetido no se bloquea
+        assertNotNull(proveedorService.crearEnTienda(conNit("Alfa", "900123456-7"), "B"));
+        assertNotNull(proveedorService.crearEnTienda(conNit("Alfa", "800111222-3"), "A"));
+    }
+
+    @Test
+    void editarUnProveedorConservaSuPropioNitPeroNoTomaElDeOtro() {
+        Proveedor alfa = proveedorService.crearEnTienda(conNit("Alfa", "900123456-7"), "A");
+        Proveedor beta = proveedorService.crearEnTienda(conNit("Beta", "800111222-3"), "A");
+
+        assertNotNull(proveedorService.actualizarEnTienda(alfa.getId(), conNit("AlfaRenombrado", "900123456-7"), "A"));
+        assertThrows(com.drivemaster.drivemaster.exception.DatosInvalidosException.class,
+                () -> proveedorService.actualizarEnTienda(beta.getId(), conNit("Beta", "900123456"), "A"));
+    }
+
+    @Test
+    void elInterruptorDelPdfSeGuardaAlEditar() {
+        Proveedor alfa = proveedorService.crearEnTienda(proveedor("Alfa"), "A");
+        Proveedor cambio = proveedor("Alfa");
+        cambio.setEnviarPdfCompras(false);
+        assertEquals(Boolean.FALSE, proveedorService.actualizarEnTienda(alfa.getId(), cambio, "A").getEnviarPdfCompras());
+    }
 }

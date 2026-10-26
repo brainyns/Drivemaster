@@ -86,7 +86,8 @@ public class CompraServiceImpl implements CompraService {
         // Enviar correo con PDF adjunto al proveedor
         try {
             Proveedor prov = proveedorService.obtenerPorId(compraGuardada.getProveedorId());
-            if (prov.getCorreo() != null && !prov.getCorreo().isBlank()) {
+            // Solo si tiene correo y la tienda no apagó el envío del PDF (null = sí, como antes del interruptor)
+            if (prov.getCorreo() != null && !prov.getCorreo().isBlank() && !Boolean.FALSE.equals(prov.getEnviarPdfCompras())) {
                 byte[] pdf = generarPdf(compraGuardada.getId());
                 String poId = "PO-" + compraGuardada.getId()
                         .substring(Math.max(0, compraGuardada.getId().length() - 5))

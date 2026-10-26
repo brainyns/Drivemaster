@@ -35,6 +35,13 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         if (cantidad == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cantidad es obligatoria");
         }
+        // Una entrada negativa restaría y un ajuste negativo dejaría el stock bajo cero: se rechazan aquí, no solo en el formulario
+        if (cantidad < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cantidad no puede ser negativa");
+        }
+        if (cantidad == 0 && !"AJUSTE".equals(tipo)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cantidad debe ser mayor que 0");
+        }
 
         Producto producto;
         int stockAnterior;
@@ -64,7 +71,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
                 break;
 
             default:
-                throw new RuntimeException("Tipo de movimiento inválido");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de movimiento inválido: ENTRADA, SALIDA o AJUSTE");
         }
 
         // Crear movimiento
