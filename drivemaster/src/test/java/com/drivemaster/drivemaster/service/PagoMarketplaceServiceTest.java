@@ -356,6 +356,38 @@ class PagoMarketplaceServiceTest {
     }
 
     @Test
+    void unaTiendaPausadaOArchivadaBloqueaElPagoYElTallerVuelveACotizar() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 1, 10_000, "DISPONIBLE"))), 11_900);
+        when(cotizacionService.devolverAprobadaADiagnosticada(any(), any(), anyString(), anyString())).thenReturn(true);
+        com.drivemaster.drivemaster.repository.TiendaRepository tiendas = mock(com.drivemaster.drivemaster.repository.TiendaRepository.class);
+        service.setTiendaRepository(tiendas);
+        for (String estado : new String[]{"ARCHIVADO", "APROBADO"}) {
+            // APROBADO pero en pausa (activo=false) también deja de vender
+            when(tiendas.findById("s1")).thenReturn(java.util.Optional.of(com.drivemaster.drivemaster.model.Tienda.builder()
+                    .id("s1").nombre("Repuestos Sur").estadoAprobacion(estado).activo(false).build()));
+
+            ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                    () -> service.iniciarPagoCotizacion("cliente@demo.com", "o1"));
+            assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+            assertEquals("Esta cotización tiene repuestos de una tienda que ya no está disponible. El taller te enviará una nueva.", e.getReason());
+        }
+        verify(cotizacionService, times(2)).devolverAprobadaADiagnosticada(eq(orden), eq(cotizacion), eq(Cotizacion.ANULADA), anyString());
+        verify(avisos, times(2)).cotizacionTiendaNoDisponible(eq(cotizacion), eq("Repuestos Sur"));
+        verifyNoInteractions(pagoService);
+    }
+
+    @Test
+    void conLaTiendaActivaLaCotizacionSePagaNormalmente() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 1, 10_000, "ENCARGO"))), 11_900);
+        com.drivemaster.drivemaster.repository.TiendaRepository tiendas = mock(com.drivemaster.drivemaster.repository.TiendaRepository.class);
+        when(tiendas.findById("s1")).thenReturn(java.util.Optional.of(com.drivemaster.drivemaster.model.Tienda.builder()
+                .id("s1").nombre("Repuestos Sur").estadoAprobacion("APROBADO").activo(true).build()));
+        service.setTiendaRepository(tiendas);
+        service.iniciarPagoCotizacion("cliente@demo.com", "o1");
+        verify(pagoService).crearPagoMarketplace(PagoMarketplaceService.COTIZACION, "u1", 11_900, "o1", "c1");
+    }
+
+    @Test
     void linkDeCotizacionPorElSaldoAPagar() {
         cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 1, 10_000, "ENCARGO"))), 11_900);
         service.iniciarPagoCotizacion("cliente@demo.com", "o1");

@@ -6,8 +6,8 @@ import java.util.Map;
 
 /**
  * Panel de la plataforma (solo SUPERADMIN). DriveMaster no vende: lo que pagan los clientes se reparte entre
- * talleres y tiendas, y a la plataforma le corresponden la comisión y las suscripciones. Por eso el dinero
- * se separa en "movido" (pasó por la plataforma, no es ingreso suyo) y "comisión registrada" (informativa).
+ * talleres y tiendas, y a la plataforma le corresponde la comisión. Por eso el dinero se separa en "movido" (pasó por
+ * la plataforma, no es ingreso suyo) y "comisión registrada" (informativa).
  */
 public record DashboardPlataformaDTO(
         LocalDateTime generadoEn,
@@ -35,9 +35,16 @@ public record DashboardPlataformaDTO(
 
     /**
      * movido: suma de pagos aprobados del marketplace (no es ingreso de DriveMaster).
-     * comisionRegistrada: suma de las líneas informativas de comisión (no es dinero cobrado).
+     * comisionRegistrada: suma de las líneas informativas de comisión, sin lo anulado por reembolsos (no es dinero cobrado).
+     * baseComision: sobre qué se calculó esa comisión: el valor sin IVA ni envío de cada pago desde comisionDesde, sin los
+     *               reembolsos (comisionRegistrada = comisionPct % de baseComision).
+     * porLiquidar: habilitado y aún sin pagar a los negocios; enEspera: espera la entrega o la recepción del pedido;
+     * liquidado: ya pagado (liquidadoSimulado, la parte que pagó la dispersión simulada); liquidacionAutomatica: el modo
+     * de dispersión liquida solo al habilitarse la línea (por eso porLiquidar suele quedar en 0).
      */
-    public record Dinero(double movido, double comisionRegistrada, double comisionPct, double porLiquidar) {}
+    public record Dinero(double movido, double comisionRegistrada, double comisionPct, double porLiquidar,
+                         double baseComision, LocalDateTime comisionDesde, double enEspera, double liquidado,
+                         double liquidadoSimulado, boolean liquidacionAutomatica) {}
 
     public record Alertas(long despachosAtrasados, long problemasEnvioAbiertos, long liquidacionesPendientes,
                           long liquidacionesFallidas, long reembolsosPendientes, double montoReembolsosPendientes,

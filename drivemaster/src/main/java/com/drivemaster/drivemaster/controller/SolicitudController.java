@@ -3,7 +3,10 @@ package com.drivemaster.drivemaster.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,12 +20,19 @@ public class SolicitudController {
 
     private final SolicitudService solicitudService;
 
+    // Compra directa de la antigua tienda DriveMaster: cerrada (compra-legado.habilitada). No revisaba la tienda del producto.
+    @Value("${compra-legado.habilitada:false}")
+    private boolean compraLegadoHabilitada;
+
     public SolicitudController(SolicitudService solicitudService) {
         this.solicitudService = solicitudService;
     }
 
     @PostMapping
     public ResponseEntity<SolicitudDTO> crear(@RequestBody CrearSolicitudRequest request, Authentication auth) {
+        if (!compraLegadoHabilitada) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Las compras se hacen desde el catálogo: agrega los repuestos al carrito");
+        }
         return ResponseEntity.ok(
                 solicitudService.crearSolicitud(auth.getName(), request.getProductos(), request.getMetodoPago()));
     }

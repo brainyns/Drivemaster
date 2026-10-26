@@ -45,7 +45,12 @@ public class PlataformaNegociosService {
     static final String SIN_PLAN = "SIN_PLAN";
     static final int TAMANO_MAXIMO = 50;
     static final int TAMANO_POR_DEFECTO = 20;
-    private static final Set<String> ESTADOS = Set.of(EstadoAprobacion.PENDIENTE, EstadoAprobacion.APROBADO, EstadoAprobacion.RECHAZADO);
+    private static final Set<String> ESTADOS = Set.of(EstadoAprobacion.PENDIENTE, EstadoAprobacion.APROBADO, EstadoAprobacion.RECHAZADO,
+            EstadoAprobacion.ARCHIVADO);
+
+    // Sin suscripciones (solo comisión) no hay plan que mostrar ni filtrar
+    @org.springframework.beans.factory.annotation.Value("${suscripciones.habilitadas:false}")
+    private boolean suscripcionesHabilitadas;
 
     private final MongoTemplate mongo;
     private final SuscripcionRepository suscripcionRepository;
@@ -66,7 +71,8 @@ public class PlataformaNegociosService {
 
     /**
      * @param tipo TIENDA o TALLER (vacío = ambos)
-     * @param estado PENDIENTE, APROBADO o RECHAZADO (vacío = todos); las cuentas anteriores al marketplace cuentan como aprobadas
+     * @param estado PENDIENTE, APROBADO, RECHAZADO o ARCHIVADO (vacío = todos menos los archivados); las cuentas anteriores
+     *               al marketplace cuentan como aprobadas
      * @param plan código del plan activo, o SIN_PLAN para los que no tienen (vacío = todos)
      */
     public NegociosRespuesta negocios(String tipo, String estado, String q, String plan, int pagina, int tamano) {
@@ -108,7 +114,7 @@ public class PlataformaNegociosService {
                         null, null, o[0], o[1], faltantesTaller(x), x.getLogoUrl()));
             }
         }
-        if (!p.isEmpty()) {
+        if (!p.isEmpty() && suscripcionesHabilitadas) {
             filas.removeIf(f -> SIN_PLAN.equals(p) ? f.plan() != null : f.plan() == null || !p.equalsIgnoreCase(f.plan().codigo()));
         }
 
@@ -175,6 +181,9 @@ public class PlataformaNegociosService {
                     Criteria.where("estadoAprobacion").is(EstadoAprobacion.APROBADO)));
         } else if (!estado.isEmpty()) {
             y.add(Criteria.where("estadoAprobacion").is(estado));
+        } else {
+            // "Todos" no incluye los archivados: se ven solo con su filtro
+            y.add(Criteria.where("estadoAprobacion").ne(EstadoAprobacion.ARCHIVADO));
         }
         if (q != null && !q.isBlank()) {
             Pattern p = Pattern.compile(Pattern.quote(q.trim()), Pattern.CASE_INSENSITIVE);
@@ -186,7 +195,7 @@ public class PlataformaNegociosService {
     /** Tiendas y talleres por estado (para las pestañas), sin contar la tienda de la plataforma. */
     private Map<String, Long> conteos() {
         Map<String, Long> r = new LinkedHashMap<>();
-        for (String e : List.of(EstadoAprobacion.PENDIENTE, EstadoAprobacion.APROBADO, EstadoAprobacion.RECHAZADO)) {
+        for (String e : List.of(EstadoAprobacion.PENDIENTE, EstadoAprobacion.APROBADO, EstadoAprobacion.RECHAZADO, EstadoAprobacion.ARCHIVADO)) {
             r.put(e, mongo.count(Query.query(filtro(new Criteria(), e, null, "ciudad")), Tienda.class)
                     + mongo.count(Query.query(filtro(new Criteria(), e, null, "ciudad")), Taller.class));
         }
@@ -194,6 +203,7 @@ public class PlataformaNegociosService {
     }
 
     private Map<String, PlanActual> planesActivos() {
+        if (!suscripcionesHabilitadas) return Map.of();
         Map<String, String> nombres = planRepository.findAll().stream()
                 .collect(Collectors.toMap(PlanSuscripcion::getCodigo, p -> p.getNombre() != null ? p.getNombre() : p.getCodigo(), (a, b) -> a));
         Map<String, PlanActual> r = new HashMap<>();

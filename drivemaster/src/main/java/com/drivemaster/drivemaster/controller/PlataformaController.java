@@ -20,6 +20,7 @@ import com.drivemaster.drivemaster.service.PlataformaDashboardService;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -124,6 +125,12 @@ public class PlataformaController {
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "20") int tamano) {
         return ResponseEntity.ok(consultas.usuarios(q, rol, estado, pagina, tamano));
+    }
+
+    /** Pedidos o solicitudes en curso del negocio de un usuario: lo avisa el modal antes de desactivarlo. */
+    @GetMapping("/usuarios/{id}/en-curso")
+    public ResponseEntity<com.drivemaster.drivemaster.service.PlataformaConsultasService.EnCurso> enCurso(@PathVariable String id) {
+        return ResponseEntity.ok(consultas.enCurso(id));
     }
 
     /** Catálogo global de solo lectura, con filtros por tienda, nuevos, estado y búsqueda. */

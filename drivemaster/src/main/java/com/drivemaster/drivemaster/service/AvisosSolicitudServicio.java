@@ -155,6 +155,18 @@ public class AvisosSolicitudServicio {
         });
     }
 
+    /** Al pagar, una tienda de la cotización ya no vende (en pausa o archivada): el taller debe cotizar de nuevo. */
+    public void cotizacionTiendaNoDisponible(Cotizacion cotizacion, String tiendaNombre) {
+        tallerRepository.findById(cotizacion.getTallerId()).ifPresent(taller -> {
+            String texto = "La cotización v" + cotizacion.getVersion() + " de " + vehiculo(cotizacion.getVehiculoDescripcion())
+                    + " tiene repuestos de " + tiendaNombre + ", que ya no está disponible. No se cobró nada: emite una nueva cotización.";
+            correoTaller(taller).ifPresent(correo -> enviar(correo, "Vuelve a cotizar: una tienda ya no está disponible",
+                    EmailServicioBuilder.adminAlerta("Vuelve a cotizar", texto)));
+            avisar(taller.getUsuarioId(), Notificacion.COTIZACION_TIENDA_NO_DISPONIBLE, "Vuelve a cotizar", texto,
+                    "taller-cotizaciones", cotizacion.getOrdenId());
+        });
+    }
+
     // ─── Pagos del marketplace (Fase 3-B) ────────────────────────────────────
 
     public void comprobantePago(OrdenServicio orden, PagoEntity pago, String concepto,

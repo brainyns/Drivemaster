@@ -92,9 +92,10 @@ public class TiendaServiceImpl implements TiendaService {
         boolean aprobado = request.getAprobado();
 
         if (aprobado) {
-            // Primero la suscripción: si el plan no es válido, la tienda no queda aprobada a medias.
-            suscripcionService.activar(SuscripcionService.ACTOR_TIENDA, tienda.getId(),
-                    request.getPlanCodigo(), correoAdmin);
+            // Primero la suscripción (si están en uso): si el plan no es válido, no queda aprobada a medias
+            if (suscripcionService.habilitadas()) {
+                suscripcionService.activar(SuscripcionService.ACTOR_TIENDA, tienda.getId(), request.getPlanCodigo(), correoAdmin);
+            }
             tienda.setEstadoAprobacion(EstadoAprobacion.APROBADO);
             tienda.setMotivoRechazo(null);
             tienda.setActivo(true);

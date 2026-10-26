@@ -234,9 +234,10 @@ public class TallerServiceImpl implements TallerService {
         boolean aprobado = request.getAprobado();
 
         if (aprobado) {
-            // Primero la suscripción: si el plan no es válido, el taller no queda aprobado a medias.
-            suscripcionService.activar(SuscripcionService.ACTOR_TALLER, taller.getId(),
-                    request.getPlanCodigo(), correoAdmin);
+            // Primero la suscripción (si están en uso): si el plan no es válido, no queda aprobado a medias
+            if (suscripcionService.habilitadas()) {
+                suscripcionService.activar(SuscripcionService.ACTOR_TALLER, taller.getId(), request.getPlanCodigo(), correoAdmin);
+            }
             taller.setEstadoAprobacion(EstadoAprobacion.APROBADO);
             taller.setMotivoRechazo(null);
             taller.setActivo(true);

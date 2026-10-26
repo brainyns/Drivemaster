@@ -15,6 +15,7 @@ import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Tienda;
+import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.Usuario;
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -58,6 +59,34 @@ public class PlataformaConsultasService {
         this.mongo = mongo;
     }
 
+    // ─── Usuario: lo que tiene en curso (antes de desactivarlo) ─────────────
+
+    /** Pedidos de una tienda o solicitudes de un taller que siguen en curso; lo avisa el modal de desactivar. */
+    public record EnCurso(String tipo, String negocio, long pedidos, long solicitudes) {}
+
+    static final java.util.List<String> PEDIDOS_EN_CURSO = java.util.List.of(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION,
+            PedidoTienda.LISTO_PARA_RETIRAR, PedidoTienda.DESPACHADO);
+    static final java.util.List<String> ORDENES_CERRADAS = java.util.List.of(
+            com.drivemaster.drivemaster.model.EstadoOrden.ENTREGADA, com.drivemaster.drivemaster.model.EstadoOrden.RECHAZADA,
+            com.drivemaster.drivemaster.model.EstadoOrden.CANCELADA);
+
+    public EnCurso enCurso(String usuarioId) {
+        Tienda tienda = mongo.findOne(Query.query(Criteria.where("usuarioId").is(usuarioId)), Tienda.class);
+        if (tienda != null) {
+            long pedidos = mongo.count(Query.query(Criteria.where("tiendaId").is(tienda.getId()).and("estado").in(PEDIDOS_EN_CURSO)),
+                    PedidoTienda.class);
+            return new EnCurso("TIENDA", tienda.getNombre(), pedidos, 0);
+        }
+        com.drivemaster.drivemaster.model.Taller taller = mongo.findOne(Query.query(Criteria.where("usuarioId").is(usuarioId)),
+                com.drivemaster.drivemaster.model.Taller.class);
+        if (taller != null) {
+            long solicitudes = mongo.count(Query.query(Criteria.where("tallerId").is(taller.getId()).and("estado").nin(ORDENES_CERRADAS)),
+                    OrdenServicio.class);
+            return new EnCurso("TALLER", taller.getNombre(), 0, solicitudes);
+        }
+        return new EnCurso(null, null, 0, 0);
+    }
+
     // ─── Productos ───────────────────────────────────────────────────────────
 
     /**
@@ -93,12 +122,17 @@ public class PlataformaConsultasService {
                 Producto.class);
 
         Map<String, String> nombres = nombresDeTiendas(productos.stream().map(Producto::getTiendaId).toList());
+        // Un producto "activo" de una tienda en pausa, rechazada o archivada no se vende: se muestra como Tienda inactiva
+        java.util.Set<String> operativas = mongo.findAll(Tienda.class).stream()
+                .filter(t -> EstadoAprobacion.estaAprobado(t.getEstadoAprobacion()) && Boolean.TRUE.equals(t.getActivo()))
+                .map(Tienda::getId).collect(Collectors.toSet());
         List<ProductoFila> filas = productos.stream().map(p -> new ProductoFila(p.getId(), p.getCodigo(), p.getNombre(),
                 p.getCategoria(), p.getMarca(), p.getTipo(), p.getTiendaId(), nombres.get(p.getTiendaId()),
                 p.getStockActual(), p.getPrecioVenta(), !Boolean.FALSE.equals(p.getActivo()), p.getImagenUrl(),
-                fechaIngreso(p))).toList();
+                fechaIngreso(p), operativas.contains(p.getTiendaId()))).toList();
 
         List<TiendaOpcion> tiendas = mongo.findAll(Tienda.class).stream()
+                .filter(t -> !EstadoAprobacion.estaArchivado(t.getEstadoAprobacion())) // las archivadas no salen en los filtros
                 .map(t -> new TiendaOpcion(t.getId(), t.getNombre()))
                 .sorted(Comparator.comparing(t -> t.nombre() == null ? "" : t.nombre().toLowerCase())).toList();
         return new ProductosRespuesta(new Pagina<>(filas, total, pag, tam), tiendas);
@@ -274,6 +308,7 @@ public class PlataformaConsultasService {
         long atrasados = mongo.count(Query.query(atrasado(ahora)), PedidoTienda.class);
         long problemas = mongo.count(Query.query(problemaAbierto()), PedidoTienda.class);
         List<TiendaOpcion> tiendas = mongo.findAll(Tienda.class).stream()
+                .filter(t -> !EstadoAprobacion.estaArchivado(t.getEstadoAprobacion())) // las archivadas no salen en los filtros
                 .map(t -> new TiendaOpcion(t.getId(), t.getNombre()))
                 .sorted(Comparator.comparing(t -> t.nombre() == null ? "" : t.nombre().toLowerCase())).toList();
         return new PedidosRespuesta(new Pagina<>(filas, total, pag, tam), porEstado, atrasados, problemas, tiendas);
@@ -305,7 +340,8 @@ public class PlataformaConsultasService {
     /** Solo la ciudad: la dirección y el nombre del cliente no hacen falta para vigilar el avance. */
     private static String destino(PedidoTienda p, boolean catalogo) {
         if (!catalogo) {
-            return "Taller " + (p.getTallerNombre() != null ? p.getTallerNombre() : "") + (p.getTallerCiudad() != null ? " · " + p.getTallerCiudad() : "");
+            return com.drivemaster.drivemaster.util.NombreNegocio.conPrefijo("Taller", p.getTallerNombre())
+                    + (p.getTallerCiudad() != null ? " · " + p.getTallerCiudad() : "");
         }
         if (PedidoTienda.ENVIO.equals(p.getEntrega())) return p.getEnvioCiudad();
         return "Retiro en tienda" + (p.getTiendaCiudad() != null ? " · " + p.getTiendaCiudad() : "");

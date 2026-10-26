@@ -17,6 +17,9 @@ import java.util.Set;
 /**
  * Planes y suscripciones de talleres y tiendas. En v1 el ADMIN activa el plan a
  * mano; no hay cobro automático.
+ *
+ * Apagado con suscripciones.habilitadas=false (DriveMaster cobra solo la comisión): no se crean suscripciones al
+ * aprobar y vigente() no devuelve ninguna, así que el plan no aparece en ninguna respuesta. Nada se borra.
  */
 @Service
 public class SuscripcionService {
@@ -27,6 +30,14 @@ public class SuscripcionService {
 
     private final PlanSuscripcionRepository planRepository;
     private final SuscripcionRepository suscripcionRepository;
+
+    @org.springframework.beans.factory.annotation.Value("${suscripciones.habilitadas:false}")
+    private boolean habilitadas;
+
+    /** Si las suscripciones están en uso (por ahora no: solo comisión). */
+    public boolean habilitadas() {
+        return habilitadas;
+    }
 
     public SuscripcionService(PlanSuscripcionRepository planRepository,
                               SuscripcionRepository suscripcionRepository) {
@@ -86,6 +97,7 @@ public class SuscripcionService {
 
     /** Suscripción activa y no vencida. Si encuentra una ya vencida, la marca VENCIDA. */
     public Optional<Suscripcion> vigente(String actorTipo, String actorId) {
+        if (!habilitadas) return Optional.empty();
         Optional<Suscripcion> activa = suscripcionRepository
                 .findFirstByActorTipoAndActorIdAndEstadoOrderByFechaInicioDesc(actorTipo, actorId, Suscripcion.ACTIVA);
         if (activa.isPresent() && activa.get().getFechaFin() != null

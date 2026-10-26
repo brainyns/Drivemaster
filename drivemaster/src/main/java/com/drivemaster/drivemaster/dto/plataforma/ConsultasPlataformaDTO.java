@@ -18,7 +18,7 @@ public final class ConsultasPlataformaDTO {
 
     public record ProductoFila(String id, String codigo, String nombre, String categoria, String marca, String tipo,
                                String tiendaId, String tienda, Integer stock, Double precio, boolean activo,
-                               String imagenUrl, LocalDateTime fechaIngreso) {}
+                               String imagenUrl, LocalDateTime fechaIngreso, boolean tiendaActiva) {}
 
     /** Productos de la página y las tiendas para el filtro. */
     public record ProductosRespuesta(Pagina<ProductoFila> productos, List<TiendaOpcion> tiendas) {}

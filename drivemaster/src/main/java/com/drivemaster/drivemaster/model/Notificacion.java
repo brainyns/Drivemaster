@@ -30,6 +30,7 @@ public class Notificacion {
     public static final String COTIZACION_EMITIDA = "COTIZACION_EMITIDA";
     public static final String COTIZACION_RESPONDIDA = "COTIZACION_RESPONDIDA";
     public static final String COTIZACION_VENCIDA = "COTIZACION_VENCIDA";
+    public static final String COTIZACION_TIENDA_NO_DISPONIBLE = "COTIZACION_TIENDA_NO_DISPONIBLE";
     public static final String PAGO_APROBADO = "PAGO_APROBADO";
     public static final String PAGO_NO_APLICADO = "PAGO_NO_APLICADO";
     public static final String PEDIDO_NUEVO = "PEDIDO_NUEVO";

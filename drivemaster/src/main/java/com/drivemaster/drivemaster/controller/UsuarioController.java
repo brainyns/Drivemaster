@@ -67,11 +67,12 @@ public class UsuarioController {
         }
 
         // Desde aquí solo se crean cuentas del equipo de DriveMaster. Las tiendas y los talleres necesitan perfil y
-        // aprobación: se registran con "Registra tu negocio" y se aprueban en Aprobaciones. VENDEDOR ya no existe.
+        // aprobación: se registran con "Registra tu negocio" y se aprueban en Aprobaciones. ADMIN y VENDEDOR ya no se
+        // crean (siguen en el enum por las cuentas anteriores): el equipo de DriveMaster es SUPERADMIN.
         String rol = request.getRol() == null ? "" : request.getRol().trim().toUpperCase();
         if (!ROLES_CREABLES.contains(rol)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Desde aquí solo se crean usuarios ADMIN o SUPERADMIN. Las tiendas y los talleres se registran con "
+                    "Desde aquí solo se crean usuarios SUPERADMIN. Las tiendas y los talleres se registran con "
                             + "\"Registra tu negocio\" y se aprueban en Aprobaciones.");
         }
         List<String> permisos = getPermisosPorRol(rol);
@@ -97,6 +98,16 @@ public class UsuarioController {
         if (usuario == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
         }
+        boolean esSiMismo = usuario.getCorreo() != null && usuario.getCorreo().equalsIgnoreCase(auth.getName());
+        if (esSiMismo && Boolean.FALSE.equals(request.getActivo())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No puedes desactivar tu propia cuenta");
+        }
+        if (esSiMismo && request.getRol() != null && !request.getRol().trim().equalsIgnoreCase(usuario.getRol())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No puedes cambiar tu propio rol");
+        }
+        boolean dejaDeSerSuperadmin = Boolean.FALSE.equals(request.getActivo())
+                || (request.getRol() != null && !"SUPERADMIN".equalsIgnoreCase(request.getRol().trim()));
+        if (dejaDeSerSuperadmin) exigirOtroSuperadmin(usuario);
 
         if (request.getNombre() != null) {
             usuario.setNombre(request.getNombre());
@@ -114,10 +125,11 @@ public class UsuarioController {
             }
             String rol = request.getRol().trim().toUpperCase();
             if (!ROLES_CREABLES.contains(rol)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El rol solo puede ser ADMIN o SUPERADMIN");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El rol solo puede ser SUPERADMIN");
             }
-            // Una cuenta de cliente, tienda o taller tiene su perfil: cambiarle el rol la dejaría rota
-            if (!ROLES_CREABLES.contains(usuario.getRol()) && !"VENDEDOR".equals(usuario.getRol())) {
+            // Una cuenta de cliente, tienda o taller tiene su perfil: cambiarle el rol la dejaría rota. Las del equipo
+            // anteriores (ADMIN, VENDEDOR) sí pueden pasar a SUPERADMIN.
+            if (!ROLES_EQUIPO.contains(usuario.getRol())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "El rol de un cliente, una tienda o un taller no se cambia: tiene perfil propio");
             }
@@ -155,6 +167,10 @@ public class UsuarioController {
         if (usuario == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado");
         }
+        if (usuario.getCorreo() != null && usuario.getCorreo().equalsIgnoreCase(auth.getName())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No puedes desactivar tu propia cuenta");
+        }
+        exigirOtroSuperadmin(usuario);
 
         usuario.setActivo(false);
         usuarioService.actualizarUsuario(usuario);
@@ -164,8 +180,21 @@ public class UsuarioController {
         return ResponseEntity.ok().build();
     }
 
-    /** Roles que se pueden crear o asignar desde la gestión de usuarios. */
-    static final java.util.Set<String> ROLES_CREABLES = java.util.Set.of("ADMIN", "SUPERADMIN");
+    /** Roles que se pueden crear o asignar desde la gestión de usuarios: solo SUPERADMIN. */
+    static final java.util.Set<String> ROLES_CREABLES = java.util.Set.of("SUPERADMIN");
+
+    /** Cuentas del equipo de DriveMaster (las anteriores ADMIN y VENDEDOR pueden pasar a SUPERADMIN). */
+    static final java.util.Set<String> ROLES_EQUIPO = java.util.Set.of("SUPERADMIN", "ADMIN", "VENDEDOR");
+
+    /** Si el usuario es un SUPERADMIN activo, tiene que quedar al menos otro: nunca se queda la plataforma sin dueño. */
+    private void exigirOtroSuperadmin(Usuario usuario) {
+        if (!"SUPERADMIN".equals(usuario.getRol()) || Boolean.FALSE.equals(usuario.getActivo())) return;
+        long otros = usuarioRepository.findByRol("SUPERADMIN").stream()
+                .filter(u -> !Boolean.FALSE.equals(u.getActivo()) && !u.getId().equals(usuario.getId())).count();
+        if (otros == 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Es el último SUPERADMIN activo: crea o activa otro antes");
+        }
+    }
 
     private List<String> getPermisosPorRol(String rol) {
         return RolPermisos.de(rol);

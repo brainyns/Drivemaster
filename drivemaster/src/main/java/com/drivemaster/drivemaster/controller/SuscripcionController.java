@@ -14,8 +14,12 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Map;
 
-/** Planes y suscripciones de talleres y tiendas (solo ADMIN/SUPERADMIN). */
+/**
+ * Planes y suscripciones de talleres y tiendas (solo ADMIN/SUPERADMIN). Apagado mientras DriveMaster cobre solo la
+ * comisión: sin suscripciones.habilitadas=true estas rutas no existen (el código y las tablas se conservan).
+ */
 @RestController
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "suscripciones.habilitadas", havingValue = "true")
 @RequestMapping("/api/suscripciones")
 public class SuscripcionController {
 

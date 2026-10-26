@@ -121,6 +121,30 @@ public class PagoMarketplaceService {
         this.avisos = avisos;
     }
 
+    private com.drivemaster.drivemaster.repository.TiendaRepository tiendaRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTiendaRepository(com.drivemaster.drivemaster.repository.TiendaRepository tiendaRepository) {
+        this.tiendaRepository = tiendaRepository;
+    }
+
+    /**
+     * Nombre de la primera tienda de la cotización que ya no puede vender (no aprobada, en pausa o archivada), o null.
+     * Los pedidos ya pagados no pasan por aquí: siguen su curso.
+     */
+    String primeraTiendaInactiva(Cotizacion cotizacion) {
+        if (tiendaRepository == null || cotizacion.getItems() == null) return null;
+        for (var item : cotizacion.getItems()) {
+            if (item.getTiendaId() == null) continue;
+            var tienda = tiendaRepository.findById(item.getTiendaId()).orElse(null);
+            if (tienda == null || !com.drivemaster.drivemaster.model.EstadoAprobacion.estaAprobado(tienda.getEstadoAprobacion())
+                    || !Boolean.TRUE.equals(tienda.getActivo())) {
+                return tienda != null ? tienda.getNombre() : (item.getTiendaNombre() != null ? item.getTiendaNombre() : "una tienda");
+            }
+        }
+        return null;
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     public void setCatalogo(@org.springframework.context.annotation.Lazy CompraCatalogoService catalogo) {
         this.catalogo = catalogo;
@@ -185,6 +209,16 @@ public class PagoMarketplaceService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "La cotización ya no está aprobada"));
         if (cotizacion.getVigenciaHasta() != null && cotizacion.getVigenciaHasta().isBefore(LocalDateTime.now())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La cotización venció: el taller emitirá una nueva");
+        }
+        // Una tienda de la cotización dejó de vender (en pausa o archivada): no se cobra y el taller vuelve a cotizar
+        String tiendaInactiva = primeraTiendaInactiva(cotizacion);
+        if (tiendaInactiva != null) {
+            if (cotizacionService.devolverAprobadaADiagnosticada(orden, cotizacion, Cotizacion.ANULADA,
+                    "Repuestos de " + tiendaInactiva + ", que ya no está disponible")) {
+                avisos.cotizacionTiendaNoDisponible(cotizacion, tiendaInactiva);
+            }
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Esta cotización tiene repuestos de una tienda que ya no está disponible. El taller te enviará una nueva.");
         }
         String faltante = primerFaltante(cotizacion);
         if (faltante != null) {

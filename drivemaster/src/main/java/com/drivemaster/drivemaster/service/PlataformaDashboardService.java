@@ -55,6 +55,12 @@ public class PlataformaDashboardService {
     private final RepartoPagoRepository repartoRepository;
     private final ReembolsoRepository reembolsoRepository;
     private final SuscripcionRepository suscripcionRepository;
+
+    @org.springframework.beans.factory.annotation.Value("${suscripciones.habilitadas:false}")
+    private boolean suscripcionesHabilitadas;
+
+    @org.springframework.beans.factory.annotation.Value("${dispersion.modo:SIMULADO}")
+    private String modoDispersion = "SIMULADO";
     private final ParametrosMarketplace parametros;
 
     public PlataformaDashboardService(MongoTemplate mongo, PagoRepository pagoRepository,
@@ -74,8 +80,10 @@ public class PlataformaDashboardService {
 
     /** Visible para pruebas: el panel a la hora dada. */
     public DashboardPlataformaDTO dashboard(LocalDateTime ahora) {
-        Negocios tiendas = negocios(Tienda.class, new Criteria());
-        Negocios talleres = negocios(Taller.class, new Criteria());
+        // Los archivados (la antigua tienda DriveMaster, duplicados) no cuentan en ningún indicador
+        Criteria sinArchivados = Criteria.where("estadoAprobacion").ne(EstadoAprobacion.ARCHIVADO);
+        Negocios tiendas = negocios(Tienda.class, sinArchivados);
+        Negocios talleres = negocios(Taller.class, sinArchivados);
 
         Instant hace7 = ahora.minusDays(7).atZone(ZoneId.systemDefault()).toInstant();
         Instant hace30 = ahora.minusDays(30).atZone(ZoneId.systemDefault()).toInstant();
@@ -98,12 +106,17 @@ public class PlataformaDashboardService {
         }
 
         Map<String, Long> planes = new LinkedHashMap<>();
-        for (Suscripcion s : suscripcionRepository.findByEstado(Suscripcion.ACTIVA)) {
+        if (suscripcionesHabilitadas) for (Suscripcion s : suscripcionRepository.findByEstado(Suscripcion.ACTIVA)) {
             planes.merge(s.getPlanCodigo(), 1L, Long::sum);
         }
 
-        Dinero dinero = new Dinero(pagoRepository.sumaMovidaMarketplace(), repartoRepository.sumaComisionRegistrada(),
-                parametros.comisionPct(), repartoRepository.sumaPorLiquidar());
+        double comision = repartoRepository.sumaComisionRegistrada();
+        double pct = parametros.comisionPct();
+        // Cada línea guarda la comisión, no su base: con el porcentaje vigente (10 % desde el inicio) la base es comisión / pct
+        double base = pct > 0 ? Math.round(comision * 100 / pct) : 0;
+        Dinero dinero = new Dinero(pagoRepository.sumaMovidaMarketplace(), comision, pct, repartoRepository.sumaPorLiquidar(),
+                base, repartoRepository.primeraComision(), repartoRepository.sumaEnEspera(), repartoRepository.sumaLiquidada(),
+                repartoRepository.sumaLiquidadaSimulada(), !"MANUAL".equalsIgnoreCase(modoDispersion));
 
         Alertas alertas = new Alertas(
                 despachosAtrasados(ahora),

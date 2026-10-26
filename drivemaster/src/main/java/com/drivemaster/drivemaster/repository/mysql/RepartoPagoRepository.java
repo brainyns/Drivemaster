@@ -76,6 +76,22 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> 
     /** Lo que falta pagar a talleres y tiendas: líneas habilitadas (o con fallo) y su monto. */
     @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.estado in ('POR_LIQUIDAR', 'FALLIDO')")
     double sumaPorLiquidar();
+
+    /** Ya pagado a talleres y tiendas; con modo = SIMULADO, solo lo que liquidó la dispersión simulada. */
+    @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.estado = 'LIQUIDADO' and r.beneficiarioTipo <> 'PLATAFORMA'")
+    double sumaLiquidada();
+
+    @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.estado = 'LIQUIDADO' and r.beneficiarioTipo <> 'PLATAFORMA' "
+            + "and r.modoLiquidacion = 'SIMULADO'")
+    double sumaLiquidadaSimulada();
+
+    /** Lo que espera la entrega o la recepción del pedido para habilitarse (aún no se puede liquidar). */
+    @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.estado = 'PENDIENTE' and r.beneficiarioTipo <> 'PLATAFORMA'")
+    double sumaEnEspera();
+
+    /** Desde cuándo se registra la comisión (los pagos anteriores no tienen línea de comisión). */
+    @Query("select min(r.fechaCreacion) from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA'")
+    java.time.LocalDateTime primeraComision();
     List<RepartoPago> findByOrdenServicioIdAndBeneficiarioTipo(String ordenServicioId, String beneficiarioTipo);
 
     /**

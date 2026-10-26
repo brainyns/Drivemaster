@@ -54,6 +54,14 @@ public class ChatProxyController {
     private final RestTemplate chatRestTemplate;
     private final int maxCaracteres;
 
+    // Solo productos de tiendas que venden: lo que devuelve n8n se vuelve a comprobar aquí
+    private com.drivemaster.drivemaster.service.TiendaService tiendaService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTiendaService(com.drivemaster.drivemaster.service.TiendaService tiendaService) {
+        this.tiendaService = tiendaService;
+    }
+
     public ChatProxyController(ChatRateLimiter chatRateLimiter,
                                ProductoRepository productoRepository,
                                ObjectMapper objectMapper,
@@ -149,10 +157,13 @@ public class ChatProxyController {
 
     /**
      * La herramienta del agente no envía la foto (gasta tokens) y lo que llega de n8n no es de fiar
-     * para precio y stock: se leen de la base. Se descartan los productos inactivos o que ya no existen.
+     * para precio y stock: se leen de la base. Se descartan los productos inactivos, los que ya no existen y los de una
+     * tienda que no vende (en pausa, rechazada o archivada).
      */
     private List<ProductoDTO> completarDesdeCatalogo(List<ProductoDTO> productos) {
         if (productos.isEmpty()) return productos;
+        java.util.Set<String> visibles = tiendaService == null ? null : tiendaService.listarVisibles().stream()
+                .map(com.drivemaster.drivemaster.model.Tienda::getId).collect(Collectors.toSet());
         Map<String, Producto> porId = productoRepository.findAllById(
                         productos.stream().map(ProductoDTO::getId).toList())
                 .stream()
@@ -161,6 +172,7 @@ public class ChatProxyController {
                 .map(dto -> {
                     Producto real = porId.get(dto.getId());
                     if (real == null || Boolean.FALSE.equals(real.getActivo())) return null;
+                    if (visibles != null && !visibles.contains(real.getTiendaId())) return null;
                     dto.setNombre(real.getNombre());
                     dto.setMarca(real.getMarca());
                     dto.setPrecioVenta(real.getPrecioVenta());
