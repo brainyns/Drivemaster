@@ -629,6 +629,7 @@
 }
 
 .ui-field__error svg { flex-shrink: 0; margin-top: 1px; }
+.ui-field__mensajes { display: grid; gap: 6px; min-width: 0; }
 
 /* Advertencia bajo un campo (Campo aviso): no impide guardar */
 .ui-field .ui-field__aviso {
@@ -953,7 +954,10 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); box-shadow: var(--ui-sombra-2);
   opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--ui-dur) ease;
 }
-.ui-ayuda:hover .ui-ayuda__nota, .ui-ayuda__boton:focus-visible + .ui-ayuda__nota { opacity: 1; visibility: visible; }
+.ui-ayuda:hover .ui-ayuda__nota, .ui-ayuda__boton:focus-visible + .ui-ayuda__nota,
+.ui-ayuda > .ui-btn:focus-visible + .ui-ayuda__nota { opacity: 1; visibility: visible; }
+/* Junto al borde derecho (p. ej. una acción en la cabecera de una sección): la nota se alinea a la derecha */
+.ui-ayuda--derecha .ui-ayuda__nota { left: auto; right: 0; transform: none; }
 
 .ui-indicador--enlace { cursor: pointer; transition: border-color var(--ui-dur) ease, transform var(--ui-dur) var(--ui-ease); }
 .ui-indicador--enlace:active { transform: scale(0.98); }
@@ -1011,6 +1015,7 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 }
 
 .ui-seccion__texto { flex: 1; min-width: 0; }
+.ui-seccion__acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: none; }
 
 .ui-seccion .ui-seccion__titulo {
   margin: 0;

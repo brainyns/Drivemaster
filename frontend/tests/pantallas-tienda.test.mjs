@@ -388,8 +388,9 @@ test("Producto: el precio de venta es sin IVA y muestra lo que verá el cliente 
   assert.equal(precioConIva("", 0.19), null);
   assert.equal(precioConIva("50000", null), null, "sin el parámetro no se inventa un precio");
   const pagina = readFileSync(new URL("../src/pages/ProductoForm.jsx", import.meta.url), "utf8");
-  assert.ok(pagina.includes('label="Precio de venta (sin IVA)"'));
-  assert.ok(pagina.includes("El cliente verá: ${formatoCop(paraCliente)} con IVA"));
+  // La etiqueta queda corta y el "sin IVA" va en la ayuda, con lo que verá el cliente
+  assert.ok(pagina.includes('label="Precio de venta"'));
+  assert.ok(pagina.includes("Sin IVA. DriveMaster le suma el IVA al cobrar: el cliente verá ${formatoCop(paraCliente)}"));
 });
 
 test("Proveedores: dígito de verificación de la DIAN, nombre repetido y quién recibe el PDF", async () => {

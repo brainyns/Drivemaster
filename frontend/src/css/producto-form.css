@@ -3,17 +3,28 @@
    inferior son de ui.css; la foto es ImagenProducto del catálogo. Aquí la rejilla de dos columnas, el campo de
    dinero, el margen, los vehículos compatibles, la foto y las sugerencias de la IA. Tokens --ui-*, los dos temas. */
 
-/* En monitores grandes las dos columnas no se estiran más allá de una línea cómoda de leer */
-.pfm-root { max-width: 1200px; }
+/* Usa todo el ancho disponible hasta 1440 px; solo en monitores muy anchos queda espacio a la derecha */
+.pfm-root { max-width: 1440px; }
 
 .pfm-alerta { margin-bottom: var(--ui-sp-4); }
 
 .pfm-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr) 420px;
   gap: 16px;
   align-items: start;
 }
+
+/* Pares de campos en dos columnas: etiqueta, control y mensajes comparten filas (subgrid), así los dos controles
+   quedan a la misma altura aunque una etiqueta o una ayuda ocupe más líneas que la otra */
+.pfm-root .ui-form__campos--2 > .ui-field {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 6px;
+  align-content: start;
+}
+.pfm-root .ui-form__campos--2 > .ui-field > .ui-field__label { align-self: end; }
 
 .pfm-columna { display: grid; gap: 16px; min-width: 0; }
 .pfm-columna--lateral { position: sticky; top: 88px; }
@@ -98,10 +109,20 @@
 
 .pfm-guardar { display: grid; gap: 8px; }
 
-/* Sugerencias de la IA */
-.pfm-ia { display: grid; gap: 14px; }
-.pfm-ia__pedir.ui-btn { justify-self: start; }
-.pfm-ia__bloque { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--ui-line-soft); }
+/* Sugerencias de la IA: el botón va en la cabecera de Información general y lo propuesto, debajo del nombre */
+.pfm-ia {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  background: color-mix(in srgb, var(--primary) 4%, var(--ui-surface));
+}
+.pfm-root .pfm-ia__cabecera {
+  display: flex; align-items: center; gap: 6px; margin: 0;
+  font-size: 0.8125rem; font-weight: 700; color: var(--ui-muted);
+}
+.pfm-ia__bloque { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid var(--ui-line-soft); }
 .pfm-root .pfm-ia__titulo { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 0.9rem; font-weight: 700; }
 .pfm-root .pfm-ia__nota { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--ui-muted); }
 .pfm-ia__lista { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }

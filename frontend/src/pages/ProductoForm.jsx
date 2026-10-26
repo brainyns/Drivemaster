@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, listarProductosMiTienda, subirImagenProducto } from "../services/productoService";
 import { sugerirProducto } from "../services/informesTiendaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
@@ -36,9 +36,10 @@ import { formatoCop } from "../utils/formato";
 
 /**
  * Sugerencias de la IA para el producto (solo TIENDA): categoría de la lista y compatibilidades "por confirmar".
- * Nada se guarda ni se cambia en el formulario hasta que la tienda pulsa "Aplicar" o "Agregar".
+ * Nada se guarda ni se cambia en el formulario hasta que la tienda pulsa "Aplicar" o "Agregar". El botón va en la
+ * cabecera de Información general (BotonSugerirIA) y lo que propone, debajo del nombre (ResultadosIA).
  */
-function SugerenciasIA({ form, setForm, token }) {
+function useSugerenciasIA(form, token) {
   const [estado, setEstado] = useState({ cargando: false, error: null, datos: null });
   const puedePedir = form.nombre.trim().length >= 3;
 
@@ -52,6 +53,29 @@ function SugerenciasIA({ form, setForm, token }) {
     }
   };
 
+  const limpiar = () => setEstado({ cargando: false, error: null, datos: null });
+  return { ...estado, puedePedir, pedir, limpiar };
+}
+
+/** Acción pequeña de la cabecera, con la explicación en una nota al pasar el mouse o al enfocarla. */
+function BotonSugerirIA({ ia }) {
+  const idNota = useId();
+  return (
+    <span className="ui-ayuda ui-ayuda--derecha">
+      <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={ia.pedir}
+        disabled={!ia.puedePedir || ia.cargando} aria-busy={ia.cargando} aria-describedby={idNota}>
+        {!ia.cargando && <Icon name="bolt" size={14} />}
+        {ia.cargando ? "Pensando…" : ia.datos ? "Sugerir de nuevo" : "Sugerir con IA"}
+      </button>
+      <span id={idNota} role="tooltip" className="ui-ayuda__nota">
+        {ia.puedePedir ? "Propone la categoría y los vehículos compatibles. Nada se guarda sin que lo apliques."
+          : "Escribe el nombre del producto (y si quieres la marca y la referencia) para pedir sugerencias."}
+      </span>
+    </span>
+  );
+}
+
+function ResultadosIA({ ia, form, setForm }) {
   const agregar = (compats) => setForm((prev) => {
     // Las filas vacías del formulario se reemplazan; las que ya están no se repiten.
     const llenas = prev.modelosCompatibles.filter((c) => !campoVacio(c.marca));
@@ -59,24 +83,19 @@ function SugerenciasIA({ form, setForm, token }) {
     return { ...prev, compatibilidadUniversal: false, modelosCompatibles: [...llenas, ...nuevas] };
   });
 
-  const { cargando, error, datos } = estado;
+  const { error, datos } = ia;
+  if (!error && !datos) return null;
   const sugeridas = (datos?.compatibilidades || []).map((c) => ({ original: c, deLista: compatDeLista(c) }));
   const agregables = sugeridas.map((s) => s.deLista).filter(Boolean)
     .filter((c) => !form.modelosCompatibles.some((x) => mismaCompat(x, c)));
 
   return (
-    <SeccionEditable id="pfm-ia" icono="bolt" titulo="Sugerencias de la IA"
-      descripcion={puedePedir ? "Propone la categoría y los vehículos compatibles. Nada se guarda sin que lo apliques."
-        : "Escribe el nombre del producto (y si quieres la marca y la referencia) para pedir sugerencias."}>
-      <div aria-live="polite" className="pfm-ia">
-        <button type="button" className="ui-btn ui-btn--secundario pfm-ia__pedir" onClick={pedir} disabled={!puedePedir || cargando} aria-busy={cargando}>
-          {!cargando && <Icon name="bolt" size={16} />}
-          {cargando ? "Pensando…" : datos ? "Sugerir de nuevo" : "Sugerir"}
-        </button>
-        {error && <Alerta onCerrar={() => setEstado({ cargando: false, error: null, datos: null })}>{error}</Alerta>}
+    <div aria-live="polite" className="pfm-ia">
+        {error && <Alerta onCerrar={ia.limpiar}>{error}</Alerta>}
 
         {datos && (
           <>
+            <p className="pfm-ia__cabecera"><Icon name="bolt" size={14} /> Sugerencias de la IA</p>
             <div className="pfm-ia__bloque">
               <p className="pfm-ia__titulo"><ChipEstado tono="aviso">Por confirmar</ChipEstado> Categoría</p>
               {datos.categoria ? (
@@ -122,8 +141,7 @@ function SugerenciasIA({ form, setForm, token }) {
             {datos.nota && <p className="pfm-ia__nota">{datos.nota}</p>}
           </>
         )}
-      </div>
-    </SeccionEditable>
+    </div>
   );
 }
 
@@ -162,6 +180,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
   const [arrastrando, setArrastrando] = useState(false);
   // Errores por campo que respondió el backend; se borran al editar el campo
   const [erroresServidor, setErroresServidor] = useState({});
+  const ia = useSugerenciasIA(form, token);
   const [confirmarPerdida, setConfirmarPerdida] = useState(false);
   const fileInputRef = useRef(null);
   const resumenRef = useRef(null);
@@ -375,12 +394,14 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
       <form id="pfm-form" onSubmit={handleSubmit} noValidate className="pfm-layout">
         <div className="pfm-columna">
           <SeccionEditable id="pfm-general" icono="box" titulo="Información general"
-            descripcion="Cómo se identifica el repuesto en tu inventario y en el catálogo.">
+            descripcion="Cómo se identifica el repuesto en tu inventario y en el catálogo."
+            acciones={esTienda && <BotonSugerirIA ia={ia} />}>
             <div className="ui-form">
               <Campo id="pfm-nombre" label="Nombre del producto" error={errores.nombre}>
                 <input className="ui-field__input" name="nombre" value={form.nombre} onChange={handleChange}
                   placeholder="Ej. Pastillas de freno cerámicas Brembo" />
               </Campo>
+              {esTienda && <ResultadosIA ia={ia} form={form} setForm={setForm} />}
               <div className="ui-form__campos ui-form__campos--2">
                 <Campo id="pfm-categoria" label="Categoría" error={errores.categoria}>
                   <select className="ui-field__input" name="categoria" value={form.categoria} onChange={handleChange}>
@@ -401,14 +422,9 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
                 <Campo id="pfm-referencia" label="Referencia del fabricante" opcional>
                   <input className="ui-field__input" name="referencia" value={form.referencia} onChange={handleChange} placeholder="Ej. P 85 020" />
                 </Campo>
-                <Campo id="pfm-ubicacion" label="Ubicación en bodega" opcional>
-                  <input className="ui-field__input" name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="Ej. Estante B-3" />
-                </Campo>
               </div>
             </div>
           </SeccionEditable>
-
-          {esTienda && <SugerenciasIA form={form} setForm={setForm} token={token} />}
 
           <SeccionEditable id="pfm-tipo" icono="clock" titulo="Disponibilidad"
             descripcion="Si lo tienes en bodega o lo consigues cuando te lo piden.">
@@ -512,10 +528,10 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
                 <Campo id="pfm-compra" label="Precio de compra" error={errores.precioCompra}>
                   <Dinero name="precioCompra" value={form.precioCompra} onChange={handleChange} />
                 </Campo>
-                <Campo id="pfm-venta" label="Precio de venta (sin IVA)" error={errores.precioVenta}
+                <Campo id="pfm-venta" label="Precio de venta" error={errores.precioVenta}
                   ayuda={paraCliente != null
-                    ? `El cliente verá: ${formatoCop(paraCliente)} con IVA (${Math.round(ivaRate * 100)} %)`
-                    : "DriveMaster le suma el IVA al cobrar."}>
+                    ? `Sin IVA. DriveMaster le suma el IVA al cobrar: el cliente verá ${formatoCop(paraCliente)} (IVA ${Math.round(ivaRate * 100)} %).`
+                    : "Sin IVA. DriveMaster le suma el IVA al cobrar."}>
                   <Dinero name="precioVenta" value={form.precioVenta} onChange={handleChange} />
                 </Campo>
               </div>
@@ -538,6 +554,9 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
                   <input className="ui-field__input" name="stockMinimo" type="text" inputMode="numeric" value={form.stockMinimo} onChange={handleChange} placeholder="0" />
                 </Campo>
               </div>
+              <Campo id="pfm-ubicacion" label="Ubicación en bodega" opcional>
+                <input className="ui-field__input" name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="Ej. Estante B-3" />
+              </Campo>
             </div>
           </SeccionEditable>
 

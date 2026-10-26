@@ -23,9 +23,14 @@ export default function Campo({ id, label, opcional = false, ayuda, aviso, error
         {opcional && <span className="ui-field__opcional">opcional</span>}
       </label>
       {conAria}
-      {ayuda && <p id={idAyuda} className="ui-field__ayuda">{ayuda}</p>}
-      {idAviso && <p id={idAviso} className="ui-field__aviso"><Icon name="alert" size={14} />{aviso}</p>}
-      {error && <p id={idError} className="ui-field__error"><Icon name="alert" size={14} />{error}</p>}
+      {/* Ayuda, aviso y error en un solo bloque: en dos columnas, etiqueta, control y mensajes van en la misma fila */}
+      {(ayuda || idAviso || error) && (
+        <div className="ui-field__mensajes">
+          {ayuda && <p id={idAyuda} className="ui-field__ayuda">{ayuda}</p>}
+          {idAviso && <p id={idAviso} className="ui-field__aviso"><Icon name="alert" size={14} />{aviso}</p>}
+          {error && <p id={idError} className="ui-field__error"><Icon name="alert" size={14} />{error}</p>}
+        </div>
+      )}
     </div>
   );
 }
