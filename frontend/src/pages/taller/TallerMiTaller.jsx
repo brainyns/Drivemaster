@@ -17,6 +17,7 @@ import SeccionContacto from "../../components/ui/SeccionContacto";
 import Campo from "../../components/ui/Campo";
 import ChipEstado from "../../components/ui/ChipEstado";
 import Alerta from "../../components/ui/Alerta";
+import { avisar } from "../../components/ui/avisar";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Calificacion from "../../components/ui/Calificacion";
 import CabeceraNegocio from "../../components/ui/CabeceraNegocio";
@@ -202,7 +203,6 @@ function VistaCliente({ taller: datos }) {
 export default function TallerMiTaller({ taller, token, cargando, error, onRecargar, onActualizado, abrirSeccion = null }) {
   // Desde el aviso del Inicio llega abrirSeccion="horario": la sección se abre ya en edición
   const [editando, setEditando] = useState(abrirSeccion === "horario" ? "horario" : null); // "servicios" | "horario" | "ubicacion"
-  const [aviso, setAviso] = useState(null); // { seccion, texto }
   const [activos, setActivos] = useState(0);
   const [avisoLogo, setAvisoLogo] = useState(null); // { tono, texto }
   const onLista = useCallback((lista) => setActivos(lista.filter((m) => m.activo !== false).length), []);
@@ -236,16 +236,13 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
   const aprobado = taller.estadoAprobacion === "APROBADO";
   const activo = taller.activo !== false;
 
-  const abrir = (seccion) => { setAviso(null); setEditando(seccion); };
+  const abrir = (seccion) => setEditando(seccion);
   const cerrar = () => setEditando(null);
   const guardado = (seccion, texto) => (t) => {
     onActualizado?.(t);
     setEditando(null);
-    setAviso({ seccion, texto });
+    avisar(texto);
   };
-  const avisoDe = (seccion) => aviso?.seccion === seccion && (
-    <Alerta tono="ok" onCerrar={() => setAviso(null)}>{aviso.texto}</Alerta>
-  );
   // Desde "lo que falta": lleva a la sección y abre su edición (el equipo tiene su propio botón)
   const resolver = (item) => {
     const destino = document.getElementById(item.seccion);
@@ -310,7 +307,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
           <SeccionEditable id="mt-servicios" icono="tool" titulo="Servicios y precios"
             descripcion="Lo que ofreces y cuánto cobras por la mano de obra."
             onEditar={aprobado ? () => abrir("servicios") : undefined} textoEditar="Editar tarifa"
-            editando={editando === "servicios"} aviso={avisoDe("servicios")}
+            editando={editando === "servicios"}
             nota={editando !== "servicios" && "Los servicios que ofreces y el precio de mano de obra los cambia el administrador de DriveMaster."}>
             {editando === "servicios" ? (
               <FormTarifa taller={taller} token={token} onCancelar={cerrar}
@@ -338,7 +335,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             descripcion="Con este punto te asignamos las solicitudes cercanas y el cliente calcula cómo llegar."
             onEditar={aprobado ? () => abrir("ubicacion") : undefined}
             textoEditar={taller.latitud != null ? "Ajustar en el mapa" : "Marcar en el mapa"}
-            editando={editando === "ubicacion"} aviso={avisoDe("ubicacion")}
+            editando={editando === "ubicacion"}
             nota={editando !== "ubicacion" && "La dirección escrita y el barrio los cambia el administrador de DriveMaster."}>
             {editando === "ubicacion" ? (
               <FormUbicacion taller={taller} token={token} onCancelar={cerrar}
@@ -365,7 +362,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             descripcion="Ayuda a proponer citas que sí puedes cumplir."
             onEditar={aprobado ? () => abrir("horario") : undefined}
             textoEditar={semana || taller.horario ? "Editar" : "Agregar horario"}
-            editando={editando === "horario"} aviso={avisoDe("horario")}>
+            editando={editando === "horario"}>
             {editando === "horario" && semana === undefined ? (
               <Esqueleto variante="formulario" cantidad={2} texto="Cargando tu horario…" />
             ) : editando === "horario" ? (
@@ -397,7 +394,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             guardarTelefono={(numero) => guardarTelefonoTaller(token, numero)}
             onTelefonoGuardado={guardado("contacto", "Teléfono guardado.")}
             editandoTelefono={editando === "contacto"} onEditarTelefono={() => abrir("contacto")} onCerrarTelefono={cerrar}
-            aviso={avisoDe("contacto")}
+           
             onCorreoCambiado={(correoUsuario) => onActualizado?.({ ...taller, correoUsuario })} />
         </div>
 

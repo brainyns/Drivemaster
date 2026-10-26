@@ -114,10 +114,9 @@ export function validarFormulario(form, productosExistentes, esEdicion, id) {
   const venta  = Number(form.precioVenta);
   if (campoVacio(form.precioCompra) || isNaN(compra) || compra < 0)
     errores.precioCompra = "Escribe un precio de compra válido (solo números).";
+  // Vender por debajo del costo no es un error: se advierte y se confirma al guardar (perdidaPorUnidad)
   if (campoVacio(form.precioVenta) || isNaN(venta) || venta < 0)
     errores.precioVenta = "Escribe un precio de venta válido (solo números).";
-  else if (compra > 0 && venta > 0 && venta < compra)
-    errores.precioVenta = "El precio de venta no puede ser menor que el de compra.";
 
   const stockActual  = Number(form.stockActual);
   const stockMinimo  = Number(form.stockMinimo);
@@ -164,6 +163,38 @@ export const COMPAT_VACIA = { marca: "", modelo: "", anoDesde: "", anoHasta: "",
 
 // Imagen: las mismas reglas que la foto del vehículo y el logo del taller
 export { TIPOS_IMAGEN, IMAGEN_MAX_MB, errorImagen } from "../../utils/imagen.js";
+
+/** Ganancia en pesos por unidad (venta − compra), o null si falta algún precio. Negativa si se vende con pérdida. */
+export function margenPesos(precioCompra, precioVenta) {
+  const compra = Number(precioCompra);
+  const venta = Number(precioVenta);
+  return compra > 0 && venta > 0 ? Math.round(venta - compra) : null;
+}
+
+/** Cuánto se pierde por unidad si el precio de venta es menor que el de compra; 0 si no hay pérdida. */
+export function perdidaPorUnidad(precioCompra, precioVenta) {
+  const m = margenPesos(precioCompra, precioVenta);
+  return m != null && m < 0 ? -m : 0;
+}
+
+/**
+ * Errores por campo que respondió el backend (ValidacionProducto) con la misma forma que validarFormulario: los de
+ * un vehículo llegan como "modelosCompatibles.{i}.{campo}" y van a errores.compatibilidad[i].
+ */
+export function erroresDelServidor(campos) {
+  const errores = {};
+  Object.entries(campos || {}).forEach(([clave, mensaje]) => {
+    const vehiculo = /^modelosCompatibles\.(\d+)\.(\w+)$/.exec(clave);
+    if (vehiculo) {
+      const i = Number(vehiculo[1]);
+      errores.compatibilidad = errores.compatibilidad || [];
+      errores.compatibilidad[i] = { ...errores.compatibilidad[i], [vehiculo[2]]: mensaje };
+    } else {
+      errores[clave] = mensaje;
+    }
+  });
+  return errores;
+}
 
 /** Margen sobre el precio de compra, con un decimal, o null si falta algún precio. */
 export function margen(precioCompra, precioVenta) {

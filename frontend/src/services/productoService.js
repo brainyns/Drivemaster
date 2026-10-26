@@ -1,4 +1,5 @@
 import { apiFetch } from "./http";
+import { errorDeRespuesta } from "../utils/errores";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/productos`;
 
 const buildHeaders = (token, contentType = "application/json") => {
@@ -41,7 +42,8 @@ export async function crearProducto(producto, token) {
     headers: buildHeaders(token),
     body: JSON.stringify(producto),
   });
-  if (!res.ok) throw new Error("Error al crear producto");
+  // Un 400 trae el error de cada campo (error.campos) para mostrarlo en el formulario
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo crear el producto");
   return res.json();
 }
 
@@ -51,7 +53,7 @@ export async function actualizarProducto(id, producto, token) {
     headers: buildHeaders(token),
     body: JSON.stringify(producto),
   });
-  if (!res.ok) throw new Error("Error al actualizar producto");
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo guardar el producto");
   return res.json();
 }
 

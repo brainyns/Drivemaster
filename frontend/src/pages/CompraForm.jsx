@@ -14,6 +14,9 @@ import ImagenProducto from "../components/marketplace/ImagenProducto";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
 import { agregarLinea, erroresCompra, erroresLinea } from "./tienda/comprasTienda";
+import { recibePdf } from "./tienda/proveedoresTienda";
+import { avisar } from "../components/ui/avisar";
+import { plural } from "../utils/formato";
 import "../css/compras-tienda.css";
 
 const MAX_RESULTADOS = 6;
@@ -79,6 +82,8 @@ function CompraForm({ onVolver, token }) {
       proveedorId,
       productos: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad, costo: i.costo })),
     }, token);
+    // ConfirmarAccion deshabilita el botón mientras guarda y muestra el error si falla (los ítems se conservan)
+    avisar(`Compra registrada: se sumaron ${plural(unidades, "unidad", "unidades")} al stock${recibePdf(proveedor) ? ` y enviamos el PDF a ${proveedor.correo}` : ""}.`);
     onVolver();
   };
 
@@ -113,8 +118,12 @@ function CompraForm({ onVolver, token }) {
                       <Dato etiqueta="Teléfono">{proveedor.telefono}</Dato>
                       <Dato etiqueta="Correo">{proveedor.correo}</Dato>
                     </dl>
-                    {!proveedor.correo && (
-                      <Alerta tono="info">Este proveedor no tiene correo: la compra se registra igual, pero no le enviaremos el PDF.</Alerta>
+                    {!recibePdf(proveedor) && (
+                      <Alerta tono="info">
+                        {proveedor.correo
+                          ? "Apagaste el envío del PDF a este proveedor: la compra se registra igual, pero no le enviaremos el PDF."
+                          : "Este proveedor no tiene correo: la compra se registra igual, pero no le enviaremos el PDF."}
+                      </Alerta>
                     )}
                   </>
                 )}
@@ -196,7 +205,7 @@ function CompraForm({ onVolver, token }) {
               <div className="cmp-total"><span>Total</span><strong className="ui-precio">{formatPrecio(total)}</strong></div>
               {botonRegistrar("ui-btn--grande ui-btn--bloque cmp-registrar")}
               <p className="cmp-nota">
-                <Icon name="check" size={14} /> Al registrarla se suma el stock de cada producto{proveedor?.correo ? ` y enviamos el PDF a ${proveedor.correo}` : ""}.
+                <Icon name="check" size={14} /> Al registrarla se suma el stock de cada producto{recibePdf(proveedor) ? ` y enviamos el PDF a ${proveedor.correo}` : ""}.
               </p>
             </div>
           </section>
@@ -210,7 +219,7 @@ function CompraForm({ onVolver, token }) {
 
       {confirmando && (
         <ConfirmarAccion titulo={`¿Registrar la compra a ${proveedor?.nombre || "este proveedor"}?`} textoConfirmar="Registrar compra"
-          mensaje={`Se suman ${unidades} ${unidades === 1 ? "unidad" : "unidades"} al stock por ${formatPrecio(total)}${proveedor?.correo ? ` y enviamos el PDF a ${proveedor.correo}` : ""}. Una compra registrada no se puede editar.`}
+          mensaje={`Se suman ${unidades} ${unidades === 1 ? "unidad" : "unidades"} al stock por ${formatPrecio(total)}${recibePdf(proveedor) ? ` y enviamos el PDF a ${proveedor.correo}` : ""}. Una compra registrada no se puede editar.`}
           onConfirmar={registrar} onCancelar={() => setConfirmando(false)} />
       )}
     </div>

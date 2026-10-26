@@ -26,3 +26,11 @@
 @media (max-width: 600px) {
   .prv-barra .ui-buscador { max-width: none; }
 }
+
+/* Interruptor del PDF de cada compra (formulario) */
+.prv-pdf {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 14px; border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg);
+}
+.prv-pdf__texto { display: grid; gap: 2px; min-width: 0; font-size: 0.875rem; }
+.prv-pdf__texto > span { font-size: 0.8rem; line-height: 1.45; color: var(--ui-muted); }

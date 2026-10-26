@@ -14,6 +14,7 @@ import Campo from "../components/ui/Campo";
 import Dato from "../components/ui/Dato";
 import PieFormulario from "../components/ui/PieFormulario";
 import Alerta from "../components/ui/Alerta";
+import { avisar } from "../components/ui/avisar";
 import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
 import {
@@ -221,7 +222,6 @@ export default function DatosMiTienda({ token, onGuardado }) {
   const [error, setError] = useState(null);
   const [reintentando, setReintentando] = useState(false);
   const [editando, setEditando] = useState(null); // "ubicacion" | "horario" | "entrega" | "contacto"
-  const [aviso, setAviso] = useState(null); // { seccion, texto }
   const [avisoLogo, setAvisoLogo] = useState(null); // { tono, texto }
 
   const cargar = useCallback(async () => {
@@ -254,17 +254,14 @@ export default function DatosMiTienda({ token, onGuardado }) {
   const estado = ESTADO[t.estadoAprobacion] || ESTADO.APROBADO;
   const activa = t.activo !== false;
 
-  const abrir = (seccion) => { setAviso(null); setEditando(seccion); };
+  const abrir = (seccion) => setEditando(seccion);
   const cerrar = () => setEditando(null);
   const guardado = (seccion, texto) => (actualizada) => {
     setTienda(actualizada);
     onGuardado?.(actualizada);
     setEditando(null);
-    setAviso({ seccion, texto });
+    avisar(texto);
   };
-  const avisoDe = (seccion) => aviso?.seccion === seccion && (
-    <Alerta tono="ok" onCerrar={() => setAviso(null)}>{aviso.texto}</Alerta>
-  );
   // Desde "lo que falta": lleva a la sección y abre su edición
   const resolver = (item) => {
     document.getElementById(item.seccion)?.scrollIntoView({
@@ -327,7 +324,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
 
           <SeccionEditable id="mtd-ubicacion" icono="pin" titulo="Ubicación"
             descripcion="Donde retiran los clientes. Ciudad y dirección son obligatorias para vender en el catálogo."
-            onEditar={() => abrir("ubicacion")} editando={editando === "ubicacion"} aviso={avisoDe("ubicacion")}>
+            onEditar={() => abrir("ubicacion")} editando={editando === "ubicacion"}>
             {editando === "ubicacion" ? (
               <FormUbicacion tienda={t} token={token} onCancelar={cerrar}
                 onGuardado={guardado("ubicacion", "Ubicación guardada.")} />
@@ -348,7 +345,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
           <SeccionEditable id="mtd-horario" icono="clock" titulo="Horario de atención"
             descripcion="Obligatorio para vender: el cliente lo ve en cada producto."
             onEditar={() => abrir("horario")} textoEditar={t.horario ? "Editar" : "Agregar horario"}
-            editando={editando === "horario"} aviso={avisoDe("horario")}>
+            editando={editando === "horario"}>
             {editando === "horario" ? (
               <FormHorario tienda={t} token={token} onCancelar={cerrar} onGuardado={guardado("horario", "Horario guardado.")} />
             ) : t.horario ? (
@@ -360,7 +357,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
 
           <SeccionEditable id="mtd-entrega" icono="box" titulo="Entrega y retiro"
             descripcion="Cómo reciben los clientes lo que compran en el catálogo."
-            onEditar={() => abrir("entrega")} editando={editando === "entrega"} aviso={avisoDe("entrega")}>
+            onEditar={() => abrir("entrega")} editando={editando === "entrega"}>
             {editando === "entrega" ? (
               <FormEntrega tienda={t} token={token} onCancelar={cerrar} onGuardado={guardado("entrega", "Entrega guardada.")} />
             ) : (
@@ -382,7 +379,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
             guardarTelefono={(numero) => guardarTelefonoTienda(token, numero)}
             onTelefonoGuardado={guardado("contacto", "Teléfono guardado.")}
             editandoTelefono={editando === "contacto"} onEditarTelefono={() => abrir("contacto")} onCerrarTelefono={cerrar}
-            aviso={avisoDe("contacto")}
+           
             onCorreoCambiado={(nuevo) => {
               // El backend también mueve el correo de contacto si era el de la cuenta
               const contacto = !t.correoContacto || t.correoContacto.toLowerCase() === (t.correoUsuario || "").toLowerCase()

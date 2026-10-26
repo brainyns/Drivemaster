@@ -9,11 +9,27 @@ import Alerta from "../components/ui/Alerta";
 import Esqueleto from "../components/ui/Esqueleto";
 import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
+import { avisar } from "../components/ui/avisar";
 import {
   ANO_ACTUAL, CATEGORIAS, COMPAT_VACIA, MARCAS_REPUESTO, MARCAS_VEHICULO, MARCAS_VEHICULO_LISTA, TIPOS_IMAGEN,
-  campoVacio, compatDeLista, errorImagen, margen as calcularMargen, mismaCompat, precioConIva, validarFormulario,
+  campoVacio, compatDeLista, errorImagen, erroresDelServidor, margen as calcularMargen, margenPesos, mismaCompat,
+  perdidaPorUnidad, precioConIva, validarFormulario,
 } from "./tienda/reglasProducto";
+
+/** Une los errores del navegador con los del servidor; en los vehículos, campo por campo. */
+function unirErrores(servidor, cliente) {
+  const unidos = { ...servidor, ...cliente };
+  const n = Math.max(servidor.compatibilidad?.length || 0, cliente.compatibilidad?.length || 0);
+  if (n > 0) {
+    unidos.compatibilidad = Array.from({ length: n }, (_, i) => {
+      const e = { ...servidor.compatibilidad?.[i], ...cliente.compatibilidad?.[i] };
+      return Object.keys(e).length ? e : undefined;
+    });
+  }
+  return unidos;
+}
 import "../css/producto-form.css";
 import { etiquetaCategoria } from "../utils/categorias";
 import { formatoCop } from "../utils/formato";
@@ -144,6 +160,9 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
   const [errorFoto, setErrorFoto] = useState(null);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
+  // Errores por campo que respondió el backend; se borran al editar el campo
+  const [erroresServidor, setErroresServidor] = useState({});
+  const [confirmarPerdida, setConfirmarPerdida] = useState(false);
   const fileInputRef = useRef(null);
   const resumenRef = useRef(null);
 
@@ -175,12 +194,19 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
   }, [id, token, esEdicion]);
 
   // Después del primer intento de guardar, los errores se recalculan en cada cambio (la validación es pura)
-  const errores = submitted ? validarFormulario(form, productosExistentes, esEdicion, id) : {};
+  const errores = unirErrores(erroresServidor, submitted ? validarFormulario(form, productosExistentes, esEdicion, id) : {});
   const actualizar = (cambio) => setForm((prev) => (typeof cambio === "function" ? cambio(prev) : { ...prev, ...cambio }));
+  const olvidarErrorServidor = (campo) => setErroresServidor((prev) => {
+    if (!(campo in prev)) return prev;
+    const resto = { ...prev };
+    delete resto[campo];
+    return resto;
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     actualizar({ [name]: value });
+    olvidarErrorServidor(name);
   };
 
   // La foto llega del selector de archivos o arrastrada a la zona de la foto; las reglas son las mismas
@@ -212,6 +238,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
 
   const handleCompatibilidadChange = (index, e) => {
     const { name, value } = e.target;
+    olvidarErrorServidor("compatibilidad");
     actualizar((prev) => ({
       ...prev,
       modelosCompatibles: prev.modelosCompatibles.map((c, i) =>
@@ -224,18 +251,31 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
     ...prev, modelosCompatibles: prev.modelosCompatibles.filter((_, i) => i !== index),
   }));
 
-  const handleSubmit = async (e) => {
+  const enfocarPrimerError = () => requestAnimationFrame(() => document.querySelector(".pfm-root [aria-invalid='true']")?.focus());
+
+  const handleSubmit = (e) => {
     e.preventDefault();
+    if (guardando) return;
     setSubmitted(true);
     const e2 = validarFormulario(form, productosExistentes, esEdicion, id);
     if (Object.keys(e2).length > 0) {
       // El resumen se anuncia y el foco va al primer campo con error
-      requestAnimationFrame(() => document.querySelector(".pfm-root [aria-invalid='true']")?.focus());
+      enfocarPrimerError();
       return;
     }
+    // Vender por debajo del costo se permite, pero la tienda lo confirma antes de guardar
+    if (perdidaPorUnidad(form.precioCompra, form.precioVenta) > 0) {
+      setConfirmarPerdida(true);
+      return;
+    }
+    guardar();
+  };
 
+  const guardar = async () => {
     setGuardando(true);
     setServerError(null);
+    setErroresServidor({});
+    let productoId = id;
     try {
       const payload = {
         ...form,
@@ -260,28 +300,44 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
           motor: c.motor?.trim() || null,
         })),
       };
-      let productoId = id;
       if (esEdicion) {
         await actualizarProducto(id, payload, token);
       } else {
         const mov = await crearProducto(payload, token);
         productoId = mov.productoId;
       }
-      if (imagenFile) {
-        setSubiendoImagen(true);
-        await subirImagenProducto(productoId, imagenFile, token);
-      }
-      onVolver();
     } catch (err) {
-      setServerError(err.message);
-      resumenRef.current?.scrollIntoView({ block: "center" });
-    } finally {
-      setSubiendoImagen(false);
+      // Los datos del formulario se conservan; el error va bajo cada campo o, si no es de un campo, arriba
+      if (err.campos) {
+        setErroresServidor(erroresDelServidor(err.campos));
+        enfocarPrimerError();
+      } else {
+        setServerError(err.message);
+        resumenRef.current?.scrollIntoView({ block: "center" });
+      }
       setGuardando(false);
+      return;
     }
+
+    const nombre = form.nombre.trim();
+    if (imagenFile) {
+      setSubiendoImagen(true);
+      try {
+        await subirImagenProducto(productoId, imagenFile, token);
+      } catch (err) {
+        // El producto ya quedó guardado: se avisa y se vuelve a la lista (repetir el guardado lo duplicaría)
+        avisar(`Guardamos “${nombre}”, pero la foto no se subió: ${err.message} Vuelve a intentarlo desde Editar.`, "aviso");
+        onVolver();
+        return;
+      }
+    }
+    avisar(esEdicion ? `Guardamos los cambios de “${nombre}”.` : `Creamos “${nombre}”: ya está en tu catálogo.`);
+    onVolver();
   };
 
   const margen = calcularMargen(form.precioCompra, form.precioVenta);
+  const ganancia = margenPesos(form.precioCompra, form.precioVenta);
+  const perdida = perdidaPorUnidad(form.precioCompra, form.precioVenta);
   const paraCliente = precioConIva(form.precioVenta, ivaRate);
   const compatErrores = errores.compatibilidad || [];
   // Vehículos con algún dato escrito: se descartan si el producto queda universal
@@ -465,8 +521,14 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
               </div>
               {margen !== null && (
                 <p className={`pfm-margen${margen < 0 ? " pfm-margen--negativo" : ""}`} role="status">
-                  Margen de ganancia <strong>{margen.toLocaleString("es-CO")} %</strong>
+                  {margen < 0 ? "Pérdida por unidad" : "Margen de ganancia"}
+                  <strong>{formatoCop(Math.abs(ganancia))} · {margen.toLocaleString("es-CO")} %</strong>
                 </p>
+              )}
+              {perdida > 0 && (
+                <Alerta tono="aviso">
+                  El precio de venta es menor que el de compra: pierdes {formatoCop(perdida)} por unidad. Puedes guardarlo igual.
+                </Alerta>
               )}
               <div className="ui-form__campos ui-form__campos--2">
                 <Campo id="pfm-stock" label="Stock actual" error={errores.stockActual} ayuda="Unidades en bodega.">
@@ -517,6 +579,12 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
           </div>
         </div>
       </form>
+
+      {confirmarPerdida && (
+        <ConfirmarAccion titulo="¿Vender por debajo del costo?" textoConfirmar="Guardar igual"
+          mensaje={`Vas a vender por debajo del costo (pérdida de ${formatoCop(perdida)} por unidad). ¿Guardar igual?`}
+          onConfirmar={() => { setConfirmarPerdida(false); guardar(); }} onCancelar={() => setConfirmarPerdida(false)} />
+      )}
 
       <BarraAccionMovil etiqueta={esEdicion ? "Editando" : "Producto nuevo"} nota={form.nombre || undefined}>
         <button type="submit" form="pfm-form" className="ui-btn ui-btn--primario" disabled={guardando} aria-busy={guardando}>

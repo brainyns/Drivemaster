@@ -29,7 +29,8 @@
 .prt-stock { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
 .prt-stock__num { font-size: 1rem; font-variant-numeric: tabular-nums; }
 .prt-stock__num--agotado { color: var(--ui-error); }
-.prt-stock__num--bajo { color: var(--ui-aviso); }
+.prt-stock__num--bajo { color: var(--ui-error); }
+.prt-stock__num--cerca { color: var(--ui-aviso); }
 .prt-stock__min { font-size: 0.75rem; color: var(--ui-muted); }
 
 .prt-eliminar.ui-btn { color: var(--ui-error); }
@@ -41,28 +42,3 @@
   .prt-barra .ui-buscador { max-width: none; }
   .prt-producto { min-width: 0; }
 }
-
-/* ── Formularios viejos (AjusteInventarioForm) ───────────────────────────────────────────────────────────── */
-.form-container {
-  padding: 1.5rem 1.75rem 2.5rem;
-  max-width: 900px;
-}
-
-.form-container h1 {
-  font-size: 1.7rem;
-  font-weight: 800;
-  letter-spacing: -.035em;
-  color: var(--ui-text);
-  margin: 0 0 1.25rem;
-}
-
-/* ── RESPONSIVE ── */
-@media (max-width: 768px) {
-  
-  .form-container { padding: 1rem; max-width: 100%; }
-  
-  
-  
-  
-}
-

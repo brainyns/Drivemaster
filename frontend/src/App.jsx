@@ -3,7 +3,6 @@ import Sidebar               from "./components/Sidebar";
 import TopBar                from "./components/TopBar";
 import Productos             from "./pages/Productos";
 import ProductoForm          from "./pages/ProductoForm";
-import AjusteInventarioForm  from "./pages/AjusteInventarioForm";
 import Compras               from "./pages/Compras";
 import CompraForm            from "./pages/CompraForm";
 import CompraDetalle         from "./pages/CompraDetalle";
@@ -58,6 +57,7 @@ import PerfilCliente from "./pages/PerfilCliente";
 import ProblemasEnvios from "./pages/ProblemasEnvios";
 import DatosMiTienda from "./pages/DatosMiTienda";
 import Alerta from "./components/ui/Alerta";
+import Avisos from "./components/ui/Avisos";
 import { miTienda } from "./services/tiendaService";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
@@ -663,7 +663,6 @@ function App() {
     if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} esTienda={esTienda} />;
     if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} esTienda={esTienda} ivaRate={ivaRate} />;
     if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} esTienda={esTienda} ivaRate={ivaRate} />;
-    if (pagina === "inventarioAjuste") return <AjusteInventarioForm productoId={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
 
     if (pagina === "clientes" && user?.rol === "SUPERADMIN") return <ClientesPlataforma token={token} />;
     if (pagina === "compras")          return <Compras              onNueva={() => irA("compraNueva")} onDetalle={id => irA("compraDetalle", id)} token={token} />;
@@ -743,6 +742,7 @@ function App() {
       </main>
 
       <ChatWidget onVerProducto={(id) => irA("producto-marketplace", id)} />
+      <Avisos />
     </div>
   );
 }

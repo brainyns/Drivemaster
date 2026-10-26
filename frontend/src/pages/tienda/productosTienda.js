@@ -4,18 +4,31 @@
 export const publicado = (p) => p.activo !== false;
 export const porEncargo = (p) => p.tipo === "ENCARGO";
 
-/** agotado | bajo | ok | encargo (los de encargo no dependen del stock). */
+/**
+ * Unidades por encima del mínimo que todavía cuentan como "cerca": el 50 % del mínimo, y al menos 2. Con mínimo 1,
+ * hasta 3 unidades; con mínimo 10, hasta 15.
+ */
+export const margenCerca = (minimo) => Math.max(2, Math.ceil(minimo * 0.5));
+
+/**
+ * agotado | bajo (en el mínimo o por debajo) | cerca (a pocas unidades del mínimo) | ok | encargo (los de encargo no
+ * dependen del stock). Sin mínimo definido solo se distingue el agotado.
+ */
 export function nivelStock(p) {
   if (porEncargo(p)) return "encargo";
   const stock = Number(p.stockActual) || 0;
   if (stock <= 0) return "agotado";
-  if (p.stockMinimo != null && stock <= p.stockMinimo) return "bajo";
+  if (p.stockMinimo == null) return "ok";
+  if (stock <= p.stockMinimo) return "bajo";
+  if (stock <= p.stockMinimo + margenCerca(p.stockMinimo)) return "cerca";
   return "ok";
 }
 
+// Rojo: agotado o en el mínimo (lo mismo que avisa la campanita). Amarillo: cerca del mínimo.
 export const NIVEL = {
   agotado: { tono: "error", texto: "Agotado" },
-  bajo: { tono: "aviso", texto: "Poco stock" },
+  bajo: { tono: "error", texto: "Poco stock" },
+  cerca: { tono: "aviso", texto: "Cerca del mínimo" },
   ok: { tono: "ok", texto: "En stock" },
   encargo: { tono: "info", texto: "Por encargo" },
 };
@@ -38,7 +51,7 @@ export function coincide(p, termino) {
 
 /** Lo que necesita atención primero (agotados y poco stock), luego por nombre. */
 export function ordenar(productos) {
-  const peso = { agotado: 0, bajo: 1, ok: 2, encargo: 2 };
+  const peso = { agotado: 0, bajo: 1, cerca: 2, ok: 3, encargo: 3 };
   return [...productos].sort((a, b) => peso[nivelStock(a)] - peso[nivelStock(b)]
     || String(a.nombre || "").localeCompare(String(b.nombre || ""), "es"));
 }

@@ -4,7 +4,7 @@
 
 export const TIPOS = {
   ENTRADA: { label: "Entrada", plural: "Entradas", tono: "ok", signo: "+", campo: "Unidades que entran",
-    ayuda: "Llegó mercancía: se suma al stock." },
+    ayuda: "Mercancía que llega sin una compra (devolución, traslado): se suma al stock. Si viene de una compra a proveedor, regístrala en Compras." },
   SALIDA: { label: "Salida", plural: "Salidas", tono: "error", signo: "−", campo: "Unidades que salen",
     ayuda: "Salió sin pasar por un pedido (daño, uso interno): se resta del stock." },
   AJUSTE: { label: "Ajuste", plural: "Ajustes", tono: "aviso", signo: "", campo: "Stock contado",
@@ -50,6 +50,31 @@ export function stockResultante(tipo, actual, cantidad) {
   if (tipo === "ENTRADA") return base + n;
   if (tipo === "SALIDA") return base - n;
   return n;
+}
+
+/**
+ * Productos que coinciden con lo escrito en el buscador del movimiento: por nombre, código SKU o referencia del
+ * fabricante, sin importar mayúsculas ni tildes. Primero los que empiezan con lo escrito; como mucho `max`.
+ */
+export function buscarProductos(productos, termino, max = 8) {
+  const limpio = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const q = limpio(termino).trim();
+  if (!q) return [];
+  const campos = (p) => [p.nombre, p.codigo, p.referencia].map(limpio);
+  return productos
+    .filter((p) => campos(p).some((x) => x.includes(q)))
+    .sort((a, b) => Number(!campos(a).some((x) => x.startsWith(q))) - Number(!campos(b).some((x) => x.startsWith(q)))
+      || String(a.nombre || "").localeCompare(String(b.nombre || ""), "es"))
+    .slice(0, max);
+}
+
+/** Texto de la diferencia de un ajuste por conteo: "8 → 5, diferencia −3"; null si falta el número contado. */
+export function textoDiferencia(actual, contado) {
+  const n = Number(contado);
+  if (String(contado ?? "").trim() === "" || !Number.isInteger(n) || n < 0) return null;
+  const base = Number(actual) || 0;
+  const d = n - base;
+  return `${base} → ${n}, diferencia ${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(d)}`;
 }
 
 /** Errores del movimiento manual, por campo. */

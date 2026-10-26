@@ -9,7 +9,8 @@ import Esqueleto from "../components/ui/Esqueleto";
 import LogoNegocio from "../components/ui/LogoNegocio";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
-import { coincideProveedor } from "./tienda/proveedoresTienda";
+import { coincideProveedor, recibePdf } from "./tienda/proveedoresTienda";
+import { plural } from "../utils/formato";
 import "../css/proveedores.css";
 
 const POR_PAGINA = 15;
@@ -47,8 +48,10 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
   const totalPaginas = Math.max(1, Math.ceil(visibles.length / POR_PAGINA));
   const paginaActual = Math.min(pagina, totalPaginas);
   const enPagina = visibles.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
-  const conCorreo = proveedores.filter((p) => p.correo).length;
-  const sinCorreo = proveedores.length - conCorreo;
+  // El correo es opcional: la tarjeta cuenta a quién le llega el PDF y explica por qué a los demás no
+  const recibenPdf = proveedores.filter(recibePdf).length;
+  const sinCorreo = proveedores.filter((p) => !p.correo).length;
+  const apagados = proveedores.length - recibenPdf - sinCorreo;
 
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
 
@@ -87,7 +90,7 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
   return (
     <div className="ss-panel--tienda prv-root">
       <EncabezadoPagina titulo="Proveedores"
-        descripcion="A quién le compras para surtir tu inventario. Cada compra registrada le llega en PDF a su correo."
+        descripcion="A quién le compras para surtir tu inventario. Si tiene correo, le puede llegar el PDF de cada compra."
         acciones={proveedores.length > 0 && (
           <>
             <button type="button" className="ui-btn ui-btn--secundario" onClick={exportar} disabled={exportando} aria-busy={exportando}>
@@ -106,7 +109,7 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
 
       {!error && proveedores.length === 0 ? (
         <EstadoVacio icono="users" titulo="Aún no tienes proveedores"
-          texto="Agrega a quién le compras: lo eliges al registrar una compra y le enviamos el PDF a su correo.">
+          texto="Agrega a quién le compras: lo eliges al registrar una compra y, si tiene correo, le enviamos el PDF.">
           {nuevo}
         </EstadoVacio>
       ) : proveedores.length > 0 && (
@@ -115,8 +118,10 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
             <h2 id="prv-resumen" className="ui-sr">Resumen de proveedores</h2>
             <div className="ui-indicadores">
               <Indicador icono="users" titulo="Proveedores" valor={proveedores.length} />
-              <Indicador icono="mail" titulo="Reciben el PDF" valor={conCorreo} tono={sinCorreo === 0 ? "ok" : undefined}
-                pie={sinCorreo > 0 ? `${sinCorreo} sin correo registrado` : "Todos tienen correo"} />
+              <Indicador icono="mail" titulo="Reciben el PDF" valor={recibenPdf} tono={recibenPdf === proveedores.length ? "ok" : undefined}
+                pie={recibenPdf === proveedores.length ? "A todos les llega el PDF de cada compra"
+                  : [sinCorreo > 0 && `${plural(sinCorreo, "proveedor", "proveedores")} sin correo`,
+                    apagados > 0 && `${apagados} con el envío del PDF apagado`].filter(Boolean).join(" · ")} />
             </div>
           </section>
 
@@ -159,7 +164,8 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
                             {p.telefono ? <a className="prv-enlace" href={`tel:${p.telefono}`}>{p.telefono}</a> : <span className="prv-tenue">Sin teléfono</span>}
                           </td>
                           <td data-label="Correo">
-                            {p.correo ? <a className="prv-enlace" href={`mailto:${p.correo}`}>{p.correo}</a> : <ChipEstado tono="aviso">Sin correo</ChipEstado>}
+                            {p.correo ? <a className="prv-enlace" href={`mailto:${p.correo}`}>{p.correo}</a> : <span className="prv-tenue">Sin correo</span>}
+                            {p.correo && !recibePdf(p) && <> <ChipEstado tono="info">Sin PDF</ChipEstado></>}
                           </td>
                           <td className="ui-table__acciones">
                             <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onEditar(p.id)}

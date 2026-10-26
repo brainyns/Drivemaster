@@ -538,6 +538,72 @@
 .ui-alerta--aviso { background: var(--ui-aviso-bg); border-color: color-mix(in srgb, var(--ui-aviso) 35%, transparent); }
 .ui-alerta--aviso > svg { color: var(--ui-aviso); }
 
+/* ── Avisos flotantes (Avisos + avisar()): abajo a la derecha, sobre la barra de acción del celular ── */
+.ui-avisos {
+  position: fixed; z-index: 1200; right: 20px; bottom: 20px;
+  display: grid; gap: 8px; width: min(380px, calc(100vw - 32px)); pointer-events: none;
+}
+.ui-aviso {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 12px 14px;
+  font-size: 0.9rem; line-height: 1.45; color: var(--ui-text);
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); box-shadow: var(--ui-sombra-2);
+  pointer-events: auto; animation: ui-aviso-entra 180ms var(--ui-ease);
+}
+.ui-aviso > svg { flex: none; margin-top: 1px; }
+.ui-aviso--ok > svg { color: var(--ui-ok); }
+.ui-aviso--error > svg { color: var(--ui-error); }
+.ui-aviso--aviso > svg { color: var(--ui-aviso); }
+.ui-aviso--info > svg { color: var(--ui-info); }
+.ui-aviso__texto { flex: 1; margin: 0; min-width: 0; }
+.ui-aviso__cerrar {
+  flex: none; display: grid; place-items: center; padding: 2px; border: 0; border-radius: var(--ui-r-md);
+  background: none; color: var(--ui-muted); cursor: pointer;
+}
+.ui-aviso__cerrar:hover { color: var(--ui-text); background: var(--ui-hover); }
+.ui-aviso__cerrar:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+@keyframes ui-aviso-entra { from { opacity: 0; transform: translateY(8px); } }
+@media (max-width: 1023px) {
+  .ui-avisos { right: 16px; left: 16px; bottom: 84px; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-aviso { animation: none; }
+}
+
+/* ── Buscador de producto con autocompletado (BuscadorProducto) ─────────── */
+.ui-combo { position: relative; min-width: 0; }
+.ui-combo__lista {
+  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% - 4px);
+  display: grid; max-height: 320px; overflow-y: auto; margin: 0; padding: 4px; list-style: none;
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); box-shadow: var(--ui-sombra-2);
+}
+.ui-combo__opcion {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  min-height: 48px; padding: 6px 8px; border-radius: var(--ui-r-md); cursor: pointer;
+}
+.ui-combo__opcion--activa { background: var(--ui-hover); }
+.ui-combo__imagen.mk-imagen { width: 36px; border-radius: var(--ui-r-md); }
+.ui-combo__texto { display: grid; gap: 1px; min-width: 0; }
+.ui-combo__texto strong { font-size: 0.875rem; overflow-wrap: anywhere; }
+.ui-combo__texto span, .ui-combo__stock { font-size: 0.75rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+.ui-combo__vacio { padding: 10px 8px; font-size: 0.85rem; color: var(--ui-muted); }
+.ui-combo .ui-combo__nota { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 0.8rem; color: var(--ui-muted); }
+
+.ui-producto-elegido {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto auto; align-items: center; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); background: var(--ui-surface);
+}
+.ui-producto-elegido__imagen.mk-imagen { width: 56px; border-radius: var(--ui-r-md); }
+.ui-producto-elegido__texto { display: grid; gap: 2px; min-width: 0; }
+.ui-producto-elegido__texto strong { overflow-wrap: anywhere; }
+.ui-producto-elegido__texto span { font-size: 0.8rem; color: var(--ui-muted); }
+.ui-producto-elegido__stock { display: grid; justify-items: end; gap: 0; }
+.ui-producto-elegido__stock span { font-size: 0.72rem; color: var(--ui-muted); }
+.ui-producto-elegido__stock strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) {
+  .ui-producto-elegido { grid-template-columns: 48px minmax(0, 1fr) auto; }
+  .ui-producto-elegido .ui-btn { grid-column: 1 / -1; justify-self: start; }
+}
+
 /* ── Campo de formulario (Campo): etiqueta arriba, ayuda y error abajo ─── */
 .ui-field { display: grid; gap: 6px; min-width: 0; align-content: start; }
 .ui-field__label { font-size: 0.875rem; font-weight: 600; color: var(--ui-text); }
@@ -563,6 +629,13 @@
 }
 
 .ui-field__error svg { flex-shrink: 0; margin-top: 1px; }
+
+/* Advertencia bajo un campo (Campo aviso): no impide guardar */
+.ui-field .ui-field__aviso {
+  display: flex; align-items: flex-start; gap: 6px; margin: 0;
+  font-size: 0.82rem; font-weight: 500; line-height: 1.45; color: var(--ui-aviso);
+}
+.ui-field__aviso svg { flex-shrink: 0; margin-top: 1px; }
 
 .ui-field__input {
   width: 100%;

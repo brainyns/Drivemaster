@@ -12,7 +12,12 @@ import Esqueleto from "../components/ui/Esqueleto";
 import PieFormulario from "../components/ui/PieFormulario";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
 import Icon from "../components/public/Icon";
-import { FILTROS_TIPO, TIPOS, erroresMovimiento, filtrarMovimientos, resumenMovimientos, stockResultante } from "./tienda/inventarioTienda";
+import BuscadorProducto from "../components/ui/BuscadorProducto";
+import { avisar } from "../components/ui/avisar";
+import {
+  FILTROS_TIPO, TIPOS, erroresMovimiento, filtrarMovimientos, resumenMovimientos, stockResultante, textoDiferencia,
+} from "./tienda/inventarioTienda";
+import { plural } from "../utils/formato";
 import "../css/movimientos.css";
 
 const POR_PAGINA = 15;
@@ -34,18 +39,20 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
   const errores = tocado ? erroresMovimiento(form, producto?.stockActual) : {};
   const resultado = producto ? stockResultante(form.tipo, producto.stockActual, form.cantidad) : null;
   const tipo = TIPOS[form.tipo];
+  const disponible = Math.max(0, Number(producto?.stockActual) || 0);
 
   const cambiar = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const enviar = async (e) => {
     e.preventDefault();
+    if (guardando) return;
     setTocado(true);
     if (Object.keys(erroresMovimiento(form, producto?.stockActual)).length) return;
     setGuardando(true);
     setError(null);
     try {
       await registrarMovimiento({ ...form, cantidad: Number(form.cantidad), motivo: form.motivo.trim() }, token);
-      onGuardado(`${tipo.label} registrada: ${producto.nombre} quedó con ${resultado} ${resultado === 1 ? "unidad" : "unidades"}.`);
+      onGuardado(`${tipo.label === "Ajuste" ? "Ajuste registrado" : `${tipo.label} registrada`}: ${producto.nombre} quedó con ${plural(resultado, "unidad", "unidades")}.`);
     } catch (err) {
       setError(err.message);
       setGuardando(false);
@@ -64,24 +71,25 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
         ))}
       </fieldset>
       <div className="ui-form__campos">
-        <Campo id="mov-producto" label="Producto" error={errores.productoId}>
-          <select className="ui-field__input" name="productoId" value={form.productoId} onChange={cambiar} autoFocus>
-            <option value="">Elegir producto</option>
-            {productos.map((p) => <option key={p.id} value={p.id}>{p.nombre} · stock {p.stockActual ?? 0}</option>)}
-          </select>
-        </Campo>
-        <Campo id="mov-cantidad" label={tipo.campo} error={errores.cantidad}>
+        <BuscadorProducto id="mov-producto" productos={productos} elegido={producto} error={errores.productoId} autoFocus
+          onElegir={(p) => setForm((f) => ({ ...f, productoId: p ? p.id : "" }))} />
+        <Campo id="mov-cantidad" label={tipo.campo} error={errores.cantidad}
+          ayuda={form.tipo === "SALIDA" && producto ? `Puedes sacar hasta ${plural(disponible, "unidad", "unidades")}.` : undefined}>
           <input className="ui-field__input" name="cantidad" type="text" inputMode="numeric" placeholder="0"
             value={form.cantidad} onChange={cambiar} />
         </Campo>
         <Campo id="mov-motivo" label="Motivo" error={errores.motivo}>
           <input className="ui-field__input" name="motivo" value={form.motivo} onChange={cambiar} maxLength={200}
-            placeholder={form.tipo === "AJUSTE" ? "Ej. Conteo de fin de mes" : form.tipo === "ENTRADA" ? "Ej. Llegó pedido del proveedor" : "Ej. Unidad dañada"} />
+            placeholder={form.tipo === "AJUSTE" ? "Ej. Conteo de fin de mes" : form.tipo === "ENTRADA" ? "Ej. Devolución de un cliente" : "Ej. Unidad dañada"} />
         </Campo>
       </div>
       {producto && resultado != null && !errores.cantidad && (
         <p className="mov-resultado" role="status">
-          El stock de <strong>{producto.nombre}</strong> pasa de <strong>{producto.stockActual ?? 0}</strong> a <strong>{resultado}</strong>.
+          {form.tipo === "AJUSTE" ? (
+            <>Stock de <strong>{producto.nombre}</strong>: <strong>{textoDiferencia(producto.stockActual, form.cantidad)}</strong>.</>
+          ) : (
+            <>El stock de <strong>{producto.nombre}</strong> pasa de <strong>{producto.stockActual ?? 0}</strong> a <strong>{resultado}</strong>.</>
+          )}
         </p>
       )}
       <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar={`Registrar ${tipo.label.toLowerCase()}`} />
@@ -97,7 +105,6 @@ function Movimientos({ token, esTienda = false }) {
   const [error, setError] = useState(null);
   const [reintentando, setReintentando] = useState(false);
   const [registrando, setRegistrando] = useState(false);
-  const [aviso, setAviso] = useState(null);
   const [filtros, setFiltros] = useState({ busqueda: "", tipo: "", desde: "", hasta: "" });
   const [pagina, setPagina] = useState(1);
 
@@ -133,13 +140,13 @@ function Movimientos({ token, esTienda = false }) {
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
   const guardado = async (texto) => {
     setRegistrando(false);
-    setAviso(texto);
+    avisar(texto);
     await cargar();
     (esTienda ? listarProductosMiTienda(token) : listarProductos(token)).then((l) => setProductos(l || [])).catch(() => {});
   };
 
   const botonRegistrar = !registrando && (
-    <button type="button" className="ui-btn ui-btn--primario" onClick={() => { setAviso(null); setRegistrando(true); }}>
+    <button type="button" className="ui-btn ui-btn--primario" onClick={() => setRegistrando(true)}>
       <Icon name="plus" size={16} /> Registrar movimiento
     </button>
   );
@@ -155,7 +162,6 @@ function Movimientos({ token, esTienda = false }) {
           No pudimos cargar los movimientos. {error}
         </Alerta>
       )}
-      {aviso && <Alerta tono="ok" className="mov-alerta" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
 
       {registrando && (
         <div className="mov-alerta">

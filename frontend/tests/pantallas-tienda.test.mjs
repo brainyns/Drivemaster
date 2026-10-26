@@ -121,6 +121,37 @@ test("Productos: stock con aviso, publicado u oculto, filtros y lo que necesita 
   assert.ok(coincide(p("Pastillas", { marca: "Bosch" }), "bosch"));
 });
 
+test("Productos: amarillo cerca del mínimo y los cuatro filtros con agotados, ocultos y por encargo", async () => {
+  const { nivelStock, contar, FILTROS, NIVEL } = await import("../src/pages/tienda/productosTienda.js");
+  const p = (nombre, extra) => ({ id: nombre, nombre, precioVenta: 1000, stockActual: 10, stockMinimo: 1, ...extra });
+  // Mínimo 1: cerca hasta 3 unidades; mínimo 10: hasta 15
+  assert.equal(nivelStock(p("a", { stockActual: 1 })), "bajo");
+  assert.equal(nivelStock(p("b", { stockActual: 3 })), "cerca");
+  assert.equal(nivelStock(p("c", { stockActual: 4 })), "ok");
+  assert.equal(nivelStock(p("d", { stockActual: 15, stockMinimo: 10 })), "cerca");
+  assert.equal(nivelStock(p("e", { stockActual: 16, stockMinimo: 10 })), "ok");
+  assert.equal(nivelStock(p("f", { stockActual: 2, stockMinimo: null })), "ok", "sin mínimo solo se avisa el agotado");
+  assert.equal(NIVEL.bajo.tono, "error");
+  assert.equal(NIVEL.cerca.tono, "aviso");
+
+  const lista = [
+    p("Publicado sano"),
+    p("Publicado cerca", { stockActual: 2 }),
+    p("Publicado bajo", { stockActual: 1 }),
+    p("Publicado agotado", { stockActual: 0 }),
+    p("Oculto agotado", { stockActual: 0, activo: false }),
+    p("Oculto sano", { activo: false }),
+    p("Encargo sin stock", { tipo: "ENCARGO", stockActual: 0 }),
+    p("Legado sin campo activo", { activo: undefined }),
+  ];
+  const nombres = (key) => lista.filter(FILTROS.find((f) => f.key === key).filtro).map((x) => x.nombre);
+  assert.deepEqual(nombres("POCO"), ["Publicado bajo"], "poco stock no incluye agotados ni los que solo están cerca");
+  assert.deepEqual(nombres("AGOTADOS"), ["Publicado agotado", "Oculto agotado"], "el de encargo no cuenta como agotado");
+  assert.deepEqual(nombres("OCULTOS"), ["Oculto agotado", "Oculto sano"]);
+  assert.equal(nombres("PUBLICADOS").length, 6, "sin campo activo cuenta como publicado");
+  assert.deepEqual(contar(lista), { TODOS: 8, POCO: 1, AGOTADOS: 2, PUBLICADOS: 6, OCULTOS: 2 });
+});
+
 test("Productos usa el sistema compartido, sin confirm() ni alert() del navegador", () => {
   const pagina = leer("../src/pages/Productos.jsx");
   for (const pieza of ["<EncabezadoPagina", "<Indicador", "<ChipEstado", "<EstadoVacio", "<Esqueleto", "<ImagenProducto", "<ConfirmarAccion",
@@ -132,7 +163,8 @@ test("Productos usa el sistema compartido, sin confirm() ni alert() del navegado
 });
 
 test("Formulario de producto: validación en español, foto con las mismas reglas y margen", async () => {
-  const { validarFormulario, errorImagen, margen, COMPAT_VACIA } = await import("../src/pages/tienda/reglasProducto.js");
+  const { validarFormulario, errorImagen, margen, margenPesos, perdidaPorUnidad, erroresDelServidor, COMPAT_VACIA } =
+    await import("../src/pages/tienda/reglasProducto.js");
   const base = { nombre: "Pastillas", categoria: "Frenos", codigo: "BRK-1", marca: "Bosch", tipo: "STOCK", precioCompra: "100",
     precioVenta: "150", stockActual: "4", stockMinimo: "1", compatibilidadUniversal: true, modelosCompatibles: [COMPAT_VACIA] };
   assert.deepEqual(validarFormulario(base, [], false), {});
@@ -140,8 +172,15 @@ test("Formulario de producto: validación en español, foto con las mismas regla
     [{ id: "x", codigo: "BRK-1" }], false);
   assert.equal(e.nombre, "Escribe el nombre del producto.");
   assert.equal(e.codigo, "Ya tienes un producto con este código SKU.");
-  assert.equal(e.precioVenta, "El precio de venta no puede ser menor que el de compra.");
+  assert.equal(e.precioVenta, undefined, "vender por debajo del costo se advierte y se confirma, no bloquea");
   assert.equal(e.compatibilidad[0].marca, "Elige la marca del vehículo.");
+  assert.equal(margenPesos("100", "150"), 50);
+  assert.equal(perdidaPorUnidad("100", "50"), 50);
+  assert.equal(perdidaPorUnidad("100", "150"), 0);
+  const delServidor = erroresDelServidor({ codigo: "Ya tienes un producto con este código SKU.", "modelosCompatibles.1.anoHasta": "Año inválido" });
+  assert.equal(delServidor.codigo, "Ya tienes un producto con este código SKU.");
+  assert.equal(delServidor.compatibilidad[0], undefined);
+  assert.deepEqual(delServidor.compatibilidad[1], { anoHasta: "Año inválido" });
   assert.equal(validarFormulario({ ...base }, [{ id: "p1", codigo: "BRK-1" }], true, "p1").codigo, undefined, "editar el mismo no es duplicado");
   assert.equal(errorImagen({ type: "image/png", size: 10 }), null);
   assert.match(errorImagen({ type: "image/svg+xml", size: 10 }), /JPG, PNG, WEBP o GIF/);
@@ -249,7 +288,7 @@ test("Proveedores: búsqueda, validación con el correo del PDF y la lista con e
   assert.ok(coincideProveedor(p, "900123"));
   assert.ok(coincideProveedor(p, "SUR"));
   assert.deepEqual(erroresProveedor(p), {});
-  assert.deepEqual(Object.keys(erroresProveedor({ nombre: "", correo: "" })), ["nombre", "correo"]);
+  assert.deepEqual(Object.keys(erroresProveedor({ nombre: "", correo: "" })), ["nombre"], "el correo es opcional, como en el backend");
   assert.match(erroresProveedor({ ...p, correo: "ventas@" }).correo, /correo válido/);
   assert.match(erroresProveedor({ ...p, telefono: "abc" }).telefono, /teléfono válido/);
   const lista = leer("../src/pages/Proveedores.jsx");
@@ -351,4 +390,36 @@ test("Producto: el precio de venta es sin IVA y muestra lo que verá el cliente 
   const pagina = readFileSync(new URL("../src/pages/ProductoForm.jsx", import.meta.url), "utf8");
   assert.ok(pagina.includes('label="Precio de venta (sin IVA)"'));
   assert.ok(pagina.includes("El cliente verá: ${formatoCop(paraCliente)} con IVA"));
+});
+
+test("Proveedores: dígito de verificación de la DIAN, nombre repetido y quién recibe el PDF", async () => {
+  const { digitoVerificacion, avisoDigitoNit, nombreRepetido, recibePdf } = await import("../src/pages/tienda/proveedoresTienda.js");
+  assert.equal(digitoVerificacion("800197268"), 4, "NIT de la DIAN");
+  assert.equal(digitoVerificacion("860034313"), 7);
+  assert.equal(avisoDigitoNit("800.197.268-4"), null);
+  assert.match(avisoDigitoNit("800197268-5"), /debería ser 4/);
+  assert.equal(avisoDigitoNit("800197268"), null, "sin dígito no hay qué revisar");
+  const lista = [{ id: "1", nombre: "Repuestos Sur S.A.S." }];
+  assert.equal(nombreRepetido("repuestos sur sas", lista, "2")?.id, "1");
+  assert.equal(nombreRepetido("Repuestos Sur", lista, "1"), null, "al editar, su propio nombre no cuenta");
+  assert.ok(recibePdf({ correo: "a@b.co" }), "sin dato: sí, como antes del interruptor");
+  assert.ok(!recibePdf({ correo: "a@b.co", enviarPdfCompras: false }));
+  assert.ok(!recibePdf({ correo: "", enviarPdfCompras: true }));
+});
+
+test("Inventario: buscador por nombre, código o referencia y diferencia del ajuste", async () => {
+  const { buscarProductos, textoDiferencia, erroresMovimiento } = await import("../src/pages/tienda/inventarioTienda.js");
+  const productos = [
+    { id: "1", nombre: "Pastillas de freno", codigo: "KNT-BRK-001", referencia: "P 85 020" },
+    { id: "2", nombre: "Filtro de aceite", codigo: "FLT-01" },
+    { id: "3", nombre: "Líquido de frenos", codigo: "LIQ-9" },
+  ];
+  assert.deepEqual(buscarProductos(productos, "fren").map((p) => p.id), ["3", "1"], "por nombre, sin tildes ni mayúsculas");
+  assert.deepEqual(buscarProductos(productos, "knt-brk").map((p) => p.id), ["1"], "por código SKU");
+  assert.deepEqual(buscarProductos(productos, "p 85").map((p) => p.id), ["1"], "por referencia");
+  assert.deepEqual(buscarProductos(productos, "  "), []);
+  assert.equal(textoDiferencia(8, "5"), "8 → 5, diferencia −3");
+  assert.equal(textoDiferencia(5, "8"), "5 → 8, diferencia +3");
+  assert.equal(textoDiferencia(5, ""), null);
+  assert.match(erroresMovimiento({ productoId: "1", tipo: "SALIDA", cantidad: "6", motivo: "x" }, 5).cantidad, /stock actual es 5/);
 });
