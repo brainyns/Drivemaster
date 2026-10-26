@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { listarMovimientos, registrarMovimiento } from "../services/movimientoService";
+import { exportarMovimientos, listarMovimientos, registrarMovimiento } from "../services/movimientoService";
 import { listarProductos, listarProductosMiTienda } from "../services/productoService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Indicador from "../components/ui/Indicador";
@@ -135,6 +135,18 @@ function Movimientos({ token, esTienda = false }) {
   const paginaActual = Math.min(pagina, totalPaginas);
   const enPagina = visibles.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
   const hayFiltros = filtros.busqueda || filtros.tipo || filtros.desde || filtros.hasta;
+  const [exportando, setExportando] = useState(null); // "xlsx" | "pdf" mientras se genera
+  const exportar = async (formato) => {
+    setExportando(formato);
+    try {
+      await exportarMovimientos(filtros, formato, token);
+      avisar(`Descargamos ${plural(visibles.length, "movimiento")} en ${formato === "pdf" ? "PDF" : "Excel"}.`);
+    } catch (e) {
+      avisar(`No pudimos generar el archivo. ${e.message}`, "error");
+    } finally {
+      setExportando(null);
+    }
+  };
 
   const filtrar = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(1); };
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
@@ -210,6 +222,16 @@ function Movimientos({ token, esTienda = false }) {
                 <input className="ui-field__input" type="date" value={filtros.hasta} min={filtros.desde || undefined}
                   onChange={(e) => filtrar({ hasta: e.target.value })} />
               </Campo>
+              {/* Descarga exactamente lo que muestra la lista con estos filtros (lo arma el backend) */}
+              <div className="mov-exportar" role="group" aria-label="Descargar los movimientos filtrados">
+                {[["xlsx", "Excel"], ["pdf", "PDF"]].map(([formato, texto]) => (
+                  <button key={formato} type="button" className="ui-btn ui-btn--secundario" onClick={() => exportar(formato)}
+                    disabled={exportando !== null || visibles.length === 0} aria-busy={exportando === formato}>
+                    {exportando !== formato && <Icon name="file" size={16} />}
+                    {exportando === formato ? "Generando…" : texto}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -8,6 +8,7 @@ import CompraForm            from "./pages/CompraForm";
 import CompraDetalle         from "./pages/CompraDetalle";
 import Proveedores           from "./pages/Proveedores";
 import ProveedorForm         from "./pages/ProveedorForm";
+import ProveedorDetalle      from "./pages/ProveedorDetalle";
 import Movimientos           from "./pages/Movimientos";
 import Login                 from "./pages/Login";
 import AdminLogin            from "./pages/AdminLogin";
@@ -86,6 +87,7 @@ const TITULOS = {
   "proveedores":     "Proveedores",
   "proveedorNuevo":  "Nuevo proveedor",
   "proveedorEditar": "Editar proveedor",
+  "proveedorDetalle": "Proveedor",
   "movimientos":     "Inventario",
   "usuarios":        "Usuarios",
   "rep-servicios":   "Reporte de Servicios",
@@ -360,7 +362,7 @@ function App() {
     TALLER: ["taller-panel", ...Object.keys(SECCION_TALLER)],
     // Compras, proveedores e inventario son de cada tienda (el backend filtra por dueño)
     TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda", "informes-tienda", "asistente-tienda",
-      "compras", "compraNueva", "compraDetalle", "proveedores", "proveedorNuevo", "proveedorEditar"],
+      "compras", "compraNueva", "compraDetalle", "proveedores", "proveedorNuevo", "proveedorEditar", "proveedorDetalle"],
   };
   const esTienda = user?.rol === "TIENDA";
 
@@ -669,7 +671,8 @@ function App() {
     if (pagina === "compraNueva")      return <CompraForm           onVolver={() => irA("compras")} token={token} />;
     if (pagina === "compraDetalle")    return <CompraDetalle        id={idSeleccionado} onVolver={() => irA("compras")} token={token} />;
 
-    if (pagina === "proveedores")      return <Proveedores          onNuevo={() => irA("proveedorNuevo")} onEditar={id => irA("proveedorEditar", id)} token={token} />;
+    if (pagina === "proveedores")      return <Proveedores          onNuevo={() => irA("proveedorNuevo")} onEditar={id => irA("proveedorEditar", id)} onDetalle={id => irA("proveedorDetalle", id)} token={token} />;
+    if (pagina === "proveedorDetalle") return <ProveedorDetalle     id={idSeleccionado} onVolver={() => irA("proveedores")} onEditar={id => irA("proveedorEditar", id)} onCompra={id => irA("compraDetalle", id)} token={token} />;
     if (pagina === "proveedorNuevo")   return <ProveedorForm        onVolver={() => irA("proveedores")} token={token} />;
     if (pagina === "proveedorEditar")  return <ProveedorForm        id={idSeleccionado} onVolver={() => irA("proveedores")} token={token} />;
 

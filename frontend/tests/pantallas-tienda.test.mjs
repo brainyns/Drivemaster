@@ -87,14 +87,22 @@ test("Mi tienda: perfil completo con lo que pide el catálogo y validación en l
 
   assert.deepEqual(Object.keys(erroresUbicacion({ ciudad: "", direccion: "" })), ["ciudad", "direccion"]);
   assert.deepEqual(erroresUbicacion({ ciudad: "Cali", direccion: "Cra 1" }), {});
-  assert.match(errorHorarioTienda(""), /Escribe tu horario/);
+  // El horario por días: una semana toda cerrada no sirve y los días con errores se marcan (reglas del taller)
+  const sinError = () => null;
+  assert.match(errorHorarioTienda([{ dia: "LUNES", abierto: false, franjas: [] }], sinError), /Abre al menos un día/);
+  assert.equal(errorHorarioTienda([{ dia: "LUNES", abierto: true, franjas: [{ apertura: "08:00", cierre: "18:00" }] }], sinError), null);
+  assert.match(errorHorarioTienda([{ dia: "LUNES", abierto: true, franjas: [{}] }], () => "mal"), /Revisa los días/);
+  const { horarioSoloTexto, tieneHorarioPorDias } = await import("../src/pages/tienda/perfilTienda.js");
+  assert.ok(horarioSoloTexto({ horario: "L-S 8-6" }), "el texto libre de antes pide configurarlo por días");
+  assert.ok(!horarioSoloTexto({ horario: "Lun a Vie…", horarioSemanal: [{ diaSemana: "LUNES" }] }));
+  assert.ok(tieneHorarioPorDias({ horarioSemanal: [{ diaSemana: "LUNES" }] }));
   assert.equal(errorCostoEnvio(false, ""), null, "sin envío no se valida el costo");
   assert.equal(errorCostoEnvio(true, "0"), null);
   assert.match(errorCostoEnvio(true, ""), /puede ser 0/);
   assert.match(errorCostoEnvio(true, "600000"), /entre \$ 0 y \$ 500\.000/);
   assert.deepEqual(comoLaVeElCliente({ ...completa, nombre: "Repuestos Sol", costoEnvio: 8000, nit: "900", correoUsuario: "x@y.com" }),
-    { id: undefined, nombre: "Repuestos Sol", ciudad: "Cali", barrio: undefined, direccion: "Cra 1", horario: "L-V 8-18", ofreceEnvio: true, costoEnvio: 8000,
-      logoUrl: "https://img/sol.png" });
+    { id: undefined, nombre: "Repuestos Sol", ciudad: "Cali", barrio: undefined, direccion: "Cra 1", horario: "L-V 8-18",
+      horarioSemanal: undefined, ofreceEnvio: true, costoEnvio: 8000, logoUrl: "https://img/sol.png" });
 });
 
 test("Mi tienda usa las piezas de Mi taller y la ficha del catálogo, con los mismos datos de antes", () => {
@@ -247,8 +255,9 @@ test("Compras: referencia del PDF, filtros, resumen del mes y la compra nueva", 
   assert.deepEqual(ids({ busqueda: "filtro" }), ["1"], "también busca por producto");
   assert.deepEqual(ids({ minimo: "100000" }), ["2"]);
   assert.deepEqual(ids({ desde: "2026-10-01" }), ["1"]);
+  // "Este mes" es solo octubre (no el histórico) y se compara con septiembre
   assert.deepEqual(resumenCompras(compras, new Date(2026, 9, 19).getTime()),
-    { total: 2, gastado: 170000, unidades: 15, mes: 50000, comprasMes: 1 });
+    { total: 2, gastado: 170000, unidades: 15, mes: 50000, comprasMes: 1, mesAnterior: 120000, variacionMes: -58.3, pendientes: 0 });
 
   assert.deepEqual(Object.keys(erroresLinea({ producto: null, cantidad: "0", costo: "" })), ["producto", "cantidad", "costo"]);
   assert.deepEqual(erroresLinea({ producto: { id: "x" }, cantidad: "2", costo: "0" }), {});
@@ -259,9 +268,10 @@ test("Compras: referencia del PDF, filtros, resumen del mes y la compra nueva", 
   assert.deepEqual([dos.length, dos[0].cantidad, dos[0].subtotal], [1, 5, 5000], "el mismo producto suma con su costo");
 });
 
-test("Compras: la lista ya no inventa un estado ni pendientes por recibir", () => {
+test("Compras: la lista muestra el estado que guarda el backend (recibida, pendiente o cancelada)", () => {
   const pagina = leer("../src/pages/Compras.jsx");
-  assert.ok(!pagina.includes("Pendientes por recibir") && !pagina.includes("RECIBIDA"), "la compra no tiene estados");
+  assert.ok(pagina.includes("<ChipEstado estado={estadoCompra(c)} catalogo={ESTADOS_COMPRA} />"), "el estado sale de la compra");
+  assert.ok(pagina.includes("topProveedores(compras, nombreProveedor)"), "el top de proveedores sale de las compras");
   assert.ok(pagina.includes("listarProveedores(token)"), "el nombre del proveedor sale de su lista");
   assert.ok(pagina.includes("ui-table--tarjetas"));
 });
@@ -298,7 +308,8 @@ test("Proveedores: búsqueda, validación con el correo del PDF y la lista con e
 
 test("Formulario de proveedor: campos con etiqueta y error, sin promesas que no existen", () => {
   const pagina = leer("../src/pages/ProveedorForm.jsx");
-  assert.equal((pagina.match(/<Campo id=/g) || []).length, 4);
+  // Nombre, NIT, correo y teléfono; y los opcionales: contacto, dirección, condiciones y plazo del crédito
+  assert.equal((pagina.match(/<Campo id=/g) || []).length, 8);
   for (const falso of ["OEM", "Categorización API", "facturación electrónica", "Validación Automática", "<a onClick"]) {
     assert.ok(!pagina.includes(falso), `sin “${falso}”`);
   }
@@ -423,4 +434,62 @@ test("Inventario: buscador por nombre, código o referencia y diferencia del aju
   assert.equal(textoDiferencia(5, "8"), "5 → 8, diferencia +3");
   assert.equal(textoDiferencia(5, ""), null);
   assert.match(erroresMovimiento({ productoId: "1", tipo: "SALIDA", cantidad: "6", motivo: "x" }, 5).cantidad, /stock actual es 5/);
+});
+
+test("Compras: estados, gasto sin canceladas, variación mensual y top de proveedores", async () => {
+  const { estadoCompra, resumenCompras, topProveedores, comprasDeProveedor, variacion, filtrarCompras } =
+    await import("../src/pages/tienda/comprasTienda.js");
+  const compras = [
+    { id: "1", proveedorId: "p1", fecha: "2026-10-02T10:00:00", total: 50000, productos: [{ cantidad: 5 }] }, // sin estado: recibida
+    { id: "2", proveedorId: "p1", fecha: "2026-10-05T10:00:00", total: 30000, estado: "PENDIENTE", numeroFactura: "FV-77", productos: [{ cantidad: 3 }] },
+    { id: "3", proveedorId: "p2", fecha: "2026-10-06T10:00:00", total: 90000, estado: "CANCELADA", productos: [{ cantidad: 9 }] },
+    { id: "4", proveedorId: "p2", fecha: "2026-09-10T10:00:00", total: 40000, estado: "RECIBIDA", productos: [{ cantidad: 4 }] },
+    { id: "5", proveedorId: "p3", fecha: "2026-08-10T10:00:00", total: 10000, productos: [{ cantidad: 1 }] },
+  ];
+  assert.equal(estadoCompra(compras[0]), "RECIBIDA", "las anteriores a los estados cuentan como recibidas");
+  const r = resumenCompras(compras, new Date(2026, 9, 19).getTime());
+  assert.equal(r.gastado, 130000, "la cancelada no es gasto");
+  assert.equal(r.unidades, 10, "solo lo recibido suma unidades");
+  assert.equal(r.mes, 80000);
+  assert.equal(r.variacionMes, 100, "octubre contra septiembre");
+  assert.equal(r.pendientes, 1);
+  assert.equal(variacion(100, 0), null, "sin gasto el mes anterior no hay contra qué comparar");
+
+  const nombres = { p1: "Autopartes Sur", p2: "Lubricantes Norte" };
+  assert.deepEqual(topProveedores(compras, (id) => nombres[id]).map((p) => [p.nombre, p.total, p.compras]),
+    [["Autopartes Sur", 80000, 2], ["Lubricantes Norte", 40000, 1], ["Proveedor eliminado", 10000, 1]]);
+  const deP1 = comprasDeProveedor(compras, "p1");
+  assert.deepEqual([deP1.compras.map((c) => c.id), deP1.total, deP1.ultima, deP1.pendientes], [["2", "1"], 80000, "2026-10-05T10:00:00", 1]);
+  assert.deepEqual(filtrarCompras(compras, { estado: "PENDIENTE" }, (id) => nombres[id]).map((c) => c.id), ["2"]);
+  assert.deepEqual(filtrarCompras(compras, { busqueda: "fv-77" }, (id) => nombres[id]).map((c) => c.id), ["2"], "busca por factura");
+});
+
+test("Pedidos: la acción de cada fila sigue el flujo real y un retiro nunca va en camino", async () => {
+  const { accionPrincipal, accionFila, diasSinRetirar, sinRetirar } = await import("../src/pages/tienda/pedidosTienda.js");
+  const dia = 86400000;
+  const ahora = Date.now();
+  const p = (estado, extra = {}) => ({ id: "0000001", estado, items: [], ...extra });
+  const retiro = { origen: "CATALOGO", entrega: "RETIRO" };
+  const envio = { origen: "CATALOGO", entrega: "ENVIO" };
+  const encargo = { items: [{ disponibilidad: "ENCARGO" }] };
+  const texto = (x) => accionFila(x).texto;
+
+  assert.equal(texto(p("PENDIENTE", retiro)), "Marcar como listo", "nuevo con stock y retiro");
+  assert.equal(texto(p("PENDIENTE", envio)), "Despachar", "nuevo con stock y envío");
+  assert.equal(texto(p("PENDIENTE", { ...retiro, ...encargo })), "Empezar preparación", "nuevo por encargo");
+  assert.equal(texto(p("EN_PREPARACION", { ...retiro, ...encargo })), "Marcar como listo", "en preparación, retiro");
+  assert.equal(texto(p("EN_PREPARACION", { ...envio, ...encargo })), "Despachar", "en preparación, envío");
+  assert.equal(texto(p("LISTO_PARA_RETIRAR", retiro)), "Validar código y entregar");
+  assert.deepEqual(accionFila(p("DESPACHADO", envio)), { tipo: "ESPERA", texto: "Esperando confirmación del cliente" });
+  assert.equal(texto(p("ENTREGADO", envio)), "Ver detalle");
+  assert.equal(texto(p("NO_DESPACHADO", envio)), "Ver motivo");
+  // Ningún estado de un retiro lleva a "Despachar"
+  for (const estado of ["PENDIENTE", "EN_PREPARACION", "LISTO_PARA_RETIRAR"]) {
+    assert.notEqual(accionPrincipal(p(estado, { ...retiro, ...encargo }))?.tipo, "DESPACHAR", estado);
+  }
+
+  const listo = (dias) => p("LISTO_PARA_RETIRAR", { ...retiro, fechaListoRetiro: new Date(ahora - dias * dia - 60000).toISOString() });
+  assert.equal(diasSinRetirar(listo(4), ahora), 4);
+  assert.ok(!sinRetirar(listo(2), ahora) && sinRetirar(listo(3), ahora), "se marca desde los 3 días");
+  assert.equal(diasSinRetirar(p("RETIRADO", { fechaListoRetiro: new Date(ahora - 9 * dia).toISOString() }), ahora), 0);
 });

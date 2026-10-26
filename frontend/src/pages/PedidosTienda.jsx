@@ -16,17 +16,28 @@ import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
 import Icon from "../components/public/Icon";
 import {
-  FILTROS, VACIOS, accionPrincipal, cantidadProductos, coincide, contar, destinatario, esCatalogo, esEnvio, esRetiro,
-  historialPedido, metodoEntrega, ordenarPorUrgencia, plazoVencido, porDespachar, subtotal, textoPlazo, tieneEncargo,
+  FILTROS, VACIOS, accionEntrega, accionFila, accionPrincipal, cantidadProductos, coincide, contar, destinatario, diasSinRetirar,
+  esCatalogo, esEnvio, esRetiro, historialPedido, metodoEntrega, ordenarPorUrgencia, plazoVencido, porDespachar, sinRetirar,
+  subtotal, textoPlazo,
 } from "./tienda/pedidosTienda";
+import { avisar } from "../components/ui/avisar";
 import { destinoSeccion } from "../utils/navegacion";
 import { plural } from "../utils/formato";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/pedidos-tienda.css";
 
-/** Chip del plazo de un pedido por despachar: vencido en rojo, si no en ámbar. */
+/**
+ * Chip del plazo de un pedido por despachar (vencido en rojo, si no en ámbar) o, en uno listo que el cliente no recoge,
+ * "Sin retirar hace N días" (desde los 3 días; a los 15 DriveMaster lo revisa).
+ */
 function ChipPlazo({ pedido, ahora }) {
+  if (sinRetirar(pedido, ahora)) {
+    const dias = diasSinRetirar(pedido, ahora);
+    return pedido.revisionRetiroDesde && !pedido.resolucionRetiro
+      ? <ChipEstado tono="error">Sin retirar hace {dias} días · en revisión</ChipEstado>
+      : <ChipEstado tono="aviso">Sin retirar hace {dias} días</ChipEstado>;
+  }
   if (!porDespachar(pedido) || !pedido.plazoDespachoHasta) return null;
   return plazoVencido(pedido, ahora)
     ? <ChipEstado tono="error">Plazo vencido</ChipEstado>
@@ -79,6 +90,12 @@ function textoEstado(p) {
       return `Esperando que el cliente confirme que lo recibió${p.autoconfirmaDespuesDe ? `; si no responde, se confirma solo el ${formatFechaHora(p.autoconfirmaDespuesDe)}` : ""}. Tu pago se habilita al confirmarse.`;
     }
     return "Esperando que el taller confirme que recibió los repuestos.";
+  }
+  if (p.estado === "LISTO_PARA_RETIRAR" && p.revisionRetiroDesde && !p.resolucionRetiro) {
+    return "Lleva 15 días o más sin retirarse y DriveMaster lo está revisando. Si el cliente llega, entrégaselo con su código.";
+  }
+  if (p.estado === "NO_ENTREGADO" && p.resolucionRetiro === "REEMBOLSO") {
+    return `DriveMaster lo canceló porque el cliente no lo retiró${p.motivoResolucionRetiro ? `: ${p.motivoResolucionRetiro}` : ""}. Las unidades en stock volvieron a tu inventario y este pedido no se paga.`;
   }
   if (p.estado === "RETIRADO") return "El cliente retiró el pedido. El pago quedó habilitado para liquidar.";
   if (p.estado === "ENTREGADO" || p.estado === "RECIBIDO") return "Pedido entregado. El pago quedó habilitado para liquidar.";
@@ -164,6 +181,27 @@ export default function PedidosTienda({ param, irA }) {
     setAviso(null);
     setAbiertoId(id);
     window.scrollTo({ top: 0 });
+  };
+
+  const [ocupadoFila, setOcupadoFila] = useState(null); // id del pedido cuya acción corre desde la lista
+
+  const accionarFila = async (p, accion) => {
+    if (accion.tipo === "DESPACHAR") { abrir(p.id); setModo("DESPACHAR"); return; }
+    if (accion.tipo === "VALIDAR") { abrir(p.id); requestAnimationFrame(() => campoCodigo.current?.focus()); return; }
+    if (accion.tipo !== "PREPARAR" && accion.tipo !== "LISTO") { abrir(p.id); return; }
+    setOcupadoFila(p.id);
+    try {
+      if (accion.tipo === "PREPARAR") await prepararPedido(token, p.id);
+      else await marcarListoParaRetirar(token, p.id);
+      avisar(accion.tipo === "PREPARAR"
+        ? `Pedido #${refSolicitud(p.id)} en preparación.`
+        : `Pedido #${refSolicitud(p.id)} listo para retirar: avisamos al cliente.`);
+      await cargar();
+    } catch (e) {
+      avisar(e.message, "error");
+    } finally {
+      setOcupadoFila(null);
+    }
   };
 
   const desdeAfuera = destino.abrir != null && abiertoId === destino.abrir;
@@ -255,11 +293,13 @@ export default function PedidosTienda({ param, irA }) {
 
     // La acción del estado, también en la barra inferior del celular
     const irASigue = () => document.getElementById("pdt-sigue")?.scrollIntoView({ block: "start" });
+    const entrega = accionEntrega(p);
     const accionBarra = !accion || formularioAbierto ? null
       : accion.tipo === "VALIDAR" ? () => { irASigue(); campoCodigo.current?.focus({ preventScroll: true }); }
-        : accion.tipo === "LISTO"
-          ? () => ejecutar(() => marcarListoParaRetirar(token, p.id), "Marcado como listo para retirar: avisamos al cliente.")
-          : () => { setModo("DESPACHAR"); irASigue(); };
+        : accion.tipo === "PREPARAR" ? () => ejecutar(() => prepararPedido(token, p.id), "Pedido en preparación.")
+          : accion.tipo === "LISTO"
+            ? () => ejecutar(() => marcarListoParaRetirar(token, p.id), "Marcado como listo para retirar: avisamos al cliente.")
+            : () => { setModo("DESPACHAR"); irASigue(); };
 
     return (
       <div className="ss-panel ss-panel--tienda pdt-root">
@@ -352,20 +392,23 @@ export default function PedidosTienda({ param, irA }) {
 
                 {porDespachar(p) && !formularioAbierto && (
                   <div className="pdt-botones">
-                    {accion.tipo === "LISTO" ? (
+                    {accion.tipo === "PREPARAR" && (
                       <button type="button" className="ui-btn ui-btn--primario ui-btn--bloque" disabled={procesando} aria-busy={procesando}
-                        onClick={() => ejecutar(() => marcarListoParaRetirar(token, p.id), "Marcado como listo para retirar: avisamos al cliente.")}>
+                        onClick={() => ejecutar(() => prepararPedido(token, p.id), "Pedido en preparación.")}>
                         {accion.texto}
                       </button>
-                    ) : (
-                      <button type="button" className="ui-btn ui-btn--primario ui-btn--bloque" onClick={() => setModo("DESPACHAR")}>
-                        <Icon name="box" size={16} /> {accion.texto}
-                      </button>
                     )}
-                    {p.estado === "PENDIENTE" && tieneEncargo(p) && (
-                      <button type="button" className="ui-btn ui-btn--secundario ui-btn--bloque" disabled={procesando}
-                        onClick={() => ejecutar(() => prepararPedido(token, p.id), "Pedido en preparación.")}>
-                        Iniciar preparación
+                    {/* Si ya consiguió el encargo, puede entregarlo sin pasar por preparación */}
+                    {entrega.tipo === "LISTO" ? (
+                      <button type="button" className={`ui-btn ${accion.tipo === "PREPARAR" ? "ui-btn--secundario" : "ui-btn--primario"} ui-btn--bloque`}
+                        disabled={procesando} aria-busy={procesando}
+                        onClick={() => ejecutar(() => marcarListoParaRetirar(token, p.id), "Marcado como listo para retirar: avisamos al cliente.")}>
+                        {entrega.texto}
+                      </button>
+                    ) : (
+                      <button type="button" className={`ui-btn ${accion.tipo === "PREPARAR" ? "ui-btn--secundario" : "ui-btn--primario"} ui-btn--bloque`}
+                        onClick={() => setModo("DESPACHAR")}>
+                        <Icon name="box" size={16} /> {entrega.texto}
                       </button>
                     )}
                     <button type="button" className="ui-btn ui-btn--texto pdt-peligro" onClick={() => setModo("NO_DESPACHAR")}>
@@ -424,7 +467,8 @@ export default function PedidosTienda({ param, irA }) {
         {accionBarra && (
           <BarraAccionMovil etiqueta="Total del pedido" valor={formatPrecio(p.total)} nota={plazo || undefined}>
             <button type="button" className="ui-btn ui-btn--primario" onClick={accionBarra} disabled={procesando} aria-busy={procesando}>
-              {accion.tipo === "VALIDAR" ? "Validar código" : accion.tipo === "LISTO" ? "Listo para retirar" : "Despachar"}
+              {accion.tipo === "VALIDAR" ? "Validar código" : accion.tipo === "PREPARAR" ? "Empezar preparación"
+                : accion.tipo === "LISTO" ? "Marcar como listo" : "Despachar"}
             </button>
           </BarraAccionMovil>
         )}
@@ -494,12 +538,16 @@ export default function PedidosTienda({ param, irA }) {
         ) : !error && <EstadoVacio icono="box" titulo={tituloVacio} texto={textoVacio} />
       ) : (
         <ul className="pdt-lista">
-          {visibles.map((p) => (
+          {visibles.map((p) => {
+            const accion = accionFila(p);
+            return (
             <li key={p.id}>
-              <button type="button" className={`pdt-fila${plazoVencido(p, ahora) ? " pdt-fila--vencido" : ""}`} onClick={() => abrir(p.id)}
-                aria-label={`Pedido #${refSolicitud(p.id)}, ${ESTADOS_PEDIDO[p.estado]?.label || p.estado}, ${formatPrecio(p.total)}`}>
+              <div className={`pdt-fila${plazoVencido(p, ahora) || (p.revisionRetiroDesde && !p.resolucionRetiro) ? " pdt-fila--vencido" : ""}`}>
                 <span className="pdt-fila__id">
-                  <strong className="pdt-fila__numero">#{refSolicitud(p.id)}</strong>
+                  <button type="button" className="pdt-fila__abrir" onClick={() => abrir(p.id)}
+                    aria-label={`Pedido #${refSolicitud(p.id)}, ${ESTADOS_PEDIDO[p.estado]?.label || p.estado}, ${formatPrecio(p.total)}`}>
+                    <strong className="pdt-fila__numero">#{refSolicitud(p.id)}</strong>
+                  </button>
                   <span className="pdt-fila__meta">{formatFechaHora(p.fechaCreacion)}</span>
                 </span>
                 <span className="pdt-fila__quien">
@@ -513,10 +561,21 @@ export default function PedidosTienda({ param, irA }) {
                   <ChipPlazo pedido={p} ahora={ahora} />
                 </span>
                 <strong className="pdt-fila__total ui-precio">{formatPrecio(p.total)}</strong>
-                <Icon name="arrow" size={18} className="pdt-fila__flecha" />
-              </button>
+                <span className="pdt-fila__accion">
+                  {accion.tipo === "ESPERA" ? (
+                    <span className="pdt-fila__espera">{accion.texto}</span>
+                  ) : (
+                    <button type="button" disabled={ocupadoFila === p.id} aria-busy={ocupadoFila === p.id}
+                      className={`ui-btn ui-btn--chico ${accion.tipo === "VER" ? "ui-btn--texto" : "ui-btn--primario"}`}
+                      onClick={() => accionarFila(p, accion)} aria-label={`${accion.texto}: pedido #${refSolicitud(p.id)}`}>
+                      {ocupadoFila === p.id ? "Guardando…" : accion.texto}
+                    </button>
+                  )}
+                </span>
+              </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </div>

@@ -76,3 +76,15 @@ export async function problemasDeEnvio(token) {
 export function resolverProblemaEnvio(token, id, resolucion, motivo) {
   return enviar(token, "POST", `${BASE}/${id}/problema/resolver`, { resolucion, motivo }, "No se pudo resolver el problema");
 }
+
+// ─── ADMIN: retiros que nadie recoge (15 días o más) ──────────────────────
+
+export async function retirosSinRecoger(token) {
+  const res = await apiFetch(`${BASE}/retiros-sin-recoger`, { headers: headers(token) });
+  return handle(res, "No se pudieron cargar los retiros sin recoger");
+}
+
+/** decision: "SEGUIR_ESPERANDO" | "REEMBOLSO"; el motivo escrito es obligatorio. Nada se reembolsa solo. */
+export function resolverRetiroSinRecoger(token, id, decision, motivo) {
+  return enviar(token, "POST", `${BASE}/${id}/retiro/resolver`, { decision, motivo }, "No se pudo registrar la decisión");
+}

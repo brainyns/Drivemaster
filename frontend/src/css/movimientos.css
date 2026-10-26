@@ -60,3 +60,10 @@
   .mov-producto { min-width: 0; }
   .mov-motivo { max-width: none; }
 }
+
+/* Descargar en Excel o PDF lo que muestra la lista con los filtros puestos */
+.mov-exportar { display: flex; gap: 8px; margin-left: auto; align-self: flex-end; }
+@media (max-width: 760px) {
+  .mov-exportar { margin-left: 0; width: 100%; }
+  .mov-exportar .ui-btn { flex: 1; }
+}

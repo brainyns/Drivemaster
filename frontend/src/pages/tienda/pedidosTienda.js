@@ -112,17 +112,46 @@ export function historialPedido(p) {
     .sort((a, b) => t(b.fecha) - t(a.fecha));
 }
 
+/** Cómo sale el pedido de la tienda: un retiro se marca listo (nunca va "en camino"); un envío o un taller, se despacha. */
+export const accionEntrega = (p) => (esRetiro(p)
+  ? { tipo: "LISTO", texto: "Marcar como listo" }
+  : { tipo: "DESPACHAR", texto: "Despachar" });
+
 /**
- * La acción del estado actual (la que va destacada y en la barra del celular):
- * VALIDAR (código de retiro), LISTO (retiro), DESPACHAR (abre el formulario) o null si no hay nada que hacer.
+ * La acción del estado actual (la que va destacada, en la fila y en la barra del celular), según el flujo del
+ * backend: un pedido nuevo con repuestos por encargo empieza la preparación; uno en stock (o ya preparado) se marca
+ * listo o se despacha; uno listo para retirar se entrega validando el código. null si la tienda no tiene nada que hacer.
  */
 export function accionPrincipal(p) {
   if (p.estado === "LISTO_PARA_RETIRAR") return { tipo: "VALIDAR", texto: "Validar código y entregar" };
   if (!porDespachar(p)) return null;
-  return esRetiro(p)
-    ? { tipo: "LISTO", texto: "Marcar como listo para retirar" }
-    : { tipo: "DESPACHAR", texto: "Marcar despachado" };
+  if (p.estado === "PENDIENTE" && tieneEncargo(p)) return { tipo: "PREPARAR", texto: "Empezar preparación" };
+  return accionEntrega(p);
 }
+
+/**
+ * Lo que muestra cada fila de la lista en lugar de la flecha: el botón de la siguiente acción o, si la tienda no tiene
+ * nada que hacer, en qué va (En camino) o cómo ver el detalle (Entregado) o el motivo (Cancelado).
+ */
+export function accionFila(p) {
+  const accion = accionPrincipal(p);
+  if (accion) return accion;
+  if (p.estado === "DESPACHADO") {
+    return { tipo: "ESPERA", texto: esCatalogo(p) ? "Esperando confirmación del cliente" : "Esperando que el taller lo reciba" };
+  }
+  if (["NO_DESPACHADO", "NO_ENTREGADO"].includes(p.estado)) return { tipo: "VER", texto: "Ver motivo" };
+  return { tipo: "VER", texto: "Ver detalle" };
+}
+
+/** Días completos desde que el pedido quedó listo para retirar (0 si no está esperando al cliente). */
+export function diasSinRetirar(p, ahora = Date.now()) {
+  if (p.estado !== "LISTO_PARA_RETIRAR" || !p.fechaListoRetiro) return 0;
+  return Math.max(0, Math.floor((ahora - new Date(p.fechaListoRetiro).getTime()) / 86400000));
+}
+
+/** Desde los 3 días se marca "Sin retirar hace N días" (ese día DriveMaster le recuerda al cliente). */
+export const DIAS_SIN_RETIRAR = 3;
+export const sinRetirar = (p, ahora = Date.now()) => diasSinRetirar(p, ahora) >= DIAS_SIN_RETIRAR;
 
 /** Texto del plazo para despachar o dejar listo, o null si no aplica. */
 export function textoPlazo(p, ahora = Date.now()) {

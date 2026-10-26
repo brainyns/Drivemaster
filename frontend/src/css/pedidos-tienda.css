@@ -27,8 +27,9 @@
 .pdt-lista { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 
 .pdt-fila {
+  position: relative;
   display: grid;
-  grid-template-columns: 120px minmax(0, 1.4fr) minmax(0, 1fr) 120px 20px;
+  grid-template-columns: 120px minmax(0, 1.4fr) minmax(0, 1fr) 120px minmax(150px, auto);
   align-items: center;
   gap: 8px 16px;
   width: 100%;
@@ -54,14 +55,18 @@
 .pdt-fila__estado { display: flex; flex-wrap: wrap; gap: 6px; }
 .pdt-fila__total { font-size: 1rem; text-align: right; }
 
-.pdt-fila__flecha {
-  color: var(--ui-muted);
-  transition: transform var(--ui-dur) var(--ui-ease), color var(--ui-dur) ease;
+/* El número abre el detalle y su área cubre toda la tarjeta; la acción queda encima y se pulsa aparte */
+.pdt-fila__abrir {
+  padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
 }
+.pdt-fila__abrir::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.pdt-fila__abrir:focus-visible { outline: none; }
+.pdt-fila__abrir:focus-visible::after { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.pdt-fila__accion { position: relative; z-index: 1; display: flex; justify-content: flex-end; }
+.pdt-fila__espera { font-size: 0.8125rem; line-height: 1.35; color: var(--ui-muted); text-align: right; }
 
 @media (hover: hover) and (pointer: fine) {
   .pdt-fila:hover { border-color: var(--ui-muted); }
-  .pdt-fila:hover .pdt-fila__flecha { transform: translateX(3px); color: var(--ui-text); }
 }
 
 /* ── Detalle ─────────────────────────────────────────────────────────── */
@@ -176,10 +181,10 @@
 
 /* ── Tableta y celular ───────────────────────────────────────────────── */
 @media (max-width: 1100px) {
-  .pdt-fila { grid-template-columns: 110px minmax(0, 1fr) auto 20px; }
+  .pdt-fila { grid-template-columns: 110px minmax(0, 1fr) auto; }
   .pdt-fila__estado { grid-column: 2; grid-row: 2; }
   .pdt-fila__total { grid-column: 3; grid-row: 1; }
-  .pdt-fila__flecha { grid-column: 4; grid-row: 1 / span 2; }
+  .pdt-fila__accion { grid-column: 3; grid-row: 2; }
 }
 
 @media (max-width: 960px) {
@@ -200,7 +205,9 @@
   .pdt-fila__total { grid-column: 2; grid-row: 1; }
   .pdt-fila__quien { grid-column: 1 / -1; grid-row: 2; }
   .pdt-fila__estado { grid-column: 1 / -1; grid-row: 3; }
-  .pdt-fila__flecha { display: none; }
+  .pdt-fila__accion { grid-column: 1 / -1; grid-row: 4; justify-content: stretch; }
+  .pdt-fila__accion .ui-btn { width: 100%; }
+  .pdt-fila__espera { text-align: left; }
 
   .pdt-item { grid-template-columns: 48px minmax(0, 1fr); }
   .pdt-item__imagen.mk-imagen { width: 48px; }
@@ -208,6 +215,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pdt-fila, .pdt-fila__flecha { transition: none; }
-  .pdt-fila:hover .pdt-fila__flecha { transform: none; }
+  .pdt-fila { transition: none; }
 }

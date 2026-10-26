@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listarProveedores, eliminarProveedor, exportarProveedores } from "../services/proveedorService";
+import { listarCompras } from "../services/compraService";
+import { formatPrecio } from "../components/servicio/estadosServicio";
+import { ESTADOS_COMPRA, estadoCompra, refCompra, topProveedores } from "./tienda/comprasTienda";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Indicador from "../components/ui/Indicador";
 import ChipEstado from "../components/ui/ChipEstado";
@@ -10,13 +13,13 @@ import LogoNegocio from "../components/ui/LogoNegocio";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
 import { coincideProveedor, recibePdf } from "./tienda/proveedoresTienda";
-import { plural } from "../utils/formato";
+import { formatoFecha, plural } from "../utils/formato";
 import "../css/proveedores.css";
 
 const POR_PAGINA = 15;
 
 /** Directorio de los proveedores de la tienda: a quién le compra y a dónde llega el PDF de cada compra. */
-export default function Proveedores({ onNuevo, onEditar, token }) {
+export default function Proveedores({ onNuevo, onEditar, onDetalle, token }) {
   const [proveedores, setProveedores] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -26,6 +29,8 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
   const [eliminando, setEliminando] = useState(null);
   const [exportando, setExportando] = useState(false);
   const [aviso, setAviso] = useState(null); // { tono, texto }
+  // Las compras alimentan la actividad de abajo; si fallan, la lista de proveedores se muestra igual
+  const [compras, setCompras] = useState([]);
 
   const cargar = useCallback(async () => {
     try {
@@ -39,9 +44,15 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
   }, [token]);
 
   useEffect(() => {
+    let vivo = true;
+    listarCompras(token).then((l) => { if (vivo) setCompras(l || []); }).catch(() => {});
     const id = setTimeout(cargar, 0);
-    return () => clearTimeout(id);
-  }, [cargar]);
+    return () => { vivo = false; clearTimeout(id); };
+  }, [cargar, token]);
+
+  const nombres = useMemo(() => Object.fromEntries(proveedores.map((p) => [p.id, p.nombre])), [proveedores]);
+  const top = useMemo(() => topProveedores(compras, (pid) => nombres[pid], 5), [compras, nombres]);
+  const recientes = useMemo(() => [...compras].sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0)).slice(0, 5), [compras]);
 
   const visibles = useMemo(() => proveedores.filter((p) => coincideProveedor(p, busqueda))
     .sort((a, b) => String(a.nombre || "").localeCompare(String(b.nombre || ""), "es")), [proveedores, busqueda]);
@@ -157,7 +168,10 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
                       {enPagina.map((p) => (
                         <tr key={p.id}>
                           <td data-label="Proveedor" className="ui-table__titulo">
-                            <span className="prv-nombre"><LogoNegocio nombre={p.nombre} /><strong>{p.nombre}</strong></span>
+                            <span className="prv-nombre">
+                              <LogoNegocio nombre={p.nombre} />
+                              <button type="button" className="prv-nombre__enlace" onClick={() => onDetalle(p.id)}>{p.nombre}</button>
+                            </span>
                           </td>
                           <td data-label="NIT">{p.nit || <span className="prv-tenue">Sin NIT</span>}</td>
                           <td data-label="Teléfono">
@@ -168,7 +182,11 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
                             {p.correo && !recibePdf(p) && <> <ChipEstado tono="info">Sin PDF</ChipEstado></>}
                           </td>
                           <td className="ui-table__acciones">
-                            <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onEditar(p.id)}
+                            <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onDetalle(p.id)}
+                              aria-label={`Ver el detalle de ${p.nombre}`}>
+                              Ver detalle
+                            </button>
+                            <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => onEditar(p.id)}
                               aria-label={`Editar a ${p.nombre}`}>
                               <Icon name="pencil" size={14} /> Editar
                             </button>
@@ -196,6 +214,47 @@ export default function Proveedores({ onNuevo, onEditar, token }) {
                 )}
               </nav>
             </>
+          )}
+
+          {compras.length > 0 && (
+            <div className="prv-actividad">
+              <section className="ui-card" aria-labelledby="prv-top-titulo">
+                <div className="ui-card__header">
+                  <h2 id="prv-top-titulo" className="ui-card__titulo">Compras por proveedor</h2>
+                  <span className="ui-card__sub">Por monto, sin las canceladas</span>
+                </div>
+                <ol className="prv-actividad__lista">
+                  {top.map((t) => (
+                    <li key={t.proveedorId || t.nombre} className="prv-actividad__fila">
+                      <span className="prv-actividad__texto">
+                        {nombres[t.proveedorId]
+                          ? <button type="button" className="prv-nombre__enlace" onClick={() => onDetalle(t.proveedorId)}>{t.nombre}</button>
+                          : <strong>{t.nombre}</strong>}
+                        <span>{plural(t.compras, "compra")}{t.ultima ? ` · la última el ${formatoFecha(t.ultima)}` : ""}</span>
+                      </span>
+                      <strong className="ui-precio">{formatPrecio(t.total)}</strong>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+              <section className="ui-card" aria-labelledby="prv-recientes-titulo">
+                <div className="ui-card__header">
+                  <h2 id="prv-recientes-titulo" className="ui-card__titulo">Actividad reciente</h2>
+                  <span className="ui-card__sub">Tus últimas compras</span>
+                </div>
+                <ul className="prv-actividad__lista">
+                  {recientes.map((c) => (
+                    <li key={c.id} className="prv-actividad__fila">
+                      <span className="prv-actividad__texto">
+                        <strong>{nombres[c.proveedorId] || "Proveedor eliminado"}</strong>
+                        <span>{refCompra(c.id)} · {formatoFecha(c.fecha)} · {formatPrecio(c.total)}</span>
+                      </span>
+                      <ChipEstado estado={estadoCompra(c)} catalogo={ESTADOS_COMPRA} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
           )}
         </>
       )}

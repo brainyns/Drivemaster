@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { actualizarMiTienda, guardarTelefonoTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
+import { actualizarMiTienda, guardarHorarioTienda, guardarTelefonoTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
+import HorarioSemanal, { HorarioResumen } from "../components/servicio/HorarioSemanal";
+import { copiarLunesAHabiles, errorDia, franjasDesdeSemana, semanaDesdeFranjas, semanaPorDefecto } from "./taller/horarioTaller";
 import LogoEditable from "../components/ui/LogoEditable";
 import { cambiarResumenSemanal, probarResumenSemanal, resumenSemanal } from "../services/informesTiendaService";
 import { formatFecha, formatPrecio } from "../components/servicio/estadosServicio";
@@ -19,6 +21,7 @@ import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
 import {
   COSTO_ENVIO_MAX, comoLaVeElCliente, completitudTienda, errorCostoEnvio, errorHorarioTienda, erroresUbicacion,
+  horarioSoloTexto,
 } from "./tienda/perfilTienda";
 import "../css/mi-tienda.css";
 
@@ -109,26 +112,44 @@ function FormUbicacion({ tienda, token, onGuardado, onCancelar }) {
   );
 }
 
+/**
+ * Horario por días con el mismo editor y las mismas reglas que el del taller (HorarioSemanal): abierto o cerrado y sus
+ * franjas. Se guarda la semana completa; el backend regenera el texto que ven el catálogo y los pedidos con retiro.
+ */
 function FormHorario({ tienda, token, onGuardado, onCancelar }) {
-  const [horario, setHorario] = useState(tienda.horario || "");
-  const [errorCampo, setErrorCampo] = useState(null);
-  const { guardar, guardando, error } = useGuardar(token, onGuardado);
+  const [semana, setSemana] = useState(() => semanaDesdeFranjas(tienda.horarioSemanal) || semanaPorDefecto());
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
 
-  const enviar = (e) => {
+  const enviar = async (e) => {
     e.preventDefault();
-    const err = errorHorarioTienda(horario);
-    setErrorCampo(err);
-    if (!err) guardar({ horario: horario.trim() });
+    if (guardando) return;
+    const err = errorHorarioTienda(semana, errorDia);
+    if (err) { setError(err); return; }
+    setGuardando(true);
+    setError(null);
+    try {
+      onGuardado(await guardarHorarioTienda(token, franjasDesdeSemana(semana)));
+    } catch (er) {
+      setError(er.message); // la semana editada se conserva
+      setGuardando(false);
+    }
   };
 
   return (
     <form className="ui-form" onSubmit={enviar} noValidate>
-      <Campo id="mtd-horario-texto" label="Horario de atención" error={errorCampo}
-        ayuda="El cliente lo ve en cada producto tuyo y lo necesita para pasar a retirar.">
-        <textarea className="ui-field__input" rows={3} autoFocus value={horario}
-          placeholder={"Lunes a viernes: 8:00 a. m. – 6:00 p. m.\nSábados: 8:00 a. m. – 1:00 p. m."}
-          onChange={(e) => { setHorario(e.target.value); if (errorCampo) setErrorCampo(null); }} />
-      </Campo>
+      {horarioSoloTexto(tienda) && (
+        <Alerta tono="info">
+          Antes escribiste: <q>{tienda.horario}</q>. Te proponemos un horario por días; ajústalo para que coincida.
+        </Alerta>
+      )}
+      <div className="mt-horario__barra">
+        <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico"
+          onClick={() => { setSemana(copiarLunesAHabiles(semana)); setError(null); }}>
+          Copiar lunes a todos los días hábiles
+        </button>
+      </div>
+      <HorarioSemanal semana={semana} onCambiar={(sem) => { setSemana(sem); setError(null); }} />
       <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar horario" />
     </form>
   );
@@ -344,14 +365,22 @@ export default function DatosMiTienda({ token, onGuardado }) {
 
           <SeccionEditable id="mtd-horario" icono="clock" titulo="Horario de atención"
             descripcion="Obligatorio para vender: el cliente lo ve en cada producto."
-            onEditar={() => abrir("horario")} textoEditar={t.horario ? "Editar" : "Agregar horario"}
+            onEditar={() => abrir("horario")} textoEditar={horarioSoloTexto(t) ? "Configurar por días" : t.horario ? "Editar" : "Agregar horario"}
             editando={editando === "horario"}>
             {editando === "horario" ? (
               <FormHorario tienda={t} token={token} onCancelar={cerrar} onGuardado={guardado("horario", "Horario guardado.")} />
+            ) : semanaDesdeFranjas(t.horarioSemanal) ? (
+              <HorarioResumen semana={semanaDesdeFranjas(t.horarioSemanal)} />
             ) : t.horario ? (
-              <p className="ui-texto-pre">{t.horario}</p>
+              <>
+                <p className="ui-texto-pre">{t.horario}</p>
+                <Alerta tono="aviso">
+                  Tu horario está en texto libre. Configúralo por días: así el cliente ve exactamente cuándo abres, y el horario
+                  sigue siendo obligatorio para vender.
+                </Alerta>
+              </>
             ) : (
-              <p className="ui-datos__falta">Aún no escribes tu horario.</p>
+              <p className="ui-datos__falta">Aún no configuras tu horario.</p>
             )}
           </SeccionEditable>
 

@@ -34,3 +34,32 @@
 }
 .prv-pdf__texto { display: grid; gap: 2px; min-width: 0; font-size: 0.875rem; }
 .prv-pdf__texto > span { font-size: 0.8rem; line-height: 1.45; color: var(--ui-muted); }
+
+/* Detalle del proveedor: historial a la izquierda y sus datos a la derecha */
+.prv-detalle { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.prv-detalle__datos .ui-card__header { justify-content: flex-start; gap: 10px; }
+.prv-datos { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 1080px) {
+  .prv-detalle { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Debajo de la lista: a quién más le compras y lo último que compraste */
+.prv-actividad { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: var(--ui-sp-4); }
+.prv-actividad__lista { display: grid; margin: 0; padding: 4px 16px 12px; list-style: none; }
+.prv-actividad__fila {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px;
+  min-height: 48px; padding: 6px 0; border-bottom: 1px solid var(--ui-line-soft);
+}
+.prv-actividad__fila:last-child { border-bottom: 0; }
+.prv-actividad__texto { display: grid; gap: 1px; min-width: 0; }
+.prv-actividad__texto strong { font-size: 0.875rem; overflow-wrap: anywhere; }
+.prv-actividad__texto span { font-size: 0.75rem; color: var(--ui-muted); }
+.prv-nombre__enlace {
+  padding: 0; border: 0; background: none; font: inherit; font-weight: 700; color: var(--ui-text); text-align: left; cursor: pointer;
+  text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 3px;
+}
+.prv-nombre__enlace:hover { text-decoration-color: currentColor; }
+.prv-nombre__enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
+@media (max-width: 900px) {
+  .prv-actividad { grid-template-columns: minmax(0, 1fr); }
+}

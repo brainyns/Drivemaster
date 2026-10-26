@@ -9,6 +9,7 @@ import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Campo from "../components/ui/Campo";
+import RetirosSinRecoger from "./admin/RetirosSinRecoger";
 import { capitalizar, unir } from "../utils/formato";
 // El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
 import "../css/admin-base.css";
@@ -106,7 +107,7 @@ export default function ProblemasEnvios() {
   return (
     <div className="ss-panel--plataforma pp-root pre-root">
       <EncabezadoPagina titulo="Problemas de envío"
-        descripcion="Envíos del catálogo en los que el cliente dijo que algo salió mal. Mientras no los resuelvas, la tienda no cobra ese pedido." />
+        descripcion="Envíos del catálogo en los que el cliente dijo que algo salió mal y retiros que nadie recoge. Mientras no los resuelvas, la tienda no cobra ese pedido." />
 
       {aviso && <Alerta tono="ok" className="pp-bloque-sep" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
       {error && (
@@ -207,6 +208,8 @@ export default function ProblemasEnvios() {
           {errorDecision && <Alerta>{errorDecision}</Alerta>}
         </ConfirmacionAdmin>
       )}
+
+      <RetirosSinRecoger token={token} />
     </div>
   );
 }

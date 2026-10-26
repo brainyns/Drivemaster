@@ -1,6 +1,7 @@
 import Interruptor from "../ui/Interruptor";
 import Icon from "../public/Icon";
 import { DIAS, MAX_FRANJAS, OPCIONES_HORA, errorDia, franjaSiguiente, textoDia } from "../../pages/taller/horarioTaller";
+import "../../css/horario-semanal.css";
 
 const NOMBRE = Object.fromEntries(DIAS.map((d) => [d.clave, d.nombre]));
 

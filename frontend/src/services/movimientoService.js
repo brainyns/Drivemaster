@@ -31,3 +31,22 @@ export async function registrarMovimiento({ productoId, tipo, cantidad, motivo }
   if (!res.ok) throw await errorDeRespuesta(res, "No se pudo registrar el movimiento. Inténtalo de nuevo.");
   return res.json();
 }
+/**
+ * Descarga los movimientos en Excel ("xlsx") o PDF ("pdf") con los mismos filtros de la pantalla: búsqueda por
+ * producto, tipo y fechas desde/hasta (aaaa-mm-dd). El archivo lo arma el backend.
+ */
+export async function exportarMovimientos({ busqueda = "", tipo = "", desde = "", hasta = "" } = {}, formato, token) {
+  const params = new URLSearchParams({ formato });
+  if (busqueda.trim()) params.append("busqueda", busqueda.trim());
+  if (tipo) params.append("tipo", tipo);
+  if (desde) params.append("desde", desde);
+  if (hasta) params.append("hasta", hasta);
+  const res = await apiFetch(`${BASE_URL}/exportar?${params}`, { headers: buildHeaders(token) });
+  if (!res.ok) throw await errorDeRespuesta(res, "No pudimos generar el archivo");
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Movimientos-inventario-${new Date().toISOString().slice(0, 10)}.${formato === "pdf" ? "pdf" : "xlsx"}`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

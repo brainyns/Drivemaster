@@ -9,16 +9,26 @@ import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
-import { filtrarCompras, refCompra, resumenCompras, unidades } from "./tienda/comprasTienda";
+import ChipEstado from "../components/ui/ChipEstado";
+import { ESTADOS_COMPRA, estadoCompra, filtrarCompras, refCompra, resumenCompras, topProveedores, unidades } from "./tienda/comprasTienda";
 import { plural } from "../utils/formato";
 import "../css/compras-tienda.css";
 
 const POR_PAGINA = 15;
-const SIN_FILTROS = { busqueda: "", desde: "", hasta: "", minimo: "", maximo: "" };
+const SIN_FILTROS = { busqueda: "", desde: "", hasta: "", minimo: "", maximo: "", estado: "" };
+const FILTROS_ESTADO = [["", "Todas"], ["PENDIENTE", "Pendientes"], ["RECIBIDA", "Recibidas"], ["CANCELADA", "Canceladas"]];
+const nombreMes = (ahora, menos) => new Date(new Date(ahora).getFullYear(), new Date(ahora).getMonth() - menos, 1)
+  .toLocaleDateString("es-CO", { month: "long" });
+
+/** "+12 % frente a septiembre" (sube el gasto) o "−8 % …"; sin gasto el mes anterior, null. */
+function textoVariacion(v, mes) {
+  if (v == null) return null;
+  return `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toLocaleString("es-CO")} % frente a ${mes}`;
+}
 
 const fecha = (f) => (f ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
-/** Compras a proveedores de la tienda: cada una suma el stock al registrarla. */
+/** Compras a proveedores de la tienda: recibidas (sumaron el stock), pendientes (lo suman al recibirlas) y canceladas. */
 function Compras({ onNueva, onDetalle, token }) {
   const [compras, setCompras] = useState([]);
   const [proveedores, setProveedores] = useState([]);
@@ -53,11 +63,13 @@ function Compras({ onNueva, onDetalle, token }) {
   const nombreProveedor = useCallback((id) => nombres[id] || null, [nombres]);
   const visibles = useMemo(() => filtrarCompras(compras, filtros, nombreProveedor), [compras, filtros, nombreProveedor]);
   const datos = useMemo(() => resumenCompras(compras, ahora), [compras, ahora]);
+  const top = useMemo(() => topProveedores(compras, nombreProveedor), [compras, nombreProveedor]);
+  const conteoEstado = useMemo(() => Object.fromEntries(FILTROS_ESTADO.map(([k]) => [k, k ? compras.filter((c) => estadoCompra(c) === k).length : compras.length])), [compras]);
   const totalPaginas = Math.max(1, Math.ceil(visibles.length / POR_PAGINA));
   const paginaActual = Math.min(pagina, totalPaginas);
   const enPagina = visibles.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
   const filtrosExtra = [filtros.desde || filtros.hasta, filtros.minimo !== "" || filtros.maximo !== ""].filter(Boolean).length;
-  const hayFiltros = filtros.busqueda || filtrosExtra > 0;
+  const hayFiltros = filtros.busqueda || filtros.estado || filtrosExtra > 0;
 
   const filtrar = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(1); };
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
@@ -78,7 +90,7 @@ function Compras({ onNueva, onDetalle, token }) {
   return (
     <div className="ss-panel--tienda cmp-root">
       <EncabezadoPagina titulo="Compras" acciones={compras.length > 0 && nueva}
-        descripcion="Lo que compras a tus proveedores. Al registrar una compra se suma el stock y, si el proveedor tiene correo, le enviamos el PDF." />
+        descripcion="Lo que compras a tus proveedores. Una compra recibida suma el stock; una pendiente lo suma cuando la marques como recibida." />
 
       {error && (
         <Alerta className="cmp-alerta" onReintentar={reintentar} reintentando={reintentando}>
@@ -88,7 +100,7 @@ function Compras({ onNueva, onDetalle, token }) {
 
       {!error && compras.length === 0 ? (
         <EstadoVacio icono="box" titulo="Aún no registras compras"
-          texto="Registra lo que te llega de un proveedor: el stock de cada producto se suma solo y el proveedor recibe el PDF.">
+          texto="Registra lo que le compras a un proveedor: cuando llega, el stock de cada producto se suma solo y, si tiene correo, recibe el PDF.">
           {nueva}
         </EstadoVacio>
       ) : compras.length > 0 && (
@@ -96,19 +108,51 @@ function Compras({ onNueva, onDetalle, token }) {
           <section aria-labelledby="cmp-resumen" className="cmp-alerta">
             <h2 id="cmp-resumen" className="ui-sr">Resumen de compras</h2>
             <div className="ui-indicadores">
-              <Indicador titulo="Compras" valor={datos.total} pie={`${plural(datos.unidades, "unidad", "unidades")} en total`} />
+              <Indicador titulo="Compras" valor={datos.total} pie={plural(datos.unidades, "unidad recibida", "unidades recibidas")} />
               <Indicador titulo="Este mes" valor={formatPrecio(datos.mes)}
-                pie={datos.comprasMes > 0 ? `${datos.comprasMes} ${datos.comprasMes === 1 ? "compra" : "compras"}` : "Sin compras este mes"} />
-              <Indicador titulo="Total gastado" valor={formatPrecio(datos.gastado)} pie="En todo el historial" />
+                pie={[datos.comprasMes > 0 ? plural(datos.comprasMes, "compra") : "Sin compras este mes",
+                  textoVariacion(datos.variacionMes, nombreMes(ahora, 1))].filter(Boolean).join(" · ")} />
+              <Indicador titulo="Total gastado" valor={formatPrecio(datos.gastado)} pie="En todo el historial, sin las canceladas" />
+              {datos.pendientes > 0 && (
+                <Indicador icono="clock" titulo="Por recibir" valor={datos.pendientes} tono="accion"
+                  pie="Compras pendientes: su stock aún no se suma" onClick={() => filtrar({ estado: "PENDIENTE" })} />
+              )}
             </div>
           </section>
 
+          {top.length > 0 && (
+            <section className="ui-card cmp-alerta cmp-top" aria-labelledby="cmp-top-titulo">
+              <div className="ui-card__header">
+                <h2 id="cmp-top-titulo" className="ui-card__titulo">A quién más le compras</h2>
+                <span className="ui-card__sub">Por monto, sin las canceladas</span>
+              </div>
+              <ol className="cmp-top__lista">
+                {top.map((p, i) => (
+                  <li key={p.proveedorId || i} className="cmp-top__fila">
+                    <span className="cmp-top__puesto" aria-hidden="true">{i + 1}</span>
+                    <span className="cmp-top__nombre"><strong>{p.nombre}</strong><span>{plural(p.compras, "compra")}</span></span>
+                    <span className="cmp-top__barra" aria-hidden="true"><span style={{ width: `${(p.total / top[0].total) * 100}%` }} /></span>
+                    <strong className="ui-precio">{formatPrecio(p.total)}</strong>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
           <div className="cmp-filtros" role="search" aria-label="Filtrar compras">
+            <div className="ui-filtros" role="group" aria-label="Estado de la compra">
+              {FILTROS_ESTADO.map(([k, label]) => (
+                <button key={k || "todas"} type="button" className="ui-chip" aria-pressed={filtros.estado === k} onClick={() => filtrar({ estado: k })}>
+                  {label}
+                  {k && conteoEstado[k] > 0 && <span className="ui-chip__contador">{conteoEstado[k]}</span>}
+                </button>
+              ))}
+            </div>
             <div className="cmp-filtros__fila">
               <div className="ui-buscador">
                 <Icon name="search" size={18} />
-                <label htmlFor="cmp-busqueda" className="ui-sr">Buscar por referencia, proveedor o producto</label>
-                <input id="cmp-busqueda" className="ui-field__input" type="search" placeholder="Referencia, proveedor o producto"
+                <label htmlFor="cmp-busqueda" className="ui-sr">Buscar por referencia, factura, proveedor o producto</label>
+                <input id="cmp-busqueda" className="ui-field__input" type="search" placeholder="Referencia, factura, proveedor o producto"
                   value={filtros.busqueda} onChange={(e) => filtrar({ busqueda: e.target.value })} />
               </div>
               <button type="button" className="ui-chip" aria-expanded={masFiltros} aria-controls="cmp-mas-filtros"
@@ -157,6 +201,7 @@ function Compras({ onNueva, onDetalle, token }) {
                         <th scope="col">Compra</th>
                         <th scope="col">Proveedor</th>
                         <th scope="col">Fecha</th>
+                        <th scope="col">Estado</th>
                         <th scope="col" className="ui-table__num">Unidades</th>
                         <th scope="col" className="ui-table__num">Total</th>
                         <th scope="col"><span className="ui-sr">Acciones</span></th>
@@ -167,10 +212,12 @@ function Compras({ onNueva, onDetalle, token }) {
                         <tr key={c.id}>
                           <td data-label="Compra" className="ui-table__titulo">
                             <strong className="cmp-ref">{refCompra(c.id)}</strong>
+                            {c.numeroFactura && <span className="cmp-tenue"> · Factura {c.numeroFactura}</span>}
                             <span className="cmp-tenue"> · {(c.productos || []).length} {(c.productos || []).length === 1 ? "producto" : "productos"}</span>
                           </td>
                           <td data-label="Proveedor">{nombreProveedor(c.proveedorId) || <span className="cmp-tenue">Proveedor eliminado</span>}</td>
                           <td data-label="Fecha">{fecha(c.fecha)}</td>
+                          <td data-label="Estado"><ChipEstado estado={estadoCompra(c)} catalogo={ESTADOS_COMPRA} /></td>
                           <td data-label="Unidades" className="ui-table__num">{unidades(c)}</td>
                           <td data-label="Total" className="ui-table__num"><span className="ui-precio">{formatPrecio(c.total)}</span></td>
                           <td className="ui-table__acciones">

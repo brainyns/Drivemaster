@@ -371,3 +371,6 @@
 @media (pointer: coarse) { .mk-paso button { width: 44px; height: 44px; } }
 /* En celular el botón de pago va en la barra inferior */
 @media (max-width: 1023px) { .mk-solo-escritorio { display: none; } }
+
+/* Horario por días de la tienda en "Vendido por": una línea por grupo de días */
+.mk-horario { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }

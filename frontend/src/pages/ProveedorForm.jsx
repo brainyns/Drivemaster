@@ -17,7 +17,10 @@ import "../css/proveedores.css";
  */
 export default function ProveedorForm({ id, onVolver, token }) {
   const esEdicion = Boolean(id);
-  const [form, setForm] = useState({ nombre: "", nit: "", telefono: "", correo: "", enviarPdfCompras: true });
+  const [form, setForm] = useState({
+    nombre: "", nit: "", telefono: "", correo: "", enviarPdfCompras: true,
+    contacto: "", direccion: "", condicionPago: "", diasCredito: "",
+  });
   const [otros, setOtros] = useState([]);
   const [cargando, setCargando] = useState(esEdicion);
   const [guardando, setGuardando] = useState(false);
@@ -35,6 +38,8 @@ export default function ProveedorForm({ id, onVolver, token }) {
       .then((data) => setForm({
         nombre: data.nombre || "", nit: data.nit || "", telefono: data.telefono || "", correo: data.correo || "",
         enviarPdfCompras: data.enviarPdfCompras !== false,
+        contacto: data.contacto || "", direccion: data.direccion || "",
+        condicionPago: data.condicionPago || "", diasCredito: data.diasCredito ?? "",
       }))
       .catch((err) => setErrorCarga(err.message))
       .finally(() => setCargando(false));
@@ -71,6 +76,10 @@ export default function ProveedorForm({ id, onVolver, token }) {
         nombre: form.nombre.trim(), nit: form.nit.trim(), telefono: form.telefono.trim(), correo: form.correo.trim(),
         // Sin correo no hay a dónde enviarlo: se guarda apagado
         enviarPdfCompras: tieneCorreo ? form.enviarPdfCompras : false,
+        contacto: form.contacto.trim() || null,
+        direccion: form.direccion.trim() || null,
+        condicionPago: form.condicionPago || null,
+        diasCredito: form.condicionPago === "CREDITO" ? Number(form.diasCredito) : null,
       };
       if (esEdicion) await actualizarProveedor(id, datos, token);
       else await crearProveedor(datos, token);
@@ -121,6 +130,30 @@ export default function ProveedorForm({ id, onVolver, token }) {
                 <input className="ui-field__input" name="telefono" type="tel" inputMode="tel" value={form.telefono} onChange={cambiar}
                   autoComplete="tel" placeholder="+57 300 123 4567" />
               </Campo>
+            </div>
+
+            <div className="ui-form__campos ui-form__campos--2">
+              <Campo id="prv-contacto" label="Contacto comercial" opcional error={errores.contacto} ayuda="La persona con la que hablas para pedir.">
+                <input className="ui-field__input" name="contacto" value={form.contacto} onChange={cambiar} maxLength={80}
+                  autoComplete="name" placeholder="Ej. Laura Gómez" />
+              </Campo>
+              <Campo id="prv-direccion" label="Dirección" opcional error={errores.direccion}>
+                <input className="ui-field__input" name="direccion" value={form.direccion} onChange={cambiar} maxLength={160}
+                  autoComplete="street-address" placeholder="Ej. Cra 30 # 10-25, Bogotá" />
+              </Campo>
+              <Campo id="prv-condicion" label="Condiciones de pago" opcional error={errores.condicionPago}>
+                <select className="ui-field__input" name="condicionPago" value={form.condicionPago} onChange={cambiar}>
+                  <option value="">Sin indicar</option>
+                  <option value="CONTADO">De contado</option>
+                  <option value="CREDITO">A crédito</option>
+                </select>
+              </Campo>
+              {form.condicionPago === "CREDITO" && (
+                <Campo id="prv-dias" label="Plazo del crédito (días)" error={errores.diasCredito} ayuda="Entre 1 y 180 días.">
+                  <input className="ui-field__input" name="diasCredito" type="text" inputMode="numeric" value={form.diasCredito}
+                    onChange={cambiar} placeholder="Ej. 30" />
+                </Campo>
+              )}
             </div>
 
             <div className="prv-pdf">

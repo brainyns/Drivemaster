@@ -12,7 +12,7 @@ const lleno = (s) => !!s && String(s).trim() !== "";
 const REQUISITOS = [
   { clave: "direccion", texto: "Escribe la ciudad y la dirección", seccion: "mtd-ubicacion", catalogo: true,
     hecho: (t) => lleno(t?.ciudad) && lleno(t?.direccion) },
-  { clave: "horario", texto: "Escribe tu horario de atención", seccion: "mtd-horario", catalogo: true, hecho: (t) => lleno(t?.horario) },
+  { clave: "horario", texto: "Configura tu horario de atención por días", seccion: "mtd-horario", catalogo: true, hecho: (t) => lleno(t?.horario) },
   { clave: "ubicacion", texto: "Marca tu tienda en el mapa", seccion: "mtd-ubicacion",
     hecho: (t) => t?.latitud != null && t?.longitud != null },
   { clave: "telefono", texto: "Agrega un teléfono de contacto", seccion: "mtd-contacto", hecho: (t) => lleno(t?.telefono) },
@@ -33,8 +33,19 @@ export function erroresUbicacion({ ciudad, direccion }) {
   return e;
 }
 
-export function errorHorarioTienda(horario) {
-  return lleno(horario) ? null : "Escribe tu horario: el cliente lo necesita para pasar a retirar.";
+/** La tienda ya tiene su horario por días (el mismo editor y las mismas reglas que el taller). */
+export const tieneHorarioPorDias = (t) => Array.isArray(t?.horarioSemanal) && t.horarioSemanal.length > 0;
+
+/** Aún tiene el horario en texto libre de antes: se le pide configurarlo por días (sigue contando para vender). */
+export const horarioSoloTexto = (t) => lleno(t?.horario) && !tieneHorarioPorDias(t);
+
+/**
+ * Error de la semana completa antes de guardar, o null. Las reglas de cada día son las de horarioTaller (errorDia);
+ * además una semana toda cerrada no sirve: el cliente necesita saber cuándo pasar a retirar (como el backend).
+ */
+export function errorHorarioTienda(semana, errorDia) {
+  if (!semana?.some((d) => d.abierto && d.franjas.length)) return "Abre al menos un día: el cliente necesita saber cuándo pasar a retirar.";
+  return semana.some((d) => errorDia(d)) ? "Revisa los días marcados antes de guardar." : null;
 }
 
 /** Error del costo de envío, o null. Sin envío no se valida (la tienda solo ofrece retiro). */
@@ -53,7 +64,7 @@ export function errorCostoEnvio(ofreceEnvio, costo) {
  */
 export function comoLaVeElCliente(t) {
   return {
-    id: t.id, nombre: t.nombre, ciudad: t.ciudad, barrio: t.barrio, direccion: t.direccion, horario: t.horario,
+    id: t.id, nombre: t.nombre, ciudad: t.ciudad, barrio: t.barrio, direccion: t.direccion, horario: t.horario, horarioSemanal: t.horarioSemanal,
     ofreceEnvio: t.costoEnvio != null, costoEnvio: t.costoEnvio ?? null, logoUrl: t.logoUrl ?? null,
   };
 }

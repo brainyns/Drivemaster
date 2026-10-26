@@ -17,8 +17,23 @@ export const correoValido = (correo) => CORREO.test(String(correo || "").trim())
 /** Recibe el PDF de cada compra: tiene correo y la tienda no apagó el envío (sin dato = sí, como antes). */
 export const recibePdf = (p) => !!p?.correo && p.enviarPdfCompras !== false;
 
-export function erroresProveedor({ nombre, nit, telefono, correo }) {
+export const DIAS_CREDITO_MAX = 180;
+
+/** "De contado", "Crédito a 30 días" o null si no se indicó. */
+export function textoCondicionPago(p) {
+  if (p?.condicionPago === "CONTADO") return "De contado";
+  if (p?.condicionPago === "CREDITO") return p.diasCredito ? `Crédito a ${p.diasCredito} ${Number(p.diasCredito) === 1 ? "día" : "días"}` : "A crédito";
+  return null;
+}
+
+export function erroresProveedor({ nombre, nit, telefono, correo, condicionPago, diasCredito }) {
   const e = {};
+  if (condicionPago === "CREDITO") {
+    const d = Number(diasCredito);
+    if (String(diasCredito ?? "").trim() === "" || !Number.isInteger(d) || d < 1 || d > DIAS_CREDITO_MAX) {
+      e.diasCredito = `Escribe el plazo del crédito: entre 1 y ${DIAS_CREDITO_MAX} días.`;
+    }
+  }
   if (!String(nombre || "").trim()) e.nombre = "Escribe el nombre de la empresa.";
   if (String(correo || "").trim() && !correoValido(correo)) e.correo = "Escribe un correo válido, como contacto@proveedor.com.";
   if (String(telefono || "").trim() && !TELEFONO.test(telefono.trim())) e.telefono = "Escribe un teléfono válido: solo números, espacios y el signo +.";
