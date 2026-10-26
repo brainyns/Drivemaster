@@ -3,7 +3,7 @@ import { getToken } from "../../services/authService";
 import { informesTaller } from "../../services/informesTallerService";
 import { formatPrecio } from "../../components/servicio/estadosServicio";
 import { ESTADOS_TALLER, faseDe } from "../../components/servicio/estadosTaller";
-import { duracionMinutos } from "../../utils/formato";
+import { duracionMinutos, textoPeriodo } from "../../utils/formato";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
 import Indicador from "../../components/ui/Indicador";
 import Alerta from "../../components/ui/Alerta";
@@ -90,12 +90,12 @@ function Dinero({ titulo, monto }) {
   );
 }
 
-function Ingresos({ ingresos }) {
+function Ingresos({ ingresos, periodo }) {
   const { manoDeObra, diagnostico, anulado, anteriores } = ingresos;
   const conDiagnostico = diagnostico.liquidado + diagnostico.pendiente > 0;
   const hay = manoDeObra.liquidado + manoDeObra.pendiente > 0 || conDiagnostico;
   return (
-    <Tarjeta id="ti-ingresos" titulo="Ingresos por mano de obra · Total histórico">
+    <Tarjeta id="ti-ingresos" titulo="Ingresos por mano de obra">
       {hay ? (
         <div className="ti-dineros">
           <Dinero titulo="Mano de obra" monto={manoDeObra} />
@@ -109,12 +109,13 @@ function Ingresos({ ingresos }) {
         </div>
       ) : (
         <p className="ti-vacio">
-          Todavía no tienes pagos repartidos. La mano de obra queda pendiente cuando el cliente paga la cotización y se
+          No hay pagos repartidos {periodo}. La mano de obra queda pendiente cuando el cliente paga la cotización y se
           habilita al entregar el vehículo.
         </p>
       )}
       <p className="ti-nota">
-        Total histórico: suma todos tus servicios y no cambia con el filtro de 3, 6 o 12 meses. “Pendiente” es lo que aún no se te ha pagado.
+        Cifras {periodo}. “Liquidado” cuenta por la fecha en que se te pagó y “Pendiente” (lo que aún no se te ha pagado)
+        por la fecha en que pagó el cliente; cada pago está en uno solo de los dos.
         {anulado > 0 && ` Hay ${formatPrecio(anulado)} anulados que no cuentan.`}
       </p>
       {anteriores.ordenes > 0 && (
@@ -151,15 +152,15 @@ function TiempoRespuesta({ tiempo }) {
   );
 }
 
-function Calificacion({ calificacion }) {
+function Calificacion({ calificacion, periodo }) {
   const filas = Object.entries(calificacion.distribucion).sort(([a], [b]) => b - a)
     .map(([estrellas, n]) => [`${estrellas} ${estrellas === "1" ? "estrella" : "estrellas"}`, n]);
   return (
     <Tarjeta id="ti-calificacion" titulo="Calificación de los clientes">
       {calificacion.total === 0 ? (
         <p className="ti-vacio">
-          Todavía ningún cliente te ha calificado. El cliente califica al confirmar que recibió su vehículo, así que
-          aparecerá aquí después de tus primeras entregas. No mostramos un promedio hasta que exista.
+          Ningún cliente te calificó {periodo}. El cliente califica al confirmar que recibió su vehículo, así que
+          aparecerá aquí después de tus entregas. No mostramos un promedio hasta que exista.
         </p>
       ) : (
         <>
@@ -210,6 +211,7 @@ export default function TallerInformes() {
   const cargando = estado.clave !== clave;
   const d = !cargando ? estado.datos : null;
   const entregados = d?.servicios.porEstado.ENTREGADA ?? 0;
+  const periodo = d ? textoPeriodo(d.periodoDesde, d.mesesConsultados) : "";
 
   return (
     <div className="ti-root">
@@ -217,7 +219,7 @@ export default function TallerInformes() {
         titulo="Informes"
         descripcion="Qué hiciste, cuánto te corresponde y cómo te califican tus clientes."
         acciones={(
-          <div className="ui-filtros" role="group" aria-label="Periodo de los servicios y tiempos">
+          <div className="ui-filtros" role="group" aria-label="Periodo de los informes">
             {PERIODOS.map((m) => (
               <button key={m} type="button" className="ui-chip" aria-pressed={meses === m} onClick={() => setMeses(m)}>
                 {m} meses
@@ -244,22 +246,23 @@ export default function TallerInformes() {
         <>
           <section aria-labelledby="ti-resumen">
             <h2 id="ti-resumen" className="ui-sr">Resumen del periodo</h2>
+            <p className="ti-periodo">Todas las cifras {periodo}.</p>
             <div className="ui-indicadores ti-indicadores">
               <Indicador icono="tool" titulo="Servicios" valor={d.servicios.total}
                 pie={`${entregados} ${entregados === 1 ? "entregado" : "entregados"} en ${d.mesesConsultados} meses`} />
-              <Indicador titulo="Mano de obra liquidada (total histórico)" valor={formatPrecio(d.ingresos.manoDeObra.liquidado)} tono="ok"
-                pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} pendiente · no depende del periodo`} />
+              <Indicador titulo="Mano de obra liquidada" valor={formatPrecio(d.ingresos.manoDeObra.liquidado)} tono="ok"
+                pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} pendiente en ${d.mesesConsultados} meses`} />
               <Indicador icono="star" titulo="Calificación"
                 valor={d.calificacion.promedio == null ? "Nuevo" : decimal(d.calificacion.promedio)}
-                pie={d.calificacion.total > 0 ? `${d.calificacion.total} de clientes` : "Sin calificaciones aún"} />
+                pie={d.calificacion.total > 0 ? `${d.calificacion.total} de clientes en ${d.mesesConsultados} meses` : "Sin calificaciones en el periodo"} />
             </div>
           </section>
 
           <div className="ti-rejilla">
             <ServiciosPorEstado servicios={d.servicios} />
-            <Ingresos ingresos={d.ingresos} />
+            <Ingresos ingresos={d.ingresos} periodo={periodo} />
             <TiempoRespuesta tiempo={d.tiempoRespuesta} />
-            <Calificacion calificacion={d.calificacion} />
+            <Calificacion calificacion={d.calificacion} periodo={periodo} />
           </div>
         </>
       )}

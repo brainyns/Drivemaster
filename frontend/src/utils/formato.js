@@ -46,3 +46,13 @@ export function duracionMinutos(min) {
   if (h === 24) return `${d + 1} d`;
   return h ? `${d} d ${h} h` : `${d} d`;
 }
+
+/**
+ * Texto del periodo de un informe: "desde el 1 de agosto de 2026". desde es la fecha ISO (yyyy-mm-dd) del primer día
+ * que da el backend; sin ella, "de los últimos N meses".
+ */
+export function textoPeriodo(desde, meses) {
+  if (!desde) return `de los últimos ${meses} meses`;
+  const [a, m, d] = desde.split("-").map(Number);
+  return `desde el ${new Date(a, m - 1, d).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}`;
+}

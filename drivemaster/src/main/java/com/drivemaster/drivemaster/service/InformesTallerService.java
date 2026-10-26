@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -30,7 +31,9 @@ import java.util.Map;
 
 /**
  * Informes del TALLER. Todo se filtra por el taller dueño (el que sale de la sesión): un taller nunca ve datos de otro.
- * Los meses se cuentan en hora de Colombia (America/Bogota).
+ * Los meses se cuentan en hora de Colombia (America/Bogota). Todas las cifras usan el mismo periodo (desde el día 1 del
+ * primer mes): servicios y tiempo de respuesta por la creación de la solicitud, ingresos por la fecha de cada pago y la
+ * calificación por la fecha en que el cliente calificó.
  */
 @Service
 public class InformesTallerService {
@@ -66,19 +69,20 @@ public class InformesTallerService {
         }
         int m = meses(meses);
         // Inicio del primer mes en hora de Colombia, expresado en la hora del servidor (así se guardan las fechas)
-        LocalDateTime desde = hasta.minusMonths(m - 1L).atDay(1).atStartOfDay(ZONA)
-                .withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
+        LocalDate inicio = hasta.minusMonths(m - 1L).atDay(1);
+        LocalDateTime desde = inicio.atStartOfDay(ZONA).withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
 
         List<OrdenServicio> todas = ordenRepository.findByTallerIdOrderByFechaCreacionDesc(tallerId);
         List<OrdenServicio> marketplace = todas.stream()
                 .filter(o -> EstadoOrden.FLUJO_MARKETPLACE.equals(o.getFlujo()))
                 .toList();
+        // Cada solicitud cuenta una vez, en su estado actual, si se creó en el periodo
         List<OrdenServicio> delPeriodo = marketplace.stream()
-                .filter(o -> o.getFechaCreacion() != null && !o.getFechaCreacion().isBefore(desde))
+                .filter(o -> enPeriodo(o.getFechaCreacion(), desde))
                 .toList();
 
-        return new Informes(ahora, m, servicios(delPeriodo), ingresos(tallerId, todas),
-                tiempoRespuesta(tallerId, delPeriodo), calificacion(marketplace));
+        return new Informes(ahora, m, inicio, servicios(delPeriodo), ingresos(tallerId, todas, desde),
+                tiempoRespuesta(tallerId, delPeriodo), calificacion(marketplace, desde));
     }
 
     // ─── Servicios por estado ────────────────────────────────────────────────
@@ -92,13 +96,14 @@ public class InformesTallerService {
         return new Servicios(porEstado, ordenes.size());
     }
 
-    // ─── Ingresos: salen de las líneas de reparto del taller ─────────────────
+    // ─── Ingresos del periodo: salen de las líneas de reparto del taller ─────
+    // Lo liquidado cuenta por la fecha en que se pagó; lo pendiente y lo anulado, por la fecha del pago del cliente.
 
-    private Ingresos ingresos(String tallerId, List<OrdenServicio> todas) {
+    private Ingresos ingresos(String tallerId, List<OrdenServicio> todas, LocalDateTime desde) {
         double[] mano = new double[4];  // liquidado, líneas liquidadas, pendiente, líneas pendientes
         double[] diag = new double[4];
         double anulado = 0;
-        for (Object[] fila : repartoRepository.resumenPorConceptoYEstado(RepartoPago.TALLER, tallerId)) {
+        for (Object[] fila : repartoRepository.resumenPorConceptoYEstadoDesde(RepartoPago.TALLER, tallerId, desde)) {
             String concepto = String.valueOf(fila[0]);
             String estado = String.valueOf(fila[1]);
             long lineas = fila[2] instanceof Number c ? c.longValue() : 0;
@@ -112,9 +117,11 @@ public class InformesTallerService {
                 destino[base + 1] += lineas;
             }
         }
-        // Órdenes del flujo anterior (sin flujo marketplace): su mano de obra queda aparte, con su propia nota en pantalla
+        // Órdenes del flujo anterior (sin flujo marketplace) finalizadas en el periodo: su mano de obra queda aparte,
+        // con su propia nota en pantalla
         List<OrdenServicio> anteriores = todas.stream()
                 .filter(o -> !EstadoOrden.FLUJO_MARKETPLACE.equals(o.getFlujo()) && "FINALIZADA".equals(o.getEstado()))
+                .filter(o -> enPeriodo(o.getFechaFinalizacion() != null ? o.getFechaFinalizacion() : o.getFechaCreacion(), desde))
                 .toList();
         double anterioresMano = anteriores.stream().mapToDouble(o -> o.getPrecioManoObra() == null ? 0 : o.getPrecioManoObra()).sum();
         return new Ingresos(monto(mano), monto(diag), anulado, new Anteriores(anteriores.size(), anterioresMano));
@@ -166,11 +173,12 @@ public class InformesTallerService {
         return EstadoOrden.TALLER.equals(e.getActorRol()) && (e.getActorId() == null || e.getActorId().equals(tallerId));
     }
 
-    // ─── Calificación: solo con lo que el cliente calificó, sin promedios inventados ───────────
+    // ─── Calificación: solo con lo que el cliente calificó en el periodo, sin promedios inventados ───────────
 
-    private Calificacion calificacion(List<OrdenServicio> ordenes) {
+    private Calificacion calificacion(List<OrdenServicio> ordenes, LocalDateTime desde) {
         List<OrdenServicio> calificadas = ordenes.stream()
                 .filter(o -> o.getCalificacionTaller() != null && o.getCalificacionTaller() >= 1 && o.getCalificacionTaller() <= 5)
+                .filter(o -> enPeriodo(fechaCalificacion(o), desde))
                 .toList();
         Map<Integer, Long> distribucion = new LinkedHashMap<>();
         for (int i = 5; i >= 1; i--) distribucion.put(i, 0L);
@@ -191,6 +199,10 @@ public class InformesTallerService {
     }
 
     // ─── Utilidades ──────────────────────────────────────────────────────────
+
+    private static boolean enPeriodo(LocalDateTime fecha, LocalDateTime desde) {
+        return fecha != null && !fecha.isBefore(desde);
+    }
 
     static int meses(int pedido) {
         return pedido <= 0 ? MESES_POR_DEFECTO : Math.min(pedido, MESES_MAXIMO);

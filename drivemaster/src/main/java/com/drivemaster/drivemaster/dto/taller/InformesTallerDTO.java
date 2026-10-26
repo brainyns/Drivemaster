@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.dto.taller;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ public final class InformesTallerDTO {
     /** promedio es null mientras no haya calificaciones; distribucion cuenta de 1 a 5 estrellas. */
     public record Calificacion(long total, Double promedio, Map<Integer, Long> distribucion, List<Comentario> recientes) {}
 
-    public record Informes(LocalDateTime generadoEn, int mesesConsultados, Servicios servicios, Ingresos ingresos,
-                           TiempoRespuesta tiempoRespuesta, Calificacion calificacion) {}
+    /** periodoDesde: primer día del periodo (hora de Colombia); todas las cifras cuentan desde ahí. */
+    public record Informes(LocalDateTime generadoEn, int mesesConsultados, LocalDate periodoDesde, Servicios servicios,
+                           Ingresos ingresos, TiempoRespuesta tiempoRespuesta, Calificacion calificacion) {}
 }

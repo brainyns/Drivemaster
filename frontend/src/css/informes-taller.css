@@ -12,6 +12,7 @@
 
 .ti-root .ti-vacio { margin: 0; max-width: 52ch; font-size: 0.9rem; line-height: 1.55; color: var(--ui-muted); text-wrap: pretty; }
 .ti-root .ti-nota { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: var(--ui-muted); text-wrap: pretty; }
+.ti-root .ti-periodo { margin: 0 0 12px; font-size: 0.8125rem; color: var(--ui-muted); }
 .ti-root .ti-nota--aparte { padding-top: 12px; border-top: 1px dashed var(--ui-line); }
 
 /* Barras: nombre, pista y valor en texto */

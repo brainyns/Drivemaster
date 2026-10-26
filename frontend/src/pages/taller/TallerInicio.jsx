@@ -36,7 +36,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
   const tallerId = taller?.id;
   const aprobado = taller?.estadoAprobacion === "APROBADO";
 
-  // Mano de obra liquidada y por cobrar (el backend la da acumulada, no por periodo)
+  // Mano de obra liquidada y por cobrar del mes en curso (informes de 1 mes: desde el día 1)
   useEffect(() => {
     let vivo = true;
     informesTaller(getToken(), 1)
@@ -80,6 +80,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
   const sinActividad = solicitudes.length === 0;
   const calificacion = datosCalificacion(taller?.rating, taller?.calificaciones);
   const primera = datos.responder[0];
+  const mesActual = new Date(ahora).toLocaleDateString("es-CO", { month: "long" });
 
   return (
     <div className="ini-root">
@@ -166,7 +167,8 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                 pie={datos.listos.length > 0 ? "El cliente ya fue avisado por correo" : "Ningún vehículo esperando entrega"}
                 onClick={() => irA("taller-trabajos", "entaller")} />
               {ingresos && (
-                <Indicador titulo="Mano de obra" pie="Total histórico de tus servicios" onClick={() => irA("taller-informes")}>
+                <Indicador titulo={`Mano de obra · ${mesActual}`} pie="Del mes en curso; los meses anteriores están en Informes"
+                  onClick={() => irA("taller-informes")}>
                   {/* Dentro de un botón solo cabe contenido en línea: spans en vez de dl */}
                   <span className="ini-dinero">
                     <span className="ini-dinero__fila ini-dinero__pendiente">
@@ -174,7 +176,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                       <span className="ini-dinero__valor">{formatPrecio(ingresos.pendiente)}</span>
                     </span>
                     <span className="ini-dinero__fila ini-dinero__recibido">
-                      <span className="ini-dinero__etiqueta">Ya recibido</span>
+                      <span className="ini-dinero__etiqueta">Recibido este mes</span>
                       <span className="ini-dinero__valor">{formatPrecio(ingresos.liquidado)}</span>
                     </span>
                   </span>

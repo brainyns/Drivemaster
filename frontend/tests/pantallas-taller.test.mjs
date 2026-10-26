@@ -346,7 +346,19 @@ test("Informes: el tiempo de respuesta llega en minutos y se muestra en min, h o
   assert.equal(duracionMinutos(2870), "2 d");
   const pagina = leer("../src/pages/taller/TallerInformes.jsx");
   assert.ok(pagina.includes("duracionMinutos(tiempo.minutosPromedio)") && !pagina.includes("horasPromedio"));
-  assert.ok(pagina.includes("Total histórico"), "los ingresos dicen que no dependen del periodo");
+});
+
+test("Informes e Inicio: todas las cifras siguen el periodo y no queda ningún total histórico", async () => {
+  const { textoPeriodo } = await import("../src/utils/formato.js");
+  assert.equal(textoPeriodo("2026-08-01", 3), "desde el 1 de agosto de 2026");
+  assert.equal(textoPeriodo(null, 6), "de los últimos 6 meses");
+  const informes = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(!informes.includes("histórico"), "Informes no habla de total histórico");
+  assert.ok(informes.includes("textoPeriodo(d.periodoDesde, d.mesesConsultados)"), "el rótulo sale del periodo del backend");
+  const inicio = leer("../src/pages/taller/TallerInicio.jsx");
+  assert.ok(!inicio.includes("histórico"), "Inicio no habla de total histórico");
+  assert.ok(inicio.includes("informesTaller(getToken(), 1)"), "Inicio pide el mes en curso");
+  assert.ok(inicio.includes("titulo={`Mano de obra · ${mesActual}`}"), "la tarjeta dice de qué mes es");
 });
 
 test("Inicio: tarjetas de estado con el color de su fase y una propia para lo listo para entregar", () => {

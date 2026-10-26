@@ -11,14 +11,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -40,7 +43,7 @@ class InformesTallerTest {
         ordenes = mock(OrdenServicioRepository.class);
         reparto = mock(RepartoPagoRepository.class);
         when(ordenes.findByTallerIdOrderByFechaCreacionDesc(anyString())).thenReturn(List.of());
-        when(reparto.resumenPorConceptoYEstado(anyString(), anyString())).thenReturn(List.of());
+        when(reparto.resumenPorConceptoYEstadoDesde(anyString(), anyString(), any())).thenReturn(List.of());
         service = new InformesTallerService(ordenes, reparto);
     }
 
@@ -64,9 +67,9 @@ class InformesTallerTest {
                 .thenReturn(List.of(solicitud("a1", "A", EstadoOrden.ENTREGADA, creada), solicitud("a2", "A", EstadoOrden.ENTREGADA, creada)));
         when(ordenes.findByTallerIdOrderByFechaCreacionDesc("B"))
                 .thenReturn(List.of(solicitud("b1", "B", EstadoOrden.CANCELADA, creada)));
-        when(reparto.resumenPorConceptoYEstado(RepartoPago.TALLER, "A"))
+        when(reparto.resumenPorConceptoYEstadoDesde(eq(RepartoPago.TALLER), eq("A"), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{"COTIZACION", RepartoPago.LIQUIDADO, 2L, 500_000.0}));
-        when(reparto.resumenPorConceptoYEstado(RepartoPago.TALLER, "B"))
+        when(reparto.resumenPorConceptoYEstadoDesde(eq(RepartoPago.TALLER), eq("B"), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{"COTIZACION", RepartoPago.LIQUIDADO, 1L, 90_000.0}));
 
         Informes a = informes("A");
@@ -80,7 +83,7 @@ class InformesTallerTest {
         assertEquals(0L, b.servicios().porEstado().get(EstadoOrden.ENTREGADA));
         assertEquals(90_000.0, b.ingresos().manoDeObra().liquidado());
         verify(ordenes).findByTallerIdOrderByFechaCreacionDesc("A");
-        verify(reparto).resumenPorConceptoYEstado(RepartoPago.TALLER, "B");
+        verify(reparto).resumenPorConceptoYEstadoDesde(eq(RepartoPago.TALLER), eq("B"), any());
     }
 
     @Test
@@ -91,7 +94,7 @@ class InformesTallerTest {
 
     @Test
     void losIngresosSeparanLiquidadoPendienteYAnulado() {
-        when(reparto.resumenPorConceptoYEstado(RepartoPago.TALLER, "A")).thenReturn(List.<Object[]>of(
+        when(reparto.resumenPorConceptoYEstadoDesde(eq(RepartoPago.TALLER), eq("A"), any())).thenReturn(List.<Object[]>of(
                 new Object[]{"COTIZACION", RepartoPago.LIQUIDADO, 3L, 300_000.0},
                 new Object[]{"COTIZACION", RepartoPago.PENDIENTE, 1L, 80_000.0},
                 new Object[]{"COTIZACION", RepartoPago.POR_LIQUIDAR, 1L, 20_000.0},
@@ -197,6 +200,68 @@ class InformesTallerTest {
     }
 
     @Test
+    void losIngresosSePidenDesdeElPrimerDiaDelPeriodo() {
+        Informes i = service.informes("A", 3, HASTA, AHORA);
+
+        LocalDateTime esperado = LocalDate.of(2026, 8, 1).atStartOfDay(InformesTallerService.ZONA)
+                .withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
+        assertEquals(LocalDate.of(2026, 8, 1), i.periodoDesde());
+        verify(reparto).resumenPorConceptoYEstadoDesde(RepartoPago.TALLER, "A", esperado);
+    }
+
+    @Test
+    void laCalificacionCuentaPorLaFechaEnQueSeCalificoDentroDelPeriodo() {
+        OrdenServicio enero = solicitud("c1", "A", EstadoOrden.ENTREGADA, LocalDateTime.of(2026, 1, 5, 9, 0));
+        enero.setCalificacionTaller(2);
+        enero.setFechaRecepcionCliente(LocalDateTime.of(2026, 1, 10, 9, 0));
+        // Pedida antes del periodo, pero calificada dentro: cuenta
+        OrdenServicio julio = solicitud("c2", "A", EstadoOrden.ENTREGADA, LocalDateTime.of(2026, 6, 20, 9, 0));
+        julio.setCalificacionTaller(5);
+        julio.setFechaRecepcionCliente(LocalDateTime.of(2026, 8, 2, 9, 0));
+        when(ordenes.findByTallerIdOrderByFechaCreacionDesc("A")).thenReturn(List.of(enero, julio));
+
+        var tres = service.informes("A", 3, HASTA, AHORA).calificacion();
+        var doce = service.informes("A", 12, HASTA, AHORA).calificacion();
+
+        assertEquals(1, tres.total());
+        assertEquals(5.0, tres.promedio());
+        assertEquals(2, doce.total());
+        assertEquals(3.5, doce.promedio());
+    }
+
+    @Test
+    void lasOrdenesAnterioresSoloCuentanSiSeFinalizaronEnElPeriodo() {
+        OrdenServicio dentro = OrdenServicio.builder().id("v1").tallerId("A").estado("FINALIZADA").precioManoObra(70_000.0)
+                .fechaCreacion(LocalDateTime.of(2026, 3, 1, 9, 0)).fechaFinalizacion(LocalDateTime.of(2026, 9, 1, 9, 0)).build();
+        OrdenServicio fuera = OrdenServicio.builder().id("v2").tallerId("A").estado("FINALIZADA").precioManoObra(50_000.0)
+                .fechaCreacion(LocalDateTime.of(2026, 1, 1, 9, 0)).fechaFinalizacion(LocalDateTime.of(2026, 2, 1, 9, 0)).build();
+        when(ordenes.findByTallerIdOrderByFechaCreacionDesc("A")).thenReturn(List.of(dentro, fuera));
+
+        var anteriores = service.informes("A", 3, HASTA, AHORA).ingresos().anteriores();
+
+        assertEquals(1, anteriores.ordenes());
+        assertEquals(70_000.0, anteriores.manoDeObra());
+    }
+
+    @Test
+    void cadaSolicitudCuentaEnUnSoloEstado() {
+        LocalDateTime creada = LocalDateTime.of(2026, 10, 1, 9, 0);
+        when(ordenes.findByTallerIdOrderByFechaCreacionDesc("A")).thenReturn(List.of(
+                solicitud("s1", "A", EstadoOrden.ENTREGADA, creada,
+                        evento(EstadoOrden.ASIGNADA_A_TALLER, creada), evento(EstadoOrden.LISTA, creada.plusDays(1)),
+                        evento(EstadoOrden.ENTREGADA, creada.plusDays(2))),
+                solicitud("s2", "A", EstadoOrden.LISTA, creada),
+                solicitud("s3", "A", EstadoOrden.CANCELADA, creada)));
+
+        var s = informes("A").servicios();
+
+        assertEquals(3, s.total());
+        assertEquals(s.total(), s.porEstado().values().stream().mapToLong(Long::longValue).sum());
+        assertEquals(1L, s.porEstado().get(EstadoOrden.ENTREGADA));
+        assertEquals(1L, s.porEstado().get(EstadoOrden.LISTA));
+    }
+
+    @Test
     void losMesesSeLimitanYLasSolicitudesViejasNoEntranAlPeriodo() {
         OrdenServicio reciente = solicitud("r", "A", EstadoOrden.COTIZADA, LocalDateTime.of(2026, 10, 3, 9, 0));
         OrdenServicio vieja = solicitud("v", "A", EstadoOrden.COTIZADA, LocalDateTime.of(2025, 1, 3, 9, 0));
@@ -205,6 +270,6 @@ class InformesTallerTest {
         assertEquals(1, service.informes("A", 6, HASTA, AHORA).servicios().total());
         assertEquals(24, service.informes("A", 999, HASTA, AHORA).mesesConsultados());
         assertEquals(6, service.informes("A", 0, HASTA, AHORA).mesesConsultados());
-        verify(reparto, org.mockito.Mockito.atLeastOnce()).resumenPorConceptoYEstado(eq(RepartoPago.TALLER), eq("A"));
+        verify(reparto, org.mockito.Mockito.atLeastOnce()).resumenPorConceptoYEstadoDesde(eq(RepartoPago.TALLER), eq("A"), any());
     }
 }

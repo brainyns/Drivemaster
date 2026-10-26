@@ -42,6 +42,19 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> 
             + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id group by r.concepto, r.estado")
     List<Object[]> resumenPorConceptoYEstado(@Param("tipo") String tipo, @Param("id") String id);
 
+    /**
+     * Lo repartido a un beneficiario en un periodo, por concepto y estado: [concepto, estado, líneas, suma]. Cada línea
+     * cuenta una sola vez, en su estado actual: la liquidada por la fecha en que se pagó (las antiguas sin esa fecha, por
+     * la de creación) y las demás por la fecha en que se creó (cuando el cliente pagó).
+     */
+    @Query("select r.concepto, r.estado, count(r), sum(r.monto) from RepartoPago r "
+            + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id and "
+            + "((r.estado = 'LIQUIDADO' and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde) "
+            + "or (r.estado <> 'LIQUIDADO' and r.fechaCreacion >= :desde)) "
+            + "group by r.concepto, r.estado")
+    List<Object[]> resumenPorConceptoYEstadoDesde(@Param("tipo") String tipo, @Param("id") String id,
+                                                  @Param("desde") LocalDateTime desde);
+
     /** Líneas de comisión (registradas y anuladas) desde una fecha, para el reporte por mes. */
     @Query("select r from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA' and r.fechaCreacion >= :desde "
             + "order by r.fechaCreacion")
