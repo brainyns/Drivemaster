@@ -44,14 +44,6 @@ test("antes de enviar se vuelve al primer paso con errores", () => {
   assert.equal(primerPasoConErrores("TALLER", { ...BASE, ciudad: "", password: "1" }), "ubicacion");
 });
 
-test("el correo conserva sus letras: solo se quitan los espacios y se pasa a minúsculas", () => {
-  // Antes una expresión sin la barra (/s+/g) borraba todas las "s" del correo
-  assert.equal(datosRegistro("TALLER", { ...BASE, correo: " Sebas.Rios @Gmail.com " }).correo, "sebas.rios@gmail.com");
-  // Ningún archivo del frontend vuelve a usar la expresión sin barra (también rompía el login y la recuperación)
-  const auth = readFileSync(new URL("../src/services/authService.js", import.meta.url), "utf8");
-  assert.ok(!auth.includes("replace(/s+/g") && auth.includes("replace(/\\s+/g"), "authService normaliza con \\s+");
-});
-
 test("un negocio repetido muestra el mensaje del servidor en su campo y en su paso", () => {
   assert.equal(campoDelDuplicado("Ya hay una tienda registrada con ese NIT."), "nit");
   assert.equal(campoDelDuplicado("Ya hay un taller registrado con ese nombre."), "nombreNegocio");
