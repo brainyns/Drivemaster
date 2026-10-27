@@ -55,5 +55,5 @@ public final class ReportesPlataformaDTO {
     public record UsuarioFila(String id, String nombre, String correo, String rol, boolean activo, boolean bloqueado,
                               LocalDateTime creado, LocalDateTime ultimoAcceso) {}
 
-    public record UsuariosRespuesta(ConsultasPlataformaDTO.Pagina<UsuarioFila> usuarios, Map<String, Long> porRol) {}
+    public record UsuariosRespuesta(com.drivemaster.drivemaster.dto.comun.Pagina<UsuarioFila> usuarios, Map<String, Long> porRol) {}
 }

@@ -1,6 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
-import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Pagina;
+import com.drivemaster.drivemaster.dto.comun.Pagina;
 import com.drivemaster.drivemaster.dto.plataforma.NegociosPlataformaDTO.NegocioFila;
 import com.drivemaster.drivemaster.dto.plataforma.NegociosPlataformaDTO.NegocioPendiente;
 import com.drivemaster.drivemaster.dto.plataforma.NegociosPlataformaDTO.NegociosRespuesta;

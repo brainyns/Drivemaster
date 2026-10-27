@@ -32,6 +32,8 @@ import java.util.List;
  * - horarios_taller y cambios_taller: todo se busca por tallerId.
  * - cambios_correo y recuperaciones_clave: por usuarioId o correo, y un TTL en "vence" para que los códigos
  *   olvidados no se acumulen.
+ * - productos, pedidos_tienda y movimientos_inventario: las tablas paginadas de la tienda (por tiendaId, en su orden
+ *   por defecto) y el monitor de pedidos del SUPERADMIN (por estado y fecha).
  * - usuarios.correo único: solo si no hay correos repetidos. Si los hay, no se crea y se listan en el log para
  *   resolverlos a mano (ver MIGRACIONES_PENDIENTES.md).
  */
@@ -83,6 +85,18 @@ public class IndicesMongo implements ApplicationRunner {
             pendientes.ensureIndex(new Index().on("correo", Sort.Direction.ASC).named("correo"));
             pendientes.ensureIndex(new Index().on("vence", Sort.Direction.ASC).expire(0).named("vence_ttl"));
         });
+        // Tablas paginadas (feature/paginacion-tablas)
+        crear("productos", () -> mongoTemplate.indexOps("productos")
+                .ensureIndex(new Index().on("tiendaId", Sort.Direction.ASC).on("nombre", Sort.Direction.ASC).named("tienda_nombre")));
+        crear("pedidos_tienda", () -> {
+            IndexOperations pedidos = mongoTemplate.indexOps("pedidos_tienda");
+            pedidos.ensureIndex(new Index().on("tiendaId", Sort.Direction.ASC).on("fechaCreacion", Sort.Direction.DESC)
+                    .named("tienda_fecha"));
+            pedidos.ensureIndex(new Index().on("estado", Sort.Direction.ASC).on("fechaCreacion", Sort.Direction.DESC)
+                    .named("estado_fecha"));
+        });
+        crear("movimientos_inventario", () -> mongoTemplate.indexOps("movimientos_inventario")
+                .ensureIndex(new Index().on("tiendaId", Sort.Direction.ASC).on("fecha", Sort.Direction.DESC).named("tienda_fecha")));
         correoUnico();
         contarCorreosConMayusculas();
     }

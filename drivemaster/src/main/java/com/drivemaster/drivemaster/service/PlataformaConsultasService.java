@@ -2,7 +2,7 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ClienteFila;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ClientesRespuesta;
-import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Pagina;
+import com.drivemaster.drivemaster.dto.comun.Pagina;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidoFila;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductoFila;

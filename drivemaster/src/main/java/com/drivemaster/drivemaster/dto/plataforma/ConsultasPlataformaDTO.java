@@ -3,6 +3,8 @@ package com.drivemaster.drivemaster.dto.plataforma;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.drivemaster.drivemaster.dto.comun.Pagina;
+
 /**
  * Consultas de solo lectura del panel de la plataforma (SUPERADMIN). Entregan lo justo para monitorear:
  * no incluyen teléfonos, direcciones, documentos ni datos administrativos de las cuentas.
@@ -12,7 +14,7 @@ public final class ConsultasPlataformaDTO {
     private ConsultasPlataformaDTO() {
     }
 
-    public record Pagina<T>(List<T> items, long total, int pagina, int tamano) {}
+    // La página de cada tabla usa el formato común (dto.comun.Pagina), con el total de páginas
 
     public record TiendaOpcion(String id, String nombre) {}
 
