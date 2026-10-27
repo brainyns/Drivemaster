@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { exportarMovimientos, listarMovimientos, registrarMovimiento } from "../services/movimientoService";
+import { exportarMovimientos, movimientosTabla, registrarMovimiento } from "../services/movimientoService";
 import { listarProductos, listarProductosMiTienda } from "../services/productoService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
-import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
+import { errorRango, propsPaginacion, textoOrden, useDiferido } from "../components/ui/reglasTabla";
+import EncabezadoOrden from "../components/ui/EncabezadoOrden";
+import FiltroFechas from "../components/ui/FiltroFechas";
+import SelectorOrden from "../components/ui/SelectorOrden";
 import Indicador from "../components/ui/Indicador";
 import SeccionEditable from "../components/ui/SeccionEditable";
 import Campo from "../components/ui/Campo";
@@ -17,7 +20,7 @@ import Icon from "../components/public/Icon";
 import BuscadorProducto from "../components/ui/BuscadorProducto";
 import { avisar } from "../components/ui/avisar";
 import {
-  FILTROS_TIPO, TIPOS, erroresMovimiento, filtrarMovimientos, resumenMovimientos, stockResultante, textoDiferencia,
+  FILTROS_TIPO, TIPOS, erroresMovimiento, stockResultante, textoDiferencia,
 } from "./tienda/inventarioTienda";
 import { plural } from "../utils/formato";
 import "../css/movimientos.css";
@@ -98,49 +101,72 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
   );
 }
 
-// esTienda: la tienda solo ve y ajusta su propio inventario (el backend ya filtra los movimientos).
+const ORDENES_MOVIMIENTOS = [
+  { campo: "fecha", label: "Fecha", asc: "(más antiguos primero)", desc: "(más recientes primero)" },
+  { campo: "tipo", label: "Tipo" },
+  { campo: "cantidad", label: "Cantidad" },
+];
+
+/**
+ * Movimientos de la tienda, paginados en el servidor (/api/movimientos/tabla): tipo, producto, fechas (en hora de
+ * Colombia), orden y página se resuelven allá; el resumen de arriba es de todo el historial. El backend ya filtra
+ * por la tienda de la sesión. esTienda elige la lista de productos (nombres y el formulario).
+ */
 function Movimientos({ token, esTienda = false }) {
-  const [movimientos, setMovimientos] = useState([]);
+  const [datos, setDatos] = useState(null); // { movimientos: Pagina, resumen }
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [reintentando, setReintentando] = useState(false);
   const [registrando, setRegistrando] = useState(false);
   const [filtros, setFiltros] = useState({ busqueda: "", tipo: "", desde: "", hasta: "" });
+  const q = useDiferido(filtros.busqueda.trim());
+  const [orden, setOrden] = useState(null); // null: del más reciente al más antiguo
+  const [pagina, setPagina] = useState(0);
+  const errorFechas = errorRango(filtros);
 
-  const cargar = useCallback(async () => {
+  const cargar = useCallback(async (vivo = () => true) => {
+    if (errorFechas) return; // el selector ya lo avisa; no se pide un rango invertido
+    setCargando(true);
     try {
-      setMovimientos((await listarMovimientos({}, token)) || []);
+      const r = await movimientosTabla(token, { tipo: filtros.tipo, q, desde: filtros.desde, hasta: filtros.hasta,
+        page: pagina, size: 20, sort: textoOrden(orden) });
+      if (!vivo()) return;
+      setDatos(r);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      if (vivo()) setError(e.message);
     } finally {
-      setCargando(false);
+      if (vivo()) setCargando(false);
     }
-  }, [token]);
+  }, [token, filtros.tipo, filtros.desde, filtros.hasta, q, pagina, orden, errorFechas]);
+
+  useEffect(() => {
+    let activo = true;
+    const id = setTimeout(() => cargar(() => activo), 0);
+    return () => { activo = false; clearTimeout(id); };
+  }, [cargar]);
 
   useEffect(() => {
     let vivo = true;
     (esTienda ? listarProductosMiTienda(token) : listarProductos(token))
       .then((l) => { if (vivo) setProductos(l || []); })
       .catch(() => {});
-    const id = setTimeout(cargar, 0);
-    return () => { vivo = false; clearTimeout(id); };
-  }, [token, esTienda, cargar]);
+    return () => { vivo = false; };
+  }, [token, esTienda]);
 
   const porId = useMemo(() => Object.fromEntries(productos.map((p) => [p.id, p])), [productos]);
-  const visibles = useMemo(() => filtrarMovimientos(movimientos, filtros, (id) => porId[id]), [movimientos, filtros, porId]);
-  const datos = useMemo(() => resumenMovimientos(movimientos), [movimientos]);
-  // 20 por página; vuelve a la primera al cambiar los filtros o la búsqueda
-  const pag = usePaginacion(visibles.length, JSON.stringify(filtros));
-  const enPagina = paginar(visibles, pag.pagina);
+  const lista = datos?.movimientos;
+  const enPagina = lista?.items || [];
+  const totalFiltrado = lista?.total || 0;
+  const resumen = datos?.resumen || { total: 0, entradas: 0, salidas: 0, ajustes: 0 };
   const hayFiltros = filtros.busqueda || filtros.tipo || filtros.desde || filtros.hasta;
   const [exportando, setExportando] = useState(null); // "xlsx" | "pdf" mientras se genera
   const exportar = async (formato) => {
     setExportando(formato);
     try {
       await exportarMovimientos(filtros, formato, token);
-      avisar(`Descargamos ${plural(visibles.length, "movimiento")} en ${formato === "pdf" ? "PDF" : "Excel"}.`);
+      avisar(`Descargamos ${plural(totalFiltrado, "movimiento")} en ${formato === "pdf" ? "PDF" : "Excel"}.`);
     } catch (e) {
       avisar(`No pudimos generar el archivo. ${e.message}`, "error");
     } finally {
@@ -148,7 +174,9 @@ function Movimientos({ token, esTienda = false }) {
     }
   };
 
-  const filtrar = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); };
+  // Cambiar filtro, búsqueda, fechas u orden vuelve a la primera página
+  const filtrar = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(0); };
+  const ordenar = (o) => { setOrden(o); setPagina(0); };
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
   const guardado = async (texto) => {
     setRegistrando(false);
@@ -184,17 +212,17 @@ function Movimientos({ token, esTienda = false }) {
         </div>
       )}
 
-      {cargando ? (
+      {!datos && !error ? (
         <Esqueleto variante="lista" cantidad={4} texto="Cargando movimientos…" />
       ) : (
         <>
           <section aria-labelledby="mov-resumen" className="mov-alerta">
             <h2 id="mov-resumen" className="ui-sr">Resumen de movimientos</h2>
             <div className="ui-indicadores">
-              <Indicador titulo="Movimientos" valor={datos.total.toLocaleString("es-CO")} pie="En todo el historial" />
-              <Indicador titulo="Unidades que entraron" valor={datos.entradas.toLocaleString("es-CO")} tono="ok" />
-              <Indicador titulo="Unidades que salieron" valor={datos.salidas.toLocaleString("es-CO")} />
-              <Indicador titulo="Ajustes por conteo" valor={datos.ajustes.toLocaleString("es-CO")} />
+              <Indicador titulo="Movimientos" valor={resumen.total.toLocaleString("es-CO")} pie="En todo el historial" />
+              <Indicador titulo="Unidades que entraron" valor={resumen.entradas.toLocaleString("es-CO")} tono="ok" />
+              <Indicador titulo="Unidades que salieron" valor={resumen.salidas.toLocaleString("es-CO")} />
+              <Indicador titulo="Ajustes por conteo" valor={resumen.ajustes.toLocaleString("es-CO")} />
             </div>
           </section>
 
@@ -214,28 +242,25 @@ function Movimientos({ token, esTienda = false }) {
                 <input id="mov-busqueda" className="ui-field__input" type="search" placeholder="Producto o código"
                   value={filtros.busqueda} onChange={(e) => filtrar({ busqueda: e.target.value })} />
               </div>
-              <Campo id="mov-desde" label="Desde" className="mov-fecha">
-                <input className="ui-field__input" type="date" value={filtros.desde} max={filtros.hasta || undefined}
-                  onChange={(e) => filtrar({ desde: e.target.value })} />
-              </Campo>
-              <Campo id="mov-hasta" label="Hasta" className="mov-fecha">
-                <input className="ui-field__input" type="date" value={filtros.hasta} min={filtros.desde || undefined}
-                  onChange={(e) => filtrar({ hasta: e.target.value })} />
-              </Campo>
+
               {/* Descarga exactamente lo que muestra la lista con estos filtros (lo arma el backend) */}
               <div className="mov-exportar" role="group" aria-label="Descargar los movimientos filtrados">
                 {[["xlsx", "Excel"], ["pdf", "PDF"]].map(([formato, texto]) => (
                   <button key={formato} type="button" className="ui-btn ui-btn--secundario" onClick={() => exportar(formato)}
-                    disabled={exportando !== null || visibles.length === 0} aria-busy={exportando === formato}>
+                    disabled={exportando !== null || totalFiltrado === 0} aria-busy={exportando === formato}>
                     {exportando !== formato && <Icon name="file" size={16} />}
                     {exportando === formato ? "Generando…" : texto}
                   </button>
                 ))}
               </div>
             </div>
+            <FiltroFechas id="mov-fechas" etiqueta="Fecha del movimiento" valor={{ desde: filtros.desde, hasta: filtros.hasta }}
+              onCambiar={(r) => filtrar(r)} />
+            <SelectorOrden id="mov-orden" opciones={ORDENES_MOVIMIENTOS} orden={orden} onOrdenar={ordenar}
+              porDefecto="Más recientes primero" />
           </div>
 
-          {visibles.length === 0 ? (
+          {enPagina.length === 0 ? (
             !error && (hayFiltros ? (
               <EstadoVacio icono="search" titulo="Ningún movimiento con estos filtros"
                 texto="Prueba con otro tipo, otras fechas o el código del producto.">
@@ -251,16 +276,16 @@ function Movimientos({ token, esTienda = false }) {
             ))
           ) : (
             <>
-              <div className="ui-card ui-table-card">
+              <div className={`ui-card ui-table-card${cargando ? " ui-actualizando" : ""}`} aria-busy={cargando} id="mov-tabla">
                 <div className="ui-table-wrap">
                   <table className="ui-table ui-table--tarjetas mov-tabla">
-                    <caption className="ui-sr">Movimientos de inventario, del más reciente al más antiguo</caption>
+                    <caption className="ui-sr">Movimientos de inventario ({totalFiltrado.toLocaleString("es-CO")})</caption>
                     <thead>
                       <tr>
                         <th scope="col">Producto</th>
-                        <th scope="col">Fecha</th>
-                        <th scope="col">Tipo</th>
-                        <th scope="col" className="ui-table__num">Cantidad</th>
+                        <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Fecha</EncabezadoOrden>
+                        <EncabezadoOrden campo="tipo" orden={orden} onOrdenar={ordenar}>Tipo</EncabezadoOrden>
+                        <EncabezadoOrden campo="cantidad" orden={orden} onOrdenar={ordenar} className="ui-table__num">Cantidad</EncabezadoOrden>
                         <th scope="col" className="ui-table__num">Stock</th>
                         <th scope="col">Motivo</th>
                       </tr>
@@ -299,7 +324,7 @@ function Movimientos({ token, esTienda = false }) {
                   </table>
                 </div>
               </div>
-              <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de movimientos" />
+              <Paginacion {...propsPaginacion(lista)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de movimientos" ancla="mov-tabla" />
             </>
           )}
         </>

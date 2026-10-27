@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { getToken } from "../services/authService";
-import { listarRepartos, liquidarReparto, listarReembolsos, marcarReembolsado, obtenerModo } from "../services/liquidacionService";
+import { repartosTabla, liquidarReparto, listarReembolsos, marcarReembolsado, obtenerModo } from "../services/liquidacionService";
 import { formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
 import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
+import { errorRango, propsPaginacion, textoOrden } from "../components/ui/reglasTabla";
+import EncabezadoOrden from "../components/ui/EncabezadoOrden";
+import FiltroFechas from "../components/ui/FiltroFechas";
+import SelectorOrden from "../components/ui/SelectorOrden";
 import ChipEstado from "../components/ui/ChipEstado";
 import Indicador from "../components/ui/Indicador";
 import Alerta from "../components/ui/Alerta";
@@ -18,6 +22,14 @@ import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/liquidaciones-plataforma.css";
+
+/** Columnas de las liquidaciones que se pueden ordenar (lista blanca de LiquidacionService.ORDEN_REPARTOS). */
+const ORDENES_REPARTOS = [
+  { campo: "fecha", label: "Fecha", asc: "(más antiguas primero)", desc: "(más recientes primero)" },
+  { campo: "monto", label: "Monto" },
+  { campo: "beneficiario", label: "Beneficiario", asc: "(A–Z)", desc: "(Z–A)" },
+  { campo: "estado", label: "Estado", asc: "(A–Z)", desc: "(Z–A)" },
+];
 
 const VISTAS = [
   { key: "repartos", label: "Liquidaciones a talleres y tiendas" },
@@ -68,19 +80,32 @@ export default function Liquidaciones() {
   const [marcandoId, setMarcandoId] = useState(null);
   const [nota, setNota] = useState("");
   const [procesando, setProcesando] = useState(false);
+  // Liquidaciones: paginadas en el servidor (/repartos/tabla) con fechas y orden; los reembolsos son pocos y siguen
+  // llegando completos
+  const [tabla, setTabla] = useState(null); // { repartos: Pagina, pendientes, montoPendiente }
+  const [pagina, setPagina] = useState(0);
+  const [orden, setOrden] = useState(null);
+  const [fechas, setFechas] = useState({ desde: "", hasta: "" });
+  const errorFechas = errorRango(fechas);
 
   const cargar = useCallback(async () => {
+    if (vista === "repartos" && errorFechas) return; // el selector de fechas ya lo avisa
     setCargando(true);
     try {
-      const datos = vista === "repartos" ? await listarRepartos(token, estado) : await listarReembolsos(token, estado);
-      setFilas(datos || []);
+      if (vista === "repartos") {
+        const r = await repartosTabla(token, { estado, ...fechas, page: pagina, size: 20, sort: textoOrden(orden) });
+        setTabla(r);
+        setFilas(r?.repartos?.items || []);
+      } else {
+        setFilas((await listarReembolsos(token, estado)) || []);
+      }
       setErrorCarga(null);
     } catch (e) {
       setErrorCarga(e.message);
     } finally {
       setCargando(false);
     }
-  }, [token, vista, estado]);
+  }, [token, vista, estado, fechas, pagina, orden, errorFechas]);
 
   useEffect(() => {
     const id = setTimeout(cargar, 0);
@@ -100,7 +125,12 @@ export default function Liquidaciones() {
     setVista(v);
     setEstado(v === "repartos" ? "POR_LIQUIDAR" : "PENDIENTE");
     setMarcandoId(null);
+    setPagina(0);
   };
+  // Cambiar estado, fechas u orden vuelve a la primera página
+  const elegirEstado = (e) => { setEstado(e); setPagina(0); };
+  const ponerFechas = (r) => { setFechas(r); setPagina(0); };
+  const ordenar = (o) => { setOrden(o); setPagina(0); };
 
   const marcar = async (id) => {
     setProcesando(true);
@@ -121,9 +151,11 @@ export default function Liquidaciones() {
     }
   };
 
-  const pendientes = filas.filter((f) => (esRepartos
-    ? ["PENDIENTE", "POR_LIQUIDAR", "FALLIDO"].includes(f.estado) : f.estado === "PENDIENTE"));
-  const totalPendiente = pendientes.reduce((s, f) => s + (f.monto || 0), 0);
+  // En liquidaciones el servidor cuenta toda la lista filtrada (no solo la página); en reembolsos, la lista completa
+  const pendientesReembolso = filas.filter((f) => f.estado === "PENDIENTE");
+  const numPendientes = esRepartos ? (tabla?.pendientes || 0) : pendientesReembolso.length;
+  const totalRegistros = esRepartos ? (tabla?.repartos?.total || 0) : filas.length;
+  const totalPendiente = esRepartos ? (tabla?.montoPendiente || 0) : pendientesReembolso.reduce((s, f) => s + (f.monto || 0), 0);
   const marcando = filas.find((f) => f.id === marcandoId) || null;
 
   const textoAccion = (f) => (!esRepartos ? "Marcar reembolsado"
@@ -132,9 +164,9 @@ export default function Liquidaciones() {
 
   const abrirMarcar = (f) => { setMarcandoId(f.id); setNota(""); setNumero(""); setError(null); };
   const listaVacia = !cargando && !errorCarga && filas.length === 0;
-  // 20 por página; vuelve a la primera al cambiar de vista o de estado
+  // Reembolsos: 20 por página en el navegador (vuelve a la primera al cambiar de estado)
   const pag = usePaginacion(filas.length, vista + "|" + estado);
-  const enPagina = paginar(filas, pag.pagina);
+  const enPagina = esRepartos ? filas : paginar(filas, pag.pagina);
 
   return (
     <div className="ss-panel--plataforma pp-root liq-root">
@@ -159,16 +191,23 @@ export default function Liquidaciones() {
       </div>
       <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Estado">
         {ESTADOS[vista].map(([valor, label]) => (
-          <button key={valor || "todos"} type="button" className="ui-chip" aria-pressed={estado === valor} onClick={() => setEstado(valor)}>
+          <button key={valor || "todos"} type="button" className="ui-chip" aria-pressed={estado === valor} onClick={() => elegirEstado(valor)}>
             {label}
           </button>
         ))}
       </div>
 
+      {esRepartos && (
+        <div className="liq-herramientas pp-bloque-sep">
+          <FiltroFechas id="liq-fechas" etiqueta="Fecha de la liquidación" valor={fechas} onCambiar={ponerFechas} />
+          <SelectorOrden id="liq-orden" opciones={ORDENES_REPARTOS} orden={orden} onOrdenar={ordenar} porDefecto="Más recientes primero" />
+        </div>
+      )}
+
       {!cargando && !errorCarga && filas.length > 0 && (
         <div className="ui-indicadores pp-seccion liq-resumen">
           <Indicador titulo="Pendiente en esta lista" valor={formatPrecio(totalPendiente)} tono={totalPendiente > 0 ? "accion" : undefined}
-            pie={`${pendientes.length} de ${filas.length} ${filas.length === 1 ? "registro" : "registros"} por ${esRepartos ? "pagar" : "reembolsar"}`} />
+            pie={`${numPendientes} de ${totalRegistros} ${totalRegistros === 1 ? "registro" : "registros"} por ${esRepartos ? "pagar" : "reembolsar"}`} />
         </div>
       )}
 
@@ -188,12 +227,20 @@ export default function Liquidaciones() {
               <caption className="ui-sr">{esRepartos ? "Liquidaciones a talleres y tiendas" : "Reembolsos a clientes"}</caption>
               <thead>
                 <tr>
-                  <th scope="col">{esRepartos ? "Beneficiario" : "Pago"}</th>
-                  <th scope="col">Fecha</th>
+                  {esRepartos
+                    ? <EncabezadoOrden campo="beneficiario" orden={orden} onOrdenar={ordenar}>Beneficiario</EncabezadoOrden>
+                    : <th scope="col">Pago</th>}
+                  {esRepartos
+                    ? <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Fecha</EncabezadoOrden>
+                    : <th scope="col">Fecha</th>}
                   <th scope="col">Solicitud</th>
                   <th scope="col">{esRepartos ? "Concepto" : "Motivo"}</th>
-                  <th scope="col" className="pp-num">Monto</th>
-                  <th scope="col">Estado</th>
+                  {esRepartos
+                    ? <EncabezadoOrden campo="monto" orden={orden} onOrdenar={ordenar} className="pp-num">Monto</EncabezadoOrden>
+                    : <th scope="col" className="pp-num">Monto</th>}
+                  {esRepartos
+                    ? <EncabezadoOrden campo="estado" orden={orden} onOrdenar={ordenar}>Estado</EncabezadoOrden>
+                    : <th scope="col">Estado</th>}
                   <th scope="col"><span className="ui-sr">Acción</span></th>
                 </tr>
               </thead>
@@ -253,7 +300,9 @@ export default function Liquidaciones() {
         </div>
       )}
       {filas.length > 0 && (
-        <Paginacion pagina={pag.pagina} total={filas.length} onCambiar={pag.cambiar} etiqueta="Páginas de liquidaciones" />
+        esRepartos
+          ? <Paginacion {...propsPaginacion(tabla?.repartos)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de liquidaciones" />
+          : <Paginacion pagina={pag.pagina} total={filas.length} onCambiar={pag.cambiar} etiqueta="Páginas de reembolsos" />
       )}
 
       {marcando && (

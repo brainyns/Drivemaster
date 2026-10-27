@@ -217,3 +217,8 @@
 @media (prefers-reduced-motion: reduce) {
   .pdt-fila { transition: none; }
 }
+
+/* Fecha de pago y orden de la lista (paginada en el servidor) */
+.pdt-herramientas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin-bottom: 14px; }
+.pdt-herramientas .ui-fechas { flex: 1 1 420px; }
+@media (max-width: 600px) { .pdt-herramientas .ui-orden-movil--siempre { max-width: none; width: 100%; } }

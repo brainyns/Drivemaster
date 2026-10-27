@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getToken } from "../services/authService";
 import {
-  misPedidosTienda, prepararPedido, despacharPedido, noPuedoDespachar, marcarListoParaRetirar, validarCodigoRetiro,
+  pedidosTiendaTabla, prepararPedido, despacharPedido, noPuedoDespachar, marcarListoParaRetirar, validarCodigoRetiro,
 } from "../services/pedidoTiendaService";
 import { listarProductosMiTienda } from "../services/productoService";
 import { ESTADOS_PEDIDO, MOTIVOS_NO_DESPACHO, formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
-import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
+import { errorRango, propsPaginacion, textoOrden, useDiferido } from "../components/ui/reglasTabla";
+import FiltroFechas from "../components/ui/FiltroFechas";
+import SelectorOrden from "../components/ui/SelectorOrden";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -18,8 +20,8 @@ import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
 import Icon from "../components/public/Icon";
 import {
-  FILTROS, VACIOS, accionEntrega, accionFila, accionPrincipal, cantidadProductos, coincide, contar, destinatario, diasSinRetirar,
-  esCatalogo, esEnvio, esRetiro, historialPedido, metodoEntrega, ordenarPorUrgencia, plazoVencido, porDespachar, sinRetirar,
+  FILTROS, VACIOS, accionEntrega, accionFila, accionPrincipal, cantidadProductos, destinatario, diasSinRetirar,
+  esCatalogo, esEnvio, esRetiro, historialPedido, metodoEntrega, plazoVencido, porDespachar, sinRetirar,
   subtotal, textoPlazo,
 } from "./tienda/pedidosTienda";
 import { avisar } from "../components/ui/avisar";
@@ -114,11 +116,26 @@ function textoEstado(p) {
  * dirección; en un retiro, nada (el cliente se identifica con su código, que se valida aquí).
  * "No puedo despachar" exige el motivo; el reembolso al cliente lo gestiona DriveMaster.
  */
+/** Orden de la lista (lista blanca de TablasTiendaService); sin orden, lo más urgente primero. */
+const ORDENES_PEDIDOS = [
+  { campo: "fecha", label: "Fecha de pago", asc: "(más antiguos primero)", desc: "(más recientes primero)" },
+  { campo: "total", label: "Total" },
+  { campo: "estado", label: "Estado", asc: "(A–Z)", desc: "(Z–A)" },
+];
+
+/**
+ * Pedidos de la tienda, paginados en el servidor (/api/pedidos-tienda/mios/tabla): pestaña, búsqueda, fechas de pago,
+ * orden y página se resuelven allá sobre todos sus pedidos; los contadores de las pestañas cuentan todos.
+ */
 export default function PedidosTienda({ param, irA }) {
   const token = getToken();
   // Desde un aviso (o desde otra sección) se abre directo un pedido: { abrir, volverA }
   const destino = destinoSeccion(param);
-  const [pedidos, setPedidos] = useState([]);
+  const [datos, setDatos] = useState(null); // { pedidos: Pagina, conteo }
+  const [suelto, setSuelto] = useState(null); // el pedido abierto cuando no está en la página (p. ej. desde un aviso)
+  const [orden, setOrden] = useState(null);
+  const [pagina, setPagina] = useState(0);
+  const [fechas, setFechas] = useState({ desde: "", hasta: "" });
   const [imagenes, setImagenes] = useState({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -136,16 +153,22 @@ export default function PedidosTienda({ param, irA }) {
   const [ahora] = useState(() => Date.now());
   const campoCodigo = useRef(null);
 
+  const q = useDiferido(busqueda.trim());
+  const errorFechas = errorRango(fechas);
+
   const cargar = useCallback(async () => {
+    if (errorFechas) return; // el selector de fechas ya lo avisa
+    setCargando(true);
     try {
-      setPedidos((await misPedidosTienda(token)) || []);
+      setDatos(await pedidosTiendaTabla(token, { pestana: filtro, q, desde: fechas.desde, hasta: fechas.hasta,
+        page: pagina, size: 20, sort: textoOrden(orden) }));
       setError(null);
     } catch (e) {
       setError(e.message);
     } finally {
       setCargando(false);
     }
-  }, [token]);
+  }, [token, filtro, q, fechas.desde, fechas.hasta, pagina, orden, errorFechas]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -163,15 +186,35 @@ export default function PedidosTienda({ param, irA }) {
     return () => { vivo = false; };
   }, [token]);
 
-  const conteo = useMemo(() => contar(pedidos), [pedidos]);
-  const visibles = useMemo(() => {
-    const f = FILTROS.find((x) => x.key === filtro) || FILTROS[0];
-    return ordenarPorUrgencia(pedidos.filter(f.filtro).filter((p) => coincide(p, busqueda)), ahora);
-  }, [pedidos, filtro, busqueda, ahora]);
-  const abierto = pedidos.find((p) => p.id === abiertoId) || null;
-  // 20 por página; vuelve a la primera al cambiar de pestaña o de búsqueda (los contadores siguen contando todo)
-  const pag = usePaginacion(visibles.length, filtro + "|" + busqueda);
-  const enPagina = paginar(visibles, pag.pagina);
+  const lista = datos?.pedidos;
+  const enPagina = useMemo(() => lista?.items || [], [lista]);
+  const conteo = datos?.conteo || {};
+  const enLaPagina = enPagina.find((p) => p.id === abiertoId) || null;
+  const abierto = enLaPagina || (suelto?.id === abiertoId ? suelto : null);
+
+  // El pedido abierto que no está en esta página se busca por su id (la búsqueda del servidor también mira el id),
+  // con la misma vista recortada que ve la tienda. Se vuelve a pedir cada vez que la lista se recarga.
+  const [buscado, setBuscado] = useState(null); // id ya buscado sin éxito
+  useEffect(() => {
+    if (!abiertoId || !datos || enLaPagina) return undefined;
+    let vivo = true;
+    pedidosTiendaTabla(token, { pestana: "TODOS", q: abiertoId, size: 1 })
+      .then((r) => {
+        if (!vivo) return;
+        const p = (r?.pedidos?.items || []).find((x) => x.id === abiertoId) || null;
+        setSuelto(p);
+        if (!p) setBuscado(abiertoId);
+      })
+      .catch(() => { if (vivo) setBuscado(abiertoId); });
+    return () => { vivo = false; };
+  }, [token, abiertoId, datos, enLaPagina]);
+  const noEncontrado = abiertoId && !abierto && buscado === abiertoId;
+
+  // Cambiar de pestaña, búsqueda, fechas u orden vuelve a la primera página
+  const ponerFiltro = (f) => { setFiltro(f); setPagina(0); };
+  const ponerBusqueda = (v) => { setBusqueda(v); setPagina(0); };
+  const ponerFechas = (r) => { setFechas(r); setPagina(0); };
+  const ponerOrden = (o) => { setOrden(o); setPagina(0); };
 
   const reiniciarFormularios = () => {
     setModo(null);
@@ -278,7 +321,8 @@ export default function PedidosTienda({ param, irA }) {
     }
   };
 
-  if (cargando) {
+  // Solo la primera carga muestra el esqueleto; al cambiar de página la lista anterior queda visible mientras llega
+  if (!datos && !error) {
     return (
       <div className="ss-panel ss-panel--tienda pdt-root">
         <EncabezadoPagina titulo="Pedidos" descripcion="Pedidos de clientes y talleres a tu tienda." />
@@ -495,7 +539,7 @@ export default function PedidosTienda({ param, irA }) {
           No pudimos cargar tus pedidos. {error}
         </Alerta>
       )}
-      {!error && abiertoId && !abierto && (
+      {!error && noEncontrado && (
         <Alerta tono="aviso" className="pdt-alerta" onCerrar={() => setAbiertoId(null)}>
           No encontramos el pedido del aviso entre los tuyos. Puede que ya no esté en tu lista.
         </Alerta>
@@ -507,7 +551,7 @@ export default function PedidosTienda({ param, irA }) {
           {/* Principales: el trabajo del día, siempre con su cifra (0 si no hay) */}
           <div className="ui-filtros" role="group" aria-label="Pedidos en curso">
             {FILTROS.filter((f) => f.principal).map((f) => (
-              <button key={f.key} type="button" className="ui-chip pdt-pestana" aria-pressed={filtro === f.key} onClick={() => setFiltro(f.key)}>
+              <button key={f.key} type="button" className="ui-chip pdt-pestana" aria-pressed={filtro === f.key} onClick={() => ponerFiltro(f.key)}>
                 {f.label}
                 <span className={`ui-chip__contador${conteo[f.key] ? "" : " pdt-pestana__cero"}`}>{conteo[f.key] || 0}</span>
               </button>
@@ -517,7 +561,7 @@ export default function PedidosTienda({ param, irA }) {
             <span className="pdt-secundarios__titulo">Ver también:</span>
             {FILTROS.filter((f) => !f.principal).map((f) => (
               <button key={f.key} type="button" className="ui-btn ui-btn--texto ui-btn--chico pdt-secundario" aria-pressed={filtro === f.key}
-                onClick={() => setFiltro(f.key)}>
+                onClick={() => ponerFiltro(f.key)}>
                 {f.label}{conteo[f.key] > 0 ? ` (${conteo[f.key]})` : ""}
               </button>
             ))}
@@ -530,19 +574,29 @@ export default function PedidosTienda({ param, irA }) {
           <Icon name="search" size={18} />
           <label htmlFor="pdt-busqueda" className="ui-sr">Buscar por número de pedido, cliente, taller o producto</label>
           <input id="pdt-busqueda" className="ui-field__input" type="search" value={busqueda} autoComplete="off"
-            onChange={(e) => setBusqueda(e.target.value)} placeholder="Número, cliente, taller o producto" />
+            onChange={(e) => ponerBusqueda(e.target.value)} placeholder="Número, cliente, taller o producto" />
         </div>
       </div>
 
-      {visibles.length === 0 ? (
-        busqueda.trim() ? (
+      <div className="pdt-herramientas">
+        <FiltroFechas id="pdt-fechas" etiqueta="Fecha de pago" valor={fechas} onCambiar={ponerFechas} />
+        <SelectorOrden id="pdt-orden" opciones={ORDENES_PEDIDOS} orden={orden} onOrdenar={ponerOrden} siempre
+          porDefecto="Lo más urgente primero" />
+      </div>
+
+      {!datos && !error ? (
+        <Esqueleto variante="lista" cantidad={4} texto="Cargando pedidos…" />
+      ) : enPagina.length === 0 ? (
+        q || fechas.desde || fechas.hasta ? (
           <EstadoVacio icono="search" titulo="Nada coincide con tu búsqueda"
-            texto={`No encontramos “${busqueda.trim()}” en esta pestaña. Prueba con el número del pedido.`}>
-            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setBusqueda("")}>Limpiar búsqueda</button>
+            texto={q ? `No encontramos “${q}” en esta pestaña. Prueba con el número del pedido.` : "No hay pedidos en esas fechas en esta pestaña."}>
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => { ponerBusqueda(""); ponerFechas({ desde: "", hasta: "" }); }}>
+              Limpiar búsqueda y fechas
+            </button>
           </EstadoVacio>
         ) : !error && <EstadoVacio icono="box" titulo={tituloVacio} texto={textoVacio} />
       ) : (
-        <ul className="pdt-lista">
+        <ul className="pdt-lista" id="pdt-lista" aria-busy={cargando}>
           {enPagina.map((p) => {
             const accion = accionFila(p);
             return (
@@ -583,8 +637,8 @@ export default function PedidosTienda({ param, irA }) {
           })}
         </ul>
       )}
-      {visibles.length > 0 && (
-        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de pedidos" />
+      {enPagina.length > 0 && (
+        <Paginacion {...propsPaginacion(lista)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de pedidos" ancla="pdt-lista" />
       )}
     </div>
   );

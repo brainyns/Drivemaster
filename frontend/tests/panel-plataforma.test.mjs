@@ -198,7 +198,7 @@ test("Problemas de envío: sistema compartido, decisión con motivo en Campo y l
 test("Liquidaciones: sistema compartido, estados con texto y el número de transferencia obligatorio en modo manual", () => {
   const p = usaSistemaCompartido("Liquidaciones.jsx", ["EncabezadoPagina", "ChipEstado", "<Indicador", "<Alerta", "onReintentar",
     "<EstadoVacio", "<Esqueleto", "<Campo", "ui-table--tarjetas", 'aria-label="Tipo"', 'aria-label="Estado"', "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
-  for (const llamada of ["listarRepartos(token, estado)", "listarReembolsos(token, estado)", "liquidarReparto(token, id,", "marcarReembolsado(token, id,", "obtenerModo(token)"]) {
+  for (const llamada of ["repartosTabla(token, { estado, ...fechas, page: pagina, size: 20, sort: textoOrden(orden) })", "listarReembolsos(token, estado)", "liquidarReparto(token, id,", "marcarReembolsado(token, id,", "obtenerModo(token)"]) {
     assert.ok(p.includes(llamada), `falta ${llamada}`);
   }
   assert.ok(p.includes("deshabilitado={esRepartos && esManual && !numero.trim()}"));
@@ -218,14 +218,15 @@ test("Servicios: sistema compartido, cifras con Indicador y el formulario con Ca
 test("Productos: catálogo de solo lectura con el sistema compartido, los mismos filtros y el mismo endpoint", () => {
   const p = usaSistemaCompartido("ProductosPlataforma.jsx", ["EncabezadoPagina", "ChipEstado", "<Alerta", "onReintentar", "<EstadoVacio",
     "<Esqueleto", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado del producto"', '"sin-stock"', "nuevosDias", "tiendaId"]);
-  assert.ok(p.includes("productosPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO })"));
+  // Página, tamaño y orden van al servidor (formato común: page, size, sort)
+  assert.ok(p.includes("productosPlataforma(token, { ...filtros, q, page: pagina, size: TAMANO, sort: textoOrden(orden) })"));
   for (const accion of ["Editar", "Eliminar", "Nuevo producto"]) assert.ok(!p.includes(accion), `solo lectura: sobra ${accion}`);
 });
 
 test("Clientes: lista de solo lectura con el sistema compartido y sin datos personales de más", () => {
   const p = usaSistemaCompartido("ClientesPlataforma.jsx", ["EncabezadoPagina", "ChipEstado", "<LogoNegocio", "<Alerta", "onReintentar",
     "<EstadoVacio", "<Esqueleto", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado de la cuenta"']);
-  assert.ok(p.includes("clientesPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO })"));
+  assert.ok(p.includes("clientesPlataforma(token, { ...filtros, q, page: pagina, size: TAMANO, sort: textoOrden(orden) })"));
   for (const dato of ["telefono", "direccion", "documento"]) assert.ok(!p.includes(`c.${dato}`), `no muestra ${dato}`);
 });
 

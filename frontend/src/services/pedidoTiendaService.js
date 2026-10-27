@@ -1,4 +1,5 @@
 import { apiFetch } from "./http";
+import { consultaTabla } from "../components/ui/reglasTabla";
 const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/pedidos-tienda`;
 
 function headers(token) {
@@ -25,6 +26,15 @@ function enviar(token, metodo, url, body, msg) {
 
 export async function misPedidosTienda(token) {
   const res = await apiFetch(`${BASE}/mios`, { headers: headers(token) });
+  return handle(res, "No se pudieron cargar los pedidos");
+}
+
+/**
+ * Pedidos de la tienda paginados en el servidor: { pedidos: Pagina, conteo }. Parámetros: pestana, q, desde, hasta
+ * (AAAA-MM-DD), page, size y sort ("fecha,desc"). misPedidosTienda sigue con la lista completa.
+ */
+export async function pedidosTiendaTabla(token, parametros) {
+  const res = await apiFetch(`${BASE}/mios/tabla${consultaTabla(parametros)}`, { headers: headers(token) });
   return handle(res, "No se pudieron cargar los pedidos");
 }
 

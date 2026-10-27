@@ -1,4 +1,5 @@
 import { apiFetch } from "./http";
+import { consultaTabla } from "../components/ui/reglasTabla";
 const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/liquidaciones`;
 
 function headers(token) {
@@ -16,6 +17,15 @@ async function handle(res, msgDefault) {
 
 export async function listarRepartos(token, estado) {
   const res = await apiFetch(`${BASE}/repartos${estado ? `?estado=${estado}` : ""}`, { headers: headers(token) });
+  return handle(res, "No se pudieron cargar las liquidaciones");
+}
+
+/**
+ * Liquidaciones paginadas en el servidor: { repartos: Pagina, pendientes, montoPendiente }. Parámetros: estado, desde,
+ * hasta, page, size y sort ("monto,desc"). pendientes y montoPendiente cuentan toda la lista filtrada.
+ */
+export async function repartosTabla(token, parametros) {
+  const res = await apiFetch(`${BASE}/repartos/tabla${consultaTabla(parametros)}`, { headers: headers(token) });
   return handle(res, "No se pudieron cargar las liquidaciones");
 }
 

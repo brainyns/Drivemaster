@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { clientesPlataforma } from "../services/plataformaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
+import EncabezadoOrden from "../components/ui/EncabezadoOrden";
+import SelectorOrden from "../components/ui/SelectorOrden";
+import { propsPaginacion, textoOrden } from "../components/ui/reglasTabla";
 import ChipEstado from "../components/ui/ChipEstado";
 import LogoNegocio from "../components/ui/LogoNegocio";
 import Alerta from "../components/ui/Alerta";
@@ -15,6 +18,12 @@ import "../css/panel-plataforma.css";
 import "../css/listas-plataforma.css";
 
 const TAMANO = 20;
+
+/** Columnas que se pueden ordenar (lista blanca de PlataformaConsultasService.ORDEN_CLIENTES). */
+const ORDENES = [
+  { campo: "nombre", label: "Nombre", asc: "(A–Z)", desc: "(Z–A)" },
+  { campo: "fecha", label: "Registro", asc: "(más antiguos primero)", desc: "(más nuevos primero)" },
+];
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
 const FILTROS_INICIALES = { ciudad: "", estado: "" };
@@ -33,6 +42,7 @@ export default function ClientesPlataforma({ token }) {
   const [q, setQ] = useState("");
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
   const [pagina, setPagina] = useState(0);
+  const [orden, setOrden] = useState(null); // null: los más nuevos primero
   const [detalle, setDetalle] = useState(null);
   const [datos, setDatos] = useState(null); // { clientes: { items, total }, ciudades }
   const [cargando, setCargando] = useState(true);
@@ -50,7 +60,7 @@ export default function ClientesPlataforma({ token }) {
   const cargar = useCallback(async (vivo = () => true) => {
     setCargando(true);
     try {
-      const r = await clientesPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO });
+      const r = await clientesPlataforma(token, { ...filtros, q, page: pagina, size: TAMANO, sort: textoOrden(orden) });
       if (!vivo()) return;
       setDatos(r);
       setError(null);
@@ -59,7 +69,7 @@ export default function ClientesPlataforma({ token }) {
     } finally {
       if (vivo()) setCargando(false);
     }
-  }, [token, filtros, q, pagina]);
+  }, [token, filtros, q, pagina, orden]);
 
   useEffect(() => {
     let activo = true;
@@ -69,12 +79,12 @@ export default function ClientesPlataforma({ token }) {
 
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
   const poner = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(0); };
+  const ordenar = (o) => { setOrden(o); setPagina(0); };
   const limpiar = () => { setBusqueda(""); setQ(""); setFiltros(FILTROS_INICIALES); setPagina(0); };
   const hayFiltros = q !== "" || Object.values(filtros).some((v) => v !== "");
 
   const lista = datos?.clientes;
   const items = lista?.items || [];
-  const total = lista?.total || 0;
 
   return (
     <div className="ss-panel--plataforma pp-root lst-root">
@@ -119,16 +129,17 @@ export default function ClientesPlataforma({ token }) {
         )
       ) : (
         <>
+          <SelectorOrden id="cli-orden" opciones={ORDENES} orden={orden} onOrdenar={ordenar} porDefecto="Más nuevos primero" />
           <div className={`ui-card ui-table-card${cargando ? " pp-actualizando" : ""}`} aria-busy={cargando}>
             <div className="ui-table-wrap">
               <table className="ui-table ui-table--tarjetas">
                 <caption className="ui-sr">Clientes registrados</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Cliente</th>
+                    <EncabezadoOrden campo="nombre" orden={orden} onOrdenar={ordenar}>Cliente</EncabezadoOrden>
                     <th scope="col">Ciudad</th>
                     <th scope="col">Estado</th>
-                    <th scope="col">Registro</th>
+                    <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Registro</EncabezadoOrden>
                     <th scope="col" className="pp-num">Compras</th>
                     <th scope="col" className="pp-num">Servicios</th>
                   </tr>
@@ -157,7 +168,7 @@ export default function ClientesPlataforma({ token }) {
               </table>
             </div>
           </div>
-          <Paginacion pagina={pagina + 1} total={total} porPagina={TAMANO} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de clientes" />
+          <Paginacion {...propsPaginacion(lista)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de clientes" />
         </>
       )}
 

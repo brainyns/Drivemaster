@@ -22,6 +22,7 @@ Proyecto de aula de Tecnología en Desarrollo de Software.
 - [Cómo levantarlo](#cómo-levantarlo)
 - [Datos de demostración](#datos-de-demostración)
 - [Pruebas](#pruebas)
+- [Tablas paginadas](#tablas-paginadas)
 - [Despliegue](#despliegue)
 - [Limitaciones de esta versión](#limitaciones-de-esta-versión)
 
@@ -312,6 +313,31 @@ cd frontend
 npm test        # lógica de las pantallas (node --test)
 npm run lint
 ```
+
+## Tablas paginadas
+
+Las tablas grandes se paginan, filtran y ordenan en el servidor, con un formato común
+(`dto.comun.Pagina`: `items`, `total`, `pagina` desde 0, `tamano` y `totalPaginas`).
+
+- **Parámetros:** `page` (desde 0), `size` (20 por defecto, máximo 100), `sort=campo,asc|desc` (cada tabla tiene su
+  lista blanca: otro campo responde 400) y, donde hay fecha, `desde` y `hasta` (AAAA-MM-DD, hora de Colombia;
+  `hasta` incluye todo ese día).
+- **Tienda** (endpoints aparte; las listas completas siguen para selectores y formularios):
+  `/api/productos/mi-tienda/tabla`, `/api/pedidos-tienda/mios/tabla` y `/api/movimientos/tabla`.
+- **SUPERADMIN:** `/api/plataforma/pedidos`, `/productos`, `/clientes`, `/usuarios` y `/api/liquidaciones/repartos/tabla`.
+
+### Alias por quitar después de la feria
+
+Nombres de parámetros de antes que se siguen aceptando mientras se termina la migración. Para quitarlos, borra el
+parámetro y pasa `null` en su lugar a `PeticionTabla.de(...)` o `RangoFechas.de(...)`:
+
+| Alias | Reemplazo | Dónde |
+|---|---|---|
+| `pagina`, `tamano` | `page`, `size` | `PlataformaController`: `/pedidos`, `/productos`, `/clientes` y `/usuarios` |
+| `fechaInicio`, `fechaFin` | `desde`, `hasta` | `TablasTiendaController`: `/api/movimientos/tabla` |
+| `atrasados=true` | `alerta=ATRASADO` | `PlataformaController`: `/pedidos` |
+
+`/api/movimientos` (la lista completa, sin paginar) sigue con `fechaInicio`/`fechaFin` porque no cambió.
 
 ## Despliegue
 

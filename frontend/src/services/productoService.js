@@ -1,5 +1,6 @@
 import { apiFetch } from "./http";
 import { errorDeRespuesta } from "../utils/errores";
+import { consultaTabla } from "../components/ui/reglasTabla";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/productos`;
 
 const buildHeaders = (token, contentType = "application/json") => {
@@ -16,6 +17,17 @@ const buildHeaders = (token, contentType = "application/json") => {
 export async function listarProductos(token) {
   const res = await apiFetch(BASE_URL, { headers: buildHeaders(token) });
   if (!res.ok) throw new Error("Error al obtener productos");
+  return res.json();
+}
+
+/**
+ * Inventario de la tienda paginado en el servidor: { productos: Pagina, conteo, resumen }. Parámetros: filtro (TODOS,
+ * POCO, AGOTADOS, PUBLICADOS, OCULTOS), q, page (desde 0), size y sort ("nombre,asc"). La lista completa
+ * (listarProductosMiTienda) sigue para los selectores y formularios.
+ */
+export async function inventarioTabla(token, parametros) {
+  const res = await apiFetch(`${BASE_URL}/mi-tienda/tabla${consultaTabla(parametros)}`, { headers: buildHeaders(token) });
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudieron cargar tus productos");
   return res.json();
 }
 

@@ -48,3 +48,7 @@
   .ui-table--tarjetas .ped-fila--alerta > td { background: none; }
   .ui-table--tarjetas .ped-alertas { justify-content: flex-end; }
 }
+
+/* Fecha de pago y orden (en celular; en escritorio se ordena con el encabezado) */
+.ped-herramientas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+.ped-herramientas .ui-fechas { flex: 1 1 420px; }

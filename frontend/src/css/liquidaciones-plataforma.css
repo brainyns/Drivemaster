@@ -25,3 +25,7 @@
   .ui-table--tarjetas .liq-fila--fallida > td { background: none; }
   .ui-table--tarjetas .liq-acciones { flex-wrap: wrap; }
 }
+
+/* Fecha y orden de las liquidaciones (paginadas en el servidor) */
+.liq-herramientas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+.liq-herramientas .ui-fechas { flex: 1 1 420px; }

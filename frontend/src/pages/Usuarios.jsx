@@ -6,6 +6,9 @@ import { errorDeRespuesta } from "../utils/errores";
 import { formatoFecha } from "../utils/formato";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
+import EncabezadoOrden from "../components/ui/EncabezadoOrden";
+import SelectorOrden from "../components/ui/SelectorOrden";
+import { propsPaginacion, textoOrden } from "../components/ui/reglasTabla";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -25,6 +28,14 @@ import "../css/usuarios-admin.css";
 
 const API_BASE = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api`;
 const TAMANO = 20;
+
+/** Columnas que se pueden ordenar (lista blanca de PlataformaConsultasService.ORDEN_USUARIOS). */
+const ORDENES = [
+  { campo: "nombre", label: "Nombre", asc: "(A–Z)", desc: "(Z–A)" },
+  { campo: "rol", label: "Rol", asc: "(A–Z)", desc: "(Z–A)" },
+  { campo: "fecha", label: "Creada", asc: "(más antiguas primero)", desc: "(más nuevas primero)" },
+  { campo: "ultimoAcceso", label: "Último acceso", asc: "(más antiguo primero)", desc: "(más reciente primero)" },
+];
 const ESTADOS = [
   { valor: "", label: "Todas" },
   { valor: "activos", label: "Activas" },
@@ -221,6 +232,7 @@ export default function Usuarios({ token }) {
   const [rol, setRol] = useState("");
   const [estado, setEstado] = useState("");
   const [pagina, setPagina] = useState(0);
+  const [orden, setOrden] = useState(null); // null: los más nuevos primero
   const [version, setVersion] = useState(0);
   const [datos, setDatos] = useState(null); // { items, total, porRol }
   const [cargando, setCargando] = useState(true);
@@ -250,16 +262,17 @@ export default function Usuarios({ token }) {
   const cargar = useCallback(async (vivo = () => true) => {
     setCargando(true);
     try {
-      const r = await usuariosPlataforma(token, { q, rol, estado, pagina, tamano: TAMANO });
+      const r = await usuariosPlataforma(token, { q, rol, estado, page: pagina, size: TAMANO, sort: textoOrden(orden) });
       if (!vivo()) return;
-      setDatos({ items: (r.usuarios?.items || []).map(filaUsuario), total: r.usuarios?.total || 0, porRol: r.porRol || {} });
+      setDatos({ items: (r.usuarios?.items || []).map(filaUsuario), total: r.usuarios?.total || 0, porRol: r.porRol || {},
+        pagina: r.usuarios });
       setError(null);
     } catch (e) {
       if (vivo()) setError(e.message);
     } finally {
       if (vivo()) setCargando(false);
     }
-  }, [token, q, rol, estado, pagina]);
+  }, [token, q, rol, estado, pagina, orden]);
 
   useEffect(() => {
     let activo = true;
@@ -272,6 +285,7 @@ export default function Usuarios({ token }) {
 
   const elegirRol = (r) => { setRol(r); setPagina(0); };
   const elegirEstado = (e) => { setEstado(e); setPagina(0); };
+  const ordenar = (o) => { setOrden(o); setPagina(0); };
   const hayFiltros = q !== "" || rol !== "" || estado !== "";
   const limpiar = () => { setBusqueda(""); setQ(""); setRol(""); setEstado(""); setPagina(0); };
 
@@ -302,7 +316,6 @@ export default function Usuarios({ token }) {
     }
   };
 
-  const total = datos?.total || 0;
   const porRol = datos?.porRol || {};
   const totalCuentas = Object.values(porRol).reduce((s, n) => s + n, 0);
 
@@ -377,17 +390,18 @@ export default function Usuarios({ token }) {
         )
       ) : (
         <>
+          <SelectorOrden id="usr-orden" opciones={ORDENES} orden={orden} onOrdenar={ordenar} porDefecto="Más nuevas primero" />
           <div className={`ui-card ui-table-card${cargando ? " usr-actualizando" : ""}`} aria-busy={cargando}>
             <div className="ui-table-wrap">
               <table className="ui-table ui-table--tarjetas">
                 <caption className="ui-sr">Usuarios, los más recientes primero</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Usuario</th>
-                    <th scope="col">Rol</th>
+                    <EncabezadoOrden campo="nombre" orden={orden} onOrdenar={ordenar}>Usuario</EncabezadoOrden>
+                    <EncabezadoOrden campo="rol" orden={orden} onOrdenar={ordenar}>Rol</EncabezadoOrden>
                     <th scope="col">Estado</th>
-                    <th scope="col">Creada</th>
-                    <th scope="col">Último acceso</th>
+                    <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Creada</EncabezadoOrden>
+                    <EncabezadoOrden campo="ultimoAcceso" orden={orden} onOrdenar={ordenar}>Último acceso</EncabezadoOrden>
                     {puedeGestionar && <th scope="col"><span className="ui-sr">Acciones</span></th>}
                   </tr>
                 </thead>
@@ -443,7 +457,7 @@ export default function Usuarios({ token }) {
               </table>
             </div>
           </div>
-          <Paginacion pagina={pagina + 1} total={total} porPagina={TAMANO} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de usuarios" />
+          <Paginacion {...propsPaginacion(datos?.pagina)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de usuarios" />
         </>
       )}
 

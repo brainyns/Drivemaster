@@ -1,5 +1,6 @@
 import { apiFetch } from "./http";
 import { errorDeRespuesta } from "../utils/errores";
+import { consultaTabla } from "../components/ui/reglasTabla";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/movimientos`;
 
 const buildHeaders = (token, contentType) => {
@@ -8,6 +9,16 @@ const buildHeaders = (token, contentType) => {
   if (contentType) headers["Content-Type"] = contentType;
   return headers;
 };
+
+/**
+ * Movimientos de la tienda paginados en el servidor: { movimientos: Pagina, resumen }. Parámetros: tipo, q (producto
+ * o código), desde, hasta (AAAA-MM-DD), page, size y sort ("fecha,desc").
+ */
+export async function movimientosTabla(token, parametros) {
+  const res = await apiFetch(`${BASE_URL}/tabla${consultaTabla(parametros)}`, { headers: buildHeaders(token) });
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudieron cargar los movimientos");
+  return res.json();
+}
 
 export async function listarMovimientos({ productoId, tipo, fechaInicio, fechaFin } = {}, token) {
   const params = new URLSearchParams();

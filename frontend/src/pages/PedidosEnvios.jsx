@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { pedidosPlataforma } from "../services/plataformaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
+import EncabezadoOrden from "../components/ui/EncabezadoOrden";
+import SelectorOrden from "../components/ui/SelectorOrden";
+import { errorRango, propsPaginacion, textoOrden } from "../components/ui/reglasTabla";
+import FiltroFechas from "../components/ui/FiltroFechas";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -24,6 +28,13 @@ const ENTREGAS = [
   { valor: "RETIRO", label: "Retiro en tienda" },
 ];
 
+/** Columnas que se pueden ordenar (lista blanca de PlataformaConsultasService.ORDEN_PEDIDOS). */
+const ORDENES = [
+  { campo: "fecha", label: "Fecha de pago", asc: "(más antiguos primero)", desc: "(más recientes primero)" },
+  { campo: "tienda", label: "Tienda", asc: "(A–Z)", desc: "(Z–A)" },
+  { campo: "estado", label: "Estado", asc: "(A–Z)", desc: "(Z–A)" },
+];
+
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }) : "—");
 const hora = (d) => d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
@@ -37,16 +48,20 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
   const [filtros, setFiltros] = useState(() => filtrosInicialesPedidos(filtroInicial));
   const [abierto, setAbierto] = useState(null);
   const [pagina, setPagina] = useState(0);
+  const [orden, setOrden] = useState(null); // null: del más reciente al más antiguo
+  const [fechas, setFechas] = useState({ desde: "", hasta: "" }); // fecha de pago, en hora de Colombia
   const [estado, setEstado] = useState({ datos: null, error: null, actualizado: null });
   const [cargando, setCargando] = useState(true);
+  const errorFechas = errorRango(fechas);
 
   const cargar = useCallback(() => {
+    if (errorFechas) return Promise.resolve(); // el selector de fechas ya lo avisa
     setCargando(true);
-    return pedidosPlataforma(token, { ...filtros, pagina, tamano: TAMANO })
+    return pedidosPlataforma(token, { ...filtros, ...fechas, page: pagina, size: TAMANO, sort: textoOrden(orden) })
       .then((datos) => setEstado({ datos, error: null, actualizado: new Date() }))
       .catch((e) => setEstado((previo) => ({ ...previo, error: e.message })))
       .finally(() => setCargando(false));
-  }, [token, filtros, pagina]);
+  }, [token, filtros, fechas, pagina, orden, errorFechas]);
 
   useEffect(() => {
     const inicial = setTimeout(cargar, 0);
@@ -57,12 +72,16 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
   const { datos, error, actualizado } = estado;
   const lista = datos?.pedidos;
   const items = lista?.items || [];
-  const total = lista?.total || 0;
-  const hayFiltros = filtros.estado !== "" || filtros.tiendaId !== "" || filtros.entrega !== "" || filtros.alerta !== "";
+  const hayFiltros = filtros.estado !== "" || filtros.tiendaId !== "" || filtros.entrega !== "" || filtros.alerta !== ""
+    || fechas.desde !== "" || fechas.hasta !== "";
   const alternarAlerta = (valor) => poner({ alerta: filtros.alerta === valor ? "" : valor });
   const totalPedidos = Object.values(datos?.porEstado || {}).reduce((s, n) => s + n, 0);
 
+  // Cambiar filtro, fechas u orden vuelve a la primera página
   const poner = (cambio) => { setPagina(0); setFiltros((f) => ({ ...f, ...cambio })); };
+  const ponerFechas = (r) => { setPagina(0); setFechas(r); };
+  const ordenar = (o) => { setPagina(0); setOrden(o); };
+  const limpiar = () => { setPagina(0); setFiltros(filtrosInicialesPedidos()); setFechas({ desde: "", hasta: "" }); };
 
   return (
     <div className="ss-panel--plataforma pp-root ped-root">
@@ -144,8 +163,12 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
           ))}
         </div>
         {hayFiltros && (
-          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => poner(filtrosInicialesPedidos())}>Limpiar filtros</button>
+          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={limpiar}>Limpiar filtros</button>
         )}
+      </div>
+      <div className="ped-herramientas pp-bloque-sep">
+        <FiltroFechas id="ped-fechas" etiqueta="Fecha de pago" valor={fechas} onCambiar={ponerFechas} />
+        <SelectorOrden id="ped-orden" opciones={ORDENES} orden={orden} onOrdenar={ordenar} porDefecto="Más recientes primero" />
       </div>
 
       {error && (
@@ -159,7 +182,7 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
       ) : items.length === 0 ? (
         hayFiltros ? (
           <EstadoVacio icono="search" titulo="Ningún pedido coincide" texto="Prueba con otra tienda, estado o forma de entrega.">
-            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => poner(filtrosInicialesPedidos())}>Limpiar filtros</button>
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={limpiar}>Limpiar filtros</button>
           </EstadoVacio>
         ) : (
           <EstadoVacio icono="box" titulo="Todavía no hay pedidos"
@@ -173,9 +196,9 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
                 <caption className="ui-sr">Pedidos de las tiendas con su estado, entrega y alertas</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Pedido</th>
-                    <th scope="col">Tienda</th>
-                    <th scope="col">Estado</th>
+                    <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Pedido</EncabezadoOrden>
+                    <EncabezadoOrden campo="tienda" orden={orden} onOrdenar={ordenar}>Tienda</EncabezadoOrden>
+                    <EncabezadoOrden campo="estado" orden={orden} onOrdenar={ordenar}>Estado</EncabezadoOrden>
                     <th scope="col">Entrega</th>
                     <th scope="col">Destino</th>
                     <th scope="col" className="pp-num">Artículos</th>
@@ -216,7 +239,7 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
               </table>
             </div>
           </div>
-          <Paginacion pagina={pagina + 1} total={total} porPagina={lista?.tamano || TAMANO} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de pedidos" />
+          <Paginacion {...propsPaginacion(lista)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de pedidos" />
         </>
       )}
 
