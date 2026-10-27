@@ -125,7 +125,8 @@ public class PlataformaDashboardService {
                 repartoRepository.countByEstado(RepartoPago.FALLIDO),
                 reembolsoRepository.countByEstado(Reembolso.PENDIENTE),
                 reembolsoRepository.sumaPendiente(),
-                tiendas.pendientes() + talleres.pendientes());
+                tiendas.pendientes() + talleres.pendientes(),
+                despachosPorVencer(ahora), retirosSinRecoger(ahora));
 
         return new DashboardPlataformaDTO(ahora, tiendas, talleres, clientes, productos, productosMasVendidos(),
                 tiendasMasVendedoras(), porEstado, dinero, planes, alertas);
@@ -157,8 +158,15 @@ public class PlataformaDashboardService {
     }
 
     private long despachosAtrasados(LocalDateTime ahora) {
-        return mongo.count(Query.query(Criteria.where("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)
-                .and("plazoDespachoHasta").lt(ahora)), PedidoTienda.class);
+        return mongo.count(Query.query(SemaforoPedido.despachoVencido(ahora)), PedidoTienda.class);
+    }
+
+    private long despachosPorVencer(LocalDateTime ahora) {
+        return mongo.count(Query.query(SemaforoPedido.despachoPorVencer(ahora)), PedidoTienda.class);
+    }
+
+    private long retirosSinRecoger(LocalDateTime ahora) {
+        return mongo.count(Query.query(SemaforoPedido.sinRetirar(ahora)), PedidoTienda.class);
     }
 
     // ─── Piezas ──────────────────────────────────────────────────────────────

@@ -271,13 +271,28 @@ public class PlataformaConsultasService {
      * @param estado un estado del pedido o "PROBLEMA" (problema de envío abierto); vacío = todos
      * @param entrega ENVIO o RETIRO (vacío = ambos)
      * @param soloAtrasados solo los que la tienda no despachó dentro del plazo
+     * @param alerta ATRASADO, POR_VENCER o SIN_RETIRAR (el semáforo de SemaforoPedido); vacío = sin filtro
      */
     public PedidosRespuesta pedidos(String estado, String tiendaId, String entrega, boolean soloAtrasados,
+                                    String alerta, int pagina, int tamano) {
+        return pedidos(estado, tiendaId, entrega, soloAtrasados ? ATRASADO : alerta, pagina, tamano, LocalDateTime.now());
+    }
+
+    public PedidosRespuesta pedidos(String estado, String tiendaId, String entrega, boolean soloAtrasados,
                                     int pagina, int tamano) {
-        return pedidos(estado, tiendaId, entrega, soloAtrasados, pagina, tamano, LocalDateTime.now());
+        return pedidos(estado, tiendaId, entrega, soloAtrasados, null, pagina, tamano);
     }
 
     PedidosRespuesta pedidos(String estado, String tiendaId, String entrega, boolean soloAtrasados,
+                             int pagina, int tamano, LocalDateTime ahora) {
+        return pedidos(estado, tiendaId, entrega, soloAtrasados ? ATRASADO : null, pagina, tamano, ahora);
+    }
+
+    static final String ATRASADO = "ATRASADO";
+    static final String POR_VENCER = "POR_VENCER";
+    static final String SIN_RETIRAR = "SIN_RETIRAR";
+
+    PedidosRespuesta pedidos(String estado, String tiendaId, String entrega, String alerta,
                              int pagina, int tamano, LocalDateTime ahora) {
         List<Criteria> y = new ArrayList<>();
         if (hay(estado)) {
@@ -289,7 +304,14 @@ public class PlataformaConsultasService {
         if (hay(tiendaId)) y.add(Criteria.where("tiendaId").is(tiendaId.trim()));
         if (PedidoTienda.ENVIO.equalsIgnoreCase(entrega)) y.add(Criteria.where("entrega").is(PedidoTienda.ENVIO));
         if (PedidoTienda.RETIRO.equalsIgnoreCase(entrega)) y.add(Criteria.where("entrega").is(PedidoTienda.RETIRO));
-        if (soloAtrasados) y.add(atrasado(ahora));
+        if (hay(alerta)) {
+            switch (alerta.trim().toUpperCase()) {
+                case ATRASADO -> y.add(SemaforoPedido.despachoVencido(ahora));
+                case POR_VENCER -> y.add(SemaforoPedido.despachoPorVencer(ahora));
+                case SIN_RETIRAR -> y.add(SemaforoPedido.sinRetirar(ahora));
+                default -> y.add(Criteria.where("estado").is("__ninguno__")); // una alerta inventada no devuelve nada
+            }
+        }
         Criteria criterio = y.isEmpty() ? new Criteria() : new Criteria().andOperator(y.toArray(new Criteria[0]));
 
         int tam = tamano(tamano);
@@ -305,18 +327,16 @@ public class PlataformaConsultasService {
             Object n = d.get("n");
             porEstado.put(String.valueOf(d.get("_id")), n instanceof Number num ? num.longValue() : 0L);
         }
-        long atrasados = mongo.count(Query.query(atrasado(ahora)), PedidoTienda.class);
+        long atrasados = mongo.count(Query.query(SemaforoPedido.despachoVencido(ahora)), PedidoTienda.class);
+        long porVencer = mongo.count(Query.query(SemaforoPedido.despachoPorVencer(ahora)), PedidoTienda.class);
+        long sinRetirar = mongo.count(Query.query(SemaforoPedido.sinRetirar(ahora)), PedidoTienda.class);
         long problemas = mongo.count(Query.query(problemaAbierto()), PedidoTienda.class);
         List<TiendaOpcion> tiendas = mongo.findAll(Tienda.class).stream()
                 .filter(t -> !EstadoAprobacion.estaArchivado(t.getEstadoAprobacion())) // las archivadas no salen en los filtros
                 .map(t -> new TiendaOpcion(t.getId(), t.getNombre()))
                 .sorted(Comparator.comparing(t -> t.nombre() == null ? "" : t.nombre().toLowerCase())).toList();
-        return new PedidosRespuesta(new Pagina<>(filas, total, pag, tam), porEstado, atrasados, problemas, tiendas);
-    }
-
-    private static Criteria atrasado(LocalDateTime ahora) {
-        return Criteria.where("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)
-                .and("plazoDespachoHasta").lt(ahora);
+        return new PedidosRespuesta(new Pagina<>(filas, total, pag, tam), porEstado, atrasados, problemas, tiendas,
+                porVencer, sinRetirar);
     }
 
     private static Criteria problemaAbierto() {
@@ -325,8 +345,9 @@ public class PlataformaConsultasService {
 
     static PedidoFila fila(PedidoTienda p, LocalDateTime ahora) {
         boolean catalogo = p.esCatalogo();
-        boolean enEspera = PedidoTienda.PENDIENTE.equals(p.getEstado()) || PedidoTienda.EN_PREPARACION.equals(p.getEstado());
-        boolean atrasado = enEspera && p.getPlazoDespachoHasta() != null && p.getPlazoDespachoHasta().isBefore(ahora);
+        String semaforoDespacho = SemaforoPedido.despacho(p, ahora);
+        String semaforoRetiro = SemaforoPedido.retiro(p, ahora);
+        boolean atrasado = SemaforoPedido.ROJO.equals(semaforoDespacho);
         long dias = p.getFechaCreacion() == null ? 0
                 : Math.max(0, ChronoUnit.DAYS.between(p.getFechaCreacion().toLocalDate(), ahora.toLocalDate()));
         int articulos = p.getItems() == null ? 0 : p.getItems().stream()
@@ -334,7 +355,8 @@ public class PlataformaConsultasService {
         return new PedidoFila(p.getId(), catalogo ? PedidoTienda.ORIGEN_CATALOGO : PedidoTienda.ORIGEN_TALLER, p.getEstado(),
                 p.getTiendaId(), p.getTiendaNombre(), catalogo ? p.getEntrega() : null, destino(p, catalogo), articulos, dias,
                 p.getFechaCreacion(), p.getPlazoDespachoHasta(), atrasado,
-                Boolean.TRUE.equals(p.getProblemaReportado()) && p.getResolucionProblema() == null);
+                Boolean.TRUE.equals(p.getProblemaReportado()) && p.getResolucionProblema() == null,
+                semaforoDespacho, semaforoRetiro, semaforoRetiro == null ? null : RetiroPendienteService.diasSinRetirar(p, ahora));
     }
 
     /** Solo la ciudad: la dirección y el nombre del cliente no hacen falta para vigilar el avance. */

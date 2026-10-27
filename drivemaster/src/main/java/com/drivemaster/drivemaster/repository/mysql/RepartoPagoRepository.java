@@ -14,6 +14,7 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> 
     List<RepartoPago> findAllByOrderByFechaCreacionDesc();
     List<RepartoPago> findByEstadoOrderByFechaCreacionDesc(String estado);
     List<RepartoPago> findByPedidoTiendaId(String pedidoTiendaId);
+    List<RepartoPago> findByPagoId(Long pagoId);
     boolean existsByPagoIdAndBeneficiarioTipo(Long pagoId, String beneficiarioTipo);
     long countByEstado(String estado);
 

@@ -5,6 +5,7 @@ import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Operaci
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.DashboardPlataformaDTO;
+import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ClientesConMasCompras;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ComisionNeta;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ProductosMasVendidos;
@@ -17,6 +18,7 @@ import com.drivemaster.drivemaster.service.PlataformaConsultasService;
 import com.drivemaster.drivemaster.service.PlataformaNegociosService;
 import com.drivemaster.drivemaster.service.PlataformaReportesService;
 import com.drivemaster.drivemaster.service.PlataformaDashboardService;
+import com.drivemaster.drivemaster.service.PlataformaDetalleService;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,13 +39,16 @@ public class PlataformaController {
     private final PlataformaConsultasService consultas;
     private final PlataformaReportesService reportes;
     private final PlataformaNegociosService negocios;
+    private final PlataformaDetalleService detalle;
 
     public PlataformaController(PlataformaDashboardService dashboardService, PlataformaConsultasService consultas,
-                                PlataformaReportesService reportes, PlataformaNegociosService negocios) {
+                                PlataformaReportesService reportes, PlataformaNegociosService negocios,
+                                PlataformaDetalleService detalle) {
         this.dashboardService = dashboardService;
         this.consultas = consultas;
         this.reportes = reportes;
         this.negocios = negocios;
+        this.detalle = detalle;
     }
 
     @GetMapping("/dashboard")
@@ -57,6 +62,24 @@ public class PlataformaController {
         return ResponseEntity.ok(dashboardService.operacion());
     }
 
+    /** SUPERADMIN: detalle de un pedido (productos, partes, línea de tiempo, pago Wompi, reparto y entrega). */
+    @GetMapping("/pedidos/{id}")
+    public ResponseEntity<DetallePlataformaDTO.Pedido> detallePedido(@PathVariable String id) {
+        return ResponseEntity.ok(detalle.pedido(id));
+    }
+
+    /** SUPERADMIN: detalle de un cliente (datos, ciudad, vehículos, pedidos y solicitudes de diagnóstico). */
+    @GetMapping("/clientes/{id}")
+    public ResponseEntity<DetallePlataformaDTO.Cliente> detalleCliente(@PathVariable String id) {
+        return ResponseEntity.ok(detalle.cliente(id));
+    }
+
+    /** SUPERADMIN: detalle de una tienda o un taller (datos, ubicación, productos o servicios, pedidos y totales). */
+    @GetMapping("/negocios/{tipo}/{id}")
+    public ResponseEntity<DetallePlataformaDTO.Negocio> detalleNegocio(@PathVariable String tipo, @PathVariable String id) {
+        return ResponseEntity.ok(detalle.negocio(tipo, id));
+    }
+
     /** ADMIN y SUPERADMIN: monitor de pedidos y envíos de las tiendas (sin datos del cliente). */
     @GetMapping("/pedidos")
     public ResponseEntity<PedidosRespuesta> pedidos(
@@ -64,9 +87,10 @@ public class PlataformaController {
             @RequestParam(required = false) String tiendaId,
             @RequestParam(required = false) String entrega,
             @RequestParam(defaultValue = "false") boolean atrasados,
+            @RequestParam(required = false) String alerta,
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "20") int tamano) {
-        return ResponseEntity.ok(consultas.pedidos(estado, tiendaId, entrega, atrasados, pagina, tamano));
+        return ResponseEntity.ok(consultas.pedidos(estado, tiendaId, entrega, atrasados, alerta, pagina, tamano));
     }
 
     /** SUPERADMIN: tiendas y talleres en una lista, con estado, plan, calificación, productos u órdenes y datos por completar. */

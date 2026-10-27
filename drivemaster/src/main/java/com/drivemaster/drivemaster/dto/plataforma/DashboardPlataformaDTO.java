@@ -48,5 +48,5 @@ public record DashboardPlataformaDTO(
 
     public record Alertas(long despachosAtrasados, long problemasEnvioAbiertos, long liquidacionesPendientes,
                           long liquidacionesFallidas, long reembolsosPendientes, double montoReembolsosPendientes,
-                          long negociosPorAprobar) {}
+                          long negociosPorAprobar, long despachosPorVencer, long retirosSinRecoger) {}
 }
