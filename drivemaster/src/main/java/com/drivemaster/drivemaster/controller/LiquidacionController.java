@@ -1,5 +1,7 @@
 package com.drivemaster.drivemaster.controller;
 
+import com.drivemaster.drivemaster.dto.comun.PeticionTabla;
+import com.drivemaster.drivemaster.dto.comun.RangoFechas;
 import com.drivemaster.drivemaster.model.mysql.Reembolso;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.service.LiquidacionService;
@@ -36,6 +38,22 @@ public class LiquidacionController {
     @GetMapping("/repartos")
     public ResponseEntity<List<RepartoPago>> repartos(@RequestParam(required = false) String estado) {
         return ResponseEntity.ok(service.repartos(estado));
+    }
+
+    /**
+     * Tabla paginada de liquidaciones: estado, desde/hasta (AAAA-MM-DD, hora de Colombia), page, size y sort
+     * (fecha, monto, estado o beneficiario). /repartos sigue devolviendo la lista completa.
+     */
+    @GetMapping("/repartos/tabla")
+    public ResponseEntity<LiquidacionService.RepartosTabla> repartosTabla(
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String desde,
+            @RequestParam(required = false) String hasta,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sort) {
+        return ResponseEntity.ok(service.repartosTabla(estado, RangoFechas.de(desde, hasta),
+                PeticionTabla.de(page, size, null, null, sort, LiquidacionService.ORDEN_REPARTOS)));
     }
 
     @PatchMapping("/repartos/{id}/liquidar")

@@ -2,7 +2,9 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ClienteFila;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ClientesRespuesta;
-import com.drivemaster.drivemaster.dto.comun.Pagina;
+import com.drivemaster.drivemaster.dto.comun.PeticionTabla;
+import com.drivemaster.drivemaster.dto.comun.PeticionTabla.OrdenPermitido;
+import com.drivemaster.drivemaster.dto.comun.RangoFechas;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidoFila;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductoFila;
@@ -19,7 +21,6 @@ import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.Usuario;
 import org.bson.Document;
 import org.bson.types.ObjectId;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -50,8 +51,7 @@ import java.util.stream.Collectors;
 @Service
 public class PlataformaConsultasService {
 
-    static final int TAMANO_MAXIMO = 50;
-    static final int TAMANO_POR_DEFECTO = 20;
+    // El tamaño de página (20 por defecto, máximo 100) lo decide PeticionTabla, igual en todas las tablas
 
     private final MongoTemplate mongo;
 
@@ -87,6 +87,21 @@ public class PlataformaConsultasService {
         return new EnCurso(null, null, 0, 0);
     }
 
+    // ─── Orden permitido por tabla (lista blanca de sort) ───────────────────
+
+    /** Productos: por defecto los más nuevos; también por nombre, precio, stock y fecha de ingreso. */
+    public static final OrdenPermitido ORDEN_PRODUCTOS = OrdenPermitido.de(Sort.by(Sort.Direction.DESC, "id"),
+            "fecha", "_id", "nombre", "nombre", "precio", "precioVenta", "stock", "stockActual");
+    /** Clientes: por defecto los más nuevos; también por nombre y fecha de registro. */
+    public static final OrdenPermitido ORDEN_CLIENTES = OrdenPermitido.de(Sort.by(Sort.Direction.DESC, "id"),
+            "fecha", "fechaCreacion", "nombre", "nombre");
+    /** Usuarios: por defecto los más nuevos; también por nombre, rol, fecha de registro y último ingreso. */
+    public static final OrdenPermitido ORDEN_USUARIOS = OrdenPermitido.de(Sort.by(Sort.Direction.DESC, "id"),
+            "fecha", "fechaCreacion", "nombre", "nombre", "rol", "rol", "ultimoAcceso", "ultimoLogin");
+    /** Pedidos y envíos: por defecto del más reciente; también por fecha de pago, estado y tienda. */
+    public static final OrdenPermitido ORDEN_PEDIDOS = OrdenPermitido.de(Sort.by(Sort.Direction.DESC, "fechaCreacion"),
+            "fecha", "fechaCreacion", "estado", "estado", "tienda", "tiendaNombre");
+
     // ─── Productos ───────────────────────────────────────────────────────────
 
     /**
@@ -95,6 +110,10 @@ public class PlataformaConsultasService {
      * @param estado "activos", "inactivos", "sin-stock" (vacío = todos)
      */
     public ProductosRespuesta productos(String q, String tiendaId, Integer nuevosDias, String estado, int pagina, int tamano) {
+        return productos(q, tiendaId, nuevosDias, estado, PeticionTabla.de(pagina, tamano, null, null, null, ORDEN_PRODUCTOS));
+    }
+
+    public ProductosRespuesta productos(String q, String tiendaId, Integer nuevosDias, String estado, PeticionTabla tabla) {
         Criteria criterio = new Criteria();
         List<Criteria> y = new ArrayList<>();
         if (hay(tiendaId)) y.add(Criteria.where("tiendaId").is(tiendaId.trim()));
@@ -115,11 +134,8 @@ public class PlataformaConsultasService {
         }
         if (!y.isEmpty()) criterio = new Criteria().andOperator(y.toArray(new Criteria[0]));
 
-        int tam = tamano(tamano);
-        int pag = Math.max(0, pagina);
         long total = mongo.count(Query.query(criterio), Producto.class);
-        List<Producto> productos = mongo.find(Query.query(criterio).with(PageRequest.of(pag, tam, Sort.by(Sort.Direction.DESC, "id"))),
-                Producto.class);
+        List<Producto> productos = mongo.find(Query.query(criterio).with(tabla.pageRequest(total)), Producto.class);
 
         Map<String, String> nombres = nombresDeTiendas(productos.stream().map(Producto::getTiendaId).toList());
         // Un producto "activo" de una tienda en pausa, rechazada o archivada no se vende: se muestra como Tienda inactiva
@@ -135,7 +151,7 @@ public class PlataformaConsultasService {
                 .filter(t -> !EstadoAprobacion.estaArchivado(t.getEstadoAprobacion())) // las archivadas no salen en los filtros
                 .map(t -> new TiendaOpcion(t.getId(), t.getNombre()))
                 .sorted(Comparator.comparing(t -> t.nombre() == null ? "" : t.nombre().toLowerCase())).toList();
-        return new ProductosRespuesta(new Pagina<>(filas, total, pag, tam), tiendas);
+        return new ProductosRespuesta(tabla.pagina(filas, total), tiendas);
     }
 
     /** Cuándo ingresó: el campo fechaCreacion o, en los anteriores a él, el momento en que Mongo creó el documento. */
@@ -161,6 +177,10 @@ public class PlataformaConsultasService {
      * @param estado "activos" o "inactivos" (vacío = todos)
      */
     public ClientesRespuesta clientes(String q, String ciudad, String estado, int pagina, int tamano) {
+        return clientes(q, ciudad, estado, PeticionTabla.de(pagina, tamano, null, null, null, ORDEN_CLIENTES));
+    }
+
+    public ClientesRespuesta clientes(String q, String ciudad, String estado, PeticionTabla tabla) {
         Criteria base = Criteria.where("rol").is("CLIENTE");
         List<Criteria> y = new ArrayList<>();
         y.add(base);
@@ -173,11 +193,8 @@ public class PlataformaConsultasService {
         }
         Criteria criterio = new Criteria().andOperator(y.toArray(new Criteria[0]));
 
-        int tam = tamano(tamano);
-        int pag = Math.max(0, pagina);
         long total = mongo.count(Query.query(criterio), Usuario.class);
-        List<Usuario> usuarios = mongo.find(Query.query(criterio).with(PageRequest.of(pag, tam, Sort.by(Sort.Direction.DESC, "id"))),
-                Usuario.class);
+        List<Usuario> usuarios = mongo.find(Query.query(criterio).with(tabla.pageRequest(total)), Usuario.class);
 
         List<String> ids = usuarios.stream().map(Usuario::getId).toList();
         Map<String, Long> compras = conteo(CompraCatalogo.class, "clienteId", ids);
@@ -190,7 +207,7 @@ public class PlataformaConsultasService {
 
         List<String> ciudades = mongo.findDistinct(Query.query(base), "ciudad", Usuario.class, String.class).stream()
                 .filter(c -> c != null && !c.isBlank()).sorted(String.CASE_INSENSITIVE_ORDER).toList();
-        return new ClientesRespuesta(new Pagina<>(filas, total, pag, tam), ciudades);
+        return new ClientesRespuesta(tabla.pagina(filas, total), ciudades);
     }
 
     /** Cuántos documentos tiene cada cliente de la página en una colección (una sola consulta agrupada). */
@@ -219,6 +236,10 @@ public class PlataformaConsultasService {
      * @param estado "activos" o "inactivos" (vacío = todos)
      */
     public UsuariosRespuesta usuarios(String q, String rol, String estado, int pagina, int tamano) {
+        return usuarios(q, rol, estado, PeticionTabla.de(pagina, tamano, null, null, null, ORDEN_USUARIOS));
+    }
+
+    public UsuariosRespuesta usuarios(String q, String rol, String estado, PeticionTabla tabla) {
         List<Criteria> y = new ArrayList<>();
         if (hay(rol)) {
             String r = rol.trim().toUpperCase();
@@ -234,11 +255,9 @@ public class PlataformaConsultasService {
         }
         Criteria criterio = new Criteria().andOperator(y.toArray(new Criteria[0]));
 
-        int tam = tamano(tamano);
-        int pag = Math.max(0, pagina);
         long total = mongo.count(Query.query(criterio), Usuario.class);
         List<UsuarioFila> filas = mongo.find(Query.query(criterio)
-                .with(PageRequest.of(pag, tam, Sort.by(Sort.Direction.DESC, "id"))), Usuario.class).stream()
+                .with(tabla.pageRequest(total)), Usuario.class).stream()
                 .map(u -> new UsuarioFila(u.getId(), u.getNombre(), enmascarar(u.getCorreo()), u.getRol(),
                         !Boolean.FALSE.equals(u.getActivo()), Boolean.TRUE.equals(u.getBloqueado()),
                         local(u.getFechaCreacion()), local(u.getUltimoLogin())))
@@ -251,7 +270,7 @@ public class PlataformaConsultasService {
             Object n = d.get("n");
             porRol.put(String.valueOf(d.get("_id")), n instanceof Number num ? num.longValue() : 0L);
         }
-        return new UsuariosRespuesta(new Pagina<>(filas, total, pag, tam), porRol);
+        return new UsuariosRespuesta(tabla.pagina(filas, total), porRol);
     }
 
     private static LocalDateTime local(Instant i) {
@@ -294,6 +313,18 @@ public class PlataformaConsultasService {
 
     PedidosRespuesta pedidos(String estado, String tiendaId, String entrega, String alerta,
                              int pagina, int tamano, LocalDateTime ahora) {
+        return pedidos(estado, tiendaId, entrega, alerta, RangoFechas.SIN_RANGO,
+                PeticionTabla.de(pagina, tamano, null, null, null, ORDEN_PEDIDOS), ahora);
+    }
+
+    /** @param rango desde/hasta sobre la fecha de pago (fechaCreacion del pedido), en hora de Colombia */
+    public PedidosRespuesta pedidos(String estado, String tiendaId, String entrega, String alerta, RangoFechas rango,
+                                    PeticionTabla tabla) {
+        return pedidos(estado, tiendaId, entrega, alerta, rango, tabla, LocalDateTime.now());
+    }
+
+    PedidosRespuesta pedidos(String estado, String tiendaId, String entrega, String alerta, RangoFechas rango,
+                             PeticionTabla tabla, LocalDateTime ahora) {
         List<Criteria> y = new ArrayList<>();
         if (hay(estado)) {
             String e = estado.trim().toUpperCase();
@@ -312,13 +343,11 @@ public class PlataformaConsultasService {
                 default -> y.add(Criteria.where("estado").is("__ninguno__")); // una alerta inventada no devuelve nada
             }
         }
+        if (rango != null && !rango.vacio()) y.add(rango.criterio("fechaCreacion"));
         Criteria criterio = y.isEmpty() ? new Criteria() : new Criteria().andOperator(y.toArray(new Criteria[0]));
 
-        int tam = tamano(tamano);
-        int pag = Math.max(0, pagina);
         long total = mongo.count(Query.query(criterio), PedidoTienda.class);
-        List<PedidoTienda> pedidos = mongo.find(Query.query(criterio)
-                .with(PageRequest.of(pag, tam, Sort.by(Sort.Direction.DESC, "fechaCreacion"))), PedidoTienda.class);
+        List<PedidoTienda> pedidos = mongo.find(Query.query(criterio).with(tabla.pageRequest(total)), PedidoTienda.class);
         List<PedidoFila> filas = pedidos.stream().map(p -> fila(p, ahora)).toList();
 
         Map<String, Long> porEstado = new LinkedHashMap<>();
@@ -335,7 +364,7 @@ public class PlataformaConsultasService {
                 .filter(t -> !EstadoAprobacion.estaArchivado(t.getEstadoAprobacion())) // las archivadas no salen en los filtros
                 .map(t -> new TiendaOpcion(t.getId(), t.getNombre()))
                 .sorted(Comparator.comparing(t -> t.nombre() == null ? "" : t.nombre().toLowerCase())).toList();
-        return new PedidosRespuesta(new Pagina<>(filas, total, pag, tam), porEstado, atrasados, problemas, tiendas,
+        return new PedidosRespuesta(tabla.pagina(filas, total), porEstado, atrasados, problemas, tiendas,
                 porVencer, sinRetirar);
     }
 
@@ -386,10 +415,5 @@ public class PlataformaConsultasService {
     /** Búsqueda literal (sin interpretar el texto como expresión regular), sin distinguir mayúsculas. */
     private static Pattern coincide(String q) {
         return Pattern.compile(Pattern.quote(q.trim()), Pattern.CASE_INSENSITIVE);
-    }
-
-    private static int tamano(int pedido) {
-        if (pedido <= 0) return TAMANO_POR_DEFECTO;
-        return Math.min(pedido, TAMANO_MAXIMO);
     }
 }

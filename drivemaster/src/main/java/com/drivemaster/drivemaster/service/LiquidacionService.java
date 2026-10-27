@@ -1,5 +1,8 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.dto.comun.Pagina;
+import com.drivemaster.drivemaster.dto.comun.PeticionTabla;
+import com.drivemaster.drivemaster.dto.comun.RangoFechas;
 import com.drivemaster.drivemaster.model.mysql.Reembolso;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
@@ -11,6 +14,8 @@ import com.drivemaster.drivemaster.service.dispersion.ResultadoDispersion;
 import com.drivemaster.drivemaster.service.dispersion.SolicitudDispersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -66,6 +71,44 @@ public class LiquidacionService {
         // La comisión de la plataforma es informativa: no hay nada que liquidar
         return lista.stream().filter(r -> !RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())).toList();
     }
+
+    /** Liquidaciones: por defecto las más recientes; también por fecha, monto, estado y beneficiario. */
+    public static final PeticionTabla.OrdenPermitido ORDEN_REPARTOS = PeticionTabla.OrdenPermitido.de(
+            Sort.by(Sort.Direction.DESC, "fechaCreacion").and(Sort.by(Sort.Direction.DESC, "id")),
+            "fecha", "fechaCreacion", "monto", "monto", "estado", "estado", "beneficiario", "beneficiarioNombre")
+            .conDesempate("id");
+
+    /** Estados que todavía se tienen que pagar (lo que suma el indicador "Pendiente en esta lista"). */
+    static final List<String> ESTADOS_PENDIENTES = List.of(RepartoPago.PENDIENTE, RepartoPago.POR_LIQUIDAR, RepartoPago.FALLIDO);
+
+    /**
+     * La tabla paginada de liquidaciones, con los mismos filtros que repartos() (sin la comisión de la plataforma) y
+     * desde/hasta sobre la fecha de la línea. pendientes y montoPendiente cuentan toda la lista filtrada, no la página.
+     */
+    public RepartosTabla repartosTabla(String estado, RangoFechas rango, PeticionTabla t) {
+        Specification<RepartoPago> spec = (r, q, cb) -> cb.notEqual(r.get("beneficiarioTipo"), RepartoPago.PLATAFORMA);
+        if (estado != null && !estado.isBlank()) {
+            String e = estado.trim().toUpperCase();
+            spec = spec.and((r, q, cb) -> cb.equal(r.get("estado"), e));
+        }
+        if (rango != null && rango.desde() != null) {
+            LocalDateTime d = rango.desde();
+            spec = spec.and((r, q, cb) -> cb.greaterThanOrEqualTo(r.get("fechaCreacion"), d));
+        }
+        if (rango != null && rango.antesDe() != null) {
+            LocalDateTime a = rango.antesDe();
+            spec = spec.and((r, q, cb) -> cb.lessThan(r.get("fechaCreacion"), a));
+        }
+        long total = repartoRepository.count(spec);
+        List<RepartoPago> items = repartoRepository.findAll(spec, t.pageRequest(total)).getContent();
+        // Lo pendiente son pocas líneas (se van pagando): se suman aquí con el mismo filtro
+        List<RepartoPago> pendientes = repartoRepository.findAll(spec.and((r, q, cb) -> r.get("estado").in(ESTADOS_PENDIENTES)));
+        double monto = pendientes.stream().mapToDouble(r -> r.getMonto() == null ? 0 : r.getMonto()).sum();
+        return new RepartosTabla(t.pagina(items, total), pendientes.size(), monto);
+    }
+
+    /** repartos: la página; pendientes y montoPendiente: de toda la lista con estos filtros. */
+    public record RepartosTabla(Pagina<RepartoPago> repartos, long pendientes, double montoPendiente) {}
 
     /** Modo de dispersión vigente, para mostrarlo en la pantalla del ADMIN. */
     public Map<String, Object> modo() {

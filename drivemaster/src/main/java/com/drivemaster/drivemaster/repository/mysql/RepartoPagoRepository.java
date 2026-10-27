@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.repository.mysql;
 
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,7 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long> {
+// JpaSpecificationExecutor: la tabla paginada de Liquidaciones arma sus filtros opcionales (estado, fechas) sin JPQL
+public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>, JpaSpecificationExecutor<RepartoPago> {
     List<RepartoPago> findAllByOrderByFechaCreacionDesc();
     List<RepartoPago> findByEstadoOrderByFechaCreacionDesc(String estado);
     List<RepartoPago> findByPedidoTiendaId(String pedidoTiendaId);
