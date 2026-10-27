@@ -5,6 +5,7 @@ import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.security.CustomUserDetailsService;
 import com.drivemaster.drivemaster.security.JwtUtil;
 import com.drivemaster.drivemaster.service.CambioCorreoService;
+import com.drivemaster.drivemaster.util.Ciudades;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -53,7 +54,7 @@ public class CambioCorreoController {
                 jwtUtil.generateToken(userDetails), usuario.getId(), usuario.getNombre(),
                 usuario.getCorreo(), usuario.getRol(),
                 usuario.getProveedor(), usuario.getDatosCompletos(),
-                jwtUtil.generateRefreshToken(userDetails)));
+                jwtUtil.generateRefreshToken(userDetails), Ciudades.pendiente(usuario)));
     }
 
     @DeleteMapping

@@ -23,6 +23,7 @@ import com.drivemaster.drivemaster.dto.cliente.DatosClienteRequest;
 import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
+import com.drivemaster.drivemaster.util.Ciudades;
 import com.drivemaster.drivemaster.util.Correos;
 import com.drivemaster.drivemaster.util.PdfClienteBuilder;
 
@@ -160,9 +161,16 @@ public class ClienteController {
         if (request.getIdentificacion() != null) usuario.setIdentificacion(request.getIdentificacion());
         if (request.getTelefono() != null) usuario.setTelefono(request.getTelefono());
         if (request.getDireccion() != null) usuario.setDireccion(request.getDireccion());
-        if (request.getCiudad() != null) usuario.setCiudad(request.getCiudad());
+        if (request.getCiudad() != null) {
+            usuario.setCiudad(Ciudades.canonica(request.getCiudad())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escoge tu ciudad de la lista.")));
+        }
         if (request.getRegion() != null) usuario.setRegion(request.getRegion());
         if (request.getReferencia() != null) usuario.setReferencia(request.getReferencia());
+        // La ciudad es obligatoria: un cliente sin ella no guarda el perfil hasta escogerla
+        if (Ciudades.pendiente(usuario)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escoge tu ciudad de la lista.");
+        }
 
         usuario.setDatosCompletos(true);
         return ResponseEntity.ok(PerfilClienteResponse.de(usuarioRepository.save(usuario)));

@@ -33,6 +33,7 @@ import com.drivemaster.drivemaster.security.CustomUserDetailsService;
 import com.drivemaster.drivemaster.security.JwtUtil;
 import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.service.UsuarioService;
+import com.drivemaster.drivemaster.util.Ciudades;
 import com.drivemaster.drivemaster.util.Correos;
 
 import jakarta.servlet.http.Cookie;
@@ -202,6 +203,8 @@ public class AuthController {
         if (usuarioService.correoOcupado(correo)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Correo ya registrado");
         }
+        String ciudad = Ciudades.canonica(request.getCiudad())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escoge tu ciudad de la lista."));
 
         String rol = "CLIENTE";
         List<String> permisos = getPermisosPorRol(rol);
@@ -211,6 +214,7 @@ public class AuthController {
                 .correo(correo)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .identificacion(request.getIdentificacion())
+                .ciudad(ciudad)
                 .proveedor("LOCAL")
                 .rol(rol)
                 .permisos(permisos)
@@ -323,7 +327,7 @@ public class AuthController {
                 jwtUtil.generateToken(userDetails), usuario.getId(), usuario.getNombre(),
                 usuario.getCorreo(), usuario.getRol(),
                 usuario.getProveedor(), usuario.getDatosCompletos(),
-                jwtUtil.generateRefreshToken(userDetails));
+                jwtUtil.generateRefreshToken(userDetails), Ciudades.pendiente(usuario));
     }
 
     private void agregarCookieJwt(HttpServletResponse response, String accessToken) {

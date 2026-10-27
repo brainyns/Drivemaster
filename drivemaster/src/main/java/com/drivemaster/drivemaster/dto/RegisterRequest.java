@@ -8,6 +8,8 @@ public class RegisterRequest {
     private String correo;
     private String password;
     private String identificacion;
+    // Obligatoria y de la lista de Ciudades
+    private String ciudad;
     private String rol;
     private Boolean activo;
 }

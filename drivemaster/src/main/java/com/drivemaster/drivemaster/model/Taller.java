@@ -22,6 +22,8 @@ public class Taller {
     private String usuarioId;
 
     private String nombre;
+    // NIT del registro (desde que se valida que no se repita); los talleres anteriores no lo tienen
+    private String nit;
     private String ciudad;
     private String direccion;
     private Double latitud;

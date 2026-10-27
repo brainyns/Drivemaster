@@ -40,6 +40,7 @@ public class TiendaServiceImpl implements TiendaService {
     @Override
     public TiendaDTO registrar(RegistroNegocioRequest r) {
         cuentaNegocioService.validarRegistro(r);
+        cuentaNegocioService.validarSinDuplicados(CuentaNegocioService.TIENDA, r);
         // Una tienda vende al público (retiro en su local): el horario es tan obligatorio como la dirección
         if (r.getHorario() == null || r.getHorario().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El horario de atención de la tienda es obligatorio");

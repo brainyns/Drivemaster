@@ -198,6 +198,7 @@ public class TallerServiceImpl implements TallerService {
     @Override
     public TallerDTO registrar(RegistroNegocioRequest r) {
         cuentaNegocioService.validarRegistro(r);
+        cuentaNegocioService.validarSinDuplicados(CuentaNegocioService.TALLER, r);
         Coordenadas.validar(r.getLatitud(), r.getLongitud(), true);
 
         Usuario usuario = cuentaNegocioService.crearUsuario(
@@ -207,6 +208,7 @@ public class TallerServiceImpl implements TallerService {
         Taller taller = Taller.builder()
                 .usuarioId(usuario.getId())
                 .nombre(r.getNombreNegocio().trim())
+                .nit(r.getNit() == null || r.getNit().isBlank() ? null : r.getNit().trim())
                 .ciudad(r.getCiudad())
                 .barrio(r.getBarrio())
                 .direccion(r.getDireccion())
