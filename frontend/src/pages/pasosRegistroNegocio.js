@@ -74,7 +74,7 @@ export function datosRegistro(tipo, form) {
     latitud: numero(form.latitud),
     longitud: numero(form.longitud),
     nombreContacto: form.nombreContacto.trim() || null,
-    correo: form.correo.replace(/s+/g, "").toLowerCase(),
+    correo: form.correo.replace(/\s+/g, "").toLowerCase(),
     password: form.password,
   };
   if (tipo === "TALLER") {
