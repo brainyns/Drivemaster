@@ -287,13 +287,19 @@ Son contraseñas conocidas: no actives `DEMO_SEED_ENABLED` en un despliegue púb
 
 ## Pruebas
 
-**Backend** (JUnit 5 y Mockito; no necesitan bases de datos salvo `DrivemasterApplicationTests`, que levanta el
-contexto completo):
+**Backend** (JUnit 5 y Mockito; no necesitan bases de datos):
 
 ```bash
 cd drivemaster
-./mvnw test                                        # todas (necesita las variables de las bases de datos)
-./mvnw test -Dtest='!DrivemasterApplicationTests'  # todas menos la que levanta el contexto completo
+./mvnw test   # todas; DrivemasterApplicationTests queda omitida
+```
+
+`DrivemasterApplicationTests` levanta el contexto completo: se conecta a las bases, corre las migraciones del
+arranque y deja activas las tareas programadas (que mandan correos). Solo corre con `DRIVEMASTER_IT=true` y las
+variables de unas bases **de prueba**, nunca las de producción:
+
+```bash
+DRIVEMASTER_IT=true SPRING_DATA_MONGODB_URI=... DB_URL=jdbc:postgresql://... DB_USERNAME=... DB_PASSWORD=... \n  ./mvnw test -Dtest=DrivemasterApplicationTests
 ```
 
 Incluyen reglas de negocio (cotizaciones, liquidación, horario, historial), permisos por rol con la configuración
