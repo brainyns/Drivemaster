@@ -104,7 +104,7 @@ public class SecurityConfig {
                         // Herramientas del agente IA (n8n): público aquí, pero exige el token de
                         // servicio X-Service-Token en ProductoController.
                         .requestMatchers(HttpMethod.GET, "/api/productos/buscar").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/productos/mi-tienda").hasRole("TIENDA")
+                        .requestMatchers(HttpMethod.GET, "/api/productos/mi-tienda", "/api/productos/mi-tienda/tabla").hasRole("TIENDA")
                         // Publicar u ocultar: solo la TIENDA dueña (AlcanceTienda verifica que el producto sea suyo)
                         .requestMatchers(HttpMethod.PATCH, "/api/productos/*/publicado").hasRole("TIENDA")
                         // TIENDA solo gestiona sus productos: lo verifica AlcanceTienda en el controlador
@@ -198,7 +198,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/pagos-marketplace/diagnostico/*",
                                 "/api/pagos-marketplace/cotizacion/*", "/api/pagos-marketplace/simular/*").hasRole("CLIENTE")
                         .requestMatchers("/api/pagos-marketplace/**").denyAll()
-                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/mios").hasRole("TIENDA")
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/mios", "/api/pedidos-tienda/mios/tabla").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/problemas", "/api/pedidos-tienda/retiros-sin-recoger").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/pedidos-tienda/*/preparar", "/api/pedidos-tienda/*/despachar",
                                 "/api/pedidos-tienda/*/no-despachar", "/api/pedidos-tienda/*/listo-retiro").hasRole("TIENDA")
