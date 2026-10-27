@@ -84,3 +84,13 @@ test("la pantalla usa los pasos, un resumen final y contraseñas que se pueden m
   assert.match(pagina, /<SelectorUbicacion/);
   assert.doesNotMatch(pagina, /rn-eyebrow/);
 });
+
+test("los correos conservan sus letras: solo se quitan los espacios y se pasan a minúsculas", () => {
+  // Con /s+/g (sin la barra) se borraban todas las "s": "sebas@x.co" llegaba como "eba@x.co"
+  assert.equal(datosRegistro("TALLER", { ...BASE, correo: " Sebas.Rios @Gmail.com " }).correo, "sebas.rios@gmail.com");
+  // El login, el registro de clientes y la recuperación de contraseña normalizan en authService
+  const auth = readFileSync(new URL("../src/services/authService.js", import.meta.url), "utf8");
+  const normalizar = auth.match(/const normalizarCorreo = (.+);/)[1];
+  assert.equal(new Function(`return ${normalizar}`)()(" Sebas.Rios @Gmail.com "), "sebas.rios@gmail.com");
+  assert.ok(!/replace\(\/s[+*]\//.test(auth), "ningún replace(/s+/) sin barra en authService");
+});
