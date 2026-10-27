@@ -148,3 +148,20 @@
 @media (max-width: 600px) {
   .pp-barras__fila--ranking { grid-template-columns: minmax(0, 1fr) 4ch 5ch; }
 }
+
+/* El nombre de un cliente o un negocio en la tabla: abre su detalle (SUPERADMIN) */
+.pp-nombre-boton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ui-text);
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--ui-line);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.pp-nombre-boton:hover { text-decoration-color: currentColor; color: var(--ui-info); }
+.pp-nombre-boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }

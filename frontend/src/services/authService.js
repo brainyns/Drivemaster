@@ -61,7 +61,7 @@ export function getTokenExpiracion(token) {
 }
 
 // Correo sin espacios y en minúsculas, como lo guarda el backend
-const normalizarCorreo = (correo) => String(correo ?? "").replace(/s+/g, "").toLowerCase();
+const normalizarCorreo = (correo) => String(correo ?? "").replace(/\s+/g, "").toLowerCase();
 
 function guardarSesion(data) {
   if (data && data.token) {
@@ -71,7 +71,8 @@ function guardarSesion(data) {
       correo: data.correo,
       rol: data.rol,
       proveedor: data.proveedor,
-      datosCompletos: data.datosCompletos
+      datosCompletos: data.datosCompletos,
+      ciudadPendiente: data.ciudadPendiente === true
     }, data.refreshToken);
   }
 }
@@ -145,7 +146,8 @@ export async function refreshToken() {
     const user = getUser();
     setSession(data.token, {
       ...user,
-      datosCompletos: data.datosCompletos
+      datosCompletos: data.datosCompletos,
+      ciudadPendiente: data.ciudadPendiente === true
     }, data.refreshToken);
     window.dispatchEvent(new CustomEvent("auth:renovada", { detail: data.token }));
   }
@@ -170,7 +172,7 @@ export async function confirmarRecuperacion(correo, codigo, nuevaPassword) {
   const res = await fetchConLimite(`${API_BASE}/auth/recuperar/confirmar`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ correo: normalizarCorreo(correo), codigo: String(codigo ?? "").replace(/s+/g, ""), nuevaPassword }),
+    body: JSON.stringify({ correo: normalizarCorreo(correo), codigo: String(codigo ?? "").replace(/\s+/g, ""), nuevaPassword }),
   });
   return handleResponse(res);
 }
@@ -196,7 +198,7 @@ export async function confirmarCambioCorreo(codigo) {
   const res = await apiFetch(`${API_BASE}/cuenta/correo/confirmar`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ codigo: String(codigo ?? "").replace(/s+/g, "") }),
+    body: JSON.stringify({ codigo: String(codigo ?? "").replace(/\s+/g, "") }),
   });
   const data = await handleResponse(res);
   guardarSesion(data);

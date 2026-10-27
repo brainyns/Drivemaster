@@ -45,7 +45,7 @@ import PedidosTienda         from "./pages/PedidosTienda";
 import Liquidaciones         from "./pages/Liquidaciones";
 import ChatWidget            from "./components/chat/ChatWidget";
 import { reiniciarChat }     from "./components/chat/chatSesion";
-import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
+import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion, setSession } from "./services/authService";
 import { useCarrito } from "./hooks/useCarrito";
 import { connectNotifications, disconnectNotifications } from "./services/websocketService";
 import { tieneCampanita } from "./services/notificacionesUtil";
@@ -59,6 +59,7 @@ import ProblemasEnvios from "./pages/ProblemasEnvios";
 import DatosMiTienda from "./pages/DatosMiTienda";
 import Alerta from "./components/ui/Alerta";
 import Avisos from "./components/ui/Avisos";
+import PedirCiudad from "./components/cliente/PedirCiudad";
 import { miTienda } from "./services/tiendaService";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
@@ -284,7 +285,8 @@ function App() {
       correo: auth.correo,
       rol: auth.rol,
       proveedor: auth.proveedor,
-      datosCompletos: auth.datosCompletos
+      datosCompletos: auth.datosCompletos,
+      ciudadPendiente: auth.ciudadPendiente === true
     };
     setUser(newUser);
     setToken(auth.token);
@@ -693,7 +695,8 @@ function App() {
     // Un aviso de la campanita abre un pedido con irA("pedidos-tienda", { abrir }); otro aviso la vuelve a montar
     if (pagina === "pedidos-tienda")   return <PedidosTienda key={idSeleccionado?.abrir || "pedidos"} param={idSeleccionado} irA={irA} />;
     if (pagina === "problemas-envios") return <ProblemasEnvios      />;
-    if (pagina === "pedidos-envios")   return <PedidosEnvios key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado} />;
+    if (pagina === "pedidos-envios")   return <PedidosEnvios key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado}
+      puedeVerDetalle={user?.rol === "SUPERADMIN"} />;
     if (pagina === "mi-tienda")        return <DatosMiTienda        token={token} onGuardado={(t) => setTiendaIncompleta(!t.datosCompletos)} />;
 
     if (pagina === "reportes-plataforma") return <ReportesPlataforma key={idSeleccionado || "ventas"} token={token} filtroInicial={idSeleccionado} />;
@@ -746,6 +749,14 @@ function App() {
 
       <ChatWidget onVerProducto={(id) => irA("producto-marketplace", id)} />
       <Avisos />
+      {/* Cliente sin ciudad: la escoge antes de seguir (no se puede cerrar sin guardarla) */}
+      {user?.rol === "CLIENTE" && user.ciudadPendiente && token && (
+        <PedirCiudad token={token} onGuardada={() => {
+          const actualizado = { ...user, ciudadPendiente: false };
+          setUser(actualizado);
+          setSession(token, actualizado);
+        }} />
+      )}
     </div>
   );
 }

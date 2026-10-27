@@ -14,6 +14,7 @@ import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Campo from "../components/ui/Campo";
 import Icon from "../components/public/Icon";
+import DetallePlataforma from "../components/admin/DetallePlataforma";
 import {
   ESTADOS_NEGOCIO, TIPOS_NEGOCIO, actividadNegocio, estadoNegocio, filtrosInicialesNegocios, perfilNegocio,
 } from "./admin/plataformaAdmin";
@@ -105,6 +106,7 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
   const [filtros, setFiltros] = useState(() => filtrosInicialesNegocios(filtroInicial));
   const [pagina, setPagina] = useState(0);
   const [version, setVersion] = useState(0);
+  const [detalle, setDetalle] = useState(null); // { tipo, id } del negocio cuyo detalle está abierto
   const [datos, setDatos] = useState(null); // { negocios: { items, total }, porEstado }
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -262,7 +264,8 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
                             <span className="neg-negocio">
                               <LogoNegocio url={n.logoUrl} nombre={n.nombre} />
                               <span className="neg-negocio__texto">
-                                <strong>{n.nombre || "Sin nombre"}</strong>
+                                <button type="button" className="pp-nombre-boton" onClick={() => setDetalle({ tipo: n.tipo, id: n.id })}
+                                  aria-label={`Ver el detalle de ${n.nombre || "este negocio"}`}>{n.nombre || "Sin nombre"}</button>
                                 <span className="pp-sub">{unir([nombreTipo(n), capitalizar(n.ciudad) || "Sin ciudad"])}</span>
                               </span>
                             </span>
@@ -312,6 +315,11 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
           </div>
           <Paginacion pagina={pagina + 1} total={total} porPagina={TAMANO} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de negocios" />
         </>
+      )}
+
+      {detalle && (
+        <DetallePlataforma key={`${detalle.tipo}-${detalle.id}`} token={token}
+          objetivo={{ tipo: "negocio", negocioTipo: detalle.tipo, id: detalle.id }} onCerrar={() => setDetalle(null)} />
       )}
     </div>
   );

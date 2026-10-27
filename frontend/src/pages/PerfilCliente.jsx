@@ -15,6 +15,7 @@ import CampoClave from "../components/ui/CampoClave";
 import Alerta from "../components/ui/Alerta";
 import ChipEstado from "../components/ui/ChipEstado";
 import Esqueleto from "../components/ui/Esqueleto";
+import SelectorCiudad from "../components/cliente/SelectorCiudad";
 import { cuerpoPerfil, datosDesdePerfil, validarClave, validarDatos } from "./reglasPerfil";
 import "../css/perfil-cliente.css";
 
@@ -138,7 +139,8 @@ function DatosPersonales({ token, correo, onNombre }) {
         </Campo>
         {campo("telefono", "Teléfono", { type: "tel", inputMode: "tel", autoComplete: "tel", placeholder: "300 123 4567" })}
         {campo("identificacion", "Documento", { placeholder: "Cédula o NIT" }, { opcional: true })}
-        {campo("ciudad", "Ciudad", { autoComplete: "address-level2", placeholder: "Bogotá D.C." })}
+        <SelectorCiudad id="pc-ciudad" valor={datos.ciudad} error={errores.ciudad}
+          onCambio={(c) => cambiar({ target: { name: "ciudad", value: c } })} />
         {campo("direccion", "Dirección", { autoComplete: "street-address", placeholder: "Cra 13 # 45-20" })}
         {campo("referencia", "Punto de referencia", { placeholder: "Casa de rejas verdes, apto 302" },
           { opcional: true, ancho: true, ayuda: "Ayuda a las tiendas cuando te envían un pedido." })}

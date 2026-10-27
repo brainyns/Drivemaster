@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  CAMPOS_PASO, datosRegistro, erroresDePasos, pasosDe, primerPasoConErrores, validarNegocio,
+  CAMPOS_PASO, campoDelDuplicado, datosRegistro, erroresDePasos, pasoDelCampo, pasosDe, primerPasoConErrores, validarNegocio,
 } from "../src/pages/pasosRegistroNegocio.js";
 
 const BASE = {
@@ -42,6 +42,26 @@ test("antes de enviar se vuelve al primer paso con errores", () => {
   assert.equal(primerPasoConErrores("TALLER", BASE), null);
   assert.equal(primerPasoConErrores("TALLER", { ...BASE, precioManoObra: "" }), "servicio");
   assert.equal(primerPasoConErrores("TALLER", { ...BASE, ciudad: "", password: "1" }), "ubicacion");
+});
+
+test("el correo conserva sus letras: solo se quitan los espacios y se pasa a minúsculas", () => {
+  // Antes una expresión sin la barra (/s+/g) borraba todas las "s" del correo
+  assert.equal(datosRegistro("TALLER", { ...BASE, correo: " Sebas.Rios @Gmail.com " }).correo, "sebas.rios@gmail.com");
+  // Ningún archivo del frontend vuelve a usar la expresión sin barra (también rompía el login y la recuperación)
+  const auth = readFileSync(new URL("../src/services/authService.js", import.meta.url), "utf8");
+  assert.ok(!auth.includes("replace(/s+/g") && auth.includes("replace(/\\s+/g"), "authService normaliza con \\s+");
+});
+
+test("un negocio repetido muestra el mensaje del servidor en su campo y en su paso", () => {
+  assert.equal(campoDelDuplicado("Ya hay una tienda registrada con ese NIT."), "nit");
+  assert.equal(campoDelDuplicado("Ya hay un taller registrado con ese nombre."), "nombreNegocio");
+  assert.equal(campoDelDuplicado("Ya hay una tienda registrada con ese correo."), "correo");
+  assert.equal(campoDelDuplicado("Ya existe un usuario con ese correo"), "correo");
+  assert.equal(campoDelDuplicado("No se pudo conectar"), null);
+  assert.equal(pasoDelCampo("TIENDA", "nit"), "negocio");
+  assert.equal(pasoDelCampo("TALLER", "correo"), "cuenta");
+  const pagina = readFileSync(new URL("../src/pages/RegistroNegocio.jsx", import.meta.url), "utf8");
+  assert.ok(pagina.includes("campoDelDuplicado(err.message)") && pagina.includes("setDuplicado("));
 });
 
 test("se envían los mismos datos que antes", () => {

@@ -1,0 +1,87 @@
+/* Vistas de detalle del SUPERADMIN (pedido, cliente y negocio) dentro del panel lateral de admin-base.css */
+
+.dtp-volver { margin-bottom: 6px; padding-left: 0; }
+
+.dtp-cabecera { display: flex; align-items: center; gap: 12px; }
+
+.dtp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.dtp-bloque { display: grid; gap: 12px; }
+.dtp-bloque + .dtp-bloque,
+.dtp-chips + .dtp-bloque,
+.dtp-cabecera + .dtp-bloque { padding-top: 18px; border-top: 1px solid var(--ui-line-soft); }
+
+.dtp-titulo {
+  margin: 0;
+  font-family: var(--ui-font);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.dtp-lista { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+
+.dtp-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ui-line-soft);
+  font-size: 0.9rem;
+  color: var(--ui-text);
+}
+.dtp-fila:last-child { border-bottom: 0; }
+.dtp-fila > span:first-child { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+
+.dtp-sub { font-size: 0.8125rem; color: var(--ui-muted); }
+
+.dtp-num {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.dtp-num strong { font-size: 0.9rem; color: var(--ui-text); }
+
+.dtp-totales { display: grid; gap: 4px; margin: 0; }
+.dtp-totales > div { display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--ui-muted); }
+.dtp-totales dd { margin: 0; font-variant-numeric: tabular-nums; }
+.dtp-totales__total { padding-top: 6px; border-top: 1px solid var(--ui-line-soft); font-weight: 700; color: var(--ui-text) !important; }
+
+/* Línea de tiempo: un punto por paso unido por una línea */
+.dtp-tiempo { display: grid; gap: 14px; margin: 0; padding: 0 0 0 18px; list-style: none; border-left: 2px solid var(--ui-line); }
+.dtp-tiempo li { position: relative; display: grid; gap: 2px; font-size: 0.9rem; color: var(--ui-text); }
+.dtp-tiempo li::before {
+  content: "";
+  position: absolute;
+  left: -24px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--ui-r-full);
+  background: var(--ui-surface);
+  border: 2px solid var(--ui-muted);
+}
+.dtp-tiempo li:last-child::before { border-color: var(--ui-ok); background: var(--ui-ok); }
+
+.dtp-enlace {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ui-info);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.dtp-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
+
+.dtp-texto, .dtp-vacio, .dtp-nota { margin: 0; font-size: 0.875rem; color: var(--ui-muted); }
+.dtp-texto { color: var(--ui-text); }

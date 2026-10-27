@@ -1,11 +1,16 @@
 // Validación de Mi perfil (datos personales y cambio de contraseña). Funciones puras.
+import { ciudadDeLista } from "../utils/ciudades.js";
 
 export const MIN_CLAVE = 6;
 
-/** Errores de los datos personales; el nombre es obligatorio y el teléfono, si se escribe, debe ser válido. */
+/**
+ * Errores de los datos personales: el nombre y la ciudad (de la lista) son obligatorios, y el teléfono, si se
+ * escribe, debe ser válido.
+ */
 export function validarDatos(d) {
   const e = {};
   if (!d.nombre.trim()) e.nombre = "Escribe tu nombre.";
+  if (!ciudadDeLista(d.ciudad)) e.ciudad = "Escoge tu ciudad de la lista.";
   if (d.telefono.trim() && !/^[0-9+\s()-]{7,20}$/.test(d.telefono.trim())) {
     e.telefono = "Teléfono no válido: usa solo números, espacios o +.";
   }
@@ -30,7 +35,8 @@ export const datosDesdePerfil = (perfil, nombre) => ({
   nombre: perfil?.nombre || nombre || "",
   identificacion: perfil?.documento || "",
   telefono: perfil?.telefono || "",
-  ciudad: perfil?.ciudad || "",
+  // La de la lista ("cartagena" → "Cartagena"); una que no está queda vacía para escogerla
+  ciudad: ciudadDeLista(perfil?.ciudad),
   direccion: perfil?.direccion || "",
   referencia: perfil?.referencia || "",
 });

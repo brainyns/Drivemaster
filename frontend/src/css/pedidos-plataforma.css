@@ -16,7 +16,30 @@
 /* La fila con alerta se tiñe apenas: el chip de la columna Alerta dice qué pasa */
 .ped-fila--alerta > td { background: color-mix(in srgb, var(--ui-error) 5%, transparent); }
 
+/* Por vencer y sin retirar: en amarillo (aviso), los atrasados y los problemas siguen en rojo */
+.ped-alerta--aviso.ui-chip { color: var(--ui-aviso); border-color: color-mix(in srgb, var(--ui-aviso) 45%, var(--ui-line)); }
+.ped-alerta--aviso.ui-chip[aria-pressed="true"],
+.ped-alerta--aviso.ui-chip[aria-pressed="true"]:hover {
+  color: var(--ui-aviso);
+  background: color-mix(in srgb, var(--ui-aviso) 12%, transparent);
+  border-color: var(--ui-aviso);
+}
+
 .ped-ref { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+/* SUPERADMIN: la referencia abre el detalle del pedido */
+.ped-ref--boton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ui-info);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.ped-ref--boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
 .ped-destino { overflow-wrap: anywhere; }
 .ped-alertas { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 

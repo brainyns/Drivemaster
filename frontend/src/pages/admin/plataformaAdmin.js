@@ -20,6 +20,12 @@ export function urgentesDashboard(a = {}) {
     { clave: "atrasados", n: a.despachosAtrasados, tono: "error", estado: "Atrasado", pagina: "pedidos-envios", preset: "atrasados",
       titulo: (n) => `${num(n)} ${plural(n, "despacho atrasado", "despachos atrasados")}`,
       detalle: "Pedidos pendientes o en preparación que pasaron el plazo de despacho.", accion: "Ver pedidos" },
+    { clave: "por-vencer", n: a.despachosPorVencer, tono: "aviso", estado: "Por vencer", pagina: "pedidos-envios", preset: "por-vencer",
+      titulo: (n) => `${num(n)} ${plural(n, "despacho por vencer", "despachos por vencer")}`,
+      detalle: "Les queda menos del 25 % del plazo de despacho.", accion: "Ver pedidos" },
+    { clave: "sin-retirar", n: a.retirosSinRecoger, tono: "aviso", estado: "Sin retirar", pagina: "pedidos-envios", preset: "sin-retirar",
+      titulo: (n) => `${num(n)} ${plural(n, "pedido sin retirar", "pedidos sin retirar")}`,
+      detalle: "Listos en la tienda hace 3 días o más; a los 15 pasan a tu revisión.", accion: "Ver pedidos" },
     { clave: "fallidas", n: a.liquidacionesFallidas, tono: "error", estado: "Pago fallido", pagina: "liquidaciones",
       titulo: (n) => `${num(n)} ${plural(n, "liquidación fallida", "liquidaciones fallidas")}`,
       detalle: "Pagos a talleres o tiendas que no se pudieron completar.", accion: "Revisar" },
@@ -148,9 +154,45 @@ export const ESTADOS_PEDIDO = {
 export const refPedido = (id) => `#${String(id || "").slice(-6).toUpperCase()}`;
 
 /** Filtros al llegar desde el dashboard ("atrasados"); cualquier otro valor, sin filtro. */
+// Las alertas del monitor (las mismas reglas del backend, SemaforoPedido) y el atajo con que llegan del dashboard
+export const ALERTAS_PEDIDO = [
+  { valor: "", label: "Todas" },
+  { valor: "POR_VENCER", label: "Por vencer", preset: "por-vencer" },
+  { valor: "ATRASADO", label: "Atrasados", preset: "atrasados" },
+  { valor: "SIN_RETIRAR", label: "Sin retirar", preset: "sin-retirar" },
+];
+
+/** Filtros del monitor; preset es el atajo del dashboard ("atrasados", "por-vencer" o "sin-retirar"). */
 export function filtrosInicialesPedidos(preset) {
-  return { estado: "", tiendaId: "", entrega: "", atrasados: preset === "atrasados" };
+  const alerta = ALERTAS_PEDIDO.find((a) => a.preset && a.preset === preset)?.valor || "";
+  return { estado: "", tiendaId: "", entrega: "", alerta };
 }
+
+const TONO_SEMAFORO = { VERDE: "ok", AMARILLO: "aviso", ROJO: "error" };
+const diaMes = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }) : "");
+
+/**
+ * Los chips de la columna Alerta: el semáforo del despacho (verde a tiempo, amarillo con menos del 25 % del plazo,
+ * rojo vencido), el de "sin retirar" (desde los 3 días amarillo, a los 15 rojo y en revisión) y el problema de envío.
+ */
+export function chipsAlerta(p = {}) {
+  const chips = [];
+  const plazo = p.plazoDespacho ? ` · plazo ${diaMes(p.plazoDespacho)}` : "";
+  if (p.semaforoDespacho === "ROJO") chips.push({ tono: "error", texto: `Atrasado${plazo}` });
+  else if (p.semaforoDespacho === "AMARILLO") chips.push({ tono: "aviso", texto: `Por vencer${plazo}` });
+  else if (p.semaforoDespacho === "VERDE") chips.push({ tono: "ok", texto: `A tiempo${plazo}` });
+  if (p.semaforoRetiro) {
+    const dias = p.diasSinRetirar || 0;
+    const texto = p.semaforoRetiro === "VERDE" ? "Esperando que lo recojan"
+      : `Sin retirar hace ${dias} ${dias === 1 ? "día" : "días"}${p.semaforoRetiro === "ROJO" ? " · en revisión" : ""}`;
+    chips.push({ tono: TONO_SEMAFORO[p.semaforoRetiro], texto });
+  }
+  if (p.problemaAbierto) chips.push({ tono: "error", texto: "Problema de envío" });
+  return chips;
+}
+
+/** Una fila pide atención si algo está en amarillo o rojo, o tiene un problema de envío. */
+export const filaConAlerta = (p = {}) => chipsAlerta(p).some((c) => c.tono === "aviso" || c.tono === "error");
 
 /** Estados con pedidos, en el orden en que avanza un pedido (los desconocidos al final). */
 export function estadosConPedidos(porEstado = {}) {

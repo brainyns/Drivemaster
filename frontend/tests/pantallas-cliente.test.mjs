@@ -6,6 +6,29 @@ import assert from "node:assert/strict";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
+test("Ciudad del cliente: la misma lista que el backend, en el registro, en Mi perfil y en la ventana obligatoria", async () => {
+  const { CIUDADES, ciudadDeLista } = await import("../src/utils/ciudades.js");
+  // Ciudades.java es la que valida: si las listas no coinciden, el selector ofrecería una que el backend rechaza
+  const java = leer("../../drivemaster/src/main/java/com/drivemaster/drivemaster/util/Ciudades.java");
+  const bloque = java.slice(java.indexOf("LISTA = List.of("), java.indexOf(");", java.indexOf("LISTA = List.of(")));
+  assert.deepEqual([...bloque.matchAll(/"([^"]+)"/g)].map((m) => m[1]), CIUDADES);
+  assert.equal(new Set(CIUDADES).size, CIUDADES.length);
+  assert.equal(ciudadDeLista(" cartagena "), "Cartagena");
+  assert.equal(ciudadDeLista("Cartagena de Indias"), "Cartagena");
+  assert.equal(ciudadDeLista("BOGOTA"), "Bogotá D.C.");
+  assert.equal(ciudadDeLista("turbaco"), "Turbaco");
+  assert.equal(ciudadDeLista("bucarambag"), "");
+  assert.equal(ciudadDeLista(null), "");
+
+  const registro = leer("../src/pages/Register.jsx");
+  assert.ok(registro.includes("CIUDADES_ORDENADAS") && registro.includes("register({ nombre, correo, password, ciudad })"));
+  const ventana = leer("../src/components/cliente/PedirCiudad.jsx");
+  assert.ok(ventana.includes("<SelectorCiudad") && !ventana.includes("onCancelar"), "no se puede cerrar sin escogerla");
+  const app = leer("../src/App.jsx");
+  assert.ok(app.includes('user?.rol === "CLIENTE" && user.ciudadPendiente') && app.includes("ciudadPendiente: auth.ciudadPendiente === true"));
+  assert.ok(leer("../src/services/authService.js").includes("ciudadPendiente: data.ciudadPendiente === true"));
+});
+
 test("Mis vehículos: tarjetas compartidas, campos con etiqueta y los tres estados", () => {
   const p = leer("../src/pages/MisVehiculos.jsx");
   assert.match(p, /<TarjetaVehiculo /);
@@ -46,19 +69,26 @@ test("Mis servicios: filtros por estado, chips con texto, sin kickers y estados 
 
 test("Mi perfil: secciones de datos, seguridad y preferencias, con validación y aviso al guardar", async () => {
   const { validarClave, validarDatos, cuerpoPerfil, datosDesdePerfil } = await import("../src/pages/reglasPerfil.js");
-  assert.deepEqual(Object.keys(validarDatos({ nombre: " ", telefono: "abc" })), ["nombre", "telefono"]);
-  assert.deepEqual(validarDatos({ nombre: "Ana", telefono: "" }), {});
+  assert.deepEqual(Object.keys(validarDatos({ nombre: " ", ciudad: "", telefono: "abc" })), ["nombre", "ciudad", "telefono"]);
+  assert.deepEqual(validarDatos({ nombre: "Ana", ciudad: "Cartagena", telefono: "" }), {});
+  // La ciudad es obligatoria y de la lista (el backend rechaza cualquier otra)
+  assert.equal(validarDatos({ nombre: "Ana", ciudad: "bucarambag", telefono: "" }).ciudad, "Escoge tu ciudad de la lista.");
   assert.deepEqual(Object.keys(validarClave({ actual: "", nueva: "123", confirmar: "12" })), ["actual", "nueva", "confirmar"]);
   assert.equal(validarClave({ actual: "secreta", nueva: "secreta", confirmar: "secreta" }).nueva,
     "La nueva contraseña debe ser distinta de la actual.");
   const d = datosDesdePerfil({ telefono: "300", ciudad: "Cali" }, "Ana");
   assert.equal(d.nombre, "Ana");
+  // Lo que ya estaba escrito pasa a la ciudad de la lista; lo que no está queda vacío para escogerlo
+  assert.equal(datosDesdePerfil({ ciudad: "cartagena" }, "Ana").ciudad, "Cartagena");
+  assert.equal(datosDesdePerfil({ ciudad: "Bogotá" }, "Ana").ciudad, "Bogotá D.C.");
+  assert.equal(datosDesdePerfil({ ciudad: "bucarambag" }, "Ana").ciudad, "");
   // PerfilClienteResponse trae el documento como "documento"; el PUT lo sigue recibiendo como "identificacion"
   assert.equal(datosDesdePerfil({ documento: "123", email: "ana@demo.com" }, "Ana").identificacion, "123");
   assert.deepEqual(cuerpoPerfil({ ...d, direccion: " Cra 1 " }),
     { identificacion: "", telefono: "300", ciudad: "Cali", direccion: "Cra 1", referencia: "" });
 
   const p = leer("../src/pages/PerfilCliente.jsx");
+  assert.ok(p.includes("<SelectorCiudad"), "la ciudad se escoge de la lista");
   for (const t of ["Datos personales", "Seguridad", "Preferencias"]) assert.match(p, new RegExp(`titulo="${t}"`));
   assert.match(p, /Guardamos tus datos\./);
   assert.match(p, /cambiarPassword\(token, clave\.actual, clave\.nueva\)/);

@@ -10,7 +10,7 @@ import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
 import { formatPrecio } from "../components/servicio/estadosServicio";
 import {
-  CAMPOS_PASO, NOMBRE_PASO, datosRegistro, erroresDePasos, pasosDe, primerPasoConErrores, vacio,
+  CAMPOS_PASO, NOMBRE_PASO, campoDelDuplicado, datosRegistro, erroresDePasos, pasoDelCampo, pasosDe, primerPasoConErrores, vacio,
 } from "./pasosRegistroNegocio";
 import "../css/Login.css";
 import "../css/registro-negocio.css";
@@ -60,6 +60,8 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
   // Pasos en los que ya se intentó continuar: sus errores se muestran y se actualizan al corregir
   const [intentados, setIntentados] = useState([]);
   const [errorServidor, setErrorServidor] = useState(null);
+  // Dato repetido según el backend ({ campo, mensaje, valor }): se muestra en su campo hasta que se cambie
+  const [duplicado, setDuplicado] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [registrado, setRegistrado] = useState(null);
   const tituloPaso = useRef(null);
@@ -68,7 +70,10 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
   const pasos = pasosDe(tipo);
   const paso = pasos[Math.min(indice, pasos.length - 1)];
   const esTaller = tipo === "TALLER";
-  const errores = erroresDePasos(tipo, form, intentados);
+  const errores = { ...erroresDePasos(tipo, form, intentados) };
+  if (duplicado && form[duplicado.campo] === duplicado.valor && !errores[duplicado.campo]) {
+    errores[duplicado.campo] = duplicado.mensaje;
+  }
 
   // Al cambiar de paso, el foco va a su título (los lectores de pantalla anuncian dónde se está)
   useEffect(() => {
@@ -127,7 +132,14 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
       const negocio = esTaller ? await registrarTaller(datos) : await registrarTienda(datos);
       setRegistrado({ nombre: negocio.nombre, correo: datos.correo });
     } catch (err) {
-      setErrorServidor(err.message);
+      const campoRepetido = campoDelDuplicado(err.message);
+      const pasoRepetido = campoRepetido && pasoDelCampo(tipo, campoRepetido);
+      if (pasoRepetido) {
+        setDuplicado({ campo: campoRepetido, mensaje: err.message, valor: form[campoRepetido] });
+        setIndice(pasos.indexOf(pasoRepetido));
+      } else {
+        setErrorServidor(err.message);
+      }
     } finally {
       setEnviando(false);
     }

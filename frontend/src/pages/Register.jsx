@@ -3,22 +3,28 @@ import { register } from "../services/authService";
 import Logo from "../components/Logo";
 import Alerta from "../components/ui/Alerta";
 import { MENSAJE_SIN_CONEXION } from "../services/conexion";
+import { CIUDADES_ORDENADAS } from "../utils/ciudades";
 import "../css/Login.css";
 
 export default function Register({ onRegister, onBack }) {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
+  const [ciudad, setCiudad] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError(null);
+    if (!ciudad) {
+      setError("Escoge tu ciudad de la lista.");
+      return;
+    }
     setLoading(true);
 
     try {
-      const response = await register({ nombre, correo, password });
+      const response = await register({ nombre, correo, password, ciudad });
       onRegister(response);
     } catch (e) {
       setError(e.message || "Error al registrar");
@@ -56,6 +62,20 @@ export default function Register({ onRegister, onBack }) {
                 <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
               </span>
               <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="correo@ejemplo.com" required />
+            </div>
+          </label>
+
+          <label>
+            Ciudad
+            <div className="input-wrapper">
+              <span className="input-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              </span>
+              <select className="auth-select" value={ciudad} onChange={(e) => setCiudad(e.target.value)} required
+                autoComplete="address-level2">
+                <option value="">Escoge tu ciudad</option>
+                {CIUDADES_ORDENADAS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
           </label>
 

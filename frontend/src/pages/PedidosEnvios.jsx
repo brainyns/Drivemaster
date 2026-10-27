@@ -7,7 +7,10 @@ import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
-import { ESTADOS_PEDIDO, estadosConPedidos, filtrosInicialesPedidos, refPedido } from "./admin/plataformaAdmin";
+import DetallePlataforma from "../components/admin/DetallePlataforma";
+import {
+  ALERTAS_PEDIDO, ESTADOS_PEDIDO, chipsAlerta, estadosConPedidos, filaConAlerta, filtrosInicialesPedidos, refPedido,
+} from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/pedidos-plataforma.css";
@@ -27,17 +30,19 @@ const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
 /**
  * Monitor de pedidos y envíos de todas las tiendas (ADMIN y SUPERADMIN). Solo lectura y sin datos del cliente:
- * estado, tienda, destino (ciudad), días desde el pago y alertas de atraso. Se actualiza solo cada 30 segundos.
+ * estado, tienda, destino (ciudad), días desde el pago y el semáforo de despacho y de retiro. Se actualiza solo cada
+ * 30 segundos. Con puedeVerDetalle (SUPERADMIN), la referencia abre el detalle del pedido.
  */
-export default function PedidosEnvios({ token, filtroInicial }) {
+export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = false }) {
   const [filtros, setFiltros] = useState(() => filtrosInicialesPedidos(filtroInicial));
+  const [abierto, setAbierto] = useState(null);
   const [pagina, setPagina] = useState(0);
   const [estado, setEstado] = useState({ datos: null, error: null, actualizado: null });
   const [cargando, setCargando] = useState(true);
 
   const cargar = useCallback(() => {
     setCargando(true);
-    return pedidosPlataforma(token, { ...filtros, atrasados: filtros.atrasados ? "true" : "", pagina, tamano: TAMANO })
+    return pedidosPlataforma(token, { ...filtros, pagina, tamano: TAMANO })
       .then((datos) => setEstado({ datos, error: null, actualizado: new Date() }))
       .catch((e) => setEstado((previo) => ({ ...previo, error: e.message })))
       .finally(() => setCargando(false));
@@ -53,7 +58,8 @@ export default function PedidosEnvios({ token, filtroInicial }) {
   const lista = datos?.pedidos;
   const items = lista?.items || [];
   const total = lista?.total || 0;
-  const hayFiltros = filtros.estado !== "" || filtros.tiendaId !== "" || filtros.entrega !== "" || filtros.atrasados;
+  const hayFiltros = filtros.estado !== "" || filtros.tiendaId !== "" || filtros.entrega !== "" || filtros.alerta !== "";
+  const alternarAlerta = (valor) => poner({ alerta: filtros.alerta === valor ? "" : valor });
   const totalPedidos = Object.values(datos?.porEstado || {}).reduce((s, n) => s + n, 0);
 
   const poner = (cambio) => { setPagina(0); setFiltros((f) => ({ ...f, ...cambio })); };
@@ -71,13 +77,27 @@ export default function PedidosEnvios({ token, filtroInicial }) {
           </>
         )} />
 
-      {datos && (datos.atrasados > 0 || datos.problemasAbiertos > 0) && (
+      {datos && (datos.atrasados > 0 || datos.porVencer > 0 || datos.sinRetirar > 0 || datos.problemasAbiertos > 0) && (
         <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Pedidos que piden atención">
           {datos.atrasados > 0 && (
-            <button type="button" className="ui-chip ped-alerta" aria-pressed={filtros.atrasados}
-              onClick={() => poner({ atrasados: !filtros.atrasados })}>
+            <button type="button" className="ui-chip ped-alerta" aria-pressed={filtros.alerta === "ATRASADO"}
+              onClick={() => alternarAlerta("ATRASADO")}>
               <Icon name="clock" size={15} />
               {plural(datos.atrasados, "pedido sin despachar", "pedidos sin despachar")} fuera del plazo
+            </button>
+          )}
+          {datos.porVencer > 0 && (
+            <button type="button" className="ui-chip ped-alerta ped-alerta--aviso" aria-pressed={filtros.alerta === "POR_VENCER"}
+              onClick={() => alternarAlerta("POR_VENCER")}>
+              <Icon name="clock" size={15} />
+              {plural(datos.porVencer, "despacho por vencer", "despachos por vencer")}
+            </button>
+          )}
+          {datos.sinRetirar > 0 && (
+            <button type="button" className="ui-chip ped-alerta ped-alerta--aviso" aria-pressed={filtros.alerta === "SIN_RETIRAR"}
+              onClick={() => alternarAlerta("SIN_RETIRAR")}>
+              <Icon name="box" size={15} />
+              {plural(datos.sinRetirar, "pedido sin retirar", "pedidos sin retirar")} en la tienda
             </button>
           )}
           {datos.problemasAbiertos > 0 && (
@@ -117,9 +137,12 @@ export default function PedidosEnvios({ token, filtroInicial }) {
               onClick={() => poner({ entrega: x.valor })}>{x.label}</button>
           ))}
         </div>
-        <button type="button" className="ui-chip" aria-pressed={filtros.atrasados} onClick={() => poner({ atrasados: !filtros.atrasados })}>
-          Solo atrasados
-        </button>
+        <div className="ui-filtros" role="group" aria-label="Alerta">
+          {ALERTAS_PEDIDO.map((a) => (
+            <button key={a.valor || "todas"} type="button" className="ui-chip" aria-pressed={filtros.alerta === a.valor}
+              onClick={() => poner({ alerta: a.valor })}>{a.valor ? a.label : "Todas las alertas"}</button>
+          ))}
+        </div>
         {hayFiltros && (
           <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => poner(filtrosInicialesPedidos())}>Limpiar filtros</button>
         )}
@@ -162,11 +185,16 @@ export default function PedidosEnvios({ token, filtroInicial }) {
                 </thead>
                 <tbody>
                   {items.map((p) => {
-                    const conAlerta = p.atrasado || p.problemaAbierto;
+                    const chips = chipsAlerta(p);
                     return (
-                      <tr key={p.id} className={conAlerta ? "ped-fila--alerta" : undefined}>
+                      <tr key={p.id} className={filaConAlerta(p) ? "ped-fila--alerta" : undefined}>
                         <td className="ui-table__titulo">
-                          <strong className="ped-ref">{refPedido(p.id)}</strong>
+                          {puedeVerDetalle ? (
+                            <button type="button" className="ped-ref ped-ref--boton" onClick={() => setAbierto(p.id)}
+                              aria-label={`Ver el detalle del pedido ${refPedido(p.id)}`}>{refPedido(p.id)}</button>
+                          ) : (
+                            <strong className="ped-ref">{refPedido(p.id)}</strong>
+                          )}
                           <span className="pp-sub">{p.origen === "TALLER" ? "Cotización de taller" : "Compra del catálogo"} · pagado {fecha(p.fechaPago)}</span>
                         </td>
                         <td data-label="Tienda">{p.tienda || <span className="pp-tenue">Sin tienda</span>}</td>
@@ -177,9 +205,8 @@ export default function PedidosEnvios({ token, filtroInicial }) {
                         <td data-label="Días desde el pago" className="pp-num">{p.diasDesdePago}</td>
                         <td data-label="Alerta">
                           <span className="ped-alertas">
-                            {p.atrasado && <ChipEstado tono="error">Atrasado · plazo {fecha(p.plazoDespacho)}</ChipEstado>}
-                            {p.problemaAbierto && <ChipEstado tono="error">Problema de envío</ChipEstado>}
-                            {!conAlerta && <span className="pp-tenue">Sin alertas</span>}
+                            {chips.map((c) => <ChipEstado key={c.texto} tono={c.tono}>{c.texto}</ChipEstado>)}
+                            {chips.length === 0 && <span className="pp-tenue">Sin alertas</span>}
                           </span>
                         </td>
                       </tr>
@@ -192,6 +219,8 @@ export default function PedidosEnvios({ token, filtroInicial }) {
           <Paginacion pagina={pagina + 1} total={total} porPagina={lista?.tamano || TAMANO} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de pedidos" />
         </>
       )}
+
+      {abierto && <DetallePlataforma key={abierto} token={token} objetivo={{ tipo: "pedido", id: abierto }} onCerrar={() => setAbierto(null)} />}
     </div>
   );
 }

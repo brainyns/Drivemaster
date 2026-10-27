@@ -8,6 +8,7 @@ import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
+import DetallePlataforma from "../components/admin/DetallePlataforma";
 import { capitalizar } from "../utils/formato";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
@@ -32,6 +33,7 @@ export default function ClientesPlataforma({ token }) {
   const [q, setQ] = useState("");
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
   const [pagina, setPagina] = useState(0);
+  const [detalle, setDetalle] = useState(null);
   const [datos, setDatos] = useState(null); // { clientes: { items, total }, ciudades }
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -138,7 +140,8 @@ export default function ClientesPlataforma({ token }) {
                         <span className="lst-item">
                           <LogoNegocio nombre={c.nombre} />
                           <span className="lst-item__texto">
-                            <strong>{c.nombre || "Sin nombre"}</strong>
+                            <button type="button" className="pp-nombre-boton" onClick={() => setDetalle(c.id)}
+                              aria-label={`Ver el detalle de ${c.nombre || "este cliente"}`}>{c.nombre || "Sin nombre"}</button>
                             <span className="pp-sub lst-correo">{c.correo || "Sin correo"}</span>
                           </span>
                         </span>
@@ -157,6 +160,8 @@ export default function ClientesPlataforma({ token }) {
           <Paginacion pagina={pagina + 1} total={total} porPagina={TAMANO} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de clientes" />
         </>
       )}
+
+      {detalle && <DetallePlataforma key={detalle} token={token} objetivo={{ tipo: "cliente", id: detalle }} onCerrar={() => setDetalle(null)} />}
     </div>
   );
 }

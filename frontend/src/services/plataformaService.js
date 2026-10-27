@@ -34,10 +34,38 @@ export async function operacionPlataforma(token) {
   return leer(await apiFetch(`${BASE}/operacion`, { headers: headers(token) }), "No se pudo cargar tu resumen.");
 }
 
-/** Monitor de pedidos y envíos (ADMIN y SUPERADMIN). Filtros: estado, tiendaId, entrega, atrasados, pagina, tamano. */
+/**
+ * Monitor de pedidos y envíos (ADMIN y SUPERADMIN). Filtros: estado, tiendaId, entrega, alerta (POR_VENCER, ATRASADO
+ * o SIN_RETIRAR), pagina, tamano.
+ */
 export async function pedidosPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/pedidos${consulta(filtros)}`, { headers: headers(token) }),
     "No se pudieron cargar los pedidos.");
+}
+
+// ─── Vistas de detalle (solo SUPERADMIN) ───────────────────────────────────
+
+async function leerDetalle(res, fallo) {
+  if (res.status === 404) throw new Error("Ya no existe: puede que se haya eliminado.");
+  return leer(res, fallo);
+}
+
+/** Pedido: productos, tienda, cliente, taller, línea de tiempo, pago Wompi, reparto y entrega. */
+export async function detallePedido(token, id) {
+  return leerDetalle(await apiFetch(`${BASE}/pedidos/${encodeURIComponent(id)}`, { headers: headers(token) }),
+    "No se pudo cargar el pedido.");
+}
+
+/** Cliente: datos, ciudad, vehículos, pedidos y solicitudes de diagnóstico. */
+export async function detalleCliente(token, id) {
+  return leerDetalle(await apiFetch(`${BASE}/clientes/${encodeURIComponent(id)}`, { headers: headers(token) }),
+    "No se pudo cargar el cliente.");
+}
+
+/** Negocio (tipo TIENDA o TALLER): datos, ubicación, estado, productos o servicios, pedidos y totales. */
+export async function detalleNegocio(token, tipo, id) {
+  return leerDetalle(await apiFetch(`${BASE}/negocios/${encodeURIComponent(tipo)}/${encodeURIComponent(id)}`, { headers: headers(token) }),
+    "No se pudo cargar el negocio.");
 }
 
 // ─── Reportes de la plataforma (solo SUPERADMIN) ───────────────────────────

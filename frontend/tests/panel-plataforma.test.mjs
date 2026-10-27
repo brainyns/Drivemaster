@@ -3,9 +3,12 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ESTADOS_NEGOCIO, ESTADOS_PEDIDO, SIN_PLAN, actividadNegocio, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
+  ALERTAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, SIN_PLAN, chipsAlerta, filaConAlerta, actividadNegocio, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
   perfilNegocio, urgentesDashboard,
 } from "../src/pages/admin/plataformaAdmin.js";
+import {
+  BENEFICIARIO, ESTADOS_REPARTO, notaReparto, textoEntrega, textoVehiculo, ubicacionNegocio,
+} from "../src/pages/admin/detalleAdmin.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
@@ -30,6 +33,12 @@ test("Dashboard: lo urgente va primero (aprobaciones y pedidos con problema) y s
   assert.equal(u[2].preset, "atrasados");
   assert.ok(u.every((x) => x.estado && x.accion && x.tono));
   assert.deepEqual(urgentesDashboard({}), []);
+  // Los contadores de despachos por vencer y de pedidos sin retirar llevan al monitor con su filtro
+  const semaforo = urgentesDashboard({ despachosAtrasados: 1, despachosPorVencer: 2, retirosSinRecoger: 1 });
+  assert.deepEqual(semaforo.map((x) => [x.clave, x.preset, x.tono]),
+    [["atrasados", "atrasados", "error"], ["por-vencer", "por-vencer", "aviso"], ["sin-retirar", "sin-retirar", "aviso"]]);
+  assert.equal(semaforo[1].titulo, "2 despachos por vencer");
+  assert.equal(semaforo[2].titulo, "1 pedido sin retirar");
   assert.match(urgentesDashboard({ reembolsosPendientes: 2, montoReembolsosPendientes: 150000 })[0].detalle, /150\.000/);
 });
 
@@ -122,8 +131,54 @@ test("Pedidos y envíos: estados en el orden del pedido con tono, referencia cor
   assert.equal(ESTADOS_PEDIDO.PENDIENTE.label, "Por despachar");
   assert.equal(ESTADOS_PEDIDO.NO_ENTREGADO.tono, "error");
   assert.equal(refPedido("66f0a1b2c3d4e5f6a7b8c9d0"), "#B8C9D0");
-  assert.equal(filtrosInicialesPedidos("atrasados").atrasados, true);
-  assert.equal(filtrosInicialesPedidos({ abrir: "x" }).atrasados, false);
+  assert.equal(filtrosInicialesPedidos("atrasados").alerta, "ATRASADO");
+  assert.equal(filtrosInicialesPedidos("por-vencer").alerta, "POR_VENCER");
+  assert.equal(filtrosInicialesPedidos("sin-retirar").alerta, "SIN_RETIRAR");
+  assert.equal(filtrosInicialesPedidos({ abrir: "x" }).alerta, "");
+});
+
+test("Pedidos y envíos: semáforo de despacho y de retiro con los mismos colores (verde, amarillo, rojo)", () => {
+  const plazo = "2026-10-28T12:00:00";
+  assert.deepEqual(chipsAlerta({ semaforoDespacho: "VERDE", plazoDespacho: plazo }).map((c) => c.tono), ["ok"]);
+  assert.match(chipsAlerta({ semaforoDespacho: "AMARILLO", plazoDespacho: plazo })[0].texto, /^Por vencer · plazo/);
+  assert.deepEqual(chipsAlerta({ semaforoDespacho: "ROJO", plazoDespacho: plazo }).map((c) => c.tono), ["error"]);
+  // Sin retirar: el mismo texto que ve la tienda, y a los 15 días en revisión
+  assert.deepEqual(chipsAlerta({ semaforoRetiro: "VERDE", diasSinRetirar: 1 }), [{ tono: "ok", texto: "Esperando que lo recojan" }]);
+  assert.deepEqual(chipsAlerta({ semaforoRetiro: "AMARILLO", diasSinRetirar: 4 }), [{ tono: "aviso", texto: "Sin retirar hace 4 días" }]);
+  assert.deepEqual(chipsAlerta({ semaforoRetiro: "ROJO", diasSinRetirar: 16 }),
+    [{ tono: "error", texto: "Sin retirar hace 16 días · en revisión" }]);
+  assert.deepEqual(chipsAlerta({ problemaAbierto: true }), [{ tono: "error", texto: "Problema de envío" }]);
+  assert.deepEqual(chipsAlerta({}), []);
+  assert.equal(filaConAlerta({ semaforoDespacho: "VERDE" }), false);
+  assert.equal(filaConAlerta({ semaforoDespacho: "AMARILLO" }), true);
+  assert.deepEqual(ALERTAS_PEDIDO.map((a) => a.valor), ["", "POR_VENCER", "ATRASADO", "SIN_RETIRAR"]);
+
+  const p = leer("../src/pages/PedidosEnvios.jsx");
+  assert.ok(p.includes("chipsAlerta(p)") && p.includes('aria-label="Alerta"'), "la columna y el filtro usan el semáforo");
+  assert.ok(p.includes("puedeVerDetalle ?") && p.includes("<DetallePlataforma"), "solo el SUPERADMIN abre el detalle");
+  assert.ok(leer("../src/App.jsx").includes('puedeVerDetalle={user?.rol === "SUPERADMIN"}'));
+});
+
+test("Vistas de detalle: reparto, entrega y ubicación con nombres claros, y se abren desde las tablas", () => {
+  assert.equal(BENEFICIARIO.PLATAFORMA, "Comisión DriveMaster");
+  assert.equal(ESTADOS_REPARTO.PENDIENTE.label, "En espera de entrega");
+  assert.equal(textoEntrega({ tipo: "RETIRO" }), "Retiro en la tienda");
+  assert.equal(textoEntrega(null), "Sin definir");
+  assert.match(notaReparto({ pedidosDelPago: 2 }, [{ delPago: true }]), /cubre 2 pedidos/);
+  assert.equal(notaReparto({ pedidosDelPago: 1 }, [{ delPago: true }]), null);
+  assert.equal(textoVehiculo({ descripcion: "Mazda 2 2018", placa: "ABC123", kilometraje: 45000 }), "Mazda 2 2018 · ABC123 · 45.000 km");
+  assert.deepEqual(ubicacionNegocio({ direccion: "Cra 7", ciudad: "Cartagena", latitud: 10.4, longitud: -75.5 }),
+    { texto: "Cra 7, Cartagena", mapa: "https://www.google.com/maps?q=10.4%2C-75.5" });
+  assert.equal(ubicacionNegocio({}).mapa, null);
+
+  for (const [archivo, objetivo] of [["ClientesPlataforma.jsx", 'tipo: "cliente"'], ["NegociosPlataforma.jsx", 'tipo: "negocio"']]) {
+    const p = leer(`../src/pages/${archivo}`);
+    assert.ok(p.includes("<DetallePlataforma") && p.includes(objetivo) && p.includes("pp-nombre-boton"), archivo);
+  }
+  const d = leer("../src/components/admin/DetallePlataforma.jsx");
+  for (const t of ["Línea de tiempo", "Pago en Wompi", "Reparto", "Vehículos", "Solicitudes de diagnóstico", "Ubicación", "Totales"]) {
+    assert.ok(d.includes(t), `falta ${t}`);
+  }
 });
 
 test("Pedidos y envíos: sistema compartido, alertas que filtran y carga, vacío y error con Reintentar", () => {
