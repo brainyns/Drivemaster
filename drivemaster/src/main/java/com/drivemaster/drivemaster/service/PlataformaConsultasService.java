@@ -285,9 +285,20 @@ public class PlataformaConsultasService {
             PedidoTienda.RETIRADO, PedidoTienda.ENTREGADO, PedidoTienda.NO_ENTREGADO);
 
     /**
+     * Grupos de estados del monitor (las pestañas de Pedidos y envíos). Entre todos cubren los 9 estados, sin repetir.
+     */
+    static final Map<String, List<String>> GRUPOS_PEDIDO = Map.of(
+            "POR_DESPACHAR", List.of(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION),
+            "EN_CAMINO", List.of(PedidoTienda.DESPACHADO),
+            "POR_RETIRAR", List.of(PedidoTienda.LISTO_PARA_RETIRAR),
+            "COMPLETADOS", List.of(PedidoTienda.RECIBIDO, PedidoTienda.RETIRADO, PedidoTienda.ENTREGADO),
+            "CANCELADOS", List.of(PedidoTienda.NO_DESPACHADO, PedidoTienda.NO_ENTREGADO));
+
+    /**
      * Monitor de lo que se vende en las tiendas y de los envíos y retiros en curso. Lo ve el ADMIN y el SUPERADMIN.
      *
-     * @param estado un estado del pedido o "PROBLEMA" (problema de envío abierto); vacío = todos
+     * @param estado un estado del pedido, un grupo de GRUPOS_PEDIDO (POR_DESPACHAR, EN_CAMINO, POR_RETIRAR,
+     *               COMPLETADOS o CANCELADOS) o "PROBLEMA" (problema de envío abierto); vacío = todos
      * @param entrega ENVIO o RETIRO (vacío = ambos)
      * @param soloAtrasados solo los que la tienda no despachó dentro del plazo
      * @param alerta ATRASADO, POR_VENCER o SIN_RETIRAR (el semáforo de SemaforoPedido); vacío = sin filtro
@@ -329,8 +340,9 @@ public class PlataformaConsultasService {
         if (hay(estado)) {
             String e = estado.trim().toUpperCase();
             if (PROBLEMA.equals(e)) y.add(problemaAbierto());
+            else if (GRUPOS_PEDIDO.containsKey(e)) y.add(Criteria.where("estado").in(GRUPOS_PEDIDO.get(e)));
             else if (ESTADOS_PEDIDO.contains(e)) y.add(Criteria.where("estado").is(e));
-            else y.add(Criteria.where("estado").is("__ninguno__")); // un estado inventado no devuelve nada
+            else y.add(Criteria.where("estado").is("__ninguno__")); // un estado o grupo inventado no devuelve nada
         }
         if (hay(tiendaId)) y.add(Criteria.where("tiendaId").is(tiendaId.trim()));
         if (PedidoTienda.ENVIO.equalsIgnoreCase(entrega)) y.add(Criteria.where("entrega").is(PedidoTienda.ENVIO));
