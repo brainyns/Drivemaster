@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { obtenerSessionId, cargarMensajes, guardarMensajes, reiniciarChat, EVENTO_REINICIO } from './chatSesion';
+import { getToken } from '../../services/authService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 // Un poco más que los 90 s que el backend espera a n8n: así llega su mensaje amable y no un corte.
@@ -75,9 +76,11 @@ export function useChat() {
 
     let respuesta;
     try {
+      // Con sesión, el backend le pasa al asistente las compras del cliente ("¿por dónde va mi pedido?").
+      const token = getToken();
       const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
         body: JSON.stringify({ mensaje: texto, sessionId: obtenerSessionId() }),
         signal: controller.signal
       });

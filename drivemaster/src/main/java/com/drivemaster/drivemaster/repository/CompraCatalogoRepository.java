@@ -8,5 +8,7 @@ import java.util.Optional;
 
 public interface CompraCatalogoRepository extends MongoRepository<CompraCatalogo, String> {
     List<CompraCatalogo> findByClienteIdOrderByFechaCreacionDesc(String clienteId);
+    // El chat solo resume las últimas compras: menos tokens por mensaje
+    List<CompraCatalogo> findTop5ByClienteIdOrderByFechaCreacionDesc(String clienteId);
     Optional<CompraCatalogo> findByReferenciaPago(String referenciaPago);
 }
