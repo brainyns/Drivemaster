@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ALERTAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, SIN_PLAN, chipsAlerta, filaConAlerta, actividadNegocio, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
+  ALERTAS_PEDIDO, ENTREGAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, SIN_PLAN, chipsAlerta, conteoGrupos, filaConAlerta,
+  hayFiltrosPedidos, actividadNegocio, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
   perfilNegocio, urgentesDashboard,
 } from "../src/pages/admin/plataformaAdmin.js";
 import {
@@ -137,6 +138,49 @@ test("Pedidos y envíos: estados en el orden del pedido con tono, referencia cor
   assert.equal(filtrosInicialesPedidos({ abrir: "x" }).alerta, "");
 });
 
+test("Pedidos y envíos: los 9 estados en 6 grupos con contador, sin repetir ni dejar ninguno por fuera", () => {
+  assert.deepEqual(GRUPOS_PEDIDO.map((g) => g.label), ["Todos", "Por despachar", "En camino", "Por retirar", "Completados", "Cancelados"]);
+  const agrupados = GRUPOS_PEDIDO.flatMap((g) => g.estados);
+  assert.deepEqual([...agrupados].sort(), Object.keys(ESTADOS_PEDIDO).sort(), "cada estado en un grupo");
+  assert.equal(new Set(agrupados).size, agrupados.length, "ningún estado en dos grupos");
+
+  const c = conteoGrupos({ PENDIENTE: 2, EN_PREPARACION: 1, DESPACHADO: 4, LISTO_PARA_RETIRAR: 3, RETIRADO: 5, ENTREGADO: 6, NO_ENTREGADO: 1 });
+  assert.deepEqual(c, { "": 22, POR_DESPACHAR: 3, EN_CAMINO: 4, POR_RETIRAR: 3, COMPLETADOS: 11, CANCELADOS: 1 });
+  assert.equal(conteoGrupos({})[""], 0);
+  assert.deepEqual(ENTREGAS_PEDIDO.map((x) => x.label), ["Envío y retiro", "Envío a domicilio", "Retiro en tienda"]);
+});
+
+test("Pedidos y envíos: avisos que filtran, tres listas en una fila y Limpiar filtros solo si hay alguno", () => {
+  assert.equal(hayFiltrosPedidos({ estado: "", tiendaId: "", entrega: "", alerta: "" }, { desde: "", hasta: "" }), false);
+  assert.equal(hayFiltrosPedidos({ alerta: "POR_VENCER" }, {}), true);
+  assert.equal(hayFiltrosPedidos({}, { desde: "2026-10-01" }), true);
+  assert.equal(hayFiltrosPedidos({ estado: "CANCELADOS" }, {}), true);
+
+  const p = leer("../src/pages/PedidosEnvios.jsx");
+  // Avisos: clic para filtrar, otro para quitar; el de «por vencer» solo si hay (o si está puesto)
+  assert.ok(p.includes("alternarAlerta = (valor) => poner({ alerta: filtros.alerta === valor ? \"\" : valor })"));
+  assert.ok(p.includes('verAviso("POR_VENCER", datos.porVencer)') && p.includes("{datos.porVencer} por vencer"));
+  assert.ok(p.includes("ped-alerta--aviso"), "por vencer y sin retirar en amarillo");
+  assert.ok(p.includes("problemas de envío abiertos"), "se mantiene el aviso de problemas de envío");
+  // Estados agrupados, listas desplegables y Limpiar
+  assert.ok(p.includes("GRUPOS_PEDIDO.map") && !p.includes("estadosConPedidos("));
+  for (const id of ['id="ped-tienda"', 'id="ped-entrega"', 'id="ped-fecha"']) assert.ok(p.includes(id), `falta ${id}`);
+  assert.ok(p.includes("<SelectorFechas") && !p.includes("<FiltroFechas"), "la fecha es una lista desplegable");
+  assert.ok(p.includes("{hayFiltros && (") && p.includes("Limpiar filtros"));
+  // Igual que antes: página 1 al cambiar algo, refresco cada 30 s y el orden
+  assert.ok(p.includes("const poner = (cambio) => { setPagina(0);") && p.includes("REFRESCO_MS = 30000") && p.includes("<EncabezadoOrden"));
+
+  const s = leer("../src/components/ui/SelectorFechas.jsx");
+  for (const pieza of ['<option value="">Todas</option>', "RANGOS_RAPIDOS", '"personalizado"', 'type="date"', "errorRango"]) {
+    assert.ok(s.includes(pieza), `SelectorFechas: falta ${pieza}`);
+  }
+  // En 390 px: avisos y estados se deslizan en una línea; las listas una debajo de otra
+  const css = leer("../src/css/pedidos-plataforma.css");
+  assert.match(css, /@media \(max-width: 600px\) \{\s*\.ped-deslizable \{\s*flex-wrap: nowrap; overflow-x: auto;/);
+  assert.match(css, /\.ped-selectores \{ flex-direction: column;/);
+  assert.equal((p.match(/ped-deslizable/g) || []).length, 2, "los avisos y los estados");
+});
+
 test("Pedidos y envíos: semáforo de despacho y de retiro con los mismos colores (verde, amarillo, rojo)", () => {
   const plazo = "2026-10-28T12:00:00";
   assert.deepEqual(chipsAlerta({ semaforoDespacho: "VERDE", plazoDespacho: plazo }).map((c) => c.tono), ["ok"]);
@@ -154,7 +198,9 @@ test("Pedidos y envíos: semáforo de despacho y de retiro con los mismos colore
   assert.deepEqual(ALERTAS_PEDIDO.map((a) => a.valor), ["", "POR_VENCER", "ATRASADO", "SIN_RETIRAR"]);
 
   const p = leer("../src/pages/PedidosEnvios.jsx");
-  assert.ok(p.includes("chipsAlerta(p)") && p.includes('aria-label="Alerta"'), "la columna y el filtro usan el semáforo");
+  // La columna usa el semáforo; el filtro de alerta son los avisos de arriba (ya no hay una fila «Alerta» aparte)
+  assert.ok(p.includes("chipsAlerta(p)") && p.includes('alternarAlerta("POR_VENCER")') && !p.includes('aria-label="Alerta"'),
+    "la columna y los avisos usan el semáforo");
   assert.ok(p.includes("puedeVerDetalle ?") && p.includes("<DetallePlataforma"), "solo el SUPERADMIN abre el detalle");
   assert.ok(leer("../src/App.jsx").includes('puedeVerDetalle={user?.rol === "SUPERADMIN"}'));
 });

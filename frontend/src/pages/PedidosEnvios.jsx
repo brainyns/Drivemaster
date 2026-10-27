@@ -5,7 +5,7 @@ import Paginacion from "../components/ui/Paginacion";
 import EncabezadoOrden from "../components/ui/EncabezadoOrden";
 import SelectorOrden from "../components/ui/SelectorOrden";
 import { errorRango, propsPaginacion, textoOrden } from "../components/ui/reglasTabla";
-import FiltroFechas from "../components/ui/FiltroFechas";
+import SelectorFechas from "../components/ui/SelectorFechas";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -13,7 +13,8 @@ import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
 import DetallePlataforma from "../components/admin/DetallePlataforma";
 import {
-  ALERTAS_PEDIDO, ESTADOS_PEDIDO, chipsAlerta, estadosConPedidos, filaConAlerta, filtrosInicialesPedidos, refPedido,
+  ENTREGAS_PEDIDO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, chipsAlerta, conteoGrupos, filaConAlerta, filtrosInicialesPedidos,
+  hayFiltrosPedidos, refPedido,
 } from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
@@ -21,12 +22,6 @@ import "../css/pedidos-plataforma.css";
 
 const TAMANO = 20;
 const REFRESCO_MS = 30000;
-
-const ENTREGAS = [
-  { valor: "", label: "Envío y retiro" },
-  { valor: "ENVIO", label: "Envío a domicilio" },
-  { valor: "RETIRO", label: "Retiro en tienda" },
-];
 
 /** Columnas que se pueden ordenar (lista blanca de PlataformaConsultasService.ORDEN_PEDIDOS). */
 const ORDENES = [
@@ -72,10 +67,11 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
   const { datos, error, actualizado } = estado;
   const lista = datos?.pedidos;
   const items = lista?.items || [];
-  const hayFiltros = filtros.estado !== "" || filtros.tiendaId !== "" || filtros.entrega !== "" || filtros.alerta !== ""
-    || fechas.desde !== "" || fechas.hasta !== "";
+  const hayFiltros = hayFiltrosPedidos(filtros, fechas);
+  // Los avisos son los filtros de alerta: clic para filtrar, otro clic para quitar
   const alternarAlerta = (valor) => poner({ alerta: filtros.alerta === valor ? "" : valor });
-  const totalPedidos = Object.values(datos?.porEstado || {}).reduce((s, n) => s + n, 0);
+  const porGrupo = conteoGrupos(datos?.porEstado);
+  const verAviso = (alerta, n) => n > 0 || filtros.alerta === alerta;
 
   // Cambiar filtro, fechas u orden vuelve a la primera página
   const poner = (cambio) => { setPagina(0); setFiltros((f) => ({ ...f, ...cambio })); };
@@ -96,30 +92,32 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
           </>
         )} />
 
-      {datos && (datos.atrasados > 0 || datos.porVencer > 0 || datos.sinRetirar > 0 || datos.problemasAbiertos > 0) && (
-        <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Pedidos que piden atención">
-          {datos.atrasados > 0 && (
+      {/* Cada aviso aparece si hay casos o si es el filtro puesto (para poder quitarlo aunque llegue a 0) */}
+      {datos && (verAviso("ATRASADO", datos.atrasados) || verAviso("POR_VENCER", datos.porVencer)
+        || verAviso("SIN_RETIRAR", datos.sinRetirar) || datos.problemasAbiertos > 0 || filtros.estado === "PROBLEMA") && (
+        <div className="ui-filtros pp-bloque-sep ped-deslizable" role="group" aria-label="Pedidos que piden atención">
+          {verAviso("ATRASADO", datos.atrasados) && (
             <button type="button" className="ui-chip ped-alerta" aria-pressed={filtros.alerta === "ATRASADO"}
               onClick={() => alternarAlerta("ATRASADO")}>
               <Icon name="clock" size={15} />
               {plural(datos.atrasados, "pedido sin despachar", "pedidos sin despachar")} fuera del plazo
             </button>
           )}
-          {datos.porVencer > 0 && (
+          {verAviso("POR_VENCER", datos.porVencer) && (
             <button type="button" className="ui-chip ped-alerta ped-alerta--aviso" aria-pressed={filtros.alerta === "POR_VENCER"}
               onClick={() => alternarAlerta("POR_VENCER")}>
               <Icon name="clock" size={15} />
-              {plural(datos.porVencer, "despacho por vencer", "despachos por vencer")}
+              {datos.porVencer} por vencer
             </button>
           )}
-          {datos.sinRetirar > 0 && (
+          {verAviso("SIN_RETIRAR", datos.sinRetirar) && (
             <button type="button" className="ui-chip ped-alerta ped-alerta--aviso" aria-pressed={filtros.alerta === "SIN_RETIRAR"}
               onClick={() => alternarAlerta("SIN_RETIRAR")}>
               <Icon name="box" size={15} />
               {plural(datos.sinRetirar, "pedido sin retirar", "pedidos sin retirar")} en la tienda
             </button>
           )}
-          {datos.problemasAbiertos > 0 && (
+          {(datos.problemasAbiertos > 0 || filtros.estado === "PROBLEMA") && (
             <button type="button" className="ui-chip ped-alerta" aria-pressed={filtros.estado === "PROBLEMA"}
               onClick={() => poner({ estado: filtros.estado === "PROBLEMA" ? "" : "PROBLEMA" })}>
               <Icon name="alert" size={15} />
@@ -130,46 +128,36 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
       )}
 
       {datos && (
-        <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Estado del pedido">
-          <button type="button" className="ui-chip" aria-pressed={filtros.estado === ""} onClick={() => poner({ estado: "" })}>
-            Todos <span className="ui-chip__contador">{totalPedidos}</span>
-          </button>
-          {estadosConPedidos(datos.porEstado).map((e) => (
-            <button key={e} type="button" className="ui-chip" aria-pressed={filtros.estado === e} onClick={() => poner({ estado: e })}>
-              {ESTADOS_PEDIDO[e]?.label || e} <span className="ui-chip__contador">{datos.porEstado[e]}</span>
+        <div className="ui-filtros pp-bloque-sep ped-deslizable" role="group" aria-label="Estado del pedido">
+          {GRUPOS_PEDIDO.map((g) => (
+            <button key={g.valor || "todos"} type="button" className="ui-chip" aria-pressed={filtros.estado === g.valor}
+              onClick={() => poner({ estado: g.valor })}>
+              {g.label} <span className="ui-chip__contador">{porGrupo[g.valor] || 0}</span>
             </button>
           ))}
         </div>
       )}
 
-      <div className="pp-filtros">
-        <label className="pp-filtros__select">
+      <div className="ped-selectores pp-bloque-sep" role="group" aria-label="Filtrar pedidos">
+        <label htmlFor="ped-tienda" className="ped-selector">
           Tienda
-          <select className="ui-field__input" value={filtros.tiendaId} onChange={(e) => poner({ tiendaId: e.target.value })}>
+          <select id="ped-tienda" className="ui-field__input" value={filtros.tiendaId} onChange={(e) => poner({ tiendaId: e.target.value })}>
             <option value="">Todas</option>
             {(datos?.tiendas || []).map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
           </select>
         </label>
-        <div className="ui-filtros" role="group" aria-label="Entrega">
-          {ENTREGAS.map((x) => (
-            <button key={x.valor || "todas"} type="button" className="ui-chip" aria-pressed={filtros.entrega === x.valor}
-              onClick={() => poner({ entrega: x.valor })}>{x.label}</button>
-          ))}
-        </div>
-        <div className="ui-filtros" role="group" aria-label="Alerta">
-          {ALERTAS_PEDIDO.map((a) => (
-            <button key={a.valor || "todas"} type="button" className="ui-chip" aria-pressed={filtros.alerta === a.valor}
-              onClick={() => poner({ alerta: a.valor })}>{a.valor ? a.label : "Todas las alertas"}</button>
-          ))}
-        </div>
+        <label htmlFor="ped-entrega" className="ped-selector">
+          Entrega
+          <select id="ped-entrega" className="ui-field__input" value={filtros.entrega} onChange={(e) => poner({ entrega: e.target.value })}>
+            {ENTREGAS_PEDIDO.map((x) => <option key={x.valor || "todas"} value={x.valor}>{x.label}</option>)}
+          </select>
+        </label>
+        <SelectorFechas id="ped-fecha" etiqueta="Fecha" valor={fechas} onCambiar={ponerFechas} className="ped-selector ped-selector--fecha" />
         {hayFiltros && (
-          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={limpiar}>Limpiar filtros</button>
+          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico ped-limpiar" onClick={limpiar}>Limpiar filtros</button>
         )}
       </div>
-      <div className="ped-herramientas pp-bloque-sep">
-        <FiltroFechas id="ped-fechas" etiqueta="Fecha de pago" valor={fechas} onCambiar={ponerFechas} />
-        <SelectorOrden id="ped-orden" opciones={ORDENES} orden={orden} onOrdenar={ordenar} porDefecto="Más recientes primero" />
-      </div>
+      <SelectorOrden id="ped-orden" opciones={ORDENES} orden={orden} onOrdenar={ordenar} porDefecto="Más recientes primero" />
 
       {error && (
         <Alerta tono={datos ? "aviso" : "error"} className="pp-bloque-sep" onReintentar={cargar} reintentando={cargando}>

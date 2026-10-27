@@ -94,7 +94,9 @@ test("Fechas: un rango invertido se avisa antes de pedirlo, con el mismo mensaje
   // Las pantallas no piden un rango invertido
   for (const archivo of ["Movimientos.jsx", "PedidosTienda.jsx", "PedidosEnvios.jsx", "Liquidaciones.jsx"]) {
     const p = leer(`../src/pages/${archivo}`);
-    assert.ok(p.includes("<FiltroFechas") && p.includes("errorRango("), `${archivo}: usa el rango de fechas y lo valida`);
+    // Pedidos y envíos usa la versión en lista desplegable (SelectorFechas); las demás, los chips (FiltroFechas)
+    assert.ok((p.includes("<FiltroFechas") || p.includes("<SelectorFechas")) && p.includes("errorRango("),
+      `${archivo}: usa el rango de fechas y lo valida`);
   }
 });
 

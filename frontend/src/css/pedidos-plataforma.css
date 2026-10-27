@@ -52,3 +52,24 @@
 /* Fecha de pago y orden (en celular; en escritorio se ordena con el encabezado) */
 .ped-herramientas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
 .ped-herramientas .ui-fechas { flex: 1 1 420px; }
+
+/* ── Filtros simplificados: avisos y estados en chips; tienda, entrega y fecha en listas en una fila ── */
+.ped-selectores { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
+.ped-selector { display: grid; gap: 4px; flex: 0 1 220px; min-width: 180px; font-size: 0.8125rem; font-weight: 600; color: var(--ui-muted); }
+.ped-selector .ui-field__input { width: 100%; }
+.ped-selector--fecha { display: grid; gap: 8px; flex: 0 1 auto; }
+.ui-selector-fechas__lista { display: grid; gap: 4px; min-width: 180px; }
+.ped-limpiar { align-self: center; }
+
+/* En celular: avisos y estados en una sola línea que se desliza; las listas una debajo de otra */
+@media (max-width: 600px) {
+  .ped-deslizable {
+    flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+    margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px;
+  }
+  .ped-deslizable::-webkit-scrollbar { display: none; }
+  .ped-deslizable > .ui-chip { flex: 0 0 auto; white-space: nowrap; }
+  .ped-selectores { flex-direction: column; align-items: stretch; }
+  .ped-selector, .ped-selector--fecha, .ui-selector-fechas__lista { flex: 1 1 auto; min-width: 0; width: 100%; }
+  .ped-limpiar { align-self: flex-start; }
+}

@@ -194,6 +194,37 @@ export function chipsAlerta(p = {}) {
 /** Una fila pide atención si algo está en amarillo o rojo, o tiene un problema de envío. */
 export const filaConAlerta = (p = {}) => chipsAlerta(p).some((c) => c.tono === "aviso" || c.tono === "error");
 
+/**
+ * Las pestañas de Pedidos y envíos: los 9 estados agrupados en 6 (los mismos grupos que acepta el backend en estado,
+ * PlataformaConsultasService.GRUPOS_PEDIDO). "Cancelados" no es "problema de envío abierto": ese es un aviso aparte.
+ */
+export const GRUPOS_PEDIDO = [
+  { valor: "", label: "Todos", estados: [] },
+  { valor: "POR_DESPACHAR", label: "Por despachar", estados: ["PENDIENTE", "EN_PREPARACION"] },
+  { valor: "EN_CAMINO", label: "En camino", estados: ["DESPACHADO"] },
+  { valor: "POR_RETIRAR", label: "Por retirar", estados: ["LISTO_PARA_RETIRAR"] },
+  { valor: "COMPLETADOS", label: "Completados", estados: ["RECIBIDO", "RETIRADO", "ENTREGADO"] },
+  { valor: "CANCELADOS", label: "Cancelados", estados: ["NO_DESPACHADO", "NO_ENTREGADO"] },
+];
+
+/** Pedidos por grupo, sumando el conteo por estado que manda el backend (Todos: la suma de todos). */
+export function conteoGrupos(porEstado = {}) {
+  const total = Object.values(porEstado).reduce((s, n) => s + (Number(n) || 0), 0);
+  return Object.fromEntries(GRUPOS_PEDIDO.map((g) => [g.valor,
+    g.estados.length ? g.estados.reduce((s, e) => s + (Number(porEstado[e]) || 0), 0) : total]));
+}
+
+/** Formas de entrega del monitor. */
+export const ENTREGAS_PEDIDO = [
+  { valor: "", label: "Envío y retiro" },
+  { valor: "ENVIO", label: "Envío a domicilio" },
+  { valor: "RETIRO", label: "Retiro en tienda" },
+];
+
+/** Hay algún filtro puesto (para mostrar "Limpiar filtros"). El orden no cuenta: no filtra. */
+export const hayFiltrosPedidos = (filtros = {}, fechas = {}) =>
+  ["estado", "tiendaId", "entrega", "alerta"].some((k) => (filtros[k] || "") !== "") || !!fechas.desde || !!fechas.hasta;
+
 /** Estados con pedidos, en el orden en que avanza un pedido (los desconocidos al final). */
 export function estadosConPedidos(porEstado = {}) {
   const orden = Object.keys(ESTADOS_PEDIDO);
