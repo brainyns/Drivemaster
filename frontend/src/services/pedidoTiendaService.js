@@ -59,8 +59,10 @@ export async function pedidosDeOrden(token, ordenId) {
   return handle(res, "No se pudieron cargar los pedidos");
 }
 
-export function confirmarRepuestosRecibidos(token, ordenId) {
-  return enviar(token, "POST", `${BASE}/orden/${ordenId}/recibidos`, null, "No se pudo confirmar la recepción");
+/** confirmarFaltantes: el taller sigue sin las piezas de una tienda que no despachó (obligatorio si hay alguna). */
+export function confirmarRepuestosRecibidos(token, ordenId, confirmarFaltantes = false) {
+  return enviar(token, "POST", `${BASE}/orden/${ordenId}/recibidos`, { confirmarFaltantes },
+    "No se pudo confirmar la recepción");
 }
 
 // ─── Compras del catálogo (retiro con código) ──────────────────────────────

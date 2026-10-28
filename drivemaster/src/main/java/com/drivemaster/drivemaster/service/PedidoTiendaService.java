@@ -388,9 +388,14 @@ public class PedidoTiendaService {
     /**
      * El taller confirma que recibió los repuestos. Vale aunque la tienda no haya
      * marcado el despacho (el taller los tiene en la mano); los no despachados no
-     * cambian.
+     * cambian. Si alguna tienda no pudo despachar, el taller debe confirmar que sigue
+     * sin esas piezas (confirmarFaltantes); si no, se rechaza.
      */
     public List<PedidoTienda> repuestosRecibidos(String correoTaller, String ordenId) {
+        return repuestosRecibidos(correoTaller, ordenId, false);
+    }
+
+    public List<PedidoTienda> repuestosRecibidos(String correoTaller, String ordenId, boolean confirmarFaltantes) {
         Taller taller = tallerService.obtenerPorUsuario(correoTaller);
         OrdenServicio orden = ordenMarketplace(ordenId);
         if (!taller.getId().equals(orden.getTallerId())) {
@@ -399,11 +404,26 @@ public class PedidoTiendaService {
         if (!EstadoOrden.REPUESTOS_PEDIDOS.equals(orden.getEstado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud no está esperando repuestos");
         }
+        List<PedidoTienda> previos = pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
+        List<PedidoTienda> noDespachados = previos.stream()
+                .filter(p -> PedidoTienda.NO_DESPACHADO.equals(p.getEstado())).toList();
+        if (!noDespachados.isEmpty() && !confirmarFaltantes) {
+            String detalle = noDespachados.stream()
+                    .map(p -> p.getTiendaNombre() + (p.getMotivoNoDespacho() != null ? " (motivo: " + p.getMotivoNoDespacho() + ")" : ""))
+                    .collect(java.util.stream.Collectors.joining(", "));
+            throw new ResponseStatusException(HttpStatus.CONFLICT, (noDespachados.size() == 1
+                    ? "La tienda " + detalle + " no despachó sus repuestos."
+                    : "Las tiendas " + detalle + " no despacharon sus repuestos.")
+                    + " Si recibiste lo demás y sigues sin esas piezas, confírmalo para continuar.");
+        }
+        String nota = noDespachados.isEmpty() ? "Repuestos recibidos en el taller"
+                : "Repuestos recibidos en el taller; el taller confirmó que sigue sin los de "
+                        + noDespachados.stream().map(PedidoTienda::getTiendaNombre).collect(java.util.stream.Collectors.joining(", "));
         transiciones.transicionar(orden, EstadoOrden.REPUESTOS_RECIBIDOS,
-                new Actor(EstadoOrden.TALLER, taller.getId(), taller.getNombre()), "Repuestos recibidos en el taller",
+                new Actor(EstadoOrden.TALLER, taller.getId(), taller.getNombre()), nota,
                 Criteria.where("tallerId").is(taller.getId()), null);
         Map<String, String> estadoPrevio = new HashMap<>();
-        for (PedidoTienda p : pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId())) {
+        for (PedidoTienda p : previos) {
             estadoPrevio.put(p.getId(), p.getEstado());
         }
         mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())

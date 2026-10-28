@@ -7,7 +7,8 @@ import {
   iniciarInstalacion, marcarEnPruebas, marcarLista, marcarEntregada,
 } from "../services/solicitudServicioService";
 import { cotizacionesDeOrden, cotizacionesDelTaller } from "../services/cotizacionService";
-import { pedidosDeOrden, confirmarRepuestosRecibidos } from "../services/pedidoTiendaService";
+import { pedidosDeOrden } from "../services/pedidoTiendaService";
+import ConfirmarRecibidos from "../components/servicio/ConfirmarRecibidos";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import DiagnosticoForm from "../components/servicio/DiagnosticoForm";
 import CotizacionForm from "../components/servicio/CotizacionForm";
@@ -132,11 +133,10 @@ function enEstadoDesde(s) {
 }
 
 /** Cotizaciones emitidas, pedidos a tiendas y recepción de repuestos. */
-function SeguimientoTaller({ token, solicitud, onCambio }) {
+function SeguimientoTaller({ token, solicitud, onConfirmarRecibidos }) {
   const [cotizaciones, setCotizaciones] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [error, setError] = useState(null);
-  const [procesando, setProcesando] = useState(false);
 
   // Se recarga cada vez que cambia el estado de la solicitud
   useEffect(() => {
@@ -150,19 +150,6 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
       .catch((e) => { if (!cancelado) setError(e.message); });
     return () => { cancelado = true; };
   }, [token, solicitud.id, solicitud.estado]);
-
-  const recibidos = async () => {
-    setProcesando(true);
-    setError(null);
-    try {
-      await confirmarRepuestosRecibidos(token, solicitud.id);
-      await onCambio();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setProcesando(false);
-    }
-  };
 
   const vigente = cotizaciones[0];
   return (
@@ -201,8 +188,8 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
           </ul>
           {solicitud.estado === "REPUESTOS_PEDIDOS" && (
             <div className="ui-form-pie">
-              <button type="button" className="ui-btn ui-btn--primario" onClick={recibidos} disabled={procesando} aria-busy={procesando}>
-                {procesando ? "Confirmando…" : "Confirmar repuestos recibidos"}
+              <button type="button" className="ui-btn ui-btn--primario" onClick={onConfirmarRecibidos}>
+                Confirmar repuestos recibidos
               </button>
               <span className="ss-ayuda">Confírmalo cuando tengas los repuestos en el taller.</span>
             </div>
@@ -250,6 +237,8 @@ export default function TallerSolicitudes({
   const [editandoDiagnostico, setEditandoDiagnostico] = useState(false);
   const [cotizando, setCotizando] = useState(false);
   const [confirmandoSinPruebas, setConfirmandoSinPruebas] = useState(false);
+  // Solicitud cuyo "repuestos recibidos" se está confirmando (desde el detalle, la barra o la lista)
+  const [confirmandoRecibidos, setConfirmandoRecibidos] = useState(null);
   const [procesando, setProcesando] = useState(false);
   const [reintentando, setReintentando] = useState(false);
   const [errorFecha, setErrorFecha] = useState(null);
@@ -348,6 +337,12 @@ export default function TallerSolicitudes({
     }
   };
 
+  const modalRecibidos = confirmandoRecibidos && (
+    <ConfirmarRecibidos token={token} solicitud={confirmandoRecibidos}
+      onCancelar={() => setConfirmandoRecibidos(null)}
+      onConfirmado={async () => { setConfirmandoRecibidos(null); await cargar(); }} />
+  );
+
   const errorDia = errorDiaCita(semanaHorario, fechaCita);
   const horasCita = fechaCita && !errorDia ? horasDeCita(semanaHorario, fechaCita) : [];
 
@@ -400,7 +395,7 @@ export default function TallerSolicitudes({
   const accionRapida = (s) => {
     if (s.estado === "REPUESTOS_PEDIDOS") return {
       texto: "Marcar repuestos recibidos",
-      ejecutar: async () => { await confirmarRepuestosRecibidos(token, s.id); await cargar(); },
+      ejecutar: async () => setConfirmandoRecibidos(s),
     };
     if (s.estado === "REPUESTOS_RECIBIDOS") return { texto: "Iniciar instalación", ejecutar: async () => reemplazar(await iniciarInstalacion(token, s.id)) };
     if (s.estado === "EN_INSTALACION" && s.subestado !== "EN_PRUEBAS") {
@@ -667,7 +662,9 @@ export default function TallerSolicitudes({
               </section>
             )}
 
-            {s.cotizacionId && <SeguimientoTaller token={token} solicitud={s} onCambio={cargar} />}
+            {s.cotizacionId && (
+              <SeguimientoTaller token={token} solicitud={s} onConfirmarRecibidos={() => setConfirmandoRecibidos(s)} />
+            )}
           </div>
 
           <aside className="ss-detalle__lateral" aria-labelledby="st-avance">
@@ -683,6 +680,7 @@ export default function TallerSolicitudes({
             </button>
           </BarraAccionMovil>
         )}
+        {modalRecibidos}
       </div>
     );
   }
@@ -832,6 +830,7 @@ export default function TallerSolicitudes({
         <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar}
           etiqueta={modo === "trabajos" ? "Páginas de trabajos" : "Páginas de solicitudes"} />
       )}
+      {modalRecibidos}
     </div>
   );
 }

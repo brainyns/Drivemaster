@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * Confirmación antes de una acción que no se deshace (ya lo recibí, reportar un problema, pedir un
- * código nuevo...). Con `pedirMotivo` exige escribir el motivo antes de poder confirmar. Escape y el
- * fondo cancelan; el foco entra al diálogo.
+ * código nuevo...). Con `pedirMotivo` exige escribir el motivo antes de poder confirmar. `children` agrega
+ * contenido bajo el mensaje y `puedeConfirmar={false}` deja el botón desactivado (ej. falta un check).
+ * Mientras se envía, el botón también queda desactivado. Escape y el fondo cancelan; el foco entra al diálogo.
  */
 export default function ConfirmarAccion({
   titulo, mensaje, textoConfirmar = "Confirmar", peligro = false,
   pedirMotivo = false, etiquetaMotivo = "Motivo", ayudaMotivo,
+  puedeConfirmar = true, children,
   onConfirmar, onCancelar,
 }) {
   const [motivo, setMotivo] = useState("");
@@ -23,6 +25,7 @@ export default function ConfirmarAccion({
   }, [onCancelar, procesando]);
 
   const confirmar = async () => {
+    if (procesando || !puedeConfirmar) return;
     if (pedirMotivo && !motivo.trim()) {
       setError(`Escribe el ${etiquetaMotivo.toLowerCase()} para continuar.`);
       return;
@@ -42,7 +45,8 @@ export default function ConfirmarAccion({
       <div className="mk-modal__caja" role="dialog" aria-modal="true" aria-labelledby="mk-modal-titulo"
         tabIndex={-1} ref={refDialogo} onClick={(e) => e.stopPropagation()}>
         <h2 id="mk-modal-titulo">{titulo}</h2>
-        <p>{mensaje}</p>
+        {mensaje && <p>{mensaje}</p>}
+        {children}
         {pedirMotivo && (
           <div className="mk-campo">
             <label htmlFor="mk-modal-motivo">{etiquetaMotivo}</label>
@@ -53,7 +57,8 @@ export default function ConfirmarAccion({
         {error && <p className="mk-aviso mk-aviso--error" role="alert">{error}</p>}
         <div className="mk-modal__acciones">
           <button className="dm-btn dm-btn--secondary" onClick={onCancelar} disabled={procesando}>Cancelar</button>
-          <button className={`dm-btn ${peligro ? "dm-btn--dark" : "dm-btn--primary"}`} onClick={confirmar} disabled={procesando}>
+          <button className={`dm-btn ${peligro ? "dm-btn--dark" : "dm-btn--primary"}`} onClick={confirmar}
+            disabled={procesando || !puedeConfirmar} aria-busy={procesando}>
             {procesando ? "Enviando..." : textoConfirmar}
           </button>
         </div>

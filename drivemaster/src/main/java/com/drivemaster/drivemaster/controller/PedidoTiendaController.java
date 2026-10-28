@@ -108,7 +108,11 @@ public class PedidoTiendaController {
     }
 
     @PostMapping("/orden/{ordenId}/recibidos")
-    public ResponseEntity<List<PedidoTienda>> recibidos(@PathVariable String ordenId, Authentication auth) {
-        return ResponseEntity.ok(service.repuestosRecibidos(auth.getName(), ordenId));
+    public ResponseEntity<List<PedidoTienda>> recibidos(@PathVariable String ordenId,
+                                                        @RequestBody(required = false) Map<String, Object> body,
+                                                        Authentication auth) {
+        // confirmarFaltantes: el taller sigue sin las piezas de una tienda que no despachó
+        boolean confirmarFaltantes = body != null && Boolean.TRUE.equals(body.get("confirmarFaltantes"));
+        return ResponseEntity.ok(service.repuestosRecibidos(auth.getName(), ordenId, confirmarFaltantes));
     }
 }

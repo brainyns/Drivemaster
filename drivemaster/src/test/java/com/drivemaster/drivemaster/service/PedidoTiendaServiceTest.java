@@ -244,13 +244,45 @@ class PedidoTiendaServiceTest {
                 .thenReturn(List.of(sinDespacho, despachado, noDespachado))
                 .thenReturn(List.of(sinDespachoDespues, despachadoDespues, noDespachado));
 
-        service.repuestosRecibidos("taller@demo.com", "o1");
+        // Hay un NO_DESPACHADO: el taller confirma que sigue sin esas piezas
+        service.repuestosRecibidos("taller@demo.com", "o1", true);
 
         // La tienda que no marcó el despacho también queda lista, y el evento lo deja registrado
         verify(liquidacion).pedidoRecibido(eq("ped1"), contains("no había marcado el despacho"));
         verify(liquidacion).pedidoRecibido(eq("ped2"), eq("RECEPCION_CONFIRMADA_TALLER"));
         // El pedido que la tienda no pudo despachar no se liquida
         verify(liquidacion, never()).pedidoRecibido(eq("ped3"), anyString());
+    }
+
+    @Test
+    void conUnPedidoNoDespachadoSinConfirmarFaltantesSeRechaza() {
+        when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
+        PedidoTienda noDespachado = PedidoTienda.builder().id("ped3").ordenId("o1").tiendaNombre("Tienda Sur")
+                .motivoNoDespacho("No tengo el repuesto").estado(PedidoTienda.NO_DESPACHADO).build();
+        when(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc("o1"))
+                .thenReturn(List.of(PedidoTienda.builder().id("ped1").ordenId("o1").estado(PedidoTienda.DESPACHADO).build(), noDespachado));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> service.repuestosRecibidos("taller@demo.com", "o1"));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        assertTrue(e.getReason().contains("Tienda Sur"));
+        assertTrue(e.getReason().contains("No tengo el repuesto"));
+        verifyNoInteractions(transiciones, liquidacion);
+        verify(mongoTemplate, never()).updateMulti(any(Query.class), any(Update.class), eq(PedidoTienda.class));
+    }
+
+    @Test
+    void conUnPedidoNoDespachadoYConfirmarFaltantesSeRecibeLoDemas() {
+        when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
+        PedidoTienda noDespachado = PedidoTienda.builder().id("ped3").ordenId("o1").tiendaNombre("Tienda Sur")
+                .estado(PedidoTienda.NO_DESPACHADO).build();
+        when(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc("o1")).thenReturn(List.of(noDespachado));
+
+        service.repuestosRecibidos("taller@demo.com", "o1", true);
+
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.REPUESTOS_RECIBIDOS), any(),
+                contains("sigue sin los de Tienda Sur"), any(), isNull());
     }
 
     @Test
