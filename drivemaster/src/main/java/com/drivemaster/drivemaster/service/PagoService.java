@@ -476,9 +476,12 @@ public class PagoService {
         if (recibidoCentavos == null || recibidoCentavos != esperadoCentavos || !"COP".equals(moneda)) {
             log.error("Pago {} rechazado: Wompi reporta {} {} y se esperaban {} COP (txn {})",
                     referencia, recibidoCentavos, moneda, esperadoCentavos, transactionId);
-            pagoEntity.setEstado("MONTO_INVALIDO");
-            pagoEntity.setTransactionId(transactionId);
-            pagoRepository.save(pagoEntity);
+            // El dinero sí entró: reembolso pendiente por lo que verificó Wompi y alerta al ADMIN (una sola vez)
+            if (pagoRepository.marcarMontoInvalido(pagoEntity.getId(), transactionId) == 1) {
+                pagoEntity.setEstado("MONTO_INVALIDO");
+                pagoEntity.setTransactionId(transactionId);
+                pagoMarketplace.montoInvalido(pagoEntity, recibidoCentavos, moneda);
+            }
             return null;
         }
 

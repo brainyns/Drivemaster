@@ -34,6 +34,16 @@ public interface PagoRepository extends JpaRepository<PagoEntity, Long> {
             + "where p.id = :id and p.estado in ('PENDIENTE', 'RECHAZADO')")
     int reclamar(@Param("id") Long id, @Param("txn") String transactionId);
 
+    /**
+     * Marca como MONTO_INVALIDO un pago aún sin aplicar (Wompi reportó otro monto o moneda). Condicional: si el
+     * webhook y la redirección llegan a la vez, solo uno lo marca (y registra el reembolso). Devuelve 1 si lo marcó.
+     */
+    @Modifying
+    @Transactional
+    @Query("update PagoEntity p set p.estado = 'MONTO_INVALIDO', p.transactionId = :txn "
+            + "where p.id = :id and p.estado in ('PENDIENTE', 'RECHAZADO')")
+    int marcarMontoInvalido(@Param("id") Long id, @Param("txn") String transactionId);
+
     /** Marca como RECHAZADO un pago aún PENDIENTE (Wompi lo declinó). */
     @Modifying
     @Transactional

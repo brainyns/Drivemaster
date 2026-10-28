@@ -485,6 +485,40 @@ public class PagoMarketplaceService {
         return guardado;
     }
 
+    /**
+     * Wompi aprobó la transacción con otro monto o moneda: el pago no se aplica, pero el dinero entró. Se registra un
+     * reembolso pendiente por lo que verificó Wompi y se alerta al ADMIN. Sirve para cualquier pago (marketplace,
+     * catálogo, solicitudes y ventas). Sin monto reportado por Wompi no hay cifra que devolver: solo la alerta.
+     * Nunca lanza: el pago ya quedó marcado MONTO_INVALIDO.
+     */
+    public void montoInvalido(PagoEntity pago, Long recibidoCentavos, String moneda) {
+        String esperado = Math.round(pago.getMonto() != null ? pago.getMonto() : 0) + " COP";
+        String recibido = recibidoCentavos != null
+                ? Math.round(recibidoCentavos / 100.0) + " " + (moneda != null ? moneda : "(sin moneda)")
+                : "un monto que no informó";
+        String motivo = "Monto inválido: Wompi reportó " + recibido + " y se esperaban " + esperado
+                + " (pago " + pago.getReferencia() + origenDelPago(pago) + ")";
+        boolean conReembolso = recibidoCentavos != null && recibidoCentavos > 0;
+        try {
+            if (conReembolso) registrarReembolso(pago, null, recibidoCentavos / 100.0, motivo);
+        } catch (Exception e) {
+            conReembolso = false;
+            log.error("No se pudo registrar el reembolso del pago {} con monto inválido", pago.getReferencia(), e);
+        }
+        avisos.alertaAdmin("Pago con monto inválido", motivo + (conReembolso
+                ? ". Quedó un reembolso pendiente por " + recibido + ": hazlo en Wompi y márcalo en Liquidaciones."
+                : ". No se registró el reembolso: revisa la transacción " + pago.getTransactionId() + " en Wompi."));
+    }
+
+    /** Qué se estaba pagando, para ubicarlo desde el reembolso o la alerta. */
+    private static String origenDelPago(PagoEntity pago) {
+        if (pago.getOrdenServicioId() != null) return ", solicitud " + pago.getOrdenServicioId();
+        if (pago.getCompraCatalogoId() != null) return ", compra " + pago.getCompraCatalogoId();
+        if (pago.getSolicitudId() != null) return ", encargo " + pago.getSolicitudId();
+        if (pago.getVentaId() != null) return ", venta " + pago.getVentaId();
+        return "";
+    }
+
     private void noAplicado(PagoEntity pago, OrdenServicio orden, String motivo) {
         log.warn("Pago {} no aplicado: {}", pago.getReferencia(), motivo);
         registrarReembolso(pago, null, pago.getMonto(), motivo);

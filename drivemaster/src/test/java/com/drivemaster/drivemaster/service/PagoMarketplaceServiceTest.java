@@ -394,6 +394,47 @@ class PagoMarketplaceServiceTest {
         verify(pagoService).crearPagoMarketplace(PagoMarketplaceService.COTIZACION, "u1", 11_900, "o1", "c1");
     }
 
+    // ─── Monto inválido ──────────────────────────────────────────────────────
+
+    @Test
+    void montoInvalidoRegistraReembolsoPorLoQueVerificoWompiYAlertaAlAdmin() {
+        PagoEntity pago = pago(PagoMarketplaceService.DIAGNOSTICO, 50_000);
+
+        service.montoInvalido(pago, 4_000_000L, "COP");
+
+        verify(reembolsoRepository).save(argThat(r -> r.getMonto() == 40_000.0 && r.getPagoId() == 10L
+                && r.getMotivo().contains("40000 COP") && r.getMotivo().contains("50000 COP")
+                && r.getMotivo().contains("DRV-REF")));
+        verify(avisos).alertaAdmin(eq("Pago con monto inválido"), contains("reembolso pendiente por 40000 COP"));
+    }
+
+    @Test
+    void montoInvalidoDeUnPagoSinOrdenNiCotizacionTambienSeReembolsa() {
+        // Pago de un encargo (flujo anterior): no tiene orden, cotización ni compra
+        PagoEntity pago = new PagoEntity();
+        pago.setId(11L);
+        pago.setConcepto("SOLICITUD");
+        pago.setSolicitudId("sol9");
+        pago.setReferencia("DRV-SOL");
+        pago.setMonto(30_000.0);
+
+        service.montoInvalido(pago, 2_000_000L, "COP");
+
+        verify(reembolsoRepository).save(argThat(r -> r.getMonto() == 20_000.0 && r.getOrdenServicioId() == null
+                && r.getMotivo().contains("encargo sol9")));
+        verify(avisos).alertaAdmin(eq("Pago con monto inválido"), anyString());
+    }
+
+    @Test
+    void montoInvalidoSinMontoDeWompiSoloAlerta() {
+        PagoEntity pago = pago(PagoMarketplaceService.COTIZACION, 119_000);
+
+        service.montoInvalido(pago, null, "COP");
+
+        verifyNoInteractions(reembolsoRepository);
+        verify(avisos).alertaAdmin(eq("Pago con monto inválido"), contains("No se registró el reembolso"));
+    }
+
     @Test
     void conUnPagoPendienteDeLaMismaCotizacionYMontoSeReutilizaSuLink() {
         cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 1, 10_000, "ENCARGO"))), 11_900);
