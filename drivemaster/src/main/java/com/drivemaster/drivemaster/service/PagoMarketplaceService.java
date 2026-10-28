@@ -231,6 +231,16 @@ public class PagoMarketplaceService {
         if (monto <= 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La cotización no tiene saldo por pagar");
         }
+        // Si ya hay un link pendiente de esta cotización por el mismo monto, se devuelve ese: un pago por intento
+        long centavos = Math.round(monto * 100);
+        PagoEntity pendiente = pagoRepository
+                .findFirstByOrdenServicioIdAndCotizacionIdAndUsuarioIdAndConceptoAndEstadoOrderByIdDesc(
+                        orden.getId(), cotizacion.getId(), cliente.getId(), COTIZACION, "PENDIENTE")
+                .filter(p -> p.getMonto() != null && Math.round(p.getMonto() * 100) == centavos)
+                .orElse(null);
+        if (pendiente != null) {
+            return pagoService.reusarPagoMarketplace(pendiente);
+        }
         return pagoService.crearPagoMarketplace(COTIZACION, cliente.getId(), monto, orden.getId(), cotizacion.getId());
     }
 

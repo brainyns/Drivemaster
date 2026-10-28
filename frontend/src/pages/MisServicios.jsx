@@ -47,6 +47,8 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
   const [pedidos, setPedidos] = useState([]);
   const [error, setError] = useState(null);
   const [pagando, setPagando] = useState(false);
+  // Candado inmediato: dos clics seguidos no piden dos links aunque el botón aún no se haya desactivado
+  const pidiendoPago = useRef(false);
   const [pagoLocal, setPagoLocal] = useState(null);
 
   // Se recarga cada vez que cambia el estado de la solicitud
@@ -71,6 +73,8 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
   };
 
   const pagar = async () => {
+    if (pidiendoPago.current) return;
+    pidiendoPago.current = true;
     setPagando(true);
     setError(null);
     try {
@@ -78,10 +82,13 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
       if (local) {
         setPagoLocal(local);
         setPagando(false);
+        pidiendoPago.current = false;
       }
+      // Sin "local" el navegador ya va hacia Wompi: el botón sigue desactivado
     } catch (e) {
       setError(e.message);
       setPagando(false);
+      pidiendoPago.current = false;
       await onCambio();
     }
   };

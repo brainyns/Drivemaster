@@ -12,6 +12,10 @@ import java.util.Optional;
 public interface PagoRepository extends JpaRepository<PagoEntity, Long> {
     Optional<PagoEntity> findByReferencia(String referencia);
 
+    /** Último pago aún PENDIENTE de una orden, cotización, cliente y concepto (para reutilizar su link). */
+    Optional<PagoEntity> findFirstByOrdenServicioIdAndCotizacionIdAndUsuarioIdAndConceptoAndEstadoOrderByIdDesc(
+            String ordenServicioId, String cotizacionId, String usuarioId, String concepto, String estado);
+
     /** Dinero que pasó por la plataforma: pagos aprobados del marketplace (no es ingreso de DriveMaster). */
     @Query("select coalesce(sum(p.monto), 0) from PagoEntity p where p.estado = 'PAGADO' "
             + "and p.concepto in ('DIAGNOSTICO', 'COTIZACION', 'CATALOGO')")

@@ -208,6 +208,21 @@ public class PagoService {
         pagoRepository.save(pago);
 
         log.info("Link de pago {} generado para {} (ref {})", concepto, compraId != null ? "la compra " + compraId : "la orden " + ordenId, referencia);
+        return respuestaLink(checkoutUrlFinal, referencia, montoCentavos);
+    }
+
+    /**
+     * Link de un pago del marketplace que sigue PENDIENTE, sin crear otro registro: misma referencia y mismo monto,
+     * así que la firma de integridad es la misma y Wompi lo trata como el mismo pago.
+     */
+    public Map<String, Object> reusarPagoMarketplace(PagoEntity pago) {
+        long montoCentavos = Math.round(pago.getMonto() * 100);
+        log.info("Link de pago {} reutilizado para la orden {} (ref {})", pago.getConcepto(), pago.getOrdenServicioId(), pago.getReferencia());
+        return respuestaLink(construirUrlCheckout(pago.getUsuarioId(), pago.getReferencia(), montoCentavos, null, false),
+                pago.getReferencia(), montoCentavos);
+    }
+
+    private Map<String, Object> respuestaLink(String checkoutUrlFinal, String referencia, long montoCentavos) {
         return Map.of(
                 "checkoutUrl", checkoutUrlFinal,
                 "referencia", referencia,

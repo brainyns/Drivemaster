@@ -395,6 +395,37 @@ class PagoMarketplaceServiceTest {
     }
 
     @Test
+    void conUnPagoPendienteDeLaMismaCotizacionYMontoSeReutilizaSuLink() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 1, 10_000, "ENCARGO"))), 11_900);
+        PagoEntity pendiente = new PagoEntity();
+        pendiente.setId(77L);
+        pendiente.setReferencia("DM-REF-1");
+        pendiente.setMonto(11_900.0);
+        when(pagoRepository.findFirstByOrdenServicioIdAndCotizacionIdAndUsuarioIdAndConceptoAndEstadoOrderByIdDesc(
+                "o1", "c1", "u1", PagoMarketplaceService.COTIZACION, "PENDIENTE")).thenReturn(java.util.Optional.of(pendiente));
+
+        service.iniciarPagoCotizacion("cliente@demo.com", "o1");
+
+        verify(pagoService).reusarPagoMarketplace(pendiente);
+        verify(pagoService, never()).crearPagoMarketplace(anyString(), anyString(), anyDouble(), anyString(), anyString());
+    }
+
+    @Test
+    void unPagoPendienteDeOtroMontoNoSeReutiliza() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 1, 10_000, "ENCARGO"))), 11_900);
+        PagoEntity pendiente = new PagoEntity();
+        pendiente.setId(77L);
+        pendiente.setMonto(9_000.0);
+        when(pagoRepository.findFirstByOrdenServicioIdAndCotizacionIdAndUsuarioIdAndConceptoAndEstadoOrderByIdDesc(
+                "o1", "c1", "u1", PagoMarketplaceService.COTIZACION, "PENDIENTE")).thenReturn(java.util.Optional.of(pendiente));
+
+        service.iniciarPagoCotizacion("cliente@demo.com", "o1");
+
+        verify(pagoService, never()).reusarPagoMarketplace(any());
+        verify(pagoService).crearPagoMarketplace(PagoMarketplaceService.COTIZACION, "u1", 11_900, "o1", "c1");
+    }
+
+    @Test
     void diagnosticoVencidoNoGeneraLink() {
         orden.setEstado(EstadoOrden.ASIGNADA_A_TALLER);
         orden.setPagoDiagnosticoEstado(EstadoOrden.PAGO_PENDIENTE);
