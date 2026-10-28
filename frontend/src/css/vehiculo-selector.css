@@ -249,5 +249,5 @@
     line-height: 1.6;
   }
   .dm-vehicle__footnote > span { flex: 1; min-width: 0; }
-  .dm-vehicle__footnote > button { margin-left: 18px; text-align: left; }
+  .dm-vehicle__footnote > button { margin-left: 18px; text-align: left; white-space: normal; }
 }
