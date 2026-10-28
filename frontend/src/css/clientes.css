@@ -549,7 +549,7 @@ table.km-table tr:last-child td {
   color: var(--on-primary);
   font-size: 1.3rem;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(242, 140, 40, 0.4);
+  box-shadow: 0 4px 20px rgba(var(--primary-rgb), 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -559,7 +559,7 @@ table.km-table tr:last-child td {
 
 .km-fab:hover {
   transform: scale(1.08);
-  box-shadow: 0 6px 28px rgba(242, 140, 40, 0.55);
+  box-shadow: 0 6px 28px rgba(var(--primary-rgb), 0.55);
 }
 
 /* ── FORM ── */
@@ -695,14 +695,14 @@ table.km-table tr:last-child td {
   padding: 0.75rem 1.8rem;
   border-radius: var(--ui-r-lg);
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(242, 140, 40, 0.3);
+  box-shadow: 0 4px 20px rgba(var(--primary-rgb), 0.3);
   transition: background-color 0.18s, border-color 0.18s, color 0.18s, opacity 0.18s, transform 0.18s, box-shadow 0.18s;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.km-btn-save:hover     { box-shadow: 0 6px 28px rgba(242, 140, 40, 0.5); transform: translateY(-1px); }
+.km-btn-save:hover     { box-shadow: 0 6px 28px rgba(var(--primary-rgb), 0.5); transform: translateY(-1px); }
 .km-btn-save:disabled  { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 /* ── PREVIEW SIDE ── */
@@ -764,7 +764,7 @@ table.km-table tr:last-child td {
   padding: 0.18rem 0.7rem;
   border-radius: var(--ui-r-lg);
   margin-bottom: 1.1rem;
-  border: 1px solid rgba(242, 140, 40, 0.15);
+  border: 1px solid rgba(var(--primary-rgb), 0.15);
 }
 
 .km-preview-fields {
@@ -926,7 +926,7 @@ table.km-table tr:last-child td {
   letter-spacing: 0.1em;
   color: var(--primary-text);
   background: var(--primary-soft);
-  border: 1px solid rgba(242, 140, 40, 0.18);
+  border: 1px solid rgba(var(--primary-rgb), 0.18);
   border-radius: var(--ui-r-lg);
   padding: 0.35rem 0.85rem;
   white-space: nowrap;
@@ -968,7 +968,7 @@ table.km-table tr:last-child td {
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.03),
     0 8px 32px rgba(0,0,0,0.35),
-    0 0 60px rgba(242, 140, 40, 0.02);
+    0 0 60px rgba(var(--primary-rgb), 0.02);
   /* glassmorphism suave */
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -989,7 +989,7 @@ table.km-table tr:last-child td {
   height: 42px;
   border-radius: var(--ui-r-lg);
   background: var(--primary-soft);
-  border: 1px solid rgba(242, 140, 40,0.18);
+  border: 1px solid rgba(var(--primary-rgb), 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1070,7 +1070,7 @@ table.km-table tr:last-child td {
 
 .kf-input-wrap.focused {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.1), 0 0 20px rgba(242, 140, 40, 0.05);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1), 0 0 20px rgba(var(--primary-rgb), 0.05);
 }
 
 .kf-input-wrap input {
@@ -1115,7 +1115,7 @@ table.km-table tr:last-child td {
 
 .kf-phone-wrap:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(242, 140, 40, 0.1), 0 0 20px rgba(242, 140, 40, 0.05);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1), 0 0 20px rgba(var(--primary-rgb), 0.05);
 }
 
 .kf-country-btn {
@@ -1252,7 +1252,7 @@ table.km-table tr:last-child td {
 
 .kf-option.selected {
   background: var(--primary-soft);
-  border: 1px solid rgba(242, 140, 40,0.12);
+  border: 1px solid rgba(var(--primary-rgb), 0.12);
 }
 
 .kf-option-name {
@@ -1329,7 +1329,7 @@ table.km-table tr:last-child td {
   border-radius: var(--ui-r-lg);
   cursor: pointer;
   box-shadow:
-    0 4px 16px rgba(242, 140, 40, 0.35),
+    0 4px 16px rgba(var(--primary-rgb), 0.35),
     0 1px 3px rgba(0,0,0,0.3),
     inset 0 1px 0 rgba(255,255,255,0.15);
   transition: background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s;
@@ -1347,7 +1347,7 @@ table.km-table tr:last-child td {
 
 .kf-btn-save:hover:not(:disabled) {
   box-shadow:
-    0 6px 28px rgba(242, 140, 40, 0.55),
+    0 6px 28px rgba(var(--primary-rgb), 0.55),
     0 2px 6px rgba(0,0,0,0.3),
     inset 0 1px 0 rgba(255,255,255,0.2);
 }
@@ -1447,7 +1447,7 @@ table.km-table tr:last-child td {
   padding: 0.2rem 0.7rem;
   border-radius: var(--ui-r-lg);
   margin-bottom: 1rem;
-  border: 1px solid rgba(242, 140, 40, 0.15);
+  border: 1px solid rgba(var(--primary-rgb), 0.15);
 }
 
 .kf-preview-fields {
