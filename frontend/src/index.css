@@ -1,5 +1,3 @@
 @import './css/global.css';
 @import './css/publico.css';
 @import './css/ui.css';
-/* Tema de la Expoferia Comfenalco: quitar esta línea devuelve el diseño original */
-@import './css/tema-expoferia.css';

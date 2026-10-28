@@ -3,7 +3,6 @@
 /* El hero es oscuro en los dos temas: sus grises viven aquí, no sueltos en cada regla */
 .dm-hero {
   --dm-hero-bg: #141517;
-  --dm-hero-rgb: 20, 21, 23; /* el mismo color en RGB, para los degradados */
   --dm-hero-soft: #B9BBBC;   /* texto de apoyo: 9:1 sobre el fondo */
   --dm-hero-faint: #A3A6A8;  /* notas y etiquetas: 7:1 */
   --dm-hero-line: #626366;
@@ -29,8 +28,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, var(--dm-hero-bg) 0%, var(--dm-hero-bg) 28%, rgba(var(--dm-hero-rgb), 0.92) 39%, rgba(var(--dm-hero-rgb), 0.17) 64%, transparent 85%),
-    linear-gradient(0deg, rgba(var(--dm-hero-rgb), 0.69) 0%, transparent 35%);
+    linear-gradient(90deg, #141517 0%, #141517 28%, rgba(20, 21, 23, 0.92) 39%, rgba(20, 21, 23, 0.17) 64%, transparent 85%),
+    linear-gradient(0deg, rgba(20, 21, 23, 0.69) 0%, transparent 35%);
 }
 
 .dm-hero__content {
@@ -52,7 +51,7 @@
 }
 
 .dm-hero__eyebrow .dm-dot {
-  box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.33);
+  box-shadow: 0 0 12px rgba(242, 140, 40, 0.33);
 }
 
 .dm-hero h1 {
@@ -160,8 +159,8 @@
   .dm-hero__image { width: 83%; object-position: 63% 50%; }
   .dm-hero__shade {
     background:
-      linear-gradient(90deg, var(--dm-hero-bg) 0%, rgba(var(--dm-hero-rgb), 0.94) 32%, rgba(var(--dm-hero-rgb), 0.75) 48%, rgba(var(--dm-hero-rgb), 0.13) 78%),
-      linear-gradient(0deg, rgba(var(--dm-hero-rgb), 0.69), transparent 40%);
+      linear-gradient(90deg, #141517 0%, rgba(20, 21, 23, 0.94) 32%, rgba(20, 21, 23, 0.75) 48%, rgba(20, 21, 23, 0.13) 78%),
+      linear-gradient(0deg, rgba(20, 21, 23, 0.69), transparent 40%);
   }
   .dm-hero__coordinate { gap: 20px; bottom: 32px; }
 }
@@ -174,11 +173,11 @@
   .dm-hero__shade {
     background: linear-gradient(
       180deg,
-      var(--dm-hero-bg) 0%,
-      var(--dm-hero-bg) calc(100% - 300px),
-      rgba(var(--dm-hero-rgb), 0.55) calc(100% - 220px),
+      #141517 0%,
+      #141517 calc(100% - 300px),
+      rgba(20, 21, 23, 0.55) calc(100% - 220px),
       transparent calc(100% - 120px),
-      rgba(var(--dm-hero-rgb), 0.5) 100%
+      rgba(20, 21, 23, 0.5) 100%
     );
   }
   .dm-hero__eyebrow { margin-bottom: 20px; }
