@@ -84,6 +84,19 @@ class LiquidacionServiceTest {
 
         repartoRepository = mock(RepartoPagoRepository.class);
         when(repartoRepository.findById(anyLong())).thenAnswer(i -> Optional.ofNullable(repartos.get((Long) i.getArgument(0))));
+        when(repartoRepository.findByReferenciaLiquidacion(anyString())).thenAnswer(i -> {
+            String ref = i.getArgument(0);
+            return repartos.values().stream().filter(r -> ref.equals(r.getReferenciaLiquidacion())).findFirst();
+        });
+        when(repartoRepository.marcarFallidoAsincrono(anyLong(), anyString())).thenAnswer(i -> {
+            synchronized (repartos) {
+                RepartoPago r = repartos.get((Long) i.getArgument(0));
+                if (r == null) return 0;
+                r.setEstado(RepartoPago.FALLIDO);
+                r.setMotivoFallo(i.getArgument(1));
+                return 1;
+            }
+        });
         when(repartoRepository.findByPedidoTiendaId(anyString())).thenAnswer(i -> repartos.values().stream()
                 .filter(r -> i.getArgument(0).equals(r.getPedidoTiendaId())).toList());
         when(repartoRepository.findByOrdenServicioIdAndBeneficiarioTipo(anyString(), anyString())).thenAnswer(i -> repartos.values().stream()
@@ -600,5 +613,61 @@ class LiquidacionServiceTest {
         assertEquals(0, dispersiones.get());
         assertEquals(1, reembolsosCreados.size());
         verify(avisos).sinTallerDisponible(orden);
+    }
+
+    @Test
+    void webhookPayoutRechazadoMarcaFallidoYAlertaAdmin() {
+        RepartoPago r = RepartoPago.builder()
+                .id(99L)
+                .estado(RepartoPago.LIQUIDADO)
+                .beneficiarioNombre("Taller Norte")
+                .referenciaLiquidacion("WOMPI-99-TEST")
+                .build();
+        repartos.put(99L, r);
+
+        LiquidacionService service = servicio(manual());
+
+        Map<String, Object> payload = Map.of(
+                "event", "payout.updated",
+                "data", Map.of(
+                        "reference", "WOMPI-99-TEST",
+                        "status", "REJECTED",
+                        "failure_reason", "Cuenta bancaria no existe"
+                )
+        );
+
+        service.procesarWebhookPayout(payload);
+
+        assertEquals(RepartoPago.FALLIDO, repartos.get(99L).getEstado());
+        assertTrue(repartos.get(99L).getMotivoFallo().contains("Cuenta bancaria no existe"));
+        verify(avisos).alertaAdmin(eq("Liquidación rechazada por banco"), contains("Taller Norte"));
+    }
+
+    @Test
+    void webhookPayoutAprobadoMarcaLiquidadoSiEstabaProcesando() {
+        RepartoPago r = RepartoPago.builder()
+                .id(100L)
+                .estado(RepartoPago.PROCESANDO)
+                .beneficiarioNombre("Tienda Sur")
+                .referenciaLiquidacion("WOMPI-100-TEST")
+                .build();
+        repartos.put(100L, r);
+
+        LiquidacionService service = servicio(manual());
+
+        Map<String, Object> payload = Map.of(
+                "event", "payout.updated",
+                "data", Map.of(
+                        "payout", Map.of(
+                                "reference", "WOMPI-100-TEST",
+                                "status", "APPROVED"
+                        )
+                )
+        );
+
+        service.procesarWebhookPayout(payload);
+
+        assertEquals(RepartoPago.LIQUIDADO, repartos.get(100L).getEstado());
+        assertEquals("WOMPI", repartos.get(100L).getModoLiquidacion());
     }
 }

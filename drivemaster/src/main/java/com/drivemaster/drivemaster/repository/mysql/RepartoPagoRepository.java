@@ -148,4 +148,12 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
     @Query("update RepartoPago r set r.estado = 'ANULADO', r.nota = :nota "
             + "where r.id = :id and r.estado = 'PENDIENTE'")
     int anularPendiente(@Param("id") Long id, @Param("nota") String nota);
+
+    java.util.Optional<RepartoPago> findByReferenciaLiquidacion(String referenciaLiquidacion);
+
+    @Modifying
+    @Transactional
+    @Query("update RepartoPago r set r.estado = 'FALLIDO', r.motivoFallo = :motivo "
+            + "where r.id = :id and r.estado in ('PROCESANDO', 'LIQUIDADO')")
+    int marcarFallidoAsincrono(@Param("id") Long id, @Param("motivo") String motivo);
 }

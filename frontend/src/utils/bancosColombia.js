@@ -36,3 +36,4 @@ export const TIPOS_DOCUMENTO = [
   { id: "CE", label: "Cédula de Extranjería (CE)" },
   { id: "PP", label: "Pasaporte (PP)" }
 ];
+

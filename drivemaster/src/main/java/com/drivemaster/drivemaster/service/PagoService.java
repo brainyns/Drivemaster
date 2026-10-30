@@ -50,6 +50,7 @@ public class PagoService {
     private final RestTemplate restTemplate;
     // @Lazy: PagoMarketplaceService también usa este servicio para crear el link
     private final PagoMarketplaceService pagoMarketplace;
+    private final LiquidacionService liquidacionService;
 
     @Value("${wompi.public_key}")
     private String publicKey;
@@ -81,7 +82,20 @@ public class PagoService {
                        EmailsService emailsService,
                        RestTemplate restTemplate,
                        @Lazy PagoMarketplaceService pagoMarketplace) {
+        this(solicitudRepository, pagoRepository, ventaService, usuarioRepository,
+                emailsService, restTemplate, pagoMarketplace, null);
+    }
+
+    public PagoService(SolicitudRepository solicitudRepository,
+                       PagoRepository pagoRepository,
+                       VentaService ventaService,
+                       UsuarioRepository usuarioRepository,
+                       EmailsService emailsService,
+                       RestTemplate restTemplate,
+                       @Lazy PagoMarketplaceService pagoMarketplace,
+                       @Lazy LiquidacionService liquidacionService) {
         this.pagoMarketplace = pagoMarketplace;
+        this.liquidacionService = liquidacionService;
         this.solicitudRepository = solicitudRepository;
         this.pagoRepository = pagoRepository;
         this.ventaService = ventaService;
@@ -406,7 +420,14 @@ public class PagoService {
      * falsificado con status APPROVED ya no puede marcar un pago como pagado.
      */
     public void procesarWebhook(Map<String, Object> body) {
-        log.info("Webhook Wompi recibido: {}", body != null ? body.get("event") : "null");
+        String event = body != null ? str(body.get("event")) : null;
+        log.info("Webhook Wompi recibido: {}", event != null ? event : "null");
+        if (event != null && (event.startsWith("payout.") || event.startsWith("transfer."))) {
+            if (liquidacionService != null) {
+                liquidacionService.procesarWebhookPayout(body);
+            }
+            return;
+        }
         try {
             if (body == null || !(body.get("data") instanceof Map<?, ?> data)) return;
             if (!(data.get("transaction") instanceof Map<?, ?> transaction)) return;

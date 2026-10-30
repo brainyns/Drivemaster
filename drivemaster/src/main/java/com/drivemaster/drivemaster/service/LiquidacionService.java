@@ -23,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Liquidación a talleres y tiendas (y reembolsos a clientes).
@@ -295,6 +296,64 @@ public class LiquidacionService {
     private static String texto(String nota, String actor) {
         String t = "Marcado por " + actor + (nota != null && !nota.isBlank() ? ": " + nota.trim() : "");
         return recortar(t, 500);
+    }
+
+    /**
+     * Procesa eventos asíncronos de Wompi Payouts (payout.updated / transfer.updated).
+     * Si la transferencia fue rechazada por la red bancaria (ACH), marca la línea como FALLIDO
+     * y genera una alerta al administrador.
+     */
+    public void procesarWebhookPayout(Map<String, Object> body) {
+        if (body == null) return;
+        log.info("Webhook Wompi Payout recibido: {}", body.get("event"));
+        try {
+            Object dataObj = body.get("data");
+            if (!(dataObj instanceof Map<?, ?> data)) return;
+
+            Map<?, ?> payoutData = data.get("payout") instanceof Map<?, ?> p ? p
+                    : (data.get("transfer") instanceof Map<?, ?> t ? t : data);
+
+            String referencia = payoutData.get("reference") != null ? String.valueOf(payoutData.get("reference")) : null;
+            String status = payoutData.get("status") != null ? String.valueOf(payoutData.get("status")).toUpperCase() : null;
+            String failureReason = payoutData.get("failure_reason") != null ? String.valueOf(payoutData.get("failure_reason"))
+                    : (payoutData.get("reason") != null ? String.valueOf(payoutData.get("reason")) : "Transferencia rechazada por entidad bancaria");
+
+            if (referencia == null || referencia.isBlank() || status == null) return;
+
+            RepartoPago reparto = repartoRepository.findByReferenciaLiquidacion(referencia)
+                    .orElseGet(() -> {
+                        try {
+                            if (referencia.startsWith("WOMPI-")) {
+                                String[] partes = referencia.split("-");
+                                if (partes.length >= 2) {
+                                    Long id = Long.parseLong(partes[1]);
+                                    return repartoRepository.findById(id).orElse(null);
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                        return null;
+                    });
+
+            if (reparto == null) {
+                log.warn("Webhook Payout: No se encontró reparto para la referencia {}", referencia);
+                return;
+            }
+
+            if (Set.of("REJECTED", "FAILED", "ERROR", "DECLINED").contains(status)) {
+                log.warn("Wompi Payout rechazado para reparto #{}: {}", reparto.getId(), failureReason);
+                repartoRepository.marcarFallidoAsincrono(reparto.getId(), recortar("Rechazo bancario Wompi ACH: " + failureReason, 300));
+                avisos.alertaAdmin("Liquidación rechazada por banco", "La dispersión Wompi para "
+                        + reparto.getBeneficiarioNombre() + " (reparto #" + reparto.getId() + ") falló en la entidad bancaria: "
+                        + failureReason + ". Revisa la cuenta bancaria del negocio y reintenta desde Liquidaciones.");
+            } else if (Set.of("APPROVED", "PROCESSED", "SUCCESSFUL").contains(status)) {
+                log.info("Wompi Payout confirmado exitoso para reparto #{}: {}", reparto.getId(), referencia);
+                if (RepartoPago.PROCESANDO.equals(reparto.getEstado())) {
+                    repartoRepository.marcarLiquidado(reparto.getId(), LocalDateTime.now(), "WOMPI", referencia, "WOMPI_WEBHOOK", "Confirmado vía webhook Wompi ACH");
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error procesando webhook de Wompi Payout", e);
+        }
     }
 
     private static String recortar(String t, int max) {

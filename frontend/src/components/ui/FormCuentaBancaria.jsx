@@ -137,3 +137,4 @@ export default function FormCuentaBancaria({ cuenta, onGuardar, onCancelar }) {
     </form>
   );
 }
+

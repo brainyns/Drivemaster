@@ -8,6 +8,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class DispersionConfigTest {
 
@@ -36,6 +38,16 @@ class DispersionConfigTest {
         DispersionService d = DispersionConfig.crear("manual", "pub_prod_abc");
         assertEquals("MANUAL", d.modo());
         assertFalse(d.automatica());
+    }
+
+    @Test
+    void wompiArrancaConServicioInstanciado() {
+        WompiPayoutService mockWompi = mock(WompiPayoutService.class);
+        when(mockWompi.modo()).thenReturn("WOMPI");
+        when(mockWompi.automatica()).thenReturn(true);
+        DispersionService d = DispersionConfig.crear("WOMPI", "pub_prod_abc", mockWompi);
+        assertEquals("WOMPI", d.modo());
+        assertTrue(d.automatica());
     }
 
     @Test
