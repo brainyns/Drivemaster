@@ -26,14 +26,15 @@ public class DispersionConfig {
             @Value("${wompi.public_key:}") String wompiPublicKey,
             @Value("${wompi.payouts.api_key:}") String apiKey,
             @Value("${wompi.payouts.user_principal_id:}") String userPrincipalId,
-            @Value("${wompi.payouts.api_url:https://api.sandbox.payouts.wompi.co/v2}") String payoutsApiUrl,
+            @Value("${wompi.payouts.account_id:}") String accountId,
+            @Value("${wompi.payouts.api_url:https://api.sandbox.payouts.wompi.co/v1}") String payoutsApiUrl,
             TallerRepository tallerRepository,
             TiendaRepository tiendaRepository,
             @Autowired(required = false) RestTemplate restTemplate) {
 
         WompiPayoutService wompiService = new WompiPayoutService(
                 tallerRepository, tiendaRepository, restTemplate,
-                apiKey, userPrincipalId, payoutsApiUrl, wompiPublicKey
+                apiKey, userPrincipalId, payoutsApiUrl, wompiPublicKey, accountId
         );
 
         DispersionService servicio = crear(modo, wompiPublicKey, wompiService);

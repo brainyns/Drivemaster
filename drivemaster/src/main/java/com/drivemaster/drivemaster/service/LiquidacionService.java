@@ -339,13 +339,13 @@ public class LiquidacionService {
                 return;
             }
 
-            if (Set.of("REJECTED", "FAILED", "ERROR", "DECLINED").contains(status)) {
+            if (Set.of("REJECTED", "FAILED", "ERROR", "DECLINED", "REVERSED", "CANCELED").contains(status)) {
                 log.warn("Wompi Payout rechazado para reparto #{}: {}", reparto.getId(), failureReason);
                 repartoRepository.marcarFallidoAsincrono(reparto.getId(), recortar("Rechazo bancario Wompi ACH: " + failureReason, 300));
                 avisos.alertaAdmin("Liquidación rechazada por banco", "La dispersión Wompi para "
                         + reparto.getBeneficiarioNombre() + " (reparto #" + reparto.getId() + ") falló en la entidad bancaria: "
                         + failureReason + ". Revisa la cuenta bancaria del negocio y reintenta desde Liquidaciones.");
-            } else if (Set.of("APPROVED", "PROCESSED", "SUCCESSFUL").contains(status)) {
+            } else if (Set.of("APPROVED", "PROCESSED", "SUCCESSFUL", "TOTAL_PAYMENT", "PAID", "SUCCESS").contains(status)) {
                 log.info("Wompi Payout confirmado exitoso para reparto #{}: {}", reparto.getId(), referencia);
                 if (RepartoPago.PROCESANDO.equals(reparto.getEstado())) {
                     repartoRepository.marcarLiquidado(reparto.getId(), LocalDateTime.now(), "WOMPI", referencia, "WOMPI_WEBHOOK", "Confirmado vía webhook Wompi ACH");

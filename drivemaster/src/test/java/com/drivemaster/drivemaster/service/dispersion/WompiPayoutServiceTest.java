@@ -196,7 +196,7 @@ class WompiPayoutServiceTest {
 
         WompiPayoutService service = new WompiPayoutService(
                 tallerRepository, tiendaRepository, restTemplate,
-                "sec_test_api_key", "principal-1", "https://api.sandbox.payouts.wompi.co/v2", "pub_test_key"
+                "sec_test_api_key", "principal-1", "https://api.sandbox.payouts.wompi.co/v1", "pub_test_key", "acc_test_123"
         );
         assertTrue(service.esModoApiReal());
 
@@ -230,7 +230,7 @@ class WompiPayoutServiceTest {
 
         WompiPayoutService service = new WompiPayoutService(
                 tallerRepository, tiendaRepository, restTemplate,
-                "sec_test_api_key", "principal-1", "https://api.sandbox.payouts.wompi.co/v2", "pub_test_key"
+                "sec_test_api_key", "principal-1", "https://api.sandbox.payouts.wompi.co/v1", "pub_test_key", "acc_test_123"
         );
 
         RepartoPago reparto = RepartoPago.builder()
