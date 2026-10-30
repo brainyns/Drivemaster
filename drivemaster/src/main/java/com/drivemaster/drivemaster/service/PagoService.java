@@ -11,6 +11,7 @@ import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.util.EmailSolicitudBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Lazy;
@@ -86,6 +87,7 @@ public class PagoService {
                 emailsService, restTemplate, pagoMarketplace, null);
     }
 
+    @Autowired
     public PagoService(SolicitudRepository solicitudRepository,
                        PagoRepository pagoRepository,
                        VentaService ventaService,
