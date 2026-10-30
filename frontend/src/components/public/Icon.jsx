@@ -144,6 +144,17 @@ const PATHS = {
       <path d="M14 3v4h4M9 12h6M9 16h6" />
     </>
   ),
+  card: (
+    <>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20M6 15h4" />
+    </>
+  ),
+  bank: (
+    <>
+      <path d="M3 21h18M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M12 3 2 8h20z" />
+    </>
+  ),
 };
 
 /**

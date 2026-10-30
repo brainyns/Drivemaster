@@ -3,7 +3,10 @@ package com.drivemaster.drivemaster.service;
 import com.drivemaster.drivemaster.dto.AprobacionRequest;
 import com.drivemaster.drivemaster.dto.CrearTallerRequest;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
+import com.drivemaster.drivemaster.dto.CuentaBancariaDTO;
 import com.drivemaster.drivemaster.dto.TallerDTO;
+import com.drivemaster.drivemaster.model.CuentaBancaria;
+import com.drivemaster.drivemaster.util.ValidacionCuentaBancaria;
 import com.drivemaster.drivemaster.dto.TallerMapaDTO;
 import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.Mecanico;
@@ -260,6 +263,15 @@ public class TallerServiceImpl implements TallerService {
         return toDTOCompleto(obtenerPorUsuario(correoTaller));
     }
 
+    @Override
+    public TallerDTO guardarCuentaBancaria(String correoTaller, CuentaBancariaDTO dto) {
+        Taller taller = obtenerPorUsuario(correoTaller);
+        CuentaBancaria cb = ValidacionCuentaBancaria.validarYConvertir(dto);
+        taller.setCuentaBancaria(cb);
+        taller = tallerRepository.save(taller);
+        return toDTOCompleto(taller);
+    }
+
     // ─── Mecánicos ───────────────────────────────────────────
 
     @Override
@@ -351,6 +363,7 @@ public class TallerServiceImpl implements TallerService {
                 .mecanicos(mecanicosDe(t))
                 .planActual(plan != null ? plan.getPlanCodigo() : null)
                 .planVence(plan != null ? plan.getFechaFin() : null)
+                .cuentaBancaria(ValidacionCuentaBancaria.toDTO(t.getCuentaBancaria()))
                 .build();
     }
 

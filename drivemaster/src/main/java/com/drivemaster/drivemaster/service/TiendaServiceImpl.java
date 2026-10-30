@@ -1,7 +1,10 @@
 package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.AprobacionRequest;
+import com.drivemaster.drivemaster.dto.CuentaBancariaDTO;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
+import com.drivemaster.drivemaster.model.CuentaBancaria;
+import com.drivemaster.drivemaster.util.ValidacionCuentaBancaria;
 import com.drivemaster.drivemaster.dto.TiendaDTO;
 import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.Tienda;
@@ -125,6 +128,15 @@ public class TiendaServiceImpl implements TiendaService {
     @Override
     public TiendaDTO miTienda(String correoUsuario) {
         return toDTO(obtenerPorUsuario(correoUsuario));
+    }
+
+    @Override
+    public TiendaDTO guardarCuentaBancaria(String correoUsuario, CuentaBancariaDTO dto) {
+        Tienda tienda = obtenerPorUsuario(correoUsuario);
+        CuentaBancaria cb = ValidacionCuentaBancaria.validarYConvertir(dto);
+        tienda.setCuentaBancaria(cb);
+        tienda = tiendaRepository.save(tienda);
+        return toDTO(tienda);
     }
 
     /** El dueño actualiza los datos de contacto y ubicación. Nombre y NIT los cambia el ADMIN. */
@@ -251,6 +263,7 @@ public class TiendaServiceImpl implements TiendaService {
                 .planActual(plan != null ? plan.getPlanCodigo() : null)
                 .planVence(plan != null ? plan.getFechaFin() : null)
                 .logoUrl(t.getLogoUrl())
+                .cuentaBancaria(ValidacionCuentaBancaria.toDTO(t.getCuentaBancaria()))
                 .build();
     }
 }

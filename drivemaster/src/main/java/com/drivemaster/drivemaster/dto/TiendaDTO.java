@@ -42,4 +42,7 @@ public class TiendaDTO {
     private String planActual;
     private LocalDateTime planVence;
     private String logoUrl;
+
+    // Cuenta bancaria para dispersiones y liquidaciones
+    private CuentaBancariaDTO cuentaBancaria;
 }

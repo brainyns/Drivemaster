@@ -181,3 +181,13 @@ export async function actualizarUbicacionTaller(token, { latitud, longitud }) {
   if (res.status === 403) throw new Error("Tu taller aún no está aprobado, así que todavía no puedes cambiar su ubicación.");
   return handle(res, "No se pudo guardar la ubicación");
 }
+
+/** TALLER: guarda la información de la cuenta bancaria para transferencias de liquidaciones. */
+export async function guardarCuentaBancariaTaller(token, cuenta) {
+  const res = await apiFetch(`${BASE}/mi-taller/cuenta-bancaria`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(cuenta),
+  });
+  return handle(res, "No se pudieron guardar los datos bancarios del taller");
+}

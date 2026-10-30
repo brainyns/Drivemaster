@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.dto.AprobacionRequest;
+import com.drivemaster.drivemaster.dto.CuentaBancariaDTO;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
 import com.drivemaster.drivemaster.dto.TiendaDTO;
 import com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO;
@@ -39,6 +40,11 @@ public class TiendaController {
     @PutMapping("/mi-tienda")
     public ResponseEntity<TiendaDTO> actualizarMiTienda(@RequestBody RegistroNegocioRequest request, Authentication auth) {
         return ResponseEntity.ok(tiendaService.actualizarMiTienda(auth.getName(), request));
+    }
+
+    @PutMapping("/mi-tienda/cuenta-bancaria")
+    public ResponseEntity<TiendaDTO> guardarCuentaBancaria(@RequestBody CuentaBancariaDTO dto, Authentication auth) {
+        return ResponseEntity.ok(tiendaService.guardarCuentaBancaria(auth.getName(), dto));
     }
 
     @PutMapping("/mi-tienda/telefono")

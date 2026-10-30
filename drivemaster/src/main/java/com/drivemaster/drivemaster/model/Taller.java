@@ -72,4 +72,7 @@ public class Taller {
 
     @Builder.Default
     private List<Mecanico> mecanicos = new ArrayList<>();
+
+    // Cuenta bancaria para dispersiones automáticas (Wompi) y transferencias
+    private CuentaBancaria cuentaBancaria;
 }
