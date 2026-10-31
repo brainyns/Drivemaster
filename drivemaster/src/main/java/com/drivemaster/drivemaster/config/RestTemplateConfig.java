@@ -13,10 +13,22 @@ public class RestTemplateConfig {
     public static final int BREVO_CONNECT_TIMEOUT_MS = 5_000;
     public static final int BREVO_READ_TIMEOUT_MS = 15_000;
 
+    /** Wompi Payouts: un pago colgado no debe dejar la petición del ADMIN esperando sin fin. */
+    public static final int PAYOUTS_CONNECT_TIMEOUT_MS = 5_000;
+    public static final int PAYOUTS_READ_TIMEOUT_MS = 20_000;
+
     @Bean
     @Primary
     public RestTemplate restTemplate() {
         return new RestTemplate();
+    }
+
+    @Bean("wompiPayoutsRestTemplate")
+    public RestTemplate wompiPayoutsRestTemplate() {
+        SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
+        fabrica.setConnectTimeout(PAYOUTS_CONNECT_TIMEOUT_MS);
+        fabrica.setReadTimeout(PAYOUTS_READ_TIMEOUT_MS);
+        return new RestTemplate(fabrica);
     }
 
     @Bean("brevoRestTemplate")

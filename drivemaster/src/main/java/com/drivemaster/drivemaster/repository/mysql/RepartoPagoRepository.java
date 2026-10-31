@@ -149,7 +149,17 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
             + "where r.id = :id and r.estado = 'PENDIENTE'")
     int anularPendiente(@Param("id") Long id, @Param("nota") String nota);
 
-    java.util.Optional<RepartoPago> findByReferenciaLiquidacion(String referenciaLiquidacion);
+    /** Wompi no confirmó el pago: la línea sigue PROCESANDO, con la referencia para reconocer su evento. */
+    @Modifying
+    @Transactional
+    @Query("update RepartoPago r set r.motivoFallo = :motivo, r.referenciaLiquidacion = :referencia, r.modoLiquidacion = :modo "
+            + "where r.id = :id and r.estado = 'PROCESANDO'")
+    int marcarPorVerificar(@Param("id") Long id, @Param("referencia") String referencia,
+                           @Param("motivo") String motivo, @Param("modo") String modo);
+
+    // La referencia guardada es "WOMPI-<id>-<azar>" y, si Wompi dio su id, termina en " [ID:<payoutId>]"
+    java.util.Optional<RepartoPago> findFirstByReferenciaLiquidacionStartingWith(String referencia);
+    java.util.Optional<RepartoPago> findFirstByReferenciaLiquidacionEndingWith(String sufijo);
 
     @Modifying
     @Transactional

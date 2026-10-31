@@ -21,6 +21,11 @@ public class SimulatedDispersionService implements DispersionService {
     }
 
     @Override
+    public boolean dineroReal() {
+        return false;
+    }
+
+    @Override
     public boolean automatica() {
         return true;
     }

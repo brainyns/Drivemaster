@@ -9,6 +9,7 @@ import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import com.drivemaster.drivemaster.service.dispersion.DispersionException;
+import com.drivemaster.drivemaster.service.dispersion.DispersionInciertaException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionService;
 import com.drivemaster.drivemaster.service.dispersion.ResultadoDispersion;
 import com.drivemaster.drivemaster.service.dispersion.SolicitudDispersion;
@@ -34,8 +35,11 @@ import java.util.Set;
  *                                  └─────────────────────────────────────────────────┘
  * - Evento: la tienda, al confirmar el taller la recepción (o al validar el cliente el
  *   retiro); el taller, cuando la orden queda ENTREGADA.
- * - Modo SIMULADO: el evento liquida solo. Modo MANUAL: la línea espera en POR_LIQUIDAR
- *   hasta que el ADMIN paga por el banco y anota el número de transferencia.
+ * - Modo SIMULADO: el evento liquida solo. Modos MANUAL y WOMPI: la línea espera en
+ *   POR_LIQUIDAR hasta que el ADMIN la aprueba (en MANUAL paga por el banco y anota el número
+ *   de transferencia).
+ * - Si Wompi no confirma un pago ya enviado, la línea sigue PROCESANDO: reintentarla podría
+ *   pagar dos veces. La resuelve el evento de Wompi.
  * - Cada paso es una escritura condicional (UPDATE ... WHERE estado = ...): dos clics, o
  *   el evento y el ADMIN a la vez, no la pagan dos veces.
  * - Una línea con reembolso pendiente (de su pedido o de todo el pago) no se toma.
@@ -113,7 +117,7 @@ public class LiquidacionService {
 
     /** Modo de dispersión vigente, para mostrarlo en la pantalla del ADMIN. */
     public Map<String, Object> modo() {
-        return Map.of("modo", dispersion.modo(), "automatica", dispersion.automatica());
+        return Map.of("modo", dispersion.modo(), "automatica", dispersion.automatica(), "dineroReal", dispersion.dineroReal());
     }
 
     // ─── Eventos que habilitan el pago ───────────────────────────────────────
@@ -216,9 +220,13 @@ public class LiquidacionService {
         SolicitudDispersion solicitud = new SolicitudDispersion(correoAdmin, numeroTransferencia, nota);
         dispersion.validar(solicitud);
         RepartoPago resultado = ejecutar(id, solicitud);
+        // 422 y no 502: un proxy puede reemplazar un 502 por su propia página, y el mensaje no llegaría a la pantalla
         if (RepartoPago.FALLIDO.equals(resultado.getEstado())) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
                     "No se pudo liquidar: " + resultado.getMotivoFallo() + ". Puedes reintentar.");
+        }
+        if (RepartoPago.PROCESANDO.equals(resultado.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, resultado.getMotivoFallo());
         }
         return resultado;
     }
@@ -238,6 +246,12 @@ public class LiquidacionService {
             if (filas == 0) {
                 log.error("La línea {} dejó de estar PROCESANDO antes de marcarse LIQUIDADA", id);
             }
+        } catch (DispersionInciertaException e) {
+            String motivo = recortar(e.getMessage(), 300);
+            repartoRepository.marcarPorVerificar(id, e.getReferencia(), motivo, dispersion.modo());
+            avisos.alertaAdmin("Liquidación sin confirmar", "Revisa en el panel de Wompi el pago de "
+                    + tomada.getBeneficiarioNombre() + " (línea " + id + ", " + Math.round(tomada.getMonto()) + " COP, referencia "
+                    + e.getReferencia() + "). " + motivo);
         } catch (RuntimeException e) {
             String motivo = e instanceof DispersionException ? e.getMessage()
                     : "Error inesperado: " + e.getClass().getSimpleName();
@@ -257,7 +271,8 @@ public class LiquidacionService {
             return new ResponseStatusException(HttpStatus.CONFLICT, "Este reparto ya está liquidado");
         }
         if (RepartoPago.PROCESANDO.equals(r.getEstado())) {
-            return new ResponseStatusException(HttpStatus.CONFLICT, "Este reparto se está liquidando en este momento");
+            return new ResponseStatusException(HttpStatus.CONFLICT, r.getMotivoFallo() != null ? r.getMotivoFallo()
+                    : "Este reparto se está liquidando en este momento");
         }
         if (RepartoPago.ANULADO.equals(r.getEstado())) {
             return new ResponseStatusException(HttpStatus.CONFLICT, "Este reparto está anulado");
@@ -299,61 +314,67 @@ public class LiquidacionService {
     }
 
     /**
-     * Procesa eventos asíncronos de Wompi Payouts (payout.updated / transfer.updated).
-     * Si la transferencia fue rechazada por la red bancaria (ACH), marca la línea como FALLIDO
-     * y genera una alerta al administrador.
+     * Evento de Wompi Pagos a Terceros, ya con la firma verificada (FirmaEventosPayout): payout.updated trae
+     * data.payout y transaction.updated trae data.transaction, que nombra su payout con payoutId. Una transferencia
+     * rechazada deja la línea FALLIDO aunque ya estuviera LIQUIDADO. La línea solo se busca por la referencia del
+     * intento vigente: el evento de un intento anterior ya no la encuentra y no deshace un reintento pagado.
      */
     public void procesarWebhookPayout(Map<String, Object> body) {
-        if (body == null) return;
-        log.info("Webhook Wompi Payout recibido: {}", body.get("event"));
-        try {
-            Object dataObj = body.get("data");
-            if (!(dataObj instanceof Map<?, ?> data)) return;
+        if (body == null || !(body.get("data") instanceof Map<?, ?> data)) return;
+        log.info("Evento de Wompi Payouts recibido: {}", body.get("event"));
 
-            Map<?, ?> payoutData = data.get("payout") instanceof Map<?, ?> p ? p
-                    : (data.get("transfer") instanceof Map<?, ?> t ? t : data);
+        Map<?, ?> payout = data.get("payout") instanceof Map<?, ?> p ? p : null;
+        Map<?, ?> transaccion = data.get("transaction") instanceof Map<?, ?> t ? t : null;
+        Map<?, ?> evento = payout != null ? payout : transaccion;
+        if (evento == null || evento.get("status") == null) return;
+        String status = String.valueOf(evento.get("status")).toUpperCase();
 
-            String referencia = payoutData.get("reference") != null ? String.valueOf(payoutData.get("reference")) : null;
-            String status = payoutData.get("status") != null ? String.valueOf(payoutData.get("status")).toUpperCase() : null;
-            String failureReason = payoutData.get("failure_reason") != null ? String.valueOf(payoutData.get("failure_reason"))
-                    : (payoutData.get("reason") != null ? String.valueOf(payoutData.get("reason")) : "Transferencia rechazada por entidad bancaria");
+        RepartoPago reparto = (payout != null ? lineaDelPayout(cadena(payout.get("reference")), cadena(payout.get("id")))
+                : lineaDelPayout(null, cadena(transaccion.get("payoutId")))).orElse(null);
+        if (reparto == null) {
+            log.warn("Evento de Wompi Payouts sin línea de reparto: {}", evento.get("id"));
+            return;
+        }
 
-            if (referencia == null || referencia.isBlank() || status == null) return;
-
-            RepartoPago reparto = repartoRepository.findByReferenciaLiquidacion(referencia)
-                    .orElseGet(() -> {
-                        try {
-                            if (referencia.startsWith("WOMPI-")) {
-                                String[] partes = referencia.split("-");
-                                if (partes.length >= 2) {
-                                    Long id = Long.parseLong(partes[1]);
-                                    return repartoRepository.findById(id).orElse(null);
-                                }
-                            }
-                        } catch (Exception ignored) {}
-                        return null;
-                    });
-
-            if (reparto == null) {
-                log.warn("Webhook Payout: No se encontró reparto para la referencia {}", referencia);
-                return;
-            }
-
-            if (Set.of("REJECTED", "FAILED", "ERROR", "DECLINED", "REVERSED", "CANCELED").contains(status)) {
-                log.warn("Wompi Payout rechazado para reparto #{}: {}", reparto.getId(), failureReason);
-                repartoRepository.marcarFallidoAsincrono(reparto.getId(), recortar("Rechazo bancario Wompi ACH: " + failureReason, 300));
+        if (RECHAZOS_PAYOUT.contains(status)) {
+            String motivo = motivoRechazo(evento);
+            log.warn("Wompi Payout rechazado para reparto #{}: {}", reparto.getId(), motivo);
+            // 0: ya estaba FALLIDO (Wompi reintenta los eventos): no se alerta dos veces
+            if (repartoRepository.marcarFallidoAsincrono(reparto.getId(), recortar("Rechazo bancario Wompi ACH: " + motivo, 300)) > 0) {
                 avisos.alertaAdmin("Liquidación rechazada por banco", "La dispersión Wompi para "
                         + reparto.getBeneficiarioNombre() + " (reparto #" + reparto.getId() + ") falló en la entidad bancaria: "
-                        + failureReason + ". Revisa la cuenta bancaria del negocio y reintenta desde Liquidaciones.");
-            } else if (Set.of("APPROVED", "PROCESSED", "SUCCESSFUL", "TOTAL_PAYMENT", "PAID", "SUCCESS").contains(status)) {
-                log.info("Wompi Payout confirmado exitoso para reparto #{}: {}", reparto.getId(), referencia);
-                if (RepartoPago.PROCESANDO.equals(reparto.getEstado())) {
-                    repartoRepository.marcarLiquidado(reparto.getId(), LocalDateTime.now(), "WOMPI", referencia, "WOMPI_WEBHOOK", "Confirmado vía webhook Wompi ACH");
-                }
+                        + motivo + ". Revisa la cuenta bancaria del negocio y reintenta desde Liquidaciones.");
             }
-        } catch (Exception e) {
-            log.error("Error procesando webhook de Wompi Payout", e);
+        } else if (CONFIRMACIONES_PAYOUT.contains(status)) {
+            log.info("Wompi Payout confirmado para reparto #{}", reparto.getId());
+            if (RepartoPago.PROCESANDO.equals(reparto.getEstado())) {
+                repartoRepository.marcarLiquidado(reparto.getId(), LocalDateTime.now(), "WOMPI",
+                        reparto.getReferenciaLiquidacion(), "WOMPI_WEBHOOK", "Confirmado vía webhook Wompi ACH");
+            }
+        } else {
+            log.info("Estado de Wompi Payouts sin acción para reparto #{}: {}", reparto.getId(), status);
         }
+    }
+
+    private static final Set<String> RECHAZOS_PAYOUT = Set.of("REJECTED", "FAILED", "ERROR", "DECLINED", "REVERSED", "CANCELED");
+    private static final Set<String> CONFIRMACIONES_PAYOUT = Set.of("APPROVED", "PROCESSED", "SUCCESSFUL", "TOTAL_PAYMENT", "PAID", "SUCCESS");
+
+    private java.util.Optional<RepartoPago> lineaDelPayout(String referencia, String payoutId) {
+        java.util.Optional<RepartoPago> porReferencia = referencia != null
+                ? repartoRepository.findFirstByReferenciaLiquidacionStartingWith(referencia) : java.util.Optional.empty();
+        if (porReferencia.isPresent() || payoutId == null) return porReferencia;
+        return repartoRepository.findFirstByReferenciaLiquidacionEndingWith("[ID:" + payoutId + "]");
+    }
+
+    /** failureReason es { code, message } en los eventos de transacción. */
+    private static String motivoRechazo(Map<?, ?> evento) {
+        Object motivo = evento.get("failureReason");
+        if (motivo instanceof Map<?, ?> m) motivo = m.get("message") != null ? m.get("message") : m.get("code");
+        return motivo != null ? String.valueOf(motivo) : "Transferencia rechazada por entidad bancaria";
+    }
+
+    private static String cadena(Object valor) {
+        return valor != null && !String.valueOf(valor).isBlank() ? String.valueOf(valor) : null;
     }
 
     private static String recortar(String t, int max) {

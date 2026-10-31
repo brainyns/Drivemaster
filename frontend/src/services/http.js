@@ -33,8 +33,8 @@ async function esErrorDeSesion(res) {
  * Si no se puede renovar, cierra la sesión y emite "auth:expirada". Si el servidor no responde en 20 s o no hay red,
  * lanza ErrorConexion con un mensaje claro (lo muestran las Alertas con "Reintentar" de cada pantalla).
  */
-export async function apiFetch(url, options = {}) {
-  const res = await fetchConLimite(url, conToken(options));
+export async function apiFetch(url, options = {}, limite) {
+  const res = await fetchConLimite(url, conToken(options), limite);
   if (!getToken() || !(await esErrorDeSesion(res))) return res;
 
   try {
@@ -46,5 +46,5 @@ export async function apiFetch(url, options = {}) {
     return res;
   }
 
-  return fetchConLimite(url, conToken(options));
+  return fetchConLimite(url, conToken(options), limite);
 }

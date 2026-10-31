@@ -28,15 +28,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Servicio de dispersión automática de liquidaciones a través de Wompi Payouts (Pagos a Terceros).
- * Transfiere a cuentas bancarias registradas de talleres y tiendas.
- * Si no hay API key configurada o se usan llaves de prueba sin API key de payouts,
- * opera en modo sandbox/simulado con validación estricta de cuentas bancarias.
+ * Transfiere a cuentas bancarias registradas de talleres y tiendas. Cada pago lo aprueba el ADMIN.
+ * Solo sin API key y con llaves pub_test_ simula (queda como SIMULADO, no como WOMPI); con cualquier otra
+ * configuración incompleta o mezclada rechaza el pago: nunca marca pagado algo que no salió.
  */
 public class WompiPayoutService implements DispersionService {
 
     private static final Logger log = LoggerFactory.getLogger(WompiPayoutService.class);
     public static final String MODO = "WOMPI";
-    public static final String DEFAULT_ACCOUNT_ID = "80ef0b70-df41-4e42-9b21-66d2d17a17df";
 
     private final TallerRepository tallerRepository;
     private final TiendaRepository tiendaRepository;
@@ -147,7 +146,12 @@ public class WompiPayoutService implements DispersionService {
 
     @Override
     public boolean automatica() {
-        return true;
+        return false;
+    }
+
+    @Override
+    public boolean dineroReal() {
+        return esModoApiReal() && !esSandbox();
     }
 
     @Override
@@ -157,6 +161,7 @@ public class WompiPayoutService implements DispersionService {
             throw new DispersionException("El monto a liquidar debe ser mayor que cero");
         }
 
+        validarConfiguracion();
         CuentaBancaria cuenta = obtenerCuentaBancaria(reparto);
         String referencia = "WOMPI-" + reparto.getId() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
@@ -169,6 +174,25 @@ public class WompiPayoutService implements DispersionService {
 
     public boolean esModoApiReal() {
         return !apiKey.isBlank() && restTemplate != null;
+    }
+
+    private boolean esSandbox() {
+        return apiUrl.contains("sandbox");
+    }
+
+    /** Las llaves de pruebas solo van con el sandbox y las reales con producción. */
+    private void validarConfiguracion() {
+        boolean llavesDePrueba = publicKey.startsWith("pub_test_");
+        if (!esModoApiReal()) {
+            if (!llavesDePrueba) {
+                throw new DispersionException("Falta WOMPI_PAYOUTS_API_KEY: no se puede pagar con Wompi Payouts");
+            }
+            return;
+        }
+        if (llavesDePrueba != esSandbox()) {
+            throw new DispersionException("Configuración de Wompi mezclada: WOMPI_PUBLIC_KEY y WOMPI_PAYOUTS_API_URL "
+                    + "deben ser ambas de pruebas o ambas de producción");
+        }
     }
 
     public CuentaBancaria obtenerCuentaBancaria(RepartoPago reparto) {
@@ -196,90 +220,110 @@ public class WompiPayoutService implements DispersionService {
         }
     }
 
+    /** Sin API key y con llaves de pruebas: no sale ninguna petición, y queda marcado SIMULADO. */
     private ResultadoDispersion ejecutarPayoutSimulado(RepartoPago reparto, CuentaBancaria cuenta, String referencia, BigDecimal monto) {
-        log.info("Dispersión Wompi (Sandbox): Reparto #{} | Beneficiario: {} | Banco: {} ({}) | Cta: {} | Monto: {} COP",
+        log.info("Dispersión simulada, sin dinero: Reparto #{} | Beneficiario: {} | Banco: {} ({}) | Cta: {} | Monto: {} COP",
                 reparto.getId(), reparto.getBeneficiarioNombre(), cuenta.getBanco(), cuenta.getTipoCuenta(),
-                cuenta.getNumeroCuenta(), monto);
-        return new ResultadoDispersion(MODO, referencia, monto);
+                enmascarar(cuenta.getNumeroCuenta()), monto);
+        return new ResultadoDispersion(SimulatedDispersionService.MODO, referencia, monto);
     }
 
     private ResultadoDispersion ejecutarPayoutWompiApi(RepartoPago reparto, CuentaBancaria cuenta, String referencia, BigDecimal monto) {
+        // Todo lo que falle antes del POST es definitivo: no salió nada y se puede reintentar
+        String cleanLegalId = cuenta.getTitularDocumentoNumero() != null
+                ? cuenta.getTitularDocumentoNumero().replaceAll("[^0-9]", "")
+                : "";
+        if (cleanLegalId.isBlank()) {
+            throw new DispersionException("La cuenta bancaria de " + reparto.getBeneficiarioNombre() + " no tiene el documento del titular");
+        }
+        if (cuenta.getTitularNombre() == null || cuenta.getTitularNombre().isBlank()) {
+            throw new DispersionException("La cuenta bancaria de " + reparto.getBeneficiarioNombre() + " no tiene el nombre del titular");
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-api-key", apiKey);
+        if (!userPrincipalId.isBlank()) {
+            headers.set("user-principal-id", userPrincipalId);
+        }
+        headers.set("idempotency-key", referencia);
+
+        String targetAccountId = resolverAccountId();
+        String targetBankId = resolverBankId(cuenta);
+        String emailBeneficiario = obtenerEmailBeneficiario(reparto);
+        String legalIdType = "PASAPORTE".equalsIgnoreCase(cuenta.getTitularDocumentoTipo()) ? "PP" : cuenta.getTitularDocumentoTipo();
+
+        Map<String, Object> transaction = new HashMap<>();
+        transaction.put("legalIdType", legalIdType != null && !legalIdType.isBlank() ? legalIdType : "CC");
+        transaction.put("legalId", cleanLegalId);
+        transaction.put("bankId", targetBankId);
+        transaction.put("accountType", cuenta.getTipoCuenta() != null ? cuenta.getTipoCuenta() : "AHORROS");
+        transaction.put("accountNumber", cuenta.getNumeroCuenta());
+        transaction.put("name", cuenta.getTitularNombre());
+        transaction.put("email", emailBeneficiario);
+        transaction.put("amount", monto.multiply(BigDecimal.valueOf(100)).longValue());
+        transaction.put("reference", referencia);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("reference", referencia);
+        body.put("accountId", targetAccountId);
+        body.put("paymentType", "PROVIDERS");
+        body.put("transactions", Collections.singletonList(transaction));
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        String url = apiUrl.endsWith("/") ? apiUrl + "payouts" : apiUrl + "/payouts";
+
+        ResponseEntity<Map<String, Object>> response;
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("x-api-key", apiKey);
-            if (!userPrincipalId.isBlank()) {
-                headers.set("user-principal-id", userPrincipalId);
-            }
-            headers.set("idempotency-key", referencia);
-
-            String targetAccountId = resolverAccountId();
-            String targetBankId = resolverBankId(cuenta);
-            String emailBeneficiario = obtenerEmailBeneficiario(reparto);
-            String cleanLegalId = cuenta.getTitularDocumentoNumero() != null
-                    ? cuenta.getTitularDocumentoNumero().replaceAll("[^0-9]", "")
-                    : "123456789";
-            String legalIdType = "PASAPORTE".equalsIgnoreCase(cuenta.getTitularDocumentoTipo()) ? "PP" : cuenta.getTitularDocumentoTipo();
-
-            Map<String, Object> transaction = new HashMap<>();
-            transaction.put("legalIdType", legalIdType != null && !legalIdType.isBlank() ? legalIdType : "CC");
-            transaction.put("legalId", cleanLegalId);
-            transaction.put("bankId", targetBankId);
-            transaction.put("accountType", cuenta.getTipoCuenta() != null ? cuenta.getTipoCuenta() : "AHORROS");
-            transaction.put("accountNumber", cuenta.getNumeroCuenta());
-            transaction.put("name", cuenta.getTitularNombre());
-            transaction.put("email", emailBeneficiario);
-            transaction.put("amount", monto.multiply(BigDecimal.valueOf(100)).longValue());
-            transaction.put("reference", referencia);
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("reference", referencia);
-            body.put("accountId", targetAccountId);
-            body.put("paymentType", "PROVIDERS");
-            body.put("transactions", Collections.singletonList(transaction));
-
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-            String url = apiUrl.endsWith("/") ? apiUrl + "payouts" : apiUrl + "/payouts";
-
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    url, HttpMethod.POST, request, new ParameterizedTypeReference<>() {}
-            );
-
-            if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> respBody = response.getBody();
-                Object dataObj = respBody.get("data");
-                String wompiId = null;
-                Integer failedCount = null;
-
-                if (dataObj instanceof Map<?, ?> dataMap) {
-                    wompiId = dataMap.get("payoutId") != null ? String.valueOf(dataMap.get("payoutId"))
-                            : (dataMap.get("id") != null ? String.valueOf(dataMap.get("id")) : null);
-                    if (dataMap.get("failed") instanceof Number n) {
-                        failedCount = n.intValue();
-                    }
-                } else if (respBody.get("id") != null) {
-                    wompiId = String.valueOf(respBody.get("id"));
-                }
-
-                if (failedCount != null && failedCount > 0) {
-                    throw new DispersionException("Wompi Payout reportó transacciones fallidas en el lote");
-                }
-
-                String refFinal = wompiId != null ? referencia + " [ID:" + wompiId + "]" : referencia;
-                log.info("Wompi Payout generado exitosamente: {} para reparto #{}", refFinal, reparto.getId());
-                return new ResultadoDispersion(MODO, refFinal, monto);
-            } else {
-                throw new DispersionException("Respuesta no exitosa de Wompi Payouts");
-            }
+            response = restTemplate.exchange(url, HttpMethod.POST, request, new ParameterizedTypeReference<>() {});
         } catch (RestClientResponseException e) {
             String errorMsg = e.getResponseBodyAsString();
             log.error("Error respuesta Wompi Payouts (HTTP {}): {}", e.getStatusCode(), errorMsg);
+            if (e.getStatusCode().is5xxServerError()) {
+                throw incierta("Wompi respondió " + e.getStatusCode().value(), referencia, e);
+            }
             throw new DispersionException("Error en API de Wompi Payouts: " + e.getStatusCode() + " - " + errorMsg);
-        } catch (Exception e) {
-            if (e instanceof DispersionException de) throw de;
+        } catch (RuntimeException e) {
             log.error("Excepción invocando Wompi Payouts", e);
-            throw new DispersionException("No se pudo conectar con la API de Wompi Payouts: " + e.getMessage());
+            throw incierta("sin respuesta de Wompi", referencia, e);
         }
+
+        if (response == null || !response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            throw incierta("respuesta vacía de Wompi", referencia, null);
+        }
+        Map<String, Object> respBody = response.getBody();
+        Object dataObj = respBody.get("data");
+        String wompiId = null;
+        Integer failedCount = null;
+
+        if (dataObj instanceof Map<?, ?> dataMap) {
+            wompiId = dataMap.get("payoutId") != null ? String.valueOf(dataMap.get("payoutId"))
+                    : (dataMap.get("id") != null ? String.valueOf(dataMap.get("id")) : null);
+            if (dataMap.get("failed") instanceof Number n) {
+                failedCount = n.intValue();
+            }
+        } else if (respBody.get("id") != null) {
+            wompiId = String.valueOf(respBody.get("id"));
+        }
+
+        if (failedCount != null && failedCount > 0) {
+            throw new DispersionException("Wompi Payout reportó transacciones fallidas en el lote");
+        }
+
+        String refFinal = wompiId != null ? referencia + " [ID:" + wompiId + "]" : referencia;
+        log.info("Wompi Payout generado exitosamente: {} para reparto #{}", refFinal, reparto.getId());
+        return new ResultadoDispersion(MODO, refFinal, monto);
+    }
+
+    private static DispersionInciertaException incierta(String motivo, String referencia, Throwable causa) {
+        return new DispersionInciertaException("Wompi no confirmó el pago (" + motivo + "). Revísalo en su panel antes de "
+                + "volver a pagar: la línea se resuelve sola al llegar el evento de Wompi", referencia, causa);
+    }
+
+    /** Solo los últimos 4 dígitos: el número completo no va a los logs. */
+    static String enmascarar(String numeroCuenta) {
+        if (numeroCuenta == null || numeroCuenta.length() <= 4) return "****";
+        return "****" + numeroCuenta.substring(numeroCuenta.length() - 4);
     }
 
     private String obtenerEmailBeneficiario(RepartoPago reparto) {
@@ -297,9 +341,6 @@ public class WompiPayoutService implements DispersionService {
     public synchronized String resolverAccountId() {
         if (accountId != null && !accountId.isBlank()) {
             return accountId;
-        }
-        if (restTemplate == null || apiKey.isBlank()) {
-            return DEFAULT_ACCOUNT_ID;
         }
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -333,7 +374,7 @@ public class WompiPayoutService implements DispersionService {
         } catch (Exception e) {
             log.warn("No se pudo consultar automáticamente la cuenta origen en Wompi Payouts: {}", e.getMessage());
         }
-        return DEFAULT_ACCOUNT_ID;
+        throw new DispersionException("No se pudo determinar la cuenta de origen: revisa WOMPI_PAYOUTS_ACCOUNT_ID");
     }
 
     public String resolverBankId(CuentaBancaria cuenta) {
@@ -358,8 +399,8 @@ public class WompiPayoutService implements DispersionService {
             if (bankUuidCache.containsKey(nombre)) return bankUuidCache.get(nombre);
         }
 
-        // Si no se encuentra en el catálogo, Bancolombia por defecto o el código mismo
-        return BANCOS_CONOCIDOS_UUID.getOrDefault(codigo, "fe0dc841-b057-4349-a6dc-a88d29d2605a");
+        throw new DispersionException("Banco no reconocido por Wompi Payouts: '" + cuenta.getBanco()
+                + "' (código '" + codigo + "'). Corrige la cuenta bancaria del beneficiario");
     }
 
     private synchronized void cargarCatalogoBancos() {

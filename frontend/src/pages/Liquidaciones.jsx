@@ -71,7 +71,7 @@ export default function Liquidaciones() {
   const token = getToken();
   const [vista, setVista] = useState("repartos");
   const [estado, setEstado] = useState("POR_LIQUIDAR");
-  const [modo, setModo] = useState(null); // { modo, automatica }
+  const [modo, setModo] = useState(null); // { modo, automatica, dineroReal }
   const [numero, setNumero] = useState("");
   const [filas, setFilas] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -176,12 +176,12 @@ export default function Liquidaciones() {
         descripcion="Pagos pendientes a talleres y tiendas, y reembolsos a clientes. Cada pago queda registrado con su referencia." />
 
       {esRepartos && modo && (
-        <Alerta tono={modo.modo === "SIMULADO" ? "aviso" : modo.modo === "WOMPI" ? "ok" : "info"} className="pp-bloque-sep">
+        <Alerta tono={modo.dineroReal === false ? "aviso" : modo.modo === "WOMPI" ? "ok" : "info"} className="pp-bloque-sep">
           <strong>Modo de liquidación: {modo.modo}.</strong>{" "}
           {modo.modo === "SIMULADO"
             ? "Solo desarrollo: las liquidaciones se hacen solas y NO mueven dinero (referencias SIM-…)."
             : modo.modo === "WOMPI"
-            ? "Dispersión automática mediante Wompi Payouts a la cuenta bancaria de cada taller y tienda."
+            ? `Wompi Payouts a la cuenta bancaria de cada taller y tienda; cada pago lo apruebas tú.${modo.dineroReal === false ? " Estás en sandbox: NO mueve dinero real." : ""}`
             : "Tú pagas por el banco y anotas aquí el número de transferencia; nada se liquida solo."}
         </Alerta>
       )}
@@ -282,7 +282,7 @@ export default function Liquidaciones() {
                           </span>
                         )}
                         {esRepartos && f.eventoListo && <span className="pp-sub">Evento: {f.eventoListo}</span>}
-                        {esRepartos && f.estado === "FALLIDO" && f.motivoFallo && <span className="pp-sub liq-fallo">{f.motivoFallo}</span>}
+                        {esRepartos && (f.estado === "FALLIDO" || f.estado === "PROCESANDO") && f.motivoFallo && <span className="pp-sub liq-fallo">{f.motivoFallo}</span>}
                         {f.nota && <span className="pp-sub">{f.nota}</span>}
                       </td>
                       <td className="ui-table__acciones liq-acciones">

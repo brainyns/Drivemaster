@@ -29,17 +29,20 @@ export async function repartosTabla(token, parametros) {
   return handle(res, "No se pudieron cargar las liquidaciones");
 }
 
-/** Modo de dispersión del backend: { modo: "SIMULADO" | "MANUAL", automatica } */
+/** Modo de dispersión del backend: { modo: "SIMULADO" | "MANUAL" | "WOMPI", automatica, dineroReal } */
 export async function obtenerModo(token) {
   const res = await apiFetch(`${BASE}/modo`, { headers: headers(token) });
   return handle(res, "No se pudo consultar el modo de liquidación");
 }
 
+// Wompi Payouts puede tardar más que el límite normal: cortar antes diría "sin conexión" con el pago en curso
+const LIMITE_LIQUIDAR_MS = 60000;
+
 /** En modo MANUAL el número de transferencia es obligatorio; en SIMULADO el backend lo ignora. */
 export async function liquidarReparto(token, id, { numeroTransferencia, nota } = {}) {
   const res = await apiFetch(`${BASE}/repartos/${id}/liquidar`, {
     method: "PATCH", headers: headers(token), body: JSON.stringify({ numeroTransferencia, nota }),
-  });
+  }, LIMITE_LIQUIDAR_MS);
   return handle(res, "No se pudo liquidar");
 }
 

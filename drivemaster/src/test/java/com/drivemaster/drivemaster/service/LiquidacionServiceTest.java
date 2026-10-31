@@ -10,6 +10,7 @@ import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import com.drivemaster.drivemaster.service.dispersion.DispersionException;
+import com.drivemaster.drivemaster.service.dispersion.DispersionInciertaException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionService;
 import com.drivemaster.drivemaster.service.dispersion.ManualDispersionService;
 import com.drivemaster.drivemaster.service.dispersion.ResultadoDispersion;
@@ -84,14 +85,30 @@ class LiquidacionServiceTest {
 
         repartoRepository = mock(RepartoPagoRepository.class);
         when(repartoRepository.findById(anyLong())).thenAnswer(i -> Optional.ofNullable(repartos.get((Long) i.getArgument(0))));
-        when(repartoRepository.findByReferenciaLiquidacion(anyString())).thenAnswer(i -> {
+        when(repartoRepository.findFirstByReferenciaLiquidacionStartingWith(anyString())).thenAnswer(i -> {
             String ref = i.getArgument(0);
-            return repartos.values().stream().filter(r -> ref.equals(r.getReferenciaLiquidacion())).findFirst();
+            return repartos.values().stream().filter(r -> r.getReferenciaLiquidacion() != null
+                    && r.getReferenciaLiquidacion().startsWith(ref)).findFirst();
+        });
+        when(repartoRepository.findFirstByReferenciaLiquidacionEndingWith(anyString())).thenAnswer(i -> {
+            String sufijo = i.getArgument(0);
+            return repartos.values().stream().filter(r -> r.getReferenciaLiquidacion() != null
+                    && r.getReferenciaLiquidacion().endsWith(sufijo)).findFirst();
+        });
+        when(repartoRepository.marcarPorVerificar(anyLong(), anyString(), anyString(), anyString())).thenAnswer(i -> {
+            synchronized (repartos) {
+                RepartoPago r = repartos.get((Long) i.getArgument(0));
+                if (!RepartoPago.PROCESANDO.equals(r.getEstado())) return 0;
+                r.setReferenciaLiquidacion(i.getArgument(1));
+                r.setMotivoFallo(i.getArgument(2));
+                r.setModoLiquidacion(i.getArgument(3));
+                return 1;
+            }
         });
         when(repartoRepository.marcarFallidoAsincrono(anyLong(), anyString())).thenAnswer(i -> {
             synchronized (repartos) {
                 RepartoPago r = repartos.get((Long) i.getArgument(0));
-                if (r == null) return 0;
+                if (r == null || !List.of(RepartoPago.PROCESANDO, RepartoPago.LIQUIDADO).contains(r.getEstado())) return 0;
                 r.setEstado(RepartoPago.FALLIDO);
                 r.setMotivoFallo(i.getArgument(1));
                 return 1;
@@ -163,6 +180,7 @@ class LiquidacionServiceTest {
         DispersionService contada = new DispersionService() {
             @Override public String modo() { return dispersion.modo(); }
             @Override public boolean automatica() { return dispersion.automatica(); }
+            @Override public boolean dineroReal() { return dispersion.dineroReal(); }
             @Override public void validar(SolicitudDispersion s) { dispersion.validar(s); }
             @Override public ResultadoDispersion liquidar(RepartoPago r, SolicitudDispersion s) {
                 dispersiones.incrementAndGet();
@@ -444,7 +462,7 @@ class LiquidacionServiceTest {
         s.pedidoRecibido("ped1", "RECEPCION_CONFIRMADA_TALLER");
 
         ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> s.liquidar(1L, ADMIN, null, null));
-        assertEquals(HttpStatus.BAD_GATEWAY, e.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, e.getStatusCode());
         assertEquals(RepartoPago.FALLIDO, tienda.getEstado());
     }
 
@@ -488,8 +506,8 @@ class LiquidacionServiceTest {
 
     @Test
     void elModoSeExponeParaLaPantalla() {
-        assertEquals(Map.of("modo", "SIMULADO", "automatica", true), servicio(simulada()).modo());
-        assertEquals(Map.of("modo", "MANUAL", "automatica", false), servicio(manual()).modo());
+        assertEquals(Map.of("modo", "SIMULADO", "automatica", true, "dineroReal", false), servicio(simulada()).modo());
+        assertEquals(Map.of("modo", "MANUAL", "automatica", false, "dineroReal", true), servicio(manual()).modo());
     }
 
     // ─── Ajuste: liquidación del diagnóstico según cómo termina la orden ─────
@@ -621,22 +639,24 @@ class LiquidacionServiceTest {
                 .id(99L)
                 .estado(RepartoPago.LIQUIDADO)
                 .beneficiarioNombre("Taller Norte")
-                .referenciaLiquidacion("WOMPI-99-TEST")
+                .referenciaLiquidacion("WOMPI-99-TEST [ID:pout-99]")
                 .build();
         repartos.put(99L, r);
 
         LiquidacionService service = servicio(manual());
 
         Map<String, Object> payload = Map.of(
-                "event", "payout.updated",
-                "data", Map.of(
-                        "reference", "WOMPI-99-TEST",
-                        "status", "REJECTED",
-                        "failure_reason", "Cuenta bancaria no existe"
-                )
+                "event", "transaction.updated",
+                "data", Map.of("transaction", Map.of(
+                        "id", "txn-1",
+                        "payoutId", "pout-99",
+                        "status", "FAILED",
+                        "failureReason", Map.of("code", "E01", "message", "Cuenta bancaria no existe")
+                ))
         );
 
         service.procesarWebhookPayout(payload);
+        service.procesarWebhookPayout(payload); // Wompi reintenta los eventos: una sola alerta
 
         assertEquals(RepartoPago.FALLIDO, repartos.get(99L).getEstado());
         assertTrue(repartos.get(99L).getMotivoFallo().contains("Cuenta bancaria no existe"));
@@ -669,5 +689,70 @@ class LiquidacionServiceTest {
 
         assertEquals(RepartoPago.LIQUIDADO, repartos.get(100L).getEstado());
         assertEquals("WOMPI", repartos.get(100L).getModoLiquidacion());
+        assertEquals("WOMPI-100-TEST", repartos.get(100L).getReferenciaLiquidacion());
+    }
+
+    @Test
+    void elEventoDeUnIntentoAnteriorNoDeshaceElReintentoPagado() {
+        RepartoPago r = linea(101, RepartoPago.TALLER, null, true);
+        r.setEstado(RepartoPago.LIQUIDADO);
+        r.setReferenciaLiquidacion("WOMPI-101-NUEVA [ID:pout-nuevo]");
+
+        servicio(manual()).procesarWebhookPayout(Map.of("event", "payout.updated", "data", Map.of("payout", Map.of(
+                "id", "pout-viejo", "reference", "WOMPI-101-VIEJA", "status", "FAILED"))));
+
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado(), "tampoco se busca por el id que trae la referencia");
+        verifyNoInteractions(avisos);
+    }
+
+    @Test
+    void enWompiElEventoNoPagaSoloQuedaEsperandoAlAdmin() {
+        RepartoPago tienda = linea(1, RepartoPago.TIENDA, "ped1", true);
+        DispersionService aprobada = mock(DispersionService.class);
+        when(aprobada.modo()).thenReturn("WOMPI");
+        when(aprobada.automatica()).thenReturn(false);
+
+        servicio(aprobada).pedidoRecibido("ped1", "RECEPCION_CONFIRMADA_TALLER");
+
+        assertEquals(RepartoPago.POR_LIQUIDAR, tienda.getEstado());
+        assertEquals(0, dispersiones.get());
+    }
+
+    @Test
+    void unPagoSinConfirmarSigueProcesandoYNoSeReintenta() {
+        RepartoPago tienda = linea(1, RepartoPago.TIENDA, "ped1", true);
+        tienda.setEstado(RepartoPago.POR_LIQUIDAR);
+        DispersionService incierta = mock(DispersionService.class);
+        when(incierta.modo()).thenReturn("WOMPI");
+        when(incierta.liquidar(any(), any())).thenThrow(new DispersionInciertaException("Wompi no confirmó", "WOMPI-1-AB", null));
+        LiquidacionService s = servicio(incierta);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> s.liquidar(1L, ADMIN, null, null));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        assertEquals(RepartoPago.PROCESANDO, tienda.getEstado());
+        assertEquals("WOMPI-1-AB", tienda.getReferenciaLiquidacion());
+        verify(avisos).alertaAdmin(eq("Liquidación sin confirmar"), contains("WOMPI-1-AB"));
+
+        // Segundo clic: no vuelve a salir hacia Wompi
+        assertThrows(ResponseStatusException.class, () -> s.liquidar(1L, ADMIN, null, null));
+        assertEquals(1, dispersiones.get());
+
+        // El evento de Wompi lo resuelve por la referencia guardada
+        s.procesarWebhookPayout(Map.of("event", "payout.updated", "data", Map.of("payout", Map.of(
+                "reference", "WOMPI-1-AB", "status", "TOTAL_PAYMENT"))));
+        assertEquals(RepartoPago.LIQUIDADO, tienda.getEstado());
+    }
+
+    @Test
+    void elWebhookSinFirmaValidaNoProcesaNada() {
+        LiquidacionService s = mock(LiquidacionService.class);
+        var controlador = new com.drivemaster.drivemaster.controller.LiquidacionController(s,
+                new com.drivemaster.drivemaster.service.dispersion.FirmaEventosPayout("", "WOMPI"));
+        Map<String, Object> evento = Map.of("event", "payout.updated", "data", Map.of("payout", Map.of(
+                "reference", "WOMPI-1-AB", "status", "FAILED")));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, controlador.webhook(evento, "cualquiera").getStatusCode());
+        verify(s, never()).procesarWebhookPayout(any());
     }
 }

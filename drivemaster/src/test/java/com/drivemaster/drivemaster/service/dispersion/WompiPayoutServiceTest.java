@@ -14,6 +14,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
@@ -57,8 +58,9 @@ class WompiPayoutServiceTest {
                 tallerRepository, tiendaRepository, restTemplate, "", "", "", "pub_test_abc"
         );
         assertEquals("WOMPI", service.modo());
-        assertTrue(service.automatica());
+        assertFalse(service.automatica(), "cada pago lo aprueba el ADMIN");
         assertFalse(service.esModoApiReal());
+        assertFalse(service.dineroReal());
     }
 
     @Test
@@ -144,7 +146,7 @@ class WompiPayoutServiceTest {
 
         ResultadoDispersion res = service.liquidar(reparto, SolicitudDispersion.automatica());
         assertNotNull(res);
-        assertEquals("WOMPI", res.modo());
+        assertEquals("SIMULADO", res.modo(), "sin API key no salió dinero: no puede quedar como WOMPI");
         assertEquals(new BigDecimal("250000"), res.monto());
         assertTrue(res.referencia().startsWith("WOMPI-30-"));
     }
@@ -173,7 +175,7 @@ class WompiPayoutServiceTest {
 
         ResultadoDispersion res = service.liquidar(reparto, SolicitudDispersion.automatica());
         assertNotNull(res);
-        assertEquals("WOMPI", res.modo());
+        assertEquals("SIMULADO", res.modo());
         assertEquals(new BigDecimal("320000"), res.monto());
         assertTrue(res.referencia().startsWith("WOMPI-40-"));
     }
@@ -244,6 +246,129 @@ class WompiPayoutServiceTest {
         DispersionException ex = assertThrows(DispersionException.class,
                 () -> service.liquidar(reparto, SolicitudDispersion.automatica()));
         assertTrue(ex.getMessage().contains("INSUFFICIENT_FUNDS"));
+        assertFalse(ex instanceof DispersionInciertaException, "un 4xx es definitivo: se puede reintentar");
+    }
+
+    // ─── Nunca marcar pagado lo que no salió ni adivinar a dónde va el dinero ──
+
+    private RepartoPago lineaDeTaller(CuentaBancaria cuenta) {
+        when(tallerRepository.findById("tal-9")).thenReturn(Optional.of(
+                Taller.builder().id("tal-9").nombre("Taller Nueve").cuentaBancaria(cuenta).build()));
+        return RepartoPago.builder().id(90L).beneficiarioTipo(RepartoPago.TALLER).beneficiarioId("tal-9")
+                .beneficiarioNombre("Taller Nueve").monto(100_000.0).build();
+    }
+
+    private WompiPayoutService apiDePruebas() {
+        return new WompiPayoutService(tallerRepository, tiendaRepository, restTemplate,
+                "sec_test_api_key", "principal-1", "https://api.sandbox.payouts.wompi.co/v1", "pub_test_key", "acc_test_123");
+    }
+
+    private void verificarSinPago() {
+        verify(restTemplate, never()).exchange(contains("/payouts"), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class));
+    }
+
+    @Test
+    @DisplayName("Sin API key y con llaves reales rechaza el pago en vez de simularlo")
+    void sinApiKeyConLlavesRealesRechaza() {
+        WompiPayoutService service = new WompiPayoutService(tallerRepository, tiendaRepository, restTemplate,
+                "", "", "https://api.payouts.wompi.co/v1", "pub_prod_abc");
+        RepartoPago linea = lineaDeTaller(cuentaEjemplo());
+
+        DispersionException ex = assertThrows(DispersionException.class, () -> service.liquidar(linea, SolicitudDispersion.automatica()));
+        assertTrue(ex.getMessage().contains("WOMPI_PAYOUTS_API_KEY"));
+    }
+
+    @Test
+    @DisplayName("Rechaza llaves reales con el sandbox y llaves de pruebas con producción")
+    void configuracionMezcladaRechaza() {
+        RepartoPago linea = lineaDeTaller(cuentaEjemplo());
+        WompiPayoutService realEnSandbox = new WompiPayoutService(tallerRepository, tiendaRepository, restTemplate,
+                "prv_key", "", "https://api.sandbox.payouts.wompi.co/v1", "pub_prod_abc", "acc");
+        WompiPayoutService pruebaEnProduccion = new WompiPayoutService(tallerRepository, tiendaRepository, restTemplate,
+                "prv_key", "", "https://api.payouts.wompi.co/v1", "pub_test_abc", "acc");
+
+        assertThrows(DispersionException.class, () -> realEnSandbox.liquidar(linea, SolicitudDispersion.automatica()));
+        assertThrows(DispersionException.class, () -> pruebaEnProduccion.liquidar(linea, SolicitudDispersion.automatica()));
+        verificarSinPago();
+    }
+
+    @Test
+    @DisplayName("Solo producción con API key cuenta como dinero real")
+    void dineroRealSoloEnProduccion() {
+        assertFalse(apiDePruebas().dineroReal());
+        assertTrue(new WompiPayoutService(tallerRepository, tiendaRepository, restTemplate,
+                "prv_key", "", "https://api.payouts.wompi.co/v1", "pub_prod_abc", "acc").dineroReal());
+    }
+
+    @Test
+    @DisplayName("Un banco desconocido se rechaza: nunca cae en Bancolombia")
+    void bancoDesconocidoNoCaeEnBancolombia() {
+        CuentaBancaria cuenta = cuentaEjemplo();
+        cuenta.setBanco("Banco Inventado");
+        cuenta.setBancoCodigo("9999");
+        RepartoPago linea = lineaDeTaller(cuenta);
+
+        DispersionException ex = assertThrows(DispersionException.class, () -> apiDePruebas().liquidar(linea, SolicitudDispersion.automatica()));
+        assertTrue(ex.getMessage().contains("Banco Inventado"));
+        verificarSinPago();
+    }
+
+    @Test
+    @DisplayName("Sin documento o nombre del titular no sale el pago")
+    void titularIncompletoNoSale() {
+        CuentaBancaria sinDocumento = cuentaEjemplo();
+        sinDocumento.setTitularDocumentoNumero(null);
+        RepartoPago linea = lineaDeTaller(sinDocumento);
+        assertThrows(DispersionException.class, () -> apiDePruebas().liquidar(linea, SolicitudDispersion.automatica()));
+
+        CuentaBancaria sinNombre = cuentaEjemplo();
+        sinNombre.setTitularNombre(" ");
+        RepartoPago otra = lineaDeTaller(sinNombre);
+        assertThrows(DispersionException.class, () -> apiDePruebas().liquidar(otra, SolicitudDispersion.automatica()));
+        verificarSinPago();
+    }
+
+    @Test
+    @DisplayName("Sin cuenta de origen configurada ni detectable no usa una cuenta fija")
+    void sinCuentaOrigenRechaza() {
+        when(restTemplate.exchange(contains("/accounts"), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenThrow(new ResourceAccessException("sin red"));
+        WompiPayoutService service = new WompiPayoutService(tallerRepository, tiendaRepository, restTemplate,
+                "sec_test_api_key", "", "https://api.sandbox.payouts.wompi.co/v1", "pub_test_key");
+        RepartoPago linea = lineaDeTaller(cuentaEjemplo());
+
+        DispersionException ex = assertThrows(DispersionException.class, () -> service.liquidar(linea, SolicitudDispersion.automatica()));
+        assertTrue(ex.getMessage().contains("WOMPI_PAYOUTS_ACCOUNT_ID"));
+        assertFalse(ex instanceof DispersionInciertaException, "no salió ningún pago");
+        verificarSinPago();
+    }
+
+    @Test
+    @DisplayName("Tiempo vencido o 5xx en el POST: el pago queda incierto, no fallido")
+    void tiempoVencidoO5xxEsIncierto() {
+        RepartoPago linea = lineaDeTaller(cuentaEjemplo());
+        when(restTemplate.exchange(contains("/payouts"), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenThrow(new ResourceAccessException("Read timed out"))
+                .thenThrow(new RestClientResponseException("Error", 503, "Service Unavailable", null, new byte[0], null));
+
+        DispersionInciertaException porTiempo = assertThrows(DispersionInciertaException.class,
+                () -> apiDePruebas().liquidar(linea, SolicitudDispersion.automatica()));
+        assertTrue(porTiempo.getReferencia().startsWith("WOMPI-90-"));
+        assertThrows(DispersionInciertaException.class, () -> apiDePruebas().liquidar(linea, SolicitudDispersion.automatica()));
+    }
+
+    @Test
+    @DisplayName("El número de cuenta se enmascara y las llamadas a Wompi tienen límite de tiempo")
+    void enmascaraYTieneTimeouts() {
+        assertEquals("****7890", WompiPayoutService.enmascarar("1234567890"));
+        assertEquals("****", WompiPayoutService.enmascarar("12"));
+        assertEquals("****", WompiPayoutService.enmascarar(null));
+
+        var fabrica = new com.drivemaster.drivemaster.config.RestTemplateConfig().wompiPayoutsRestTemplate().getRequestFactory();
+        assertEquals(com.drivemaster.drivemaster.config.RestTemplateConfig.PAYOUTS_CONNECT_TIMEOUT_MS,
+                org.springframework.test.util.ReflectionTestUtils.getField(fabrica, "connectTimeout"));
+        assertEquals(com.drivemaster.drivemaster.config.RestTemplateConfig.PAYOUTS_READ_TIMEOUT_MS,
+                org.springframework.test.util.ReflectionTestUtils.getField(fabrica, "readTimeout"));
     }
 }
 
