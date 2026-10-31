@@ -264,11 +264,30 @@ public class PagoMarketplaceService {
             }
         } catch (Exception e) {
             log.error("Error aplicando el pago {} de la orden {}", pago.getReferencia(), pago.getOrdenServicioId(), e);
+            anularLineasDelPago(pago);
             registrarReembolso(pago, null, pago.getMonto(), "Error al aplicar el pago: revisar la solicitud antes de reembolsar");
             avisos.alertaAdmin("Pago sin aplicar", "El pago " + pago.getReferencia() + " de la solicitud "
                     + pago.getOrdenServicioId() + " falló al aplicarse: " + e.getMessage());
         } finally {
             pagoRepository.save(pago);
+        }
+    }
+
+    /**
+     * El pago falló a mitad de aplicarse y se reembolsa todo: las líneas que alcanzaron a crearse no se deben pagar. Nunca
+     * lanza: un fallo aquí no puede impedir que quede registrado el reembolso.
+     */
+    private void anularLineasDelPago(PagoEntity pago) {
+        try {
+            for (RepartoPago r : repartoRepository.findByPagoId(pago.getId())) {
+                if (RepartoPago.PENDIENTE.equals(r.getEstado())) {
+                    repartoRepository.anularPendiente(r.getId(), "El pago no se pudo aplicar: se reembolsa al cliente");
+                }
+            }
+        } catch (RuntimeException e) {
+            log.error("No se pudieron anular las líneas del pago {} que no se aplicó", pago.getReferencia(), e);
+            avisos.alertaAdmin("Líneas sin anular", "El pago " + pago.getReferencia() + " no se aplicó y se reembolsa, pero sus "
+                    + "líneas de reparto no se pudieron anular: no las liquides y anúlalas antes de cerrar el reembolso.");
         }
     }
 

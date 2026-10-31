@@ -315,6 +315,51 @@ class PagoMarketplaceServiceTest {
         assertEquals("PAGADO", pago.getEstado());
     }
 
+    /** La orden se paga y se crean las líneas, pero falla el último paso: pasar a REPUESTOS_PEDIDOS. */
+    private void fallaTrasCrearLasLineas() {
+        doAnswer(i -> {
+            if (EstadoOrden.REPUESTOS_PEDIDOS.equals(i.getArgument(1))) throw new IllegalStateException("Mongo no responde");
+            OrdenServicio o = i.getArgument(0);
+            o.setEstado(i.getArgument(1));
+            return o;
+        }).when(transiciones).transicionar(any(), anyString(), any(), anyString(), any(), any());
+    }
+
+    private static RepartoPago lineaDelPago(long id, String tipo, String estado) {
+        return RepartoPago.builder().id(id).pagoId(10L).beneficiarioTipo(tipo).estado(estado).monto(100.0).build();
+    }
+
+    @Test
+    void siFallaTrasCrearLasLineasQuedanAnuladasConElReembolso() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
+        fallaTrasCrearLasLineas();
+        when(repartoRepository.findByPagoId(10L)).thenReturn(List.of(
+                lineaDelPago(1L, RepartoPago.TIENDA, RepartoPago.PENDIENTE),
+                lineaDelPago(2L, RepartoPago.TALLER, RepartoPago.PENDIENTE),
+                lineaDelPago(3L, RepartoPago.PLATAFORMA, RepartoPago.INFORMATIVA)));
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 107_100), "txn-1");
+
+        verify(repartoRepository).anularPendiente(eq(1L), anyString());
+        verify(repartoRepository).anularPendiente(eq(2L), anyString());
+        verify(repartoRepository, never()).anularPendiente(eq(3L), anyString());
+        ArgumentCaptor<Reembolso> r = ArgumentCaptor.forClass(Reembolso.class);
+        verify(reembolsoRepository).save(r.capture());
+        assertEquals(107_100, r.getValue().getMonto());
+    }
+
+    @Test
+    void siNoSePuedenAnularLasLineasElReembolsoSeRegistraYSeAlerta() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
+        fallaTrasCrearLasLineas();
+        when(repartoRepository.findByPagoId(10L)).thenThrow(new IllegalStateException("La base no responde"));
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 107_100), "txn-1");
+
+        verify(reembolsoRepository).save(any());
+        verify(avisos).alertaAdmin(eq("Líneas sin anular"), anyString());
+    }
+
     @Test
     void cotizacionSoloManoDeObraQuedaLista() {
         cotizacion(new ArrayList<>(List.of(CotizacionItem.builder().tipo(CotizacionItem.MANO_OBRA)
