@@ -59,7 +59,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       # Logo en el encabezado de los correos y del PDF (vacío = el nombre en texto).
       BRAND_LOGO_URL: ${BRAND_LOGO_URL:-}
-      BRAND_LOGO_WIDTH: ${BRAND_LOGO_WIDTH:-160}
+      BRAND_LOGO_WIDTH: ${BRAND_LOGO_WIDTH:-80}
       WOMPI_PUBLIC_KEY: ${WOMPI_PUBLIC_KEY}
       WOMPI_INTEGRITY_KEY: ${WOMPI_INTEGRITY_KEY}
       WOMPI_API_URL: ${WOMPI_API_URL:-https://sandbox.wompi.co/v1}
