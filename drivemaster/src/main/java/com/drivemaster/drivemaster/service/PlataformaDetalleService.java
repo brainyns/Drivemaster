@@ -115,8 +115,7 @@ public class PlataformaDetalleService {
         var devoluciones = p.getPagoId() == null ? List.<com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso>of()
                 : reembolsos.findByPagoId(p.getPagoId()).stream()
                 .filter(b -> b.getPedidoTiendaId() == null || id.equals(b.getPedidoTiendaId()))
-                .map(b -> new com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso(
-                        n(b.getMonto()), b.getEstado(), b.getMotivo(), b.getFechaCreacion(), b.getFechaRealizado()))
+                .map(PlataformaDetalleService::reembolso)
                 .toList();
 
         Entrega entrega = entrega(p, ahora);
@@ -201,8 +200,7 @@ public class PlataformaDetalleService {
                         r.getModoLiquidacion(), r.getFechaLiquidacion(), r.getNota(), false))
                 .toList();
         var devoluciones = reembolsos.findByOrdenServicioId(id).stream()
-                .map(b -> new com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso(
-                        n(b.getMonto()), b.getEstado(), b.getMotivo(), b.getFechaCreacion(), b.getFechaRealizado()))
+                .map(PlataformaDetalleService::reembolso)
                 .toList();
         List<PedidoResumen> pedidos = mongo.find(Query.query(Criteria.where("ordenId").is(id))
                         .with(Sort.by(Sort.Direction.ASC, "fechaCreacion")), PedidoTienda.class).stream()
@@ -310,6 +308,12 @@ public class PlataformaDetalleService {
     }
 
     // ─── Piezas ─────────────────────────────────────────────────────────────
+
+    private static com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso reembolso(
+            com.drivemaster.drivemaster.model.mysql.Reembolso b) {
+        return new com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso(
+                n(b.getMonto()), b.getEstado(), b.getMotivo(), b.getFechaCreacion(), b.getFechaRealizado(), b.getSaldoAFavor());
+    }
 
     private static PedidoResumen resumen(PedidoTienda p) {
         return new PedidoResumen(p.getId(), p.getTiendaNombre(), p.getEstado(), n(p.getTotal()), p.getFechaCreacion());

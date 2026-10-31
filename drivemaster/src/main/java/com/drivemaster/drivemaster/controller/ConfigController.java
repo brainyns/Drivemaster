@@ -2,9 +2,12 @@ package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.model.mysql.*;
 import com.drivemaster.drivemaster.repository.mysql.*;
+import com.drivemaster.drivemaster.service.ParametrosMarketplace;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -57,6 +60,9 @@ public class ConfigController {
     public ResponseEntity<Parametro> actualizarParametro(
             @PathVariable String clave,
             @RequestBody Parametro parametro) {
+        if ("COMISION_PCT".equals(clave) && !ParametrosMarketplace.comisionValida(parametro.getValor())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La comisión debe ser un número de 0 a 50");
+        }
         return parametroRepo.findByClave(clave).map(p -> {
             p.setValor(parametro.getValor());
             p.setDescripcion(parametro.getDescripcion());

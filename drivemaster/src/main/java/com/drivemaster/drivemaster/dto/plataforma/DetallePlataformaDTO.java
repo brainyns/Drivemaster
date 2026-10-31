@@ -29,7 +29,9 @@ public final class DetallePlataformaDTO {
     public record LineaReparto(String beneficiarioTipo, String beneficiario, double monto, String estado,
                                String modoLiquidacion, LocalDateTime fechaLiquidacion, String nota, boolean delPago) {}
 
-    public record Reembolso(double monto, String estado, String motivo, LocalDateTime fecha, LocalDateTime fechaRealizado) {}
+    /** saldoAFavor: lo que ya se le había transferido al negocio por este dinero y hay que cobrarle a mano (null si nada). */
+    public record Reembolso(double monto, String estado, String motivo, LocalDateTime fecha, LocalDateTime fechaRealizado,
+                            Double saldoAFavor) {}
 
     /** ENVIO (a dónde y a quién) o RETIRO (en qué tienda y cuándo lo recogió); los de taller van al taller. */
     public record Entrega(String tipo, String receptor, String telefono, String direccion, String ciudad,

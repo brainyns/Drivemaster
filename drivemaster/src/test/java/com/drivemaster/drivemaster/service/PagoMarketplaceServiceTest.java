@@ -360,6 +360,161 @@ class PagoMarketplaceServiceTest {
         verify(avisos).alertaAdmin(eq("Líneas sin anular"), anyString());
     }
 
+    // ─── Comisión retenida ───────────────────────────────────────────────────
+
+    /** Repuestos 200.000 + IVA 19 %, mano de obra 100.000 + IVA 19 % y diagnóstico de 59.500 ya pagado (base 50.000). */
+    private PagoEntity cotizacionConDiagnostico(boolean retener) {
+        when(parametros.comisionPct()).thenReturn(10.0);
+        when(parametros.ivaPct()).thenReturn(19.0);
+        when(parametros.comisionRetenida()).thenReturn(retener);
+        orden.setIvaDiagnosticoPct(19.0);
+        cotizacion = Cotizacion.builder().id("c1").ordenId("o1").version(1).estado(Cotizacion.APROBADA).tallerNombre("AutoMax")
+                .ivaPct(19.0).ivaRepuestosPct(19.0).ivaManoObraPct(19.0)
+                .items(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 200_000, "ENCARGO"),
+                        CotizacionItem.builder().tipo(CotizacionItem.MANO_OBRA).subtotal(100_000.0).build())))
+                .subtotalRepuestos(200_000.0).subtotalManoObra(100_000.0).subtotal(300_000.0)
+                .ivaRepuestos(38_000.0).ivaManoObra(19_000.0).iva(57_000.0).total(357_000.0)
+                .anticipoDiagnostico(59_500.0).totalAPagar(297_500.0).vigenciaHasta(LocalDateTime.now().plusDays(2)).build();
+        when(cotizacionRepository.findById("c1")).thenReturn(Optional.of(cotizacion));
+        return pago(PagoMarketplaceService.COTIZACION, 297_500);
+    }
+
+    @Test
+    void laCotizacionRetieneACadaUnoSobreLoSuyoYLasLineasSumanLoPagado() {
+        service.confirmar(cotizacionConDiagnostico(true), "txn-1");
+
+        List<RepartoPago> lineas = lineasGuardadas(3);
+        RepartoPago tienda = lineas.get(0);
+        assertEquals(RepartoPago.TIENDA, tienda.getBeneficiarioTipo());
+        assertEquals(238_000, tienda.getMontoBruto());
+        assertEquals(200_000, tienda.getComisionBase());
+        assertEquals(20_000, tienda.getComisionRetenida());
+        assertEquals(218_000, tienda.getMonto());
+
+        RepartoPago taller = lineas.get(1);
+        assertEquals(RepartoPago.TALLER, taller.getBeneficiarioTipo());
+        assertEquals(59_500, taller.getMontoBruto());
+        assertEquals(50_000, taller.getComisionBase(), "mano de obra menos la base del diagnóstico, que ya pagó comisión");
+        assertEquals(5_000, taller.getComisionRetenida());
+        assertEquals(54_500, taller.getMonto());
+
+        RepartoPago comision = lineas.get(2);
+        assertEquals(RepartoPago.PLATAFORMA, comision.getBeneficiarioTipo());
+        assertEquals(RepartoPago.RETENIDA, comision.getEstado());
+        assertEquals(25_000, comision.getMonto());
+        assertEquals(297_500, tienda.getMonto() + taller.getMonto() + comision.getMonto(), "lo pagado = netos + comisión");
+    }
+
+    @Test
+    void conLaBanderaApagadaLaCotizacionPagaCompletoYLaComisionEsInformativa() {
+        service.confirmar(cotizacionConDiagnostico(false), "txn-1");
+
+        List<RepartoPago> lineas = lineasGuardadas(3);
+        assertEquals(238_000, lineas.get(0).getMonto());
+        assertEquals(20_000, lineas.get(0).getComisionCalculada());
+        assertEquals(0, lineas.get(0).getComisionRetenida());
+        assertEquals(59_500, lineas.get(1).getMonto());
+        assertEquals(RepartoPago.INFORMATIVA, lineas.get(2).getEstado());
+        assertEquals(25_000, lineas.get(2).getMonto());
+    }
+
+    @Test
+    void elDiagnosticoRetieneSobreSuBaseSinIva() {
+        when(parametros.comisionPct()).thenReturn(10.0);
+        when(parametros.ivaPct()).thenReturn(19.0);
+        when(parametros.comisionRetenida()).thenReturn(true);
+        orden.setEstado(EstadoOrden.ASIGNADA_A_TALLER);
+        orden.setPagoDiagnosticoEstado(EstadoOrden.PAGO_PENDIENTE);
+        orden.setTarifaDiagnosticoBase(50_000.0);
+
+        service.confirmar(pago(PagoMarketplaceService.DIAGNOSTICO, 59_500), "txn-1");
+
+        List<RepartoPago> lineas = lineasGuardadas(2);
+        assertEquals(59_500, lineas.get(0).getMontoBruto());
+        assertEquals(5_000, lineas.get(0).getComisionRetenida());
+        assertEquals(54_500, lineas.get(0).getMonto());
+        assertEquals(RepartoPago.RETENIDA, lineas.get(1).getEstado());
+        assertEquals(5_000, lineas.get(1).getMonto());
+    }
+
+    // ─── Reembolsos con comisión retenida ────────────────────────────────────
+
+    private static RepartoPago lineaRetenida(long id, String tipo, String pedido, String estado, double bruto, double retenida) {
+        return RepartoPago.builder().id(id).pagoId(10L).beneficiarioTipo(tipo).pedidoTiendaId(pedido).estado(estado)
+                .montoBruto(bruto).monto(bruto - retenida).comisionRetenida(retenida).build();
+    }
+
+    /** Tienda 238.000 (comisión 20.000) y taller sin IVA 100.000 (comisión 10.000): el reembolso ya no es proporcional. */
+    private PagoEntity pagoConRetencion(String estadoTienda, String estadoTaller) {
+        PagoEntity pago = pago(PagoMarketplaceService.COTIZACION, 338_000);
+        when(reembolsoRepository.save(any(Reembolso.class))).thenAnswer(i -> {
+            Reembolso r = i.getArgument(0);
+            r.setId(55L);
+            return r;
+        });
+        when(repartoRepository.findByPagoId(10L)).thenReturn(List.of(
+                lineaRetenida(1L, RepartoPago.TIENDA, "ped-s1", estadoTienda, 238_000, 20_000),
+                lineaRetenida(2L, RepartoPago.TALLER, null, estadoTaller, 100_000, 10_000),
+                RepartoPago.builder().id(3L).pagoId(10L).beneficiarioTipo(RepartoPago.PLATAFORMA)
+                        .estado(RepartoPago.RETENIDA).monto(30_000.0).build()));
+        when(repartoRepository.sumaComisionDePago(10L)).thenReturn(30_000.0);
+        when(repartoRepository.sumaComisionBruta(10L)).thenReturn(30_000.0);
+        return pago;
+    }
+
+    @Test
+    void elReembolsoParcialAnulaExactamenteLaComisionDeEsaLinea() {
+        PagoEntity pago = pagoConRetencion(RepartoPago.ANULADO, RepartoPago.PENDIENTE);
+
+        Reembolso reembolso = service.registrarReembolso(pago, "ped-s1", 238_000, "No despachó");
+
+        RepartoPago anulacion = lineasGuardadas(1).get(0);
+        assertEquals(-20_000, anulacion.getMonto(), "la proporción del dinero daría 21.124");
+        assertEquals(RepartoPago.RETENIDA, anulacion.getEstado());
+        assertNull(reembolso.getSaldoAFavor());
+        verify(avisos, never()).alertaAdmin(anyString(), anyString());
+    }
+
+    @Test
+    void elReembolsoTotalAnulaTodaLaComisionRetenida() {
+        PagoEntity pago = pagoConRetencion(RepartoPago.ANULADO, RepartoPago.ANULADO);
+
+        Reembolso reembolso = service.registrarReembolso(pago, null, 338_000, "No se aplicó");
+
+        assertEquals(-30_000, lineasGuardadas(1).get(0).getMonto());
+        assertNull(reembolso.getSaldoAFavor());
+    }
+
+    @Test
+    void reembolsarUnaLineaYaPagadaNoAnulaSuComisionYDejaElSaldoAFavor() {
+        PagoEntity pago = pagoConRetencion(RepartoPago.LIQUIDADO, RepartoPago.PENDIENTE);
+
+        Reembolso reembolso = service.registrarReembolso(pago, "ped-s1", 238_000, "No llegó");
+
+        verify(repartoRepository, never()).save(any());
+        assertEquals(218_000, reembolso.getSaldoAFavor(), "lo que el negocio ya recibió por ese dinero");
+        verify(avisos).alertaAdmin(eq("Reembolso de una línea ya pagada"), contains("218000 COP a favor de DriveMaster"));
+    }
+
+    @Test
+    void reembolsarParteDeUnaLineaPagadaDejaLaParteProporcional() {
+        PagoEntity pago = pagoConRetencion(RepartoPago.LIQUIDADO, RepartoPago.PENDIENTE);
+
+        Reembolso reembolso = service.registrarReembolso(pago, "ped-s1", 119_000, "Devolución de una unidad");
+
+        assertEquals(109_000, reembolso.getSaldoAFavor());
+    }
+
+    @Test
+    void elReembolsoTotalConUnaLineaPagadaConservaSoloSuComision() {
+        PagoEntity pago = pagoConRetencion(RepartoPago.ANULADO, RepartoPago.LIQUIDADO);
+
+        Reembolso reembolso = service.registrarReembolso(pago, null, 338_000, "Error");
+
+        assertEquals(-20_000, lineasGuardadas(1).get(0).getMonto());
+        assertEquals(90_000, reembolso.getSaldoAFavor());
+    }
+
     @Test
     void cotizacionSoloManoDeObraQuedaLista() {
         cotizacion(new ArrayList<>(List.of(CotizacionItem.builder().tipo(CotizacionItem.MANO_OBRA)

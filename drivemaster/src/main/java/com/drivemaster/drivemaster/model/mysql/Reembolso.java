@@ -40,6 +40,9 @@ public class Reembolso {
     @Column(nullable = false)
     private Double monto;
 
+    // Lo que ya se le había transferido al negocio por este dinero: a favor de DriveMaster, se le cobra a mano
+    private Double saldoAFavor;
+
     @Column(length = 500, nullable = false)
     private String motivo;
 

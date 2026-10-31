@@ -205,6 +205,30 @@ class LiquidacionServiceTest {
         return new LiquidacionService(repartoRepository, reembolsoRepository, pagoRepository, contada, avisos, resoluciones);
     }
 
+    @Test
+    void unaLineaConNetoCeroSeCierraSinTransferirNiEsperarAlAdmin() {
+        RepartoPago r = linea(1L, RepartoPago.TALLER, null, true);
+        r.setMontoBruto(500.0);
+        r.setComisionRetenida(500.0);
+        r.setMonto(0.0);
+
+        servicio(new com.drivemaster.drivemaster.service.dispersion.ManualDispersionService()).ordenEntregada("o1");
+
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
+        assertEquals(RepartoPago.SIN_TRANSFERENCIA, r.getModoLiquidacion());
+        assertEquals(0, dispersiones.get(), "no se transfiere nada");
+    }
+
+    @Test
+    void unaLineaConMontoEnCeroYSinComisionSigueFallandoEnLaDispersion() {
+        RepartoPago r = linea(1L, RepartoPago.TALLER, null, true);
+        r.setMonto(0.0);
+
+        servicio(new com.drivemaster.drivemaster.service.dispersion.SimulatedDispersionService()).ordenEntregada("o1");
+
+        assertEquals(RepartoPago.FALLIDO, r.getEstado());
+    }
+
     private RepartoPago linea(long id, String tipo, String pedidoId, boolean porEvento) {
         RepartoPago r = RepartoPago.builder().id(id).pagoId(10L).ordenServicioId("o1").pedidoTiendaId(pedidoId)
                 .beneficiarioTipo(tipo).beneficiarioId("b" + id).beneficiarioNombre("Beneficiario " + id)

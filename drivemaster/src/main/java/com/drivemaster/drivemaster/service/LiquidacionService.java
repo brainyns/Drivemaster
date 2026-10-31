@@ -221,7 +221,8 @@ public class LiquidacionService {
         try {
             if (!RepartoPago.PENDIENTE.equals(reparto.getEstado())) return;
             if (repartoRepository.marcarPorLiquidar(reparto.getId(), LocalDateTime.now(), evento) == 0) return;
-            if (dispersion.automatica()) {
+            // Con neto 0 no hay nada que aprobar ni transferir, sea cual sea el modo
+            if (dispersion.automatica() || sinNadaQueTransferir(reparto)) {
                 ejecutar(reparto.getId(), SolicitudDispersion.automatica());
             }
         } catch (Exception e) {
@@ -322,6 +323,11 @@ public class LiquidacionService {
             throw noSePudoTomar(id);
         }
         RepartoPago tomada = repartoRepository.findById(id).orElseThrow();
+        if (sinNadaQueTransferir(tomada)) {
+            repartoRepository.marcarLiquidado(id, LocalDateTime.now(), RepartoPago.SIN_TRANSFERENCIA, "SIN-TRANSFERENCIA", solicitud.actor(),
+                    "Sin transferencia: toda la parte de esta línea fue comisión");
+            return repartoRepository.findById(id).orElseThrow();
+        }
         try {
             ResultadoDispersion r = dispersion.liquidar(tomada, solicitud);
             int filas = repartoRepository.marcarLiquidado(id, LocalDateTime.now(), r.modo(), r.referencia(),
@@ -345,6 +351,11 @@ public class LiquidacionService {
                     + ". Reintenta desde Liquidaciones.");
         }
         return repartoRepository.findById(id).orElseThrow();
+    }
+
+    /** La comisión se llevó toda la línea: pasa con muy poco saldo, si el taller dejó de cobrar IVA tras el diagnóstico. */
+    private static boolean sinNadaQueTransferir(RepartoPago r) {
+        return r.getMonto() != null && r.getMonto() <= 0 && r.getComisionRetenida() != null && r.getComisionRetenida() > 0;
     }
 
     private ResponseStatusException noSePudoTomar(Long id) {

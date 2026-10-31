@@ -62,6 +62,7 @@ class CompraCatalogoServiceTest {
     private final Map<String, CompraCatalogo> compras = new LinkedHashMap<>();
     private final Map<String, PedidoTienda> pedidos = new LinkedHashMap<>();
     private final List<RepartoPago> repartos = new ArrayList<>();
+    private ParametrosMarketplace parametros;
     private final List<Reembolso> reembolsos = new ArrayList<>();
     private final Map<Long, PagoEntity> pagos = new HashMap<>();
     private final AtomicLong secuencia = new AtomicLong(100);
@@ -205,7 +206,7 @@ class CompraCatalogoServiceTest {
 
         UsuarioService usuarioService = mock(UsuarioService.class);
         when(usuarioService.obtenerPorCorreo(CORREO)).thenReturn(Usuario.builder().id("u1").nombre("Ana").correo(CORREO).rol("CLIENTE").build());
-        ParametrosMarketplace parametros = mock(ParametrosMarketplace.class);
+        parametros = mock(ParametrosMarketplace.class);
         when(parametros.ivaPct()).thenReturn(19.0);
         when(parametros.comisionPct()).thenReturn(10.0);
         when(parametros.plazoDespachoDiasHabiles()).thenReturn(2);
@@ -251,6 +252,43 @@ class CompraCatalogoServiceTest {
 
     private List<RepartoPago> comisiones() {
         return repartos.stream().filter(r -> RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())).toList();
+    }
+
+    private RepartoPago lineaDe(String tienda) {
+        return repartosDeNegocio().stream().filter(r -> r.getBeneficiarioId().equals(tienda)).findFirst().orElseThrow();
+    }
+
+    @Test
+    void conRetencionCadaTiendaPagaSobreSusProductosYConservaIvaYEnvio() {
+        when(parametros.comisionRetenida()).thenReturn(true);
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+
+        service.aplicar(pago);
+
+        // s1: 40.000 + IVA 7.600. s2: 30.000 + IVA 5.700 + envío 8.000
+        assertEquals(47_600.0, lineaDe("s1").getMontoBruto());
+        assertEquals(4_000.0, lineaDe("s1").getComisionRetenida());
+        assertEquals(43_600.0, lineaDe("s1").getMonto());
+        assertEquals(43_700.0, lineaDe("s2").getMontoBruto());
+        assertEquals(30_000.0, lineaDe("s2").getComisionBase(), "el envío no paga comisión");
+        assertEquals(3_000.0, lineaDe("s2").getComisionRetenida());
+        assertEquals(40_700.0, lineaDe("s2").getMonto());
+        assertEquals(1, comisiones().size());
+        assertEquals(RepartoPago.RETENIDA, comisiones().get(0).getEstado());
+        assertEquals(7_000.0, comisiones().get(0).getMonto());
+        assertEquals(91_300.0, lineaDe("s1").getMonto() + lineaDe("s2").getMonto() + comisiones().get(0).getMonto());
+    }
+
+    @Test
+    void conLaBanderaApagadaLaTiendaRecibeTodoYLaComisionSoloQuedaCalculada() {
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+
+        service.aplicar(pago);
+
+        assertEquals(47_600.0, lineaDe("s1").getMonto());
+        assertEquals(4_000.0, lineaDe("s1").getComisionCalculada());
+        assertEquals(0.0, lineaDe("s1").getComisionRetenida());
+        assertEquals(RepartoPago.INFORMATIVA, comisiones().get(0).getEstado());
     }
 
     private PagoEntity iniciarYObtenerPago(CompraRequest r) {

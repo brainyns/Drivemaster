@@ -64,6 +64,27 @@ class WompiPayoutServiceTest {
     }
 
     @Test
+    @DisplayName("A Wompi se le pide transferir el neto, en centavos, no el bruto")
+    @SuppressWarnings("unchecked")
+    void transfiereElNeto() {
+        Map<String, Object> respuesta = Map.of("data", Map.of("payoutId", "pay-1"));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(new ResponseEntity<>(respuesta, HttpStatus.CREATED));
+        RepartoPago neto = lineaDeTaller(cuentaEjemplo());
+        neto.setMontoBruto(238_000.0);
+        neto.setComisionRetenida(20_000.0);
+        neto.setMonto(218_000.0);
+
+        apiDePruebas().liquidar(neto, SolicitudDispersion.automatica());
+
+        org.mockito.ArgumentCaptor<HttpEntity> pedido = org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).exchange(contains("/payouts"), eq(HttpMethod.POST), pedido.capture(), any(ParameterizedTypeReference.class));
+        Map<String, Object> cuerpo = (Map<String, Object>) pedido.getValue().getBody();
+        Map<String, Object> transaccion = ((java.util.List<Map<String, Object>>) cuerpo.get("transactions")).get(0);
+        assertEquals(21_800_000L, transaccion.get("amount"));
+    }
+
+    @Test
     @DisplayName("Rechaza monto cero o negativo")
     void rechazaMontoInvalido() {
         WompiPayoutService service = new WompiPayoutService(

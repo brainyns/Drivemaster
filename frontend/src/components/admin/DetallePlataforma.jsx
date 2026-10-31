@@ -233,7 +233,11 @@ function ListaReembolsos({ reembolsos }) {
     <ul className="dtp-lista">
       {reembolsos.map((b, i) => (
         <li key={i} className="dtp-fila">
-          <span><strong>Reembolso</strong><span className="dtp-sub">{[b.motivo, fecha(b.fecha)].filter(Boolean).join(" · ")}</span></span>
+          <span>
+            <strong>Reembolso</strong>
+            <span className="dtp-sub">{[b.motivo, fecha(b.fecha)].filter(Boolean).join(" · ")}</span>
+            {b.saldoAFavor > 0 && <span className="dtp-sub"><strong>A favor de DriveMaster: {formatoCop(b.saldoAFavor)}</strong>. Ya se le transfirió al negocio: hay que cobrárselo a mano.</span>}
+          </span>
           <span className="dtp-num"><ChipEstado tono={b.estado === "REALIZADO" ? "ok" : "aviso"}>{b.estado === "REALIZADO" ? "Realizado" : "Pendiente"}</ChipEstado><strong>{formatoCop(b.monto)}</strong></span>
         </li>
       ))}

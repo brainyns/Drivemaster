@@ -53,7 +53,9 @@ import java.util.Set;
  * Cotización pagada: se descuenta el stock (con reversa si un ítem falla), se crea un
  * pedido por tienda y el reparto: cada tienda recibe sus repuestos con su IVA; el
  * taller, la mano de obra con su IVA menos el anticipo del diagnóstico (que ya
- * recibió en el reparto del diagnóstico).
+ * recibió en el reparto del diagnóstico). Si la comisión se retiene, cada uno la paga
+ * sobre lo suyo sin IVA (ver ComisionPlataforma): la tienda sobre sus repuestos y el
+ * taller sobre su mano de obra menos la base del diagnóstico.
  */
 @Service
 public class PagoMarketplaceService {
@@ -306,16 +308,20 @@ public class PagoMarketplaceService {
             return;
         }
         Taller taller = tallerRepository.findById(enRevision.getTallerId()).orElse(null);
-        repartoRepository.save(reparto(pago, RepartoPago.TALLER, enRevision.getTallerId(),
-                taller != null ? taller.getNombre() : null, pago.getMonto(), null));
+        BigDecimal base = ComisionPlataforma.baseDiagnostico(enRevision, pago.getMonto(), parametros.ivaPct());
+        double pct = parametros.comisionPct();
+        boolean retener = parametros.comisionRetenida();
+        RepartoPago lineaTaller = reparto(pago, RepartoPago.TALLER, enRevision.getTallerId(),
+                taller != null ? taller.getNombre() : null, pago.getMonto(), null);
+        ComisionPlataforma.aplicar(lineaTaller, base, pct, retener);
+        repartoRepository.save(lineaTaller);
 
         Map<String, Double> lineas = new LinkedHashMap<>();
         // Un taller no responsable de IVA cobra el diagnóstico sin IVA (las solicitudes anteriores no traen el dato)
         boolean sinIva = enRevision.getIvaDiagnosticoPct() != null && enRevision.getIvaDiagnosticoPct() == 0;
         lineas.put(sinIva ? "Tarifa de diagnóstico (sin IVA: el taller no es responsable de IVA)"
                 : "Tarifa de diagnóstico (IVA incluido)", pago.getMonto());
-        ComisionPlataforma.registrar(repartoRepository, pago,
-                ComisionPlataforma.baseDiagnostico(enRevision, pago.getMonto(), parametros.ivaPct()), parametros.comisionPct());
+        ComisionPlataforma.registrar(repartoRepository, pago, base, pct, retener, List.of(lineaTaller));
         avisos.comprobantePago(enRevision, pago, "la revisión y diagnóstico", lineas,
                 "Tu cita de revisión quedó confirmada. El valor se descontará de la cotización si la apruebas.");
         avisos.diagnosticoPagado(enRevision);
@@ -396,18 +402,32 @@ public class PagoMarketplaceService {
         // 3. Pedidos por tienda y reparto
         Taller taller = tallerRepository.findById(orden.getTallerId()).orElse(null);
         List<PedidoTienda> pedidos = crearPedidos(pago, pagada, cotizacion, taller);
-        // Montos en pesos enteros y con BigDecimal: lo del taller es el resto exacto del pago
+        // Montos en pesos enteros y con BigDecimal: lo del taller es el resto exacto del pago, y su base de comisión, el
+        // resto de la base: así la comisión de las líneas suma la de todo el pago
+        BigDecimal base = ComisionPlataforma.baseCotizacion(cotizacion, pagada, pago.getMonto(), parametros.ivaPct());
+        double pct = parametros.comisionPct();
+        boolean retener = parametros.comisionRetenida();
+        List<RepartoPago> lineas = new ArrayList<>();
         BigDecimal paraTiendas = BigDecimal.ZERO;
+        BigDecimal baseTiendas = BigDecimal.ZERO;
         for (PedidoTienda p : pedidos) {
             BigDecimal montoTienda = Dinero.pesos(p.getTotal());
-            repartoRepository.save(reparto(pago, RepartoPago.TIENDA, p.getTiendaId(), p.getTiendaNombre(),
-                    Dinero.aDouble(montoTienda), p.getId()));
+            BigDecimal baseTienda = Dinero.pesos(p.getSubtotal());
+            RepartoPago linea = reparto(pago, RepartoPago.TIENDA, p.getTiendaId(), p.getTiendaNombre(),
+                    Dinero.aDouble(montoTienda), p.getId());
+            ComisionPlataforma.aplicar(linea, baseTienda, pct, retener);
+            repartoRepository.save(linea);
+            lineas.add(linea);
             paraTiendas = paraTiendas.add(montoTienda);
+            baseTiendas = baseTiendas.add(baseTienda);
         }
         BigDecimal paraTaller = Dinero.pesos(pago.getMonto()).subtract(paraTiendas).max(BigDecimal.ZERO);
         if (paraTaller.signum() > 0) {
-            repartoRepository.save(reparto(pago, RepartoPago.TALLER, orden.getTallerId(),
-                    taller != null ? taller.getNombre() : cotizacion.getTallerNombre(), Dinero.aDouble(paraTaller), null));
+            RepartoPago linea = reparto(pago, RepartoPago.TALLER, orden.getTallerId(),
+                    taller != null ? taller.getNombre() : cotizacion.getTallerNombre(), Dinero.aDouble(paraTaller), null);
+            ComisionPlataforma.aplicar(linea, base.subtract(baseTiendas), pct, retener);
+            repartoRepository.save(linea);
+            lineas.add(linea);
         }
 
         // 4. Siguiente estado: con repuestos se esperan los pedidos; sin ellos, listo para trabajar
@@ -416,8 +436,7 @@ public class PagoMarketplaceService {
                 pedidos.isEmpty() ? "Cotización solo de mano de obra" : "Repuestos pedidos a " + pedidos.size() + " tienda(s)",
                 null, null);
 
-        ComisionPlataforma.registrar(repartoRepository, pago,
-                ComisionPlataforma.baseCotizacion(cotizacion, pagada, pago.getMonto(), parametros.ivaPct()), parametros.comisionPct());
+        ComisionPlataforma.registrar(repartoRepository, pago, base, pct, retener, lineas);
         avisos.comprobantePago(actualizada, pago, "la cotización v" + cotizacion.getVersion() + " de " + cotizacion.getTallerNombre(),
                 lineasCotizacion(cotizacion),
                 pedidos.isEmpty() ? "El taller ya puede empezar el trabajo."
@@ -486,6 +505,7 @@ public class PagoMarketplaceService {
 
     /** Registra un reembolso pendiente (lo hace el ADMIN a mano en Wompi). */
     public Reembolso registrarReembolso(PagoEntity pago, String pedidoTiendaId, double monto, String motivo) {
+        double saldoAFavor = ComisionPlataforma.saldoAFavor(repartoRepository, pago, pedidoTiendaId, monto);
         Reembolso guardado = reembolsoRepository.save(Reembolso.builder()
                 .pagoId(pago.getId())
                 .ordenServicioId(pago.getOrdenServicioId())
@@ -495,12 +515,18 @@ public class PagoMarketplaceService {
                 .referenciaPago(pago.getReferencia())
                 .transactionId(pago.getTransactionId())
                 .monto(monto)
+                .saldoAFavor(saldoAFavor > 0 ? saldoAFavor : null)
                 .motivo(motivo.length() > 500 ? motivo.substring(0, 500) : motivo)
                 .estado(Reembolso.PENDIENTE)
                 .fechaCreacion(LocalDateTime.now())
                 .build());
         // La comisión del dinero devuelto deja de contar
         ComisionPlataforma.anular(repartoRepository, pago, monto, guardado != null ? guardado.getId() : null, pedidoTiendaId);
+        if (saldoAFavor > 0) {
+            avisos.alertaAdmin("Reembolso de una línea ya pagada", "El pago " + pago.getReferencia() + " tiene un reembolso de "
+                    + Math.round(monto) + " COP sobre dinero que ya se transfirió al negocio. Quedan " + Math.round(saldoAFavor)
+                    + " COP a favor de DriveMaster por cobrarle a mano. Motivo: " + motivo);
+        }
         return guardado;
     }
 

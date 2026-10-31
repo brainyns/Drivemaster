@@ -55,7 +55,7 @@ import java.util.Map;
  *  - Si una tienda se queda sin stock después de pagar: todo o nada. Se devuelve el stock ya
  *    descontado, la compra queda NO_APLICADA y se registra el reembolso completo.
  *  - El pago se reparte a la tienda dueña de cada producto (RepartoPago por pedido), con el IVA y
- *    el envío de su pedido; DriveMaster no retiene nada en v1 (la comisión es informativa).
+ *    el envío de su pedido. La comisión, si se retiene, sale de los productos sin IVA y sin el envío (ver ComisionPlataforma).
  *  - La liquidación sigue la misma regla por evento de la 4-B (ver LiquidacionService).
  *
  * La confirmación entra por PagoMarketplaceService.confirmar (ya verificada con Wompi y tomada
@@ -216,19 +216,23 @@ public class CompraCatalogoService {
             }
             // 2. Un pedido por tienda, con su código de retiro y su reparto
             Map<String, String> codigos = new HashMap<>();
+            double pct = parametros.comisionPct();
+            boolean retener = parametros.comisionRetenida();
             for (CompraCatalogo.EntregaTienda entrega : compra.getEntregas()) {
                 PedidoTienda pedido = crearPedido(pago, compra, entrega, codigos);
                 pedidos.add(pedido);
-                repartos.add(repartoRepository.save(reparto(pago, compra, pedido)));
+                RepartoPago linea = reparto(pago, compra, pedido);
+                ComisionPlataforma.aplicar(linea, Dinero.pesos(pedido.getSubtotal()), pct, retener);
+                repartoRepository.save(linea);
+                repartos.add(linea);
             }
             compra.setPedidoIds(pedidos.stream().map(PedidoTienda::getId).toList());
             compra.setEstado(CompraCatalogo.PAGADA);
             compra.setFechaPago(pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now());
             compra.setPagoId(pago.getId());
             compraRepository.save(compra);
-            // 3. Comisión informativa (sobre los productos, antes de IVA y sin el envío) y avisos
-            //    (un fallo de envío nunca deshace la compra)
-            ComisionPlataforma.registrar(repartoRepository, pago, Dinero.pesos(compra.getSubtotal()), parametros.comisionPct());
+            // 3. Comisión (sobre los productos, antes de IVA y sin el envío) y avisos (un fallo de envío nunca deshace la compra)
+            ComisionPlataforma.registrar(repartoRepository, pago, Dinero.pesos(compra.getSubtotal()), pct, retener, repartos);
             avisos.compraPagada(compra, pedidos, codigos, pago);
         } catch (RuntimeException e) {
             log.error("No se pudo aplicar el pago {} de la compra {}: se deshace todo", pago.getReferencia(), compra.getId(), e);
