@@ -7,6 +7,7 @@ import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Linea;
 import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.LineaReparto;
 import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Mecanico;
 import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Negocio;
+import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Orden;
 import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Parte;
 import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Pedido;
 import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.PedidoResumen;
@@ -46,8 +47,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Vistas de detalle del SUPERADMIN: un pedido (con su línea de tiempo, el pago en Wompi y el reparto), un cliente
- * (vehículos, pedidos y solicitudes) y un negocio (datos, productos o servicios, pedidos y totales). Solo lectura.
+ * Vistas de detalle del SUPERADMIN: un pedido (con su línea de tiempo, el pago en Wompi y el reparto), una solicitud
+ * de servicio, un cliente (vehículos, pedidos y solicitudes) y un negocio (datos, productos o servicios, pedidos y
+ * totales). Solo lectura.
  */
 @Service
 public class PlataformaDetalleService {
@@ -166,6 +168,49 @@ public class PlataformaDetalleService {
 
     private static void agregar(List<Evento> e, String etiqueta, LocalDateTime fecha, String detalle) {
         if (fecha != null) e.add(new Evento(etiqueta, fecha, detalle == null || detalle.isBlank() ? null : detalle));
+    }
+
+    // ─── Solicitud ──────────────────────────────────────────────────────────
+
+    public Orden orden(String id) {
+        OrdenServicio o = existe(mongo.findById(id, OrdenServicio.class), "Solicitud no encontrada");
+        Usuario cliente = o.getUsuarioId() == null ? null : mongo.findById(o.getUsuarioId(), Usuario.class);
+        Parte parteCliente = cliente == null ? null : new Parte(cliente.getId(), cliente.getNombre(),
+                PlataformaConsultasService.enmascarar(cliente.getCorreo()), cliente.getTelefono(), cliente.getCiudad());
+        Taller taller = o.getTallerId() == null ? null : mongo.findById(o.getTallerId(), Taller.class);
+        Parte parteTaller = taller == null && o.getTallerNombre() == null ? null
+                : new Parte(o.getTallerId(), taller != null ? taller.getNombre() : o.getTallerNombre(), null,
+                        taller == null ? null : taller.getTelefono(), taller == null ? null : taller.getCiudad());
+
+        List<Evento> tiempo = new ArrayList<>();
+        if (o.getEventos() != null) {
+            o.getEventos().forEach(ev -> agregar(tiempo, ev.getEstado(), ev.getFecha(),
+                    Stream.of(ev.getActorNombre(), ev.getNota()).filter(Objects::nonNull).filter(s -> !s.isBlank())
+                            .collect(Collectors.joining(" · "))));
+        }
+        if (tiempo.isEmpty()) agregar(tiempo, "Creada", o.getFechaCreacion(), null);
+        tiempo.sort(Comparator.comparing(Evento::fecha));
+
+        var pagosOrden = pagos.findByOrdenServicioIdOrderByIdAsc(id).stream()
+                .map(p -> new com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Pago(p.getId(), p.getReferencia(),
+                        p.getTransactionId(), p.getMetodo(), p.getEstado(), n(p.getMonto()), p.getFechaPago(), p.getConcepto(), 0))
+                .toList();
+        List<LineaReparto> reparto = repartos.findByOrdenServicioId(id).stream()
+                .sorted(Comparator.comparing(RepartoPago::getBeneficiarioTipo, Comparator.nullsLast(String::compareTo)))
+                .map(r -> new LineaReparto(r.getBeneficiarioTipo(), r.getBeneficiarioNombre(), n(r.getMonto()), r.getEstado(),
+                        r.getModoLiquidacion(), r.getFechaLiquidacion(), r.getNota(), false))
+                .toList();
+        var devoluciones = reembolsos.findByOrdenServicioId(id).stream()
+                .map(b -> new com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso(
+                        n(b.getMonto()), b.getEstado(), b.getMotivo(), b.getFechaCreacion(), b.getFechaRealizado()))
+                .toList();
+        List<PedidoResumen> pedidos = mongo.find(Query.query(Criteria.where("ordenId").is(id))
+                        .with(Sort.by(Sort.Direction.ASC, "fechaCreacion")), PedidoTienda.class).stream()
+                .map(PlataformaDetalleService::resumen).toList();
+
+        return new Orden(o.getId(), o.getEstado(), o.getFechaCreacion(), parteCliente, parteTaller, o.getVehiculoDescripcion(),
+                o.getSintomas() != null ? o.getSintomas() : o.getProductoNombre(), o.getMotivoCierre(), n(o.getTotal()),
+                tiempo, pagosOrden, reparto, devoluciones, pedidos);
     }
 
     // ─── Cliente ────────────────────────────────────────────────────────────

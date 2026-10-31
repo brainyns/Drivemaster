@@ -54,6 +54,34 @@ export function barras(conteos = {}, etiquetas = {}, orden = []) {
 /** Solo se paga lo que está listo o falló (reintento). PENDIENTE espera la recepción o la entrega; el backend lo exige igual. */
 export const sePuedePagar = (f = {}) => f.estado === "POR_LIQUIDAR" || f.estado === "FALLIDO";
 
+const CONCEPTOS_REPARTO = { DIAGNOSTICO: "Diagnóstico", COTIZACION: "Cotización", CATALOGO: "Venta de catálogo" };
+
+/** Qué se pagó, en palabras. */
+export const textoConcepto = (concepto) => CONCEPTOS_REPARTO[concepto] || concepto || "—";
+
+/**
+ * A qué pertenece una liquidación o un reembolso: el pedido si lo hay (las compras de catálogo no tienen solicitud), si
+ * no la solicitud. tipo es el de DetallePlataforma; una compra entera no tiene detalle propio: solo se muestra.
+ */
+export function referenciaLinea(f = {}) {
+  if (f.pedidoTiendaId) return { tipo: "pedido", id: f.pedidoTiendaId, texto: refPedido(f.pedidoTiendaId) };
+  if (f.ordenServicioId) return { tipo: "orden", id: f.ordenServicioId, texto: refPedido(f.ordenServicioId) };
+  if (f.compraCatalogoId) return { tipo: null, id: f.compraCatalogoId, texto: refPedido(f.compraCatalogoId) };
+  return { tipo: null, id: null, texto: "—" };
+}
+
+const PENDIENTES_LISTA = {
+  POR_LIQUIDAR: { titulo: "Por pagar", frase: "por pagar" },
+  PENDIENTE: { titulo: "En espera de entrega", frase: "en espera de entrega" },
+  FALLIDO: { titulo: "Pagos fallidos", frase: "por reintentar" },
+};
+
+/** La cifra de la lista de liquidaciones, con las palabras de esa lista: lo que espera la entrega no está "por pagar". */
+export function pendientesLista(estado, n = 0, total = 0) {
+  const { titulo, frase } = PENDIENTES_LISTA[estado] || { titulo: "Pendiente en esta lista", frase: "sin pagar" };
+  return { titulo, pie: `${num(n)} de ${num(total)} ${plural(total, "registro", "registros")} ${frase}` };
+}
+
 // ─── Tiendas y talleres ─────────────────────────────────────────────────────
 
 /** Estado de aprobación con su texto y tono de ChipEstado. */

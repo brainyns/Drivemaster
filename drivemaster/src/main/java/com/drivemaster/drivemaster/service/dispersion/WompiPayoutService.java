@@ -321,7 +321,7 @@ public class WompiPayoutService implements DispersionService {
     }
 
     /** Solo los últimos 4 dígitos: el número completo no va a los logs. */
-    static String enmascarar(String numeroCuenta) {
+    public static String enmascarar(String numeroCuenta) {
         if (numeroCuenta == null || numeroCuenta.length() <= 4) return "****";
         return "****" + numeroCuenta.substring(numeroCuenta.length() - 4);
     }

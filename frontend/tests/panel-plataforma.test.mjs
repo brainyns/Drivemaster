@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ALERTAS_PEDIDO, ENTREGAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, SIN_PLAN, chipsAlerta, conteoGrupos, filaConAlerta,
-  hayFiltrosPedidos, actividadNegocio, sePuedePagar, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
+  hayFiltrosPedidos, actividadNegocio, sePuedePagar, textoConcepto, referenciaLinea, pendientesLista, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
   perfilNegocio, urgentesDashboard,
 } from "../src/pages/admin/plataformaAdmin.js";
 import {
@@ -250,6 +250,29 @@ test("Liquidaciones: solo se paga lo listo o fallido, nunca lo que espera la ent
   const p = leer("../src/pages/Liquidaciones.jsx");
   assert.ok(p.includes("Esperando entrega"));
   assert.ok(!p.includes("liquidacionPorEvento"), "la pantalla no decide por antigüedad");
+});
+
+test("Liquidaciones: el concepto de una compra de catálogo no es Cotización", () => {
+  assert.equal(textoConcepto("CATALOGO"), "Venta de catálogo");
+  assert.equal(textoConcepto("COTIZACION"), "Cotización");
+  assert.equal(textoConcepto("DIAGNOSTICO"), "Diagnóstico");
+  assert.equal(textoConcepto("OTRO"), "OTRO");
+  assert.equal(textoConcepto(null), "—");
+});
+
+test("Liquidaciones: la referencia es el pedido si lo hay; las compras de catálogo ya no salen en #—", () => {
+  assert.deepEqual(referenciaLinea({ pedidoTiendaId: "6ac6e641aabbcc" }), { tipo: "pedido", id: "6ac6e641aabbcc", texto: "#AABBCC" });
+  assert.deepEqual(referenciaLinea({ pedidoTiendaId: "pedido1a2b3c", ordenServicioId: "orden9" }).tipo, "pedido", "la línea de la tienda es de su pedido");
+  assert.deepEqual(referenciaLinea({ ordenServicioId: "orden9x8y7z" }), { tipo: "orden", id: "orden9x8y7z", texto: "#9X8Y7Z" });
+  assert.deepEqual(referenciaLinea({ compraCatalogoId: "compra112233" }), { tipo: null, id: "compra112233", texto: "#112233" }, "una compra entera no tiene detalle");
+  assert.deepEqual(referenciaLinea({}), { tipo: null, id: null, texto: "—" });
+});
+
+test("Liquidaciones: lo que espera la entrega no se presenta como por pagar", () => {
+  assert.deepEqual(pendientesLista("PENDIENTE", 18, 18), { titulo: "En espera de entrega", pie: "18 de 18 registros en espera de entrega" });
+  assert.deepEqual(pendientesLista("POR_LIQUIDAR", 1, 1), { titulo: "Por pagar", pie: "1 de 1 registro por pagar" });
+  assert.equal(pendientesLista("FALLIDO", 2, 2).pie, "2 de 2 registros por reintentar");
+  assert.equal(pendientesLista("", 3, 9).pie, "3 de 9 registros sin pagar", "Todos mezcla estados");
 });
 
 test("Liquidaciones: sistema compartido, estados con texto y el número de transferencia obligatorio en modo manual", () => {

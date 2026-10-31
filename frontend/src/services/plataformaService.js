@@ -56,6 +56,12 @@ export async function detallePedido(token, id) {
     "No se pudo cargar el pedido.");
 }
 
+/** Solicitud: partes, línea de tiempo, pagos, reparto, reembolsos y pedidos a las tiendas. */
+export async function detalleOrden(token, id) {
+  return leerDetalle(await apiFetch(`${BASE}/ordenes/${encodeURIComponent(id)}`, { headers: headers(token) }),
+    "No se pudo cargar la solicitud.");
+}
+
 /** Cliente: datos, ciudad, vehículos, pedidos y solicitudes de diagnóstico. */
 export async function detalleCliente(token, id) {
   return leerDetalle(await apiFetch(`${BASE}/clientes/${encodeURIComponent(id)}`, { headers: headers(token) }),

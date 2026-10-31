@@ -7,10 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PagoRepository extends JpaRepository<PagoEntity, Long> {
     Optional<PagoEntity> findByReferencia(String referencia);
+    List<PagoEntity> findByOrdenServicioIdOrderByIdAsc(String ordenServicioId);
 
     /** Último pago aún PENDIENTE de una orden, cotización, cliente y concepto (para reutilizar su link). */
     Optional<PagoEntity> findFirstByOrdenServicioIdAndCotizacionIdAndUsuarioIdAndConceptoAndEstadoOrderByIdDesc(

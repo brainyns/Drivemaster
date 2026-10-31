@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { getToken } from "../services/authService";
 import { repartosTabla, liquidarReparto, listarReembolsos, marcarReembolsado, obtenerModo } from "../services/liquidacionService";
-import { formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
+import { formatFechaHora, formatPrecio } from "../components/servicio/estadosServicio";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
+import DetallePlataforma from "../components/admin/DetallePlataforma";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
 import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
@@ -17,7 +18,7 @@ import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Campo from "../components/ui/Campo";
 import { unir } from "../utils/formato";
-import { sePuedePagar } from "./admin/plataformaAdmin";
+import { pendientesLista, referenciaLinea, sePuedePagar, textoConcepto } from "./admin/plataformaAdmin";
 // El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
 import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
@@ -77,6 +78,7 @@ export default function Liquidaciones() {
   const [marcandoId, setMarcandoId] = useState(null);
   const [nota, setNota] = useState("");
   const [procesando, setProcesando] = useState(false);
+  const [detalle, setDetalle] = useState(null); // { tipo: "pedido" | "orden", id }
   // Liquidaciones: paginadas en el servidor (/repartos/tabla) con fechas y orden; los reembolsos son pocos y siguen
   // llegando completos
   const [tabla, setTabla] = useState(null); // { repartos: Pagina, pendientes, montoPendiente }
@@ -155,6 +157,8 @@ export default function Liquidaciones() {
   const totalRegistros = esRepartos ? (tabla?.repartos?.total || 0) : filas.length;
   const totalPendiente = esRepartos ? (tabla?.montoPendiente || 0) : pendientesReembolso.reduce((s, f) => s + (f.monto || 0), 0);
   const marcando = filas.find((f) => f.id === marcandoId) || null;
+  const nombreBeneficiario = (f) => f.beneficiario || f.beneficiarioNombre || "Beneficiario sin nombre";
+  const cifraLista = pendientesLista(estado, numPendientes, totalRegistros);
 
   const textoAccion = (f) => (!esRepartos ? "Marcar reembolsado"
     : f.estado === "FALLIDO" ? (esWompi ? "Reintentar con Wompi" : "Reintentar")
@@ -207,8 +211,8 @@ export default function Liquidaciones() {
 
       {!cargando && !errorCarga && filas.length > 0 && (
         <div className="ui-indicadores pp-seccion liq-resumen">
-          <Indicador titulo="Pendiente en esta lista" valor={formatPrecio(totalPendiente)} tono={totalPendiente > 0 ? "accion" : undefined}
-            pie={`${numPendientes} de ${totalRegistros} ${totalRegistros === 1 ? "registro" : "registros"} por ${esRepartos ? "pagar" : "reembolsar"}`} />
+          <Indicador titulo={esRepartos ? cifraLista.titulo : "Pendiente en esta lista"} valor={formatPrecio(totalPendiente)} tono={totalPendiente > 0 ? "accion" : undefined}
+            pie={esRepartos ? cifraLista.pie : `${numPendientes} de ${totalRegistros} ${totalRegistros === 1 ? "registro" : "registros"} por reembolsar`} />
         </div>
       )}
 
@@ -234,7 +238,7 @@ export default function Liquidaciones() {
                   {esRepartos
                     ? <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Fecha</EncabezadoOrden>
                     : <th scope="col">Fecha</th>}
-                  <th scope="col">Solicitud</th>
+                  <th scope="col">Referencia</th>
                   <th scope="col">{esRepartos ? "Concepto" : "Motivo"}</th>
                   {esRepartos
                     ? <EncabezadoOrden campo="monto" orden={orden} onOrdenar={ordenar} className="pp-num">Monto</EncabezadoOrden>
@@ -248,12 +252,13 @@ export default function Liquidaciones() {
               <tbody>
                 {enPagina.map((f) => {
                   const pagable = esRepartos ? sePuedePagar(f) : f.estado === "PENDIENTE";
+                  const ref = referenciaLinea(f);
                   return (
                     <tr key={f.id} className={f.estado === "FALLIDO" ? "liq-fila--fallida" : undefined}>
                       <td className="ui-table__titulo">
                         {esRepartos ? (
                           <>
-                            <strong>{f.beneficiarioNombre || f.beneficiarioId}</strong>
+                            <strong>{nombreBeneficiario(f)}</strong>
                             <span className="pp-sub">{f.beneficiarioTipo === "TALLER" ? "Taller" : "Tienda"}</span>
                           </>
                         ) : (
@@ -264,9 +269,16 @@ export default function Liquidaciones() {
                         )}
                       </td>
                       <td data-label="Fecha" className="liq-fecha">{formatFechaHora(f.fechaCreacion)}</td>
-                      <td data-label="Solicitud" className="liq-ref">#{refSolicitud(f.ordenServicioId)}</td>
+                      <td data-label="Referencia" className="liq-ref">
+                        {ref.tipo ? (
+                          <button type="button" className="dtp-enlace" onClick={() => setDetalle({ tipo: ref.tipo, id: ref.id })}
+                            aria-label={`Ver detalle de ${ref.tipo === "pedido" ? "el pedido" : "la solicitud"} ${ref.texto}`}>
+                            {ref.texto}
+                          </button>
+                        ) : ref.texto}
+                      </td>
                       <td data-label={esRepartos ? "Concepto" : "Motivo"} className="liq-texto">
-                        {esRepartos ? (f.concepto === "DIAGNOSTICO" ? "Diagnóstico" : "Cotización") : f.motivo}
+                        {esRepartos ? textoConcepto(f.concepto) : f.motivo}
                       </td>
                       <td data-label="Monto" className="pp-num">{formatPrecio(f.monto)}</td>
                       <td data-label="Estado" className="liq-estado">
@@ -310,8 +322,8 @@ export default function Liquidaciones() {
         <ConfirmacionAdmin
           titulo={`${textoAccion(marcando)} · ${formatPrecio(marcando.monto)}`}
           texto={esRepartos
-            ? `${marcando.beneficiarioNombre || "Beneficiario"} · solicitud #${refSolicitud(marcando.ordenServicioId)}.`
-            : `Reembolso de la solicitud #${refSolicitud(marcando.ordenServicioId)}. Hazlo primero en el panel de Wompi.`}
+            ? `${nombreBeneficiario(marcando)} · ${textoConcepto(marcando.concepto)} ${referenciaLinea(marcando).texto}.`
+            : `Reembolso de ${referenciaLinea(marcando).texto}. Hazlo primero en el panel de Wompi.`}
           confirmar="Confirmar"
           cargando={procesando}
           deshabilitado={esRepartos && esManual && !numero.trim()}
@@ -329,6 +341,8 @@ export default function Liquidaciones() {
           {error && <Alerta>{error}</Alerta>}
         </ConfirmacionAdmin>
       )}
+
+      {detalle && <DetallePlataforma key={`${detalle.tipo}-${detalle.id}`} token={token} objetivo={detalle} onCerrar={() => setDetalle(null)} />}
     </div>
   );
 }

@@ -5,9 +5,9 @@ import Alerta from "../ui/Alerta";
 import Dato from "../ui/Dato";
 import Esqueleto from "../ui/Esqueleto";
 import LogoNegocio from "../ui/LogoNegocio";
-import { detalleCliente, detalleNegocio, detallePedido } from "../../services/plataformaService";
+import { detalleCliente, detalleNegocio, detalleOrden, detallePedido } from "../../services/plataformaService";
 import { ESTADOS as ESTADOS_ORDEN } from "../servicio/estadosServicio";
-import { ESTADOS_PEDIDO, chipsAlerta, estadoNegocio, refPedido } from "../../pages/admin/plataformaAdmin";
+import { ESTADOS_PEDIDO, chipsAlerta, estadoNegocio, refPedido, textoConcepto } from "../../pages/admin/plataformaAdmin";
 import {
   BENEFICIARIO, ESTADOS_PAGO, ESTADOS_REPARTO, notaReparto, textoEntrega, textoVehiculo, ubicacionNegocio,
 } from "../../pages/admin/detalleAdmin";
@@ -22,13 +22,14 @@ const fechaHora = (iso) => (iso
 
 const CARGAR = {
   pedido: (token, o) => detallePedido(token, o.id),
+  orden: (token, o) => detalleOrden(token, o.id),
   cliente: (token, o) => detalleCliente(token, o.id),
   negocio: (token, o) => detalleNegocio(token, o.negocioTipo, o.id),
 };
 
 /**
- * Detalle de un pedido, un cliente o un negocio en el panel lateral (solo SUPERADMIN, solo lectura). objetivo es
- * { tipo: "pedido" | "cliente" | "negocio", id, negocioTipo }. Desde un detalle se abre el de sus partes (la tienda o
+ * Detalle de un pedido, una solicitud, un cliente o un negocio en el panel lateral (solo SUPERADMIN, solo lectura).
+ * objetivo es { tipo: "pedido" | "orden" | "cliente" | "negocio", id, negocioTipo }. Desde un detalle se abre el de sus partes (la tienda o
  * el cliente de un pedido, un pedido de un cliente…) y "Volver" regresa al anterior.
  */
 export default function DetallePlataforma({ token, objetivo, onCerrar }) {
@@ -51,6 +52,7 @@ export default function DetallePlataforma({ token, objetivo, onCerrar }) {
   const d = listo ? estado.datos : null;
 
   const titulo = actual.tipo === "pedido" ? `Pedido ${refPedido(actual.id)}`
+    : actual.tipo === "orden" ? `Solicitud ${refPedido(actual.id)}`
     : d?.nombre || (actual.tipo === "cliente" ? "Cliente" : "Negocio");
 
   return (
@@ -61,6 +63,7 @@ export default function DetallePlataforma({ token, objetivo, onCerrar }) {
       {!listo && <Esqueleto variante="formulario" cantidad={4} texto="Cargando el detalle…" />}
       {listo && estado.error && <Alerta>{estado.error}</Alerta>}
       {d && actual.tipo === "pedido" && <VistaPedido p={d} abrir={abrir} />}
+      {d && actual.tipo === "orden" && <VistaOrden o={d} abrir={abrir} />}
       {d && actual.tipo === "cliente" && <VistaCliente c={d} abrir={abrir} />}
       {d && actual.tipo === "negocio" && <VistaNegocio n={d} abrir={abrir} />}
     </DrawerAdmin>
@@ -163,35 +166,9 @@ function VistaPedido({ p, abrir }) {
       </Bloque>
 
       <Bloque id="dtp-reparto" titulo="Reparto">
-        {p.reparto.length === 0 ? <p className="dtp-vacio">Todavía no hay reparto registrado.</p> : (
-          <ul className="dtp-lista">
-            {p.reparto.map((r, i) => (
-              <li key={i} className="dtp-fila">
-                <span>
-                  <strong>{BENEFICIARIO[r.beneficiarioTipo] || r.beneficiarioTipo}</strong>
-                  <span className="dtp-sub">{[r.beneficiarioTipo === "PLATAFORMA" ? null : r.beneficiario,
-                    r.fechaLiquidacion && `liquidado el ${fecha(r.fechaLiquidacion)}${r.modoLiquidacion === "SIMULADO" ? " (simulado)" : ""}`,
-                    r.nota].filter(Boolean).join(" · ")}</span>
-                </span>
-                <span className="dtp-num">
-                  <ChipEstado catalogo={ESTADOS_REPARTO} estado={r.estado} />
-                  <strong>{formatoCop(r.monto)}</strong>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ListaReparto reparto={p.reparto} />
         {nota && <p className="dtp-nota">{nota}</p>}
-        {p.reembolsos.length > 0 && (
-          <ul className="dtp-lista">
-            {p.reembolsos.map((b, i) => (
-              <li key={i} className="dtp-fila">
-                <span><strong>Reembolso</strong><span className="dtp-sub">{[b.motivo, fecha(b.fecha)].filter(Boolean).join(" · ")}</span></span>
-                <span className="dtp-num"><ChipEstado tono={b.estado === "REALIZADO" ? "ok" : "aviso"}>{b.estado === "REALIZADO" ? "Realizado" : "Pendiente"}</ChipEstado><strong>{formatoCop(b.monto)}</strong></span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ListaReembolsos reembolsos={p.reembolsos} />
       </Bloque>
 
       <Bloque id="dtp-entrega" titulo={textoEntrega(e)}>
@@ -224,6 +201,106 @@ function VistaPedido({ p, abrir }) {
           </Alerta>
         )}
       </Bloque>
+    </>
+  );
+}
+
+function ListaReparto({ reparto }) {
+  if (reparto.length === 0) return <p className="dtp-vacio">Todavía no hay reparto registrado.</p>;
+  return (
+    <ul className="dtp-lista">
+      {reparto.map((r, i) => (
+        <li key={i} className="dtp-fila">
+          <span>
+            <strong>{BENEFICIARIO[r.beneficiarioTipo] || r.beneficiarioTipo}</strong>
+            <span className="dtp-sub">{[r.beneficiarioTipo === "PLATAFORMA" ? null : r.beneficiario,
+              r.fechaLiquidacion && `liquidado el ${fecha(r.fechaLiquidacion)}${r.modoLiquidacion === "SIMULADO" ? " (simulado)" : ""}`,
+              r.nota].filter(Boolean).join(" · ")}</span>
+          </span>
+          <span className="dtp-num">
+            <ChipEstado catalogo={ESTADOS_REPARTO} estado={r.estado} />
+            <strong>{formatoCop(r.monto)}</strong>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ListaReembolsos({ reembolsos }) {
+  if (reembolsos.length === 0) return null;
+  return (
+    <ul className="dtp-lista">
+      {reembolsos.map((b, i) => (
+        <li key={i} className="dtp-fila">
+          <span><strong>Reembolso</strong><span className="dtp-sub">{[b.motivo, fecha(b.fecha)].filter(Boolean).join(" · ")}</span></span>
+          <span className="dtp-num"><ChipEstado tono={b.estado === "REALIZADO" ? "ok" : "aviso"}>{b.estado === "REALIZADO" ? "Realizado" : "Pendiente"}</ChipEstado><strong>{formatoCop(b.monto)}</strong></span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ─── Solicitud ──────────────────────────────────────────────────────────
+
+function VistaOrden({ o, abrir }) {
+  return (
+    <>
+      <div className="dtp-chips"><ChipEstado catalogo={ESTADOS_ORDEN} estado={o.estado} /></div>
+
+      <Bloque id="dtp-orden-partes" titulo="Quién participa">
+        <dl className="ui-datos">
+          <Dato etiqueta="Cliente">
+            <Enlace texto={o.cliente?.nombre} onAbrir={o.cliente?.id && (() => abrir({ tipo: "cliente", id: o.cliente.id }))} />
+          </Dato>
+          <Dato etiqueta="Taller">
+            <Enlace texto={o.taller?.nombre} onAbrir={o.taller?.id && (() => abrir({ tipo: "negocio", negocioTipo: "TALLER", id: o.taller.id }))} />
+          </Dato>
+          {o.vehiculo && <Dato etiqueta="Vehículo">{o.vehiculo}</Dato>}
+          <Dato etiqueta="Creada">{fechaHora(o.fecha)}</Dato>
+          {o.total > 0 && <Dato etiqueta="Total">{formatoCop(o.total)}</Dato>}
+          {o.detalle && <Dato etiqueta="Detalle" ancho>{o.detalle}</Dato>}
+          {o.motivoCierre && <Dato etiqueta="Motivo del cierre" ancho>{o.motivoCierre}</Dato>}
+        </dl>
+      </Bloque>
+
+      <Bloque id="dtp-orden-tiempo" titulo="Línea de tiempo">
+        <ol className="dtp-tiempo">
+          {o.lineaDeTiempo.map((ev, i) => (
+            <li key={i}>
+              <strong>{ESTADOS_ORDEN[ev.etiqueta]?.label || ev.etiqueta}</strong>
+              <span className="dtp-sub">{fechaHora(ev.fecha)}{ev.detalle ? ` · ${ev.detalle}` : ""}</span>
+            </li>
+          ))}
+        </ol>
+      </Bloque>
+
+      <Bloque id="dtp-orden-pagos" titulo="Pagos en Wompi">
+        {o.pagos.length === 0 ? <p className="dtp-vacio">Sin pagos registrados.</p> : (
+          <ul className="dtp-lista">
+            {o.pagos.map((x) => (
+              <li key={x.id} className="dtp-fila">
+                <span>
+                  <strong>{textoConcepto(x.concepto)}</strong>
+                  <span className="dtp-sub">{[x.referencia, fechaHora(x.fechaPago)].filter(Boolean).join(" · ")}</span>
+                </span>
+                <span className="dtp-num"><ChipEstado catalogo={ESTADOS_PAGO} estado={x.estado} /><strong>{formatoCop(x.monto)}</strong></span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Bloque>
+
+      <Bloque id="dtp-orden-reparto" titulo="Reparto">
+        <ListaReparto reparto={o.reparto} />
+        <ListaReembolsos reembolsos={o.reembolsos} />
+      </Bloque>
+
+      {o.pedidos.length > 0 && (
+        <Bloque id="dtp-orden-pedidos" titulo="Pedidos a las tiendas">
+          <ListaPedidos pedidos={o.pedidos} total={o.pedidos.length} abrir={abrir} />
+        </Bloque>
+      )}
     </>
   );
 }

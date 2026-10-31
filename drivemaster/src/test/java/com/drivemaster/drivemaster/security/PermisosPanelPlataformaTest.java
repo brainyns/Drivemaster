@@ -62,6 +62,7 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.GET, "/api/plataforma/productos", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/clientes", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/inexistente", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/plataforma/ordenes/o1", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/negocios", "SUPERADMIN"),
             // Tiendas, talleres y planes: el ADMIN solo aprueba o rechaza
             ruta(HttpMethod.GET, "/api/tiendas/t1", "SUPERADMIN"),

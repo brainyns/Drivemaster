@@ -13,6 +13,7 @@ public interface ReembolsoRepository extends JpaRepository<Reembolso, Long> {
     boolean existsByPagoId(Long pagoId);
     long countByEstado(String estado);
     List<Reembolso> findByPagoId(Long pagoId);
+    List<Reembolso> findByOrdenServicioId(String ordenServicioId);
 
     @Query("select coalesce(sum(b.monto), 0) from Reembolso b where b.estado = 'PENDIENTE'")
     double sumaPendiente();

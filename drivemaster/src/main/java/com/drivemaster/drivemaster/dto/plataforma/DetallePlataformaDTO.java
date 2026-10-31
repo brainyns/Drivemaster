@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Vistas de detalle del SUPERADMIN (pedido, cliente y negocio), de solo lectura. El correo va enmascarado como en las
+ * Vistas de detalle del SUPERADMIN (pedido, solicitud, cliente y negocio), de solo lectura. El correo va enmascarado como en las
  * listas; el teléfono y la dirección de envío sí, porque los necesita para resolver un problema con el pedido.
  */
 public final class DetallePlataformaDTO {
@@ -43,6 +43,11 @@ public final class DetallePlataformaDTO {
                          String vehiculo, List<Linea> lineas, double subtotal, double iva, double total,
                          List<Evento> lineaDeTiempo, Pago pago, List<LineaReparto> reparto, List<Reembolso> reembolsos,
                          Entrega entrega, Problema problema) {}
+
+    /** Una solicitud de servicio: etiqueta de cada evento es el estado de la orden; pedidos, los repuestos a las tiendas. */
+    public record Orden(String id, String estado, LocalDateTime fecha, Parte cliente, Parte taller, String vehiculo,
+                        String detalle, String motivoCierre, double total, List<Evento> lineaDeTiempo, List<Pago> pagos,
+                        List<LineaReparto> reparto, List<Reembolso> reembolsos, List<PedidoResumen> pedidos) {}
 
     // ─── Cliente ────────────────────────────────────────────────────────────
 

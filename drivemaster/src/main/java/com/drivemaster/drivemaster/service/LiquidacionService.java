@@ -13,6 +13,10 @@ import com.drivemaster.drivemaster.service.dispersion.DispersionInciertaExceptio
 import com.drivemaster.drivemaster.service.dispersion.DispersionService;
 import com.drivemaster.drivemaster.service.dispersion.ResultadoDispersion;
 import com.drivemaster.drivemaster.service.dispersion.SolicitudDispersion;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Path;
+import jakarta.persistence.criteria.Root;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
@@ -88,7 +92,8 @@ public class LiquidacionService {
 
     /**
      * La tabla paginada de liquidaciones, con los mismos filtros que repartos() (sin la comisión de la plataforma) y
-     * desde/hasta sobre la fecha de la línea. pendientes y montoPendiente cuentan toda la lista filtrada, no la página.
+     * desde/hasta sobre la fecha de la línea; en las liquidadas, sobre la fecha en que se pagaron. pendientes y
+     * montoPendiente cuentan toda la lista filtrada, no la página.
      */
     public RepartosTabla repartosTabla(String estado, RangoFechas rango, PeticionTabla t) {
         Specification<RepartoPago> spec = (r, q, cb) -> cb.notEqual(r.get("beneficiarioTipo"), RepartoPago.PLATAFORMA);
@@ -96,13 +101,14 @@ public class LiquidacionService {
             String e = estado.trim().toUpperCase();
             spec = spec.and((r, q, cb) -> cb.equal(r.get("estado"), e));
         }
+        boolean porFechaDePago = estado != null && RepartoPago.LIQUIDADO.equalsIgnoreCase(estado.trim());
         if (rango != null && rango.desde() != null) {
             LocalDateTime d = rango.desde();
-            spec = spec.and((r, q, cb) -> cb.greaterThanOrEqualTo(r.get("fechaCreacion"), d));
+            spec = spec.and((r, q, cb) -> cb.greaterThanOrEqualTo(fechaDeLaLinea(r, cb, porFechaDePago), d));
         }
         if (rango != null && rango.antesDe() != null) {
             LocalDateTime a = rango.antesDe();
-            spec = spec.and((r, q, cb) -> cb.lessThan(r.get("fechaCreacion"), a));
+            spec = spec.and((r, q, cb) -> cb.lessThan(fechaDeLaLinea(r, cb, porFechaDePago), a));
         }
         long total = repartoRepository.count(spec);
         List<RepartoPago> items = repartoRepository.findAll(spec, t.pageRequest(total)).getContent();
@@ -110,6 +116,11 @@ public class LiquidacionService {
         List<RepartoPago> pendientes = repartoRepository.findAll(spec.and((r, q, cb) -> r.get("estado").in(ESTADOS_PENDIENTES)));
         double monto = pendientes.stream().mapToDouble(r -> r.getMonto() == null ? 0 : r.getMonto()).sum();
         return new RepartosTabla(t.pagina(items, total), pendientes.size(), monto);
+    }
+
+    private static Expression<LocalDateTime> fechaDeLaLinea(Root<RepartoPago> r, CriteriaBuilder cb, boolean porFechaDePago) {
+        Path<LocalDateTime> creacion = r.get("fechaCreacion");
+        return porFechaDePago ? cb.coalesce(r.<LocalDateTime>get("fechaLiquidacion"), creacion) : creacion;
     }
 
     /** repartos: la página; pendientes y montoPendiente: de toda la lista con estos filtros. */

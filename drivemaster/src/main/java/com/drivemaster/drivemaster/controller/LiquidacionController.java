@@ -5,7 +5,10 @@ import com.drivemaster.drivemaster.dto.comun.RangoFechas;
 import com.drivemaster.drivemaster.model.mysql.Reembolso;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.service.LiquidacionService;
+import com.drivemaster.drivemaster.service.LiquidacionTablaService;
 import com.drivemaster.drivemaster.service.dispersion.FirmaEventosPayout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -27,11 +30,15 @@ import java.util.Map;
 @RequestMapping("/api/liquidaciones")
 public class LiquidacionController {
 
+    private static final Logger log = LoggerFactory.getLogger(LiquidacionController.class);
+
     private final LiquidacionService service;
+    private final LiquidacionTablaService tabla;
     private final FirmaEventosPayout firmaEventos;
 
-    public LiquidacionController(LiquidacionService service, FirmaEventosPayout firmaEventos) {
+    public LiquidacionController(LiquidacionService service, LiquidacionTablaService tabla, FirmaEventosPayout firmaEventos) {
         this.service = service;
+        this.tabla = tabla;
         this.firmaEventos = firmaEventos;
     }
 
@@ -48,17 +55,18 @@ public class LiquidacionController {
 
     /**
      * Tabla paginada de liquidaciones: estado, desde/hasta (AAAA-MM-DD, hora de Colombia), page, size y sort
-     * (fecha, monto, estado o beneficiario). /repartos sigue devolviendo la lista completa.
+     * (fecha, monto, estado o beneficiario). Cada fila trae el nombre actual y la cuenta enmascarada, y resumen no
+     * depende de los filtros. /repartos sigue devolviendo la lista completa.
      */
     @GetMapping("/repartos/tabla")
-    public ResponseEntity<LiquidacionService.RepartosTabla> repartosTabla(
+    public ResponseEntity<LiquidacionTablaService.Tabla> repartosTabla(
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String desde,
             @RequestParam(required = false) String hasta,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) String sort) {
-        return ResponseEntity.ok(service.repartosTabla(estado, RangoFechas.de(desde, hasta),
+        return ResponseEntity.ok(tabla.tabla(estado, RangoFechas.de(desde, hasta),
                 PeticionTabla.de(page, size, null, null, sort, LiquidacionService.ORDEN_REPARTOS)));
     }
 
@@ -87,6 +95,7 @@ public class LiquidacionController {
     public ResponseEntity<Void> webhook(@RequestBody Map<String, Object> body,
                                         @RequestHeader(value = "X-Event-Checksum", required = false) String checksum) {
         if (!firmaEventos.esValida(body, checksum)) {
+            log.warn("Evento de Wompi Payouts rechazado por firma inválida: {}", body.get("event"));
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         service.procesarWebhookPayout(body);

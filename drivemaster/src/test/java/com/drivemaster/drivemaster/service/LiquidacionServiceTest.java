@@ -767,7 +767,7 @@ class LiquidacionServiceTest {
     @Test
     void elWebhookSinFirmaValidaNoProcesaNada() {
         LiquidacionService s = mock(LiquidacionService.class);
-        var controlador = new com.drivemaster.drivemaster.controller.LiquidacionController(s,
+        var controlador = new com.drivemaster.drivemaster.controller.LiquidacionController(s, null,
                 new com.drivemaster.drivemaster.service.dispersion.FirmaEventosPayout("", "WOMPI"));
         Map<String, Object> evento = Map.of("event", "payout.updated", "data", Map.of("payout", Map.of(
                 "reference", "WOMPI-1-AB", "status", "FAILED")));

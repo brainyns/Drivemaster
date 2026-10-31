@@ -17,6 +17,7 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
     List<RepartoPago> findByEstadoOrderByFechaCreacionDesc(String estado);
     List<RepartoPago> findByPedidoTiendaId(String pedidoTiendaId);
     List<RepartoPago> findByPagoId(Long pagoId);
+    List<RepartoPago> findByOrdenServicioId(String ordenServicioId);
     boolean existsByPagoIdAndBeneficiarioTipo(Long pagoId, String beneficiarioTipo);
     long countByEstado(String estado);
 
@@ -91,6 +92,18 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
     /** Lo que espera la entrega o la recepción del pedido para habilitarse (aún no se puede liquidar). */
     @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.estado = 'PENDIENTE' and r.beneficiarioTipo <> 'PLATAFORMA'")
     double sumaEnEspera();
+
+    /** Lo que falta pagar por estado, sin filtros: [estado, líneas, suma]. */
+    @Query("select r.estado, count(r), coalesce(sum(r.monto), 0) from RepartoPago r where r.beneficiarioTipo <> 'PLATAFORMA' "
+            + "and r.estado in ('PENDIENTE', 'POR_LIQUIDAR', 'FALLIDO') group by r.estado")
+    List<Object[]> resumenSinPagar();
+
+    /** Lo pagado en un periodo por modo: [modo, líneas, suma]. Las antiguas sin fecha de pago cuentan por la de creación. */
+    @Query("select coalesce(r.modoLiquidacion, ''), count(r), coalesce(sum(r.monto), 0) from RepartoPago r "
+            + "where r.estado = 'LIQUIDADO' and r.beneficiarioTipo <> 'PLATAFORMA' "
+            + "and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde and coalesce(r.fechaLiquidacion, r.fechaCreacion) < :hasta "
+            + "group by coalesce(r.modoLiquidacion, '')")
+    List<Object[]> resumenPagado(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
 
     /** Desde cuándo se registra la comisión (los pagos anteriores no tienen línea de comisión). */
     @Query("select min(r.fechaCreacion) from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA'")

@@ -70,6 +70,12 @@ public class PlataformaController {
         return ResponseEntity.ok(detalle.pedido(id));
     }
 
+    /** SUPERADMIN: detalle de una solicitud (partes, línea de tiempo, pagos, reparto, reembolsos y pedidos). */
+    @GetMapping("/ordenes/{id}")
+    public ResponseEntity<DetallePlataformaDTO.Orden> detalleOrden(@PathVariable String id) {
+        return ResponseEntity.ok(detalle.orden(id));
+    }
+
     /** SUPERADMIN: detalle de un cliente (datos, ciudad, vehículos, pedidos y solicitudes de diagnóstico). */
     @GetMapping("/clientes/{id}")
     public ResponseEntity<DetallePlataformaDTO.Cliente> detalleCliente(@PathVariable String id) {
