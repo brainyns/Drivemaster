@@ -17,7 +17,7 @@
 .sd-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 48px;
+  gap: 32px;
 }
 
 .sd-principal { min-width: 0; }
@@ -26,7 +26,7 @@
   padding: 36px 0;
   border-top: 1px solid var(--ui-line);
   /* Al llevar el foco a un campo, la sección no queda debajo de la cabecera fija */
-  scroll-margin-top: 104px;
+  scroll-margin-top: calc(var(--alto-header) + 16px);
 }
 
 .sd-seccion:first-child { border-top: none; padding-top: 12px; }
@@ -53,6 +53,11 @@
 .sd-seccion__titulo + .ui-vehiculos,
 .sd-seccion__titulo + .ui-vacio,
 .sd-seccion__titulo + .sd-fila { margin-top: 16px; }
+
+/* Todas las filas del mismo alto: "Agregar otro vehículo" iguala a las demás aunque caiga en una fila sola.
+   Acotado a esta página: Mis vehículos usa la misma rejilla con tarjetas más grandes */
+.sd-pagina .ui-vehiculos { grid-auto-rows: 1fr; }
+.sd-pagina .ui-vehiculo__cuerpo { gap: 6px; padding: 10px 12px 12px; }
 
 .sd-seccion__ayuda {
   max-width: 65ch;
@@ -126,7 +131,7 @@
 .sd-lateral { min-width: 0; padding-top: 12px; }
 
 .sd-pagina .sd-resumen {
-  top: 104px;
+  top: calc(var(--alto-header) + 16px);
   gap: 0;
   padding: 22px;
   border-radius: var(--ui-r-xl);
@@ -218,6 +223,11 @@
   font-size: 0.85rem;
   color: var(--ui-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* Con el resumen al lado caben 3 o 4 vehículos por fila; en celular manda la rejilla de ui.css */
+@media (min-width: 1024px) {
+  .sd-pagina .ui-vehiculos { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 }
 
 @media (max-width: 1023px) {
