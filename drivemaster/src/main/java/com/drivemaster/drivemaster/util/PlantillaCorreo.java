@@ -53,20 +53,20 @@ public final class PlantillaCorreo {
                   <title>%s</title>
                   %s
                 </head>
-                <body style="margin:0;padding:0;background-color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;">
-                  <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="background:#ffffff;">
+                <body class="body dm-fondo" style="margin:0;padding:0;background-color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;">
+                  <table class="dm-fondo" role="presentation" width="100%%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="background-color:#ffffff;">
                     <tr><td class="dm-externa" align="center" style="padding:24px 12px;">
-                      <table role="presentation" width="620" cellpadding="0" cellspacing="0" bgcolor="#ffffff"
-                             style="max-width:620px;width:100%%;background:#ffffff;border-radius:8px;border:1px solid %s;">
+                      <table class="dm-fondo" role="presentation" width="620" cellpadding="0" cellspacing="0" bgcolor="#ffffff"
+                             style="max-width:620px;width:100%%;background-color:#ffffff;border-radius:8px;border:1px solid %s;">
                         %s
                         <tr>
-                          <td class="dm-cuerpo" style="padding:32px 36px;font-size:14px;line-height:1.6;color:%s;">
-                            %s%s
+                          <td class="dm-cuerpo dm-fondo" bgcolor="#ffffff" style="padding:32px 36px;background-color:#ffffff;font-size:14px;line-height:1.6;color:%s;">
+                            %s
                           </td>
                         </tr>
                         <tr>
-                          <td class="dm-pie" style="padding:18px 36px;background:#ffffff;border-top:1px solid %s;">
-                            <p style="margin:0;font-size:12px;color:%s;line-height:1.6;">%s</p>
+                          <td class="dm-pie dm-fondo" bgcolor="#ffffff" style="padding:18px 36px;background-color:#ffffff;border-top:1px solid %s;">
+                            %s
                           </td>
                         </tr>
                       </table>
@@ -74,8 +74,10 @@ public final class PlantillaCorreo {
                   </table>
                 </body>
                 </html>
-                """.formatted(e(tituloPagina), ESTILOS_MOVIL, COLOR_LINEA, encabezado(derechaHtml), COLOR_TEXTO,
-                encabezadoCuerpo, cuerpo, COLOR_LINEA, COLOR_TEXTO_SUAVE, e(pie != null ? pie : PIE_POR_DEFECTO));
+                """.formatted(e(tituloPagina), ESTILOS, COLOR_LINEA, encabezado(derechaHtml), COLOR_TEXTO,
+                capaGmail(encabezadoCuerpo + cuerpo), COLOR_LINEA,
+                capaGmail("<p style=\"margin:0;font-size:12px;color:" + COLOR_TEXTO_SUAVE + ";line-height:1.6;\">"
+                        + e(pie != null ? pie : PIE_POR_DEFECTO) + "</p>"));
     }
 
     /**
@@ -83,7 +85,7 @@ public final class PlantillaCorreo {
      * marca, los márgenes se reducen y las columnas marcadas con dm-apilar quedan una debajo de otra.
      * color-scheme pide a los clientes que respetan la preferencia no invertir los colores.
      */
-    public static final String ESTILOS_MOVIL = """
+    private static final String ESTILOS_MOVIL = """
             <style>
               :root { color-scheme: light; supported-color-schemes: light; }
               @media only screen and (max-width:480px) {
@@ -101,13 +103,57 @@ public final class PlantillaCorreo {
             </style>""";
 
     /**
+     * Modo claro en Gmail, que ignora color-scheme e invierte fondos y textos; u + .body solo coincide allí.
+     * El degradado conserva el blanco porque Gmail cambia background-color pero no background-image. Va aquí y
+     * no en línea para que, donde se borra este estilo (Gmail con cuentas que no son de Google), no quede fondo
+     * blanco con el texto ya aclarado. La capa difference deja los colores igual sin inversión (|0 - C| = C) y
+     * los reinvierte con ella, porque Gmail vuelve blanco su fondo negro (|1 - C|). El truco conocido con
+     * screen solo sirve para texto blanco: sobre fondo blanco borraría el correo.
+     */
+    private static final String ESTILOS_GMAIL = """
+            <style>
+              u + .body, u + .body .dm-fondo { background-image:linear-gradient(#ffffff,#ffffff) !important; }
+              u + .body .dm-gmail-fondo { background:#000000; }
+              u + .body .dm-gmail-capa { background:#ffffff; mix-blend-mode:difference; }
+              u + .body .dm-gmail-recto { border-radius:0 !important; }
+            </style>""";
+
+    /**
+     * Modo oscuro de Outlook.com, que marca lo que recolorea con data-ogsc (texto) y data-ogsb (fondo). Va en un
+     * bloque aparte para no poner en riesgo las reglas de Gmail, que no admite selectores de atributo.
+     */
+    private static final String ESTILOS_OUTLOOK = """
+            <style>
+              [data-ogsb] .dm-fondo { background-color:#ffffff !important; }
+              [data-ogsc] .dm-fondo h1, [data-ogsc] .dm-fondo p, [data-ogsc] .dm-fondo td,
+              [data-ogsc] .dm-fondo th, [data-ogsc] .dm-fondo span, [data-ogsc] .dm-fondo a { color:%s !important; }
+            </style>""".formatted(COLOR_TITULO);
+
+    /** Todo lo que va en el head de cada correo. */
+    public static final String ESTILOS = ESTILOS_MOVIL + ESTILOS_GMAIL + ESTILOS_OUTLOOK;
+
+    /** Texto oscuro sobre blanco que debe seguir legible en Gmail. Fuera de Gmail los div no hacen nada. */
+    private static String capaGmail(String html) {
+        return "<div class=\"dm-gmail-fondo\"><div class=\"dm-gmail-capa\">" + html + "</div></div>";
+    }
+
+    /**
+     * Dentro de {@link #capaGmail}: una segunda inversión evita que el naranja de marca salga azul. Lo envuelto
+     * lleva la clase dm-gmail-recto, porque en las esquinas redondeadas se vería la capa negra de abajo.
+     */
+    private static String conservarColor(String html) {
+        String estilo = " style=\"display:inline-block;\">";
+        return "<span class=\"dm-gmail-fondo\"" + estilo + "<span class=\"dm-gmail-capa\"" + estilo + html + "</span></span>";
+    }
+
+    /**
      * Filas del encabezado: zona blanca con la marca (logo y nombre) a la izquierda y
      * {@code derechaHtml} a la derecha, y debajo la franja del color principal (nunca detrás del logo).
      */
     public static String encabezado(String derechaHtml) {
         return """
                 <tr>
-                  <td class="dm-encabezado" style="background:#ffffff;padding:22px 36px 18px;">
+                  <td class="dm-encabezado dm-fondo" bgcolor="#ffffff" style="background-color:#ffffff;padding:22px 36px 18px;">
                     <table role="presentation" width="100%%" cellpadding="0" cellspacing="0"><tr>
                       <td class="dm-col" valign="middle" style="vertical-align:middle;">%s</td>
                       <td class="dm-col dm-col-etiqueta" align="right" valign="middle" style="vertical-align:middle;">%s</td>
@@ -115,9 +161,10 @@ public final class PlantillaCorreo {
                   </td>
                 </tr>
                 <tr>
-                  <td style="background:%s;height:4px;line-height:4px;font-size:0;">&nbsp;</td>
+                  <td bgcolor="%1$s" style="background-color:%1$s;background-image:linear-gradient(%1$s,%1$s);height:4px;line-height:4px;font-size:0;">&nbsp;</td>
                 </tr>
-                """.formatted(marca(), derechaHtml != null ? derechaHtml : "", BrandConfig.colorPrimario());
+                """.replace("%1$s", BrandConfig.colorPrimario())
+                .formatted(marca(), capaGmail(derechaHtml != null ? derechaHtml : ""));
     }
 
     /** Logo (si hay URL) y a su derecha el nombre, centrados en altura. */
@@ -126,7 +173,7 @@ public final class PlantillaCorreo {
         String logo = url.isEmpty() ? ""
                 : "<td valign=\"middle\" style=\"vertical-align:middle;padding-right:12px;\">" + logo() + "</td>";
         return "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"><tr>" + logo
-                + "<td valign=\"middle\" style=\"vertical-align:middle;\">" + nombre() + "</td></tr></table>";
+                + "<td valign=\"middle\" style=\"vertical-align:middle;\">" + capaGmail(nombre()) + "</td></tr></table>";
     }
 
     /** Logo como imagen remota de URL pública, con texto alternativo (vacío si no hay URL). */
@@ -147,16 +194,17 @@ public final class PlantillaCorreo {
     /** Etiqueta del encabezado: píldora del color principal. */
     public static String etiquetaHtml(String texto) {
         if (texto == null || texto.isBlank()) return "";
-        return "<span style=\"display:inline-block;padding:5px 12px;background:" + BrandConfig.colorPrimario()
+        return conservarColor("<span class=\"dm-gmail-recto\" style=\"display:inline-block;padding:5px 12px;background:" + BrandConfig.colorPrimario()
                 + ";color:" + BrandConfig.colorSobrePrimario() + ";font-size:11px;font-weight:700;letter-spacing:1.5px;"
-                + "text-transform:uppercase;border-radius:20px;\">" + e(texto) + "</span>";
+                + "text-transform:uppercase;border-radius:20px;\">" + e(texto) + "</span>");
     }
 
     /** Botón principal: fondo naranja con texto oscuro, igual que en la web. */
     public static String boton(String texto, String url) {
-        return "<a href=\"" + HtmlUtils.htmlEscape(url) + "\" style=\"display:inline-block;margin:0 8px 8px 0;padding:11px 18px;"
+        return "<span style=\"display:inline-block;margin:0 8px 8px 0;\">" + conservarColor(
+                "<a class=\"dm-gmail-recto\" href=\"" + HtmlUtils.htmlEscape(url) + "\" style=\"display:inline-block;padding:11px 18px;"
                 + "background:" + BrandConfig.colorPrimario() + ";color:" + BrandConfig.colorSobrePrimario()
-                + ";text-decoration:none;border-radius:6px;font-size:14px;font-weight:700;\">" + e(texto) + "</a>";
+                + ";text-decoration:none;border-radius:6px;font-size:14px;font-weight:700;\">" + e(texto) + "</a>") + "</span>";
     }
 
     /** Botón secundario: contorno gris sobre blanco. */

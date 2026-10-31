@@ -66,6 +66,25 @@ class PlantillaCorreoTest {
     }
 
     @Test
+    void elModoClaroSeRefuerzaPorClienteSinRomperLosDemas() {
+        String html = PlantillaCorreo.documento("Etiqueta", "Título", PlantillaCorreo.parrafo("Hola"), null);
+
+        assertTrue(html.contains("name=\"supported-color-schemes\" content=\"light\""), html);
+        assertTrue(html.contains("<body class=\"body dm-fondo\""), "u + .body necesita la clase");
+
+        // Si un cliente borra el estilo no debe quedar un fondo blanco fijo con el texto ya aclarado
+        String cuerpo = html.substring(html.indexOf("<body"));
+        assertFalse(cuerpo.contains("linear-gradient(#ffffff"), "el degradado blanco solo va en el estilo de Gmail");
+        assertFalse(html.contains("mix-blend-mode:screen"), "screen borraría el texto oscuro sobre blanco");
+
+        // Las reglas de Outlook no comparten bloque con las de Gmail
+        for (String bloque : html.split("<style>")) {
+            assertFalse(bloque.contains("u + .body") && bloque.contains("[data-og"), bloque);
+        }
+        assertTrue(html.contains("[data-ogsc]") && html.contains("[data-ogsb]"), html);
+    }
+
+    @Test
     void elLogoEsUnaUrlPublicaConTextoAlternativo() {
         // docker-compose pasa BRAND_LOGO_URL vacía: también debe caer en la URL pública
         new BrandConfig("DriveMaster", "#F28C28", "#17191C", "#17191C", "   ", "80");
