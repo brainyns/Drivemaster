@@ -139,7 +139,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
 
   if (cargando) {
     return (
-      <div className="sv-root sd-pagina">
+      <div className="sv-root sv-root--ancha sd-pagina">
         <Esqueleto variante="formulario" cantidad={4} texto="Cargando el formulario…" />
       </div>
     );
@@ -208,7 +208,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
   );
 
   return (
-    <div className="sv-root sd-pagina">
+    <div className="sv-root sv-root--ancha sd-pagina">
       <EncabezadoPagina
         titulo="Solicitar diagnóstico"
         descripcion="Cuéntanos qué le pasa a tu vehículo. Un taller cercano lo revisa y te envía una cotización."

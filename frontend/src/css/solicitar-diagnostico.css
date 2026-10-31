@@ -4,7 +4,6 @@
    checkout (marketplace.css). Todo con tokens, así que sigue el tema claro y oscuro. */
 
 .sd-pagina {
-  max-width: 1200px;
   caret-color: var(--primary);
   accent-color: var(--primary);
 }

@@ -296,7 +296,7 @@ export default function MisServicios({
 
   if (cargando) {
     return (
-      <div className="sv-root">
+      <div className="sv-root sv-root--ancha">
         <EncabezadoPagina titulo="Mis servicios" descripcion="Tus solicitudes de diagnóstico y el avance de cada una." />
         <Esqueleto variante="lista" cantidad={3} texto="Cargando tus servicios…" />
       </div>
@@ -307,7 +307,7 @@ export default function MisServicios({
     const s = seleccionada;
     const cancelable = ESTADOS_CANCELABLES_CLIENTE.includes(s.estado);
     return (
-      <div className="sv-root">
+      <div className="sv-root sv-root--ancha">
         <EncabezadoPagina
           titulo={s.vehiculoDescripcion}
           onVolver={() => { setSeleccionadaId(null); setCancelando(false); }}
@@ -477,7 +477,7 @@ export default function MisServicios({
   }
 
   return (
-    <div className="sv-root">
+    <div className="sv-root sv-root--ancha">
       <EncabezadoPagina
         titulo="Mis servicios"
         descripcion="Tus solicitudes de diagnóstico y el avance de cada una."
