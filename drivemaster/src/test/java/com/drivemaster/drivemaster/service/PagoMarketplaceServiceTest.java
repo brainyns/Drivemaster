@@ -54,6 +54,7 @@ class PagoMarketplaceServiceTest {
     private AvisosSolicitudServicio avisos;
     private PagoMarketplaceService service;
     private ParametrosMarketplace parametros;
+    private org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
 
     private OrdenServicio orden;
     private Cotizacion cotizacion;
@@ -79,6 +80,8 @@ class PagoMarketplaceServiceTest {
                 pedidoRepository, repartoRepository, reembolsoRepository, tallerRepository, productoService,
                 movimientoService, mock(com.drivemaster.drivemaster.repository.MovimientoInventarioRepository.class), usuarioService, transiciones, cotizacionService, avisos,
                 parametros = mock(ParametrosMarketplace.class));
+        mongoTemplate = mock(org.springframework.data.mongodb.core.MongoTemplate.class);
+        service.setMongoTemplate(mongoTemplate);
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).estado(EstadoOrden.APROBADA)
                 .tallerId("t1").usuarioId("u1").cotizacionId("c1").vehiculoDescripcion("Spark")
@@ -346,6 +349,84 @@ class PagoMarketplaceServiceTest {
         ArgumentCaptor<Reembolso> r = ArgumentCaptor.forClass(Reembolso.class);
         verify(reembolsoRepository).save(r.capture());
         assertEquals(107_100, r.getValue().getMonto());
+    }
+
+    private org.mockito.stubbing.OngoingStubbing<PedidoTienda> alCancelarUnPedido() {
+        return when(mongoTemplate.findAndModify(any(org.springframework.data.mongodb.core.query.Query.class),
+                any(org.springframework.data.mongodb.core.query.Update.class),
+                any(org.springframework.data.mongodb.core.FindAndModifyOptions.class), eq(PedidoTienda.class)));
+    }
+
+    private void pedidosDelPago() {
+        when(pedidoRepository.findByPagoId(10L)).thenReturn(List.of(
+                PedidoTienda.builder().id("ped-s1").tiendaId("s1").tiendaNombre("Tienda s1").build()));
+    }
+
+    @Test
+    void siFallaTrasCrearLosPedidosQuedanCanceladosYElStockVuelve() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"), repuesto("p2", "s1", 1, 10_000, "ENCARGO"))), 119_000);
+        fallaTrasCrearLasLineas();
+        pedidosDelPago();
+        alCancelarUnPedido().thenReturn(new PedidoTienda());
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 119_000), "txn-1");
+
+        ArgumentCaptor<org.springframework.data.mongodb.core.query.Query> filtro =
+                ArgumentCaptor.forClass(org.springframework.data.mongodb.core.query.Query.class);
+        ArgumentCaptor<org.springframework.data.mongodb.core.query.Update> cambio =
+                ArgumentCaptor.forClass(org.springframework.data.mongodb.core.query.Update.class);
+        verify(mongoTemplate).findAndModify(filtro.capture(), cambio.capture(),
+                any(org.springframework.data.mongodb.core.FindAndModifyOptions.class), eq(PedidoTienda.class));
+        org.bson.Document puestos = (org.bson.Document) cambio.getValue().getUpdateObject().get("$set");
+        assertEquals(PedidoTienda.NO_DESPACHADO, puestos.get("estado"));
+        assertEquals(PedidoTienda.MOTIVO_PAGO_NO_APLICADO, puestos.get("tipoMotivoNoDespacho"));
+        assertTrue(filtro.getValue().getQueryObject().toJson().contains(PedidoTienda.PENDIENTE), "solo si sigue sin despachar");
+        assertFalse(filtro.getValue().getQueryObject().toJson().contains(PedidoTienda.DESPACHADO + "\""));
+
+        verify(movimientoService).registrarMovimiento(eq("p1"), eq("ENTRADA"), eq(2), anyString(), eq("PAGO-DRV-REF"), any());
+        verify(movimientoService, never()).registrarMovimiento(eq("p2"), anyString(), anyInt(), anyString(), anyString(), any());
+        verify(reembolsoRepository).save(any());
+        verify(avisos).alertaAdmin(eq("Pago sin aplicar"), anyString());
+    }
+
+    @Test
+    void unPedidoQueYaSalioNoSeCancelaYSeAlerta() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
+        fallaTrasCrearLasLineas();
+        pedidosDelPago();
+        alCancelarUnPedido().thenReturn(null);
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 107_100), "txn-1");
+
+        verify(avisos).alertaAdmin(eq("Pedido sin cancelar"), contains("ped-s1"));
+        verify(reembolsoRepository).save(any());
+    }
+
+    @Test
+    void siNoSePuedenCancelarLosPedidosElReembolsoYElStockSiguen() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
+        fallaTrasCrearLasLineas();
+        pedidosDelPago();
+        alCancelarUnPedido().thenThrow(new IllegalStateException("Mongo no responde"));
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 107_100), "txn-1");
+
+        verify(avisos).alertaAdmin(eq("Pedidos sin cancelar"), anyString());
+        verify(movimientoService).registrarMovimiento(eq("p1"), eq("ENTRADA"), eq(2), anyString(), eq("PAGO-DRV-REF"), any());
+        verify(reembolsoRepository).save(any());
+    }
+
+    @Test
+    void siFallaAlMarcarLaOrdenPagadaElStockVuelveYNoHayPedidos() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
+        doThrow(new IllegalStateException("Mongo no responde"))
+                .when(transiciones).transicionar(any(), anyString(), any(), anyString(), any(), any());
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 107_100), "txn-1");
+
+        verify(movimientoService).registrarMovimiento(eq("p1"), eq("ENTRADA"), eq(2), anyString(), eq("PAGO-DRV-REF"), any());
+        verify(pedidoRepository, never()).save(any());
+        verify(reembolsoRepository).save(any());
     }
 
     @Test

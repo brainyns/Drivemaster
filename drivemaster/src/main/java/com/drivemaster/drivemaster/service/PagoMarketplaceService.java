@@ -26,7 +26,10 @@ import com.drivemaster.drivemaster.util.Dinero;
 import com.drivemaster.drivemaster.util.PlazoHabil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -121,6 +124,13 @@ public class PagoMarketplaceService {
         this.transiciones = transiciones;
         this.cotizacionService = cotizacionService;
         this.avisos = avisos;
+    }
+
+    private MongoTemplate mongoTemplate;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setMongoTemplate(MongoTemplate mongoTemplate) {
+        this.mongoTemplate = mongoTemplate;
     }
 
     private com.drivemaster.drivemaster.repository.TiendaRepository tiendaRepository;
@@ -397,8 +407,49 @@ public class PagoMarketplaceService {
             reponerStock(descontados, refInventario);
             noAplicado(pago, orden, "La solicitud cambió mientras se confirmaba el pago");
             return;
+        } catch (RuntimeException e) {
+            reponerStock(descontados, refInventario);
+            throw e;
         }
 
+        // Desde aquí, un fallo reembolsa todo el pago (ver confirmar): ninguna tienda debe despachar lo que se devolvió
+        try {
+            repartirCotizacion(pago, orden, pagada, cotizacion);
+        } catch (RuntimeException e) {
+            cancelarPedidos(pago);
+            reponerStock(descontados, refInventario);
+            throw e;
+        }
+    }
+
+    /**
+     * Cancela los pedidos que alcanzaron a crearse para un pago que no se aplicó. Solo si la tienda no los ha despachado;
+     * si alguno ya salió, o no se puede cancelar, se alerta al ADMIN. Nunca lanza: el reembolso se registra igual.
+     */
+    private void cancelarPedidos(PagoEntity pago) {
+        try {
+            for (PedidoTienda p : pedidoRepository.findByPagoId(pago.getId())) {
+                PedidoTienda cancelado = mongoTemplate.findAndModify(
+                        Query.query(Criteria.where("id").is(p.getId())
+                                .and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)),
+                        new Update().set("estado", PedidoTienda.NO_DESPACHADO)
+                                .set("fechaNoDespacho", LocalDateTime.now())
+                                .set("tipoMotivoNoDespacho", PedidoTienda.MOTIVO_PAGO_NO_APLICADO)
+                                .set("motivoNoDespacho", "El pago no se pudo aplicar y se reembolsa al cliente: no despaches este pedido"),
+                        FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
+                if (cancelado == null) {
+                    avisos.alertaAdmin("Pedido sin cancelar", "El pago " + pago.getReferencia() + " no se aplicó y se reembolsa, pero el pedido "
+                            + p.getId() + " de " + p.getTiendaNombre() + " ya no estaba pendiente: revísalo con la tienda.");
+                }
+            }
+        } catch (RuntimeException e) {
+            log.error("No se pudieron cancelar los pedidos del pago {} que no se aplicó", pago.getReferencia(), e);
+            avisos.alertaAdmin("Pedidos sin cancelar", "El pago " + pago.getReferencia() + " no se aplicó y se reembolsa, pero sus pedidos "
+                    + "no se pudieron cancelar: avísales a las tiendas que no despachen.");
+        }
+    }
+
+    private void repartirCotizacion(PagoEntity pago, OrdenServicio orden, OrdenServicio pagada, Cotizacion cotizacion) {
         // 3. Pedidos por tienda y reparto
         Taller taller = tallerRepository.findById(orden.getTallerId()).orElse(null);
         List<PedidoTienda> pedidos = crearPedidos(pago, pagada, cotizacion, taller);

@@ -48,6 +48,8 @@ public class PedidoTienda {
     // Motivo de "No puedo despachar"
     public static final String MOTIVO_SIN_REPUESTO = "SIN_REPUESTO";
     public static final String MOTIVO_OTRO = "OTRO";
+    // Lo cancela el sistema: el pago falló al aplicarse y se reembolsa. Queda NO_DESPACHADO, con los demás cancelados
+    public static final String MOTIVO_PAGO_NO_APLICADO = "PAGO_NO_APLICADO";
 
     @Id
     private String id;
