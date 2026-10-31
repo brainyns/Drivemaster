@@ -213,12 +213,12 @@ public class ResumenSemanalTienda {
     private static String cifra(String etiqueta, String valor, String detalle) {
         return "<td width=\"33%\" valign=\"top\" style=\"padding:12px;border:1px solid #e5e7eb;\">"
                 + "<p style=\"margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;\">" + e(etiqueta) + "</p>"
-                + "<p style=\"margin:4px 0;font-size:18px;font-weight:700;color:#17191C;\">" + e(valor) + "</p>"
+                + "<p style=\"margin:4px 0;font-size:18px;font-weight:700;color:#1F2937;\">" + e(valor) + "</p>"
                 + "<p style=\"margin:0;font-size:12px;color:#6b7280;\">" + e(detalle) + "</p></td>";
     }
 
     private static String subtitulo(String texto) {
-        return "<h2 style=\"margin:20px 0 8px;font-size:15px;color:#17191C;\">" + e(texto) + "</h2>";
+        return "<h2 style=\"margin:20px 0 8px;font-size:15px;color:#1F2937;\">" + e(texto) + "</h2>";
     }
 
     private static String th(String texto, String alinear) {

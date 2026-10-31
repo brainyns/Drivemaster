@@ -1,5 +1,8 @@
 package com.drivemaster.drivemaster.util;
 
+import static com.drivemaster.drivemaster.util.PlantillaCorreo.e;
+import static com.drivemaster.drivemaster.util.PlantillaCorreo.parrafo;
+
 import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.Vehiculo;
@@ -8,6 +11,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+/** Correos de mantenimiento y de las órdenes del flujo anterior. Todo dato del usuario se escapa. */
 public class EmailMantenimientoBuilder {
 
     private static final Locale LOCALE = Locale.forLanguageTag("es");
@@ -30,6 +34,10 @@ public class EmailMantenimientoBuilder {
         return PlantillaCorreo.documento(etiqueta, titulo, cuerpo, PIE);
     }
 
+    private static String saludo(Usuario usuario) {
+        return parrafo("Hola " + e(usuario.getNombre()) + ",");
+    }
+
     /** Aviso de que el vehículo se acerca o superó el intervalo de mantenimiento. */
     public static String recordatorioKm(Usuario usuario, Vehiculo vehiculo,
                                         int kmActual, int kmUltimoMantenimiento, int intervaloKm) {
@@ -43,17 +51,16 @@ public class EmailMantenimientoBuilder {
                   + "del intervalo recomendado.";
 
         String cuerpo =
-                "<p>Hola " + usuario.getNombre() + ",</p>"
-                + "<p>" + situacion + "</p>"
-                + "<table style=\"border-collapse:collapse;margin:20px 0;font-size:14px\">"
-                + fila("Vehículo", vehiculo(vehiculo))
-                + fila("Placa", vehiculo.getPlaca() != null ? vehiculo.getPlaca() : "—")
-                + fila("Kilometraje actual", kmActual + " km")
-                + fila("Último mantenimiento", kmUltimoMantenimiento + " km")
-                + fila("Intervalo configurado", intervaloKm + " km")
-                + "</table>"
-                + "<p>Un mantenimiento al día evita averías-costosas. Agenda tu cita desde la "
-                + "sección de Mis Vehículos.</p>";
+                saludo(usuario)
+                + parrafo(situacion)
+                + PlantillaCorreo.tabla(
+                        fila("Vehículo", e(vehiculo(vehiculo)))
+                        + fila("Placa", placa(vehiculo))
+                        + fila("Kilometraje actual", kmActual + " km")
+                        + fila("Último mantenimiento", kmUltimoMantenimiento + " km")
+                        + fila("Intervalo configurado", intervaloKm + " km"))
+                + parrafo("Un mantenimiento al día evita averías costosas. Agenda tu cita desde la "
+                        + "sección de Mis Vehículos.");
 
         return envolver("Mantenimiento", titulo, cuerpo);
     }
@@ -64,15 +71,14 @@ public class EmailMantenimientoBuilder {
         String titulo = "Cita confirmada: " + vehiculo(vehiculo);
 
         String cuerpo =
-                "<p>Hola " + usuario.getNombre() + ",</p>"
-                + "<p>Tu cita en el taller ya está agendada. Estos son los datos:</p>"
-                + "<table style=\"border-collapse:collapse;margin:20px 0;font-size:14px\">"
-                + fila("Vehículo", vehiculo(vehiculo))
-                + fila("Placa", vehiculo.getPlaca() != null ? vehiculo.getPlaca() : "—")
-                + fila("Fecha y hora de ingreso", "<strong>" + fecha(fechaProgramada, FECHA_HORA) + "</strong>")
-                + "</table>"
-                + "<p>Te recomendamos llegar unos minutos antes. Si necesitas reprogramar, "
-                + "responde a este correo o escríbenos por WhatsApp.</p>";
+                saludo(usuario)
+                + parrafo("Tu cita en el taller ya está agendada. Estos son los datos:")
+                + PlantillaCorreo.tabla(
+                        fila("Vehículo", e(vehiculo(vehiculo)))
+                        + fila("Placa", placa(vehiculo))
+                        + fila("Fecha y hora de ingreso", "<strong>" + e(fecha(fechaProgramada, FECHA_HORA)) + "</strong>"))
+                + parrafo("Te recomendamos llegar unos minutos antes. Si necesitas reprogramar, "
+                        + "responde a este correo o escríbenos por WhatsApp.");
 
         return envolver("Cita en el taller", titulo, cuerpo);
     }
@@ -86,58 +92,57 @@ public class EmailMantenimientoBuilder {
         String titulo = "Mantenimiento registrado";
 
         String cuerpo =
-                "<p>Hola " + usuario.getNombre() + ",</p>"
-                + "<p>Registramos el mantenimiento de tu <strong>" + vehiculo(vehiculo)
-                + "</strong>. A partir de ahora el conteo se reinicia.</p>"
-                + "<table style=\"border-collapse:collapse;margin:20px 0;font-size:14px\">"
-                + fila("Kilometraje actual", kmActual + " km")
-                + fila("Próximo mantenimiento sugerido", proximoKm + " km")
-                + "</table>"
-                + "<p>Te avisaremos de nuevo cuando se acerque el momento.</p>";
+                saludo(usuario)
+                + parrafo("Registramos el mantenimiento de tu <strong>" + e(vehiculo(vehiculo))
+                        + "</strong>. A partir de ahora el conteo se reinicia.")
+                + PlantillaCorreo.tabla(
+                        fila("Kilometraje actual", kmActual + " km")
+                        + fila("Próximo mantenimiento sugerido", proximoKm + " km"))
+                + parrafo("Te avisaremos de nuevo cuando se acerque el momento.");
 
         return envolver("Mantenimiento", titulo, cuerpo);
     }
 
-    private static String fila(String etiqueta, String valor) {
-        return "<tr>"
-                + "<td style=\"padding:6px 18px 6px 0;color:#6b7280\">" + etiqueta + "</td>"
-                + "<td style=\"padding:6px 0;color:#374151\">" + valor + "</td>"
-                + "</tr>";
+    /** {@code valorHtml} ya es HTML: quien llama escapa los datos del usuario. */
+    private static String fila(String etiqueta, String valorHtml) {
+        return PlantillaCorreo.filaDato(etiqueta, valorHtml);
+    }
+
+    private static String placa(Vehiculo vehiculo) {
+        return vehiculo.getPlaca() != null ? e(vehiculo.getPlaca()) : "—";
     }
 
     /** Aviso de que el vehículo acaba de entrar al taller. */
     public static String servicioIniciado(Usuario usuario, Vehiculo vehiculo, OrdenServicio orden) {
         String titulo = "Tu vehículo está en el taller";
         String cuerpo =
-                "<p>Hola " + usuario.getNombre() + ",</p>"
-                + "<p>El <strong>" + vehiculo(vehiculo) + "</strong> ya entró al taller "
-                + (orden.getTallerNombre() != null ? "<strong>" + orden.getTallerNombre() + "</strong>" : "del taller")
-                + " y comenzamos el servicio en este momento.</p>"
-                + "<table style=\"border-collapse:collapse;margin:20px 0;font-size:14px\">"
-                + fila("Vehículo", vehiculo(vehiculo))
-                + fila("Placa", vehiculo.getPlaca() != null ? vehiculo.getPlaca() : "—")
-                + fila("Inicio del servicio", fecha(LocalDateTime.now(), FECHA_HORA))
-                + "</table>"
-                + "<p>Te avisaremos apenas tu vehículo esté listo para retirarlo.</p>";
+                saludo(usuario)
+                + parrafo("El <strong>" + e(vehiculo(vehiculo)) + "</strong> ya entró al taller "
+                        + (orden.getTallerNombre() != null ? "<strong>" + e(orden.getTallerNombre()) + "</strong>" : "del taller")
+                        + " y comenzamos el servicio en este momento.")
+                + PlantillaCorreo.tabla(
+                        fila("Vehículo", e(vehiculo(vehiculo)))
+                        + fila("Placa", placa(vehiculo))
+                        + fila("Inicio del servicio", e(fecha(LocalDateTime.now(), FECHA_HORA))))
+                + parrafo("Te avisaremos apenas tu vehículo esté listo para retirarlo.");
         return envolver("Servicio", titulo, cuerpo);
     }
 
     /** Aviso de que el vehículo ya está listo para retirar. */
     public static String servicioFinalizado(Usuario usuario, Vehiculo vehiculo, OrdenServicio orden) {
-        String titulo = "Tu vehículo está listo 🚗";
+        String titulo = "Tu vehículo está listo";
         String cuerpo =
-                "<p>Hola " + usuario.getNombre() + ",</p>"
-                + "<p>Puedes pasar a recoger tu <strong>" + vehiculo(vehiculo) + "</strong>. "
-                + "El servicio terminó y el vehículo quedó listo.</p>"
-                + "<table style=\"border-collapse:collapse;margin:20px 0;font-size:14px\">"
-                + fila("Taller", orden.getTallerNombre() != null ? orden.getTallerNombre() : "—")
-                + fila("Vehículo", vehiculo(vehiculo))
-                + fila("Resumen del servicio", orden.getProductoNombre() != null ? orden.getProductoNombre() : "—")
-                + (orden.getObservaciones() != null && !orden.getObservaciones().isBlank()
-                        ? fila("Observaciones", orden.getObservaciones()) : "")
-                + fila("Total", "$ " + String.format("%,.0f", orden.getTotal() != null ? orden.getTotal() : 0.0))
-                + "</table>"
-                + "<p>Gracias por confiar en DriveMaster.</p>";
+                saludo(usuario)
+                + parrafo("Puedes pasar a recoger tu <strong>" + e(vehiculo(vehiculo)) + "</strong>. "
+                        + "El servicio terminó y el vehículo quedó listo.")
+                + PlantillaCorreo.tabla(
+                        fila("Taller", orden.getTallerNombre() != null ? e(orden.getTallerNombre()) : "—")
+                        + fila("Vehículo", e(vehiculo(vehiculo)))
+                        + fila("Resumen del servicio", orden.getProductoNombre() != null ? e(orden.getProductoNombre()) : "—")
+                        + (orden.getObservaciones() != null && !orden.getObservaciones().isBlank()
+                                ? fila("Observaciones", e(orden.getObservaciones())) : "")
+                        + fila("Total", PlantillaCorreo.moneda(orden.getTotal())))
+                + parrafo("Gracias por confiar en DriveMaster.");
         return envolver("Servicio", titulo, cuerpo);
     }
 
