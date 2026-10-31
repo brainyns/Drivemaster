@@ -24,6 +24,7 @@ import Esqueleto from "../components/ui/Esqueleto";
 import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
 import { FILTROS_SERVICIOS, MINIMO_PARA_FILTRAR, contarServicios, filtrarServicios } from "../components/servicio/filtrosServicios";
+import { conPrefijo } from "../utils/negocio";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
@@ -558,7 +559,7 @@ export default function MisServicios({
                 <span className="ss-meta ss-tarjeta__sintomas">{s.sintomas}</span>
                 <span className="ms-tarjeta__pie">
                   <span className="ss-meta">
-                    {s.tallerNombre ? `Taller: ${s.tallerNombre}` : "Buscando taller"}
+                    {s.tallerNombre ? conPrefijo("Taller", s.tallerNombre) : "Buscando taller"}
                     {s.tallerElegidoNoAcepto ? " · Reasignada: tu taller elegido no aceptó" : ""}
                     {s.fechaRevision ? ` · Revisión: ${formatFechaHora(s.fechaRevision)}` : ""}
                   </span>

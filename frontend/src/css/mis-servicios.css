@@ -125,12 +125,19 @@
 }
 
 @media (min-width: 1100px) {
+  /* display: contents reparte la pieza de RutaTaller en la rejilla: la ruta y los botones suben a la columna
+     de los datos y el mapa ocupa toda la otra */
   .ms-taller--con-mapa {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    gap: 16px;
+    grid-template-rows: auto 1fr;
+    gap: 8px 16px;
     align-items: start;
   }
+
+  .ms-taller--con-mapa .mapa-ruta-taller { display: contents; }
+  .ms-taller--con-mapa .mapa-ruta-taller__mapa { grid-column: 2; grid-row: 1 / span 2; }
+  .ms-taller--con-mapa .mapa-ruta-taller__info { grid-column: 1; grid-row: 2; }
 }
 
 @media (prefers-reduced-motion: reduce) {
