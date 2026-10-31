@@ -460,3 +460,20 @@ test("Cotizar nace de una solicitud: Inicio lleva a Por cotizar (N) y Cotizacion
   const cotizaciones = leer("../src/pages/taller/TallerCotizaciones.jsx");
   assert.ok(!cotizaciones.includes("Crear cotización"));
 });
+
+test("Buscar repuestos: la foto se ve completa en un recuadro uniforme y la tarjeta es compacta", () => {
+  const css = leer("../src/css/solicitud-servicio.css");
+  const foto = css.slice(css.indexOf(".ss-oferta__foto {"), css.indexOf(".ss-oferta__cuerpo {"));
+  assert.match(foto, /aspect-ratio: 4 \/ 3;/);
+  assert.match(foto, /background: #fff;/);
+  assert.match(foto, /object-fit: contain;/);
+  assert.doesNotMatch(foto, /object-fit: cover/);
+  // Absoluta: si no, una foto muy alta estira el recuadro y las tarjetas dejan de ser uniformes
+  assert.match(foto, /img \{\s*position: absolute;/);
+
+  const buscador = leer("../src/components/servicio/BuscadorRepuestos.jsx");
+  assert.doesNotMatch(buscador, /ss-oferta__compat/, "nada encima de la foto");
+  assert.match(buscador, /formatoDistancia\(o\.distanciaKm\)/);
+  assert.match(css, /\.ss-oferta__nombre \{[^}]*-webkit-line-clamp: 2;/);
+  assert.match(css, /\.ss-oferta__pie \{[^}]*flex-wrap: wrap;/, "un precio largo no se monta sobre el botón");
+});

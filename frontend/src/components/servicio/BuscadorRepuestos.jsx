@@ -4,6 +4,7 @@ import { buscarRepuestos } from "../../services/repuestoService";
 import { ESTADO_OFERTA, formatPrecio } from "./estadosServicio";
 import Icon from "../public/Icon";
 import { etiquetaCategoria } from "../../utils/categorias";
+import { formatoDistancia } from "../../utils/distancia";
 
 /**
  * Ventana del buscador de repuestos en todas las tiendas (aprobadas y activas).
@@ -164,24 +165,24 @@ function TarjetaOferta({ oferta: o, categoria, elegido, onElegir }) {
   const estado = ESTADO_OFERTA[o.estado] || { label: o.estado, tono: "info" };
   const ubicacion = [o.tiendaBarrio, o.tiendaCiudad].filter(Boolean).join(", ");
   const encargo = o.disponibilidad === "ENCARGO";
+  const referencia = [o.referencia && `Ref. ${o.referencia}`, o.marca, etiquetaCategoria(categoria)].filter(Boolean).join(" · ");
 
   return (
     <article className={`ss-oferta${o.seleccionable ? "" : " ss-oferta--bloqueada"}${elegido ? " ss-oferta--elegida" : ""}`}>
+      {/* El estado no va sobre la foto: el repuesto debe verse completo */}
       <div className="ss-oferta__foto">
-        {o.imagenUrl ? <img src={o.imagenUrl} alt="" loading="lazy" /> : <Icon name="tool" size={20} />}
-        <span className={`ss-estado ss-estado--${estado.tono} ss-oferta__compat`}><span className="ss-estado__punto" />{estado.label}</span>
+        {o.imagenUrl ? <img src={o.imagenUrl} alt="" loading="lazy" /> : <Icon name="tool" size={24} />}
       </div>
       <div className="ss-oferta__cuerpo">
-        <strong className="ss-oferta__nombre">{o.nombre}</strong>
-        <span className="ss-oferta__ref">
-          {[o.referencia && `Ref. ${o.referencia}`, o.marca, etiquetaCategoria(categoria)].filter(Boolean).join(" · ")}
-        </span>
-        <span className="ss-oferta__tienda">{o.tiendaNombre}</span>
-        <span className="ss-oferta__dato">
-          {ubicacion || "Ubicación no registrada"}
-          {o.distanciaKm != null && ` · a ${o.distanciaKm} km`}
+        <strong className="ss-oferta__nombre" title={o.nombre}>{o.nombre}</strong>
+        <span className="ss-oferta__ref" title={referencia}>{referencia}</span>
+        <span className="ss-oferta__tienda" title={o.tiendaNombre}>{o.tiendaNombre}</span>
+        <span className="ss-oferta__lugar">
+          <span className="ss-oferta__ubicacion" title={ubicacion || undefined}>{ubicacion || "Ubicación no registrada"}</span>
+          {o.distanciaKm != null && <span className="ss-oferta__distancia">{formatoDistancia(o.distanciaKm)}</span>}
         </span>
         <span className="ss-oferta__etiquetas">
+          <span className={`ss-estado ss-estado--${estado.tono}`}><span className="ss-estado__punto" />{estado.label}</span>
           <span className={`ss-oferta__stock${!encargo && !o.stock ? " ss-oferta__stock--agotado" : ""}`}>
             {encargo
               ? `Por encargo · ${o.diasEntrega ? `${o.diasEntrega} día(s)` : "tiempo por confirmar"}`
