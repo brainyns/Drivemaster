@@ -65,7 +65,7 @@ test("el detalle deja solo \"Total a pagar\" si no hay anticipo y dice cuánto r
   const detalle = readFileSync(new URL("../src/components/servicio/CotizacionDetalle.jsx", import.meta.url), "utf8");
   assert.match(detalle, /\{c\.anticipoDiagnostico > 0 && \(\s*<>\s*<div className="ct-totales__fila"><dt>Total<\/dt>/,
     "\"Total\" solo aparece con anticipo");
-  assert.ok(detalle.includes("c.subtotalManoObra + (c.ivaManoObra ??"), "recibe = mano de obra con su IVA");
+  assert.ok(detalle.includes("c.recibeTaller"), "lo que recibe viene del backend, con o sin comisión");
 });
 
 test("aprobadas: ir al trabajo, imprimir solo esa cotización y sus versiones anteriores de la misma lista", async () => {

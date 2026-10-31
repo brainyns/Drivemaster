@@ -11,6 +11,7 @@ import { errorRango, propsPaginacion, textoOrden, useDiferido } from "../compone
 import FiltroFechas from "../components/ui/FiltroFechas";
 import SelectorOrden from "../components/ui/SelectorOrden";
 import ChipEstado from "../components/ui/ChipEstado";
+import DesgloseDinero from "../components/servicio/DesgloseDinero";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
@@ -103,6 +104,7 @@ function textoEstado(p) {
   }
   if (p.estado === "RETIRADO") return "El cliente retiró el pedido. El pago quedó habilitado para liquidar.";
   if (p.estado === "ENTREGADO" || p.estado === "RECIBIDO") return "Pedido entregado. El pago quedó habilitado para liquidar.";
+  if (p.tipoMotivoNoDespacho === "PAGO_NO_APLICADO") return `${p.motivoNoDespacho}.`;
   if (p.estado === "NO_DESPACHADO") return `No se despachó: ${p.motivoNoDespacho || "sin motivo registrado"}. DriveMaster reembolsa al cliente.`;
   if (p.estado === "NO_ENTREGADO") return "DriveMaster resolvió el problema con reembolso al cliente: este pedido no se paga.";
   return null;
@@ -510,6 +512,14 @@ export default function PedidosTienda({ param, irA }) {
                 <div className="ui-card__cuerpo"><Historial pasos={historial} etiqueta={`Historial del pedido #${refSolicitud(p.id)}`} /></div>
               </section>
             )}
+            <DesgloseDinero token={token} pedidoId={p.id} estado={p.estado}>
+              {(contenido) => (
+                <section className="ui-card pdt-bloque" aria-labelledby="pdt-pago">
+                  <div className="ui-card__header"><h2 id="pdt-pago" className="ui-card__titulo">Tu pago</h2></div>
+                  <div className="ui-card__cuerpo">{contenido}</div>
+                </section>
+              )}
+            </DesgloseDinero>
           </aside>
         </div>
 

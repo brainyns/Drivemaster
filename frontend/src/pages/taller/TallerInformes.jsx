@@ -10,6 +10,7 @@ import Alerta from "../../components/ui/Alerta";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Estrellas from "../../components/ui/Estrellas";
 import BarraProgreso from "../../components/ui/BarraProgreso";
+import { ResumenDinero } from "../../components/servicio/DesgloseDinero";
 import Grafico from "../../components/ui/Grafico";
 import { etiquetaMes, pesosCorto } from "../../components/ui/escalaGrafico";
 import "../../css/informes-taller.css";
@@ -93,11 +94,12 @@ function Dinero({ titulo, monto }) {
 }
 
 function Ingresos({ ingresos, periodo }) {
-  const { manoDeObra, diagnostico, anulado, anteriores } = ingresos;
+  const { manoDeObra, diagnostico, anulado, anteriores, desglose } = ingresos;
   const conDiagnostico = diagnostico.liquidado + diagnostico.pendiente > 0;
   const hay = manoDeObra.liquidado + manoDeObra.pendiente > 0 || conDiagnostico;
   return (
     <Tarjeta id="ti-ingresos" titulo="Ingresos por mano de obra">
+      {hay && <ResumenDinero resumen={desglose} />}
       {hay ? (
         <div className="ti-dineros">
           <Dinero titulo="Mano de obra" monto={manoDeObra} />
@@ -116,7 +118,7 @@ function Ingresos({ ingresos, periodo }) {
         </p>
       )}
       <p className="ti-nota">
-        Cifras {periodo}. “Liquidado” cuenta por la fecha en que se te pagó y “Pendiente” (lo que aún no se te ha pagado)
+        Cifras {periodo}, en lo que recibes. “Liquidado” cuenta por la fecha en que se te pagó y “Pendiente” (lo que aún no se te ha pagado)
         por la fecha en que pagó el cliente; cada pago está en uno solo de los dos.
         {anulado > 0 && ` Hay ${formatPrecio(anulado)} anulados que no cuentan.`}
       </p>

@@ -17,6 +17,7 @@ export const ESTADOS_REPARTO = {
   FALLIDO: { label: "Falló el pago", tono: "error" },
   ANULADO: { label: "Anulado", tono: "apagado" },
   INFORMATIVA: { label: "Informativa", tono: "apagado" },
+  RETENIDA: { label: "Retenida", tono: "ok" },
 };
 
 /** Estados del pago en Wompi. */

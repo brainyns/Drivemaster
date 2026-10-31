@@ -52,6 +52,12 @@ export function noPuedoDespachar(token, id, tipoMotivo, detalle) {
   return enviar(token, "PATCH", `${BASE}/${id}/no-despachar`, { tipoMotivo, detalle }, "No se pudo registrar");
 }
 
+/** Venta, comisión y lo que recibe la tienda por un pedido suyo. */
+export async function liquidacionDePedido(token, pedidoId) {
+  const res = await apiFetch(`${BASE}/${pedidoId}/liquidacion`, { headers: headers(token) });
+  return handle(res, "No se pudo cargar el pago de este pedido");
+}
+
 // ─── Por orden (cliente, taller, ADMIN) ────────────────────────────────────
 
 export async function pedidosDeOrden(token, ordenId) {

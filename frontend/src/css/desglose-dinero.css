@@ -1,0 +1,24 @@
+/* Venta → comisión → lo que recibe el negocio. El naranja de marca no va en cifras: el resultado se marca con peso y línea */
+.dd-lineas { display: grid; gap: 16px; }
+.dd-linea { display: grid; gap: 8px; min-width: 0; }
+.dd-linea + .dd-linea { padding-top: 16px; border-top: 1px solid var(--ui-line); }
+.dd-linea__cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.dd-linea__titulo { margin: 0; font-size: 0.9375rem; font-weight: 700; color: var(--ui-text); }
+
+.dd-recibo { display: grid; gap: 8px; margin: 0; }
+.dd-recibo__fila { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; min-width: 0; }
+.dd-recibo__fila dt { min-width: 0; font-size: 0.875rem; color: var(--ui-text); }
+.dd-recibo__fila dd {
+  flex: none;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ui-text);
+}
+.dd-recibo__fila--final { padding-top: 8px; border-top: 1px solid var(--ui-line); }
+.dd-recibo__fila--final dt { font-weight: 700; }
+.dd-recibo__fila--final dd { font-size: 1.125rem; font-weight: 700; }
+
+.dd-nota { display: block; margin: 2px 0 0; font-size: 0.8125rem; line-height: 1.4; color: var(--ui-muted); overflow-wrap: anywhere; }
+.dd-linea > .dd-nota { margin: 0; }

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {
   ALERTAS_PEDIDO, ENTREGAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, SIN_PLAN, chipsAlerta, conteoGrupos, filaConAlerta,
   hayFiltrosPedidos, actividadNegocio, sePuedePagar, textoConcepto, referenciaLinea, textoCuenta, tarjetasLiquidaciones, fueraDelRango, avisoModo, faltaParaResolver, fechaLinea, porRevisar, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
-  perfilNegocio, urgentesDashboard,
+  perfilNegocio, urgentesDashboard, desgloseFila,
 } from "../src/pages/admin/plataformaAdmin.js";
 import {
   BENEFICIARIO, ESTADOS_REPARTO, notaReparto, textoEntrega, textoVehiculo, ubicacionNegocio,
@@ -380,6 +380,33 @@ test("Clientes: lista de solo lectura con el sistema compartido y sin datos pers
     "<EstadoVacio", "<Esqueleto", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado de la cuenta"']);
   assert.ok(p.includes("clientesPlataforma(token, { ...filtros, q, page: pagina, size: TAMANO, sort: textoOrden(orden) })"));
   for (const dato of ["telefono", "direccion", "documento"]) assert.ok(!p.includes(`c.${dato}`), `no muestra ${dato}`);
+});
+
+test("Liquidaciones: bruto, comisión y neto de cada fila", () => {
+  const retenida = desgloseFila({ monto: 218000, montoBruto: 238000, comisionRetenida: 20000, comisionCalculada: 20000 }, true);
+  assert.equal(retenida.bruto, 238000);
+  assert.ok(retenida.comision.startsWith("− "), "lo descontado va con signo");
+  assert.equal(retenida.nota, null);
+
+  const apagada = desgloseFila({ monto: 238000, montoBruto: 238000, comisionRetenida: 0, comisionCalculada: 20000 }, false);
+  assert.equal(apagada.nota, "No se descuenta todavía");
+  assert.ok(!apagada.comision.startsWith("− "));
+
+  const anterior = desgloseFila({ monto: 118400 }, true);
+  assert.equal(anterior.bruto, 118400, "una línea anterior: bruto y neto son lo mismo");
+  assert.equal(anterior.comision, "—", "no se inventa una comisión que no se guardó");
+  assert.equal(anterior.nota, "No se descontó en este pago");
+
+  const p = leer("../src/pages/Liquidaciones.jsx");
+  for (const texto of ['data-label="Bruto"', 'data-label="Comisión"', '"Neto"', 'etiqueta="Se transfiere"']) assert.ok(p.includes(texto), texto);
+});
+
+test("Reportes y dashboard: la comisión cobrada va separada de la informativa", () => {
+  const p = leer("../src/pages/ReportesPlataforma.jsx");
+  for (const texto of ['titulo="Cobrada"', 'titulo="Por cobrar"', "Comisión informativa", "marcarSaldoCobrado(token, marcando.id)"]) assert.ok(p.includes(texto), texto);
+  const d = leer("../src/pages/DashboardPlataforma.jsx");
+  assert.ok(d.includes('titulo="Comisión cobrada"') && d.includes('titulo="Comisión informativa"'));
+  assert.ok(d.includes("El cobro está apagado"), "con la bandera apagada no aparenta haber cobrado");
 });
 
 test("Reportes de plataforma: sistema compartido, comisión con Indicador y la comisión del dashboard abre su reporte", () => {

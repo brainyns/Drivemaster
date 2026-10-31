@@ -11,10 +11,9 @@ import "../../css/cotizacion.css";
 export default function CotizacionDetalle({ cotizacion: c, mostrarComision = false, sinEstado = false }) {
   const repuestos = (c.items || []).filter((i) => i.tipo === "REPUESTO");
   const manoObra = (c.items || []).filter((i) => i.tipo === "MANO_OBRA");
-  // Lo del taller es la mano de obra con su IVA (la comisión es informativa: no se le resta)
-  const recibe = c.subtotalManoObra != null
-    ? c.subtotalManoObra + (c.ivaManoObra ?? Math.round((c.subtotalManoObra * (c.ivaManoObraPct ?? c.ivaPct ?? 0)) / 100))
-    : null;
+  // Solo el taller recibe estas cifras; lo que se descuenta de verdad se fija al aprobarse el pago
+  const recibe = c.recibeTaller;
+  const seDescuenta = c.comisionSeDescuenta === true;
 
   return (
     <div className="ct-detalle">
@@ -80,20 +79,21 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
           </>
         )}
         <div className="ct-totales__fila ct-totales__fila--final"><dt>Total a pagar</dt><dd>{formatPrecio(c.totalAPagar)}</dd></div>
+        {mostrarComision && c.comisionTaller != null && (
+          <div className="ct-totales__fila ct-totales__fila--info">
+            <dt>Comisión DriveMaster{seDescuenta ? " sobre tu mano de obra" : " (no se descuenta todavía)"}</dt>
+            <dd>{seDescuenta ? `− ${formatPrecio(c.comisionTaller)}` : formatPrecio(c.comisionTaller)}</dd>
+          </div>
+        )}
         {mostrarComision && recibe != null && (
           <div className="ct-totales__fila ct-totales__fila--recibe">
             <dt>
               Recibes
               <span className="ss-meta">
-                Mano de obra con su IVA{c.anticipoDiagnostico > 0 ? ", incluido el diagnóstico ya pagado" : ""}. Los repuestos van a la tienda.
+                Mano de obra con su IVA{seDescuenta ? ", menos la comisión" : ""}{c.anticipoDiagnostico > 0 ? ", incluido el diagnóstico ya pagado" : ""}. Los repuestos van a la tienda.
               </span>
             </dt>
             <dd>{formatPrecio(recibe)}</dd>
-          </div>
-        )}
-        {mostrarComision && c.comisionInformativa != null && (
-          <div className="ct-totales__fila ct-totales__fila--info">
-            <dt>Comisión DriveMaster (informativa, hoy no se descuenta)</dt><dd>{formatPrecio(c.comisionInformativa)}</dd>
           </div>
         )}
       </dl>

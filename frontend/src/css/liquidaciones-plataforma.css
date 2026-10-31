@@ -84,6 +84,14 @@
   .liq-orden-movil { display: block; }
 }
 
+/* Bruto y comisión: columnas propias con espacio de sobra. Más angosto se recogen bajo el neto, y en celular cada tarjeta
+   vuelve a mostrar las tres cifras con su etiqueta */
+.liq-desglose-sub { display: none; }
+@media (min-width: 761px) and (max-width: 1440px) {
+  .liq-col-desglose { display: none; }
+  .liq-tabla--repartos .liq-desglose-sub { display: grid; font-weight: 400; white-space: nowrap; }
+}
+
 /* Con el menú lateral abierto las tarjetas quedan angostas: la cifra se achica antes de partirse en dos líneas */
 @media (min-width: 761px) and (max-width: 1000px) {
   .liq-resumen .ui-indicador__valor { font-size: 1.3rem; overflow-wrap: normal; }

@@ -6,6 +6,22 @@ const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency:
 const plural = (n, uno, varios) => (n === 1 ? uno : varios);
 
 /**
+ * Bruto, comisión y neto de una línea de Liquidaciones. comision es null en las líneas anteriores al desglose: no se
+ * guardó por línea y no se estima. seDescuenta es la bandera, para la nota de lo que no se descontó.
+ */
+export function desgloseFila(f, seDescuenta) {
+  const bruto = f.montoBruto ?? f.monto;
+  if (f.comisionRetenida > 0) {
+    return { bruto, comision: `− ${cop(f.comisionRetenida)}`, nota: null };
+  }
+  return {
+    bruto,
+    comision: f.comisionCalculada != null ? cop(f.comisionCalculada) : "—",
+    nota: seDescuenta ? "No se descontó en este pago" : "No se descuenta todavía",
+  };
+}
+
+/**
  * Lo urgente del dashboard, en el orden en que conviene atenderlo: primero los negocios que esperan aprobación y los
  * pedidos con problema, después el dinero. Solo lo que tiene casos. pagina y preset son los de irA.
  */

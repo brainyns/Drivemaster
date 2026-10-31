@@ -220,6 +220,8 @@ function ListaReparto({ reparto }) {
           <span className="dtp-num">
             <ChipEstado catalogo={ESTADOS_REPARTO} estado={r.estado} />
             <strong>{formatoCop(r.monto)}</strong>
+            {r.comisionRetenida > 0 && <span className="dtp-sub">Bruto {formatoCop(r.montoBruto)} · Comisión − {formatoCop(r.comisionRetenida)}</span>}
+            {!(r.comisionRetenida > 0) && r.comisionCalculada > 0 && <span className="dtp-sub">Comisión {formatoCop(r.comisionCalculada)} sin descontar</span>}
           </span>
         </li>
       ))}
@@ -236,7 +238,12 @@ function ListaReembolsos({ reembolsos }) {
           <span>
             <strong>Reembolso</strong>
             <span className="dtp-sub">{[b.motivo, fecha(b.fecha)].filter(Boolean).join(" · ")}</span>
-            {b.saldoAFavor > 0 && <span className="dtp-sub"><strong>A favor de DriveMaster: {formatoCop(b.saldoAFavor)}</strong>. Ya se le transfirió al negocio: hay que cobrárselo a mano.</span>}
+            {b.saldoAFavor > 0 && (
+              <span className="dtp-sub">
+                <strong>A favor de DriveMaster: {formatoCop(b.saldoAFavor)}</strong>
+                {b.saldoCobradoEn ? `. Cobrado al negocio el ${fecha(b.saldoCobradoEn)}.` : ". Ya se le transfirió al negocio: hay que cobrárselo a mano."}
+              </span>
+            )}
           </span>
           <span className="dtp-num"><ChipEstado tono={b.estado === "REALIZADO" ? "ok" : "aviso"}>{b.estado === "REALIZADO" ? "Realizado" : "Pendiente"}</ChipEstado><strong>{formatoCop(b.monto)}</strong></span>
         </li>

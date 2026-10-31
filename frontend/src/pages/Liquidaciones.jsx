@@ -20,7 +20,7 @@ import Campo from "../components/ui/Campo";
 import Dato from "../components/ui/Dato";
 import { unir } from "../utils/formato";
 import {
-  ESTADOS_LIQUIDACION, MAS_ESTADOS_LIQUIDACION, avisoModo, faltaParaResolver, fechaLinea, fueraDelRango, porRevisar, referenciaLinea,
+  ESTADOS_LIQUIDACION, MAS_ESTADOS_LIQUIDACION, avisoModo, desgloseFila, faltaParaResolver, fechaLinea, fueraDelRango, porRevisar, referenciaLinea,
   sePuedePagar, tarjetasLiquidaciones, textoConcepto, textoCuenta,
 } from "./admin/plataformaAdmin";
 // El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
@@ -201,6 +201,7 @@ export default function Liquidaciones() {
   const pendientesReembolso = filas.filter((f) => f.estado === "PENDIENTE");
   const totalPendienteReembolso = pendientesReembolso.reduce((s, f) => s + (f.monto || 0), 0);
   const marcando = filas.find((f) => f.id === marcandoId) || null;
+  const desgloseDialogo = marcando && esRepartos ? desgloseFila(marcando, tabla?.comisionSeDescuenta) : null;
   const resolviendo = filas.find((f) => f.id === resolviendoId) || null;
 
   const resumen = esRepartos ? tabla?.resumen : null;
@@ -334,7 +335,11 @@ export default function Liquidaciones() {
                     ? <EncabezadoOrden campo="estado" orden={orden} onOrdenar={ordenar}>Estado</EncabezadoOrden>
                     : <th scope="col">Estado</th>}
                   {esRepartos
-                    ? <EncabezadoOrden campo="monto" orden={orden} onOrdenar={ordenar} className="pp-num">Monto</EncabezadoOrden>
+                    ? <>
+                      <th scope="col" className="pp-num liq-col-desglose">Bruto</th>
+                      <th scope="col" className="pp-num liq-col-desglose">Comisión</th>
+                      <EncabezadoOrden campo="monto" orden={orden} onOrdenar={ordenar} className="pp-num">Neto</EncabezadoOrden>
+                    </>
                     : <th scope="col" className="pp-num">Monto</th>}
                   <th scope="col"><span className="ui-sr">Acción</span></th>
                 </tr>
@@ -346,6 +351,7 @@ export default function Liquidaciones() {
                   const cuenta = esRepartos ? textoCuenta(f.cuenta) : "";
                   const faltaCuenta = esRepartos && esWompi && pagable && !f.cuenta;
                   const idFalta = `liq-falta-${f.id}`;
+                  const desglose = esRepartos ? desgloseFila(f, tabla?.comisionSeDescuenta) : null;
                   return (
                     <tr key={f.id} className={f.estado === "FALLIDO" ? "liq-fila--fallida" : undefined}>
                       <td className="ui-table__titulo">
@@ -382,15 +388,31 @@ export default function Liquidaciones() {
                         <ChipEstado catalogo={esRepartos ? ESTADO_REPARTO : ESTADO_REEMBOLSO} estado={f.sePuedeResolver ? "SIN_CONFIRMAR" : f.estado} />
                         {esRepartos && f.estado === "LIQUIDADO" && (
                           <span className="pp-sub">
-                            {unir([f.modoLiquidacion === "SIMULADO" ? "SIMULADO (sin dinero real)" : f.modoLiquidacion,
-                              f.referenciaLiquidacion && `Ref. ${f.referenciaLiquidacion}`, f.liquidadoPor,
+                            {unir([f.modoLiquidacion === "SIMULADO" ? "SIMULADO (sin dinero real)" : f.modoLiquidacion === "SIN_PAGO" ? "Sin transferencia" : f.modoLiquidacion,
+                              f.referenciaLiquidacion && f.modoLiquidacion !== "SIN_PAGO" && `Ref. ${f.referenciaLiquidacion}`, f.liquidadoPor,
                               f.fechaLiquidacion && formatFechaHora(f.fechaLiquidacion)])}
                           </span>
                         )}
                         {esRepartos && (f.estado === "FALLIDO" || f.estado === "PROCESANDO") && f.motivoFallo && <span className="pp-sub liq-fallo">{f.motivoFallo}</span>}
                         {f.nota && <span className="pp-sub">{f.nota}</span>}
                       </td>
-                      <td data-label="Monto" className="pp-num liq-monto">{formatPrecio(f.monto)}</td>
+                      {esRepartos && <td data-label="Bruto" className="pp-num liq-col-desglose">{formatPrecio(desglose.bruto)}</td>}
+                      {esRepartos && (
+                        <td data-label="Comisión" className="pp-num liq-col-desglose">
+                          <span>{desglose.comision}{desglose.nota && <span className="pp-sub">{desglose.nota}</span>}</span>
+                        </td>
+                      )}
+                      <td data-label={esRepartos ? "Neto" : "Monto"} className="pp-num liq-monto">
+                        <span>
+                          {formatPrecio(f.monto)}
+                          {esRepartos && (
+                            <span className="pp-sub liq-desglose-sub">
+                              <span>Bruto {formatPrecio(desglose.bruto)}</span>
+                              <span>Comisión {desglose.comision}</span>
+                            </span>
+                          )}
+                        </span>
+                      </td>
                       <td className="ui-table__acciones liq-acciones">
                         {pagable && (
                           <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" onClick={() => abrirMarcar(f)}
@@ -434,8 +456,10 @@ export default function Liquidaciones() {
                 <Dato etiqueta="Beneficiario" ancho>{nombreBeneficiario(marcando)} · {tipoBeneficiario(marcando)}</Dato>
                 <Dato etiqueta="Banco">{marcando.cuenta?.banco}</Dato>
                 <Dato etiqueta="Cuenta">{unir([marcando.cuenta?.tipoCuenta && textoCuenta({ tipoCuenta: marcando.cuenta.tipoCuenta }), marcando.cuenta?.numero])}</Dato>
-                <Dato etiqueta="Concepto">{textoConcepto(marcando.concepto)} {referenciaLinea(marcando).texto}</Dato>
-                <Dato etiqueta="Monto">{formatPrecio(marcando.monto)}</Dato>
+                <Dato etiqueta="Concepto" ancho>{textoConcepto(marcando.concepto)} {referenciaLinea(marcando).texto}</Dato>
+                <Dato etiqueta="Bruto">{formatPrecio(desgloseDialogo.bruto)}</Dato>
+                <Dato etiqueta="Comisión DriveMaster">{unir([desgloseDialogo.comision, desgloseDialogo.nota])}</Dato>
+                <Dato etiqueta="Se transfiere" ancho><strong>{formatPrecio(marcando.monto)}</strong></Dato>
               </dl>
               {aviso && (
                 <p className={`liq-dinero${aviso.grande ? " liq-dinero--prueba" : ""}`}>

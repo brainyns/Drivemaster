@@ -4,6 +4,7 @@ import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Indicador from "../components/ui/Indicador";
 import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
+import { ResumenDinero } from "../components/servicio/DesgloseDinero";
 import "../css/informes-tienda.css";
 
 const PERIODOS = [3, 6, 12];
@@ -250,6 +251,7 @@ function Liquidacion({ liquidacion: l }) {
   }
   return (
     <>
+      <ResumenDinero resumen={l.desglose} />
       <ul className="it-liquidacion">
         {filas.map((f) => (
           <li key={f.clave} className={f.destacada ? "is-destacada" : ""}>
@@ -409,7 +411,7 @@ export default function InformesTienda({ token, onIr }) {
             <Panel ancho="7" titulo="Stock bajo" nota="Productos en o bajo su stock mínimo (o 5 unidades si no definiste uno).">
               <StockBajo stock={datos.stockBajo} onIr={onIr} />
             </Panel>
-            <Panel ancho="5" titulo="Lo pendiente de liquidar" nota="El dinero de tus pedidos, según en qué etapa está.">
+            <Panel ancho="5" titulo="Lo pendiente de liquidar" nota="El dinero de tus pedidos, según en qué etapa está. Cada cifra es lo que recibes.">
               <Liquidacion liquidacion={datos.liquidacion} />
             </Panel>
           </div>

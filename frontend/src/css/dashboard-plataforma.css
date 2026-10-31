@@ -26,3 +26,6 @@
 .ss-panel--tienda .sv-btn, .ss-panel--tienda .ss-filtro__conteo { color: var(--on-primary); }
 .ss-panel--plataforma .ss-estado--proceso,
 .ss-panel--tienda .ss-estado--proceso { background: var(--ui-info-bg); color: var(--ui-info); }
+
+/* Cifras de dinero: cada tarjeta deja espacio a un monto de nueve dígitos, que no se parte en dos líneas */
+.pp-indicadores-dinero { grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); }

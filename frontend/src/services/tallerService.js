@@ -49,6 +49,12 @@ export async function miTaller(token) {
   return handle(res, "Error al cargar los datos del taller");
 }
 
+/** Venta, comisión y lo que recibe el taller por una orden suya. */
+export async function liquidacionDeOrden(token, ordenId) {
+  const res = await apiFetch(`${BASE}/mi-taller/ordenes/${ordenId}/liquidacion`, { headers: headers(token) });
+  return handle(res, "No se pudo cargar el pago de esta solicitud");
+}
+
 // ─── Mecánicos del taller autenticado ───
 
 export async function listarMecanicos(token) {

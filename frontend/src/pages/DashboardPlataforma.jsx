@@ -203,13 +203,26 @@ export default function DashboardPlataforma({ token, onIr }) {
 
       <section className="pp-seccion" aria-labelledby="pp-dinero">
         <h2 id="pp-dinero" className="pp-titulo">Dinero</h2>
-        <div className="ui-indicadores">
+        <div className="ui-indicadores pp-indicadores-dinero">
           <Indicador titulo="Total movido" valor={cop(d.dinero.movido)}
             pie="Pagos aprobados que pasaron por la plataforma, con IVA y envío. No es ingreso de DriveMaster." />
           {/* La base y la comisión salen de lo mismo: comisión = 10 % de la base (mismo período, sin reembolsos) */}
           <Indicador titulo="Base de la comisión" valor={cop(d.dinero.baseComision)}
             pie={`Valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}, sin reembolsos.`} />
-          <Indicador titulo="Comisión registrada" valor={cop(d.dinero.comisionRegistrada)} tono="ok"
+          <Indicador titulo="Comisión cobrada" valor={cop(d.dinero.comisionRetenida?.cobrada)} tono="ok"
+            pie={d.dinero.comisionSeDescuenta ? "Retenida en pagos ya transferidos a los negocios." : "El cobro está apagado: la comisión no se descuenta todavía."}
+            onClick={() => ir("reportes-plataforma", "comision")} />
+          {d.dinero.comisionRetenida?.porCobrar > 0 && (
+            <Indicador titulo="Comisión por cobrar" valor={cop(d.dinero.comisionRetenida.porCobrar)}
+              pie="Retenida en pagos que aún no se transfieren a los negocios."
+              onClick={() => ir("reportes-plataforma", "comision")} />
+          )}
+          {d.dinero.saldosAFavorPendientes > 0 && (
+            <Indicador titulo="Saldos a favor pendientes" valor={cop(d.dinero.saldosAFavorPendientes)} tono="accion"
+              pie="Reembolsos de pagos ya transferidos: se les cobran a los negocios a mano."
+              onClick={() => ir("reportes-plataforma", "comision")} />
+          )}
+          <Indicador titulo="Comisión informativa" valor={cop(d.dinero.comisionRegistrada)}
             pie={`${d.dinero.comisionPct} % sobre el valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}. Informativa: no es dinero cobrado.`}
             onClick={() => ir("reportes-plataforma", "comision")} />
           {d.dinero.liquidacionAutomatica && !d.dinero.porLiquidar ? (

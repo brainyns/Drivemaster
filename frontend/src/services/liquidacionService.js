@@ -59,6 +59,12 @@ export async function listarReembolsos(token, estado) {
   return handle(res, "No se pudieron cargar los reembolsos");
 }
 
+/** El negocio ya devolvió lo que quedó a favor de DriveMaster en un reembolso. */
+export async function marcarSaldoCobrado(token, id) {
+  const res = await apiFetch(`${BASE}/reembolsos/${id}/saldo-cobrado`, { method: "PATCH", headers: headers(token) });
+  return handle(res, "No se pudo marcar el saldo como cobrado");
+}
+
 export async function marcarReembolsado(token, id, nota) {
   const res = await apiFetch(`${BASE}/reembolsos/${id}/realizado`, {
     method: "PATCH", headers: headers(token), body: JSON.stringify({ nota }),
