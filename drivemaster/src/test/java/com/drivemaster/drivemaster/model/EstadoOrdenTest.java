@@ -11,6 +11,9 @@ class EstadoOrdenTest {
 
     @Test
     void soloElSistemaAsignaTalleres() {
+        assertTrue(permitida(EN_REVISION, ASIGNADA_A_TALLER, SISTEMA), "pago del diagnóstico que no se pudo aplicar");
+        assertFalse(permitida(EN_REVISION, ASIGNADA_A_TALLER, TALLER), "el taller no puede deshacer un pago");
+        assertFalse(permitida(EN_REVISION, ASIGNADA_A_TALLER, CLIENTE));
         assertTrue(permitida(ENVIADA, ASIGNADA_A_TALLER, SISTEMA));
         assertFalse(permitida(ENVIADA, ASIGNADA_A_TALLER, CLIENTE));
         assertFalse(permitida(ENVIADA, ASIGNADA_A_TALLER, TALLER));

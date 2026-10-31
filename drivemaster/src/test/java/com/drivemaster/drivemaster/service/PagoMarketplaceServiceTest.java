@@ -390,6 +390,135 @@ class PagoMarketplaceServiceTest {
     }
 
     @Test
+    void siFallaTrasPagarLaOrdenVuelveADiagnosticadaConLaCotizacionAnulada() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
+        fallaTrasCrearLasLineas();
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 107_100), "txn-1");
+
+        assertEquals(EstadoOrden.DIAGNOSTICADA, orden.getEstado(), "no queda PAGADA con el dinero devuelto");
+        assertEquals(Cotizacion.ANULADA, cotizacion.getEstado());
+        verify(cotizacionRepository).save(cotizacion);
+        ArgumentCaptor<org.springframework.data.mongodb.core.query.Update> cambio =
+                ArgumentCaptor.forClass(org.springframework.data.mongodb.core.query.Update.class);
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.DIAGNOSTICADA), any(), anyString(), any(), cambio.capture());
+        assertTrue(cambio.getValue().getUpdateObject().toJson().contains("pagoCotizacionId"), "sin el pago que no se aplicó");
+        verify(avisos).pagoNoAplicado(eq(orden), eq(107_100.0), anyString());
+        verify(reembolsoRepository).save(any());
+    }
+
+    @Test
+    void siLaOrdenNoPuedeVolverSeAlertaYElReembolsoSigue() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
+        doAnswer(i -> {
+            String destino = i.getArgument(1);
+            if (!EstadoOrden.PAGADA.equals(destino)) throw new IllegalStateException("Mongo no responde");
+            OrdenServicio o = i.getArgument(0);
+            o.setEstado(destino);
+            return o;
+        }).when(transiciones).transicionar(any(), anyString(), any(), anyString(), any(), any());
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 107_100), "txn-1");
+
+        verify(avisos).alertaAdmin(eq("Orden sin corregir"), contains("o1"));
+        verify(reembolsoRepository).save(any());
+        verify(movimientoService).registrarMovimiento(eq("p1"), eq("ENTRADA"), eq(2), anyString(), eq("PAGO-DRV-REF"), any());
+    }
+
+    private PagoEntity diagnosticoQueFalla() {
+        orden.setEstado(EstadoOrden.ASIGNADA_A_TALLER);
+        orden.setPagoDiagnosticoEstado(EstadoOrden.PAGO_PENDIENTE);
+        when(parametros.timeoutPagoDiagnosticoMin()).thenReturn(1440);
+        when(repartoRepository.save(any())).thenThrow(new IllegalStateException("La base no responde"));
+        return pago(PagoMarketplaceService.DIAGNOSTICO, 59_500);
+    }
+
+    @Test
+    void siFallaElDiagnosticoLaOrdenVuelveAEsperarElPagoConPlazoNuevo() {
+        LocalDateTime antes = LocalDateTime.now();
+
+        service.confirmar(diagnosticoQueFalla(), "txn-1");
+
+        assertEquals(EstadoOrden.ASIGNADA_A_TALLER, orden.getEstado(), "no queda EN_REVISION con el dinero devuelto");
+        ArgumentCaptor<org.springframework.data.mongodb.core.query.Update> cambio =
+                ArgumentCaptor.forClass(org.springframework.data.mongodb.core.query.Update.class);
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.ASIGNADA_A_TALLER), any(), anyString(), any(), cambio.capture());
+        org.bson.Document puestos = (org.bson.Document) cambio.getValue().getUpdateObject().get("$set");
+        assertEquals(EstadoOrden.PAGO_PENDIENTE, puestos.get("pagoDiagnosticoEstado"));
+        assertTrue(((LocalDateTime) puestos.get("fechaLimitePagoDiagnostico")).isAfter(antes.plusMinutes(1439)));
+        verify(avisos).pagoNoAplicado(eq(orden), eq(59_500.0), anyString());
+        verify(reembolsoRepository).save(any());
+    }
+
+    @Test
+    void elPlazoNuevoDelDiagnosticoNuncaPasaDeLaCita() {
+        LocalDateTime cita = LocalDateTime.now().plusHours(2);
+        orden.setFechaProgramada(cita);
+
+        service.confirmar(diagnosticoQueFalla(), "txn-1");
+
+        ArgumentCaptor<org.springframework.data.mongodb.core.query.Update> cambio =
+                ArgumentCaptor.forClass(org.springframework.data.mongodb.core.query.Update.class);
+        verify(transiciones).transicionar(any(), eq(EstadoOrden.ASIGNADA_A_TALLER), any(), anyString(), any(), cambio.capture());
+        assertEquals(cita, ((org.bson.Document) cambio.getValue().getUpdateObject().get("$set")).get("fechaLimitePagoDiagnostico"));
+    }
+
+    @Test
+    void siLaOrdenDelDiagnosticoNoPuedeVolverSeAlertaYElReembolsoSigue() {
+        PagoEntity pago = diagnosticoQueFalla();
+        doAnswer(i -> {
+            String destino = i.getArgument(1);
+            if (!EstadoOrden.EN_REVISION.equals(destino)) throw new IllegalStateException("Mongo no responde");
+            OrdenServicio o = i.getArgument(0);
+            o.setEstado(destino);
+            return o;
+        }).when(transiciones).transicionar(any(), anyString(), any(), anyString(), any(), any());
+
+        service.confirmar(pago, "txn-1");
+
+        verify(avisos).alertaAdmin(eq("Orden sin corregir"), contains("EN_REVISION"));
+        verify(reembolsoRepository).save(any());
+    }
+
+    @Test
+    void unAvisoQueFallaEnElDiagnosticoNoReembolsaYAlertaAlAdmin() {
+        orden.setEstado(EstadoOrden.ASIGNADA_A_TALLER);
+        orden.setPagoDiagnosticoEstado(EstadoOrden.PAGO_PENDIENTE);
+        doThrow(new IllegalStateException("Sin plantilla")).when(avisos).diagnosticoPagado(any());
+
+        service.confirmar(pago(PagoMarketplaceService.DIAGNOSTICO, 59_500), "txn-1");
+
+        assertEquals(EstadoOrden.EN_REVISION, orden.getEstado());
+        verify(reembolsoRepository, never()).save(any());
+        verify(avisos).alertaAdmin(eq("Avisos sin enviar"), contains("DRV-REF"));
+    }
+
+    @Test
+    void siTambienFallaLaAlertaElPagoSigueAplicado() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
+        doThrow(new IllegalStateException("Sin correo")).when(avisos).comprobantePago(any(), any(), anyString(), anyMap(), anyString());
+        doThrow(new IllegalStateException("Sin nada")).when(avisos).alertaAdmin(anyString(), anyString());
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 107_100), "txn-1");
+
+        verify(reembolsoRepository, never()).save(any());
+    }
+
+    @Test
+    void unCorreoQueFallaNoReembolsaUnPagoYaAplicado() {
+        cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
+        doThrow(new IllegalStateException("Sin correo")).when(avisos).comprobantePago(any(), any(), anyString(), anyMap(), anyString());
+
+        service.confirmar(pago(PagoMarketplaceService.COTIZACION, 107_100), "txn-1");
+
+        verify(reembolsoRepository, never()).save(any());
+        verify(repartoRepository, never()).anularPendiente(anyLong(), anyString());
+        verify(movimientoService, never()).registrarMovimiento(anyString(), eq("ENTRADA"), anyInt(), anyString(), anyString(), any());
+        assertEquals(EstadoOrden.REPUESTOS_PEDIDOS, orden.getEstado());
+        verify(avisos).alertaAdmin(eq("Avisos sin enviar"), contains("DRV-REF"));
+    }
+
+    @Test
     void unPedidoQueYaSalioNoSeCancelaYSeAlerta() {
         cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"))), 107_100);
         fallaTrasCrearLasLineas();

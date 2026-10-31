@@ -72,6 +72,8 @@ public final class EstadoOrden {
                     CANCELADA, Set.of(CLIENTE, ADMIN))),
             Map.entry(EN_REVISION, Map.of(
                     DIAGNOSTICADA, Set.of(TALLER, MECANICO),
+                    // El pago del diagnóstico falló al aplicarse: se reembolsa y vuelve a esperar el pago
+                    ASIGNADA_A_TALLER, Set.of(SISTEMA),
                     // Con el diagnóstico ya pagado, solo el ADMIN cancela (gestiona el reembolso)
                     CANCELADA, Set.of(ADMIN))),
             Map.entry(DIAGNOSTICADA, Map.of(

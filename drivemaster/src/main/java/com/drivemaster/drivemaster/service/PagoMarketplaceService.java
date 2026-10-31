@@ -317,24 +317,71 @@ public class PagoMarketplaceService {
                     + (orden != null ? " (estado " + orden.getEstado() + ")" : ""));
             return;
         }
-        Taller taller = tallerRepository.findById(enRevision.getTallerId()).orElse(null);
-        BigDecimal base = ComisionPlataforma.baseDiagnostico(enRevision, pago.getMonto(), parametros.ivaPct());
-        double pct = parametros.comisionPct();
-        boolean retener = parametros.comisionRetenida();
-        RepartoPago lineaTaller = reparto(pago, RepartoPago.TALLER, enRevision.getTallerId(),
-                taller != null ? taller.getNombre() : null, pago.getMonto(), null);
-        ComisionPlataforma.aplicar(lineaTaller, base, pct, retener);
-        repartoRepository.save(lineaTaller);
+        // Desde aquí, un fallo reembolsa todo el pago (ver confirmar): la orden no puede seguir como si estuviera pagada
+        try {
+            Taller taller = tallerRepository.findById(enRevision.getTallerId()).orElse(null);
+            BigDecimal base = ComisionPlataforma.baseDiagnostico(enRevision, pago.getMonto(), parametros.ivaPct());
+            double pct = parametros.comisionPct();
+            boolean retener = parametros.comisionRetenida();
+            RepartoPago lineaTaller = reparto(pago, RepartoPago.TALLER, enRevision.getTallerId(),
+                    taller != null ? taller.getNombre() : null, pago.getMonto(), null);
+            ComisionPlataforma.aplicar(lineaTaller, base, pct, retener);
+            repartoRepository.save(lineaTaller);
+            ComisionPlataforma.registrar(repartoRepository, pago, base, pct, retener, List.of(lineaTaller));
+        } catch (RuntimeException e) {
+            devolverDiagnosticoTrasFallo(pago, enRevision);
+            throw e;
+        }
 
         Map<String, Double> lineas = new LinkedHashMap<>();
         // Un taller no responsable de IVA cobra el diagnóstico sin IVA (las solicitudes anteriores no traen el dato)
         boolean sinIva = enRevision.getIvaDiagnosticoPct() != null && enRevision.getIvaDiagnosticoPct() == 0;
         lineas.put(sinIva ? "Tarifa de diagnóstico (sin IVA: el taller no es responsable de IVA)"
                 : "Tarifa de diagnóstico (IVA incluido)", pago.getMonto());
-        ComisionPlataforma.registrar(repartoRepository, pago, base, pct, retener, List.of(lineaTaller));
-        avisos.comprobantePago(enRevision, pago, "la revisión y diagnóstico", lineas,
-                "Tu cita de revisión quedó confirmada. El valor se descontará de la cotización si la apruebas.");
-        avisos.diagnosticoPagado(enRevision);
+        // El pago ya quedó aplicado: un aviso que falla no puede convertirlo en un reembolso
+        avisarPagoAplicado(pago, () -> {
+            avisos.comprobantePago(enRevision, pago, "la revisión y diagnóstico", lineas,
+                    "Tu cita de revisión quedó confirmada. El valor se descontará de la cotización si la apruebas.");
+            avisos.diagnosticoPagado(enRevision);
+        });
+    }
+
+    /**
+     * Mismo criterio que la cotización: el pago se reembolsa y la orden vuelve a donde estaba antes de pagar, esperando el
+     * pago con un plazo nuevo (el cliente pagó a tiempo; como al proponer la cita, nunca después de ella). Si no paga, el
+     * vencimiento normal la cancela. Nunca lanza: si no se puede, se alerta al ADMIN.
+     */
+    private void devolverDiagnosticoTrasFallo(PagoEntity pago, OrdenServicio enRevision) {
+        String motivo = "El pago del diagnóstico no se pudo aplicar: se reembolsa y se puede pagar de nuevo";
+        try {
+            LocalDateTime limite = LocalDateTime.now().plusMinutes(parametros.timeoutPagoDiagnosticoMin());
+            if (enRevision.getFechaProgramada() != null && limite.isAfter(enRevision.getFechaProgramada())) {
+                limite = enRevision.getFechaProgramada();
+            }
+            transiciones.transicionar(enRevision, EstadoOrden.ASIGNADA_A_TALLER, Actor.SISTEMA, motivo,
+                    Criteria.where("pagoDiagnosticoEstado").is(EstadoOrden.PAGO_PAGADO),
+                    new Update().set("pagoDiagnosticoEstado", EstadoOrden.PAGO_PENDIENTE).set("fechaLimitePagoDiagnostico", limite));
+            avisos.pagoNoAplicado(enRevision, pago.getMonto(), motivo);
+        } catch (RuntimeException e) {
+            log.error("No se pudo devolver la orden {} tras fallar el pago {}", enRevision.getId(), pago.getReferencia(), e);
+            avisos.alertaAdmin("Orden sin corregir", "El pago " + pago.getReferencia() + " no se aplicó y se reembolsa, pero la solicitud "
+                    + enRevision.getId() + " sigue EN_REVISION: corrígela a mano.");
+        }
+    }
+
+    /** Lo último de un pago aplicado. Si un aviso falla, el pago sigue aplicado: queda el log y la alerta al ADMIN. Nunca lanza. */
+    private void avisarPagoAplicado(PagoEntity pago, Runnable aviso) {
+        try {
+            aviso.run();
+        } catch (RuntimeException e) {
+            log.error("Pago {} aplicado, pero no se pudieron enviar sus avisos", pago.getReferencia(), e);
+            try {
+                avisos.alertaAdmin("Avisos sin enviar", "El pago " + pago.getReferencia()
+                        + " quedó aplicado, pero no se pudieron enviar sus avisos: confírmale al cliente y a los negocios.");
+            } catch (RuntimeException sinAlerta) {
+                log.error("Tampoco se pudo alertar al ADMIN por los avisos del pago {}", pago.getReferencia(), sinAlerta);
+            }
+        }
     }
 
     private void aplicarCotizacion(PagoEntity pago) {
@@ -413,12 +460,47 @@ public class PagoMarketplaceService {
         }
 
         // Desde aquí, un fallo reembolsa todo el pago (ver confirmar): ninguna tienda debe despachar lo que se devolvió
+        CotizacionRepartida repartida;
         try {
-            repartirCotizacion(pago, orden, pagada, cotizacion);
+            repartida = repartirCotizacion(pago, orden, pagada, cotizacion);
         } catch (RuntimeException e) {
             cancelarPedidos(pago);
             reponerStock(descontados, refInventario);
+            devolverOrdenTrasFallo(pago, pagada, cotizacion);
             throw e;
+        }
+
+        // El pago ya quedó aplicado: un aviso que falla no puede convertirlo en un reembolso
+        avisarPagoAplicado(pago, () -> {
+            avisos.comprobantePago(repartida.orden(), pago, "la cotización v" + cotizacion.getVersion() + " de " + cotizacion.getTallerNombre(),
+                    lineasCotizacion(cotizacion),
+                    repartida.pedidos().isEmpty() ? "El taller ya puede empezar el trabajo."
+                            : "Pedimos los repuestos a las tiendas; te avisaremos el avance.");
+            avisos.cotizacionPagada(repartida.orden(), repartida.pedidos());
+        });
+    }
+
+    private record CotizacionRepartida(OrdenServicio orden, List<PedidoTienda> pedidos) {}
+
+    /**
+     * El pago se reembolsa y esa cotización ya no vale: como cuando falta stock, se anula y la orden vuelve a DIAGNOSTICADA
+     * para que el taller emita otra, sin el pago que no se aplicó. Nunca lanza: si no se puede, se alerta al ADMIN.
+     */
+    private void devolverOrdenTrasFallo(PagoEntity pago, OrdenServicio pagada, Cotizacion cotizacion) {
+        String motivo = "El pago de la cotización no se pudo aplicar: se reembolsa y el taller debe emitir una nueva";
+        try {
+            transiciones.transicionar(pagada, EstadoOrden.DIAGNOSTICADA, Actor.SISTEMA, motivo,
+                    Criteria.where("cotizacionId").is(cotizacion.getId()), new Update().unset("pagoCotizacionId"));
+            cotizacionRepository.findById(cotizacion.getId()).ifPresent(c -> {
+                c.setEstado(Cotizacion.ANULADA);
+                c.setMotivoRespuesta(motivo);
+                cotizacionRepository.save(c);
+            });
+            avisos.pagoNoAplicado(pagada, pago.getMonto(), motivo);
+        } catch (RuntimeException e) {
+            log.error("No se pudo devolver la orden {} tras fallar el pago {}", pagada.getId(), pago.getReferencia(), e);
+            avisos.alertaAdmin("Orden sin corregir", "El pago " + pago.getReferencia() + " no se aplicó y se reembolsa, pero la solicitud "
+                    + pagada.getId() + " no pudo volver a DIAGNOSTICADA: corrígela a mano.");
         }
     }
 
@@ -449,7 +531,7 @@ public class PagoMarketplaceService {
         }
     }
 
-    private void repartirCotizacion(PagoEntity pago, OrdenServicio orden, OrdenServicio pagada, Cotizacion cotizacion) {
+    private CotizacionRepartida repartirCotizacion(PagoEntity pago, OrdenServicio orden, OrdenServicio pagada, Cotizacion cotizacion) {
         // 3. Pedidos por tienda y reparto
         Taller taller = tallerRepository.findById(orden.getTallerId()).orElse(null);
         List<PedidoTienda> pedidos = crearPedidos(pago, pagada, cotizacion, taller);
@@ -488,11 +570,7 @@ public class PagoMarketplaceService {
                 null, null);
 
         ComisionPlataforma.registrar(repartoRepository, pago, base, pct, retener, lineas);
-        avisos.comprobantePago(actualizada, pago, "la cotización v" + cotizacion.getVersion() + " de " + cotizacion.getTallerNombre(),
-                lineasCotizacion(cotizacion),
-                pedidos.isEmpty() ? "El taller ya puede empezar el trabajo."
-                        : "Pedimos los repuestos a las tiendas; te avisaremos el avance.");
-        avisos.cotizacionPagada(actualizada, pedidos);
+        return new CotizacionRepartida(actualizada, pedidos);
     }
 
     private List<PedidoTienda> crearPedidos(PagoEntity pago, OrdenServicio orden, Cotizacion cotizacion, Taller taller) {
