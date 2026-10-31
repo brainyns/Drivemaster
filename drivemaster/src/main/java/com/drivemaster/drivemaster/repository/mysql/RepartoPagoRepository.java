@@ -110,17 +110,16 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
 
     /**
      * Toma la línea para pagarla (→ PROCESANDO) en una sola sentencia: dos clics, o el
-     * evento y el ADMIN a la vez, no la pagan dos veces. Se puede tomar una POR_LIQUIDAR,
-     * una FALLIDO (reintento) o una PENDIENTE anterior a la regla por evento. Nunca una
-     * con reembolso pendiente del mismo pedido o de todo el pago.
+     * evento y el ADMIN a la vez, no la pagan dos veces. Solo se puede tomar una POR_LIQUIDAR
+     * o una FALLIDO (reintento): una PENDIENTE espera su recepción o entrega, sea cual sea su
+     * antigüedad. Nunca una con reembolso pendiente del mismo pedido o de todo el pago.
      * Devuelve 1 si la tomó, 0 si no.
      */
     @Modifying
     @Transactional
     @Query("update RepartoPago r set r.estado = 'PROCESANDO', r.motivoFallo = null, "
             + "r.intentosLiquidacion = coalesce(r.intentosLiquidacion, 0) + 1 "
-            + "where r.id = :id and (r.estado in ('POR_LIQUIDAR', 'FALLIDO') "
-            + "or (r.estado = 'PENDIENTE' and (r.liquidacionPorEvento is null or r.liquidacionPorEvento = false))) "
+            + "where r.id = :id and r.estado in ('POR_LIQUIDAR', 'FALLIDO') "
             + "and not exists (select 1 from Reembolso b where b.pagoId = r.pagoId and b.estado = 'PENDIENTE' "
             + "and (b.pedidoTiendaId is null or b.pedidoTiendaId = r.pedidoTiendaId))")
     int tomarParaLiquidar(@Param("id") Long id);

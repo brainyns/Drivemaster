@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ALERTAS_PEDIDO, ENTREGAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, SIN_PLAN, chipsAlerta, conteoGrupos, filaConAlerta,
-  hayFiltrosPedidos, actividadNegocio, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
+  hayFiltrosPedidos, actividadNegocio, sePuedePagar, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
   perfilNegocio, urgentesDashboard,
 } from "../src/pages/admin/plataformaAdmin.js";
 import {
@@ -239,6 +239,17 @@ test("Problemas de envío: sistema compartido, decisión con motivo en Campo y l
     "<Esqueleto", "<Campo", "ui-table--tarjetas", 'aria-label="Problemas por estado"', "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
   assert.ok(p.includes("problemasDeEnvio(token)") && p.includes("resolverProblemaEnvio(token, pedido.id, resolucion, motivo.trim())"));
   assert.ok(p.includes("deshabilitado={!motivo.trim()}"), "sin motivo no se puede decidir");
+});
+
+test("Liquidaciones: solo se paga lo listo o fallido, nunca lo que espera la entrega, aunque sea una línea antigua", () => {
+  for (const estado of ["POR_LIQUIDAR", "FALLIDO"]) assert.equal(sePuedePagar({ estado }), true, estado);
+  for (const estado of ["PROCESANDO", "LIQUIDADO", "ANULADO"]) assert.equal(sePuedePagar({ estado }), false, estado);
+  for (const liquidacionPorEvento of [true, false, null, undefined]) {
+    assert.equal(sePuedePagar({ estado: "PENDIENTE", liquidacionPorEvento }), false, String(liquidacionPorEvento));
+  }
+  const p = leer("../src/pages/Liquidaciones.jsx");
+  assert.ok(p.includes("Esperando entrega"));
+  assert.ok(!p.includes("liquidacionPorEvento"), "la pantalla no decide por antigüedad");
 });
 
 test("Liquidaciones: sistema compartido, estados con texto y el número de transferencia obligatorio en modo manual", () => {

@@ -43,8 +43,8 @@ import java.util.Set;
  * - Cada paso es una escritura condicional (UPDATE ... WHERE estado = ...): dos clics, o
  *   el evento y el ADMIN a la vez, no la pagan dos veces.
  * - Una línea con reembolso pendiente (de su pedido o de todo el pago) no se toma.
- * - Las líneas anteriores a la Fase 4-B (liquidacionPorEvento nulo) siguen el flujo
- *   anterior: el ADMIN las paga desde PENDIENTE.
+ * - Una línea PENDIENTE nunca se paga: tampoco las anteriores a la Fase 4-B
+ *   (liquidacionPorEvento nulo), que además el evento no habilita.
  */
 @Service
 public class LiquidacionService {
@@ -277,9 +277,9 @@ public class LiquidacionService {
         if (RepartoPago.ANULADO.equals(r.getEstado())) {
             return new ResponseStatusException(HttpStatus.CONFLICT, "Este reparto está anulado");
         }
-        if (RepartoPago.PENDIENTE.equals(r.getEstado()) && Boolean.TRUE.equals(r.getLiquidacionPorEvento())) {
+        if (RepartoPago.PENDIENTE.equals(r.getEstado())) {
             return new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Todavía no se cumple la condición para liquidar esta línea (recepción confirmada u orden entregada)");
+                    "Todavía no se puede liquidar: falta confirmar la recepción del pedido o la entrega de la orden");
         }
         if (reembolsoRepository.hayPendienteQueAfecta(r.getPagoId(), r.getPedidoTiendaId())) {
             return new ResponseStatusException(HttpStatus.CONFLICT,

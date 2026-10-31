@@ -17,6 +17,7 @@ import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Campo from "../components/ui/Campo";
 import { unir } from "../utils/formato";
+import { sePuedePagar } from "./admin/plataformaAdmin";
 // El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
 import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
@@ -57,10 +58,6 @@ const ESTADO_REEMBOLSO = {
   PENDIENTE: { label: "Pendiente", tono: "aviso" },
   REALIZADO: { label: "Realizado", tono: "ok" },
 };
-
-/** Una línea nueva (regla por evento) en PENDIENTE espera su evento; las anteriores a la Fase 4-B se pagan desde PENDIENTE. */
-const sePuedePagar = (f) =>
-  f.estado === "POR_LIQUIDAR" || f.estado === "FALLIDO" || (f.estado === "PENDIENTE" && !f.liquidacionPorEvento);
 
 /**
  * Lista del ADMIN. En modo SIMULADO el evento (recepción confirmada / orden entregada)
@@ -291,8 +288,8 @@ export default function Liquidaciones() {
                             {textoAccion(f)}
                           </button>
                         )}
-                        {esRepartos && f.estado === "PENDIENTE" && f.liquidacionPorEvento && (
-                          <span className="pp-sub">Se habilita al confirmarse la recepción o la entrega</span>
+                        {esRepartos && f.estado === "PENDIENTE" && (
+                          <span className="pp-sub">Esperando entrega</span>
                         )}
                       </td>
                     </tr>

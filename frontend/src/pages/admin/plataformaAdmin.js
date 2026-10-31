@@ -49,6 +49,11 @@ export function barras(conteos = {}, etiquetas = {}, orden = []) {
   return claves.map((k) => ({ clave: k, etiqueta: etiquetas[k] || k, n: conteos[k], pct: total ? (conteos[k] / total) * 100 : 0 }));
 }
 
+// ─── Liquidaciones ──────────────────────────────────────────────────────────
+
+/** Solo se paga lo que está listo o falló (reintento). PENDIENTE espera la recepción o la entrega; el backend lo exige igual. */
+export const sePuedePagar = (f = {}) => f.estado === "POR_LIQUIDAR" || f.estado === "FALLIDO";
+
 // ─── Tiendas y talleres ─────────────────────────────────────────────────────
 
 /** Estado de aprobación con su texto y tono de ChipEstado. */

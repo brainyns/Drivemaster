@@ -71,7 +71,7 @@ public class RepartoPago {
     @Column(length = 500)
     private String nota;
 
-    // true: la línea nació con la regla por evento (Fase 4-B). Las anteriores (null) se liquidan a mano como antes.
+    // true: la línea nació con la regla por evento (Fase 4-B) y el evento la habilita. Las anteriores (null) no se pueden pagar desde PENDIENTE.
     private Boolean liquidacionPorEvento;
     private LocalDateTime fechaListo;
     @Column(length = 200)

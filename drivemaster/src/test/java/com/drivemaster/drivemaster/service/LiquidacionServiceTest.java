@@ -141,8 +141,7 @@ class LiquidacionServiceTest {
         when(repartoRepository.tomarParaLiquidar(anyLong())).thenAnswer(i -> {
             synchronized (repartos) {
                 RepartoPago r = repartos.get((Long) i.getArgument(0));
-                boolean tomable = RepartoPago.POR_LIQUIDAR.equals(r.getEstado()) || RepartoPago.FALLIDO.equals(r.getEstado())
-                        || (RepartoPago.PENDIENTE.equals(r.getEstado()) && !Boolean.TRUE.equals(r.getLiquidacionPorEvento()));
+                boolean tomable = RepartoPago.POR_LIQUIDAR.equals(r.getEstado()) || RepartoPago.FALLIDO.equals(r.getEstado());
                 if (!tomable || reembolsoRepository.hayPendienteQueAfecta(r.getPagoId(), r.getPedidoTiendaId())) return 0;
                 r.setEstado(RepartoPago.PROCESANDO);
                 r.setMotivoFallo(null);
@@ -289,7 +288,7 @@ class LiquidacionServiceTest {
         assertEquals(0, dispersiones.get());
     }
 
-    // ─── Solo líneas nuevas: las de la Fase 3 siguen el flujo anterior ───────
+    // ─── Las líneas de la Fase 3 tampoco se pagan sin recepción o entrega ────
 
     @Test
     void lasLineasDeLaFase3NoSeTocanConElEvento() {
@@ -300,11 +299,31 @@ class LiquidacionServiceTest {
     }
 
     @Test
-    void elAdminSiPuedePagarUnaLineaDeLaFase3DesdePendienteConNumero() {
-        linea(1, RepartoPago.TIENDA, "ped1", false);
-        RepartoPago r = servicio(manual()).liquidar(1L, ADMIN, "TRF-0001", null);
-        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
-        assertEquals("MANUAL", r.getModoLiquidacion());
+    void unaLineaPendienteAntiguaNoSeLiquidaYElMensajeDiceQueFalta() {
+        for (Boolean regla : new Boolean[] { null, false, true }) {
+            RepartoPago pendiente = linea(1, RepartoPago.TIENDA, "ped1", true);
+            pendiente.setLiquidacionPorEvento(regla);
+
+            ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                    () -> servicio(manual()).liquidar(1L, ADMIN, "TRF-0001", null));
+
+            assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+            assertTrue(e.getReason().contains("falta confirmar la recepción"), e.getReason());
+            assertEquals(RepartoPago.PENDIENTE, pendiente.getEstado());
+        }
+        assertEquals(0, dispersiones.get());
+    }
+
+    @Test
+    void siguenPagandoseLasLineasListasYLosReintentos() {
+        RepartoPago lista = linea(1, RepartoPago.TIENDA, "ped1", true);
+        lista.setEstado(RepartoPago.POR_LIQUIDAR);
+        RepartoPago fallida = linea(2, RepartoPago.TIENDA, "ped2", true);
+        fallida.setEstado(RepartoPago.FALLIDO);
+        LiquidacionService s = servicio(manual());
+
+        assertEquals(RepartoPago.LIQUIDADO, s.liquidar(1L, ADMIN, "TRF-0001", null).getEstado());
+        assertEquals(RepartoPago.LIQUIDADO, s.liquidar(2L, ADMIN, "TRF-0002", null).getEstado());
     }
 
     // ─── Reembolso pendiente ─────────────────────────────────────────────────
@@ -494,7 +513,8 @@ class LiquidacionServiceTest {
         String tomar = jpql("tomarParaLiquidar", Long.class);
         assertTrue(tomar.contains("set r.estado = 'PROCESANDO'"), tomar);
         assertTrue(tomar.contains("r.estado in ('POR_LIQUIDAR', 'FALLIDO')"), tomar);
-        assertTrue(tomar.contains("liquidacionPorEvento is null or r.liquidacionPorEvento = false"), tomar);
+        assertTrue(tomar.contains("r.id = :id and r.estado in ('POR_LIQUIDAR', 'FALLIDO') and not exists"), tomar);
+        assertFalse(tomar.contains("r.estado = 'PENDIENTE'"), "una línea PENDIENTE nunca se toma: " + tomar);
         assertTrue(tomar.contains("not exists") && tomar.contains("b.estado = 'PENDIENTE'")
                 && tomar.contains("b.pedidoTiendaId is null or b.pedidoTiendaId = r.pedidoTiendaId"), tomar);
 
