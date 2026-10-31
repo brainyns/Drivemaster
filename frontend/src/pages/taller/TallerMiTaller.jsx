@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import MecanicosTaller from "../../components/servicio/MecanicosTaller";
 import HorarioSemanal, { HorarioResumen } from "../../components/servicio/HorarioSemanal";
 import { formatFecha, formatPrecio } from "../../components/servicio/estadosServicio";
+import FormCuentaBancaria from "../../components/ui/FormCuentaBancaria";
 import {
-  actualizarDatosTaller, actualizarUbicacionTaller, guardarTelefonoTaller, miTaller, subirLogoTaller,
+  actualizarDatosTaller, actualizarUbicacionTaller, guardarCuentaBancariaTaller, guardarTelefonoTaller, miTaller, subirLogoTaller,
 } from "../../services/tallerService";
 import { guardarHorario, obtenerHorario } from "../../services/horarioService";
 import {
@@ -322,6 +323,38 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
                 <Dato etiqueta="IVA de tu mano de obra">{textoRegimenIva(taller.responsableIva)}</Dato>
                 <Dato etiqueta="Precio de mano de obra">{taller.precioManoObra != null && <span className="ui-precio">{formatPrecio(taller.precioManoObra)}</span>}</Dato>
               </dl>
+            )}
+          </SeccionEditable>
+
+          <SeccionEditable id="mt-cuenta" icono="card" titulo="Cuenta bancaria para transferencias"
+            descripcion="Cuenta donde recibirás el pago de tus liquidaciones y mano de obra."
+            onEditar={() => abrir("cuenta")}
+            textoEditar={taller.cuentaBancaria ? "Editar cuenta" : "Registrar cuenta"}
+            editando={editando === "cuenta"}>
+            {editando === "cuenta" ? (
+              <FormCuentaBancaria
+                cuenta={taller.cuentaBancaria}
+                onCancelar={cerrar}
+                onGuardar={async (datos) => {
+                  const res = await guardarCuentaBancariaTaller(token, datos);
+                  guardado("cuenta", "Cuenta bancaria guardada. Las transferencias se realizarán a esta cuenta.")(res);
+                }}
+              />
+            ) : taller.cuentaBancaria ? (
+              <dl className="ui-datos">
+                <Dato etiqueta="Entidad bancaria">{taller.cuentaBancaria.banco}</Dato>
+                <Dato etiqueta="Tipo de cuenta">{taller.cuentaBancaria.tipoCuenta === "CORRIENTE" ? "Cuenta Corriente" : "Cuenta de Ahorros"}</Dato>
+                <Dato etiqueta="Número de cuenta">{taller.cuentaBancaria.numeroCuenta}</Dato>
+                <Dato etiqueta="Titular">{taller.cuentaBancaria.titularNombre}</Dato>
+                <Dato etiqueta="Documento">{taller.cuentaBancaria.titularDocumentoTipo} {taller.cuentaBancaria.titularDocumentoNumero}</Dato>
+                {taller.cuentaBancaria.fechaActualizacion && (
+                  <Dato etiqueta="Última actualización">{formatFecha(taller.cuentaBancaria.fechaActualizacion)}</Dato>
+                )}
+              </dl>
+            ) : (
+              <Alerta tono="aviso">
+                Aún no has registrado tu cuenta bancaria. Es indispensable para recibir el pago de tus liquidaciones.
+              </Alerta>
             )}
           </SeccionEditable>
 

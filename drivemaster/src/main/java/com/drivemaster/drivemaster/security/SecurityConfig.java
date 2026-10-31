@@ -208,6 +208,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/orden/*").authenticated()
                         .requestMatchers("/api/pedidos-tienda/**").denyAll()
                         // Finanzas: liquidaciones solo SUPERADMIN
+                        .requestMatchers(HttpMethod.POST, "/api/liquidaciones/webhook").permitAll()
                         .requestMatchers("/api/liquidaciones/**").hasRole("SUPERADMIN")
                         // Panel de la plataforma: solo SUPERADMIN, salvo el panel operativo mínimo del ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/plataforma/operacion", "/api/plataforma/pedidos",

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { actualizarMiTienda, guardarHorarioTienda, guardarTelefonoTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
+import { actualizarMiTienda, guardarCuentaBancariaTienda, guardarHorarioTienda, guardarTelefonoTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
 import HorarioSemanal, { HorarioResumen } from "../components/servicio/HorarioSemanal";
 import { copiarLunesAHabiles, errorDia, franjasDesdeSemana, semanaDesdeFranjas, semanaPorDefecto } from "./taller/horarioTaller";
 import LogoEditable from "../components/ui/LogoEditable";
@@ -10,6 +10,7 @@ import TiendaVendedor from "../components/marketplace/TiendaVendedor";
 import CabeceraNegocio from "../components/ui/CabeceraNegocio";
 import VistaPrevia from "../components/ui/VistaPrevia";
 import SeccionEditable from "../components/ui/SeccionEditable";
+import FormCuentaBancaria from "../components/ui/FormCuentaBancaria";
 import SeccionContacto from "../components/ui/SeccionContacto";
 import ChipEstado from "../components/ui/ChipEstado";
 import Campo from "../components/ui/Campo";
@@ -335,6 +336,38 @@ export default function DatosMiTienda({ token, onGuardado }) {
               <Dato etiqueta="NIT">{t.nit}</Dato>
               <Dato etiqueta="Fecha de registro">{t.fechaRegistro && formatFecha(t.fechaRegistro)}</Dato>
             </dl>
+          </SeccionEditable>
+
+          <SeccionEditable id="mtd-cuenta" icono="card" titulo="Cuenta bancaria para transferencias"
+            descripcion="Cuenta donde recibirás el pago de tus liquidaciones por ventas de repuestos."
+            onEditar={() => abrir("cuenta")}
+            textoEditar={t.cuentaBancaria ? "Editar cuenta" : "Registrar cuenta"}
+            editando={editando === "cuenta"}>
+            {editando === "cuenta" ? (
+              <FormCuentaBancaria
+                cuenta={t.cuentaBancaria}
+                onCancelar={cerrar}
+                onGuardar={async (datos) => {
+                  const res = await guardarCuentaBancariaTienda(token, datos);
+                  guardado("cuenta", "Cuenta bancaria guardada. Las transferencias se realizarán a esta cuenta.")(res);
+                }}
+              />
+            ) : t.cuentaBancaria ? (
+              <dl className="ui-datos">
+                <Dato etiqueta="Entidad bancaria">{t.cuentaBancaria.banco}</Dato>
+                <Dato etiqueta="Tipo de cuenta">{t.cuentaBancaria.tipoCuenta === "CORRIENTE" ? "Cuenta Corriente" : "Cuenta de Ahorros"}</Dato>
+                <Dato etiqueta="Número de cuenta">{t.cuentaBancaria.numeroCuenta}</Dato>
+                <Dato etiqueta="Titular">{t.cuentaBancaria.titularNombre}</Dato>
+                <Dato etiqueta="Documento">{t.cuentaBancaria.titularDocumentoTipo} {t.cuentaBancaria.titularDocumentoNumero}</Dato>
+                {t.cuentaBancaria.fechaActualizacion && (
+                  <Dato etiqueta="Última actualización">{formatFecha(t.cuentaBancaria.fechaActualizacion)}</Dato>
+                )}
+              </dl>
+            ) : (
+              <Alerta tono="aviso">
+                Aún no has registrado tu cuenta bancaria. Es indispensable para recibir el pago de tus liquidaciones.
+              </Alerta>
+            )}
           </SeccionEditable>
 
           <SeccionEditable id="mtd-ubicacion" icono="pin" titulo="Ubicación"

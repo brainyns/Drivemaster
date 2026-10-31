@@ -119,6 +119,7 @@ export default function Liquidaciones() {
   }, [token]);
 
   const esManual = modo?.modo === "MANUAL";
+  const esWompi = modo?.modo === "WOMPI";
   const esRepartos = vista === "repartos";
 
   const cambiarVista = (v) => {
@@ -159,8 +160,9 @@ export default function Liquidaciones() {
   const marcando = filas.find((f) => f.id === marcandoId) || null;
 
   const textoAccion = (f) => (!esRepartos ? "Marcar reembolsado"
-    : f.estado === "FALLIDO" ? "Reintentar"
-    : esManual ? "Registrar pago" : "Liquidar (simulado)");
+    : f.estado === "FALLIDO" ? (esWompi ? "Reintentar con Wompi" : "Reintentar")
+    : esManual ? "Registrar pago"
+    : esWompi ? "Liquidar con Wompi" : "Liquidar (simulado)");
 
   const abrirMarcar = (f) => { setMarcandoId(f.id); setNota(""); setNumero(""); setError(null); };
   const listaVacia = !cargando && !errorCarga && filas.length === 0;
@@ -174,10 +176,12 @@ export default function Liquidaciones() {
         descripcion="Pagos pendientes a talleres y tiendas, y reembolsos a clientes. Cada pago queda registrado con su referencia." />
 
       {esRepartos && modo && (
-        <Alerta tono={modo.modo === "SIMULADO" ? "aviso" : "info"} className="pp-bloque-sep">
+        <Alerta tono={modo.modo === "SIMULADO" ? "aviso" : modo.modo === "WOMPI" ? "ok" : "info"} className="pp-bloque-sep">
           <strong>Modo de liquidación: {modo.modo}.</strong>{" "}
           {modo.modo === "SIMULADO"
             ? "Solo desarrollo: las liquidaciones se hacen solas y NO mueven dinero (referencias SIM-…)."
+            : modo.modo === "WOMPI"
+            ? "Dispersión automática mediante Wompi Payouts a la cuenta bancaria de cada taller y tienda."
             : "Tú pagas por el banco y anotas aquí el número de transferencia; nada se liquida solo."}
         </Alerta>
       )}

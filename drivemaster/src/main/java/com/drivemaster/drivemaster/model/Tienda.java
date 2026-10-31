@@ -64,6 +64,9 @@ public class Tienda {
     // Lunes de la semana del último envío: evita repetirlo si el job corre dos veces.
     private java.time.LocalDate resumenSemanalEnviado;
 
+    // Cuenta bancaria para dispersiones automáticas (Wompi) y transferencias
+    private CuentaBancaria cuentaBancaria;
+
     /**
      * Dirección, ciudad y horario son obligatorios para vender en el catálogo. Las tiendas
      * anteriores a la 4-A que no los tengan siguen aprobadas, pero sus productos no se

@@ -75,4 +75,10 @@ public class LiquidacionController {
                                                Authentication auth) {
         return ResponseEntity.ok(service.marcarReembolsado(id, auth.getName(), body != null ? body.get("nota") : null));
     }
+
+    @org.springframework.web.bind.annotation.PostMapping("/webhook")
+    public ResponseEntity<Void> webhook(@RequestBody Map<String, Object> body) {
+        service.procesarWebhookPayout(body);
+        return ResponseEntity.ok().build();
+    }
 }

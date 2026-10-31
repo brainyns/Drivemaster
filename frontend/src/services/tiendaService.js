@@ -97,3 +97,13 @@ export async function guardarHorarioTienda(token, franjas) {
   });
   return handle(res, "No se pudo guardar el horario");
 }
+
+/** TIENDA: guarda la información de la cuenta bancaria para transferencias de liquidaciones. */
+export async function guardarCuentaBancariaTienda(token, cuenta) {
+  const res = await apiFetch(`${BASE}/mi-tienda/cuenta-bancaria`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(cuenta),
+  });
+  return handle(res, "No se pudieron guardar los datos bancarios de la tienda");
+}

@@ -48,4 +48,5 @@ public class TallerDTO {
     private List<Mecanico> mecanicos;
     private String planActual;
     private LocalDateTime planVence;
+    private CuentaBancariaDTO cuentaBancaria;
 }
