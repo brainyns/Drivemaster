@@ -171,11 +171,11 @@ public class AvisosSolicitudServicio {
 
     public void comprobantePago(OrdenServicio orden, PagoEntity pago, String concepto,
                                 Map<String, Double> lineas, String siguientePaso) {
-        cliente(orden).ifPresent(c -> enviar(c.getCorreo(), "Comprobante de pago - DriveMaster",
+        cliente(orden).ifPresent(c -> enviarTrasPago(c.getCorreo(), "Comprobante de pago - DriveMaster",
                 EmailServicioBuilder.clienteComprobantePago(c.getNombre(), concepto, orden.getVehiculoDescripcion(),
                         pago.getReferencia(), pago.getTransactionId(),
                         pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now(),
-                        pago.getMonto(), lineas, siguientePaso)));
+                        pago.getMonto(), lineas, siguientePaso), "pago " + pago.getReferencia()));
         avisar(orden.getUsuarioId(), Notificacion.PAGO_APROBADO, "Pago aprobado",
                 "Recibimos tu pago de " + concepto + ".", "mis-servicios", orden.getId());
     }
@@ -194,9 +194,9 @@ public class AvisosSolicitudServicio {
 
     public void diagnosticoPagado(OrdenServicio orden) {
         taller(orden).ifPresent(t -> {
-            correoTaller(t).ifPresent(correo -> enviar(correo, "Diagnóstico pagado",
+            correoTaller(t).ifPresent(correo -> enviarTrasPago(correo, "Diagnóstico pagado",
                     EmailServicioBuilder.tallerDiagnosticoPagado(t.getNombre(), orden.getVehiculoDescripcion(),
-                            orden.getFechaProgramada())));
+                            orden.getFechaProgramada()), "solicitud " + orden.getId()));
             avisar(t.getUsuarioId(), Notificacion.PAGO_APROBADO, "Diagnóstico pagado",
                     "El cliente pagó la revisión de " + vehiculo(orden) + ".", "taller-solicitudes", orden.getId());
         });
@@ -204,8 +204,9 @@ public class AvisosSolicitudServicio {
 
     public void cotizacionPagada(OrdenServicio orden, List<PedidoTienda> pedidos) {
         taller(orden).ifPresent(t -> {
-            correoTaller(t).ifPresent(correo -> enviar(correo, "El cliente pagó la cotización",
-                    EmailServicioBuilder.tallerCotizacionPagada(t.getNombre(), orden.getVehiculoDescripcion(), pedidos.size())));
+            correoTaller(t).ifPresent(correo -> enviarTrasPago(correo, "El cliente pagó la cotización",
+                    EmailServicioBuilder.tallerCotizacionPagada(t.getNombre(), orden.getVehiculoDescripcion(), pedidos.size()),
+                    "solicitud " + orden.getId()));
             avisar(t.getUsuarioId(), Notificacion.PAGO_APROBADO, "El cliente pagó la cotización",
                     vehiculo(orden) + (pedidos.isEmpty() ? "." : ": " + pedidos.size() + " pedido(s) de repuestos en camino."),
                     "taller-trabajos", orden.getId());
@@ -213,8 +214,8 @@ public class AvisosSolicitudServicio {
         for (PedidoTienda p : pedidos) {
             tiendaRepository.findById(p.getTiendaId()).ifPresent(tienda -> {
                 correoTienda(tienda).ifPresent(correo ->
-                        enviar(correo, "Nuevo pedido pagado - " + p.getTallerNombre(),
-                                EmailServicioBuilder.tiendaNuevoPedido(tienda.getNombre(), p)));
+                        enviarTrasPago(correo, "Nuevo pedido pagado - " + p.getTallerNombre(),
+                                EmailServicioBuilder.tiendaNuevoPedido(tienda.getNombre(), p), "pedido " + p.getId()));
                 avisar(tienda.getUsuarioId(), Notificacion.PEDIDO_NUEVO, "Nuevo pedido pagado",
                         "Pedido de " + p.getTallerNombre() + " por " + pesos(p.getTotal()) + ".", "pedidos-tienda", p.getId());
             });
@@ -250,17 +251,19 @@ public class AvisosSolicitudServicio {
         if (registrarCodigosEnLog() && codigos != null) {
             codigos.forEach((pedidoId, codigo) -> log.info("[CORREO-DEV] Código de retiro del pedido {}: {}", pedidoId, codigo));
         }
-        usuarioRepository.findById(compra.getClienteId()).ifPresent(c -> enviar(c.getCorreo(), "Comprobante de tu compra - DriveMaster",
+        // Este correo lleva los códigos de retiro: la alerta dice cuál falló, nunca los códigos
+        usuarioRepository.findById(compra.getClienteId()).ifPresent(c -> enviarTrasPago(c.getCorreo(), "Comprobante de tu compra - DriveMaster",
                 EmailServicioBuilder.clienteCompraPagada(c.getNombre(), compra, pedidos, codigos, pago.getReferencia(),
-                        pago.getTransactionId(), pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now())));
+                        pago.getTransactionId(), pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now()),
+                "pago " + pago.getReferencia()));
         avisar(compra.getClienteId(), Notificacion.PAGO_APROBADO, "Compra confirmada",
                 "Tu pago fue aprobado. Te enviamos el comprobante a tu correo.", "mis-compras", compra.getId());
         for (PedidoTienda p : pedidos) {
             String entrega = PedidoTienda.ENVIO.equals(p.getEntrega()) ? "envío" : "retiro";
             tiendaRepository.findById(p.getTiendaId()).ifPresent(tienda -> {
                 correoTienda(tienda).ifPresent(correo ->
-                        enviar(correo, "Nueva compra pagada - " + entrega,
-                                EmailServicioBuilder.tiendaNuevaCompra(tienda.getNombre(), p)));
+                        enviarTrasPago(correo, "Nueva compra pagada - " + entrega,
+                                EmailServicioBuilder.tiendaNuevaCompra(tienda.getNombre(), p), "pedido " + p.getId()));
                 avisar(tienda.getUsuarioId(), Notificacion.PEDIDO_NUEVO, "Nueva compra pagada (" + entrega + ")",
                         "Compra del catálogo por " + pesos(p.getTotal()) + ".", "pedidos-tienda", p.getId());
             });
@@ -459,6 +462,25 @@ public class AvisosSolicitudServicio {
             return orden.getBarrio() + ", " + orden.getCiudad();
         }
         return orden.getCiudad();
+    }
+
+    /**
+     * Correo que sigue a un pago ya aplicado: si falla, el pago no cambia, pero alguien debe saberlo. Queda el log y la
+     * alerta al ADMIN, que llega por la campanita aunque el correo esté caído. Nunca lanza.
+     */
+    private void enviarTrasPago(String correo, String asunto, String html, String referencia) {
+        if (correo == null || correo.isBlank()) return;
+        try {
+            emailsService.enviarEmail(correo, asunto, html);
+        } catch (Exception e) {
+            log.error("El pago ya quedó aplicado, pero no se pudo enviar el correo '{}' ({}): {}", asunto, referencia, e.getMessage());
+            try {
+                alertaAdmin("Correo sin enviar", "El pago ya quedó aplicado, pero no se pudo enviar el correo \"" + asunto + "\" ("
+                        + referencia + "). Avísale al destinatario por otro medio.");
+            } catch (RuntimeException sinAlerta) {
+                log.error("Tampoco se pudo alertar al ADMIN por el correo sin enviar ({})", referencia, sinAlerta);
+            }
+        }
     }
 
     private void enviar(String correo, String asunto, String html) {

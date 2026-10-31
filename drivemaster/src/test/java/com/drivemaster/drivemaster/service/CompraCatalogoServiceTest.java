@@ -259,6 +259,18 @@ class CompraCatalogoServiceTest {
     }
 
     @Test
+    void unAvisoQueFallaNoDeshaceLaCompraYAlertaAlAdmin() {
+        doThrow(new IllegalStateException("Sin plantilla")).when(avisos).compraPagada(any(), anyList(), anyMap(), any());
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+
+        service.aplicar(pago);
+
+        assertEquals(2, repartosDeNegocio().size(), "los repartos no se borran");
+        assertTrue(reembolsos.isEmpty(), "una compra aplicada no se reembolsa por un aviso");
+        verify(avisos).alertaAdmin(eq("Avisos sin enviar"), contains(pago.getReferencia()));
+    }
+
+    @Test
     void conRetencionCadaTiendaPagaSobreSusProductosYConservaIvaYEnvio() {
         when(parametros.comisionRetenida()).thenReturn(true);
         PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));

@@ -206,6 +206,7 @@ public class CompraCatalogoService {
         List<CompraCatalogo.Linea> descontadas = new ArrayList<>();
         List<PedidoTienda> pedidos = new ArrayList<>();
         List<RepartoPago> repartos = new ArrayList<>();
+        Map<String, String> codigos = new HashMap<>();
         try {
             // 1. Stock de TODAS las tiendas (todo o nada)
             String faltante = descontarStock(pago, compra, refInventario, descontadas);
@@ -215,7 +216,6 @@ public class CompraCatalogoService {
                 return;
             }
             // 2. Un pedido por tienda, con su código de retiro y su reparto
-            Map<String, String> codigos = new HashMap<>();
             double pct = parametros.comisionPct();
             boolean retener = parametros.comisionRetenida();
             for (CompraCatalogo.EntregaTienda entrega : compra.getEntregas()) {
@@ -231,14 +231,22 @@ public class CompraCatalogoService {
             compra.setFechaPago(pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now());
             compra.setPagoId(pago.getId());
             compraRepository.save(compra);
-            // 3. Comisión (sobre los productos, antes de IVA y sin el envío) y avisos (un fallo de envío nunca deshace la compra)
+            // 3. Comisión, sobre los productos, antes de IVA y sin el envío
             ComisionPlataforma.registrar(repartoRepository, pago, Dinero.pesos(compra.getSubtotal()), pct, retener, repartos);
-            avisos.compraPagada(compra, pedidos, codigos, pago);
         } catch (RuntimeException e) {
             log.error("No se pudo aplicar el pago {} de la compra {}: se deshace todo", pago.getReferencia(), compra.getId(), e);
             deshacer(pedidos, repartos);
             reponerStock(descontadas, refInventario);
             noAplicada(pago, compra, "Error al completar la compra: se reembolsa el pago");
+            return;
+        }
+        // 4. La compra ya quedó aplicada: un aviso que falla no la deshace ni la reembolsa
+        try {
+            avisos.compraPagada(compra, pedidos, codigos, pago);
+        } catch (RuntimeException e) {
+            log.error("Pago {} aplicado, pero no se pudieron enviar los avisos de la compra {}", pago.getReferencia(), compra.getId(), e);
+            avisos.alertaAdmin("Avisos sin enviar", "La compra " + compra.getId() + " quedó aplicada (pago " + pago.getReferencia()
+                    + "), pero no se pudieron enviar sus avisos: confírmale al cliente y a las tiendas.");
         }
     }
 

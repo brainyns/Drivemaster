@@ -134,6 +134,44 @@ class AvisosCampanitaTest {
     }
 
     @Test
+    void siFallaElCorreoDeUnPagoAplicadoElAdminRecibeLaAlertaSinElCodigoDeRetiro() {
+        when(usuarios.findById("u-cliente")).thenReturn(Optional.of(
+                Usuario.builder().id("u-cliente").nombre("Ana").correo("ana@demo.com").build()));
+        when(usuarios.findByRol("ADMIN")).thenReturn(List.of(Usuario.builder().id("a1").correo("a1@demo.com").activo(true).build()));
+        when(usuarios.findByRol("SUPERADMIN")).thenReturn(List.of());
+        doThrow(new RuntimeException("Error al enviar el correo: Brevo respondió 500")).when(correos).enviarEmail(anyString(), anyString(), anyString());
+        CompraCatalogo compra = new CompraCatalogo();
+        compra.setId("c1");
+        compra.setClienteId("u-cliente");
+        compra.setLineas(List.of());
+        PagoEntity pago = new PagoEntity();
+        pago.setReferencia("DRV-1");
+
+        assertDoesNotThrow(() -> avisos.compraPagada(compra, List.of(), Map.of("p1", "481516"), pago));
+
+        ArgumentCaptor<String> detalle = ArgumentCaptor.forClass(String.class);
+        verify(campanita).avisar(eq("a1"), eq(Notificacion.ALERTA_ADMIN), eq("Correo sin enviar"), detalle.capture(), any(), any());
+        assertTrue(detalle.getValue().contains("DRV-1"));
+        assertFalse(detalle.getValue().contains("481516"), "la alerta nunca lleva el código de retiro");
+    }
+
+    @Test
+    void siFallaElComprobanteDelPagoTambienSeAlerta() {
+        when(usuarios.findById("u-cliente")).thenReturn(Optional.of(
+                Usuario.builder().id("u-cliente").nombre("Ana").correo("ana@demo.com").build()));
+        when(usuarios.findByRol("ADMIN")).thenReturn(List.of(Usuario.builder().id("a1").correo("a1@demo.com").activo(true).build()));
+        when(usuarios.findByRol("SUPERADMIN")).thenReturn(List.of());
+        doThrow(new RuntimeException("Sin conexión con Brevo")).when(correos).enviarEmail(anyString(), anyString(), anyString());
+        PagoEntity pago = new PagoEntity();
+        pago.setReferencia("DRV-2");
+        pago.setMonto(59_500.0);
+
+        assertDoesNotThrow(() -> avisos.comprobantePago(orden(), pago, "la revisión", Map.of("Tarifa", 59_500.0), "Sigue"));
+
+        verify(campanita).avisar(eq("a1"), eq(Notificacion.ALERTA_ADMIN), eq("Correo sin enviar"), contains("DRV-2"), any(), any());
+    }
+
+    @Test
     void compraDelCatalogoAvisaSinMostrarLosCodigosDeRetiro() {
         tienda("s1", "u-tienda1");
         CompraCatalogo compra = new CompraCatalogo();
