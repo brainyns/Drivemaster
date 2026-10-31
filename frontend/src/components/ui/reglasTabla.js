@@ -60,10 +60,10 @@ export function rangoRapido(clave, ahora = new Date()) {
   return { desde: "", hasta: "" };
 }
 
-/** Qué acceso rápido corresponde a un rango: "" sin rango, "personalizado" si no es ninguno. */
-export function claveDeRango({ desde = "", hasta = "" } = {}, ahora = new Date()) {
+/** Qué acceso rápido de rangos corresponde a un rango: "" sin rango, "personalizado" si no es ninguno. */
+export function claveDeRango({ desde = "", hasta = "" } = {}, ahora = new Date(), rangos = RANGOS_RAPIDOS) {
   if (!desde && !hasta) return "";
-  const r = RANGOS_RAPIDOS.find((x) => {
+  const r = rangos.find((x) => {
     const v = rangoRapido(x.clave, ahora);
     return v.desde === desde && v.hasta === hasta;
   });

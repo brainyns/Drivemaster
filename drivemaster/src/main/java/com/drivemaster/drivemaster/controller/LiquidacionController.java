@@ -78,6 +78,14 @@ public class LiquidacionController {
                 body != null ? body.get("numeroTransferencia") : null, body != null ? body.get("nota") : null));
     }
 
+    /** Salida manual de una línea PROCESANDO sin evento de Wompi: { resultado: LIQUIDADO | FALLIDO, motivo, referencia }. */
+    @PatchMapping("/repartos/{id}/resolver")
+    public ResponseEntity<RepartoPago> resolver(@PathVariable Long id,
+                                                @RequestBody Map<String, String> body,
+                                                Authentication auth) {
+        return ResponseEntity.ok(service.resolver(id, auth.getName(), body.get("resultado"), body.get("motivo"), body.get("referencia")));
+    }
+
     @GetMapping("/reembolsos")
     public ResponseEntity<List<Reembolso>> reembolsos(@RequestParam(required = false) String estado) {
         return ResponseEntity.ok(service.reembolsos(estado));

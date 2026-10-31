@@ -488,6 +488,12 @@ html[data-theme="light"] .chat-widget-container {
    de ella en vez de taparla. */
 body:has(.auth-page) .chat-widget-container { display: none; }
 
+/* Liquidaciones en celular: un botón flotante tapa filtros y filas al desplazarse, y este asistente busca repuestos, no
+   ayuda con los pagos. Una conversación abierta sigue visible. */
+@media (max-width: 760px) {
+  body:has(.liq-root) .chat-widget-container:not(.abierto) { display: none; }
+}
+
 @media (max-width: 1023px) {
   body:has(.ui-barra-movil) .chat-widget-container {
     --chat-abajo: calc(var(--alto-barra-movil, 72px) + 16px); /* el alto ya incluye el margen seguro de abajo */

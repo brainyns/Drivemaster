@@ -122,7 +122,8 @@ class TablasAdminTest {
     void lasLiquidacionesPaginanEnLaBaseYElPendienteCuentaTodaLaListaFiltrada() {
         RepartoPagoRepository repartos = mock(RepartoPagoRepository.class);
         LiquidacionService servicio = new LiquidacionService(repartos, mock(ReembolsoRepository.class), mock(PagoRepository.class),
-                mock(DispersionService.class), mock(AvisosSolicitudServicio.class));
+                mock(DispersionService.class), mock(AvisosSolicitudServicio.class),
+                mock(com.drivemaster.drivemaster.repository.mysql.ResolucionRepartoRepository.class));
         RepartoPago pendiente = RepartoPago.builder().id(1L).estado(RepartoPago.POR_LIQUIDAR).monto(50_000.0).build();
         RepartoPago otro = RepartoPago.builder().id(2L).estado(RepartoPago.FALLIDO).monto(20_000.0).build();
         when(repartos.count(any(Specification.class))).thenReturn(41L);

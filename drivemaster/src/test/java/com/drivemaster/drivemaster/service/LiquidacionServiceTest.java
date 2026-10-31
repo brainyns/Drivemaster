@@ -9,6 +9,8 @@ import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
+import com.drivemaster.drivemaster.model.mysql.ResolucionReparto;
+import com.drivemaster.drivemaster.repository.mysql.ResolucionRepartoRepository;
 import com.drivemaster.drivemaster.service.dispersion.DispersionException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionInciertaException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionService;
@@ -33,6 +35,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.mockito.ArgumentCaptor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -138,12 +142,22 @@ class LiquidacionServiceTest {
                 return 1;
             }
         });
-        when(repartoRepository.tomarParaLiquidar(anyLong())).thenAnswer(i -> {
+        resoluciones = mock(ResolucionRepartoRepository.class);
+        when(repartoRepository.confirmarPagoTardio(anyLong(), any(), anyString(), anyString())).thenAnswer(i -> {
+            synchronized (repartos) {
+                RepartoPago r = repartos.get((Long) i.getArgument(0));
+                if (!RepartoPago.FALLIDO.equals(r.getEstado())) return 0;
+                r.setEstado(RepartoPago.LIQUIDADO);
+                return 1;
+            }
+        });
+        when(repartoRepository.tomarParaLiquidar(anyLong(), any())).thenAnswer(i -> {
             synchronized (repartos) {
                 RepartoPago r = repartos.get((Long) i.getArgument(0));
                 boolean tomable = RepartoPago.POR_LIQUIDAR.equals(r.getEstado()) || RepartoPago.FALLIDO.equals(r.getEstado());
                 if (!tomable || reembolsoRepository.hayPendienteQueAfecta(r.getPagoId(), r.getPedidoTiendaId())) return 0;
                 r.setEstado(RepartoPago.PROCESANDO);
+                r.setFechaProcesando(i.getArgument(1));
                 r.setMotivoFallo(null);
                 r.setIntentosLiquidacion((r.getIntentosLiquidacion() != null ? r.getIntentosLiquidacion() : 0) + 1);
                 return 1;
@@ -175,6 +189,8 @@ class LiquidacionServiceTest {
         });
     }
 
+    private ResolucionRepartoRepository resoluciones;
+
     private LiquidacionService servicio(DispersionService dispersion) {
         DispersionService contada = new DispersionService() {
             @Override public String modo() { return dispersion.modo(); }
@@ -186,7 +202,7 @@ class LiquidacionServiceTest {
                 return dispersion.liquidar(r, s);
             }
         };
-        return new LiquidacionService(repartoRepository, reembolsoRepository, pagoRepository, contada, avisos);
+        return new LiquidacionService(repartoRepository, reembolsoRepository, pagoRepository, contada, avisos, resoluciones);
     }
 
     private RepartoPago linea(long id, String tipo, String pedidoId, boolean porEvento) {
@@ -510,7 +526,7 @@ class LiquidacionServiceTest {
         String evento = jpql("marcarPorLiquidar", Long.class, LocalDateTime.class, String.class);
         assertTrue(evento.contains("r.estado = 'PENDIENTE'") && evento.contains("liquidacionPorEvento = true"), evento);
 
-        String tomar = jpql("tomarParaLiquidar", Long.class);
+        String tomar = jpql("tomarParaLiquidar", Long.class, LocalDateTime.class);
         assertTrue(tomar.contains("set r.estado = 'PROCESANDO'"), tomar);
         assertTrue(tomar.contains("r.estado in ('POR_LIQUIDAR', 'FALLIDO')"), tomar);
         assertTrue(tomar.contains("r.id = :id and r.estado in ('POR_LIQUIDAR', 'FALLIDO') and not exists"), tomar);
@@ -762,6 +778,147 @@ class LiquidacionServiceTest {
         s.procesarWebhookPayout(Map.of("event", "payout.updated", "data", Map.of("payout", Map.of(
                 "reference", "WOMPI-1-AB", "status", "TOTAL_PAYMENT"))));
         assertEquals(RepartoPago.LIQUIDADO, tienda.getEstado());
+    }
+
+    // ─── Salida manual de una línea PROCESANDO ───────────────────────────────
+
+    private static final String MOTIVO = "Revisado en el panel de Wompi el 31 de octubre";
+
+    private RepartoPago enProceso(long id, String motivoFallo, LocalDateTime tomada) {
+        RepartoPago r = linea(id, RepartoPago.TALLER, null, true);
+        r.setEstado(RepartoPago.PROCESANDO);
+        r.setMotivoFallo(motivoFallo);
+        r.setFechaProcesando(tomada);
+        r.setReferenciaLiquidacion("WOMPI-" + id + "-AB");
+        r.setModoLiquidacion("WOMPI");
+        return r;
+    }
+
+    private void esperaRechazo(HttpStatus estado, String texto, Runnable accion) {
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, accion::run);
+        assertEquals(estado, e.getStatusCode());
+        assertTrue(e.getReason().contains(texto), e.getReason());
+    }
+
+    @Test
+    void siSalioQuedaLiquidadaConSuReferenciaYElRegistroDeQuienYPorQue() {
+        RepartoPago r = enProceso(1, "Wompi no confirmó el pago", LocalDateTime.now());
+
+        servicio(manual()).resolver(1L, ADMIN, "liquidado", MOTIVO, "PANEL-123");
+
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
+        assertEquals("WOMPI-1-AB", r.getReferenciaLiquidacion(), "conserva la de Wompi para reconocer sus eventos");
+        assertEquals(ADMIN, r.getLiquidadoPor());
+        assertTrue(r.getNota().contains(MOTIVO) && r.getNota().contains("PANEL-123"), r.getNota());
+        ArgumentCaptor<ResolucionReparto> registro = ArgumentCaptor.forClass(ResolucionReparto.class);
+        verify(resoluciones).save(registro.capture());
+        assertEquals(1L, registro.getValue().getRepartoId());
+        assertEquals(RepartoPago.LIQUIDADO, registro.getValue().getResultado());
+        assertEquals(ADMIN, registro.getValue().getResueltoPor());
+        assertEquals(MOTIVO, registro.getValue().getMotivo());
+        assertEquals(0, dispersiones.get(), "no sale ningún pago nuevo");
+    }
+
+    @Test
+    void siNoSalioQuedaFallidaYSePuedeReintentar() {
+        RepartoPago r = enProceso(1, "Wompi no confirmó el pago", LocalDateTime.now());
+        LiquidacionService s = servicio(manual());
+
+        s.resolver(1L, ADMIN, "FALLIDO", MOTIVO, null);
+
+        assertEquals(RepartoPago.FALLIDO, r.getEstado());
+        assertEquals(RepartoPago.LIQUIDADO, s.liquidar(1L, ADMIN, "TRF-0001", null).getEstado());
+    }
+
+    @Test
+    void unPagoEnCursoNoSeResuelveHastaPasarLos30Minutos() {
+        RepartoPago r = enProceso(1, null, LocalDateTime.now().minusMinutes(29));
+        LiquidacionService s = servicio(manual());
+
+        esperaRechazo(HttpStatus.CONFLICT, "sigue en curso", () -> s.resolver(1L, ADMIN, "FALLIDO", MOTIVO, null));
+        assertEquals(RepartoPago.PROCESANDO, r.getEstado());
+        verify(resoluciones, never()).save(any());
+
+        r.setFechaProcesando(LocalDateTime.now().minusMinutes(31));
+        s.resolver(1L, ADMIN, "FALLIDO", MOTIVO, null);
+        assertEquals(RepartoPago.FALLIDO, r.getEstado());
+    }
+
+    @Test
+    void unaLineaSinHoraDeTomaCuentaComoColgada() {
+        assertTrue(LiquidacionService.sePuedeResolver(enProceso(1, null, null), LocalDateTime.now()));
+    }
+
+    @Test
+    void solamenteSeResuelveUnaLineaEnProceso() {
+        RepartoPago r = enProceso(1, "Wompi no confirmó", LocalDateTime.now());
+        r.setEstado(RepartoPago.LIQUIDADO);
+
+        esperaRechazo(HttpStatus.CONFLICT, "en proceso", () -> servicio(manual()).resolver(1L, ADMIN, "FALLIDO", MOTIVO, null));
+        verify(resoluciones, never()).save(any());
+    }
+
+    @Test
+    void validaResultadoMotivoYReferencia() {
+        RepartoPago r = enProceso(1, "Wompi no confirmó", LocalDateTime.now());
+        LiquidacionService s = servicio(manual());
+
+        esperaRechazo(HttpStatus.BAD_REQUEST, "salió o no salió", () -> s.resolver(1L, ADMIN, "OTRO", MOTIVO, "REF"));
+        esperaRechazo(HttpStatus.BAD_REQUEST, "por qué", () -> s.resolver(1L, ADMIN, "FALLIDO", "corto", null));
+        esperaRechazo(HttpStatus.BAD_REQUEST, "referencia", () -> s.resolver(1L, ADMIN, "LIQUIDADO", MOTIVO, "  "));
+        esperaRechazo(HttpStatus.BAD_REQUEST, "80", () -> s.resolver(1L, ADMIN, "LIQUIDADO", MOTIVO, "x".repeat(81)));
+        assertEquals(RepartoPago.PROCESANDO, r.getEstado());
+    }
+
+    @Test
+    void siOtroCambioLaLineaAlResolverNoQuedaRegistro() {
+        enProceso(1, "Wompi no confirmó", LocalDateTime.now());
+        doReturn(0).when(repartoRepository).marcarFallido(anyLong(), anyString(), anyString());
+
+        esperaRechazo(HttpStatus.CONFLICT, "cambió", () -> servicio(manual()).resolver(1L, ADMIN, "FALLIDO", MOTIVO, null));
+        verify(resoluciones, never()).save(any());
+    }
+
+    private static Map<String, Object> pagoConfirmado(String referencia) {
+        return Map.of("event", "payout.updated", "data", Map.of("payout", Map.of("reference", referencia, "status", "TOTAL_PAYMENT")));
+    }
+
+    @Test
+    void siWompiConfirmaLoResueltoComoNoSalidoLaLineaQuedaLiquidadaYAlerta() {
+        RepartoPago r = enProceso(1, "Wompi no confirmó", LocalDateTime.now());
+        LiquidacionService s = servicio(manual());
+        s.resolver(1L, ADMIN, "FALLIDO", MOTIVO, null);
+        when(resoluciones.existsByRepartoIdAndResultado(1L, RepartoPago.FALLIDO)).thenReturn(true);
+
+        s.procesarWebhookPayout(pagoConfirmado("WOMPI-1-AB"));
+
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
+        verify(avisos).alertaAdmin(eq("Pago confirmado tarde"), contains("no la reintentes"));
+    }
+
+    @Test
+    void unFallidoDelBancoNoSeReviveConUnEventoFueraDeOrden() {
+        RepartoPago r = linea(1, RepartoPago.TALLER, null, true);
+        r.setEstado(RepartoPago.FALLIDO);
+        r.setReferenciaLiquidacion("WOMPI-1-AB");
+
+        servicio(manual()).procesarWebhookPayout(pagoConfirmado("WOMPI-1-AB"));
+
+        assertEquals(RepartoPago.FALLIDO, r.getEstado());
+        verifyNoInteractions(avisos);
+    }
+
+    @Test
+    void siYaSeReintentoConOtraReferenciaAlertaDePosibleDoblePago() {
+        RepartoPago r = linea(1, RepartoPago.TALLER, null, true);
+        r.setEstado(RepartoPago.LIQUIDADO);
+        r.setReferenciaLiquidacion("WOMPI-1-NUEVA");
+        when(resoluciones.existsByResultadoAndReferenciaStartingWith(RepartoPago.FALLIDO, "WOMPI-1-VIEJA")).thenReturn(true);
+
+        servicio(manual()).procesarWebhookPayout(pagoConfirmado("WOMPI-1-VIEJA"));
+
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
+        verify(avisos).alertaAdmin(eq("Posible doble pago"), contains("WOMPI-1-VIEJA"));
     }
 
     @Test

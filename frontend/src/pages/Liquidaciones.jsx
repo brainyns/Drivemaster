@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getToken } from "../services/authService";
-import { repartosTabla, liquidarReparto, listarReembolsos, marcarReembolsado, obtenerModo } from "../services/liquidacionService";
+import { repartosTabla, liquidarReparto, listarReembolsos, marcarReembolsado, obtenerModo, resolverReparto } from "../services/liquidacionService";
 import { formatFechaHora, formatPrecio } from "../components/servicio/estadosServicio";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import DetallePlataforma from "../components/admin/DetallePlataforma";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
 import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
-import { errorRango, propsPaginacion, textoOrden } from "../components/ui/reglasTabla";
+import { errorRango, propsPaginacion, rangoRapido, textoOrden } from "../components/ui/reglasTabla";
 import EncabezadoOrden from "../components/ui/EncabezadoOrden";
-import FiltroFechas from "../components/ui/FiltroFechas";
+import SelectorFechas from "../components/ui/SelectorFechas";
 import SelectorOrden from "../components/ui/SelectorOrden";
 import ChipEstado from "../components/ui/ChipEstado";
 import Indicador from "../components/ui/Indicador";
@@ -17,8 +17,12 @@ import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Campo from "../components/ui/Campo";
+import Dato from "../components/ui/Dato";
 import { unir } from "../utils/formato";
-import { pendientesLista, referenciaLinea, sePuedePagar, textoConcepto } from "./admin/plataformaAdmin";
+import {
+  ESTADOS_LIQUIDACION, MAS_ESTADOS_LIQUIDACION, avisoModo, faltaParaResolver, fechaLinea, fueraDelRango, porRevisar, referenciaLinea,
+  sePuedePagar, tarjetasLiquidaciones, textoConcepto, textoCuenta,
+} from "./admin/plataformaAdmin";
 // El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
 import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
@@ -34,24 +38,22 @@ const ORDENES_REPARTOS = [
 ];
 
 const VISTAS = [
-  { key: "repartos", label: "Liquidaciones a talleres y tiendas" },
-  { key: "reembolsos", label: "Reembolsos a clientes" },
+  { key: "repartos", label: "Liquidaciones" },
+  { key: "reembolsos", label: "Reembolsos" },
 ];
 
-const ESTADOS = {
-  repartos: [
-    ["POR_LIQUIDAR", "Por liquidar"], ["FALLIDO", "Fallidos"], ["PENDIENTE", "Esperando recepción o entrega"],
-    ["LIQUIDADO", "Liquidados"], ["ANULADO", "Anulados"], ["", "Todos"],
-  ],
-  reembolsos: [["PENDIENTE", "Pendientes"], ["REALIZADO", "Realizados"], ["", "Todos"]],
-};
+const ESTADOS_REEMBOLSO = [["PENDIENTE", "Pendientes"], ["REALIZADO", "Realizados"], ["", "Todos"]];
+
+// "Hoy" no sirve aquí: se paga por periodos. Todo va después, porque se empieza en Este mes
+const RANGOS = [{ clave: "mes", label: "Este mes" }, { clave: "7d", label: "Últimos 7 días" }];
 
 // Estado de cada línea con el formato de catálogo de ChipEstado
 const ESTADO_REPARTO = {
-  PENDIENTE: { label: "Esperando recepción o entrega", tono: "apagado" },
-  POR_LIQUIDAR: { label: "Por liquidar", tono: "aviso" },
+  PENDIENTE: { label: "En espera", tono: "apagado" },
+  POR_LIQUIDAR: { label: "Por pagar", tono: "aviso" },
   PROCESANDO: { label: "Procesando", tono: "proceso" },
-  LIQUIDADO: { label: "Liquidado", tono: "ok" },
+  SIN_CONFIRMAR: { label: "Sin confirmar", tono: "aviso" },
+  LIQUIDADO: { label: "Pagado", tono: "ok" },
   FALLIDO: { label: "Fallido", tono: "error" },
   ANULADO: { label: "Anulado", tono: "apagado" },
 };
@@ -60,10 +62,14 @@ const ESTADO_REEMBOLSO = {
   REALIZADO: { label: "Realizado", tono: "ok" },
 };
 
+const VALOR_MAS = "MAS";
+const nombreBeneficiario = (f) => f.beneficiario || f.beneficiarioNombre || "Beneficiario sin nombre";
+const tipoBeneficiario = (f) => (f.beneficiarioTipo === "TALLER" ? "Taller" : "Tienda");
+
 /**
- * Lista del ADMIN. En modo SIMULADO el evento (recepción confirmada / orden entregada)
- * liquida solo y no mueve dinero; en modo MANUAL el ADMIN transfiere por el banco y anota
- * el número de transferencia (obligatorio). Los reembolsos siempre se hacen fuera (panel de Wompi).
+ * Lista del ADMIN. Se paga solo lo que está listo: en modos MANUAL y WOMPI cada pago lo aprueba el ADMIN, con su
+ * confirmación; en SIMULADO el evento liquida solo y no mueve dinero. Los reembolsos siempre se hacen fuera (panel de
+ * Wompi). Una línea sin confirmar por Wompi se resuelve a mano, con motivo y registro.
  */
 export default function Liquidaciones() {
   const token = getToken();
@@ -79,30 +85,40 @@ export default function Liquidaciones() {
   const [nota, setNota] = useState("");
   const [procesando, setProcesando] = useState(false);
   const [detalle, setDetalle] = useState(null); // { tipo: "pedido" | "orden", id }
+  const [resolviendoId, setResolviendoId] = useState(null);
+  const [resolucion, setResolucion] = useState({ resultado: "", motivo: "", referencia: "" });
   // Liquidaciones: paginadas en el servidor (/repartos/tabla) con fechas y orden; los reembolsos son pocos y siguen
   // llegando completos
-  const [tabla, setTabla] = useState(null); // { repartos: Pagina, pendientes, montoPendiente }
+  const [tabla, setTabla] = useState(null); // { repartos: Pagina, resumen }
   const [pagina, setPagina] = useState(0);
   const [orden, setOrden] = useState(null);
-  const [fechas, setFechas] = useState({ desde: "", hasta: "" });
+  const [fechas, setFechas] = useState(() => rangoRapido("mes"));
   const errorFechas = errorRango(fechas);
+  // "Ver fallidos", "Revisar" y "Ver todo" miran todas las fechas por un momento: al volver a un estado sigue el rango elegido
+  const fechasAntesDeVerTodo = useRef(null);
+  // Solo cuenta la última petición: una respuesta lenta no pisa el filtro que se eligió después
+  const ultimaPeticion = useRef(0);
 
   const cargar = useCallback(async () => {
     if (vista === "repartos" && errorFechas) return; // el selector de fechas ya lo avisa
+    const peticion = ++ultimaPeticion.current;
     setCargando(true);
     try {
       if (vista === "repartos") {
         const r = await repartosTabla(token, { estado, ...fechas, page: pagina, size: 20, sort: textoOrden(orden) });
+        if (peticion !== ultimaPeticion.current) return;
         setTabla(r);
         setFilas(r?.repartos?.items || []);
       } else {
-        setFilas((await listarReembolsos(token, estado)) || []);
+        const lista = (await listarReembolsos(token, estado)) || [];
+        if (peticion !== ultimaPeticion.current) return;
+        setFilas(lista);
       }
       setErrorCarga(null);
     } catch (e) {
-      setErrorCarga(e.message);
+      if (peticion === ultimaPeticion.current) setErrorCarga(e.message);
     } finally {
-      setCargando(false);
+      if (peticion === ultimaPeticion.current) setCargando(false);
     }
   }, [token, vista, estado, fechas, pagina, orden, errorFechas]);
 
@@ -120,17 +136,31 @@ export default function Liquidaciones() {
   const esManual = modo?.modo === "MANUAL";
   const esWompi = modo?.modo === "WOMPI";
   const esRepartos = vista === "repartos";
+  const aviso = esRepartos ? avisoModo(modo) : null;
 
   const cambiarVista = (v) => {
     setVista(v);
     setEstado(v === "repartos" ? "POR_LIQUIDAR" : "PENDIENTE");
+    setFilas([]); // son otras columnas: las de la vista anterior no se pueden mostrar mientras carga
     setMarcandoId(null);
     setPagina(0);
   };
   // Cambiar estado, fechas u orden vuelve a la primera página
-  const elegirEstado = (e) => { setEstado(e); setPagina(0); };
-  const ponerFechas = (r) => { setFechas(r); setPagina(0); };
+  const elegirEstado = (e) => {
+    setEstado(e);
+    if (fechasAntesDeVerTodo.current) { setFechas(fechasAntesDeVerTodo.current); fechasAntesDeVerTodo.current = null; }
+    setPagina(0);
+  };
+  const ponerFechas = (r) => { fechasAntesDeVerTodo.current = null; setFechas(r); setPagina(0); };
   const ordenar = (o) => { setOrden(o); setPagina(0); };
+  const verTodoElEstado = (e) => {
+    fechasAntesDeVerTodo.current ??= fechas;
+    setEstado(e);
+    setFechas({ desde: "", hasta: "" });
+    setPagina(0);
+  };
+  // La cifra de Pagado es del mes en curso: lleva a ese mismo mes
+  const verPagadoDelMes = () => { fechasAntesDeVerTodo.current = null; setEstado("LIQUIDADO"); setFechas(rangoRapido("mes")); setPagina(0); };
 
   const marcar = async (id) => {
     setProcesando(true);
@@ -146,46 +176,64 @@ export default function Liquidaciones() {
       await cargar();
     } catch (e) {
       setError(e.message);
+      await cargar(); // un fallo también cambia la línea (queda FALLIDO o sin confirmar)
     } finally {
       setProcesando(false);
     }
   };
 
-  // En liquidaciones el servidor cuenta toda la lista filtrada (no solo la página); en reembolsos, la lista completa
+  const resolver = async (id) => {
+    setProcesando(true);
+    setError(null);
+    try {
+      await resolverReparto(token, id, {
+        resultado: resolucion.resultado, motivo: resolucion.motivo.trim(), referencia: resolucion.referencia.trim() || null,
+      });
+      setResolviendoId(null);
+      await cargar();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setProcesando(false);
+    }
+  };
+
   const pendientesReembolso = filas.filter((f) => f.estado === "PENDIENTE");
-  const numPendientes = esRepartos ? (tabla?.pendientes || 0) : pendientesReembolso.length;
-  const totalRegistros = esRepartos ? (tabla?.repartos?.total || 0) : filas.length;
-  const totalPendiente = esRepartos ? (tabla?.montoPendiente || 0) : pendientesReembolso.reduce((s, f) => s + (f.monto || 0), 0);
+  const totalPendienteReembolso = pendientesReembolso.reduce((s, f) => s + (f.monto || 0), 0);
   const marcando = filas.find((f) => f.id === marcandoId) || null;
-  const nombreBeneficiario = (f) => f.beneficiario || f.beneficiarioNombre || "Beneficiario sin nombre";
-  const cifraLista = pendientesLista(estado, numPendientes, totalRegistros);
+  const resolviendo = filas.find((f) => f.id === resolviendoId) || null;
+
+  const resumen = esRepartos ? tabla?.resumen : null;
+  const tarjetas = tarjetasLiquidaciones(resumen);
+  const fuera = fueraDelRango(estado, resumen, tabla?.repartos?.total || 0, fechas);
+  const fallidas = resumen?.fallidas?.cantidad || 0;
+  const enProceso = resumen?.enProceso?.cantidad || 0;
+  const revisar = porRevisar(resumen, estado);
+  const estadoEnMas = esRepartos && MAS_ESTADOS_LIQUIDACION.some(([v]) => v === estado);
 
   const textoAccion = (f) => (!esRepartos ? "Marcar reembolsado"
     : f.estado === "FALLIDO" ? (esWompi ? "Reintentar con Wompi" : "Reintentar")
     : esManual ? "Registrar pago"
     : esWompi ? "Liquidar con Wompi" : "Liquidar (simulado)");
 
+  // En la fila, corto para que la acción quepa junto al monto; el diálogo dice el nombre completo
+  const textoBoton = (f) => (esRepartos && esWompi ? (f.estado === "FALLIDO" ? "Reintentar" : "Liquidar") : textoAccion(f));
+
   const abrirMarcar = (f) => { setMarcandoId(f.id); setNota(""); setNumero(""); setError(null); };
+  const abrirResolver = (f) => { setResolviendoId(f.id); setResolucion({ resultado: "", motivo: "", referencia: "" }); setError(null); };
   const listaVacia = !cargando && !errorCarga && filas.length === 0;
   // Reembolsos: 20 por página en el navegador (vuelve a la primera al cambiar de estado)
   const pag = usePaginacion(filas.length, vista + "|" + estado);
   const enPagina = esRepartos ? filas : paginar(filas, pag.pagina);
+  const faltaResolver = faltaParaResolver(resolucion);
 
   return (
     <div className="ss-panel--plataforma pp-root liq-root">
       <EncabezadoPagina titulo="Liquidaciones y reembolsos"
-        descripcion="Pagos pendientes a talleres y tiendas, y reembolsos a clientes. Cada pago queda registrado con su referencia." />
+        descripcion="Pagos a talleres y tiendas, y reembolsos a clientes. Cada pago queda registrado con su referencia." />
 
-      {esRepartos && modo && (
-        <Alerta tono={modo.dineroReal === false ? "aviso" : modo.modo === "WOMPI" ? "ok" : "info"} className="pp-bloque-sep">
-          <strong>Modo de liquidación: {modo.modo}.</strong>{" "}
-          {modo.modo === "SIMULADO"
-            ? "Solo desarrollo: las liquidaciones se hacen solas y NO mueven dinero (referencias SIM-…)."
-            : modo.modo === "WOMPI"
-            ? `Wompi Payouts a la cuenta bancaria de cada taller y tienda; cada pago lo apruebas tú.${modo.dineroReal === false ? " Estás en sandbox: NO mueve dinero real." : ""}`
-            : "Tú pagas por el banco y anotas aquí el número de transferencia; nada se liquida solo."}
-        </Alerta>
-      )}
+      {aviso && !aviso.grande && <p className="liq-modo pp-bloque-sep"><strong>Dinero real</strong>{aviso.texto.replace("Dinero real", "")}</p>}
+      {aviso?.grande && <Alerta tono="aviso" className="pp-bloque-sep"><strong>{aviso.texto}</strong></Alerta>}
 
       <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Tipo">
         {VISTAS.map((v) => (
@@ -194,58 +242,100 @@ export default function Liquidaciones() {
           </button>
         ))}
       </div>
-      <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Estado">
-        {ESTADOS[vista].map(([valor, label]) => (
-          <button key={valor || "todos"} type="button" className="ui-chip" aria-pressed={estado === valor} onClick={() => elegirEstado(valor)}>
-            {label}
-          </button>
-        ))}
+
+      {tarjetas.length > 0 && (
+        <div className="ui-indicadores pp-bloque-sep liq-resumen">
+          {tarjetas.map((t) => (
+            <Indicador key={t.estado} titulo={t.titulo} valor={t.valor} pie={t.pie} tono={t.tono}
+              onClick={() => (t.estado === "LIQUIDADO" ? verPagadoDelMes() : elegirEstado(t.estado))} />
+          ))}
+        </div>
+      )}
+      {!esRepartos && !cargando && !errorCarga && filas.length > 0 && (
+        <div className="ui-indicadores pp-bloque-sep liq-resumen liq-resumen--una">
+          <Indicador titulo="Pendiente en esta lista" valor={formatPrecio(totalPendienteReembolso)} tono={totalPendienteReembolso > 0 ? "accion" : undefined}
+            pie={`${pendientesReembolso.length} de ${filas.length} ${filas.length === 1 ? "registro" : "registros"} por reembolsar`} />
+        </div>
+      )}
+
+      <div className="liq-herramientas pp-bloque-sep">
+        <div className="ui-filtros" role="group" aria-label="Estado">
+          {(esRepartos ? ESTADOS_LIQUIDACION : ESTADOS_REEMBOLSO).map(([valor, label]) => (
+            <button key={valor || "todos"} type="button" className="ui-chip" aria-pressed={estado === valor} onClick={() => elegirEstado(valor)}>
+              {label}
+            </button>
+          ))}
+          {esRepartos && (
+            <span className={`ui-chip liq-mas${estadoEnMas ? " liq-mas--activa" : ""}`}>
+              <select aria-label="Más estados" value={estadoEnMas ? estado : VALOR_MAS} onChange={(e) => elegirEstado(e.target.value)}>
+                <option value={VALOR_MAS} disabled hidden>Más</option>
+                {MAS_ESTADOS_LIQUIDACION.map(([valor, label]) => <option key={valor || "todos"} value={valor}>{label}</option>)}
+              </select>
+              {fallidas + enProceso > 0 && (
+                <span className="ui-chip__contador" aria-label={`${fallidas + enProceso} por revisar`}>{fallidas + enProceso}</span>
+              )}
+            </span>
+          )}
+        </div>
+        {esRepartos && (
+          <div className="liq-selectores">
+            <SelectorFechas id="liq-fechas" etiqueta="Fecha" valor={fechas} onCambiar={ponerFechas} rangos={RANGOS} todoAlFinal />
+            <div className="liq-orden-movil">
+              <SelectorOrden id="liq-orden" opciones={ORDENES_REPARTOS} orden={orden} onOrdenar={ordenar} porDefecto="Más recientes primero" />
+            </div>
+          </div>
+        )}
       </div>
 
-      {esRepartos && (
-        <div className="liq-herramientas pp-bloque-sep">
-          <FiltroFechas id="liq-fechas" etiqueta="Fecha de la liquidación" valor={fechas} onCambiar={ponerFechas} />
-          <SelectorOrden id="liq-orden" opciones={ORDENES_REPARTOS} orden={orden} onOrdenar={ordenar} porDefecto="Más recientes primero" />
-        </div>
+      {revisar.length > 0 && (
+        <Alerta tono={revisar[0].estado === "FALLIDO" ? "error" : "aviso"} className="pp-bloque-sep">
+          <span className="liq-revisar">
+            {revisar.map((r) => (
+              <span key={r.estado}>
+                {r.texto}.{" "}
+                <button type="button" className="dtp-enlace" onClick={() => verTodoElEstado(r.estado)}>{r.accion}</button>
+              </span>
+            ))}
+          </span>
+        </Alerta>
+      )}
+      {fuera > 0 && (
+        <Alerta tono="info" className="pp-bloque-sep">
+          {fuera === 1 ? "Hay 1 fuera de estas fechas" : `Hay ${fuera} fuera de estas fechas`}.{" "}
+          <button type="button" className="dtp-enlace" onClick={() => verTodoElEstado(estado)}>Ver todo</button>
+        </Alerta>
       )}
 
-      {!cargando && !errorCarga && filas.length > 0 && (
-        <div className="ui-indicadores pp-seccion liq-resumen">
-          <Indicador titulo={esRepartos ? cifraLista.titulo : "Pendiente en esta lista"} valor={formatPrecio(totalPendiente)} tono={totalPendiente > 0 ? "accion" : undefined}
-            pie={esRepartos ? cifraLista.pie : `${numPendientes} de ${totalRegistros} ${totalRegistros === 1 ? "registro" : "registros"} por reembolsar`} />
-        </div>
-      )}
-
-      {error && !marcando && <Alerta className="pp-bloque-sep" onCerrar={() => setError(null)}>{error}</Alerta>}
+      {error && !marcando && !resolviendo && <Alerta className="pp-bloque-sep" onCerrar={() => setError(null)}>{error}</Alerta>}
       {errorCarga && <Alerta className="pp-bloque-sep" onReintentar={cargar} reintentando={cargando}>{errorCarga}</Alerta>}
 
       {cargando && filas.length === 0 ? (
         <Esqueleto variante="lista" cantidad={4} texto="Cargando…" />
       ) : listaVacia ? (
         <EstadoVacio icono={esRepartos ? "file" : "refresh"} titulo="No hay registros en esta lista"
-          texto={esRepartos ? "Prueba con otro estado: aquí aparecen los pagos a talleres y tiendas según avanzan las órdenes."
+          texto={esRepartos ? "Prueba con otro estado u otras fechas: aquí aparecen los pagos a talleres y tiendas según avanzan las órdenes."
             : "Prueba con otro estado: aquí aparecen los reembolsos que se decidieron en Problemas de envío."} />
       ) : filas.length > 0 && (
         <div className={`ui-card ui-table-card${cargando ? " pp-actualizando" : ""}`} aria-busy={cargando}>
           <div className="ui-table-wrap">
-            <table className="ui-table ui-table--tarjetas liq-tabla">
+            <table className={`ui-table ui-table--tarjetas liq-tabla${esRepartos ? " liq-tabla--repartos" : ""}`}>
               <caption className="ui-sr">{esRepartos ? "Liquidaciones a talleres y tiendas" : "Reembolsos a clientes"}</caption>
               <thead>
                 <tr>
                   {esRepartos
                     ? <EncabezadoOrden campo="beneficiario" orden={orden} onOrdenar={ordenar}>Beneficiario</EncabezadoOrden>
                     : <th scope="col">Pago</th>}
+                  <th scope="col">Referencia</th>
                   {esRepartos
                     ? <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Fecha</EncabezadoOrden>
                     : <th scope="col">Fecha</th>}
-                  <th scope="col">Referencia</th>
-                  <th scope="col">{esRepartos ? "Concepto" : "Motivo"}</th>
-                  {esRepartos
-                    ? <EncabezadoOrden campo="monto" orden={orden} onOrdenar={ordenar} className="pp-num">Monto</EncabezadoOrden>
-                    : <th scope="col" className="pp-num">Monto</th>}
+                  {!esRepartos && <th scope="col">Motivo</th>}
                   {esRepartos
                     ? <EncabezadoOrden campo="estado" orden={orden} onOrdenar={ordenar}>Estado</EncabezadoOrden>
                     : <th scope="col">Estado</th>}
+                  {esRepartos
+                    ? <EncabezadoOrden campo="monto" orden={orden} onOrdenar={ordenar} className="pp-num">Monto</EncabezadoOrden>
+                    : <th scope="col" className="pp-num">Monto</th>}
                   <th scope="col"><span className="ui-sr">Acción</span></th>
                 </tr>
               </thead>
@@ -253,13 +343,19 @@ export default function Liquidaciones() {
                 {enPagina.map((f) => {
                   const pagable = esRepartos ? sePuedePagar(f) : f.estado === "PENDIENTE";
                   const ref = referenciaLinea(f);
+                  const cuenta = esRepartos ? textoCuenta(f.cuenta) : "";
+                  const faltaCuenta = esRepartos && esWompi && pagable && !f.cuenta;
+                  const idFalta = `liq-falta-${f.id}`;
                   return (
                     <tr key={f.id} className={f.estado === "FALLIDO" ? "liq-fila--fallida" : undefined}>
                       <td className="ui-table__titulo">
                         {esRepartos ? (
                           <>
-                            <strong>{nombreBeneficiario(f)}</strong>
-                            <span className="pp-sub">{f.beneficiarioTipo === "TALLER" ? "Taller" : "Tienda"}</span>
+                            <span className="liq-beneficiario">
+                              <strong>{nombreBeneficiario(f)}</strong>
+                              <span className="liq-tipo">{tipoBeneficiario(f)}</span>
+                            </span>
+                            <span className="pp-sub">{cuenta || "Sin cuenta bancaria"}</span>
                           </>
                         ) : (
                           <>
@@ -268,21 +364,22 @@ export default function Liquidaciones() {
                           </>
                         )}
                       </td>
-                      <td data-label="Fecha" className="liq-fecha">{formatFechaHora(f.fechaCreacion)}</td>
                       <td data-label="Referencia" className="liq-ref">
-                        {ref.tipo ? (
-                          <button type="button" className="dtp-enlace" onClick={() => setDetalle({ tipo: ref.tipo, id: ref.id })}
-                            aria-label={`Ver detalle de ${ref.tipo === "pedido" ? "el pedido" : "la solicitud"} ${ref.texto}`}>
-                            {ref.texto}
-                          </button>
-                        ) : ref.texto}
+                        <span>
+                          {ref.tipo ? (
+                            <button type="button" className="dtp-enlace" onClick={() => setDetalle({ tipo: ref.tipo, id: ref.id })}
+                              aria-label={`Ver detalle de ${ref.tipo === "pedido" ? "el pedido" : "la solicitud"} ${ref.texto}`}>
+                              {ref.texto}
+                            </button>
+                          ) : ref.texto}
+                          {esRepartos && <span className="pp-sub">{textoConcepto(f.concepto)}</span>}
+                          {esRepartos && <span className="pp-sub liq-fecha-sub">{fechaLinea(f.fechaCreacion)}</span>}
+                        </span>
                       </td>
-                      <td data-label={esRepartos ? "Concepto" : "Motivo"} className="liq-texto">
-                        {esRepartos ? textoConcepto(f.concepto) : f.motivo}
-                      </td>
-                      <td data-label="Monto" className="pp-num">{formatPrecio(f.monto)}</td>
+                      <td data-label="Fecha" className="liq-fecha">{fechaLinea(f.fechaCreacion)}</td>
+                      {!esRepartos && <td data-label="Motivo" className="liq-texto">{f.motivo}</td>}
                       <td data-label="Estado" className="liq-estado">
-                        <ChipEstado catalogo={esRepartos ? ESTADO_REPARTO : ESTADO_REEMBOLSO} estado={f.estado} />
+                        <ChipEstado catalogo={esRepartos ? ESTADO_REPARTO : ESTADO_REEMBOLSO} estado={f.sePuedeResolver ? "SIN_CONFIRMAR" : f.estado} />
                         {esRepartos && f.estado === "LIQUIDADO" && (
                           <span className="pp-sub">
                             {unir([f.modoLiquidacion === "SIMULADO" ? "SIMULADO (sin dinero real)" : f.modoLiquidacion,
@@ -290,19 +387,22 @@ export default function Liquidaciones() {
                               f.fechaLiquidacion && formatFechaHora(f.fechaLiquidacion)])}
                           </span>
                         )}
-                        {esRepartos && f.eventoListo && <span className="pp-sub">Evento: {f.eventoListo}</span>}
                         {esRepartos && (f.estado === "FALLIDO" || f.estado === "PROCESANDO") && f.motivoFallo && <span className="pp-sub liq-fallo">{f.motivoFallo}</span>}
                         {f.nota && <span className="pp-sub">{f.nota}</span>}
                       </td>
+                      <td data-label="Monto" className="pp-num liq-monto">{formatPrecio(f.monto)}</td>
                       <td className="ui-table__acciones liq-acciones">
                         {pagable && (
-                          <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" onClick={() => abrirMarcar(f)}>
-                            {textoAccion(f)}
+                          <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" onClick={() => abrirMarcar(f)}
+                            disabled={faltaCuenta} aria-describedby={faltaCuenta ? idFalta : undefined}>
+                            {textoBoton(f)}
                           </button>
                         )}
-                        {esRepartos && f.estado === "PENDIENTE" && (
-                          <span className="pp-sub">Esperando entrega</span>
+                        {faltaCuenta && <span id={idFalta} className="pp-sub liq-fallo">Falta cuenta bancaria</span>}
+                        {esRepartos && f.sePuedeResolver && (
+                          <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => abrirResolver(f)}>Resolver</button>
                         )}
+                        {esRepartos && f.estado === "PENDIENTE" && <span className="pp-sub">Esperando entrega</span>}
                       </td>
                     </tr>
                   );
@@ -320,16 +420,30 @@ export default function Liquidaciones() {
 
       {marcando && (
         <ConfirmacionAdmin
-          titulo={`${textoAccion(marcando)} · ${formatPrecio(marcando.monto)}`}
-          texto={esRepartos
-            ? `${nombreBeneficiario(marcando)} · ${textoConcepto(marcando.concepto)} ${referenciaLinea(marcando).texto}.`
-            : `Reembolso de ${referenciaLinea(marcando).texto}. Hazlo primero en el panel de Wompi.`}
-          confirmar="Confirmar"
+          titulo={esRepartos ? `${textoAccion(marcando)} · ${formatPrecio(marcando.monto)}` : `Marcar reembolsado · ${formatPrecio(marcando.monto)}`}
+          texto={esRepartos ? null : `Reembolso de ${referenciaLinea(marcando).texto}. Hazlo primero en el panel de Wompi.`}
+          confirmar={esRepartos ? `Liquidar ${formatPrecio(marcando.monto)}` : "Confirmar"}
           cargando={procesando}
           deshabilitado={esRepartos && esManual && !numero.trim()}
           onConfirmar={() => marcar(marcando.id)}
           onCancelar={() => { setMarcandoId(null); setError(null); }}
         >
+          {esRepartos && (
+            <>
+              <dl className="ui-datos liq-confirmacion">
+                <Dato etiqueta="Beneficiario" ancho>{nombreBeneficiario(marcando)} · {tipoBeneficiario(marcando)}</Dato>
+                <Dato etiqueta="Banco">{marcando.cuenta?.banco}</Dato>
+                <Dato etiqueta="Cuenta">{unir([marcando.cuenta?.tipoCuenta && textoCuenta({ tipoCuenta: marcando.cuenta.tipoCuenta }), marcando.cuenta?.numero])}</Dato>
+                <Dato etiqueta="Concepto">{textoConcepto(marcando.concepto)} {referenciaLinea(marcando).texto}</Dato>
+                <Dato etiqueta="Monto">{formatPrecio(marcando.monto)}</Dato>
+              </dl>
+              {aviso && (
+                <p className={`liq-dinero${aviso.grande ? " liq-dinero--prueba" : ""}`}>
+                  {aviso.grande ? aviso.texto : <><strong>Dinero real:</strong> este pago sale de verdad y no se puede deshacer desde aquí.</>}
+                </p>
+              )}
+            </>
+          )}
           {esRepartos && esManual && (
             <Campo id="liq-numero" label="N.º de transferencia" ayuda="Obligatorio: la referencia del pago en el banco.">
               <input className="ui-field__input" maxLength={80} required value={numero} onChange={(e) => setNumero(e.target.value)} />
@@ -338,6 +452,45 @@ export default function Liquidaciones() {
           <Campo id="liq-nota" label="Nota" opcional>
             <input className="ui-field__input" maxLength={300} value={nota} onChange={(e) => setNota(e.target.value)} />
           </Campo>
+          {error && <Alerta>{error}</Alerta>}
+        </ConfirmacionAdmin>
+      )}
+
+      {resolviendo && (
+        <ConfirmacionAdmin
+          titulo={`Resolver pago · ${formatPrecio(resolviendo.monto)}`}
+          texto={`${nombreBeneficiario(resolviendo)}. Revisa primero el panel de Wompi: lo que marques aquí no mueve dinero, solo deja la línea como está en Wompi.`}
+          confirmar="Guardar resolución"
+          cargando={procesando}
+          deshabilitado={!!faltaResolver}
+          onConfirmar={() => resolver(resolviendo.id)}
+          onCancelar={() => { setResolviendoId(null); setError(null); }}
+        >
+          <dl className="ui-datos liq-confirmacion">
+            <Dato etiqueta="Referencia enviada a Wompi" ancho>{resolviendo.referenciaLiquidacion}</Dato>
+            {resolviendo.motivoFallo && <Dato etiqueta="Qué pasó" ancho>{resolviendo.motivoFallo}</Dato>}
+          </dl>
+          <fieldset className="liq-resultado">
+            <legend>¿Qué dice el panel de Wompi?</legend>
+            {[["LIQUIDADO", "El pago sí salió", "Queda pagado."], ["FALLIDO", "El pago no salió", "Queda fallido y se podrá reintentar."]].map(([valor, titulo, ayuda]) => (
+              <label key={valor} className={`ui-opcion${resolucion.resultado === valor ? " ui-opcion--elegida" : ""}`}>
+                <input type="radio" name="liq-resultado" value={valor} checked={resolucion.resultado === valor}
+                  onChange={() => setResolucion((r) => ({ ...r, resultado: valor }))} />
+                <span><strong>{titulo}</strong><span className="pp-sub">{ayuda}</span></span>
+              </label>
+            ))}
+          </fieldset>
+          {resolucion.resultado === "LIQUIDADO" && (
+            <Campo id="liq-res-ref" label="Referencia del pago en Wompi">
+              <input className="ui-field__input" maxLength={80} required value={resolucion.referencia}
+                onChange={(e) => setResolucion((r) => ({ ...r, referencia: e.target.value }))} />
+            </Campo>
+          )}
+          <Campo id="liq-res-motivo" label="Motivo" ayuda="Queda registrado con tu usuario y la fecha.">
+            <textarea className="ui-field__input" rows={3} maxLength={500} required value={resolucion.motivo}
+              onChange={(e) => setResolucion((r) => ({ ...r, motivo: e.target.value }))} />
+          </Campo>
+          {faltaResolver && <p className="liq-falta">{faltaResolver}</p>}
           {error && <Alerta>{error}</Alerta>}
         </ConfirmacionAdmin>
       )}

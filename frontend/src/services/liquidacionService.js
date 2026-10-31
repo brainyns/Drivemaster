@@ -21,7 +21,7 @@ export async function listarRepartos(token, estado) {
 }
 
 /**
- * Liquidaciones paginadas en el servidor: { repartos: Pagina, pendientes, montoPendiente }. Parámetros: estado, desde,
+ * Liquidaciones paginadas en el servidor: { repartos: Pagina, pendientes, montoPendiente, resumen }. Parámetros: estado, desde,
  * hasta, page, size y sort ("monto,desc"). pendientes y montoPendiente cuentan toda la lista filtrada.
  */
 export async function repartosTabla(token, parametros) {
@@ -44,6 +44,14 @@ export async function liquidarReparto(token, id, { numeroTransferencia, nota } =
     method: "PATCH", headers: headers(token), body: JSON.stringify({ numeroTransferencia, nota }),
   }, LIMITE_LIQUIDAR_MS);
   return handle(res, "No se pudo liquidar");
+}
+
+/** Salida manual de una línea PROCESANDO sin evento de Wompi: resultado LIQUIDADO (sí salió) o FALLIDO (no salió). */
+export async function resolverReparto(token, id, { resultado, motivo, referencia }) {
+  const res = await apiFetch(`${BASE}/repartos/${id}/resolver`, {
+    method: "PATCH", headers: headers(token), body: JSON.stringify({ resultado, motivo, referencia }),
+  });
+  return handle(res, "No se pudo resolver el pago");
 }
 
 export async function listarReembolsos(token, estado) {

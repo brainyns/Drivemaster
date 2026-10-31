@@ -70,16 +70,80 @@ export function referenciaLinea(f = {}) {
   return { tipo: null, id: null, texto: "—" };
 }
 
-const PENDIENTES_LISTA = {
-  POR_LIQUIDAR: { titulo: "Por pagar", frase: "por pagar" },
-  PENDIENTE: { titulo: "En espera de entrega", frase: "en espera de entrega" },
-  FALLIDO: { titulo: "Pagos fallidos", frase: "por reintentar" },
-};
+/** Los estados a la vista y los que van dentro de "Más". "" es Todos. */
+export const ESTADOS_LIQUIDACION = [["POR_LIQUIDAR", "Por pagar"], ["PENDIENTE", "En espera"], ["LIQUIDADO", "Pagados"]];
+export const MAS_ESTADOS_LIQUIDACION = [["FALLIDO", "Fallidos"], ["PROCESANDO", "Sin confirmar"], ["ANULADO", "Anulados"], ["", "Todos"]];
 
-/** La cifra de la lista de liquidaciones, con las palabras de esa lista: lo que espera la entrega no está "por pagar". */
-export function pendientesLista(estado, n = 0, total = 0) {
-  const { titulo, frase } = PENDIENTES_LISTA[estado] || { titulo: "Pendiente en esta lista", frase: "sin pagar" };
-  return { titulo, pie: `${num(n)} de ${num(total)} ${plural(total, "registro", "registros")} ${frase}` };
+const TIPOS_CUENTA = { AHORROS: "Ahorros", CORRIENTE: "Corriente" };
+
+/** Cuenta destino en una línea: "Davivienda · Ahorros · ****3210". El número ya llega enmascarado del backend. */
+export function textoCuenta(c) {
+  if (!c) return "";
+  return [c.banco, TIPOS_CUENTA[c.tipoCuenta] || c.tipoCuenta, c.numero].filter(Boolean).join(" · ");
+}
+
+/** Fecha de la lista, corta para que la columna no le quite espacio al beneficiario: "28 oct 2026". */
+export const fechaLinea = (iso) => (iso
+  ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }).replace(/\./g, "").replace(/ de /g, " ")
+  : "—");
+
+const pagos = (n) => `${num(n)} ${plural(n, "pago", "pagos")}`;
+
+/** Lo que pide revisión y va dentro de "Más": fallidos primero, porque esos ya se sabe que no salieron. */
+export function porRevisar(resumen, estado) {
+  const fallidas = estado === "FALLIDO" ? 0 : resumen?.fallidas?.cantidad || 0;
+  const sinConfirmar = estado === "PROCESANDO" ? 0 : resumen?.enProceso?.cantidad || 0;
+  return [
+    fallidas > 0 && { estado: "FALLIDO", texto: fallidas === 1 ? "1 pago falló" : `${num(fallidas)} pagos fallaron`, accion: "Ver fallidos" },
+    sinConfirmar > 0 && { estado: "PROCESANDO", texto: sinConfirmar === 1 ? "1 pago sin confirmar" : `${num(sinConfirmar)} pagos sin confirmar`, accion: "Revisar" },
+  ].filter(Boolean);
+}
+
+/** Las tres cifras de arriba. estado es la lista a la que lleva cada una. */
+export function tarjetasLiquidaciones(r) {
+  if (!r) return [];
+  const simulado = r.pagadoMesSimulado > 0 ? ` · ${cop(r.pagadoMesSimulado)} simulados` : "";
+  return [
+    { titulo: "Por pagar", valor: cop(r.porPagar.monto), pie: `${pagos(r.porPagar.cantidad)} ${plural(r.porPagar.cantidad, "listo", "listos")}`,
+      estado: "POR_LIQUIDAR", tono: r.porPagar.cantidad > 0 ? "accion" : undefined },
+    { titulo: "En espera de entrega", valor: cop(r.enEspera.monto), pie: pagos(r.enEspera.cantidad), estado: "PENDIENTE" },
+    { titulo: "Pagado este mes", valor: cop(r.pagadoMes.monto), pie: `${pagos(r.pagadoMes.cantidad)}${simulado}`, estado: "LIQUIDADO" },
+  ];
+}
+
+/** Con un rango puesto, cuántos de esta lista quedan fuera: lo viejo por pagar no se puede esconder. 0 si no aplica. */
+export function fueraDelRango(estado, resumen, totalLista = 0, fechas = {}) {
+  if (!resumen || (!fechas.desde && !fechas.hasta)) return 0;
+  const total = estado === "POR_LIQUIDAR" ? resumen.porPagar.cantidad : estado === "PENDIENTE" ? resumen.enEspera.cantidad : 0;
+  return Math.max(0, total - totalLista);
+}
+
+/**
+ * Cómo se avisa el modo: grande si no se mueve dinero (el aviso que no se puede pasar por alto) y una línea discreta
+ * con dinero real. Sin saber el modo no se afirma nada.
+ */
+export function avisoModo(m) {
+  if (!m) return null;
+  if (m.dineroReal === true) {
+    return { grande: false, texto: m.modo === "MANUAL"
+      ? "Dinero real · Tú pagas por el banco y anotas aquí el número de transferencia"
+      : "Dinero real · Wompi Payouts a la cuenta de cada taller y tienda; cada pago lo apruebas tú" };
+  }
+  if (m.dineroReal === false) {
+    return { grande: true, texto: m.modo === "WOMPI"
+      ? "Sandbox de Wompi: los pagos NO mueven dinero real. Cada pago lo apruebas tú."
+      : "Modo simulado: las liquidaciones se hacen solas y NO mueven dinero real (referencias SIM-…)." };
+  }
+  return null;
+}
+
+/** Lo que falta para poder enviar la salida manual; el backend lo exige igual. */
+export const MINIMO_MOTIVO_RESOLVER = 10;
+export function faltaParaResolver({ resultado, motivo = "", referencia = "" } = {}) {
+  if (!resultado) return "Indica si el pago salió.";
+  if (motivo.trim().length < MINIMO_MOTIVO_RESOLVER) return `Explica el motivo en al menos ${MINIMO_MOTIVO_RESOLVER} caracteres.`;
+  if (resultado === "LIQUIDADO" && !referencia.trim()) return "Anota la referencia del pago en Wompi.";
+  return null;
 }
 
 // ─── Tiendas y talleres ─────────────────────────────────────────────────────

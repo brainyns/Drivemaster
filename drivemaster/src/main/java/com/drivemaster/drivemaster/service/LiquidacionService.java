@@ -5,9 +5,11 @@ import com.drivemaster.drivemaster.dto.comun.PeticionTabla;
 import com.drivemaster.drivemaster.dto.comun.RangoFechas;
 import com.drivemaster.drivemaster.model.mysql.Reembolso;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
+import com.drivemaster.drivemaster.model.mysql.ResolucionReparto;
 import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
+import com.drivemaster.drivemaster.repository.mysql.ResolucionRepartoRepository;
 import com.drivemaster.drivemaster.service.dispersion.DispersionException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionInciertaException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionService;
@@ -23,6 +25,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -47,6 +50,8 @@ import java.util.Set;
  * - Cada paso es una escritura condicional (UPDATE ... WHERE estado = ...): dos clics, o
  *   el evento y el ADMIN a la vez, no la pagan dos veces.
  * - Una línea con reembolso pendiente (de su pedido o de todo el pago) no se toma.
+ * - Si el evento de Wompi nunca llega, el ADMIN resuelve la línea a mano, con motivo y registro
+ *   en resoluciones_reparto. Un pago en curso no se resuelve: solo uno sin confirmar o colgado.
  * - Una línea PENDIENTE nunca se paga: tampoco las anteriores a la Fase 4-B
  *   (liquidacionPorEvento nulo), que además el evento no habilita.
  */
@@ -60,17 +65,20 @@ public class LiquidacionService {
     private final PagoRepository pagoRepository;
     private final DispersionService dispersion;
     private final AvisosSolicitudServicio avisos;
+    private final ResolucionRepartoRepository resoluciones;
 
     public LiquidacionService(RepartoPagoRepository repartoRepository,
                               ReembolsoRepository reembolsoRepository,
                               PagoRepository pagoRepository,
                               DispersionService dispersion,
-                              AvisosSolicitudServicio avisos) {
+                              AvisosSolicitudServicio avisos,
+                              ResolucionRepartoRepository resoluciones) {
         this.repartoRepository = repartoRepository;
         this.reembolsoRepository = reembolsoRepository;
         this.pagoRepository = pagoRepository;
         this.dispersion = dispersion;
         this.avisos = avisos;
+        this.resoluciones = resoluciones;
     }
 
     public List<RepartoPago> repartos(String estado) {
@@ -242,11 +250,75 @@ public class LiquidacionService {
         return resultado;
     }
 
+    /** Sin motivo de Wompi, una línea PROCESANDO se considera colgada pasado este tiempo. */
+    static final int MINUTOS_PARA_RESOLVER = 30;
+    private static final int MINIMO_MOTIVO = 10;
+
+    /**
+     * Si el ADMIN puede resolver la línea a mano: Wompi no la confirmó, o lleva demasiado tiempo tomada (se cayó el
+     * servidor a mitad del pago). Las anteriores a fechaProcesando no tienen hora: cuentan como colgadas.
+     */
+    public static boolean sePuedeResolver(RepartoPago r, LocalDateTime ahora) {
+        if (!RepartoPago.PROCESANDO.equals(r.getEstado())) return false;
+        return r.getMotivoFallo() != null || r.getFechaProcesando() == null
+                || r.getFechaProcesando().isBefore(ahora.minusMinutes(MINUTOS_PARA_RESOLVER));
+    }
+
+    /**
+     * Salida manual de una línea PROCESANDO, después de revisar el panel de Wompi: resultado LIQUIDADO (sí salió, con su
+     * referencia) o FALLIDO (no salió: se podrá reintentar). La línea conserva la referencia de Wompi, para reconocer
+     * un evento tardío. El cambio y su registro van en la misma transacción: no hay uno sin el otro.
+     */
+    @Transactional
+    public RepartoPago resolver(Long id, String correoAdmin, String resultado, String motivo, String referencia) {
+        String decision = resultado == null ? "" : resultado.trim().toUpperCase();
+        boolean salio = RepartoPago.LIQUIDADO.equals(decision);
+        if (!salio && !RepartoPago.FALLIDO.equals(decision)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica si el pago salió o no salió");
+        }
+        String razon = motivo == null ? "" : motivo.trim();
+        if (razon.length() < MINIMO_MOTIVO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Explica en al menos " + MINIMO_MOTIVO + " caracteres por qué se resuelve así");
+        }
+        String anotada = referencia == null ? "" : referencia.trim();
+        if (salio && anotada.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Anota la referencia del pago en Wompi");
+        }
+        if (anotada.length() > 80) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La referencia admite hasta 80 caracteres");
+        }
+
+        RepartoPago r = repartoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reparto no encontrado"));
+        LocalDateTime ahora = LocalDateTime.now();
+        if (!RepartoPago.PROCESANDO.equals(r.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se resuelve una línea en proceso (estado " + r.getEstado() + ")");
+        }
+        if (!sePuedeResolver(r, ahora)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este pago sigue en curso: espera a que Wompi responda "
+                    + "o a que pasen " + MINUTOS_PARA_RESOLVER + " minutos");
+        }
+
+        String referenciaLinea = r.getReferenciaLiquidacion() != null ? r.getReferenciaLiquidacion() : (anotada.isEmpty() ? null : anotada);
+        String modo = r.getModoLiquidacion() != null ? r.getModoLiquidacion() : dispersion.modo();
+        String nota = recortar("Resuelto a mano por " + correoAdmin + ": " + razon
+                + (anotada.isEmpty() ? "" : " (ref. " + anotada + ")"), 500);
+        int filas = salio
+                ? repartoRepository.marcarLiquidado(id, ahora, modo, referenciaLinea, correoAdmin, nota)
+                : repartoRepository.marcarFallido(id, recortar("No salió, resuelto a mano: " + razon, 300), modo);
+        if (filas == 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La línea cambió mientras se resolvía: revísala de nuevo");
+        }
+        resoluciones.save(ResolucionReparto.builder().repartoId(id).resultado(decision).motivo(recortar(razon, 500))
+                .referencia(referenciaLinea).resueltoPor(correoAdmin).fecha(ahora).build());
+        return repartoRepository.findById(id).orElseThrow();
+    }
+
     // ─── Núcleo ──────────────────────────────────────────────────────────────
 
     /** Toma la línea, ejecuta la dispersión y deja LIQUIDADO o FALLIDO. Devuelve la línea ya reescrita. */
     private RepartoPago ejecutar(Long id, SolicitudDispersion solicitud) {
-        if (repartoRepository.tomarParaLiquidar(id) == 0) {
+        if (repartoRepository.tomarParaLiquidar(id, LocalDateTime.now()) == 0) {
             throw noSePudoTomar(id);
         }
         RepartoPago tomada = repartoRepository.findById(id).orElseThrow();
@@ -340,10 +412,19 @@ public class LiquidacionService {
         if (evento == null || evento.get("status") == null) return;
         String status = String.valueOf(evento.get("status")).toUpperCase();
 
-        RepartoPago reparto = (payout != null ? lineaDelPayout(cadena(payout.get("reference")), cadena(payout.get("id")))
-                : lineaDelPayout(null, cadena(transaccion.get("payoutId")))).orElse(null);
+        String referencia = payout != null ? cadena(payout.get("reference")) : null;
+        String payoutId = payout != null ? cadena(payout.get("id")) : cadena(transaccion.get("payoutId"));
+        boolean confirmado = CONFIRMACIONES_PAYOUT.contains(status);
+
+        RepartoPago reparto = lineaDelPayout(referencia, payoutId).orElse(null);
         if (reparto == null) {
             log.warn("Evento de Wompi Payouts sin línea de reparto: {}", evento.get("id"));
+            // La línea se reintentó con otra referencia después de darla por no salida: pudo pagarse dos veces
+            if (confirmado && resueltaComoNoSalida(referencia, payoutId)) {
+                avisos.alertaAdmin("Posible doble pago", "Wompi confirmó el pago " + (referencia != null ? referencia : payoutId)
+                        + ", que se había resuelto a mano como no salido y ya no es el intento vigente de su línea. "
+                        + "Revísalo en el panel de Wompi.");
+            }
             return;
         }
 
@@ -356,11 +437,19 @@ public class LiquidacionService {
                         + reparto.getBeneficiarioNombre() + " (reparto #" + reparto.getId() + ") falló en la entidad bancaria: "
                         + motivo + ". Revisa la cuenta bancaria del negocio y reintenta desde Liquidaciones.");
             }
-        } else if (CONFIRMACIONES_PAYOUT.contains(status)) {
+        } else if (confirmado) {
             log.info("Wompi Payout confirmado para reparto #{}", reparto.getId());
             if (RepartoPago.PROCESANDO.equals(reparto.getEstado())) {
                 repartoRepository.marcarLiquidado(reparto.getId(), LocalDateTime.now(), "WOMPI",
                         reparto.getReferenciaLiquidacion(), "WOMPI_WEBHOOK", "Confirmado vía webhook Wompi ACH");
+            } else if (RepartoPago.FALLIDO.equals(reparto.getEstado())
+                    && resoluciones.existsByRepartoIdAndResultado(reparto.getId(), RepartoPago.FALLIDO)
+                    && repartoRepository.confirmarPagoTardio(reparto.getId(), LocalDateTime.now(), "WOMPI_WEBHOOK",
+                            "Wompi confirmó el pago después de resolverlo a mano como no salido") > 0) {
+                // Solo con una resolución manual: un FALLIDO del banco no se revive con un evento fuera de orden
+                avisos.alertaAdmin("Pago confirmado tarde", "Wompi confirmó el pago de " + reparto.getBeneficiarioNombre()
+                        + " (reparto #" + reparto.getId() + ") que se había resuelto como no salido. La línea queda "
+                        + "liquidada: no la reintentes.");
             }
         } else {
             log.info("Estado de Wompi Payouts sin acción para reparto #{}: {}", reparto.getId(), status);
@@ -375,6 +464,11 @@ public class LiquidacionService {
                 ? repartoRepository.findFirstByReferenciaLiquidacionStartingWith(referencia) : java.util.Optional.empty();
         if (porReferencia.isPresent() || payoutId == null) return porReferencia;
         return repartoRepository.findFirstByReferenciaLiquidacionEndingWith("[ID:" + payoutId + "]");
+    }
+
+    private boolean resueltaComoNoSalida(String referencia, String payoutId) {
+        return (referencia != null && resoluciones.existsByResultadoAndReferenciaStartingWith(RepartoPago.FALLIDO, referencia))
+                || (payoutId != null && resoluciones.existsByResultadoAndReferenciaEndingWith(RepartoPago.FALLIDO, "[ID:" + payoutId + "]"));
     }
 
     /** failureReason es { code, message } en los eventos de transacción. */

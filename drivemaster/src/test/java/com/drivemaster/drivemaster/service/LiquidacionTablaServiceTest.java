@@ -112,7 +112,8 @@ class LiquidacionTablaServiceTest {
     void elResumenSeparaEstadosYDiceCuantoDeLoPagadoFueSimulado() {
         when(repartos.resumenSinPagar()).thenReturn(List.of(
                 new Object[] { RepartoPago.PENDIENTE, 18L, 1_033_620.0 },
-                new Object[] { RepartoPago.POR_LIQUIDAR, 2L, 90_000.0 }));
+                new Object[] { RepartoPago.POR_LIQUIDAR, 2L, 90_000.0 },
+                new Object[] { RepartoPago.PROCESANDO, 1L, 40_000.0 }));
         when(repartos.resumenPagado(LocalDateTime.of(2026, 10, 1, 0, 0), LocalDateTime.of(2026, 11, 1, 0, 0))).thenReturn(List.of(
                 new Object[] { "SIMULADO", 19L, 1_532_325.0 },
                 new Object[] { "WOMPI", 1L, 50_000.0 }));
@@ -122,6 +123,7 @@ class LiquidacionTablaServiceTest {
         assertEquals(new LiquidacionTablaService.Cifra(2, 90_000), r.porPagar());
         assertEquals(new LiquidacionTablaService.Cifra(18, 1_033_620), r.enEspera());
         assertEquals(new LiquidacionTablaService.Cifra(0, 0), r.fallidas());
+        assertEquals(new LiquidacionTablaService.Cifra(1, 40_000), r.enProceso());
         assertEquals(new LiquidacionTablaService.Cifra(20, 1_582_325), r.pagadoMes());
         assertEquals(1_532_325, r.pagadoMesSimulado());
     }

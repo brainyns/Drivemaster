@@ -3,8 +3,8 @@ import Campo from "./Campo";
 import PieFormulario from "./PieFormulario";
 import { BANCOS_COLOMBIA, TIPOS_CUENTA, TIPOS_DOCUMENTO } from "../../utils/bancosColombia";
 
-const NUMERO_CUENTA_REGEX = /^[0-9\-]{4,25}$/;
-const NUMERO_DOC_REGEX = /^[0-9a-zA-Z\-]{4,30}$/;
+const NUMERO_CUENTA_REGEX = /^[0-9-]{4,25}$/;
+const NUMERO_DOC_REGEX = /^[0-9a-zA-Z-]{4,30}$/;
 
 export default function FormCuentaBancaria({ cuenta, onGuardar, onCancelar }) {
   const [bancoCodigo, setBancoCodigo] = useState(cuenta?.bancoCodigo || BANCOS_COLOMBIA[0].codigo);

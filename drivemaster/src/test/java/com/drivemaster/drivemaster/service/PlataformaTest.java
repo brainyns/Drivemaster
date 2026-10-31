@@ -192,7 +192,7 @@ class PlataformaTest {
 
         LiquidacionService servicio = new LiquidacionService(repartos, mock(ReembolsoRepository.class),
                 mock(PagoRepository.class), mock(com.drivemaster.drivemaster.service.dispersion.DispersionService.class),
-                mock(AvisosSolicitudServicio.class));
+                mock(AvisosSolicitudServicio.class), mock(com.drivemaster.drivemaster.repository.mysql.ResolucionRepartoRepository.class));
 
         assertEquals(List.of(tienda), servicio.repartos(null));
         assertTrue(servicio.repartos("informativa").isEmpty());

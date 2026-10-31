@@ -4,10 +4,11 @@ import { RANGOS_RAPIDOS, claveDeRango, errorRango, rangoRapido } from "./reglasT
 /**
  * El rango de fechas como lista desplegable (Todas, Hoy, Últimos 7 días, Este mes, Personalizado), para las barras de
  * filtros en una sola fila. Personalizado abre las dos fechas debajo. Las mismas reglas que FiltroFechas (hora de
- * Colombia); valor es { desde, hasta } y onCambiar recibe el nuevo.
+ * Colombia); valor es { desde, hasta } y onCambiar recibe el nuevo. rangos cambia los accesos rápidos y su orden;
+ * todoAlFinal lleva "Todo" después de ellos, para las pantallas que empiezan con un rango puesto.
  */
-export default function SelectorFechas({ id, etiqueta = "Fecha", valor, onCambiar, className = "" }) {
-  const clave = claveDeRango(valor);
+export default function SelectorFechas({ id, etiqueta = "Fecha", valor, onCambiar, className = "", rangos = RANGOS_RAPIDOS, todoAlFinal = false }) {
+  const clave = claveDeRango(valor, new Date(), rangos);
   const [personalizado, setPersonalizado] = useState(clave === "personalizado");
   const elegida = personalizado || clave === "personalizado" ? "personalizado" : clave;
   const error = errorRango(valor);
@@ -24,8 +25,9 @@ export default function SelectorFechas({ id, etiqueta = "Fecha", valor, onCambia
         {etiqueta}
         <select id={id} className="ui-field__input" value={elegida} onChange={(e) => elegir(e.target.value)}
           aria-controls={elegida === "personalizado" ? `${id}-rango` : undefined}>
-          <option value="">Todas</option>
-          {RANGOS_RAPIDOS.map((r) => <option key={r.clave} value={r.clave}>{r.label}</option>)}
+          {!todoAlFinal && <option value="">Todas</option>}
+          {rangos.map((r) => <option key={r.clave} value={r.clave}>{r.label}</option>)}
+          {todoAlFinal && <option value="">Todo</option>}
           <option value="personalizado">Personalizado</option>
         </select>
       </label>

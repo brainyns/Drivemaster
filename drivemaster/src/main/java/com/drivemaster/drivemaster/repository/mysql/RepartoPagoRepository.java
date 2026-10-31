@@ -95,7 +95,7 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
 
     /** Lo que falta pagar por estado, sin filtros: [estado, líneas, suma]. */
     @Query("select r.estado, count(r), coalesce(sum(r.monto), 0) from RepartoPago r where r.beneficiarioTipo <> 'PLATAFORMA' "
-            + "and r.estado in ('PENDIENTE', 'POR_LIQUIDAR', 'FALLIDO') group by r.estado")
+            + "and r.estado in ('PENDIENTE', 'POR_LIQUIDAR', 'FALLIDO', 'PROCESANDO') group by r.estado")
     List<Object[]> resumenSinPagar();
 
     /** Lo pagado en un periodo por modo: [modo, líneas, suma]. Las antiguas sin fecha de pago cuentan por la de creación. */
@@ -130,12 +130,12 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
      */
     @Modifying
     @Transactional
-    @Query("update RepartoPago r set r.estado = 'PROCESANDO', r.motivoFallo = null, "
+    @Query("update RepartoPago r set r.estado = 'PROCESANDO', r.motivoFallo = null, r.fechaProcesando = :ahora, "
             + "r.intentosLiquidacion = coalesce(r.intentosLiquidacion, 0) + 1 "
             + "where r.id = :id and r.estado in ('POR_LIQUIDAR', 'FALLIDO') "
             + "and not exists (select 1 from Reembolso b where b.pagoId = r.pagoId and b.estado = 'PENDIENTE' "
             + "and (b.pedidoTiendaId is null or b.pedidoTiendaId = r.pedidoTiendaId))")
-    int tomarParaLiquidar(@Param("id") Long id);
+    int tomarParaLiquidar(@Param("id") Long id, @Param("ahora") LocalDateTime ahora);
 
     @Modifying
     @Transactional
@@ -160,6 +160,14 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
     @Query("update RepartoPago r set r.estado = 'ANULADO', r.nota = :nota "
             + "where r.id = :id and r.estado = 'PENDIENTE'")
     int anularPendiente(@Param("id") Long id, @Param("nota") String nota);
+
+    /** Wompi confirmó el pago de una línea que el ADMIN había dado por no salida: el dinero sí salió. */
+    @Modifying
+    @Transactional
+    @Query("update RepartoPago r set r.estado = 'LIQUIDADO', r.fechaLiquidacion = :ahora, r.liquidadoPor = :por, "
+            + "r.nota = :nota, r.motivoFallo = null where r.id = :id and r.estado = 'FALLIDO'")
+    int confirmarPagoTardio(@Param("id") Long id, @Param("ahora") LocalDateTime ahora, @Param("por") String por,
+                            @Param("nota") String nota);
 
     /** Wompi no confirmó el pago: la línea sigue PROCESANDO, con la referencia para reconocer su evento. */
     @Modifying

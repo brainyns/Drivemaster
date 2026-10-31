@@ -47,15 +47,15 @@ public class LiquidacionTablaService {
     /** Solo lo necesario para reconocer la cuenta destino antes de pagar. */
     public record CuentaDestino(String banco, String tipoCuenta, String numero) {}
 
-    /** La línea con sus campos de siempre, más beneficiario (nombre actual) y cuenta (null si no tiene). */
-    public record Fila(@JsonUnwrapped RepartoPago reparto, String beneficiario, CuentaDestino cuenta) {}
+    /** La línea con sus campos de siempre, más beneficiario (nombre actual), cuenta (null si no tiene) y si se puede resolver a mano. */
+    public record Fila(@JsonUnwrapped RepartoPago reparto, String beneficiario, CuentaDestino cuenta, boolean sePuedeResolver) {}
 
     public record Cifra(long cantidad, double monto) {
         static final Cifra CERO = new Cifra(0, 0);
     }
 
     /** pagadoMes incluye lo simulado: pagadoMesSimulado dice cuánto de eso no movió dinero. */
-    public record Resumen(Cifra porPagar, Cifra enEspera, Cifra fallidas, Cifra pagadoMes, double pagadoMesSimulado) {}
+    public record Resumen(Cifra porPagar, Cifra enEspera, Cifra fallidas, Cifra enProceso, Cifra pagadoMes, double pagadoMesSimulado) {}
 
     public record Tabla(Pagina<Fila> repartos, long pendientes, double montoPendiente, Resumen resumen) {}
 
@@ -90,7 +90,7 @@ public class LiquidacionTablaService {
         String nombre = nombreActual != null && !nombreActual.isBlank() ? nombreActual : r.getBeneficiarioNombre();
         boolean conCuenta = cuenta != null && cuenta.getNumeroCuenta() != null && !cuenta.getNumeroCuenta().isBlank();
         return new Fila(r, nombre, !conCuenta ? null : new CuentaDestino(cuenta.getBanco(), cuenta.getTipoCuenta(),
-                WompiPayoutService.enmascarar(cuenta.getNumeroCuenta())));
+                WompiPayoutService.enmascarar(cuenta.getNumeroCuenta())), LiquidacionService.sePuedeResolver(r, LocalDateTime.now()));
     }
 
     Resumen resumen(LocalDate hoy) {
@@ -107,7 +107,8 @@ public class LiquidacionTablaService {
         }
         return new Resumen(porEstado.getOrDefault(RepartoPago.POR_LIQUIDAR, Cifra.CERO),
                 porEstado.getOrDefault(RepartoPago.PENDIENTE, Cifra.CERO),
-                porEstado.getOrDefault(RepartoPago.FALLIDO, Cifra.CERO), pagado, simulado);
+                porEstado.getOrDefault(RepartoPago.FALLIDO, Cifra.CERO),
+                porEstado.getOrDefault(RepartoPago.PROCESANDO, Cifra.CERO), pagado, simulado);
     }
 
     private static Cifra cifra(Object[] fila) {

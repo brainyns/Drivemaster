@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ALERTAS_PEDIDO, ENTREGAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, SIN_PLAN, chipsAlerta, conteoGrupos, filaConAlerta,
-  hayFiltrosPedidos, actividadNegocio, sePuedePagar, textoConcepto, referenciaLinea, pendientesLista, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
+  hayFiltrosPedidos, actividadNegocio, sePuedePagar, textoConcepto, referenciaLinea, textoCuenta, tarjetasLiquidaciones, fueraDelRango, avisoModo, faltaParaResolver, fechaLinea, porRevisar, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
   perfilNegocio, urgentesDashboard,
 } from "../src/pages/admin/plataformaAdmin.js";
 import {
@@ -268,11 +268,83 @@ test("Liquidaciones: la referencia es el pedido si lo hay; las compras de catál
   assert.deepEqual(referenciaLinea({}), { tipo: null, id: null, texto: "—" });
 });
 
-test("Liquidaciones: lo que espera la entrega no se presenta como por pagar", () => {
-  assert.deepEqual(pendientesLista("PENDIENTE", 18, 18), { titulo: "En espera de entrega", pie: "18 de 18 registros en espera de entrega" });
-  assert.deepEqual(pendientesLista("POR_LIQUIDAR", 1, 1), { titulo: "Por pagar", pie: "1 de 1 registro por pagar" });
-  assert.equal(pendientesLista("FALLIDO", 2, 2).pie, "2 de 2 registros por reintentar");
-  assert.equal(pendientesLista("", 3, 9).pie, "3 de 9 registros sin pagar", "Todos mezcla estados");
+const resumenLiq = {
+  porPagar: { cantidad: 1, monto: 90000 }, enEspera: { cantidad: 18, monto: 1033620 }, fallidas: { cantidad: 0, monto: 0 },
+  enProceso: { cantidad: 0, monto: 0 }, pagadoMes: { cantidad: 20, monto: 1582325 }, pagadoMesSimulado: 1532325,
+};
+
+test("Liquidaciones: tres tarjetas; lo que espera la entrega no se presenta como por pagar y lo simulado va aparte", () => {
+  const [pagar, espera, pagado] = tarjetasLiquidaciones(resumenLiq);
+  assert.deepEqual([pagar.titulo, pagar.pie, pagar.estado, pagar.tono], ["Por pagar", "1 pago listo", "POR_LIQUIDAR", "accion"]);
+  assert.deepEqual([espera.titulo, espera.pie, espera.estado, espera.tono], ["En espera de entrega", "18 pagos", "PENDIENTE", undefined]);
+  assert.equal(pagado.estado, "LIQUIDADO");
+  assert.ok(pagado.pie.startsWith("20 pagos · ") && pagado.pie.endsWith(" simulados"), pagado.pie);
+  assert.equal(tarjetasLiquidaciones({ ...resumenLiq, pagadoMesSimulado: 0 })[2].pie, "20 pagos");
+  assert.equal(tarjetasLiquidaciones({ ...resumenLiq, porPagar: { cantidad: 0, monto: 0 } })[0].tono, undefined);
+  assert.deepEqual(tarjetasLiquidaciones(null), []);
+});
+
+test("Liquidaciones: lo que falló o sigue sin confirmar se avisa aunque esté dentro de Más", () => {
+  const conProblemas = { ...resumenLiq, fallidas: { cantidad: 2, monto: 1 }, enProceso: { cantidad: 1, monto: 1 } };
+  assert.deepEqual(porRevisar(conProblemas, "POR_LIQUIDAR").map((r) => r.texto), ["2 pagos fallaron", "1 pago sin confirmar"]);
+  assert.deepEqual(porRevisar(conProblemas, "FALLIDO").map((r) => r.estado), ["PROCESANDO"], "en su propia lista no se repite");
+  assert.deepEqual(porRevisar(resumenLiq, "POR_LIQUIDAR"), []);
+  assert.deepEqual(porRevisar(null, "POR_LIQUIDAR"), []);
+});
+
+test("Liquidaciones: empieza en Este mes, sin nada guardado, y las tarjetas no cambian las fechas", () => {
+  const p = leer("../src/pages/Liquidaciones.jsx");
+  assert.ok(p.includes('useState(() => rangoRapido("mes"))'));
+  assert.ok(!/localStorage|sessionStorage/.test(p), "el rango no se guarda en el navegador");
+  assert.ok(p.includes('verPagadoDelMes() : elegirEstado(t.estado)'), "una tarjeta no deja la lista en Todo");
+  assert.ok(p.includes("fechasAntesDeVerTodo.current ??= fechas"), "Ver todo es de un momento: al volver a un estado sigue el rango");
+});
+
+test("Liquidaciones en celular: el chat no tapa la lista y la página no deja franja gris", () => {
+  const chat = leer("../src/components/chat/chat.css");
+  assert.match(chat, /@media \(max-width: 760px\) \{\s*body:has\(\.liq-root\) \.chat-widget-container:not\(\.abierto\) \{ display: none; \}/);
+  const css = leer("../src/css/liquidaciones-plataforma.css");
+  assert.ok(css.includes(".app-content:has(.liq-root) { background: var(--ui-surface); }"));
+  assert.ok(!css.includes("--alto-header"), "--alto-header es la cabecera pública, no la del panel");
+});
+
+test("Liquidaciones: la fecha de la lista es corta y sin hora", () => {
+  assert.equal(fechaLinea("2026-10-28T09:30:00"), "28 oct 2026");
+  assert.equal(fechaLinea(null), "—");
+});
+
+test("Liquidaciones: la cuenta sale como Banco · Tipo · número enmascarado", () => {
+  assert.equal(textoCuenta({ banco: "Davivienda", tipoCuenta: "AHORROS", numero: "****3210" }), "Davivienda · Ahorros · ****3210");
+  assert.equal(textoCuenta({ banco: "Nequi", numero: "****1111" }), "Nequi · ****1111");
+  assert.equal(textoCuenta(null), "");
+});
+
+test("Liquidaciones: lo pendiente de meses anteriores no queda escondido por el rango", () => {
+  const mes = { desde: "2026-11-01", hasta: "2026-11-30" };
+  assert.equal(fueraDelRango("PENDIENTE", resumenLiq, 0, mes), 18, "el primer día del mes no desaparecen las 18 en espera");
+  assert.equal(fueraDelRango("POR_LIQUIDAR", resumenLiq, 1, mes), 0);
+  assert.equal(fueraDelRango("POR_LIQUIDAR", resumenLiq, 0, { desde: "", hasta: "" }), 0, "sin rango no falta nada");
+  assert.equal(fueraDelRango("LIQUIDADO", resumenLiq, 0, mes), 0, "lo pagado se filtra por su fecha");
+  assert.equal(fueraDelRango("PENDIENTE", null, 0, mes), 0);
+});
+
+test("Liquidaciones: el aviso grande es para lo que no mueve dinero; con dinero real la línea discreta lo dice", () => {
+  assert.equal(avisoModo({ modo: "WOMPI", dineroReal: true }).grande, false);
+  assert.ok(avisoModo({ modo: "WOMPI", dineroReal: true }).texto.startsWith("Dinero real"));
+  assert.ok(avisoModo({ modo: "MANUAL", dineroReal: true }).texto.startsWith("Dinero real"));
+  assert.equal(avisoModo({ modo: "WOMPI", dineroReal: false }).grande, true);
+  assert.ok(avisoModo({ modo: "WOMPI", dineroReal: false }).texto.includes("Sandbox"));
+  assert.ok(avisoModo({ modo: "SIMULADO", dineroReal: false }).texto.includes("simulado"));
+  assert.equal(avisoModo(null), null);
+  assert.equal(avisoModo({ modo: "WOMPI" }), null, "sin saberlo no se afirma nada");
+});
+
+test("Liquidaciones: la salida manual exige decisión, motivo y, si salió, la referencia", () => {
+  assert.ok(faltaParaResolver({}));
+  assert.ok(faltaParaResolver({ resultado: "FALLIDO", motivo: "corto" }));
+  assert.equal(faltaParaResolver({ resultado: "FALLIDO", motivo: "Revisado en el panel" }), null);
+  assert.ok(faltaParaResolver({ resultado: "LIQUIDADO", motivo: "Revisado en el panel", referencia: "  " }));
+  assert.equal(faltaParaResolver({ resultado: "LIQUIDADO", motivo: "Revisado en el panel", referencia: "REF-1" }), null);
 });
 
 test("Liquidaciones: sistema compartido, estados con texto y el número de transferencia obligatorio en modo manual", () => {

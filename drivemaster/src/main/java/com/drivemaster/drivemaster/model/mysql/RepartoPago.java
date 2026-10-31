@@ -87,4 +87,6 @@ public class RepartoPago {
     @Column(length = 300)
     private String motivoFallo;
     private Integer intentosLiquidacion;
+    // Cuándo se tomó para pagarla: distingue un pago en curso de uno que quedó colgado
+    private LocalDateTime fechaProcesando;
 }

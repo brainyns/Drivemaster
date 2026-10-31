@@ -1,31 +1,146 @@
 /* ── Liquidaciones y reembolsos (SUPERADMIN, prefijo liq-, BEM) ────────────
    Chips, cifra, tabla, avisos y estados son de ui.css y panel-plataforma.css (pp-); el diálogo, de
-   admin-base.css. Aquí las celdas de la tabla y la fila fallida. Tokens --ui-*, los dos temas. */
+   admin-base.css. Aquí el fondo, las celdas de la tabla y los filtros. Tokens --ui-*, los dos temas. */
 
-.liq-resumen { grid-template-columns: minmax(0, 320px); }
+/* Blanco en tema claro: --ui-surface y no --ui-bg, que es gris. Va en el contenedor de la página porque este deja abajo
+   un espacio para el globo del chat, que si no quedaría como una franja gris. Las tarjetas se separan por su borde */
+.app-content:has(.liq-root) { background: var(--ui-surface); }
 
+.liq-modo { margin: 0 0 14px; font-size: 0.875rem; line-height: 1.5; color: var(--ui-muted); }
+.liq-modo strong { color: var(--ui-text); }
+
+.liq-resumen { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.liq-resumen--una { grid-template-columns: minmax(0, 320px); }
+
+/* Estados a la izquierda, fecha a la derecha */
+.liq-herramientas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+.liq-selectores { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.liq-selectores .ui-selector-fechas__lista { display: grid; gap: 4px; min-width: 180px; font-size: 0.8125rem; color: var(--ui-muted); }
+.liq-orden-movil { display: none; }
+
+/* "Más": un select nativo con forma de chip (teclado y celular resueltos por el navegador) */
+.liq-mas { position: relative; padding-right: 10px; }
+.liq-mas select {
+  appearance: none;
+  padding: 0 16px 0 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.liq-mas::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 6px;
+  height: 6px;
+  margin-top: -5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.liq-mas:has(.ui-chip__contador) { padding-right: 28px; }
+.liq-mas:has(.ui-chip__contador) select { padding-right: 0; }
+.liq-mas:has(select:focus-visible) { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+.liq-mas select:focus { outline: none; }
+.liq-mas--activa, .liq-mas--activa:hover { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-text); }
+
+.liq-revisar { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+
+/* Tabla: el beneficiario es lo primero que se lee y su cuenta cabe en una línea */
+.liq-tabla .ui-table__titulo { min-width: 230px; }
+.liq-beneficiario { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.liq-tipo {
+  padding: 1px 7px;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-full);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ui-muted);
+}
 .liq-fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .liq-ref { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; white-space: nowrap; }
+.liq-ref .pp-sub { letter-spacing: normal; }
 .pp-sub.liq-ref { white-space: normal; overflow-wrap: anywhere; }
 .liq-texto { min-width: 11ch; max-width: 36ch; overflow-wrap: break-word; }
-.liq-estado { min-width: 180px; }
+.liq-estado { min-width: 170px; }
 .liq-estado .pp-sub { margin-top: 6px; line-height: 1.45; }
+.liq-monto { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ui-text); }
 .liq-fallo.pp-sub { color: var(--ui-error); }
 .liq-acciones .pp-sub { max-width: 22ch; margin-left: auto; white-space: normal; text-align: right; }
+
+/* Portátil pequeño y tableta: la fecha pasa debajo de la referencia para que la acción quepa junto al monto, y como
+   se pierde su encabezado aparece el selector de orden */
+.liq-fecha-sub { display: none; }
+@media (min-width: 761px) and (max-width: 1240px) {
+  .liq-tabla--repartos th:nth-child(3), .liq-tabla--repartos td:nth-child(3) { display: none; }
+  .liq-tabla--repartos .liq-fecha-sub { display: block; }
+  .liq-tabla--repartos th, .liq-tabla--repartos td { padding-inline: 10px; }
+  .liq-tabla .ui-table__titulo { min-width: 180px; }
+  .liq-estado { min-width: 130px; }
+  .liq-orden-movil { display: block; }
+}
+
+/* Con el menú lateral abierto las tarjetas quedan angostas: la cifra se achica antes de partirse en dos líneas */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .liq-resumen .ui-indicador__valor { font-size: 1.3rem; overflow-wrap: normal; }
+}
 
 /* La línea fallida se tiñe apenas: el chip y el motivo dicen qué pasó */
 .liq-fila--fallida > td { background: color-mix(in srgb, var(--ui-error) 5%, transparent); }
 
+/* Diálogos */
+.liq-confirmacion { margin: 0 0 14px; }
+.liq-dinero {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--primary);
+  background: var(--primary-soft);
+  border-radius: var(--ui-r-sm);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ui-text);
+}
+.liq-dinero--prueba { border-left-color: var(--ui-aviso); background: var(--ui-surface-2); }
+.liq-resultado { display: grid; gap: 8px; margin: 0 0 14px; padding: 0; border: 0; }
+.liq-resultado legend { margin-bottom: 6px; padding: 0; font-size: 0.875rem; font-weight: 600; color: var(--ui-text); }
+.liq-resultado .ui-opcion { display: flex; width: 100%; box-sizing: border-box; }
+.liq-falta { margin: 0 0 10px; font-size: 0.8125rem; color: var(--ui-muted); }
+
 @media (max-width: 760px) {
-  .liq-resumen { grid-template-columns: minmax(0, 1fr); }
-  .ui-table--tarjetas .liq-estado { flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+  /* Tarjetas en filas bajas: las tres cifras a la vista y la lista cerca */
+  .liq-resumen, .liq-resumen--una { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .liq-resumen .ui-indicador {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 12px;
+    padding: 9px 14px;
+  }
+  .liq-resumen .ui-indicador__titulo { grid-column: 1; padding-right: 0; }
+  .liq-resumen .ui-indicador__valor { grid-column: 2; grid-row: 1 / span 2; font-size: 1.15rem; }
+  .liq-resumen .ui-indicador__pie { grid-column: 1; font-size: 0.75rem; }
+  .liq-resumen .ui-indicador__flecha { display: none; }
+
+  /* Fecha y orden lado a lado; con el rango personalizado abierto, una debajo de otra para que quepan las dos fechas */
+  .liq-herramientas { flex-direction: column; align-items: stretch; }
+  .liq-selectores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 10px; }
+  .liq-selectores:has(.ui-fechas__rango) { grid-template-columns: minmax(0, 1fr); }
+  .liq-selectores .ui-selector-fechas__lista { min-width: 0; }
+  .liq-selectores .ui-field__input { padding-inline: 10px 4px; font-size: 0.875rem; }
+  .liq-orden-movil { display: block; }
+
+  .ui-table--tarjetas .liq-estado { flex-wrap: wrap; min-width: 0; }
   .ui-table--tarjetas .liq-estado .pp-sub { flex-basis: 100%; text-align: right; }
   .ui-table--tarjetas .liq-texto { max-width: none; }
+  .liq-tabla .ui-table__titulo { min-width: 0; }
+  .ui-table--tarjetas .liq-ref { white-space: normal; }
+  .ui-table--tarjetas .liq-monto { font-size: 1.05rem; }
   .ui-table--tarjetas .liq-fila--fallida { border-color: color-mix(in srgb, var(--ui-error) 45%, var(--ui-line)); }
   .ui-table--tarjetas .liq-fila--fallida > td { background: none; }
   .ui-table--tarjetas .liq-acciones { flex-wrap: wrap; }
+  .ui-table--tarjetas .liq-acciones .ui-btn { flex: 1 1 auto; min-height: 44px; }
 }
-
-/* Fecha y orden de las liquidaciones (paginadas en el servidor) */
-.liq-herramientas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
-.liq-herramientas .ui-fechas { flex: 1 1 420px; }
