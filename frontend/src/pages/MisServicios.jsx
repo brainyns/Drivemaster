@@ -512,6 +512,19 @@ export default function MisServicios({
         </EstadoVacio>
       )}
 
+      {solicitudes.length > 0 && (
+        <dl className="ms-resumen" aria-label="Resumen de tus servicios">
+          <div className="ms-resumen__dato ms-resumen__dato--activo">
+            <dt>En curso</dt>
+            <dd>{conteo.enCurso}</dd>
+          </div>
+          <div className="ms-resumen__dato">
+            <dt>Finalizadas</dt>
+            <dd>{conteo.finalizadas}</dd>
+          </div>
+        </dl>
+      )}
+
       {solicitudes.length > MINIMO_PARA_FILTRAR && (
         <div className="ms-filtros" role="group" aria-label="Filtrar servicios">
           {FILTROS_SERVICIOS.map((f) => (
@@ -535,9 +548,10 @@ export default function MisServicios({
               <button className="ss-tarjeta ms-tarjeta" onClick={() => setSeleccionadaId(s.id)}>
                 <span className="ss-tarjeta__cabecera">
                   <strong className="ss-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
-                  <ChipServicio estado={s.estado} />
+                  {s.vehiculoPlaca && <span className="ui-placa ui-placa--chica">{s.vehiculoPlaca}</span>}
+                  <span className="ss-meta">#{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
+                  <span className="ms-tarjeta__estado"><ChipServicio estado={s.estado} /></span>
                 </span>
-                <span className="ss-meta">Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
                 <span className="ss-meta ss-tarjeta__sintomas">{s.sintomas}</span>
                 <span className="ms-tarjeta__pie">
                   <span className="ss-meta">

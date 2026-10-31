@@ -4,6 +4,38 @@
 
 .ms-alerta { margin-bottom: var(--ui-sp-4); }
 
+/* Resumen: dos datos alineados con las columnas de la lista */
+.ms-resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 var(--ui-sp-4);
+}
+
+.ms-resumen__dato {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-r-lg);
+}
+
+.ms-resumen__dato dt { font-size: 0.875rem; font-weight: 600; color: var(--text-muted); }
+
+.ms-resumen__dato dd {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.ms-resumen__dato--activo dd { color: var(--primary-text); }
+
 .ms-filtros {
   display: flex;
   flex-wrap: wrap;
@@ -17,16 +49,20 @@
   list-style: none;
 }
 
-.ms-tarjeta { width: 100%; text-align: left; }
+/* Tarjeta compacta: vehículo, placa, referencia y estado en una fila; si no caben, bajan de línea */
+.ms-tarjeta { width: 100%; height: 100%; padding: 14px 16px; text-align: left; }
 
-.ms-tarjeta .ss-tarjeta__cabecera { align-items: flex-start; }
-.ms-tarjeta .ss-tarjeta__titulo { font-size: 1.1rem; line-height: 1.3; }
+.ms-tarjeta .ss-tarjeta__cabecera { justify-content: flex-start; gap: 4px 10px; }
+.ms-tarjeta .ss-tarjeta__titulo { font-size: 1rem; line-height: 1.3; }
+.ms-tarjeta .ui-placa--chica { margin-left: 0; }
+.ms-tarjeta__estado { margin-left: auto; }
 
 .ms-tarjeta__pie {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-top: auto;
 }
 
 .ms-tarjeta__flecha {
@@ -47,6 +83,19 @@
   margin: 10px 0 0;
   font-size: 0.875rem;
   color: var(--ui-muted);
+}
+
+/* Servicios anteriores: mismas tarjetas compactas que la lista */
+.sv-anteriores .sv-anterior { padding: 14px 16px; }
+.sv-anteriores .ss-tarjeta__titulo { font-size: 1rem; }
+
+@media (min-width: 900px) {
+  .sv-list.ms-lista,
+  .sv-anteriores .sv-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
