@@ -194,7 +194,12 @@ function App() {
   // true si la tienda (rol TIENDA) aún no completó ciudad, dirección y horario: no se muestra en el catálogo
   const [tiendaIncompleta, setTiendaIncompleta] = useState(false);
 
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+  // El diseño base es claro; solo se recuerda lo que el usuario elige con el toggle. La clave vieja "theme"
+  // se guardaba en cada carga (no distingue una elección real), por eso se descarta.
+  const [theme, setTheme] = useState(() => {
+    localStorage.removeItem("theme");
+    return localStorage.getItem("temaElegido") || "light";
+  });
 
   const [ivaRate, setIvaRate] = useState(DEFAULT_IVA);
 
@@ -214,10 +219,13 @@ function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme(prev => prev === "dark" ? "light" : "dark");
+  const toggleTheme = () => {
+    const nuevo = theme === "dark" ? "light" : "dark";
+    localStorage.setItem("temaElegido", nuevo);
+    setTheme(nuevo);
+  };
 
   useEffect(() => {
     localStorage.setItem("solicitudItems", JSON.stringify(solicitudItems));

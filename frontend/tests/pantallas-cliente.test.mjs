@@ -67,6 +67,15 @@ test("Mis servicios: filtros por estado, chips con texto, sin kickers y estados 
   assert.doesNotMatch(leer("../src/css/solicitud-servicio.css"), /border-left: 4px/);
 });
 
+test("Tema: el diseño base es claro y solo se recuerda lo que el usuario elige con el toggle", () => {
+  const app = leer("../src/App.jsx");
+  assert.match(app, /localStorage\.getItem\("temaElegido"\) \|\| "light"/);
+  assert.match(leer("../index.html"), /<html[^>]*data-theme="light"/, "sin destello oscuro antes de montar React");
+  // La clave vieja se guardaba en cada carga: no se vuelve a leer ni a escribir
+  assert.doesNotMatch(app, /getItem\("theme"\)|setItem\("theme"/);
+  assert.equal((app.match(/setItem\("temaElegido"/g) || []).length, 1, "se guarda solo desde el toggle");
+});
+
 test("Mi perfil: secciones de datos, seguridad y preferencias, con validación y aviso al guardar", async () => {
   const { validarClave, validarDatos, cuerpoPerfil, datosDesdePerfil } = await import("../src/pages/reglasPerfil.js");
   assert.deepEqual(Object.keys(validarDatos({ nombre: " ", ciudad: "", telefono: "abc" })), ["nombre", "ciudad", "telefono"]);
