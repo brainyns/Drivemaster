@@ -98,6 +98,12 @@ public class LiquidacionController {
         return ResponseEntity.ok(service.marcarReembolsado(id, auth.getName(), body != null ? body.get("nota") : null));
     }
 
+    /** El negocio ya devolvió lo que quedó a favor de DriveMaster en este reembolso. */
+    @PatchMapping("/reembolsos/{id}/saldo-cobrado")
+    public ResponseEntity<Reembolso> saldoCobrado(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(service.marcarSaldoCobrado(id, auth.getName()));
+    }
+
     /** Público para que Wompi pueda llamarlo: sin firma válida (o sin secreto configurado) no se procesa nada. */
     @PostMapping("/webhook")
     public ResponseEntity<Void> webhook(@RequestBody Map<String, Object> body,

@@ -49,7 +49,7 @@ class InformesTiendaTest {
             return RETURNS_DEFAULTS.answer(invocation);
         });
         repartos = mock(RepartoPagoRepository.class);
-        servicio = new InformesTiendaService(mongo, repartos);
+        servicio = new InformesTiendaService(mongo, repartos, mock(ParametrosMarketplace.class));
     }
 
     @SuppressWarnings("unchecked")

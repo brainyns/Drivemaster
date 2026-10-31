@@ -33,7 +33,8 @@ public final class InformesTiendaDTO {
 
     /** estado del reparto → cuántos y cuánto. En espera es dinero que espera la entrega; por liquidar ya se puede pagar. */
     public record Liquidacion(double enEspera, long lineasEnEspera, double porLiquidar, long lineasPorLiquidar,
-                              double liquidado, long lineasLiquidadas, double anulado) {}
+                              double liquidado, long lineasLiquidadas, double anulado,
+                              com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO.Resumen desglose) {}
 
     public record Informes(LocalDateTime generadoEn, int mesesConsultados, VentasPorMes ventas,
                            List<ProductoVendido> productosMasVendidos, StockBajo stockBajo,

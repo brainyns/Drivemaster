@@ -40,12 +40,14 @@ class PlataformaReportesTest {
     private MongoTemplate mongo;
     private RepartoPagoRepository repartos;
     private PlataformaReportesService reportes;
+    private com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository reembolsos;
+    private ParametrosMarketplace parametros;
 
     @BeforeEach
     void setUp() {
         mongo = mock(MongoTemplate.class);
         repartos = mock(RepartoPagoRepository.class);
-        reportes = new PlataformaReportesService(mongo, repartos);
+        reportes = new PlataformaReportesService(mongo, repartos, reembolsos = mock(com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository.class), parametros = mock(ParametrosMarketplace.class));
     }
 
     @SuppressWarnings("unchecked")
@@ -250,6 +252,49 @@ class PlataformaReportesTest {
     private static RepartoPago linea(LocalDateTime fecha, double monto, String concepto) {
         return RepartoPago.builder().beneficiarioTipo(RepartoPago.PLATAFORMA).estado(RepartoPago.INFORMATIVA)
                 .monto(monto).concepto(concepto).fechaCreacion(fecha).build();
+    }
+
+    @Test
+    void laComisionRetenidaNoSeMezclaConLaInformativaYLaCobradaCuentaCuandoSePago() {
+        RepartoPago retenida = linea(LocalDateTime.of(2026, 9, 5, 10, 0), 30_000, "COTIZACION");
+        retenida.setEstado(RepartoPago.RETENIDA);
+        when(repartos.comisionDesde(any())).thenReturn(List.of(linea(LocalDateTime.of(2026, 10, 2, 10, 0), 7_000, "CATALOGO"), retenida));
+        when(repartos.comisionCobradaDesde(any())).thenReturn(List.of(RepartoPago.builder().comisionRetenida(20_000.0)
+                .fechaCreacion(LocalDateTime.of(2026, 9, 5, 10, 0)).fechaLiquidacion(LocalDateTime.of(2026, 10, 3, 10, 0)).build()));
+        when(repartos.comisionRetenidaPorEstado()).thenReturn(java.util.Arrays.asList(
+                new Object[]{"LIQUIDADO", "WOMPI", 20_000.0}, new Object[]{"PENDIENTE", "", 10_000.0}));
+        when(parametros.comisionRetenida()).thenReturn(true);
+
+        ComisionNeta r = reportes.comisionNeta(2, OCT_2026, LocalDateTime.of(2026, 10, 10, 9, 0));
+
+        assertEquals(7_000.0, r.registrada(), "la retenida no es informativa");
+        assertEquals(0.0, r.meses().get(0).cobrada(), "septiembre: se aprobó, pero no se había pagado");
+        assertEquals(20_000.0, r.meses().get(1).cobrada());
+        assertEquals(20_000.0, r.retenida().cobrada());
+        assertEquals(10_000.0, r.retenida().porCobrar());
+        assertTrue(r.comisionSeDescuenta());
+    }
+
+    @Test
+    void losSaldosAFavorPendientesSumanYSeListanParaCobrarlos() {
+        when(reembolsos.saldosAFavorPendientes()).thenReturn(List.of(
+                com.drivemaster.drivemaster.model.mysql.Reembolso.builder().id(7L).saldoAFavor(218_000.0).motivo("No llegó").referenciaPago("DRV-1").build(),
+                com.drivemaster.drivemaster.model.mysql.Reembolso.builder().id(8L).saldoAFavor(40_000.0).motivo("Sin retirar").referenciaPago("DRV-2").build()));
+
+        ComisionNeta r = reportes.comisionNeta(1, OCT_2026, LocalDateTime.of(2026, 10, 10, 9, 0));
+
+        assertEquals(258_000.0, r.saldosAFavor().total());
+        assertEquals(2, r.saldosAFavor().cantidad());
+        assertEquals(7L, r.saldosAFavor().items().get(0).id());
+        assertEquals("DRV-2", r.saldosAFavor().items().get(1).referenciaPago());
+    }
+
+    @Test
+    void sinSaldosElReporteDiceCero() {
+        ComisionNeta r = reportes.comisionNeta(1, OCT_2026, LocalDateTime.of(2026, 10, 10, 9, 0));
+
+        assertEquals(0.0, r.saldosAFavor().total());
+        assertTrue(r.saldosAFavor().items().isEmpty());
     }
 
     @Test

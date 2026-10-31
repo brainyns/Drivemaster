@@ -10,6 +10,7 @@ import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.StockBajo;
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.VentasPorMes;
 import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.model.Producto;
+import com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import org.bson.Document;
@@ -51,10 +52,12 @@ public class InformesTiendaService {
 
     private final MongoTemplate mongo;
     private final RepartoPagoRepository repartoRepository;
+    private final ParametrosMarketplace parametros;
 
-    public InformesTiendaService(MongoTemplate mongo, RepartoPagoRepository repartoRepository) {
+    public InformesTiendaService(MongoTemplate mongo, RepartoPagoRepository repartoRepository, ParametrosMarketplace parametros) {
         this.mongo = mongo;
         this.repartoRepository = repartoRepository;
+        this.parametros = parametros;
     }
 
     public Informes informes(String tiendaId, int meses) {
@@ -202,7 +205,8 @@ public class InformesTiendaService {
                 default -> { }
             }
         }
-        return new Liquidacion(espera, lEspera, listo, lListo, pagado, lPagado, anulado);
+        return new Liquidacion(espera, lEspera, listo, lListo, pagado, lPagado, anulado, DesgloseLiquidacionDTO.Resumen.de(
+                repartoRepository.desgloseDeNegocio(RepartoPago.TIENDA, tiendaId), parametros.comisionRetenida()));
     }
 
     // ─── Utilidades ──────────────────────────────────────────────────────────

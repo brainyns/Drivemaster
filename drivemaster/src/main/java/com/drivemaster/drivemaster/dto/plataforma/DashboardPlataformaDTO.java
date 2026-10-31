@@ -36,6 +36,8 @@ public record DashboardPlataformaDTO(
     /**
      * movido: suma de pagos aprobados del marketplace (no es ingreso de DriveMaster).
      * comisionRegistrada: suma de las líneas informativas de comisión, sin lo anulado por reembolsos (no es dinero cobrado).
+     * comisionRetenida: la que sí se descontó a los negocios; comisionSeDescuenta: la bandera. saldosAFavorPendientes: lo
+     *               que hay que cobrarles a los negocios a mano por reembolsos de líneas ya pagadas.
      * baseComision: sobre qué se calculó esa comisión: el valor sin IVA ni envío de cada pago desde comisionDesde, sin los
      *               reembolsos (comisionRegistrada = comisionPct % de baseComision).
      * porLiquidar: habilitado y aún sin pagar a los negocios; enEspera: espera la entrega o la recepción del pedido;
@@ -44,7 +46,28 @@ public record DashboardPlataformaDTO(
      */
     public record Dinero(double movido, double comisionRegistrada, double comisionPct, double porLiquidar,
                          double baseComision, LocalDateTime comisionDesde, double enEspera, double liquidado,
-                         double liquidadoSimulado, boolean liquidacionAutomatica) {}
+                         double liquidadoSimulado, boolean liquidacionAutomatica, ComisionRetenida comisionRetenida,
+                         boolean comisionSeDescuenta, double saldosAFavorPendientes) {}
+
+    /**
+     * Comisión retenida según el estado de la línea del negocio. cobrada: ya se pagó el neto, sin lo simulado.
+     * cobradaSimulada: la pagada en simulación, que no movió dinero. porCobrar: retenida en líneas aún sin pagar.
+     * anulada: la de líneas anuladas por reembolso.
+     */
+    public record ComisionRetenida(double cobrada, double cobradaSimulada, double porCobrar, double anulada) {
+
+        public static ComisionRetenida de(List<Object[]> filas) {
+            double cobrada = 0, simulada = 0, porCobrar = 0, anulada = 0;
+            for (Object[] f : filas) {
+                double monto = f[2] instanceof Number n ? n.doubleValue() : 0;
+                if ("ANULADO".equals(f[0])) anulada += monto;
+                else if (!"LIQUIDADO".equals(f[0])) porCobrar += monto;
+                else if ("SIMULADO".equals(f[1])) simulada += monto;
+                else cobrada += monto;
+            }
+            return new ComisionRetenida(cobrada, simulada, porCobrar, anulada);
+        }
+    }
 
     public record Alertas(long despachosAtrasados, long problemasEnvioAbiertos, long liquidacionesPendientes,
                           long liquidacionesFallidas, long reembolsosPendientes, double montoReembolsosPendientes,

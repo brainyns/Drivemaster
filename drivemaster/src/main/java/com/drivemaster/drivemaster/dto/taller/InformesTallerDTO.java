@@ -26,7 +26,9 @@ public final class InformesTallerDTO {
     /** Órdenes del flujo anterior: suma de la mano de obra de las finalizadas. Va aparte para no mezclar los dos flujos. */
     public record Anteriores(long ordenes, double manoDeObra) {}
 
-    public record Ingresos(Monto manoDeObra, Monto diagnostico, double anulado, Anteriores anteriores) {}
+    /** desglose: venta, comisión y lo que recibe el taller en el periodo; los montos de arriba ya son lo que recibe. */
+    public record Ingresos(Monto manoDeObra, Monto diagnostico, double anulado, Anteriores anteriores,
+                           com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO.Resumen desglose) {}
 
     /**
      * Minutos (con un decimal) entre la asignación al taller y su primera respuesta (aceptar y agendar, o rechazar),

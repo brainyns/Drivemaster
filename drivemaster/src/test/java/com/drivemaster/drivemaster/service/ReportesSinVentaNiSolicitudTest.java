@@ -55,7 +55,7 @@ class ReportesSinVentaNiSolicitudTest {
     void ningunReporteNiElPanelConsultaVentasNiSolicitudes() {
         MongoTemplate mongo = mongoQueDevuelveVacio();
         RepartoPagoRepository repartos = mock(RepartoPagoRepository.class);
-        PlataformaReportesService reportes = new PlataformaReportesService(mongo, repartos);
+        PlataformaReportesService reportes = new PlataformaReportesService(mongo, repartos, mock(com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository.class), mock(ParametrosMarketplace.class));
         PlataformaDashboardService dashboard = new PlataformaDashboardService(mongo, mock(PagoRepository.class), repartos,
                 mock(ReembolsoRepository.class), mock(SuscripcionRepository.class), mock(ParametrosMarketplace.class));
         PlataformaConsultasService consultas = new PlataformaConsultasService(mongo);

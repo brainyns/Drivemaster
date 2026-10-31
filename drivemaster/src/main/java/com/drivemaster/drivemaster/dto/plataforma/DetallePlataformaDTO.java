@@ -26,12 +26,13 @@ public final class DetallePlataformaDTO {
                        LocalDateTime fechaPago, String concepto, int pedidosDelPago) {}
 
     /** Una línea del reparto. delPago: la comisión se registra sobre todo el pago (puede cubrir varios pedidos). */
-    public record LineaReparto(String beneficiarioTipo, String beneficiario, double monto, String estado,
+    public record LineaReparto(String beneficiarioTipo, String beneficiario, double monto, Double montoBruto, Double comisionPct,
+                               Double comisionCalculada, Double comisionRetenida, String estado,
                                String modoLiquidacion, LocalDateTime fechaLiquidacion, String nota, boolean delPago) {}
 
     /** saldoAFavor: lo que ya se le había transferido al negocio por este dinero y hay que cobrarle a mano (null si nada). */
     public record Reembolso(double monto, String estado, String motivo, LocalDateTime fecha, LocalDateTime fechaRealizado,
-                            Double saldoAFavor) {}
+                            Double saldoAFavor, LocalDateTime saldoCobradoEn) {}
 
     /** ENVIO (a dónde y a quién) o RETIRO (en qué tienda y cuándo lo recogió); los de taller van al taller. */
     public record Entrega(String tipo, String receptor, String telefono, String direccion, String ciudad,

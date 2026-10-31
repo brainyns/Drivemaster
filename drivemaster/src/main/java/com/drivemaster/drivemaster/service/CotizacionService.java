@@ -18,6 +18,7 @@ import com.drivemaster.drivemaster.repository.CotizacionRepository;
 import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
 import com.drivemaster.drivemaster.util.CalculadoraCotizacion;
+import com.drivemaster.drivemaster.util.Dinero;
 import com.drivemaster.drivemaster.util.IvaTaller;
 import com.drivemaster.drivemaster.util.PdfCotizacionBuilder;
 import com.drivemaster.drivemaster.util.TokenSeguro;
@@ -109,7 +110,7 @@ public class CotizacionService {
         Taller taller = tallerOperativo(correoTaller);
         OrdenServicio orden = ordenCotizable(taller, ordenId);
         Cotizacion cotizacion = armar(taller, orden, r);
-        CotizacionDTO dto = CotizacionDTO.completa(cotizacion);
+        CotizacionDTO dto = paraTaller(cotizacion);
         dto.setPrediccionAprobacion(calcularPrediccion(taller, orden, cotizacion));
         return dto;
     }
@@ -179,7 +180,20 @@ public class CotizacionService {
                 new Update().set("estado", Cotizacion.REEMPLAZADA).set("tokenUsado", true), Cotizacion.class);
 
         avisos.cotizacionEmitida(cotizada, cotizacion, token.token());
-        return CotizacionDTO.completa(cotizacion);
+        return paraTaller(cotizacion);
+    }
+
+    /** La vista completa más lo que recibirá el taller. El cliente nunca ve estos campos. */
+    private CotizacionDTO paraTaller(Cotizacion c) {
+        CotizacionDTO dto = CotizacionDTO.completa(c);
+        double manoObra = c.getSubtotalManoObra() != null ? c.getSubtotalManoObra() : 0;
+        double ivaManoObra = c.getIvaManoObra() != null ? c.getIvaManoObra() : Math.round(manoObra * c.pctManoObra() / 100.0);
+        boolean seDescuenta = parametros.comisionRetenida();
+        double comision = Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(manoObra), parametros.comisionPct()));
+        dto.setComisionTaller(comision);
+        dto.setComisionSeDescuenta(seDescuenta);
+        dto.setRecibeTaller(manoObra + ivaManoObra - (seDescuenta ? comision : 0));
+        return dto;
     }
 
     // ─── Consulta con sesión ─────────────────────────────────────────────────
@@ -198,7 +212,7 @@ public class CotizacionService {
         }
         return cotizacionRepository.findByOrdenIdOrderByVersionDesc(orden.getId()).stream()
                 .filter(c -> !EstadoOrden.TALLER.equals(actor) || orden.getTallerId().equals(c.getTallerId()))
-                .map(CotizacionDTO::completa)
+                .map(c -> EstadoOrden.TALLER.equals(actor) ? paraTaller(c) : CotizacionDTO.completa(c))
                 .toList();
     }
 
@@ -241,7 +255,7 @@ public class CotizacionService {
     public List<CotizacionDTO> delTaller(String correoTaller) {
         String tallerId = tallerService.obtenerPorUsuario(correoTaller).getId();
         return cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc(tallerId).stream()
-                .map(CotizacionDTO::completa)
+                .map(this::paraTaller)
                 .toList();
     }
 

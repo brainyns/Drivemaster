@@ -42,6 +42,10 @@ public class Reembolso {
 
     // Lo que ya se le había transferido al negocio por este dinero: a favor de DriveMaster, se le cobra a mano
     private Double saldoAFavor;
+    // Cuándo se le cobró al negocio y quién lo anotó: sin esto el saldo sigue pendiente
+    private LocalDateTime saldoCobradoEn;
+    @Column(length = 120)
+    private String saldoCobradoPor;
 
     @Column(length = 500, nullable = false)
     private String motivo;

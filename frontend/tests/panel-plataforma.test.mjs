@@ -388,6 +388,7 @@ test("Reportes de plataforma: sistema compartido, comisión con Indicador y la c
   for (const llamada of ["reporteVentasPlataforma(", "reporteProductosPlataforma(", "reporteClientesPlataforma(",
     "reporteServiciosPlataforma(", "reporteComisionPlataforma("]) assert.ok(p.includes(llamada), `falta ${llamada}`);
   assert.ok(leer("../src/pages/DashboardPlataforma.jsx").includes('ir("reportes-plataforma", "comision")'));
+  assert.ok(p.includes('titulo="Saldos a favor pendientes"') && p.includes("datos.saldosAFavor?.total"), "el total de lo que hay que cobrarles a los negocios");
   assert.ok(leer("../src/App.jsx").includes("<ReportesPlataforma key={idSeleccionado || \"ventas\"} token={token} filtroInicial={idSeleccionado} />"));
 });
 

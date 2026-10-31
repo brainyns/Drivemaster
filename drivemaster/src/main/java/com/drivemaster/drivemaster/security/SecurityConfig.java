@@ -206,6 +206,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/*/problema/resolver", "/api/pedidos-tienda/*/retiro/resolver").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/orden/*/recibidos").hasRole("TALLER")
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/orden/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/*/liquidacion").hasRole("TIENDA")
                         .requestMatchers("/api/pedidos-tienda/**").denyAll()
                         // Finanzas: liquidaciones solo SUPERADMIN
                         .requestMatchers(HttpMethod.POST, "/api/liquidaciones/webhook").permitAll()

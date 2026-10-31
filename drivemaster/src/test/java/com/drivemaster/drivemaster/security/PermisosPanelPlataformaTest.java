@@ -58,6 +58,7 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.GET, "/api/reportes/dashboard", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/reportes/servicios/reportes", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/liquidaciones", "SUPERADMIN"),
+            ruta(HttpMethod.PATCH, "/api/liquidaciones/reembolsos/7/saldo-cobrado", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/dashboard", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/productos", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/clientes", "SUPERADMIN"),

@@ -402,6 +402,14 @@ public class LiquidacionService {
         return reembolsoRepository.save(r);
     }
 
+    /** El negocio ya devolvió el saldo a favor de este reembolso: deja de contar como pendiente. */
+    public Reembolso marcarSaldoCobrado(Long id, String correoAdmin) {
+        if (reembolsoRepository.marcarSaldoCobrado(id, LocalDateTime.now(), correoAdmin) == 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este reembolso no tiene un saldo pendiente por cobrar");
+        }
+        return reembolsoRepository.findById(id).orElseThrow();
+    }
+
     private static String texto(String nota, String actor) {
         String t = "Marcado por " + actor + (nota != null && !nota.isBlank() ? ": " + nota.trim() : "");
         return recortar(t, 500);

@@ -116,7 +116,9 @@ public class PlataformaDashboardService {
         double base = pct > 0 ? Math.round(comision * 100 / pct) : 0;
         Dinero dinero = new Dinero(pagoRepository.sumaMovidaMarketplace(), comision, pct, repartoRepository.sumaPorLiquidar(),
                 base, repartoRepository.primeraComision(), repartoRepository.sumaEnEspera(), repartoRepository.sumaLiquidada(),
-                repartoRepository.sumaLiquidadaSimulada(), !"MANUAL".equalsIgnoreCase(modoDispersion));
+                repartoRepository.sumaLiquidadaSimulada(), !"MANUAL".equalsIgnoreCase(modoDispersion),
+                DashboardPlataformaDTO.ComisionRetenida.de(repartoRepository.comisionRetenidaPorEstado()),
+                parametros.comisionRetenida(), reembolsoRepository.sumaSaldosAFavorPendientes());
 
         Alertas alertas = new Alertas(
                 despachosAtrasados(ahora),

@@ -40,14 +40,23 @@ public final class ReportesPlataformaDTO {
     /** movidoAlTaller: lo repartido al taller por sus pagos (sin contar lo anulado); no es ingreso de DriveMaster. */
     public record ServiciosPorTaller(List<TallerServicios> talleres) {}
 
-    public record MesComision(String mes, double registrada, double anulada, double neta) {}
+    /** registrada, anulada y neta son la comisión informativa; cobrada, la retenida en líneas pagadas ese mes. */
+    public record MesComision(String mes, double registrada, double anulada, double neta, double cobrada) {}
+
+    /** Un saldo que hay que cobrarle a un negocio. id es el del reembolso, para marcarlo cobrado. */
+    public record SaldoAFavor(Long id, double monto, String motivo, String referenciaPago, LocalDateTime fecha) {}
+
+    /** Reembolsos de líneas ya pagadas: el dinero salió dos veces y se recupera a mano. */
+    public record SaldosAFavor(double total, long cantidad, List<SaldoAFavor> items) {}
 
     /**
      * Comisión registrada neta = comisión de cada pago aprobado menos la anulada por reembolsos. Es informativa:
-     * no es dinero cobrado.
+     * no es dinero cobrado. retenida es la que sí se descontó, separada por estado (ver DashboardPlataformaDTO).
      */
     public record ComisionNeta(LocalDateTime generadoEn, List<MesComision> meses, double registrada, double anulada,
-                               double neta, Map<String, Double> netaPorConcepto) {}
+                               double neta, Map<String, Double> netaPorConcepto,
+                               DashboardPlataformaDTO.ComisionRetenida retenida, boolean comisionSeDescuenta,
+                               SaldosAFavor saldosAFavor) {}
 
     // ─── Usuarios ────────────────────────────────────────────────────────────
 

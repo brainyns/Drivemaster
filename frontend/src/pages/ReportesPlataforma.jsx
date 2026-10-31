@@ -133,6 +133,9 @@ function Contenido({ id, titulo, datos }) {
         <Indicador titulo="Registrada" valor={cop(datos.registrada)} pie="En los pagos aprobados del período." />
         <Indicador titulo="Anulada por reembolsos" valor={cop(datos.anulada)} pie="Se descuenta cuando se reembolsa un pago." />
         <Indicador titulo="Comisión neta" valor={cop(datos.neta)} tono="ok" pie="Registrada menos anulada. No es dinero cobrado." />
+        <Indicador titulo="Saldos a favor pendientes" valor={cop(datos.saldosAFavor?.total ?? 0)}
+          tono={datos.saldosAFavor?.total > 0 ? "accion" : undefined}
+          pie="Reembolsos de pagos ya transferidos al negocio: se le cobran a mano." />
       </div>
       <Tabla titulo={titulo} vacio="Todavía no hay comisión registrada."
         filas={datos.meses.map((m) => ({ ...m, id: m.mes }))}

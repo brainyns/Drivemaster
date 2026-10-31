@@ -46,7 +46,7 @@ class LiquidacionTablaServiceTest {
         repartos = mock(RepartoPagoRepository.class);
         talleres = mock(TallerRepository.class);
         tiendas = mock(TiendaRepository.class);
-        servicio = new LiquidacionTablaService(liquidacion, repartos, talleres, tiendas);
+        servicio = new LiquidacionTablaService(liquidacion, repartos, talleres, tiendas, mock(ParametrosMarketplace.class));
     }
 
     private static RepartoPago linea(long id, String tipo, String beneficiario, String nombreGuardado) {

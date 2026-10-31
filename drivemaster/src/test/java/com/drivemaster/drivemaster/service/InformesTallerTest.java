@@ -44,7 +44,7 @@ class InformesTallerTest {
         reparto = mock(RepartoPagoRepository.class);
         when(ordenes.findByTallerIdOrderByFechaCreacionDesc(anyString())).thenReturn(List.of());
         when(reparto.resumenPorConceptoYEstadoDesde(anyString(), anyString(), any())).thenReturn(List.of());
-        service = new InformesTallerService(ordenes, reparto);
+        service = new InformesTallerService(ordenes, reparto, mock(ParametrosMarketplace.class));
     }
 
     private static EventoOrden evento(String estado, LocalDateTime fecha) {

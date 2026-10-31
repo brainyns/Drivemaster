@@ -59,10 +59,13 @@ public class InformesTallerService {
 
     private final OrdenServicioRepository ordenRepository;
     private final RepartoPagoRepository repartoRepository;
+    private final ParametrosMarketplace parametros;
 
-    public InformesTallerService(OrdenServicioRepository ordenRepository, RepartoPagoRepository repartoRepository) {
+    public InformesTallerService(OrdenServicioRepository ordenRepository, RepartoPagoRepository repartoRepository,
+                                 ParametrosMarketplace parametros) {
         this.ordenRepository = ordenRepository;
         this.repartoRepository = repartoRepository;
+        this.parametros = parametros;
     }
 
     public Informes informes(String tallerId, int meses) {
@@ -191,7 +194,9 @@ public class InformesTallerService {
                 .filter(o -> enPeriodo(o.getFechaFinalizacion() != null ? o.getFechaFinalizacion() : o.getFechaCreacion(), desde))
                 .toList();
         double anterioresMano = anteriores.stream().mapToDouble(o -> o.getPrecioManoObra() == null ? 0 : o.getPrecioManoObra()).sum();
-        return new Ingresos(monto(mano), monto(diag), anulado, new Anteriores(anteriores.size(), anterioresMano));
+        return new Ingresos(monto(mano), monto(diag), anulado, new Anteriores(anteriores.size(), anterioresMano),
+                com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO.Resumen.de(
+                        repartoRepository.desgloseDeNegocioDesde(RepartoPago.TALLER, tallerId, desde), parametros.comisionRetenida()));
     }
 
     private static Monto monto(double[] v) {

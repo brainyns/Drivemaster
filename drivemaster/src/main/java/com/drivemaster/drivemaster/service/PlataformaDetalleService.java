@@ -109,8 +109,7 @@ public class PlataformaDetalleService {
         List<LineaReparto> reparto = p.getPagoId() == null ? List.of() : repartos.findByPagoId(p.getPagoId()).stream()
                 .filter(r -> id.equals(r.getPedidoTiendaId()) || r.getPedidoTiendaId() == null)
                 .sorted(Comparator.comparing(RepartoPago::getBeneficiarioTipo, Comparator.nullsLast(String::compareTo)))
-                .map(r -> new LineaReparto(r.getBeneficiarioTipo(), r.getBeneficiarioNombre(), n(r.getMonto()), r.getEstado(),
-                        r.getModoLiquidacion(), r.getFechaLiquidacion(), r.getNota(), r.getPedidoTiendaId() == null))
+                .map(r -> lineaReparto(r, r.getPedidoTiendaId() == null))
                 .toList();
         var devoluciones = p.getPagoId() == null ? List.<com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso>of()
                 : reembolsos.findByPagoId(p.getPagoId()).stream()
@@ -196,8 +195,7 @@ public class PlataformaDetalleService {
                 .toList();
         List<LineaReparto> reparto = repartos.findByOrdenServicioId(id).stream()
                 .sorted(Comparator.comparing(RepartoPago::getBeneficiarioTipo, Comparator.nullsLast(String::compareTo)))
-                .map(r -> new LineaReparto(r.getBeneficiarioTipo(), r.getBeneficiarioNombre(), n(r.getMonto()), r.getEstado(),
-                        r.getModoLiquidacion(), r.getFechaLiquidacion(), r.getNota(), false))
+                .map(r -> lineaReparto(r, false))
                 .toList();
         var devoluciones = reembolsos.findByOrdenServicioId(id).stream()
                 .map(PlataformaDetalleService::reembolso)
@@ -309,10 +307,16 @@ public class PlataformaDetalleService {
 
     // ─── Piezas ─────────────────────────────────────────────────────────────
 
+    private static LineaReparto lineaReparto(RepartoPago r, boolean delPago) {
+        return new LineaReparto(r.getBeneficiarioTipo(), r.getBeneficiarioNombre(), n(r.getMonto()), r.getMontoBruto(), r.getComisionPct(),
+                r.getComisionCalculada(), r.getComisionRetenida(), r.getEstado(), r.getModoLiquidacion(), r.getFechaLiquidacion(),
+                r.getNota(), delPago);
+    }
+
     private static com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso reembolso(
             com.drivemaster.drivemaster.model.mysql.Reembolso b) {
         return new com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso(
-                n(b.getMonto()), b.getEstado(), b.getMotivo(), b.getFechaCreacion(), b.getFechaRealizado(), b.getSaldoAFavor());
+                n(b.getMonto()), b.getEstado(), b.getMotivo(), b.getFechaCreacion(), b.getFechaRealizado(), b.getSaldoAFavor(), b.getSaldoCobradoEn());
     }
 
     private static PedidoResumen resumen(PedidoTienda p) {

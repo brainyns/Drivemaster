@@ -222,10 +222,13 @@ class PlataformaTest {
         when(pagos.sumaMovidaMarketplace()).thenReturn(1_000_000.0);
         RepartoPagoRepository repartos = mock(RepartoPagoRepository.class);
         when(repartos.sumaComisionRegistrada()).thenReturn(80_000.0);
+        when(repartos.comisionRetenidaPorEstado()).thenReturn(java.util.Arrays.asList(
+                new Object[]{"LIQUIDADO", "WOMPI", 30_000.0}, new Object[]{"POR_LIQUIDAR", "", 9_000.0}));
         when(repartos.countByEstado(RepartoPago.POR_LIQUIDAR)).thenReturn(5L);
         ReembolsoRepository reembolsos = mock(ReembolsoRepository.class);
         when(reembolsos.countByEstado("PENDIENTE")).thenReturn(2L);
         when(reembolsos.sumaPendiente()).thenReturn(120_000.0);
+        when(reembolsos.sumaSaldosAFavorPendientes()).thenReturn(218_000.0);
         SuscripcionRepository suscripciones = mock(SuscripcionRepository.class);
         ParametrosMarketplace parametros = mock(ParametrosMarketplace.class);
         when(parametros.comisionPct()).thenReturn(10.0);
@@ -243,6 +246,10 @@ class PlataformaTest {
         assertEquals(3L, d.ordenesPorEstado().get("EN_REVISION"));
         assertEquals(1_000_000.0, d.dinero().movido());
         assertEquals(80_000.0, d.dinero().comisionRegistrada());
+        assertEquals(30_000.0, d.dinero().comisionRetenida().cobrada());
+        assertEquals(9_000.0, d.dinero().comisionRetenida().porCobrar());
+        assertFalse(d.dinero().comisionSeDescuenta());
+        assertEquals(218_000.0, d.dinero().saldosAFavorPendientes());
         assertEquals(10.0, d.dinero().comisionPct());
         assertEquals(5, d.alertas().liquidacionesPendientes());
         assertEquals(2, d.alertas().reembolsosPendientes());

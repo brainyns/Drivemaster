@@ -35,13 +35,15 @@ public class LiquidacionTablaService {
     private final RepartoPagoRepository repartos;
     private final TallerRepository talleres;
     private final TiendaRepository tiendas;
+    private final ParametrosMarketplace parametros;
 
     public LiquidacionTablaService(LiquidacionService liquidacion, RepartoPagoRepository repartos,
-                                   TallerRepository talleres, TiendaRepository tiendas) {
+                                   TallerRepository talleres, TiendaRepository tiendas, ParametrosMarketplace parametros) {
         this.liquidacion = liquidacion;
         this.repartos = repartos;
         this.talleres = talleres;
         this.tiendas = tiendas;
+        this.parametros = parametros;
     }
 
     /** Solo lo necesario para reconocer la cuenta destino antes de pagar. */
@@ -57,13 +59,14 @@ public class LiquidacionTablaService {
     /** pagadoMes incluye lo simulado: pagadoMesSimulado dice cuánto de eso no movió dinero. */
     public record Resumen(Cifra porPagar, Cifra enEspera, Cifra fallidas, Cifra enProceso, Cifra pagadoMes, double pagadoMesSimulado) {}
 
-    public record Tabla(Pagina<Fila> repartos, long pendientes, double montoPendiente, Resumen resumen) {}
+    /** comisionSeDescuenta: la bandera; cada fila trae además su propio desglose (montoBruto, comisionRetenida...). */
+    public record Tabla(Pagina<Fila> repartos, long pendientes, double montoPendiente, Resumen resumen, boolean comisionSeDescuenta) {}
 
     public Tabla tabla(String estado, RangoFechas rango, PeticionTabla peticion) {
         LiquidacionService.RepartosTabla base = liquidacion.repartosTabla(estado, rango, peticion);
         Pagina<RepartoPago> p = base.repartos();
         return new Tabla(new Pagina<>(filas(p.items()), p.total(), p.pagina(), p.tamano(), p.totalPaginas()),
-                base.pendientes(), base.montoPendiente(), resumen(LocalDate.now(RangoFechas.ZONA)));
+                base.pendientes(), base.montoPendiente(), resumen(LocalDate.now(RangoFechas.ZONA)), parametros.comisionRetenida());
     }
 
     private List<Fila> filas(List<RepartoPago> lineas) {

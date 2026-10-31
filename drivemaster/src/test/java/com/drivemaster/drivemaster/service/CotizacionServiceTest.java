@@ -190,6 +190,46 @@ class CotizacionServiceTest {
         assertEquals(19.0, guardada.getValue().getIvaManoObraPct());
     }
 
+    private Cotizacion cotizacionDelTaller() {
+        return Cotizacion.builder().id("c9").tallerId(taller.getId()).items(List.of()).ivaPct(19.0).ivaRepuestosPct(19.0).ivaManoObraPct(19.0)
+                .subtotalRepuestos(200_000.0).subtotalManoObra(100_000.0).ivaManoObra(19_000.0).build();
+    }
+
+    @Test
+    void conLaBanderaApagadaElTallerRecibeTodoYVeLaComisionAparte() {
+        when(tallerService.obtenerPorUsuario(CORREO_TALLER)).thenReturn(taller);
+        when(parametros.comisionPct()).thenReturn(10.0);
+        when(cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc(taller.getId())).thenReturn(List.of(cotizacionDelTaller()));
+
+        CotizacionDTO dto = service.delTaller(CORREO_TALLER).get(0);
+
+        assertEquals(10_000, dto.getComisionTaller(), "solo sobre su mano de obra sin IVA, no sobre los repuestos de la tienda");
+        assertEquals(119_000, dto.getRecibeTaller());
+        assertFalse(dto.getComisionSeDescuenta());
+    }
+
+    @Test
+    void conLaBanderaEncendidaLaCotizacionMuestraLoQueRecibeNeto() {
+        when(tallerService.obtenerPorUsuario(CORREO_TALLER)).thenReturn(taller);
+        when(parametros.comisionPct()).thenReturn(10.0);
+        when(parametros.comisionRetenida()).thenReturn(true);
+        when(cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc(taller.getId())).thenReturn(List.of(cotizacionDelTaller()));
+
+        CotizacionDTO dto = service.delTaller(CORREO_TALLER).get(0);
+
+        assertEquals(109_000, dto.getRecibeTaller());
+        assertTrue(dto.getComisionSeDescuenta());
+    }
+
+    @Test
+    void elClienteNoRecibeLoQueCobraElTaller() {
+        CotizacionDTO dto = CotizacionDTO.completa(cotizacionDelTaller());
+
+        assertNull(dto.getComisionTaller());
+        assertNull(dto.getRecibeTaller());
+        assertNull(dto.getComisionSeDescuenta());
+    }
+
     @Test
     void sinDiagnosticoPagadoNoHayAnticipo() {
         orden.setPagoDiagnosticoEstado(EstadoOrden.PAGO_NO_REQUERIDO);

@@ -206,6 +206,28 @@ class LiquidacionServiceTest {
     }
 
     @Test
+    void laComisionInformativaYLaRetenidaNoSeSumanEnLaMismaConsulta() throws Exception {
+        assertTrue(jpql("sumaComisionRegistrada").contains("r.estado = 'INFORMATIVA'"));
+        assertTrue(jpql("comisionCobradaDesde", LocalDateTime.class).contains("<> 'SIMULADO'"));
+        assertTrue(jpql("comisionCobradaDesde", LocalDateTime.class).contains("r.estado = 'LIQUIDADO'"));
+        assertTrue(jpql("comisionRetenidaPorEstado").contains("r.beneficiarioTipo <> 'PLATAFORMA'"), "se lee de las líneas de los negocios");
+        assertTrue(jpql("sumaRepartidaPorTaller").contains("coalesce(r.montoBruto, r.monto)"), "lo movido al taller es antes de comisión");
+    }
+
+    @Test
+    void marcarUnSaldoCobradoSoloFuncionaUnaVez() {
+        LiquidacionService service = servicio(new com.drivemaster.drivemaster.service.dispersion.SimulatedDispersionService());
+        Reembolso cobrado = Reembolso.builder().id(7L).saldoAFavor(218_000.0).build();
+        when(reembolsoRepository.marcarSaldoCobrado(eq(7L), any(), eq(ADMIN))).thenReturn(1).thenReturn(0);
+        when(reembolsoRepository.findById(7L)).thenReturn(Optional.of(cobrado));
+
+        assertSame(cobrado, service.marcarSaldoCobrado(7L, ADMIN));
+        org.springframework.web.server.ResponseStatusException e = assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                () -> service.marcarSaldoCobrado(7L, ADMIN));
+        assertEquals(org.springframework.http.HttpStatus.CONFLICT, e.getStatusCode());
+    }
+
+    @Test
     void unaLineaConNetoCeroSeCierraSinTransferirNiEsperarAlAdmin() {
         RepartoPago r = linea(1L, RepartoPago.TALLER, null, true);
         r.setMontoBruto(500.0);

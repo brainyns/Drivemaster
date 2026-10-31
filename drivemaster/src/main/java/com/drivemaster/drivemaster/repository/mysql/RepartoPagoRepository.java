@@ -31,8 +31,8 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
     @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.pagoId = :pagoId and r.beneficiarioTipo = 'PLATAFORMA' and r.monto > 0")
     double sumaComisionBruta(@Param("pagoId") Long pagoId);
 
-    /** Lo repartido a cada taller (sin lo anulado): [beneficiarioId, suma]. */
-    @Query("select r.beneficiarioId, sum(r.monto) from RepartoPago r "
+    /** Lo repartido a cada taller, antes de comisión y sin lo anulado: [beneficiarioId, suma]. */
+    @Query("select r.beneficiarioId, sum(coalesce(r.montoBruto, r.monto)) from RepartoPago r "
             + "where r.beneficiarioTipo = 'TALLER' and r.estado <> 'ANULADO' group by r.beneficiarioId")
     List<Object[]> sumaRepartidaPorTaller();
 
@@ -68,13 +68,42 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
             + "and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde")
     List<Object[]> liquidadoDesde(@Param("tipo") String tipo, @Param("id") String id, @Param("desde") LocalDateTime desde);
 
+    /** Totales de un negocio sin lo anulado: [venta, comisión descontada, comisión calculada, lo que recibe]. */
+    @Query("select coalesce(sum(coalesce(r.montoBruto, r.monto)), 0), coalesce(sum(coalesce(r.comisionRetenida, 0)), 0), "
+            + "coalesce(sum(coalesce(r.comisionCalculada, 0)), 0), coalesce(sum(r.monto), 0) from RepartoPago r "
+            + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id and r.estado <> 'ANULADO'")
+    List<Object[]> desgloseDeNegocio(@Param("tipo") String tipo, @Param("id") String id);
+
+    /** Lo mismo en un periodo, con las fechas de resumenPorConceptoYEstadoDesde. */
+    @Query("select coalesce(sum(coalesce(r.montoBruto, r.monto)), 0), coalesce(sum(coalesce(r.comisionRetenida, 0)), 0), "
+            + "coalesce(sum(coalesce(r.comisionCalculada, 0)), 0), coalesce(sum(r.monto), 0) from RepartoPago r "
+            + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id and r.estado <> 'ANULADO' and "
+            + "((r.estado = 'LIQUIDADO' and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde) "
+            + "or (r.estado <> 'LIQUIDADO' and r.fechaCreacion >= :desde))")
+    List<Object[]> desgloseDeNegocioDesde(@Param("tipo") String tipo, @Param("id") String id, @Param("desde") LocalDateTime desde);
+
+    /**
+     * La comisión que de verdad se retuvo, leída de las líneas de los negocios: [estado, modo, suma]. Así un rechazo del
+     * banco o una anulación la mueven solos, y no depende de la línea PLATAFORMA, cuyo registro no detiene un pago.
+     */
+    @Query("select r.estado, coalesce(r.modoLiquidacion, ''), coalesce(sum(r.comisionRetenida), 0) from RepartoPago r "
+            + "where r.beneficiarioTipo <> 'PLATAFORMA' and r.comisionRetenida > 0 "
+            + "group by r.estado, coalesce(r.modoLiquidacion, '')")
+    List<Object[]> comisionRetenidaPorEstado();
+
+    /** Líneas con comisión cobrada de verdad desde una fecha: pagadas y sin simular. */
+    @Query("select r from RepartoPago r where r.beneficiarioTipo <> 'PLATAFORMA' and r.comisionRetenida > 0 "
+            + "and r.estado = 'LIQUIDADO' and coalesce(r.modoLiquidacion, '') <> 'SIMULADO' "
+            + "and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde")
+    List<RepartoPago> comisionCobradaDesde(@Param("desde") LocalDateTime desde);
+
     /** Líneas de comisión (registradas y anuladas) desde una fecha, para el reporte por mes. */
     @Query("select r from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA' and r.fechaCreacion >= :desde "
             + "order by r.fechaCreacion")
     List<RepartoPago> comisionDesde(@Param("desde") LocalDateTime desde);
 
-    /** Comisión registrada (líneas informativas de la plataforma, ya sin lo anulado por reembolsos). */
-    @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA'")
+    /** Comisión solo registrada (líneas informativas de la plataforma, ya sin lo anulado por reembolsos). La retenida va aparte. */
+    @Query("select coalesce(sum(r.monto), 0) from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA' and r.estado = 'INFORMATIVA'")
     double sumaComisionRegistrada();
 
     /** Lo que falta pagar a talleres y tiendas: líneas habilitadas (o con fallo) y su monto. */
