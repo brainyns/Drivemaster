@@ -306,6 +306,7 @@ export default function MisServicios({
   if (seleccionada) {
     const s = seleccionada;
     const cancelable = ESTADOS_CANCELABLES_CLIENTE.includes(s.estado);
+    const tallerConMapa = s.tallerLatitud != null && s.tallerLongitud != null;
     return (
       <div className="sv-root sv-root--ancha">
         <EncabezadoPagina
@@ -323,7 +324,7 @@ export default function MisServicios({
 
         {error && <Alerta className="ms-alerta" onCerrar={() => setError(null)}>{error}</Alerta>}
 
-        <div className="ss-detalle">
+        <div className="ss-detalle ms-detalle">
           <div className="ss-detalle__principal">
             <section className="ss-bloque">
               <h2 className="ss-bloque__titulo">Lo que reportaste</h2>
@@ -346,16 +347,18 @@ export default function MisServicios({
             )}
 
             {s.tallerNombre && (
-              <section className="ss-bloque">
-                <h2 className="ss-bloque__titulo">Taller</h2>
-                <p className="ss-texto"><strong>{s.tallerNombre}</strong></p>
-                {s.tallerElegidoId && s.tallerElegidoId === s.tallerId && <p className="ss-meta">Lo elegiste en el mapa.</p>}
-                {s.tallerDireccion && <p className="ss-meta">{s.tallerDireccion}</p>}
-                {s.aceptadaPorTaller && s.tallerTelefono && <p className="ss-meta">Teléfono: {s.tallerTelefono}</p>}
-                {!s.aceptadaPorTaller && s.estado === "ASIGNADA_A_TALLER" && (
-                  <p className="ss-meta">Esperando que el taller confirme y te proponga una fecha.</p>
-                )}
-                {s.tallerLatitud != null && s.tallerLongitud != null && (
+              <section className={`ss-bloque ms-taller${tallerConMapa ? " ms-taller--con-mapa" : ""}`}>
+                <div className="ms-taller__datos">
+                  <h2 className="ss-bloque__titulo">Taller</h2>
+                  <p className="ss-texto"><strong>{s.tallerNombre}</strong></p>
+                  {s.tallerElegidoId && s.tallerElegidoId === s.tallerId && <p className="ss-meta">Lo elegiste en el mapa.</p>}
+                  {s.tallerDireccion && <p className="ss-meta">{s.tallerDireccion}</p>}
+                  {s.aceptadaPorTaller && s.tallerTelefono && <p className="ss-meta">Teléfono: {s.tallerTelefono}</p>}
+                  {!s.aceptadaPorTaller && s.estado === "ASIGNADA_A_TALLER" && (
+                    <p className="ss-meta">Esperando que el taller confirme y te proponga una fecha.</p>
+                  )}
+                </div>
+                {tallerConMapa && (
                   <RutaTaller
                     origen={s.latitud != null && s.longitud != null ? { latitud: s.latitud, longitud: s.longitud } : null}
                     taller={{ nombre: s.tallerNombre, latitud: s.tallerLatitud, longitud: s.tallerLongitud }}

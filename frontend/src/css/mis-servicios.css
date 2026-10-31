@@ -85,6 +85,19 @@
   color: var(--ui-muted);
 }
 
+/* Detalle: bloques más compactos (solo aquí; el panel del taller comparte .ss-detalle) */
+.ms-detalle { gap: 16px; }
+.ms-detalle .ss-detalle__principal { gap: 12px; }
+.ms-detalle .ss-bloque,
+.ms-detalle .ss-detalle__lateral { padding: 16px; }
+.ms-detalle .ss-bloque__titulo { font-size: 1.05rem; }
+.ms-detalle .ss-bloque--destacado { scroll-margin-top: calc(var(--alto-header) + 16px); }
+
+/* Sin mapa los datos ocupan todo el ancho del bloque; con mapa van a su lado desde 1100px */
+.ms-taller .mapa-ruta-taller { margin-top: 0; }
+.ms-taller .mapa-ruta-taller__mapa { height: 220px; }
+.ms-taller .ss-texto { margin-bottom: 4px; }
+
 /* Servicios anteriores: mismas tarjetas compactas que la lista */
 .sv-anteriores .sv-anterior { padding: 14px 16px; }
 .sv-anteriores .ss-tarjeta__titulo { font-size: 1rem; }
@@ -95,6 +108,28 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+  }
+}
+
+/* Desde aquí hay columna lateral (solicitud-servicio.css la apila en 900px o menos) */
+@media (min-width: 901px) {
+  .ms-detalle { grid-template-columns: minmax(0, 1fr) 320px; }
+
+  .ms-detalle .ss-detalle__lateral {
+    top: calc(var(--alto-header) + 16px);
+    /* Una línea de tiempo larga hace scroll dentro del panel y no queda cortada por abajo */
+    max-height: calc(100vh - var(--alto-header) - 32px);
+    max-height: calc(100dvh - var(--alto-header) - 32px);
+    overflow-y: auto;
+  }
+}
+
+@media (min-width: 1100px) {
+  .ms-taller--con-mapa {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 16px;
+    align-items: start;
   }
 }
 
