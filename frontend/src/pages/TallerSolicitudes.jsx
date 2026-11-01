@@ -369,7 +369,7 @@ export default function TallerSolicitudes({
   const entregar = async (s) => {
     try {
       reemplazar(await marcarEntregada(token, s.id));
-      setAviso({ tono: "ok", texto: `Entregado: ${s.vehiculoDescripcion || "el vehículo"} pasó a Entregados.` });
+      setAviso({ tono: "ok", texto: `Entregado: ${s.vehiculoDescripcion || "el vehículo"} pasó a Entregados. Avisamos al cliente para que confirme.` });
     } catch (e) {
       await trasFallo(s, e); // si sigue igual, el diálogo muestra el error y deja reintentar
     }
@@ -384,7 +384,7 @@ export default function TallerSolicitudes({
 
   const modalEntrega = confirmandoEntrega && (
     <ConfirmarAccion titulo={`¿Entregar ${confirmandoEntrega.vehiculoDescripcion || "el vehículo"}?`}
-      mensaje="Confírmalo solo cuando el cliente ya tenga el vehículo. No se puede deshacer."
+      mensaje="Confírmalo solo cuando el cliente ya tenga el vehículo. Le avisamos para que confirme: tu pago se habilita cuando lo haga o, si no responde, a los 3 días hábiles. No se puede deshacer."
       textoConfirmar="Sí, entregar"
       onCancelar={() => setConfirmandoEntrega(null)}
       onConfirmar={() => entregar(confirmandoEntrega)} />
@@ -687,8 +687,8 @@ export default function TallerSolicitudes({
                   <p className="ss-meta">
                     Entregada el {formatFechaHora(s.fechaEntrega)}
                     {s.recepcionConfirmada
-                      ? ` · El cliente confirmó la recepción${s.calificacionTaller ? ` y calificó ${s.calificacionTaller}/5` : ""}`
-                      : " · Esperando la confirmación del cliente"}
+                      ? ` · ${s.recepcionAutomatica ? "Recepción confirmada automáticamente" : "El cliente confirmó la recepción"}${s.calificacionTaller ? ` y calificó ${s.calificacionTaller}/5` : ""}`
+                      : ` · Esperando la confirmación del cliente${s.autoconfirmaDespuesDe ? `; si no responde, se confirma sola el ${formatFecha(s.autoconfirmaDespuesDe)}` : ""}`}
                   </p>
                 )}
                 {accion && (

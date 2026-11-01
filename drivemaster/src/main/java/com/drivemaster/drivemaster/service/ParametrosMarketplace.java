@@ -109,6 +109,11 @@ public class ParametrosMarketplace {
         return entero("PLAZO_AUTOCONFIRMACION_DIAS_HABILES", 5);
     }
 
+    /** Días hábiles tras la entrega de un vehículo para que el cliente confirme; si no responde se confirma sola. */
+    public int plazoRecepcionServicioDiasHabiles() {
+        return entero("PLAZO_RECEPCION_SERVICIO_DIAS_HABILES", 3);
+    }
+
     /** Días hábiles que se suman a los días estimados de un encargo. */
     public int plazoEncargoDiasExtra() {
         return entero("PLAZO_ENCARGO_DIAS_EXTRA", 2);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { confirmarRecepcion } from "../../services/solicitudServicioService";
-import { formatFechaHora } from "./estadosServicio";
+import { formatFecha, formatFechaHora } from "./estadosServicio";
 import Icon from "../public/Icon";
 
 /**
@@ -18,7 +18,8 @@ export default function ConfirmarRecepcion({ token, solicitud, onConfirmada }) {
       <section className="ss-bloque">
         <h2 className="ss-bloque__titulo">Recepción confirmada</h2>
         <p className="ss-meta">
-          Confirmaste la recepción el {formatFechaHora(solicitud.fechaRecepcionCliente)}
+          {solicitud.recepcionAutomatica ? "La recepción se confirmó automáticamente el " : "Confirmaste la recepción el "}
+          {formatFechaHora(solicitud.fechaRecepcionCliente)}
           {solicitud.calificacionTaller ? ` · Calificaste al taller con ${solicitud.calificacionTaller}/5` : ""}
         </p>
         {solicitud.comentarioCalificacion && <p className="ss-texto">{solicitud.comentarioCalificacion}</p>}
@@ -43,6 +44,7 @@ export default function ConfirmarRecepcion({ token, solicitud, onConfirmada }) {
       <h2 className="ss-bloque__titulo">¿Ya recibiste tu vehículo?</h2>
       <p className="ss-meta">
         El taller marcó la entrega el {formatFechaHora(solicitud.fechaEntrega)}. Confírmalo y, si quieres, califica el servicio.
+        {solicitud.autoconfirmaDespuesDe && ` Si no respondes, se confirma automáticamente el ${formatFecha(solicitud.autoconfirmaDespuesDe)}.`}
       </p>
       <div className="ct-calificacion" role="radiogroup" aria-label="Calificación del taller (opcional)">
         {[1, 2, 3, 4, 5].map((n) => (

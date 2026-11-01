@@ -43,6 +43,7 @@ public class Notificacion {
     public static final String PROBLEMA_ENVIO = "PROBLEMA_ENVIO";
     public static final String PROBLEMA_ENVIO_RESUELTO = "PROBLEMA_ENVIO_RESUELTO";
     public static final String VEHICULO_LISTO = "VEHICULO_LISTO";
+    public static final String VEHICULO_ENTREGADO = "VEHICULO_ENTREGADO";
     public static final String ALERTA_ADMIN = "ALERTA_ADMIN";
 
     @Id

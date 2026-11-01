@@ -91,6 +91,8 @@ public class SolicitudServicioDTO {
     private LocalDateTime fechaEntrega;
     private Boolean recepcionConfirmada;
     private LocalDateTime fechaRecepcionCliente;
+    private LocalDateTime autoconfirmaDespuesDe;
+    private Boolean recepcionAutomatica;
     private Integer calificacionTaller;
     private String comentarioCalificacion;
 

@@ -391,6 +391,15 @@ public class AvisosSolicitudServicio {
                 "mis-servicios", orden.getId());
     }
 
+    public void vehiculoEntregado(OrdenServicio orden, int dias) {
+        Taller t = taller(orden).orElse(null);
+        String nombreTaller = t != null ? t.getNombre() : orden.getTallerNombre();
+        cliente(orden).ifPresent(c -> enviar(c.getCorreo(), "Confirma que recibiste tu vehículo",
+                EmailServicioBuilder.clienteVehiculoEntregado(c.getNombre(), orden.getVehiculoDescripcion(), nombreTaller, dias)));
+        avisar(orden.getUsuarioId(), Notificacion.VEHICULO_ENTREGADO, "Confirma que recibiste tu vehículo",
+                nombreTaller + " marcó la entrega de " + vehiculo(orden) + ".", "mis-servicios", orden.getId());
+    }
+
     public void alertaAdmin(String titulo, String detalle) {
         alertaAdmin(titulo, null, detalle);
     }

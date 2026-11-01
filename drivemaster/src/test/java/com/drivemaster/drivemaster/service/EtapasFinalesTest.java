@@ -18,7 +18,9 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,6 +42,8 @@ class EtapasFinalesTest {
     private LiquidacionService liquidacion;
     private CalificacionTallerService calificaciones;
     private SolicitudServicioServiceImpl service;
+    private OrdenServicioRepository ordenRepository;
+    private ParametrosMarketplace parametros;
     private OrdenServicio orden;
 
     @BeforeEach
@@ -49,13 +53,14 @@ class EtapasFinalesTest {
         avisos = mock(AvisosSolicitudServicio.class);
         liquidacion = mock(LiquidacionService.class);
         calificaciones = mock(CalificacionTallerService.class);
-        OrdenServicioRepository ordenRepository = mock(OrdenServicioRepository.class);
+        ordenRepository = mock(OrdenServicioRepository.class);
+        parametros = mock(ParametrosMarketplace.class);
         UsuarioService usuarioService = mock(UsuarioService.class);
         VehiculoService vehiculoService = mock(VehiculoService.class);
 
         service = new SolicitudServicioServiceImpl(ordenRepository, mock(TallerRepository.class), vehiculoService,
                 usuarioService, tallerService, mock(CloudinaryService.class), new TransicionOrdenService(mongoTemplate),
-                mock(AsignacionTallerService.class), mock(ParametrosMarketplace.class), avisos,
+                mock(AsignacionTallerService.class), parametros, avisos,
                 mock(ProductoService.class), mock(BuscadorRepuestosService.class), liquidacion, calificaciones,
                 mock(HorarioTallerService.class));
 
@@ -94,20 +99,97 @@ class EtapasFinalesTest {
 
         assertEquals(EstadoOrden.LISTA, service.marcarLista(CORREO_TALLER, "o1").getEstado());
         verify(avisos).vehiculoListo(orden);
-        verify(liquidacion, never()).ordenEntregada(anyString());
+        when(parametros.plazoRecepcionServicioDiasHabiles()).thenReturn(3);
         assertEquals(EstadoOrden.ENTREGADA, service.marcarEntregada(CORREO_TALLER, "o1").getEstado());
-        // Al quedar ENTREGADA, la línea del taller queda lista para liquidar
+        Document set = (Document) ultimaEscritura().getUpdateObject().get("$set");
+        assertNotNull(set.get("autoconfirmaDespuesDe"), "corre el plazo del cliente");
+        verify(avisos).vehiculoEntregado(orden, 3);
+        // El taller no se habilita su propio pago: espera al cliente
+        verify(liquidacion, never()).ordenEntregada(anyString());
+    }
+
+    @Test
+    void siElAvisoDeEntregaFallaLaEntregaIgualQuedaYAlertaAlAdmin() {
+        orden.setEstado(EstadoOrden.LISTA);
+        doThrow(new IllegalStateException("sin aviso")).when(avisos).vehiculoEntregado(any(), anyInt());
+
+        assertEquals(EstadoOrden.ENTREGADA, service.marcarEntregada(CORREO_TALLER, "o1").getEstado());
+
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("no se pudo avisar al cliente"));
+    }
+
+    @Test
+    void laConfirmacionDelClienteHabilitaElPagoDelTaller() {
+        orden.setEstado(EstadoOrden.ENTREGADA);
+
+        service.confirmarRecepcion(CORREO_CLIENTE, "o1", null, null);
+
+        verify(liquidacion).ordenEntregada("o1");
+        ArgumentCaptor<Update> marca = ArgumentCaptor.forClass(Update.class);
+        verify(mongoTemplate).updateFirst(any(Query.class), marca.capture(), eq(OrdenServicio.class));
+        assertEquals(true, ((Document) marca.getValue().getUpdateObject().get("$set")).get("liquidacionLiberada"));
+    }
+
+    @Test
+    void siHabilitarElPagoFallaLaConfirmacionIgualQuedaYSinMarcaParaReintentar() {
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        doThrow(new IllegalStateException("postgres caído")).when(liquidacion).ordenEntregada("o1");
+
+        assertDoesNotThrow(() -> service.confirmarRecepcion(CORREO_CLIENTE, "o1", null, null));
+
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("Se reintenta solo"));
+        verify(mongoTemplate, never()).updateFirst(any(Query.class), any(Update.class), eq(OrdenServicio.class));
+    }
+
+    @Test
+    void alVencerElPlazoSeConfirmaSolaYHabilitaElPago() {
+        LocalDateTime ahora = LocalDateTime.of(2026, 11, 10, 9, 0);
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        when(ordenRepository.entregasPorLiberar(EstadoOrden.FLUJO_MARKETPLACE, EstadoOrden.ENTREGADA, ahora)).thenReturn(List.of(orden));
+
+        assertEquals(1, service.autoconfirmarEntregas(ahora));
+
+        Document set = (Document) ultimaEscritura().getUpdateObject().get("$set");
+        assertEquals(true, set.get("recepcionConfirmada"));
+        assertEquals(true, set.get("recepcionAutomatica"));
         verify(liquidacion).ordenEntregada("o1");
     }
 
     @Test
-    void siHabilitarElPagoFallaLaEntregaIgualQuedaYAlertaAlAdmin() {
-        orden.setEstado(EstadoOrden.LISTA);
-        doThrow(new IllegalStateException("postgres caído")).when(liquidacion).ordenEntregada("o1");
+    void unaRecepcionYaConfirmadaSoloReintentaElPago() {
+        LocalDateTime ahora = LocalDateTime.of(2026, 11, 10, 9, 0);
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        orden.setRecepcionConfirmada(true);
+        when(ordenRepository.entregasPorLiberar(any(), any(), any())).thenReturn(List.of(orden));
 
-        assertEquals(EstadoOrden.ENTREGADA, service.marcarEntregada(CORREO_TALLER, "o1").getEstado());
+        assertEquals(1, service.autoconfirmarEntregas(ahora));
 
-        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("no se pudo habilitar el pago"));
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class));
+        verify(liquidacion).ordenEntregada("o1");
+    }
+
+    @Test
+    void siElClienteConfirmaAlMismoTiempoElJobNoLoPisaYUnFalloNoFrenaLasDemas() {
+        LocalDateTime ahora = LocalDateTime.of(2026, 11, 10, 9, 0);
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        OrdenServicio otra = OrdenServicio.builder().id("o2").estado(EstadoOrden.ENTREGADA).recepcionConfirmada(true).build();
+        when(ordenRepository.entregasPorLiberar(any(), any(), any())).thenReturn(List.of(orden, otra));
+        when(mongoTemplate.findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class))).thenReturn(null);
+        doThrow(new IllegalStateException("postgres caído")).when(liquidacion).ordenEntregada("o2");
+
+        assertEquals(0, assertDoesNotThrow(() -> service.autoconfirmarEntregas(ahora)));
+
+        verify(liquidacion, never()).ordenEntregada("o1");
+        verify(liquidacion).ordenEntregada("o2");
+    }
+
+    @Test
+    void laConsultaSoloTomaLoConfirmadoOVencidoYSinHabilitar() throws Exception {
+        String consulta = OrdenServicioRepository.class.getMethod("entregasPorLiberar", String.class, String.class, LocalDateTime.class)
+                .getAnnotation(org.springframework.data.mongodb.repository.Query.class).value();
+        Document d = Document.parse(consulta.replace("?0", "'F'").replace("?1", "'E'").replace("?2", "'A'"));
+        assertEquals(new Document("$ne", true), d.get("liquidacionLiberada"));
+        assertEquals(2, ((java.util.List<?>) d.get("$or")).size());
     }
 
     @Test

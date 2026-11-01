@@ -158,6 +158,14 @@ public final class EmailServicioBuilder {
                 + parrafo("Puedes ver el avance en tu panel."));
     }
 
+    public static String clienteVehiculoEntregado(String cliente, String vehiculo, String taller, int dias) {
+        return plantilla("Vehículo entregado", "Confirma que recibiste tu vehículo",
+                saludo(cliente)
+                + parrafo("<strong>" + e(taller) + "</strong> marcó la entrega de tu <strong>" + e(vehiculo) + "</strong>.")
+                + parrafo("Confírmalo en \"Mis servicios\" y, si quieres, califica al taller. Si no respondes en " + dias
+                        + " días hábiles, se confirma automáticamente. Si no lo has recibido, comunícate con el taller."));
+    }
+
     public static String clienteVehiculoListo(String cliente, String vehiculo, String taller, String direccion) {
         return plantilla("Vehículo listo", "Tu vehículo está listo",
                 saludo(cliente)

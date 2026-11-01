@@ -22,6 +22,7 @@ import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
 import com.drivemaster.drivemaster.util.Coordenadas;
 import com.drivemaster.drivemaster.util.IvaTaller;
+import com.drivemaster.drivemaster.util.PlazoHabil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -593,12 +594,41 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
 
     @Override
     public SolicitudServicioDTO marcarEntregada(String correoTaller, String id) {
+        LocalDateTime ahora = LocalDateTime.now();
+        int dias = parametros.plazoRecepcionServicioDiasHabiles();
+        // El pago del taller espera al cliente: el taller no se lo habilita a sí mismo
         SolicitudServicioDTO entregada = avanzar(correoTaller, id, EstadoOrden.ENTREGADA, "Vehículo entregado al cliente",
-                new Update().set("fechaEntrega", LocalDateTime.now()));
-        // La línea del taller queda lista para liquidar (SIMULADO: se paga sola; MANUAL: la paga el ADMIN)
-        TrasGuardar.hacer(avisos, "La solicitud " + id + " quedó entregada, pero no se pudo habilitar el pago del taller.",
-                () -> liquidacion.ordenEntregada(id));
+                new Update().set("fechaEntrega", ahora).set("autoconfirmaDespuesDe", PlazoHabil.sumarDiasHabiles(ahora, dias)));
+        TrasGuardar.hacer(avisos, "La solicitud " + id + " quedó entregada, pero no se pudo avisar al cliente para que la confirme.",
+                () -> ordenRepository.findById(id).ifPresent(o -> avisos.vehiculoEntregado(o, dias)));
         return entregada;
+    }
+
+    @Override
+    public int autoconfirmarEntregas(LocalDateTime ahora) {
+        int habilitados = 0;
+        for (OrdenServicio orden : ordenRepository.entregasPorLiberar(EstadoOrden.FLUJO_MARKETPLACE, EstadoOrden.ENTREGADA, ahora)) {
+            try {
+                if (!Boolean.TRUE.equals(orden.getRecepcionConfirmada())) {
+                    transiciones.registrar(orden, Actor.SISTEMA, "Recepción confirmada automáticamente: venció el plazo sin respuesta del cliente",
+                            Criteria.where("recepcionConfirmada").ne(true),
+                            new Update().set("recepcionConfirmada", true).set("recepcionAutomatica", true).set("fechaRecepcionCliente", ahora));
+                }
+                liberarPago(orden.getId());
+                habilitados++;
+            } catch (ResponseStatusException e) {
+                log.debug("Orden {}: el cliente confirmó justo ahora; se habilita con su confirmación", orden.getId());
+            } catch (RuntimeException e) {
+                log.error("No se pudo habilitar el pago de la orden {}: se reintenta en el próximo ciclo", orden.getId(), e);
+            }
+        }
+        return habilitados;
+    }
+
+    /** La línea del taller queda lista para liquidar (SIMULADO: se paga sola; MANUAL y WOMPI: la paga el ADMIN). Repetirlo no paga dos veces. */
+    private void liberarPago(String id) {
+        liquidacion.ordenEntregada(id);
+        transiciones.anotar(id, new Update().set("liquidacionLiberada", true));
     }
 
     /**
@@ -647,6 +677,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         OrdenServicio actualizada = transiciones.registrar(orden,
                 new Actor(EstadoOrden.CLIENTE, cliente.getId(), cliente.getNombre()), nota,
                 Criteria.where("usuarioId").is(cliente.getId()).and("recepcionConfirmada").ne(true), cambios);
+        TrasGuardar.hacer(avisos, "El cliente confirmó la recepción de la solicitud " + id + ", pero el pago del taller aún no se pudo "
+                + "habilitar. Se reintenta solo cada 15 minutos.", () -> liberarPago(id));
         // La nota ya quedó en la orden; si el recálculo falla, lo corrige la siguiente calificación o el de arranque
         if (calificacion != null) {
             try {
@@ -810,6 +842,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 .fechaEntrega(o.getFechaEntrega())
                 .recepcionConfirmada(o.getRecepcionConfirmada())
                 .fechaRecepcionCliente(o.getFechaRecepcionCliente())
+                .autoconfirmaDespuesDe(o.getAutoconfirmaDespuesDe())
+                .recepcionAutomatica(o.getRecepcionAutomatica())
                 .calificacionTaller(o.getCalificacionTaller())
                 .comentarioCalificacion(o.getComentarioCalificacion())
                 .eventos(o.getEventos());

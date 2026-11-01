@@ -74,6 +74,11 @@ public class TransicionOrdenService {
         return aplicar(orden, orden.getEstado(), orden.getEstado(), actor, nota, condicion, cambios, notasAdicionales);
     }
 
+    /** Un dato interno de la orden, sin evento: el cliente no debe verlo en su línea de tiempo. */
+    public void anotar(String ordenId, Update cambios) {
+        mongoTemplate.updateFirst(Query.query(Criteria.where("id").is(ordenId)), cambios, OrdenServicio.class);
+    }
+
     private OrdenServicio aplicar(OrdenServicio orden, String desde, String hacia, Actor actor, String nota,
                                   Criteria condicion, Update cambios, List<String> notasAdicionales) {
         Criteria base = Criteria.where("id").is(orden.getId()).and("estado").is(desde);

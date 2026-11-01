@@ -138,6 +138,11 @@ public class OrdenServicio {
     // El cliente confirma que recibió el vehículo; la calificación (1 a 5) es opcional
     private Boolean recepcionConfirmada;
     private LocalDateTime fechaRecepcionCliente;
+    // Se marca la entrega + N días hábiles (PLAZO_RECEPCION_SERVICIO_DIAS_HABILES): sin respuesta, se confirma sola
+    private LocalDateTime autoconfirmaDespuesDe;
+    private Boolean recepcionAutomatica;
+    // El pago del taller ya se habilitó. Mientras no, la tarea programada lo reintenta tras confirmarse la recepción
+    private Boolean liquidacionLiberada;
     private Integer calificacionTaller;
     private String comentarioCalificacion;
 
