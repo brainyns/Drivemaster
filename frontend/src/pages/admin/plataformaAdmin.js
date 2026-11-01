@@ -73,20 +73,6 @@ export function barras(conteos = {}, etiquetas = {}, orden = []) {
 export const sePuedePagar = (f = {}) => f.estado === "POR_LIQUIDAR" || f.estado === "FALLIDO";
 
 /**
- * Corta un segundo envío antes de que React deshabilite el botón. candado: { current } de useRef. Una acción a la vez;
- * el candado se suelta con la respuesta, buena o mala.
- */
-export async function unaALaVez(candado, accion) {
-  if (candado.current) return;
-  candado.current = true;
-  try {
-    await accion();
-  } finally {
-    candado.current = false;
-  }
-}
-
-/**
  * Lo que pasó con un pago que no volvió con éxito, cuando no es un error del pago: la línea ya estaba en pago o pagada
  * (409 con su estado), o no llegó respuesta y no se sabe. null si es un error de verdad. estado es la lista que la muestra.
  */

@@ -16,6 +16,7 @@ export default function ConfirmarAccion({
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState(null);
   const refDialogo = useRef(null);
+  const enviando = useRef(false);
 
   useEffect(() => {
     refDialogo.current?.focus();
@@ -25,11 +26,12 @@ export default function ConfirmarAccion({
   }, [onCancelar, procesando]);
 
   const confirmar = async () => {
-    if (procesando || !puedeConfirmar) return;
+    if (enviando.current || !puedeConfirmar) return;
     if (pedirMotivo && !motivo.trim()) {
       setError(`Escribe el ${etiquetaMotivo.toLowerCase()} para continuar.`);
       return;
     }
+    enviando.current = true;
     setProcesando(true);
     setError(null);
     try {
@@ -37,6 +39,8 @@ export default function ConfirmarAccion({
     } catch (e) {
       setError(e.message);
       setProcesando(false);
+    } finally {
+      enviando.current = false;
     }
   };
 

@@ -21,8 +21,9 @@ import Dato from "../components/ui/Dato";
 import { unir } from "../utils/formato";
 import {
   ESTADOS_LIQUIDACION, MAS_ESTADOS_LIQUIDACION, avisoLiquidacion, avisoModo, desgloseFila, faltaParaResolver, fechaLinea, fueraDelRango, porRevisar, referenciaLinea,
-  sePuedePagar, tarjetasLiquidaciones, textoConcepto, textoCuenta, unaALaVez,
+  sePuedePagar, tarjetasLiquidaciones, textoConcepto, textoCuenta,
 } from "./admin/plataformaAdmin";
+import { unaALaVez } from "../utils/unaALaVez";
 // El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
 import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getToken } from "../services/authService";
 import { miTaller } from "../services/tallerService";
 import { bandejaSolicitudesTaller } from "../services/solicitudServicioService";
@@ -29,34 +29,47 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [errorTaller, setErrorTaller] = useState(null);
+  // Una bandeja pedida antes de una acción ya no vale: pisaría el estado nuevo con el viejo
+  const versionBandeja = useRef(0);
 
   const cargar = useCallback(async () => {
     setError(null);
+    const version = ++versionBandeja.current;
     // Cada fuente falla por separado: una caída no deja el panel en blanco.
     const [t, s, o] = await Promise.allSettled([
       miTaller(token), bandejaSolicitudesTaller(token), ordenesDelTaller(token),
     ]);
     if (t.status === "fulfilled") setTaller(t.value);
     setErrorTaller(t.status === "rejected" ? t.reason?.message || "No se pudieron cargar los datos del taller." : null);
-    if (s.status === "fulfilled") setSolicitudes(s.value || []);
-    else setError(s.reason?.message || "No se pudieron cargar las solicitudes.");
+    if (version === versionBandeja.current) {
+      if (s.status === "fulfilled") setSolicitudes(s.value || []);
+      else setError(s.reason?.message || "No se pudieron cargar las solicitudes.");
+    }
     if (o.status === "fulfilled") setOrdenes(o.value || []);
     setCargando(false);
   }, [token]);
 
   // Solo la bandeja: tras una acción en Solicitudes o Trabajos no hace falta pedir de nuevo el taller ni las órdenes
+  // Devuelve la bandeja nueva, o null si no se pudo o ya no vale
   const recargarSolicitudes = useCallback(async () => {
+    const version = ++versionBandeja.current;
     try {
-      setSolicitudes((await bandejaSolicitudesTaller(token)) || []);
+      const lista = (await bandejaSolicitudesTaller(token)) || [];
+      if (version !== versionBandeja.current) return null;
+      setSolicitudes(lista);
       setError(null);
+      return lista;
     } catch (e) {
-      setError(e.message || "No se pudieron cargar las solicitudes.");
+      if (version === versionBandeja.current) setError(e.message || "No se pudieron cargar las solicitudes.");
+      return null;
     }
   }, [token]);
 
   /** Una solicitud actualizada por una acción reemplaza la suya en la bandeja, sin recargar. */
-  const reemplazarSolicitud = useCallback((actualizada) =>
-    setSolicitudes((prev) => prev.map((s) => (s.id === actualizada.id ? { ...s, ...actualizada } : s))), []);
+  const reemplazarSolicitud = useCallback((actualizada) => {
+    versionBandeja.current += 1;
+    setSolicitudes((prev) => prev.map((s) => (s.id === actualizada.id ? { ...s, ...actualizada } : s)));
+  }, []);
 
   // La bandeja y el taller se cargan aquí una vez y se pasan a cada sección (Solicitudes y Trabajos no los piden de nuevo)
   const bandeja = { solicitudes, taller, cargandoBandeja: cargando, errorBandeja: error,

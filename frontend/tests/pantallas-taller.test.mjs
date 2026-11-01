@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { completitudPerfil, errorHorario, errorTarifa, iniciales } from "../src/pages/taller/perfilTaller.js";
+import { yaEstabaHecho } from "../src/components/servicio/estadosTaller.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
@@ -476,4 +477,26 @@ test("Buscar repuestos: la foto se ve completa en un recuadro uniforme y la tarj
   assert.match(buscador, /formatoDistancia\(o\.distanciaKm\)/);
   assert.match(css, /\.ss-oferta__nombre \{[^}]*-webkit-line-clamp: 2;/);
   assert.match(css, /\.ss-oferta__pie \{[^}]*flex-wrap: wrap;/, "un precio largo no se monta sobre el botón");
+});
+
+test("Entregar: pide confirmación, dice el resultado y no se pierde detrás del scroll", () => {
+  const p = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(p.includes('ejecutar: async () => setConfirmandoEntrega(s)'), "no entrega con un solo clic");
+  assert.ok(p.includes("Entregado: ") && p.includes("pasó a Entregados"), "el éxito se dice");
+  assert.ok(p.includes('scrollIntoView({ block: "center" })'), "el aviso aparece a la vista");
+  assert.ok(!p.includes("{ texto: \"Entregar\", ejecutar: async () => reemplazar"), "ya no marca sin confirmar");
+  assert.ok(p.includes("const ejecutar = (accion, s = null) => unaALaVez(enviando,"), "una acción a la vez");
+});
+
+test("Una acción que falló pero ya estaba hecha no se muestra como error", () => {
+  assert.match(yaEstabaHecho({ estado: "LISTA" }, { estado: "ENTREGADA" }), /ya está en "Entregada"/);
+  assert.equal(yaEstabaHecho({ estado: "LISTA" }, { estado: "LISTA" }), null, "sigue igual: el error es real");
+  assert.equal(yaEstabaHecho({ estado: "LISTA" }, undefined), null, "sin recargar no se afirma nada");
+  assert.equal(yaEstabaHecho(null, { estado: "LISTA" }), null);
+});
+
+test("Una bandeja pedida antes de una acción no pisa el estado nuevo", () => {
+  const p = leer("../src/pages/PanelTaller.jsx");
+  assert.ok(p.includes("versionBandeja.current += 1;"), "la acción invalida lo que estaba en camino");
+  assert.ok(p.includes("if (version !== versionBandeja.current) return null;"));
 });

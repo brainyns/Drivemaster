@@ -5,8 +5,9 @@ import assert from "node:assert/strict";
 import {
   ALERTAS_PEDIDO, ENTREGAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, SIN_PLAN, chipsAlerta, conteoGrupos, filaConAlerta,
   hayFiltrosPedidos, actividadNegocio, sePuedePagar, textoConcepto, referenciaLinea, textoCuenta, tarjetasLiquidaciones, fueraDelRango, avisoModo, faltaParaResolver, fechaLinea, porRevisar, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
-  perfilNegocio, urgentesDashboard, desgloseFila, avisoLiquidacion, unaALaVez,
+  perfilNegocio, urgentesDashboard, desgloseFila, avisoLiquidacion,
 } from "../src/pages/admin/plataformaAdmin.js";
+import { unaALaVez } from "../src/utils/unaALaVez.js";
 import {
   BENEFICIARIO, ESTADOS_REPARTO, notaReparto, textoEntrega, textoVehiculo, ubicacionNegocio,
 } from "../src/pages/admin/detalleAdmin.js";

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getToken } from "../services/authService";
 import { listarMecanicos } from "../services/tallerService";
 import { obtenerHorario } from "../services/horarioService";
@@ -17,7 +17,8 @@ import DesgloseDinero from "../components/servicio/DesgloseDinero";
 import {
   ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
-import { ESTADOS_TALLER, estadoDeSolicitud } from "../components/servicio/estadosTaller";
+import { ESTADOS_TALLER, estadoDeSolicitud, yaEstabaHecho } from "../components/servicio/estadosTaller";
+import { unaALaVez } from "../utils/unaALaVez";
 import { tiempoRelativo } from "./taller/resumenTaller";
 import { errorDiaCita, hora12, horasDeCita, semanaDesdeFranjas } from "./taller/horarioTaller";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
@@ -240,6 +241,11 @@ export default function TallerSolicitudes({
   const [confirmandoSinPruebas, setConfirmandoSinPruebas] = useState(false);
   // Solicitud cuyo "repuestos recibidos" se está confirmando (desde el detalle, la barra o la lista)
   const [confirmandoRecibidos, setConfirmandoRecibidos] = useState(null);
+  const [confirmandoEntrega, setConfirmandoEntrega] = useState(null);
+  // Resultado de una acción, arriba de la pantalla; aparece a la vista aunque el botón estuviera abajo
+  const [aviso, setAviso] = useState(null); // { tono, texto }
+  const refAvisos = useRef(null);
+  const enviando = useRef(false);
   const [procesando, setProcesando] = useState(false);
   const [reintentando, setReintentando] = useState(false);
   const [errorFecha, setErrorFecha] = useState(null);
@@ -275,7 +281,11 @@ export default function TallerSolicitudes({
   }, [cargarExtras, cargandoBandeja]);
 
   /** Vuelve a pedir la bandeja (la tiene PanelTaller) tras una acción que cambia más de una solicitud. */
-  const cargar = async () => { await onRecargar?.(); };
+  const cargar = async () => onRecargar?.();
+
+  useEffect(() => {
+    if (error || aviso) refAvisos.current?.scrollIntoView({ block: "center" });
+  }, [error, aviso]);
 
   // Abierta desde Inicio: el detalle empieza arriba, no a la altura donde estaba la lista de urgentes
   useEffect(() => {
@@ -321,27 +331,67 @@ export default function TallerSolicitudes({
     setCotizando(false);
     setConfirmandoSinPruebas(false);
     setError(null);
+    setAviso(null);
   };
 
   /** Reemplaza la solicitud actualizada en la lista sin recargar todo. */
   const reemplazar = (actualizada) => onReemplazar?.(actualizada);
 
-  const ejecutar = async (accion) => {
+  /**
+   * Tras un fallo se recarga la bandeja: el cambio pudo guardarse aunque la respuesta se perdiera. Si la solicitud ya
+   * avanzó se dice en qué quedó; si no, lanza el error para quien lo muestre.
+   */
+  const trasFallo = async (s, e) => {
+    const lista = await cargar();
+    const texto = yaEstabaHecho(s, lista?.find((x) => x.id === s?.id));
+    if (!texto) throw e;
+    setAviso({ tono: "info", texto });
+  };
+
+  /** s: la solicitud sobre la que se actúa, si la acción la mueve de estado. */
+  const ejecutar = (accion, s = null) => unaALaVez(enviando, async () => {
     setProcesando(true);
     setError(null);
+    setAviso(null);
     try {
       await accion();
     } catch (e) {
-      setError(e.message);
+      try {
+        await trasFallo(s, e);
+      } catch (fallo) {
+        setError(fallo.message);
+      }
     } finally {
       setProcesando(false);
     }
+  });
+
+  const entregar = async (s) => {
+    try {
+      reemplazar(await marcarEntregada(token, s.id));
+      setAviso({ tono: "ok", texto: `Entregado: ${s.vehiculoDescripcion || "el vehículo"} pasó a Entregados.` });
+    } catch (e) {
+      await trasFallo(s, e); // si sigue igual, el diálogo muestra el error y deja reintentar
+    }
+    setConfirmandoEntrega(null);
   };
 
   const modalRecibidos = confirmandoRecibidos && (
     <ConfirmarRecibidos token={token} solicitud={confirmandoRecibidos}
       onCancelar={() => setConfirmandoRecibidos(null)}
       onConfirmado={async () => { setConfirmandoRecibidos(null); await cargar(); }} />
+  );
+
+  const modalEntrega = confirmandoEntrega && (
+    <ConfirmarAccion titulo={`¿Entregar ${confirmandoEntrega.vehiculoDescripcion || "el vehículo"}?`}
+      mensaje="Confírmalo solo cuando el cliente ya tenga el vehículo. No se puede deshacer."
+      textoConfirmar="Sí, entregar"
+      onCancelar={() => setConfirmandoEntrega(null)}
+      onConfirmar={() => entregar(confirmandoEntrega)} />
+  );
+
+  const avisoAccion = aviso && (
+    <Alerta tono={aviso.tono} className="st-alerta" onCerrar={() => setAviso(null)}>{aviso.texto}</Alerta>
   );
 
   const errorDia = errorDiaCita(semanaHorario, fechaCita);
@@ -403,7 +453,7 @@ export default function TallerSolicitudes({
       return { texto: "Registrar pruebas", ejecutar: async () => reemplazar(await marcarEnPruebas(token, s.id)) };
     }
     if (s.estado === "EN_INSTALACION") return { texto: "Marcar como lista", ejecutar: async () => reemplazar(await marcarLista(token, s.id)) };
-    if (s.estado === "LISTA") return { texto: "Entregar", ejecutar: async () => reemplazar(await marcarEntregada(token, s.id)) };
+    if (s.estado === "LISTA") return { texto: "Entregar", ejecutar: async () => setConfirmandoEntrega(s) };
     return null;
   };
 
@@ -419,7 +469,7 @@ export default function TallerSolicitudes({
       : s.estado === "DIAGNOSTICADA" && !cotizando && !editandoDiagnostico
         ? { etiqueta: "Diagnóstico listo", texto: "Cotizar", onClick: () => setCotizando(true) }
         : accion
-          ? { etiqueta: ESTADOS_TALLER[s.estado]?.label, texto: accion.texto, onClick: () => ejecutar(accion.ejecutar) }
+          ? { etiqueta: ESTADOS_TALLER[s.estado]?.label, texto: accion.texto, onClick: () => ejecutar(accion.ejecutar, s) }
           : null;
 
     return (
@@ -434,7 +484,10 @@ export default function TallerSolicitudes({
           </p>
         </EncabezadoPagina>
 
-        {error && <Alerta className="st-alerta" onCerrar={() => setError(null)}>{error}</Alerta>}
+        <div ref={refAvisos}>
+          {error && <Alerta className="st-alerta" onCerrar={() => setError(null)}>{error}</Alerta>}
+          {avisoAccion}
+        </div>
 
         <div className="ss-detalle">
           <div className="ss-detalle__principal">
@@ -641,7 +694,7 @@ export default function TallerSolicitudes({
                 {accion && (
                   <div className="ui-form-pie">
                     <button type="button" className="ui-btn ui-btn--primario" disabled={procesando} aria-busy={procesando}
-                      onClick={() => ejecutar(accion.ejecutar)}>
+                      onClick={() => ejecutar(accion.ejecutar, s)}>
                       {accion.texto}
                     </button>
                     {/* Las pruebas son opcionales en el backend: se puede pasar directo a lista */}
@@ -658,7 +711,14 @@ export default function TallerSolicitudes({
                     mensaje="El vehículo pasa a lista para entregar y avisamos al cliente por correo. Las pruebas ya no se podrán registrar."
                     textoConfirmar="Sí, marcar como lista"
                     onCancelar={() => setConfirmandoSinPruebas(false)}
-                    onConfirmar={async () => { reemplazar(await marcarLista(token, s.id)); setConfirmandoSinPruebas(false); }} />
+                    onConfirmar={async () => {
+                      try {
+                        reemplazar(await marcarLista(token, s.id));
+                      } catch (e) {
+                        await trasFallo(s, e);
+                      }
+                      setConfirmandoSinPruebas(false);
+                    }} />
                 )}
               </section>
             )}
@@ -692,6 +752,7 @@ export default function TallerSolicitudes({
           </BarraAccionMovil>
         )}
         {modalRecibidos}
+        {modalEntrega}
       </div>
     );
   }
@@ -729,7 +790,7 @@ export default function TallerSolicitudes({
         <div className="st-tarjeta__acciones">
           {accion && (
             <button type="button" className="ui-btn ui-btn--primario" disabled={procesando} aria-busy={procesando}
-              onClick={() => ejecutar(accion.ejecutar)}>{accion.texto}</button>
+              onClick={() => ejecutar(accion.ejecutar, s)}>{accion.texto}</button>
           )}
           <button type="button" className="ui-btn ui-btn--secundario" aria-expanded={abierta} aria-controls={`st-linea-${s.id}`}
             onClick={() => setLineaAbierta(abierta ? null : s.id)}>
@@ -758,12 +819,15 @@ export default function TallerSolicitudes({
     <div className="ss-panel st-root">
       <EncabezadoPagina titulo={textos.titulo} descripcion={textos.descripcion} />
 
-      {(error || errorBandeja) && (
-        <Alerta className="st-alerta" onReintentar={reintentar} reintentando={reintentando}
-          onCerrar={error ? () => setError(null) : undefined}>
-          {error || errorBandeja}
-        </Alerta>
-      )}
+      <div ref={refAvisos}>
+        {(error || errorBandeja) && (
+          <Alerta className="st-alerta" onReintentar={reintentar} reintentando={reintentando}
+            onCerrar={error ? () => setError(null) : undefined}>
+            {error || errorBandeja}
+          </Alerta>
+        )}
+        {avisoAccion}
+      </div>
 
       <div className="st-barra">
         <div className="ui-filtros" role="group" aria-label={modo === "trabajos" ? "Trabajos por etapa" : "Solicitudes por estado"}>
@@ -842,6 +906,7 @@ export default function TallerSolicitudes({
           etiqueta={modo === "trabajos" ? "Páginas de trabajos" : "Páginas de solicitudes"} />
       )}
       {modalRecibidos}
+      {modalEntrega}
     </div>
   );
 }

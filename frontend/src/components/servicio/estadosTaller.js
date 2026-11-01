@@ -54,6 +54,15 @@ export function estadoDeSolicitud(s) {
   return ESTADOS_TALLER[s.estado] || { label: s.estado, tono: "nueva" };
 }
 
+/**
+ * Una acción falló, pero la solicitud ya no está como la vio la pantalla: otra pestaña la movió o el cambio se guardó y
+ * la respuesta se perdió. Entonces no es un error: se dice en qué quedó. null si sigue igual o no se pudo recargar.
+ */
+export function yaEstabaHecho(antes, despues) {
+  if (!antes || !despues || antes.estado === despues.estado) return null;
+  return `Esta solicitud ya está en "${ETIQUETAS_TALLER[despues.estado] || despues.estado}". Revisa el estado antes de seguir.`;
+}
+
 /** Cotizaciones del taller con la misma paleta: pendiente en ámbar, aprobada en curso y los cierres en gris. */
 export const ESTADOS_COTIZACION_TALLER = {
   EMITIDA:             { label: "Pendiente",           tono: "cotizacion" },
