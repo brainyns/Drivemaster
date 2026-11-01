@@ -101,6 +101,25 @@ class EtapasFinalesTest {
     }
 
     @Test
+    void siHabilitarElPagoFallaLaEntregaIgualQuedaYAlertaAlAdmin() {
+        orden.setEstado(EstadoOrden.LISTA);
+        doThrow(new IllegalStateException("postgres caído")).when(liquidacion).ordenEntregada("o1");
+
+        assertEquals(EstadoOrden.ENTREGADA, service.marcarEntregada(CORREO_TALLER, "o1").getEstado());
+
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("no se pudo habilitar el pago"));
+    }
+
+    @Test
+    void siElAvisoFallaLaOrdenIgualQuedaLista() {
+        orden.setEstado(EstadoOrden.EN_INSTALACION);
+        doThrow(new IllegalStateException("sin aviso")).when(avisos).vehiculoListo(any());
+        doThrow(new IllegalStateException("tampoco alerta")).when(avisos).alertaAdmin(anyString(), anyString());
+
+        assertEquals(EstadoOrden.LISTA, service.marcarLista(CORREO_TALLER, "o1").getEstado());
+    }
+
+    @Test
     void noSeSaltanEtapas() {
         orden.setEstado(EstadoOrden.PAGADA);
         ResponseStatusException e = assertThrows(ResponseStatusException.class,

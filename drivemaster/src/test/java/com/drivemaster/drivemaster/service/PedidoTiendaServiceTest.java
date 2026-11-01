@@ -157,6 +157,16 @@ class PedidoTiendaServiceTest {
     }
 
     @Test
+    void siCerrarLosPedidosFallaLaRecepcionIgualQuedaYAlertaAlAdmin() {
+        when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
+        doThrow(new IllegalStateException("mongo caído")).when(mongoTemplate).updateMulti(any(Query.class), any(Update.class), eq(PedidoTienda.class));
+
+        assertDoesNotThrow(() -> service.repuestosRecibidos("taller@demo.com", "o1"));
+
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("quedaron recibidos"));
+    }
+
+    @Test
     void otroTallerNoConfirmaRecepcion() {
         when(tallerService.obtenerPorUsuario("otro@demo.com")).thenReturn(Taller.builder().id("t9").build());
         ResponseStatusException e = assertThrows(ResponseStatusException.class,

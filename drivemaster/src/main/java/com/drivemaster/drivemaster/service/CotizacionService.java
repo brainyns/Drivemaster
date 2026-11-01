@@ -165,21 +165,25 @@ public class CotizacionService {
         cotizacion.setEmitidaPor(taller.getNombre());
         cotizacion = cotizacionRepository.save(cotizacion);
 
-        OrdenServicio cotizada;
+        OrdenServicio guardada;
         try {
-            cotizada = transiciones.transicionar(orden, EstadoOrden.COTIZADA, actorTaller(taller),
+            guardada = transiciones.transicionar(orden, EstadoOrden.COTIZADA, actorTaller(taller),
                     "Cotización v" + cotizacion.getVersion() + " emitida", Criteria.where("tallerId").is(taller.getId()),
                     new Update().set("cotizacionId", cotizacion.getId()));
         } catch (RuntimeException e) {
             cotizacionRepository.delete(cotizacion);
             throw e;
         }
-        // Las versiones anteriores que siguieran abiertas dejan de valer
-        mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())
-                        .and("estado").is(Cotizacion.EMITIDA).and("id").ne(cotizacion.getId())),
-                new Update().set("estado", Cotizacion.REEMPLAZADA).set("tokenUsado", true), Cotizacion.class);
-
-        avisos.cotizacionEmitida(cotizada, cotizacion, token.token());
+        OrdenServicio cotizada = guardada;
+        Cotizacion emitida = cotizacion;
+        TrasGuardar.hacer(avisos, "La cotización v" + emitida.getVersion() + " de la solicitud " + orden.getId()
+                + " se emitió, pero no se pudo cerrar la anterior ni avisar al cliente.", () -> {
+            // Las versiones anteriores que siguieran abiertas dejan de valer
+            mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())
+                            .and("estado").is(Cotizacion.EMITIDA).and("id").ne(emitida.getId())),
+                    new Update().set("estado", Cotizacion.REEMPLAZADA).set("tokenUsado", true), Cotizacion.class);
+            avisos.cotizacionEmitida(cotizada, emitida, token.token());
+        });
         return paraTaller(cotizacion);
     }
 
@@ -433,7 +437,9 @@ public class CotizacionService {
         if (RespuestaCotizacionRequest.RECHAZAR.equals(accion)) {
             liquidacion.ordenCanceladaPorRechazoDeCotizacion(cotizacion.getOrdenId());
         }
-        avisos.cotizacionRespondida(marcada, respuesta, motivo);
+        String motivoAviso = motivo;
+        TrasGuardar.hacer(avisos, "La cotización " + marcada.getId() + " quedó " + respuesta + ", pero no se pudo avisar al taller.",
+                () -> avisos.cotizacionRespondida(marcada, respuesta, motivoAviso));
         return marcada;
     }
 

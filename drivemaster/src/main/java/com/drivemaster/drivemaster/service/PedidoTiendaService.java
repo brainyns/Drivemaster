@@ -426,20 +426,22 @@ public class PedidoTiendaService {
         for (PedidoTienda p : previos) {
             estadoPrevio.put(p.getId(), p.getEstado());
         }
-        mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())
-                        .and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION, PedidoTienda.DESPACHADO)),
-                new Update().set("estado", PedidoTienda.RECIBIDO).set("fechaRecibido", LocalDateTime.now()),
-                PedidoTienda.class);
-        List<PedidoTienda> pedidos = pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
-        // Recepción confirmada: la línea de cada tienda queda lista para liquidar (también si no marcó despacho)
-        for (PedidoTienda p : pedidos) {
-            if (!PedidoTienda.RECIBIDO.equals(p.getEstado())) continue;
-            String previo = estadoPrevio.get(p.getId());
-            String evento = "RECEPCION_CONFIRMADA_TALLER" + (PedidoTienda.PENDIENTE.equals(previo)
-                    ? " (la tienda no había marcado el despacho)" : "");
-            liquidacion.pedidoRecibido(p.getId(), evento);
-        }
-        return pedidos;
+        TrasGuardar.hacer(avisos, "Los repuestos de la solicitud " + orden.getId() + " quedaron recibidos, pero no se pudieron "
+                + "cerrar sus pedidos ni habilitar el pago de las tiendas.", () -> {
+            mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())
+                            .and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION, PedidoTienda.DESPACHADO)),
+                    new Update().set("estado", PedidoTienda.RECIBIDO).set("fechaRecibido", LocalDateTime.now()),
+                    PedidoTienda.class);
+            // Recepción confirmada: la línea de cada tienda queda lista para liquidar (también si no marcó despacho)
+            for (PedidoTienda p : pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId())) {
+                if (!PedidoTienda.RECIBIDO.equals(p.getEstado())) continue;
+                String previo = estadoPrevio.get(p.getId());
+                String evento = "RECEPCION_CONFIRMADA_TALLER" + (PedidoTienda.PENDIENTE.equals(previo)
+                        ? " (la tienda no había marcado el despacho)" : "");
+                liquidacion.pedidoRecibido(p.getId(), evento);
+            }
+        });
+        return pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
     }
 
     // ─── Consulta por orden ──────────────────────────────────────────────────

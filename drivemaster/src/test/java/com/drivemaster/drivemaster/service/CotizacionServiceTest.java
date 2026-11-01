@@ -125,6 +125,16 @@ class CotizacionServiceTest {
     // ─── Emisión ─────────────────────────────────────────────────────────────
 
     @Test
+    void siElCorreoFallaLaCotizacionIgualQuedaEmitidaYAlertaAlAdmin() {
+        doThrow(new IllegalStateException("sin correo")).when(avisos).cotizacionEmitida(any(), any(), anyString());
+
+        assertNotNull(service.emitir(CORREO_TALLER, "o1", pedido()));
+
+        verify(cotizacionRepository, never()).delete(any());
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("se emitió"));
+    }
+
+    @Test
     void emitirCongelaPreciosCalculaTotalesYEnviaElToken() {
         when(cotizacionRepository.findFirstByOrdenIdOrderByVersionDesc("o1"))
                 .thenReturn(Optional.of(Cotizacion.builder().id("c1").version(1).build()));

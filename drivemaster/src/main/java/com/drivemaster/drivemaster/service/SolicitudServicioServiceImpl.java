@@ -233,7 +233,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         OrdenServicio cancelada = transiciones.transicionar(orden, EstadoOrden.CANCELADA,
                 new Actor(EstadoOrden.CLIENTE, cliente.getId(), cliente.getNombre()), texto, null,
                 new Update().set("motivoCierre", texto));
-        avisos.solicitudRetirada(tallerAnterior, cancelada, "El cliente canceló la solicitud");
+        TrasGuardar.hacer(avisos, "La solicitud " + id + " se canceló, pero no se pudo avisar al taller.",
+                () -> avisos.solicitudRetirada(tallerAnterior, cancelada, "El cliente canceló la solicitud"));
         return toDTO(cancelada, Vista.CLIENTE);
     }
 
@@ -327,7 +328,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             actualizada = transiciones.transicionar(orden, EstadoOrden.EN_REVISION, actor,
                     "Cita de revisión agendada para " + fechaTexto, condicion, cambios);
         }
-        avisos.citaRevision(actualizada, pagoRequerido);
+        TrasGuardar.hacer(avisos, "La solicitud " + id + " se aceptó, pero no se pudo avisar al cliente de su cita.",
+                () -> avisos.citaRevision(actualizada, pagoRequerido));
         return toDTO(actualizada, Vista.TALLER);
     }
 
@@ -584,7 +586,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     public SolicitudServicioDTO marcarLista(String correoTaller, String id) {
         SolicitudServicioDTO lista = avanzar(correoTaller, id, EstadoOrden.LISTA, "Vehículo listo para entregar",
                 new Update().set("fechaLista", LocalDateTime.now()).unset("subestado"));
-        ordenRepository.findById(id).ifPresent(avisos::vehiculoListo);
+        TrasGuardar.hacer(avisos, "La solicitud " + id + " quedó lista, pero no se pudo avisar al cliente.",
+                () -> ordenRepository.findById(id).ifPresent(avisos::vehiculoListo));
         return lista;
     }
 
@@ -593,7 +596,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         SolicitudServicioDTO entregada = avanzar(correoTaller, id, EstadoOrden.ENTREGADA, "Vehículo entregado al cliente",
                 new Update().set("fechaEntrega", LocalDateTime.now()));
         // La línea del taller queda lista para liquidar (SIMULADO: se paga sola; MANUAL: la paga el ADMIN)
-        liquidacion.ordenEntregada(id);
+        TrasGuardar.hacer(avisos, "La solicitud " + id + " quedó entregada, pero no se pudo habilitar el pago del taller.",
+                () -> liquidacion.ordenEntregada(id));
         return entregada;
     }
 
