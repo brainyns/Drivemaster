@@ -57,8 +57,10 @@ public class TransicionOrdenService {
                                       Criteria condicion, Update cambios, List<String> notasAdicionales) {
         String desde = orden.getEstado();
         if (!EstadoOrden.permitida(desde, hacia, actor.rol())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede pasar la solicitud de " + desde + " a " + hacia);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, desde != null && desde.equals(hacia)
+                    ? "Esta solicitud ya está en \"" + EstadoOrden.nombre(desde) + "\"."
+                    : "Esta solicitud está en \"" + EstadoOrden.nombre(desde) + "\" y no puede pasar a \""
+                            + EstadoOrden.nombre(hacia) + "\". Recarga para ver su estado.");
         }
         return aplicar(orden, desde, hacia, actor, nota, condicion, cambios, notasAdicionales);
     }

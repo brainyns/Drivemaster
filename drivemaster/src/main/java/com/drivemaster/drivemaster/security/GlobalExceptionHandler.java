@@ -4,12 +4,17 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.drivemaster.drivemaster.exception.DatosInvalidosException;
 import com.drivemaster.drivemaster.exception.RepartoYaEnPagoException;
@@ -17,6 +22,8 @@ import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private Map<String, Object> buildResponse(String message, HttpStatus status) {
         Map<String, Object> response = new HashMap<>();
@@ -68,6 +75,22 @@ public class GlobalExceptionHandler {
         Map<String, Object> response = buildResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
         response.put("campos", ex.getCampos());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /** JSON mal formado, un texto donde va un número, una fecha inválida: es un dato malo, no un fallo del servidor. */
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<?> handleDatoIlegible(Exception ex) {
+        log.warn("Petición con datos ilegibles: {}", ex.getMessage());
+        return ResponseEntity.badRequest()
+                .body(buildResponse("Los datos enviados no son válidos. Revísalos e intenta de nuevo.", HttpStatus.BAD_REQUEST));
+    }
+
+    /** La base no respondió: se puede reintentar, y el detalle del error no le sirve a quien lo lee. */
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<?> handleBaseDeDatos(DataAccessException ex) {
+        log.error("Fallo de acceso a datos", ex);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(buildResponse("No pudimos completar la acción. Intenta de nuevo en un momento.", HttpStatus.SERVICE_UNAVAILABLE));
     }
 
     @ExceptionHandler(RuntimeException.class)

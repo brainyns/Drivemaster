@@ -227,7 +227,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         }
         if (!CANCELABLES_POR_CLIENTE.contains(orden.getEstado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "La solicitud ya no se puede cancelar desde la app (estado " + orden.getEstado() + ")");
+                    "La solicitud ya no se puede cancelar desde la app (estado: " + EstadoOrden.nombre(orden.getEstado()) + ")");
         }
         String texto = motivo != null && !motivo.isBlank() ? motivo.trim() : "Cancelada por el cliente";
         String tallerAnterior = orden.getTallerId();
@@ -373,7 +373,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         boolean primeraVez = EstadoOrden.EN_REVISION.equals(orden.getEstado());
         if (!primeraVez && !EstadoOrden.DIAGNOSTICADA.equals(orden.getEstado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El diagnóstico se registra con el vehículo en revisión (estado actual: " + orden.getEstado() + ")");
+                    "El diagnóstico se registra con el vehículo en revisión (estado actual: " + EstadoOrden.nombre(orden.getEstado()) + ")");
         }
         if (r == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completa el diagnóstico");

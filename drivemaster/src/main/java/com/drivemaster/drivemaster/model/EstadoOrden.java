@@ -108,7 +108,21 @@ public final class EstadoOrden {
                     ENTREGADA, Set.of(TALLER)))
     );
 
+    private static final Map<String, String> NOMBRES = Map.ofEntries(
+            Map.entry(ENVIADA, "Enviada"), Map.entry(ASIGNADA_A_TALLER, "Asignada a taller"),
+            Map.entry(REASIGNADA, "Buscando otro taller"), Map.entry(EN_REVISION, "En revisión"),
+            Map.entry(DIAGNOSTICADA, "Diagnosticada"), Map.entry(COTIZADA, "Cotizada"), Map.entry(APROBADA, "Aprobada"),
+            Map.entry(PAGADA, "Pagada"), Map.entry(REPUESTOS_PEDIDOS, "Repuestos pedidos"),
+            Map.entry(REPUESTOS_RECIBIDOS, "Repuestos recibidos"), Map.entry(EN_INSTALACION, "En instalación"),
+            Map.entry(LISTA, "Lista para entregar"), Map.entry(ENTREGADA, "Entregada"),
+            Map.entry(RECHAZADA, "Sin taller disponible"), Map.entry(CANCELADA, "Cancelada"));
+
     private EstadoOrden() {
+    }
+
+    /** El estado como se lee en pantalla: los mensajes de error no muestran nombres técnicos. */
+    public static String nombre(String estado) {
+        return NOMBRES.getOrDefault(estado, estado);
     }
 
     public static boolean permitida(String desde, String hacia, String actor) {

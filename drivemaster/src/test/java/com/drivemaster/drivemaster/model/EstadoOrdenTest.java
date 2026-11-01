@@ -52,6 +52,18 @@ class EstadoOrdenTest {
     }
 
     @Test
+    void cadaEstadoTieneSuNombreParaLaPantalla() throws Exception {
+        for (java.lang.reflect.Field f : EstadoOrden.class.getFields()) {
+            if (java.util.Set.of("ENVIADA", "ASIGNADA_A_TALLER", "REASIGNADA", "EN_REVISION", "DIAGNOSTICADA", "COTIZADA", "APROBADA", "PAGADA",
+                    "REPUESTOS_PEDIDOS", "REPUESTOS_RECIBIDOS", "EN_INSTALACION", "LISTA", "ENTREGADA", "RECHAZADA", "CANCELADA").contains(f.getName())) {
+                String estado = (String) f.get(null);
+                assertFalse(estado.equals(nombre(estado)), estado + " no tiene nombre para la pantalla");
+            }
+        }
+        assertEquals("Otro", nombre("Otro"));
+    }
+
+    @Test
     void superadminActuaComoAdmin() {
         assertEquals(ADMIN, actorDeRol("SUPERADMIN"));
         assertEquals(ADMIN, actorDeRol("ADMIN"));

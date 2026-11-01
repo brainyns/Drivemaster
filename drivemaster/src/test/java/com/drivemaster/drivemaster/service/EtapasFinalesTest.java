@@ -216,6 +216,19 @@ class EtapasFinalesTest {
     }
 
     @Test
+    void elRechazoDeUnCambioDeEstadoSeLeeEnEspanol() {
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        ResponseStatusException repetido = assertThrows(ResponseStatusException.class, () -> service.marcarEntregada(CORREO_TALLER, "o1"));
+        assertEquals("Esta solicitud ya está en \"Entregada\".", repetido.getReason());
+
+        orden.setEstado(EstadoOrden.LISTA);
+        ResponseStatusException saltado = assertThrows(ResponseStatusException.class, () -> service.iniciarInstalacion(CORREO_TALLER, "o1"));
+        assertEquals(HttpStatus.CONFLICT, saltado.getStatusCode());
+        assertTrue(saltado.getReason().contains("Lista para entregar") && saltado.getReason().contains("En instalación"), saltado.getReason());
+        assertFalse(saltado.getReason().contains("EN_INSTALACION"));
+    }
+
+    @Test
     void soloElTallerDeLaOrden() {
         orden.setEstado(EstadoOrden.REPUESTOS_RECIBIDOS);
         when(tallerService.obtenerPorUsuario("otro@demo.com")).thenReturn(Taller.builder().id("t9")
