@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import {
   ALERTAS_PEDIDO, ENTREGAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, SIN_PLAN, chipsAlerta, conteoGrupos, filaConAlerta,
   hayFiltrosPedidos, actividadNegocio, sePuedePagar, textoConcepto, referenciaLinea, textoCuenta, tarjetasLiquidaciones, fueraDelRango, avisoModo, faltaParaResolver, fechaLinea, porRevisar, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
-  perfilNegocio, urgentesDashboard, desgloseFila,
+  perfilNegocio, urgentesDashboard, desgloseFila, avisoLiquidacion, unaALaVez,
 } from "../src/pages/admin/plataformaAdmin.js";
 import {
   BENEFICIARIO, ESTADOS_REPARTO, notaReparto, textoEntrega, textoVehiculo, ubicacionNegocio,
@@ -239,6 +239,58 @@ test("Problemas de envío: sistema compartido, decisión con motivo en Campo y l
     "<Esqueleto", "<Campo", "ui-table--tarjetas", 'aria-label="Problemas por estado"', "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
   assert.ok(p.includes("problemasDeEnvio(token)") && p.includes("resolverProblemaEnvio(token, pedido.id, resolucion, motivo.trim())"));
   assert.ok(p.includes("deshabilitado={!motivo.trim()}"), "sin motivo no se puede decidir");
+});
+
+test("Liquidaciones: dos envíos seguidos hacen una sola petición, y el candado se suelta con la respuesta", async () => {
+  const candado = { current: false };
+  let peticiones = 0;
+  let responder;
+  const pago = () => { peticiones += 1; return new Promise((r) => { responder = r; }); };
+
+  const primero = unaALaVez(candado, pago);
+  await unaALaVez(candado, pago);
+  assert.equal(peticiones, 1, "antes de que React deshabilite el botón");
+  responder();
+  await primero;
+  assert.equal(candado.current, false);
+
+  await assert.rejects(unaALaVez(candado, async () => { throw new Error("409"); }));
+  assert.equal(candado.current, false, "un error también suelta el candado");
+});
+
+test("Liquidaciones: un 409 de una línea en pago o pagada muestra su estado, no un error", () => {
+  const pagada = avisoLiquidacion({ status: 409, estado: "LIQUIDADO", referencia: "WOMPI-86-AB" });
+  assert.equal(pagada.tono, "ok");
+  assert.match(pagada.texto, /^Pagado/);
+  assert.match(pagada.texto, /WOMPI-86-AB/);
+
+  const enCurso = avisoLiquidacion({ status: 409, estado: "PROCESANDO", message: "Este reparto se está liquidando" });
+  assert.equal(enCurso.tono, "info");
+  assert.match(enCurso.texto, /^Ya se está pagando/);
+
+  const sinConfirmar = avisoLiquidacion({ status: 409, estado: "PROCESANDO", sinConfirmar: true, message: "Wompi no confirmó el pago" });
+  assert.equal(sinConfirmar.tono, "aviso");
+  assert.equal(sinConfirmar.texto, "Wompi no confirmó el pago", "no se dice que se está pagando si Wompi no lo confirmó");
+});
+
+test("Liquidaciones: sin respuesta no se afirma nada y se pide revisar antes de reintentar", () => {
+  const a = avisoLiquidacion({ name: "ErrorConexion", message: "x" });
+  assert.equal(a.tono, "aviso");
+  assert.match(a.texto, /pudo haber salido/);
+});
+
+test("Liquidaciones: lo que sí es un error sigue siéndolo", () => {
+  assert.equal(avisoLiquidacion({ status: 409, message: "Este reparto está anulado" }), null);
+  assert.equal(avisoLiquidacion({ status: 409, estado: "ANULADO" }), null);
+  assert.equal(avisoLiquidacion({ status: 422, estado: "LIQUIDADO", message: "No se pudo liquidar: banco" }), null);
+  assert.equal(avisoLiquidacion({ status: 500, message: "Fallo" }), null);
+});
+
+test("Liquidaciones: el diálogo no sigue ofreciendo pagar una línea que ya no se puede pagar", () => {
+  const p = leer("../src/pages/Liquidaciones.jsx");
+  assert.ok(p.includes("(!esRepartos || sePuedePagar(f))"));
+  assert.ok(p.includes("const marcar = (id) => unaALaVez(enviando,") && p.includes("const resolver = (id) => unaALaVez(enviando,"));
+  assert.ok(leer("../src/services/liquidacionService.js").match(/LIMITE_LIQUIDAR_MS = (\d+)/)[1] > 75000, "más que el peor caso de Wompi");
 });
 
 test("Liquidaciones: solo se paga lo listo o fallido, nunca lo que espera la entrega, aunque sea una línea antigua", () => {

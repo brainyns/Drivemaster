@@ -20,8 +20,8 @@ import Campo from "../components/ui/Campo";
 import Dato from "../components/ui/Dato";
 import { unir } from "../utils/formato";
 import {
-  ESTADOS_LIQUIDACION, MAS_ESTADOS_LIQUIDACION, avisoModo, desgloseFila, faltaParaResolver, fechaLinea, fueraDelRango, porRevisar, referenciaLinea,
-  sePuedePagar, tarjetasLiquidaciones, textoConcepto, textoCuenta,
+  ESTADOS_LIQUIDACION, MAS_ESTADOS_LIQUIDACION, avisoLiquidacion, avisoModo, desgloseFila, faltaParaResolver, fechaLinea, fueraDelRango, porRevisar, referenciaLinea,
+  sePuedePagar, tarjetasLiquidaciones, textoConcepto, textoCuenta, unaALaVez,
 } from "./admin/plataformaAdmin";
 // El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
 import "../css/admin-base.css";
@@ -80,6 +80,7 @@ export default function Liquidaciones() {
   const [filas, setFilas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [avisoPago, setAvisoPago] = useState(null); // lo que se sabe de un pago que no volvió con éxito: { tono, texto, estado, accion }
   const [errorCarga, setErrorCarga] = useState(null);
   const [marcandoId, setMarcandoId] = useState(null);
   const [nota, setNota] = useState("");
@@ -98,6 +99,7 @@ export default function Liquidaciones() {
   const fechasAntesDeVerTodo = useRef(null);
   // Solo cuenta la última petición: una respuesta lenta no pisa el filtro que se eligió después
   const ultimaPeticion = useRef(0);
+  const enviando = useRef(false);
 
   const cargar = useCallback(async () => {
     if (vista === "repartos" && errorFechas) return; // el selector de fechas ya lo avisa
@@ -162,9 +164,10 @@ export default function Liquidaciones() {
   // La cifra de Pagado es del mes en curso: lleva a ese mismo mes
   const verPagadoDelMes = () => { fechasAntesDeVerTodo.current = null; setEstado("LIQUIDADO"); setFechas(rangoRapido("mes")); setPagina(0); };
 
-  const marcar = async (id) => {
+  const marcar = (id) => unaALaVez(enviando, async () => {
     setProcesando(true);
     setError(null);
+    setAvisoPago(null);
     try {
       if (esRepartos) {
         await liquidarReparto(token, id, { numeroTransferencia: numero.trim() || null, nota: nota.trim() || null });
@@ -175,14 +178,22 @@ export default function Liquidaciones() {
       setNumero("");
       await cargar();
     } catch (e) {
-      setError(e.message);
+      const avisoDelPago = esRepartos ? avisoLiquidacion(e) : null;
+      if (avisoDelPago) {
+        setMarcandoId(null);
+        setAvisoPago(avisoDelPago);
+        // La fila dice su estado real aunque la recarga falle
+        if (e.estado) setFilas((lista) => lista.map((f) => (f.id === id ? { ...f, estado: e.estado, referenciaLiquidacion: e.referencia ?? f.referenciaLiquidacion } : f)));
+      } else {
+        setError(e.message);
+      }
       await cargar(); // un fallo también cambia la línea (queda FALLIDO o sin confirmar)
     } finally {
       setProcesando(false);
     }
-  };
+  });
 
-  const resolver = async (id) => {
+  const resolver = (id) => unaALaVez(enviando, async () => {
     setProcesando(true);
     setError(null);
     try {
@@ -196,11 +207,12 @@ export default function Liquidaciones() {
     } finally {
       setProcesando(false);
     }
-  };
+  });
 
   const pendientesReembolso = filas.filter((f) => f.estado === "PENDIENTE");
   const totalPendienteReembolso = pendientesReembolso.reduce((s, f) => s + (f.monto || 0), 0);
-  const marcando = filas.find((f) => f.id === marcandoId) || null;
+  // Si la línea ya no se puede pagar, el diálogo no se queda abierto ofreciendo pagarla
+  const marcando = filas.find((f) => f.id === marcandoId && (!esRepartos || sePuedePagar(f))) || null;
   const desgloseDialogo = marcando && esRepartos ? desgloseFila(marcando, tabla?.comisionSeDescuenta) : null;
   const resolviendo = filas.find((f) => f.id === resolviendoId) || null;
 
@@ -307,6 +319,12 @@ export default function Liquidaciones() {
         </Alerta>
       )}
 
+      {avisoPago && (
+        <Alerta tono={avisoPago.tono} className="pp-bloque-sep" onCerrar={() => setAvisoPago(null)}>
+          {avisoPago.texto}{" "}
+          {estado !== avisoPago.estado && <button type="button" className="dtp-enlace" onClick={() => verTodoElEstado(avisoPago.estado)}>{avisoPago.accion}</button>}
+        </Alerta>
+      )}
       {error && !marcando && !resolviendo && <Alerta className="pp-bloque-sep" onCerrar={() => setError(null)}>{error}</Alerta>}
       {errorCarga && <Alerta className="pp-bloque-sep" onReintentar={cargar} reintentando={cargando}>{errorCarga}</Alerta>}
 

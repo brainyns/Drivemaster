@@ -1,6 +1,8 @@
 // Panel de la plataforma (SUPERADMIN): lo que las pantallas calculan con las respuestas de /api/plataforma. Sin
 // componentes: lo prueban los tests con node --test. No agrega reglas de negocio: ordena y nombra lo que ya llega.
 
+import { esErrorConexion } from "../../services/conexion.js";
+
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 const plural = (n, uno, varios) => (n === 1 ? uno : varios);
@@ -69,6 +71,41 @@ export function barras(conteos = {}, etiquetas = {}, orden = []) {
 
 /** Solo se paga lo que está listo o falló (reintento). PENDIENTE espera la recepción o la entrega; el backend lo exige igual. */
 export const sePuedePagar = (f = {}) => f.estado === "POR_LIQUIDAR" || f.estado === "FALLIDO";
+
+/**
+ * Corta un segundo envío antes de que React deshabilite el botón. candado: { current } de useRef. Una acción a la vez;
+ * el candado se suelta con la respuesta, buena o mala.
+ */
+export async function unaALaVez(candado, accion) {
+  if (candado.current) return;
+  candado.current = true;
+  try {
+    await accion();
+  } finally {
+    candado.current = false;
+  }
+}
+
+/**
+ * Lo que pasó con un pago que no volvió con éxito, cuando no es un error del pago: la línea ya estaba en pago o pagada
+ * (409 con su estado), o no llegó respuesta y no se sabe. null si es un error de verdad. estado es la lista que la muestra.
+ */
+export function avisoLiquidacion(e = {}) {
+  if (e.status === 409 && e.estado === "LIQUIDADO") {
+    return { tono: "ok", estado: "LIQUIDADO", accion: "Ver pagados",
+      texto: `Pagado: este pago ya había salido${e.referencia ? ` (${e.referencia})` : ""}. No se envió otro.` };
+  }
+  if (e.status === 409 && e.estado === "PROCESANDO") {
+    return e.sinConfirmar
+      ? { tono: "aviso", estado: "PROCESANDO", accion: "Revisar", texto: e.message }
+      : { tono: "info", estado: "PROCESANDO", accion: "Ver estado", texto: "Ya se está pagando: no se envió otro pago." };
+  }
+  if (esErrorConexion(e)) {
+    return { tono: "aviso", estado: "PROCESANDO", accion: "Ver sin confirmar",
+      texto: "No llegó respuesta del servidor y el pago pudo haber salido. Revisa el estado de la línea antes de intentarlo otra vez." };
+  }
+  return null;
+}
 
 const CONCEPTOS_REPARTO = { DIAGNOSTICO: "Diagnóstico", COTIZACION: "Cotización", CATALOGO: "Venta de catálogo" };
 

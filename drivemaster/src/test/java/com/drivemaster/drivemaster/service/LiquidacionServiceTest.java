@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.exception.RepartoYaEnPagoException;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.OrdenServicio;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -825,6 +827,58 @@ class LiquidacionServiceTest {
         s.procesarWebhookPayout(Map.of("event", "payout.updated", "data", Map.of("payout", Map.of(
                 "reference", "WOMPI-1-AB", "status", "TOTAL_PAYMENT"))));
         assertEquals(RepartoPago.LIQUIDADO, tienda.getEstado());
+    }
+
+    @Test
+    void elConflictoDeUnaLineaEnPagoOPagadaDiceSuEstadoYNoLlegaAWompi() {
+        DispersionService wompi = mock(DispersionService.class);
+        LiquidacionService s = servicio(wompi);
+        RepartoPago enCurso = linea(1, RepartoPago.TIENDA, "ped1", true);
+        enCurso.setEstado(RepartoPago.PROCESANDO);
+        RepartoPago sinConfirmar = linea(2, RepartoPago.TIENDA, "ped2", true);
+        sinConfirmar.setEstado(RepartoPago.PROCESANDO);
+        sinConfirmar.setMotivoFallo("Wompi no confirmó");
+        RepartoPago pagada = linea(3, RepartoPago.TIENDA, "ped3", true);
+        pagada.setEstado(RepartoPago.LIQUIDADO);
+        pagada.setReferenciaLiquidacion("WOMPI-3-AB [ID:p-3]");
+
+        RepartoYaEnPagoException e1 = assertThrows(RepartoYaEnPagoException.class, () -> s.liquidar(1L, ADMIN, null, null));
+        RepartoYaEnPagoException e2 = assertThrows(RepartoYaEnPagoException.class, () -> s.liquidar(2L, ADMIN, null, null));
+        RepartoYaEnPagoException e3 = assertThrows(RepartoYaEnPagoException.class, () -> s.liquidar(3L, ADMIN, null, null));
+
+        assertEquals(HttpStatus.CONFLICT, e1.getStatusCode());
+        assertEquals(RepartoPago.PROCESANDO, e1.getEstado());
+        assertFalse(e1.isSinConfirmar());
+        assertTrue(e2.isSinConfirmar());
+        assertEquals("Wompi no confirmó", e2.getReason());
+        assertEquals(RepartoPago.LIQUIDADO, e3.getEstado());
+        assertEquals("WOMPI-3-AB [ID:p-3]", e3.getReferencia());
+        verify(wompi, never()).liquidar(any(), any());
+        assertEquals(0, dispersiones.get());
+    }
+
+    @Test
+    void unaLineaQueNoEstaEnPagoSigueSiendoUnErrorSinEstado() {
+        RepartoPago anulada = linea(1, RepartoPago.TIENDA, "ped1", true);
+        anulada.setEstado(RepartoPago.ANULADO);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> servicio(mock(DispersionService.class)).liquidar(1L, ADMIN, null, null));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        assertFalse(e instanceof RepartoYaEnPagoException, "la pantalla debe mostrarlo como error");
+    }
+
+    @Test
+    void elRechazoDeUnaLineaEnPagoLlegaAlNavegadorConSuEstado() {
+        ResponseEntity<?> r = new com.drivemaster.drivemaster.security.GlobalExceptionHandler()
+                .handleRepartoYaEnPago(new RepartoYaEnPagoException("Este reparto ya está liquidado", "LIQUIDADO", "WOMPI-1-AB", false));
+
+        Map<?, ?> cuerpo = (Map<?, ?>) r.getBody();
+        assertEquals(HttpStatus.CONFLICT, r.getStatusCode());
+        assertEquals("Este reparto ya está liquidado", cuerpo.get("error"));
+        assertEquals("LIQUIDADO", cuerpo.get("estado"));
+        assertEquals("WOMPI-1-AB", cuerpo.get("referencia"));
+        assertEquals(false, cuerpo.get("sinConfirmar"));
     }
 
     @Test

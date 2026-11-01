@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.drivemaster.drivemaster.exception.DatosInvalidosException;
+import com.drivemaster.drivemaster.exception.RepartoYaEnPagoException;
 import com.drivemaster.drivemaster.exception.StockInsuficienteException;
 
 @RestControllerAdvice
@@ -41,6 +42,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleResponseStatus(org.springframework.web.server.ResponseStatusException ex) {
         HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
         return ResponseEntity.status(status).body(buildResponse(ex.getReason(), status));
+    }
+
+    @ExceptionHandler(RepartoYaEnPagoException.class)
+    public ResponseEntity<?> handleRepartoYaEnPago(RepartoYaEnPagoException ex) {
+        Map<String, Object> response = buildResponse(ex.getReason(), HttpStatus.CONFLICT);
+        response.put("estado", ex.getEstado());
+        response.put("referencia", ex.getReferencia());
+        response.put("sinConfirmar", ex.isSinConfirmar());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(StockInsuficienteException.class)

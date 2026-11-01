@@ -3,6 +3,7 @@ package com.drivemaster.drivemaster.service;
 import com.drivemaster.drivemaster.dto.comun.Pagina;
 import com.drivemaster.drivemaster.dto.comun.PeticionTabla;
 import com.drivemaster.drivemaster.dto.comun.RangoFechas;
+import com.drivemaster.drivemaster.exception.RepartoYaEnPagoException;
 import com.drivemaster.drivemaster.model.mysql.Reembolso;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.model.mysql.ResolucionReparto;
@@ -235,7 +236,8 @@ public class LiquidacionService {
 
     /**
      * Paga una línea (o reintenta una FALLIDO). En modo MANUAL el número de
-     * transferencia es obligatorio.
+     * transferencia es obligatorio. Un 409 por línea no tomada corta antes de la dispersión;
+     * el de un pago sin confirmar sale después de su único intento: nunca hay un segundo.
      */
     public RepartoPago liquidar(Long id, String correoAdmin, String numeroTransferencia, String nota) {
         SolicitudDispersion solicitud = new SolicitudDispersion(correoAdmin, numeroTransferencia, nota);
@@ -247,9 +249,13 @@ public class LiquidacionService {
                     "No se pudo liquidar: " + resultado.getMotivoFallo() + ". Puedes reintentar.");
         }
         if (RepartoPago.PROCESANDO.equals(resultado.getEstado())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, resultado.getMotivoFallo());
+            throw yaEnPago(resultado, resultado.getMotivoFallo());
         }
         return resultado;
+    }
+
+    private static RepartoYaEnPagoException yaEnPago(RepartoPago r, String mensaje) {
+        return new RepartoYaEnPagoException(mensaje, r.getEstado(), r.getReferenciaLiquidacion(), r.getMotivoFallo() != null);
     }
 
     /** Sin motivo de Wompi, una línea PROCESANDO se considera colgada pasado este tiempo. */
@@ -386,10 +392,10 @@ public class LiquidacionService {
         RepartoPago r = repartoRepository.findById(id).orElse(null);
         if (r == null) return new ResponseStatusException(HttpStatus.NOT_FOUND, "Reparto no encontrado");
         if (RepartoPago.LIQUIDADO.equals(r.getEstado())) {
-            return new ResponseStatusException(HttpStatus.CONFLICT, "Este reparto ya está liquidado");
+            return yaEnPago(r, "Este reparto ya está liquidado");
         }
         if (RepartoPago.PROCESANDO.equals(r.getEstado())) {
-            return new ResponseStatusException(HttpStatus.CONFLICT, r.getMotivoFallo() != null ? r.getMotivoFallo()
+            return yaEnPago(r, r.getMotivoFallo() != null ? r.getMotivoFallo()
                     : "Este reparto se está liquidando en este momento");
         }
         if (RepartoPago.ANULADO.equals(r.getEstado())) {

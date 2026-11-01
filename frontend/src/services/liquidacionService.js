@@ -9,8 +9,10 @@ function headers(token) {
 async function handle(res, msgDefault) {
   if (!res.ok) {
     let msg = msgDefault;
-    try { const data = await res.json(); msg = data.error || data.message || msg; } catch { /* ignore */ }
-    throw new Error(msg);
+    let data = null;
+    try { data = await res.json(); msg = data.error || data.message || msg; } catch { /* ignore */ }
+    // estado, referencia y sinConfirmar solo llegan en el 409 de una línea que ya está en pago o pagada
+    throw Object.assign(new Error(msg), { status: res.status, estado: data?.estado, referencia: data?.referencia, sinConfirmar: data?.sinConfirmar });
   }
   return res.json();
 }
@@ -35,8 +37,9 @@ export async function obtenerModo(token) {
   return handle(res, "No se pudo consultar el modo de liquidación");
 }
 
-// Wompi Payouts puede tardar más que el límite normal: cortar antes diría "sin conexión" con el pago en curso
-const LIMITE_LIQUIDAR_MS = 60000;
+// Wompi puede tardar 75 s en el peor caso (cuenta, bancos y pago) y Render otro tanto si está dormido: cortar antes
+// diría "sin conexión" con el pago en curso
+const LIMITE_LIQUIDAR_MS = 150000;
 
 /** En modo MANUAL el número de transferencia es obligatorio; en SIMULADO el backend lo ignora. */
 export async function liquidarReparto(token, id, { numeroTransferencia, nota } = {}) {
