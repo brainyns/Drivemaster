@@ -200,7 +200,7 @@ class LiquidacionServiceTest {
             @Override public boolean automatica() { return dispersion.automatica(); }
             @Override public boolean dineroReal() { return dispersion.dineroReal(); }
             @Override public void validar(SolicitudDispersion s) { dispersion.validar(s); }
-            @Override public PagoAnterior consultarPagoAnterior(RepartoPago r) { return dispersion.consultarPagoAnterior(r); }
+            @Override public PagoAnterior consultarPago(String referencia) { return dispersion.consultarPago(referencia); }
             @Override public ResultadoDispersion liquidar(RepartoPago r, SolicitudDispersion s) {
                 dispersiones.incrementAndGet();
                 return dispersion.liquidar(r, s);
@@ -763,9 +763,9 @@ class LiquidacionServiceTest {
         LiquidacionService service = servicio(manual());
 
         Map<String, Object> payload = Map.of(
-                "event", "payout.updated",
+                "event", "transaction.updated",
                 "data", Map.of(
-                        "payout", Map.of(
+                        "transaction", Map.of(
                                 "reference", "WOMPI-100-TEST",
                                 "status", "APPROVED"
                         )
@@ -826,8 +826,7 @@ class LiquidacionServiceTest {
         assertEquals(1, dispersiones.get());
 
         // El evento de Wompi lo resuelve por la referencia guardada
-        s.procesarWebhookPayout(Map.of("event", "payout.updated", "data", Map.of("payout", Map.of(
-                "reference", "WOMPI-1-AB", "status", "TOTAL_PAYMENT"))));
+        s.procesarWebhookPayout(pagoConfirmado("WOMPI-1-AB"));
         assertEquals(RepartoPago.LIQUIDADO, tienda.getEstado());
     }
 
@@ -897,7 +896,7 @@ class LiquidacionServiceTest {
     private DispersionService wompiQueResponde(PagoAnterior anterior) {
         DispersionService wompi = mock(DispersionService.class);
         when(wompi.modo()).thenReturn("WOMPI");
-        when(wompi.consultarPagoAnterior(any())).thenReturn(anterior);
+        when(wompi.consultarPago(any())).thenReturn(anterior);
         when(wompi.liquidar(any(), any())).thenReturn(new ResultadoDispersion("WOMPI", "WOMPI-1-NUEVA [ID:p-2]", java.math.BigDecimal.TEN));
         return wompi;
     }
@@ -947,7 +946,7 @@ class LiquidacionServiceTest {
     void siLaConsultaFallaOResponderNadaTambienSeBloquea() {
         RepartoPago r = fallidaEnWompi();
         DispersionService rota = wompiQueResponde(null);
-        when(rota.consultarPagoAnterior(any())).thenThrow(new IllegalStateException("Wompi caído"));
+        when(rota.consultarPago(any())).thenThrow(new IllegalStateException("Wompi caído"));
 
         assertThrows(RepartoYaEnPagoException.class, () -> servicio(rota).liquidar(1L, ADMIN, null, null));
         assertEquals(RepartoPago.PROCESANDO, r.getEstado());
@@ -1002,7 +1001,7 @@ class LiquidacionServiceTest {
         s.liquidar(2L, ADMIN, null, null);
         s.liquidar(3L, ADMIN, null, null);
 
-        verify(wompi, never()).consultarPagoAnterior(any());
+        verify(wompi, never()).consultarPago(any());
         assertEquals(3, dispersiones.get());
     }
 
@@ -1132,7 +1131,7 @@ class LiquidacionServiceTest {
     }
 
     private static Map<String, Object> pagoConfirmadoConId(String referencia, String idWompi) {
-        return Map.of("event", "payout.updated", "data", Map.of("payout", Map.of("id", idWompi, "reference", referencia, "status", "TOTAL_PAYMENT")));
+        return Map.of("event", "transaction.updated", "data", Map.of("transaction", Map.of("payoutId", idWompi, "reference", referencia, "status", "APPROVED")));
     }
 
     @Test
@@ -1185,7 +1184,7 @@ class LiquidacionServiceTest {
     }
 
     private static Map<String, Object> pagoConfirmado(String referencia) {
-        return Map.of("event", "payout.updated", "data", Map.of("payout", Map.of("reference", referencia, "status", "TOTAL_PAYMENT")));
+        return Map.of("event", "transaction.updated", "data", Map.of("transaction", Map.of("reference", referencia, "status", "APPROVED")));
     }
 
     @Test
@@ -1224,6 +1223,117 @@ class LiquidacionServiceTest {
 
         assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
         verify(avisos).alertaAdmin(eq("Posible doble pago"), contains("WOMPI-1-VIEJA"));
+    }
+
+    // ─── Eventos: decide la transacción, no el lote ──────────────────────────
+
+    private static Map<String, Object> loteTerminado(String estado) {
+        return Map.of("event", "payout.updated", "data", Map.of("payout", Map.of("id", "pay-9", "reference", "WOMPI-1-AB", "status", estado)));
+    }
+
+    private RepartoPago lineaEnWompi(String estado) {
+        RepartoPago r = linea(1, RepartoPago.TALLER, null, true);
+        r.setEstado(estado);
+        r.setReferenciaLiquidacion("WOMPI-1-AB");
+        return r;
+    }
+
+    @Test
+    void unLoteTerminadoConSuTransaccionAprobadaConfirmaElPago() {
+        for (String lote : List.of("TOTAL_PAYMENT", "PARTIAL_PAYMENT")) {
+            RepartoPago r = lineaEnWompi(RepartoPago.PROCESANDO);
+            DispersionService wompi = wompiQueResponde(new PagoAnterior(PagoAnterior.Estado.SALIO, "pay-9"));
+
+            servicio(wompi).procesarWebhookPayout(loteTerminado(lote));
+
+            verify(wompi).consultarPago("WOMPI-1-AB [ID:pay-9]");
+            assertEquals(RepartoPago.LIQUIDADO, r.getEstado(), lote);
+            assertEquals("WOMPI-1-AB [ID:pay-9]", r.getReferenciaLiquidacion());
+        }
+    }
+
+    @Test
+    void unLoteTerminadoConSuTransaccionFallidaNoDejaLaLineaPagada() {
+        RepartoPago enCurso = lineaEnWompi(RepartoPago.PROCESANDO);
+        LiquidacionService s = servicio(wompiQueResponde(new PagoAnterior(PagoAnterior.Estado.NO_SALIO, "pay-9")));
+
+        s.procesarWebhookPayout(loteTerminado("TOTAL_PAYMENT"));
+        assertEquals(RepartoPago.FALLIDO, enCurso.getEstado());
+
+        enCurso.setEstado(RepartoPago.LIQUIDADO);
+        s.procesarWebhookPayout(loteTerminado("TOTAL_PAYMENT"));
+        assertEquals(RepartoPago.FALLIDO, enCurso.getEstado(), "tampoco si ya se había dado por pagada");
+    }
+
+    @Test
+    void unLoteCuyaTransaccionNoSeConoceNoCambiaNada() {
+        for (String estado : List.of(RepartoPago.PROCESANDO, RepartoPago.LIQUIDADO)) {
+            RepartoPago r = lineaEnWompi(estado);
+
+            servicio(wompiQueResponde(PagoAnterior.SIN_SABER)).procesarWebhookPayout(loteTerminado("PARTIAL_PAYMENT"));
+
+            assertEquals(estado, r.getEstado());
+        }
+        verifyNoInteractions(avisos);
+    }
+
+    @Test
+    void siLaConsultaDelLoteFallaNoCambiaNada() {
+        RepartoPago r = lineaEnWompi(RepartoPago.PROCESANDO);
+        DispersionService rota = wompiQueResponde(null);
+        when(rota.consultarPago(any())).thenThrow(new IllegalStateException("Wompi caído"));
+
+        assertDoesNotThrow(() -> servicio(rota).procesarWebhookPayout(loteTerminado("TOTAL_PAYMENT")));
+
+        assertEquals(RepartoPago.PROCESANDO, r.getEstado());
+    }
+
+    @Test
+    void elEstadoDeUnLoteSinTransaccionesNoConfirmaNada() {
+        RepartoPago r = lineaEnWompi(RepartoPago.PROCESANDO);
+        DispersionService wompi = wompiQueResponde(new PagoAnterior(PagoAnterior.Estado.SALIO, "pay-9"));
+
+        servicio(wompi).procesarWebhookPayout(loteTerminado("APPROVED"));
+        servicio(wompi).procesarWebhookPayout(loteTerminado("PENDING"));
+
+        assertEquals(RepartoPago.PROCESANDO, r.getEstado());
+        verify(wompi, never()).consultarPago(any());
+    }
+
+    @Test
+    void unaTransaccionCanceladaEsUnRechazoConCualquierOrtografia() {
+        for (String estado : List.of("CANCELLED", "CANCELED")) {
+            RepartoPago r = lineaEnWompi(RepartoPago.LIQUIDADO);
+
+            servicio(manual()).procesarWebhookPayout(Map.of("event", "transaction.updated", "data", Map.of("transaction", Map.of(
+                    "reference", "WOMPI-1-AB", "status", estado))));
+
+            assertEquals(RepartoPago.FALLIDO, r.getEstado(), estado);
+        }
+    }
+
+    @Test
+    void unLoteAjenoNoGeneraConsultas() {
+        DispersionService wompi = wompiQueResponde(new PagoAnterior(PagoAnterior.Estado.SALIO, "pay-9"));
+
+        servicio(wompi).procesarWebhookPayout(loteTerminado("TOTAL_PAYMENT"));
+
+        verify(wompi, never()).consultarPago(any());
+    }
+
+    @Test
+    void elLoteDeUnIntentoReemplazadoAlertaSoloSiSuTransaccionSalio() {
+        RepartoPago r = linea(1, RepartoPago.TALLER, null, true);
+        r.setEstado(RepartoPago.LIQUIDADO);
+        r.setReferenciaLiquidacion("WOMPI-1-NUEVA");
+        when(resoluciones.existsByResultadoAndReferenciaStartingWith(RepartoPago.FALLIDO, "WOMPI-1-AB")).thenReturn(true);
+
+        servicio(wompiQueResponde(new PagoAnterior(PagoAnterior.Estado.NO_SALIO, "pay-9"))).procesarWebhookPayout(loteTerminado("TOTAL_PAYMENT"));
+        verifyNoInteractions(avisos);
+
+        servicio(wompiQueResponde(new PagoAnterior(PagoAnterior.Estado.SALIO, "pay-9"))).procesarWebhookPayout(loteTerminado("TOTAL_PAYMENT"));
+        verify(avisos).alertaAdmin(eq("Posible doble pago"), contains("WOMPI-1-AB"));
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
     }
 
     @Test

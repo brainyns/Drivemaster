@@ -288,10 +288,6 @@ class WompiPayoutServiceTest {
 
     // ─── Consulta del intento anterior ───────────────────────────────────────
 
-    private static RepartoPago conReferencia(String referencia) {
-        return RepartoPago.builder().id(90L).referenciaLiquidacion(referencia).build();
-    }
-
     @SuppressWarnings("unchecked")
     private void wompiResponde(Object data) {
         Map<String, Object> cuerpo = new java.util.HashMap<>();
@@ -313,7 +309,7 @@ class WompiPayoutServiceTest {
 
     private PagoAnterior.Estado estadoCon(Object data) {
         wompiResponde(data);
-        return apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB [ID:pay-1]")).estado();
+        return apiDePruebas().consultarPago("WOMPI-90-AB [ID:pay-1]").estado();
     }
 
     @Test
@@ -322,7 +318,7 @@ class WompiPayoutServiceTest {
     void consultaPorId() {
         wompiResponde(pagina(transaccion("APPROVED")));
 
-        PagoAnterior p = apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB [ID:pay-1]"));
+        PagoAnterior p = apiDePruebas().consultarPago("WOMPI-90-AB [ID:pay-1]");
 
         assertEquals(new PagoAnterior(PagoAnterior.Estado.SALIO, "pay-1"), p);
         org.mockito.ArgumentCaptor<URI> uri = org.mockito.ArgumentCaptor.forClass(URI.class);
@@ -339,7 +335,7 @@ class WompiPayoutServiceTest {
     void consultaPorReferencia() {
         wompiResponde(pagina(transaccion("APPROVED")));
 
-        PagoAnterior p = apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB"));
+        PagoAnterior p = apiDePruebas().consultarPago("WOMPI-90-AB");
 
         assertEquals(new PagoAnterior(PagoAnterior.Estado.SALIO, "txn-1"), p);
         org.mockito.ArgumentCaptor<URI> uri = org.mockito.ArgumentCaptor.forClass(URI.class);
@@ -350,7 +346,7 @@ class WompiPayoutServiceTest {
     @Test
     @DisplayName("Solo los estados finales de no pago dicen que no salió")
     void estadosDeNoPago() {
-        for (String estado : List.of("FAILED", "CANCELLED", "REJECTED")) {
+        for (String estado : List.of("FAILED", "CANCELLED", "CANCELED", "REJECTED")) {
             assertEquals(PagoAnterior.Estado.NO_SALIO, estadoCon(pagina(transaccion(estado))), estado);
         }
     }
@@ -398,6 +394,16 @@ class WompiPayoutServiceTest {
     }
 
     @Test
+    @DisplayName("En un lote parcial solo cuenta la transacción de la línea")
+    void loteParcial() {
+        Map<String, Object> ajena = new java.util.HashMap<>(transaccion("APPROVED"));
+        ajena.put("reference", "WOMPI-91-ZZ");
+
+        assertEquals(PagoAnterior.Estado.NO_SALIO, estadoCon(pagina(ajena, transaccion("FAILED"))));
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(ajena, transaccion("PENDING"))));
+    }
+
+    @Test
     @DisplayName("Una transacción sin referencia no se da por propia")
     void sinReferencia() {
         assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(Map.of("id", "txn-1", "status", "APPROVED"))));
@@ -411,8 +417,8 @@ class WompiPayoutServiceTest {
                 .thenThrow(new ResourceAccessException("sin red"))
                 .thenThrow(org.springframework.web.client.HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
 
-        assertEquals(PagoAnterior.SIN_SABER, apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB")));
-        assertEquals(PagoAnterior.SIN_SABER, apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB")));
+        assertEquals(PagoAnterior.SIN_SABER, apiDePruebas().consultarPago("WOMPI-90-AB"));
+        assertEquals(PagoAnterior.SIN_SABER, apiDePruebas().consultarPago("WOMPI-90-AB"));
     }
 
     @Test
@@ -420,7 +426,7 @@ class WompiPayoutServiceTest {
     void sinApiKey() {
         WompiPayoutService sinLlave = new WompiPayoutService(tallerRepository, tiendaRepository, restTemplate, "", "", "", "pub_test_abc");
 
-        assertEquals(PagoAnterior.SIN_SABER, sinLlave.consultarPagoAnterior(conReferencia("WOMPI-90-AB")));
+        assertEquals(PagoAnterior.SIN_SABER, sinLlave.consultarPago("WOMPI-90-AB"));
         verifyNoInteractions(restTemplate);
     }
 

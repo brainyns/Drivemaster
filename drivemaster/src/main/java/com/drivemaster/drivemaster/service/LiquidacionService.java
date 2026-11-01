@@ -382,15 +382,7 @@ public class LiquidacionService {
         String referencia = tomada.getReferenciaLiquidacion();
         if (referencia == null || !WompiPayoutService.MODO.equals(tomada.getModoLiquidacion())) return true;
 
-        PagoAnterior anterior;
-        try {
-            anterior = dispersion.consultarPagoAnterior(tomada);
-        } catch (RuntimeException e) {
-            log.error("Falló la consulta del intento anterior de la línea {}", tomada.getId(), e);
-            anterior = PagoAnterior.SIN_SABER;
-        }
-        if (anterior == null) anterior = PagoAnterior.SIN_SABER;
-
+        PagoAnterior anterior = consultarPago(referencia);
         switch (anterior.estado()) {
             case NO_SALIO:
                 return true;
@@ -407,6 +399,16 @@ public class LiquidacionService {
                 avisos.alertaAdmin("Reintento bloqueado", "Revisa en el panel de Wompi el pago de " + tomada.getBeneficiarioNombre()
                         + " (línea " + tomada.getId() + ", referencia " + referencia + "). " + MOTIVO_SIN_SABER);
                 return false;
+        }
+    }
+
+    private PagoAnterior consultarPago(String referencia) {
+        try {
+            PagoAnterior pago = dispersion.consultarPago(referencia);
+            return pago != null ? pago : PagoAnterior.SIN_SABER;
+        } catch (RuntimeException e) {
+            log.error("Falló la consulta del pago {}", referencia, e);
+            return PagoAnterior.SIN_SABER;
         }
     }
 
@@ -500,6 +502,8 @@ public class LiquidacionService {
      * data.payout y transaction.updated trae data.transaction, que nombra su payout con payoutId. Una transferencia
      * rechazada deja la línea FALLIDO aunque ya estuviera LIQUIDADO. La línea solo se busca por la referencia del
      * intento vigente: el evento de un intento anterior ya no la encuentra y no deshace un reintento pagado.
+     * Solo una transacción APPROVED confirma el pago. Un lote TOTAL_PAYMENT o PARTIAL_PAYMENT no dice cuál se pagó:
+     * se consulta la transacción de la línea, y si sigue en curso no se toca nada.
      */
     public void procesarWebhookPayout(Map<String, Object> body) {
         if (body == null || !(body.get("data") instanceof Map<?, ?> data)) return;
@@ -511,15 +515,23 @@ public class LiquidacionService {
         if (evento == null || evento.get("status") == null) return;
         String status = String.valueOf(evento.get("status")).toUpperCase();
 
-        String referencia = payout != null ? cadena(payout.get("reference")) : null;
+        String referencia = cadena(evento.get("reference"));
         String payoutId = payout != null ? cadena(payout.get("id")) : cadena(transaccion.get("payoutId"));
-        boolean confirmado = CONFIRMACIONES_PAYOUT.contains(status);
 
         RepartoPago reparto = lineaDelPayout(referencia, payoutId).orElse(null);
+        // La línea se reintentó con otra referencia después de darla por no salida: pudo pagarse dos veces
+        boolean reemplazado = reparto == null && resueltaComoNoSalida(referencia, payoutId);
+        if (reparto == null) log.warn("Evento de Wompi Payouts sin línea de reparto: {}", evento.get("id"));
+        if (reparto == null && !reemplazado) return;
+
+        boolean hablaDeLaTransaccion = payout == null || LOTES_TERMINADOS.contains(status);
+        if (payout != null && hablaDeLaTransaccion) {
+            status = estadoDeSuTransaccion(referencia != null || reparto == null ? referencia : reparto.getReferenciaLiquidacion(), payoutId);
+        }
+        boolean confirmado = hablaDeLaTransaccion && TRANSACCION_PAGADA.equals(status);
+
         if (reparto == null) {
-            log.warn("Evento de Wompi Payouts sin línea de reparto: {}", evento.get("id"));
-            // La línea se reintentó con otra referencia después de darla por no salida: pudo pagarse dos veces
-            if (confirmado && resueltaComoNoSalida(referencia, payoutId)) {
+            if (confirmado) {
                 avisos.alertaAdmin("Posible doble pago", "Wompi confirmó el pago " + (referencia != null ? referencia : payoutId)
                         + ", que se había resuelto a mano como no salido y ya no es el intento vigente de su línea. "
                         + "Revísalo en el panel de Wompi.");
@@ -566,8 +578,19 @@ public class LiquidacionService {
         return conId.length() > 80 ? referencia : conId;
     }
 
-    private static final Set<String> RECHAZOS_PAYOUT = Set.of("REJECTED", "FAILED", "ERROR", "DECLINED", "REVERSED", "CANCELED");
-    private static final Set<String> CONFIRMACIONES_PAYOUT = Set.of("APPROVED", "PROCESSED", "SUCCESSFUL", "TOTAL_PAYMENT", "PAID", "SUCCESS");
+    private static final Set<String> RECHAZOS_PAYOUT = Set.of("REJECTED", "FAILED", "ERROR", "DECLINED", "REVERSED", "CANCELLED", "CANCELED");
+    private static final String TRANSACCION_PAGADA = "APPROVED";
+    private static final Set<String> LOTES_TERMINADOS = Set.of("TOTAL_PAYMENT", "PARTIAL_PAYMENT");
+
+    /** El estado que decide por un lote terminado: el de su transacción. SIN_SABER no es ninguno conocido: no cambia nada. */
+    private String estadoDeSuTransaccion(String referencia, String payoutId) {
+        String sinId = referencia != null && referencia.contains(" [ID:") ? referencia.substring(0, referencia.indexOf(" [ID:")) : referencia;
+        return switch (consultarPago(conIdWompi(sinId, payoutId)).estado()) {
+            case SALIO -> TRANSACCION_PAGADA;
+            case NO_SALIO -> "FAILED";
+            case SIN_SABER -> "SIN_SABER";
+        };
+    }
 
     private java.util.Optional<RepartoPago> lineaDelPayout(String referencia, String payoutId) {
         java.util.Optional<RepartoPago> porReferencia = referencia != null

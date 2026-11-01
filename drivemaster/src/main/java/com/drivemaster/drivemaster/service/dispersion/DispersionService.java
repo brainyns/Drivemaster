@@ -31,8 +31,8 @@ public interface DispersionService {
     /** Ejecuta el pago de la línea ya tomada (PROCESANDO). Lanza DispersionException si falla. */
     ResultadoDispersion liquidar(RepartoPago reparto, SolicitudDispersion solicitud);
 
-    /** Qué pasó con el intento anterior de una línea pagada por Wompi. Quien no puede consultarlo no sabe. */
-    default PagoAnterior consultarPagoAnterior(RepartoPago reparto) {
+    /** Qué pasó con un pago enviado a Wompi; referencia: la guardada, con su id si lo tiene. Quien no puede consultarlo no sabe. */
+    default PagoAnterior consultarPago(String referencia) {
         return PagoAnterior.SIN_SABER;
     }
 }

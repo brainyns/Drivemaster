@@ -40,7 +40,7 @@ public class WompiPayoutService implements DispersionService {
     public static final String MODO = "WOMPI";
 
     private static final String TRANSACCION_PAGADA = "APPROVED";
-    private static final java.util.Set<String> TRANSACCION_NO_PAGADA = java.util.Set.of("FAILED", "CANCELLED", "REJECTED");
+    private static final java.util.Set<String> TRANSACCION_NO_PAGADA = java.util.Set.of("FAILED", "CANCELLED", "CANCELED", "REJECTED");
 
     private final TallerRepository tallerRepository;
     private final TiendaRepository tiendaRepository;
@@ -178,15 +178,14 @@ public class WompiPayoutService implements DispersionService {
     }
 
     /**
-     * Consulta las transacciones del intento anterior, por su id o, sin id, por su referencia. Mira la transacción y no
+     * Consulta las transacciones de un pago, por su id o, sin id, por su referencia. Mira la transacción y no
      * el lote: un lote TOTAL_PAYMENT solo dice que terminó, no que se pagó. Solo decide un estado final documentado;
      * lo demás (en curso, desconocido, sin registros, error de la consulta) es SIN_SABER. Ambas rutas responden
      * data.records con transacciones { id, reference, status, amountInCents, failureReason }, sin el id del lote: si se
      * buscó por referencia, el id que queda es el de la transacción.
      */
     @Override
-    public PagoAnterior consultarPagoAnterior(RepartoPago reparto) {
-        String guardada = reparto.getReferenciaLiquidacion();
+    public PagoAnterior consultarPago(String guardada) {
         if (guardada == null || !esModoApiReal()) return PagoAnterior.SIN_SABER;
         int marca = guardada.indexOf(" [ID:");
         String referencia = marca < 0 ? guardada : guardada.substring(0, marca);
