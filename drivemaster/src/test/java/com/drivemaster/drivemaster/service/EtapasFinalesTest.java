@@ -259,6 +259,40 @@ class EtapasFinalesTest {
     }
 
     @Test
+    void ningunaAccionTocaLaOrdenDeOtroTaller() {
+        when(tallerService.obtenerPorUsuario("otro@demo.com")).thenReturn(Taller.builder().id("t9")
+                .activo(true).estadoAprobacion(EstadoAprobacion.APROBADO).build());
+        java.util.Map<String, Runnable> acciones = new java.util.LinkedHashMap<>();
+        acciones.put("aceptar", () -> service.aceptar("otro@demo.com", "o1", null));
+        acciones.put("rechazar", () -> service.rechazarPorTaller("otro@demo.com", "o1", null));
+        acciones.put("mecánico", () -> service.asignarMecanico("otro@demo.com", "o1", "m1"));
+        acciones.put("diagnóstico", () -> service.registrarDiagnostico("otro@demo.com", "o1", null));
+        acciones.put("repuestos", () -> service.seleccionarRepuestos("otro@demo.com", "o1", null));
+        acciones.put("instalación", () -> service.iniciarInstalacion("otro@demo.com", "o1"));
+        acciones.put("pruebas", () -> service.marcarEnPruebas("otro@demo.com", "o1"));
+        acciones.put("lista", () -> service.marcarLista("otro@demo.com", "o1"));
+        acciones.put("entregada", () -> service.marcarEntregada("otro@demo.com", "o1"));
+
+        for (var accion : acciones.entrySet()) {
+            ResponseStatusException e = assertThrows(ResponseStatusException.class, accion.getValue()::run, accion.getKey());
+            assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode(), accion.getKey());
+        }
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class));
+    }
+
+    @Test
+    void unTallerSuspendidoNoMueveSusOrdenes() {
+        orden.setEstado(EstadoOrden.LISTA);
+        when(tallerService.obtenerPorUsuario(CORREO_TALLER)).thenReturn(Taller.builder().id("t1")
+                .activo(false).estadoAprobacion(EstadoAprobacion.APROBADO).build());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.marcarEntregada(CORREO_TALLER, "o1"));
+
+        assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode());
+        assertEquals("Tu taller no está habilitado para operar", e.getReason());
+    }
+
+    @Test
     void soloElTallerDeLaOrden() {
         orden.setEstado(EstadoOrden.REPUESTOS_RECIBIDOS);
         when(tallerService.obtenerPorUsuario("otro@demo.com")).thenReturn(Taller.builder().id("t9")
