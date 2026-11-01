@@ -58,6 +58,7 @@ public class CotizacionService {
     static final String ENLACE_INVALIDO = "Enlace no válido o vencido";
     private static final int MAX_ITEMS_MANO_OBRA = 20;
     private static final int MAX_TEXTO = 1000;
+    private static final int MIN_TEXTO_TRABAJO = 3;
     private static final double MAX_VALOR = 100_000_000;
     private static final double MAX_HORAS = 200;
 
@@ -529,8 +530,8 @@ public class CotizacionService {
         Double tarifaHora = taller.getTarifaHora();
         for (CrearCotizacionRequest.ManoObra m : manoObra) {
             String descripcion = m.getDescripcion() != null ? m.getDescripcion().trim() : "";
-            if (descripcion.isBlank() || descripcion.length() > 200) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Describe cada trabajo de mano de obra (máx. 200 caracteres)");
+            if (descripcion.length() < MIN_TEXTO_TRABAJO || descripcion.length() > 200) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Describe cada trabajo de mano de obra (de 3 a 200 caracteres)");
             }
             if (CotizacionItem.POR_HORAS.equalsIgnoreCase(m.getModalidad())) {
                 double horas = m.getHoras() != null ? m.getHoras() : 0;

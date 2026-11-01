@@ -125,6 +125,16 @@ class CotizacionServiceTest {
     // ─── Emisión ─────────────────────────────────────────────────────────────
 
     @Test
+    void unTrabajoConDescripcionDeMenosDeTresCaracteresSeRechaza() {
+        CrearCotizacionRequest corto = new CrearCotizacionRequest(List.of(
+                new CrearCotizacionRequest.ManoObra("ab", "ITEM", 10_000.0, null)), null, null);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.emitir(CORREO_TALLER, "o1", corto));
+
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+    }
+
+    @Test
     void siElCorreoFallaLaCotizacionIgualQuedaEmitidaYAlertaAlAdmin() {
         doThrow(new IllegalStateException("sin correo")).when(avisos).cotizacionEmitida(any(), any(), anyString());
 

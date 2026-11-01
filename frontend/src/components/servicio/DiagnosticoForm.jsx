@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { registrarDiagnostico } from "../../services/solicitudServicioService";
 import SubidaFotos from "./SubidaFotos";
 import BuscadorRepuestos from "./BuscadorRepuestos";
 import { ESTADO_OFERTA, TEXTO_CONFIRMACION, URGENCIAS, formatPrecio } from "./estadosServicio";
 import Icon from "../public/Icon";
+import { cantidadEntera, errorFallas, lineasFallas } from "./reglasFormulariosTaller";
+import { unaALaVez } from "../../utils/unaALaVez";
 
 const MIN_HALLAZGOS = 10;
 
@@ -42,6 +44,7 @@ export default function DiagnosticoForm({ token, solicitud, mecanicos, onGuardad
   const [buscadorAbierto, setBuscadorAbierto] = useState(false);
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const enviando = useRef(false);
 
   const activos = mecanicos.filter((m) => m.activo !== false || m.id === mecanicoId);
   const elegidos = new Set(repuestos.map((r) => r.productoId));
@@ -71,37 +74,41 @@ export default function DiagnosticoForm({ token, solicitud, mecanicos, onGuardad
 
   const quitar = (productoId) => setRepuestos((prev) => prev.filter((r) => r.productoId !== productoId));
 
-  const guardar = async (e) => {
+  const guardar = (e) => {
     e.preventDefault();
     if (hallazgos.trim().length < MIN_HALLAZGOS) return setError(`Describe los hallazgos (mínimo ${MIN_HALLAZGOS} caracteres).`);
     if (!urgencia) return setError("Indica la urgencia.");
     if (!mecanicoId) return setError("Elige el mecánico que hizo la revisión.");
+    const problemaFallas = errorFallas(fallas);
+    if (problemaFallas) return setError(problemaFallas);
     const sinConfirmar = repuestos.find((r) => r.requiereConfirmacion && !r.confirmado);
     if (sinConfirmar) return setError(`Confirma la compatibilidad de "${sinConfirmar.nombre}" o quítalo de la lista.`);
 
-    setGuardando(true);
-    setError(null);
-    try {
-      const actualizada = await registrarDiagnostico(token, solicitud.id, {
-        hallazgos: hallazgos.trim(),
-        fallas: fallas.split("\n").map((f) => f.trim()).filter(Boolean),
-        urgencia,
-        observaciones: observaciones.trim() || null,
-        fotos,
-        mecanicoId,
-        repuestos: repuestos.map((r) => ({
-          productoId: r.productoId,
-          descripcion: r.descripcion?.trim() || r.nombre,
-          cantidad: Number(r.cantidad),
-          confirmoCompatibilidad: r.requiereConfirmacion ? r.confirmado : null,
-        })),
-      });
-      onGuardado(actualizada);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setGuardando(false);
-    }
+    return unaALaVez(enviando, async () => {
+      setGuardando(true);
+      setError(null);
+      try {
+        const actualizada = await registrarDiagnostico(token, solicitud.id, {
+          hallazgos: hallazgos.trim(),
+          fallas: lineasFallas(fallas),
+          urgencia,
+          observaciones: observaciones.trim() || null,
+          fotos,
+          mecanicoId,
+          repuestos: repuestos.map((r) => ({
+            productoId: r.productoId,
+            descripcion: r.descripcion?.trim() || r.nombre,
+            cantidad: Number(r.cantidad),
+            confirmoCompatibilidad: r.requiereConfirmacion ? r.confirmado : null,
+          })),
+        });
+        onGuardado(actualizada);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setGuardando(false);
+      }
+    });
   };
 
   return (
@@ -181,9 +188,9 @@ export default function DiagnosticoForm({ token, solicitud, mecanicos, onGuardad
                       {r.disponibilidad === "ENCARGO" && ` · Encargo${r.diasEntrega ? ` (${r.diasEntrega} días)` : ""}`}
                     </span>
                   </div>
-                  <input className="ss-input ss-input--cantidad" type="number" min={1} max={99}
+                  <input className="ss-input ss-input--cantidad" type="number" min={1} max={99} step={1}
                     aria-label={`Cantidad de ${r.nombre}`} value={r.cantidad}
-                    onChange={(e) => actualizar(r.productoId, { cantidad: Math.max(1, Math.min(99, Number(e.target.value) || 1)) })} />
+                    onChange={(e) => actualizar(r.productoId, { cantidad: cantidadEntera(e.target.value) })} />
                   <span className="ss-repuesto__precio">{formatPrecio((r.precio || 0) * (r.cantidad || 0))}</span>
                   <button type="button" className="ss-btn-icono" onClick={() => quitar(r.productoId)}
                     aria-label={`Quitar ${r.nombre}`}><Icon name="close" size={16} /></button>

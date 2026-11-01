@@ -4,6 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { completitudPerfil, errorHorario, errorTarifa, iniciales } from "../src/pages/taller/perfilTaller.js";
 import { yaEstabaHecho } from "../src/components/servicio/estadosTaller.js";
+import { cantidadEntera, errorCotizacion, errorFallas, lineasFallas } from "../src/components/servicio/reglasFormulariosTaller.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
@@ -508,4 +509,55 @@ test("Una cotización sin saldo no le pide pagar al cliente", () => {
   assert.ok(cliente.includes("sinSaldo={vigente.totalAPagar <= 0}") && cliente.includes('"Continuar sin pago"'));
   assert.ok(publica.includes("sinSaldo={sinSaldo}") && publica.includes("Ir a mis servicios"));
   assert.ok(respuesta.includes("no tienes nada por pagar"));
+});
+
+test("Diagnóstico: las cantidades son enteras de 1 a 99", () => {
+  assert.equal(cantidadEntera("1.5"), 1);
+  assert.equal(cantidadEntera("3"), 3);
+  assert.equal(cantidadEntera(""), 1);
+  assert.equal(cantidadEntera("0"), 1);
+  assert.equal(cantidadEntera("-4"), 1);
+  assert.equal(cantidadEntera("500"), 99);
+});
+
+test("Diagnóstico: las fallas respetan el máximo por línea y en total", () => {
+  assert.deepEqual(lineasFallas("  Uno \n\n Dos "), ["Uno", "Dos"]);
+  assert.equal(errorFallas("Pastillas gastadas\nDisco rayado"), null);
+  assert.match(errorFallas("x".repeat(201)), /hasta 200/);
+  assert.match(errorFallas(Array(21).fill("Falla").join("\n")), /Máximo 20/);
+});
+
+const trabajo = (cambios = {}) => ({ descripcion: "Cambio de pastillas", modalidad: "ITEM", valor: "50000", horas: "", ...cambios });
+
+test("Cotización: un trabajo a medias se avisa, no se pierde", () => {
+  assert.equal(errorCotizacion([trabajo()], ""), null);
+  assert.match(errorCotizacion([trabajo({ descripcion: "" })], ""), /trabajo 1 necesita una descripción/);
+  assert.match(errorCotizacion([trabajo({ descripcion: "ab" })], ""), /al menos 3/);
+  assert.match(errorCotizacion([trabajo(), trabajo({ valor: "0" })], ""), /trabajo 2 necesita un valor/);
+  assert.match(errorCotizacion([trabajo({ valor: "-5" })], ""), /valor mayor que 0/);
+  assert.match(errorCotizacion([trabajo({ valor: "" })], ""), /valor mayor que 0/);
+});
+
+test("Cotización: por horas pide horas válidas y tarifa", () => {
+  const porHoras = trabajo({ modalidad: "HORAS", valor: "", horas: "1.5" });
+  assert.equal(errorCotizacion([porHoras], "", { tarifaHora: 60000 }), null);
+  assert.match(errorCotizacion([porHoras], ""), /tarifa por hora/);
+  assert.match(errorCotizacion([{ ...porHoras, horas: "201" }], "", { tarifaHora: 60000 }), /hasta 200/);
+});
+
+test("Cotización: sin trabajos solo pasa si hay repuestos; el tiempo va en horas enteras", () => {
+  const vacia = { descripcion: "", modalidad: "ITEM", valor: "", horas: "" };
+  assert.match(errorCotizacion([vacia], ""), /al menos un trabajo/);
+  assert.equal(errorCotizacion([vacia], "", { hayRepuestos: true }), null);
+  assert.equal(errorCotizacion([trabajo()], "8"), null);
+  assert.match(errorCotizacion([trabajo()], "1.5"), /horas enteras/);
+  assert.match(errorCotizacion([trabajo()], "0"), /horas enteras/);
+});
+
+test("Los formularios del mecánico envían una sola vez y usan las reglas", () => {
+  const diagnostico = leer("../src/components/servicio/DiagnosticoForm.jsx");
+  const cotizacion = leer("../src/components/servicio/CotizacionForm.jsx");
+  assert.ok(diagnostico.includes("unaALaVez(enviando,") && cotizacion.includes("unaALaVez(enviando,"));
+  assert.ok(diagnostico.includes("cantidadEntera(e.target.value)") && diagnostico.includes("errorFallas(fallas)"));
+  assert.ok(cotizacion.includes("errorCotizacion(lineas, tiempo,"));
 });
