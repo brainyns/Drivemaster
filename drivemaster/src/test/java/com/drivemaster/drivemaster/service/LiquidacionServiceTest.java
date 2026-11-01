@@ -16,6 +16,7 @@ import com.drivemaster.drivemaster.service.dispersion.DispersionException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionInciertaException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionService;
 import com.drivemaster.drivemaster.service.dispersion.ManualDispersionService;
+import com.drivemaster.drivemaster.service.dispersion.PagoAnterior;
 import com.drivemaster.drivemaster.service.dispersion.ResultadoDispersion;
 import com.drivemaster.drivemaster.service.dispersion.SimulatedDispersionService;
 import com.drivemaster.drivemaster.service.dispersion.SolicitudDispersion;
@@ -199,6 +200,7 @@ class LiquidacionServiceTest {
             @Override public boolean automatica() { return dispersion.automatica(); }
             @Override public boolean dineroReal() { return dispersion.dineroReal(); }
             @Override public void validar(SolicitudDispersion s) { dispersion.validar(s); }
+            @Override public PagoAnterior consultarPagoAnterior(RepartoPago r) { return dispersion.consultarPagoAnterior(r); }
             @Override public ResultadoDispersion liquidar(RepartoPago r, SolicitudDispersion s) {
                 dispersiones.incrementAndGet();
                 return dispersion.liquidar(r, s);
@@ -881,6 +883,129 @@ class LiquidacionServiceTest {
         assertEquals(false, cuerpo.get("sinConfirmar"));
     }
 
+    // ─── Reintento de un pago que ya pasó por Wompi ──────────────────────────
+
+    private RepartoPago fallidaEnWompi() {
+        RepartoPago r = linea(1, RepartoPago.TIENDA, "ped1", true);
+        r.setEstado(RepartoPago.FALLIDO);
+        r.setModoLiquidacion("WOMPI");
+        r.setReferenciaLiquidacion("WOMPI-1-VIEJA");
+        r.setMotivoFallo("Rechazo bancario");
+        return r;
+    }
+
+    private DispersionService wompiQueResponde(PagoAnterior anterior) {
+        DispersionService wompi = mock(DispersionService.class);
+        when(wompi.modo()).thenReturn("WOMPI");
+        when(wompi.consultarPagoAnterior(any())).thenReturn(anterior);
+        when(wompi.liquidar(any(), any())).thenReturn(new ResultadoDispersion("WOMPI", "WOMPI-1-NUEVA [ID:p-2]", java.math.BigDecimal.TEN));
+        return wompi;
+    }
+
+    @Test
+    void siElIntentoAnteriorSalioQuedaLiquidadoConSuReferenciaSinEnviarOtro() {
+        RepartoPago r = fallidaEnWompi();
+        LiquidacionService s = servicio(wompiQueResponde(new PagoAnterior(PagoAnterior.Estado.SALIO, "p-1")));
+
+        RepartoYaEnPagoException e = assertThrows(RepartoYaEnPagoException.class, () -> s.liquidar(1L, ADMIN, null, null));
+
+        assertEquals(RepartoPago.LIQUIDADO, e.getEstado());
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
+        assertEquals("WOMPI-1-VIEJA [ID:p-1]", r.getReferenciaLiquidacion());
+        assertEquals(ADMIN, r.getLiquidadoPor());
+        assertEquals(0, dispersiones.get(), "no se envía otro pago");
+    }
+
+    @Test
+    void siElIntentoAnteriorNoSalioSeEnviaElPagoNuevo() {
+        RepartoPago r = fallidaEnWompi();
+
+        servicio(wompiQueResponde(new PagoAnterior(PagoAnterior.Estado.NO_SALIO, null))).liquidar(1L, ADMIN, null, null);
+
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
+        assertEquals("WOMPI-1-NUEVA [ID:p-2]", r.getReferenciaLiquidacion());
+        assertEquals(1, dispersiones.get());
+    }
+
+    @Test
+    void sinSaberQuePasoNoSeEnviaYSeResuelveAMano() {
+        RepartoPago r = fallidaEnWompi();
+        LiquidacionService s = servicio(wompiQueResponde(PagoAnterior.SIN_SABER));
+
+        RepartoYaEnPagoException e = assertThrows(RepartoYaEnPagoException.class, () -> s.liquidar(1L, ADMIN, null, null));
+
+        assertTrue(e.isSinConfirmar());
+        assertEquals(RepartoPago.PROCESANDO, r.getEstado());
+        assertEquals("WOMPI-1-VIEJA", r.getReferenciaLiquidacion(), "conserva la referencia para reconocer su evento");
+        assertTrue(LiquidacionService.sePuedeResolver(r, LocalDateTime.now()), "el ADMIN tiene cómo sacarla");
+        verify(avisos).alertaAdmin(eq("Reintento bloqueado"), contains("WOMPI-1-VIEJA"));
+        assertThrows(RepartoYaEnPagoException.class, () -> s.liquidar(1L, ADMIN, null, null));
+        assertEquals(0, dispersiones.get());
+    }
+
+    @Test
+    void siLaConsultaFallaOResponderNadaTambienSeBloquea() {
+        RepartoPago r = fallidaEnWompi();
+        DispersionService rota = wompiQueResponde(null);
+        when(rota.consultarPagoAnterior(any())).thenThrow(new IllegalStateException("Wompi caído"));
+
+        assertThrows(RepartoYaEnPagoException.class, () -> servicio(rota).liquidar(1L, ADMIN, null, null));
+        assertEquals(RepartoPago.PROCESANDO, r.getEstado());
+
+        r.setEstado(RepartoPago.FALLIDO);
+        assertThrows(RepartoYaEnPagoException.class, () -> servicio(wompiQueResponde(null)).liquidar(1L, ADMIN, null, null));
+        assertEquals(RepartoPago.PROCESANDO, r.getEstado());
+        assertEquals(0, dispersiones.get());
+    }
+
+    @Test
+    void trasResolverlaComoNoSalidaElReintentoSinConfirmacionSiPuedeSalir() {
+        RepartoPago r = fallidaEnWompi();
+        LiquidacionService s = servicio(wompiQueResponde(PagoAnterior.SIN_SABER));
+        assertThrows(RepartoYaEnPagoException.class, () -> s.liquidar(1L, ADMIN, null, null));
+
+        s.resolver(1L, ADMIN, "FALLIDO", MOTIVO, null);
+        when(resoluciones.existsByResultadoAndReferenciaStartingWith(RepartoPago.FALLIDO, "WOMPI-1-VIEJA")).thenReturn(true);
+        s.liquidar(1L, ADMIN, null, null);
+
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
+        assertEquals(1, dispersiones.get(), "la línea no queda atrapada en el bloqueo");
+    }
+
+    @Test
+    void aunResueltaComoNoSalidaWompiTieneLaUltimaPalabraSiDiceQueSalio() {
+        RepartoPago r = fallidaEnWompi();
+        when(resoluciones.existsByResultadoAndReferenciaStartingWith(RepartoPago.FALLIDO, "WOMPI-1-VIEJA")).thenReturn(true);
+        LiquidacionService s = servicio(wompiQueResponde(new PagoAnterior(PagoAnterior.Estado.SALIO, "p-1")));
+
+        assertThrows(RepartoYaEnPagoException.class, () -> s.liquidar(1L, ADMIN, null, null));
+
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
+        assertEquals(0, dispersiones.get());
+    }
+
+    @Test
+    void soloSeConsultaUnaLineaQueYaFueAWompi() {
+        DispersionService wompi = wompiQueResponde(PagoAnterior.SIN_SABER);
+        RepartoPago primeraVez = linea(1, RepartoPago.TIENDA, "ped1", true);
+        primeraVez.setEstado(RepartoPago.POR_LIQUIDAR);
+        RepartoPago fallaAntesDeEnviar = linea(2, RepartoPago.TIENDA, "ped2", true);
+        fallaAntesDeEnviar.setEstado(RepartoPago.FALLIDO);
+        fallaAntesDeEnviar.setModoLiquidacion("WOMPI");
+        RepartoPago manual = linea(3, RepartoPago.TIENDA, "ped3", true);
+        manual.setEstado(RepartoPago.FALLIDO);
+        manual.setModoLiquidacion("MANUAL");
+        manual.setReferenciaLiquidacion("TRF-1");
+        LiquidacionService s = servicio(wompi);
+
+        s.liquidar(1L, ADMIN, null, null);
+        s.liquidar(2L, ADMIN, null, null);
+        s.liquidar(3L, ADMIN, null, null);
+
+        verify(wompi, never()).consultarPagoAnterior(any());
+        assertEquals(3, dispersiones.get());
+    }
+
     @Test
     void unPagoQueSalioYNoSePudoGuardarNoQuedaFallidoNiSeReintenta() {
         RepartoPago tienda = linea(1, RepartoPago.TIENDA, "ped1", true);
@@ -948,6 +1073,10 @@ class LiquidacionServiceTest {
         LiquidacionService s = servicio(manual());
 
         s.resolver(1L, ADMIN, "FALLIDO", MOTIVO, null);
+        ArgumentCaptor<ResolucionReparto> guardada = ArgumentCaptor.forClass(ResolucionReparto.class);
+        verify(resoluciones).save(guardada.capture());
+        assertEquals(r.getReferenciaLiquidacion(), guardada.getValue().getReferencia(), "con ella el reintento la reconoce");
+        when(resoluciones.existsByResultadoAndReferenciaStartingWith(RepartoPago.FALLIDO, r.getReferenciaLiquidacion())).thenReturn(true);
 
         assertEquals(RepartoPago.FALLIDO, r.getEstado());
         assertEquals(RepartoPago.LIQUIDADO, s.liquidar(1L, ADMIN, "TRF-0001", null).getEstado());

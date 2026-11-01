@@ -17,8 +17,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +38,9 @@ public class WompiPayoutService implements DispersionService {
 
     private static final Logger log = LoggerFactory.getLogger(WompiPayoutService.class);
     public static final String MODO = "WOMPI";
+
+    private static final String TRANSACCION_PAGADA = "APPROVED";
+    private static final java.util.Set<String> TRANSACCION_NO_PAGADA = java.util.Set.of("FAILED", "CANCELLED", "REJECTED");
 
     private final TallerRepository tallerRepository;
     private final TiendaRepository tiendaRepository;
@@ -170,6 +175,71 @@ public class WompiPayoutService implements DispersionService {
         } else {
             return ejecutarPayoutSimulado(reparto, cuenta, referencia, monto);
         }
+    }
+
+    /**
+     * Consulta las transacciones del intento anterior, por su id o, sin id, por su referencia. Mira la transacción y no
+     * el lote: un lote TOTAL_PAYMENT solo dice que terminó, no que se pagó. Solo decide un estado final documentado;
+     * lo demás (en curso, desconocido, sin registros, error de la consulta) es SIN_SABER.
+     */
+    @Override
+    public PagoAnterior consultarPagoAnterior(RepartoPago reparto) {
+        String guardada = reparto.getReferenciaLiquidacion();
+        if (guardada == null || !esModoApiReal()) return PagoAnterior.SIN_SABER;
+        int marca = guardada.indexOf(" [ID:");
+        String referencia = marca < 0 ? guardada : guardada.substring(0, marca);
+        String idWompi = marca < 0 ? null : guardada.substring(marca + 5, guardada.length() - 1);
+
+        try {
+            UriComponentsBuilder ruta = UriComponentsBuilder.fromUriString(apiUrl);
+            URI uri = (idWompi != null ? ruta.pathSegment("payouts", idWompi, "transactions") : ruta.pathSegment("transactions", referencia))
+                    .build().encode().toUri();
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("x-api-key", apiKey);
+            if (!userPrincipalId.isBlank()) {
+                headers.set("user-principal-id", userPrincipalId);
+            }
+            ResponseEntity<Map<String, Object>> respuesta = restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<Void>(headers),
+                    new ParameterizedTypeReference<>() {});
+            if (respuesta == null || !respuesta.getStatusCode().is2xxSuccessful() || respuesta.getBody() == null) {
+                return PagoAnterior.SIN_SABER;
+            }
+            return leerTransacciones(respuesta.getBody().get("data"), referencia, idWompi);
+        } catch (RuntimeException e) {
+            log.warn("No se pudo consultar en Wompi el pago {}: {}", referencia, e.getMessage());
+            return PagoAnterior.SIN_SABER;
+        }
+    }
+
+    private static PagoAnterior leerTransacciones(Object data, String referencia, String idWompi) {
+        List<Map<?, ?>> propias = registros(data).stream().filter(Map.class::isInstance).<Map<?, ?>>map(Map.class::cast)
+                .filter(t -> t.get("reference") == null || referencia.equals(String.valueOf(t.get("reference"))))
+                .toList();
+        if (propias.isEmpty()) return PagoAnterior.SIN_SABER;
+
+        for (Map<?, ?> t : propias) {
+            if (TRANSACCION_PAGADA.equals(String.valueOf(t.get("status")))) {
+                return new PagoAnterior(PagoAnterior.Estado.SALIO, idWompi != null ? idWompi : idDelPago(t));
+            }
+        }
+        boolean todasFinales = propias.stream().allMatch(t -> TRANSACCION_NO_PAGADA.contains(String.valueOf(t.get("status"))));
+        return todasFinales ? new PagoAnterior(PagoAnterior.Estado.NO_SALIO, idWompi) : PagoAnterior.SIN_SABER;
+    }
+
+    /** La documentación de Wompi no muestra la respuesta: se acepta la lista, la página con records o una sola transacción. */
+    private static List<?> registros(Object data) {
+        if (data instanceof List<?> lista) return lista;
+        if (data instanceof Map<?, ?> mapa) {
+            if (mapa.get("records") instanceof List<?> lista) return lista;
+            if (mapa.get("status") != null) return List.of(mapa);
+        }
+        return List.of();
+    }
+
+    private static String idDelPago(Map<?, ?> transaccion) {
+        Object id = transaccion.get("payoutId");
+        if (id == null && transaccion.get("payout") instanceof Map<?, ?> lote) id = lote.get("id");
+        return id != null ? String.valueOf(id) : null;
     }
 
     public boolean esModoApiReal() {

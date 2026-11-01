@@ -14,9 +14,11 @@ import com.drivemaster.drivemaster.repository.mysql.ResolucionRepartoRepository;
 import com.drivemaster.drivemaster.service.dispersion.DispersionException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionInciertaException;
 import com.drivemaster.drivemaster.service.dispersion.DispersionService;
+import com.drivemaster.drivemaster.service.dispersion.PagoAnterior;
 import com.drivemaster.drivemaster.service.dispersion.ResultadoDispersion;
 import com.drivemaster.drivemaster.service.dispersion.SolicitudDispersion;
 import com.drivemaster.drivemaster.service.dispersion.WompiPayoutService;
+import com.drivemaster.drivemaster.util.Dinero;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
@@ -52,6 +54,8 @@ import java.util.Set;
  * - Cada paso es una escritura condicional (UPDATE ... WHERE estado = ...): dos clics, o
  *   el evento y el ADMIN a la vez, no la pagan dos veces.
  * - Una línea con reembolso pendiente (de su pedido o de todo el pago) no se toma.
+ * - Un reintento que ya pasó por Wompi le pregunta antes por el intento anterior: si salió, queda
+ *   LIQUIDADO sin enviar otro; si no se sabe, no se envía y se resuelve a mano.
  * - Si el evento de Wompi nunca llega, el ADMIN resuelve la línea a mano, con motivo y registro
  *   en resoluciones_reparto. Un pago en curso no se resuelve: solo uno sin confirmar o colgado.
  * - Una línea PENDIENTE nunca se paga: tampoco las anteriores a la Fase 4-B
@@ -339,8 +343,15 @@ public class LiquidacionService {
                     "Sin transferencia: toda la parte de esta línea fue comisión");
             return repartoRepository.findById(id).orElseThrow();
         }
+        if (!sePuedeEnviarOtro(tomada, solicitud)) {
+            RepartoPago revisada = repartoRepository.findById(id).orElseThrow();
+            if (RepartoPago.LIQUIDADO.equals(revisada.getEstado())) {
+                throw yaEnPago(revisada, "Este pago ya había salido en Wompi: no se envió otro");
+            }
+            return revisada;
+        }
         try {
-            registrarPago(tomada, dispersion.liquidar(tomada, solicitud), solicitud);
+            registrarPago(tomada, dispersion.liquidar(tomada, solicitud), solicitud.actor(), texto(solicitud.nota(), solicitud.actor()));
         } catch (DispersionInciertaException e) {
             String motivo = recortar(e.getMessage(), 300);
             repartoRepository.marcarPorVerificar(id, e.getReferencia(), motivo, dispersion.modo());
@@ -359,15 +370,54 @@ public class LiquidacionService {
         return repartoRepository.findById(id).orElseThrow();
     }
 
+    static final String MOTIVO_SIN_SABER = "No se pudo confirmar en Wompi si el intento anterior salió. Revísalo en su panel "
+            + "y resuelve la línea: no se envió otro pago";
+
+    /**
+     * Antes de repetir un pago que ya fue a Wompi, pregunta qué pasó con él (la línea ya está tomada: va una sola
+     * consulta). Si salió, la deja LIQUIDADO con esa referencia. Si no se sabe, sigue PROCESANDO para resolverla a mano;
+     * el ADMIN que la resolvió como no salida ya respondió por ese intento y puede reintentar. true: se puede enviar.
+     */
+    private boolean sePuedeEnviarOtro(RepartoPago tomada, SolicitudDispersion solicitud) {
+        String referencia = tomada.getReferenciaLiquidacion();
+        if (referencia == null || !WompiPayoutService.MODO.equals(tomada.getModoLiquidacion())) return true;
+
+        PagoAnterior anterior;
+        try {
+            anterior = dispersion.consultarPagoAnterior(tomada);
+        } catch (RuntimeException e) {
+            log.error("Falló la consulta del intento anterior de la línea {}", tomada.getId(), e);
+            anterior = PagoAnterior.SIN_SABER;
+        }
+        if (anterior == null) anterior = PagoAnterior.SIN_SABER;
+
+        switch (anterior.estado()) {
+            case NO_SALIO:
+                return true;
+            case SALIO:
+                registrarPago(tomada, new ResultadoDispersion(WompiPayoutService.MODO, conIdWompi(referencia, anterior.idWompi()), Dinero.pesos(tomada.getMonto())),
+                        solicitud.actor(), "Wompi confirmó el intento anterior: no se envió otro pago");
+                return false;
+            default:
+                if (resoluciones.existsByResultadoAndReferenciaStartingWith(RepartoPago.FALLIDO, referencia)) {
+                    log.warn("Reintento de la línea {} sin confirmar {}: el ADMIN la resolvió como no salida", tomada.getId(), referencia);
+                    return true;
+                }
+                repartoRepository.marcarPorVerificar(tomada.getId(), referencia, MOTIVO_SIN_SABER, WompiPayoutService.MODO);
+                avisos.alertaAdmin("Reintento bloqueado", "Revisa en el panel de Wompi el pago de " + tomada.getBeneficiarioNombre()
+                        + " (línea " + tomada.getId() + ", referencia " + referencia + "). " + MOTIVO_SIN_SABER);
+                return false;
+        }
+    }
+
     /**
      * El pago ya salió: si guardarlo falla, la línea sigue PROCESANDO con su referencia. Nunca FALLIDO, que se puede
      * reintentar y pagaría dos veces. El evento de Wompi o el ADMIN la cierran.
      */
-    private void registrarPago(RepartoPago tomada, ResultadoDispersion r, SolicitudDispersion solicitud) {
+    private void registrarPago(RepartoPago tomada, ResultadoDispersion r, String actor, String nota) {
         Long id = tomada.getId();
         try {
-            if (repartoRepository.marcarLiquidado(id, LocalDateTime.now(), r.modo(), r.referencia(),
-                    solicitud.actor(), texto(solicitud.nota(), solicitud.actor())) == 0) {
+            if (repartoRepository.marcarLiquidado(id, LocalDateTime.now(), r.modo(), r.referencia(), actor, nota) == 0) {
                 log.error("La línea {} dejó de estar PROCESANDO antes de marcarse LIQUIDADA", id);
             }
         } catch (RuntimeException e) {

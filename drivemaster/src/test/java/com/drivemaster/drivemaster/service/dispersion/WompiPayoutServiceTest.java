@@ -19,6 +19,8 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -282,6 +284,131 @@ class WompiPayoutServiceTest {
     private WompiPayoutService apiDePruebas() {
         return new WompiPayoutService(tallerRepository, tiendaRepository, restTemplate,
                 "sec_test_api_key", "principal-1", "https://api.sandbox.payouts.wompi.co/v1", "pub_test_key", "acc_test_123");
+    }
+
+    // ─── Consulta del intento anterior ───────────────────────────────────────
+
+    private static RepartoPago conReferencia(String referencia) {
+        return RepartoPago.builder().id(90L).referenciaLiquidacion(referencia).build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void wompiResponde(Object data) {
+        Map<String, Object> cuerpo = new java.util.HashMap<>();
+        cuerpo.put("data", data);
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(new ResponseEntity<>(cuerpo, HttpStatus.OK));
+    }
+
+    private static Map<String, Object> pagina(Map<?, ?>... transacciones) {
+        return Map.of("page", 1, "records", List.of(transacciones));
+    }
+
+    private PagoAnterior.Estado estadoCon(Object data) {
+        wompiResponde(data);
+        return apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB [ID:pay-1]")).estado();
+    }
+
+    @Test
+    @DisplayName("Con id consulta las transacciones del pago y no envía nada")
+    @SuppressWarnings("unchecked")
+    void consultaPorId() {
+        wompiResponde(pagina(Map.of("status", "APPROVED", "reference", "WOMPI-90-AB")));
+
+        PagoAnterior p = apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB [ID:pay-1]"));
+
+        assertEquals(new PagoAnterior(PagoAnterior.Estado.SALIO, "pay-1"), p);
+        org.mockito.ArgumentCaptor<URI> uri = org.mockito.ArgumentCaptor.forClass(URI.class);
+        org.mockito.ArgumentCaptor<HttpEntity> pedido = org.mockito.ArgumentCaptor.forClass(HttpEntity.class);
+        verify(restTemplate).exchange(uri.capture(), eq(HttpMethod.GET), pedido.capture(), any(ParameterizedTypeReference.class));
+        assertEquals("https://api.sandbox.payouts.wompi.co/v1/payouts/pay-1/transactions", uri.getValue().toString());
+        assertEquals("sec_test_api_key", pedido.getValue().getHeaders().getFirst("x-api-key"));
+        verificarSinPago();
+    }
+
+    @Test
+    @DisplayName("Sin id consulta por referencia y toma el id del pago de la respuesta")
+    @SuppressWarnings("unchecked")
+    void consultaPorReferencia() {
+        wompiResponde(pagina(Map.of("status", "APPROVED", "reference", "WOMPI-90-AB", "payout", Map.of("id", "pay-7"))));
+
+        PagoAnterior p = apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB"));
+
+        assertEquals(new PagoAnterior(PagoAnterior.Estado.SALIO, "pay-7"), p);
+        org.mockito.ArgumentCaptor<URI> uri = org.mockito.ArgumentCaptor.forClass(URI.class);
+        verify(restTemplate).exchange(uri.capture(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class));
+        assertEquals("https://api.sandbox.payouts.wompi.co/v1/transactions/WOMPI-90-AB", uri.getValue().toString());
+    }
+
+    @Test
+    @DisplayName("Solo los estados finales de no pago dicen que no salió")
+    void estadosDeNoPago() {
+        for (String estado : List.of("FAILED", "CANCELLED", "REJECTED")) {
+            assertEquals(PagoAnterior.Estado.NO_SALIO, estadoCon(pagina(Map.of("status", estado))), estado);
+        }
+    }
+
+    @Test
+    @DisplayName("Un pago en curso o un estado desconocido no permiten reintentar")
+    void estadosSinDecidir() {
+        for (String estado : List.of("PENDING", "PROCESSING", "READY_TO_FILE", "OTRO")) {
+            assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(Map.of("status", estado))), estado);
+        }
+    }
+
+    @Test
+    @DisplayName("Un estado final junto a uno en curso no permite reintentar; uno aprobado manda")
+    void variasTransacciones() {
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(Map.of("status", "FAILED"), Map.of("status", "PENDING"))));
+        assertEquals(PagoAnterior.Estado.SALIO, estadoCon(pagina(Map.of("status", "FAILED"), Map.of("status", "APPROVED"))));
+    }
+
+    @Test
+    @DisplayName("El estado del lote no cuenta: TOTAL_PAYMENT no dice que se pagó")
+    void elLoteNoEsLaTransaccion() {
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(Map.of("id", "pay-1", "status", "TOTAL_PAYMENT")));
+    }
+
+    @Test
+    @DisplayName("La transacción de otra referencia no dice nada de este pago")
+    void otraReferencia() {
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(Map.of("status", "APPROVED", "reference", "WOMPI-91-ZZ"))));
+    }
+
+    @Test
+    @DisplayName("Sin registros o con una respuesta desconocida no se sabe")
+    void respuestaSinDatos() {
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina()));
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(Map.of("otro", 1)));
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(null));
+    }
+
+    @Test
+    @DisplayName("También acepta la lista directa y una sola transacción")
+    void otrasFormasDeRespuesta() {
+        assertEquals(PagoAnterior.Estado.NO_SALIO, estadoCon(List.of(Map.of("status", "FAILED"))));
+        assertEquals(PagoAnterior.Estado.SALIO, estadoCon(Map.of("status", "APPROVED")));
+    }
+
+    @Test
+    @DisplayName("Si la consulta falla, incluso con 404, no se sabe")
+    @SuppressWarnings("unchecked")
+    void consultaFallida() {
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenThrow(new ResourceAccessException("sin red"))
+                .thenThrow(org.springframework.web.client.HttpClientErrorException.create(HttpStatus.NOT_FOUND, "Not Found", null, null, null));
+
+        assertEquals(PagoAnterior.SIN_SABER, apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB")));
+        assertEquals(PagoAnterior.SIN_SABER, apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB")));
+    }
+
+    @Test
+    @DisplayName("Sin API key no consulta")
+    void sinApiKey() {
+        WompiPayoutService sinLlave = new WompiPayoutService(tallerRepository, tiendaRepository, restTemplate, "", "", "", "pub_test_abc");
+
+        assertEquals(PagoAnterior.SIN_SABER, sinLlave.consultarPagoAnterior(conReferencia("WOMPI-90-AB")));
+        verifyNoInteractions(restTemplate);
     }
 
     private void verificarSinPago() {
