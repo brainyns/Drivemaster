@@ -180,7 +180,9 @@ public class WompiPayoutService implements DispersionService {
     /**
      * Consulta las transacciones del intento anterior, por su id o, sin id, por su referencia. Mira la transacción y no
      * el lote: un lote TOTAL_PAYMENT solo dice que terminó, no que se pagó. Solo decide un estado final documentado;
-     * lo demás (en curso, desconocido, sin registros, error de la consulta) es SIN_SABER.
+     * lo demás (en curso, desconocido, sin registros, error de la consulta) es SIN_SABER. Ambas rutas responden
+     * data.records con transacciones { id, reference, status, amountInCents, failureReason }, sin el id del lote: si se
+     * buscó por referencia, el id que queda es el de la transacción.
      */
     @Override
     public PagoAnterior consultarPagoAnterior(RepartoPago reparto) {
@@ -212,34 +214,19 @@ public class WompiPayoutService implements DispersionService {
     }
 
     private static PagoAnterior leerTransacciones(Object data, String referencia, String idWompi) {
-        List<Map<?, ?>> propias = registros(data).stream().filter(Map.class::isInstance).<Map<?, ?>>map(Map.class::cast)
-                .filter(t -> t.get("reference") == null || referencia.equals(String.valueOf(t.get("reference"))))
+        if (!(data instanceof Map<?, ?> pagina) || !(pagina.get("records") instanceof List<?> registros)) return PagoAnterior.SIN_SABER;
+        List<Map<?, ?>> propias = registros.stream().filter(Map.class::isInstance).<Map<?, ?>>map(Map.class::cast)
+                .filter(t -> referencia.equals(t.get("reference")))
                 .toList();
         if (propias.isEmpty()) return PagoAnterior.SIN_SABER;
 
         for (Map<?, ?> t : propias) {
             if (TRANSACCION_PAGADA.equals(String.valueOf(t.get("status")))) {
-                return new PagoAnterior(PagoAnterior.Estado.SALIO, idWompi != null ? idWompi : idDelPago(t));
+                return new PagoAnterior(PagoAnterior.Estado.SALIO, idWompi != null ? idWompi : t.get("id") != null ? String.valueOf(t.get("id")) : null);
             }
         }
         boolean todasFinales = propias.stream().allMatch(t -> TRANSACCION_NO_PAGADA.contains(String.valueOf(t.get("status"))));
         return todasFinales ? new PagoAnterior(PagoAnterior.Estado.NO_SALIO, idWompi) : PagoAnterior.SIN_SABER;
-    }
-
-    /** La documentación de Wompi no muestra la respuesta: se acepta la lista, la página con records o una sola transacción. */
-    private static List<?> registros(Object data) {
-        if (data instanceof List<?> lista) return lista;
-        if (data instanceof Map<?, ?> mapa) {
-            if (mapa.get("records") instanceof List<?> lista) return lista;
-            if (mapa.get("status") != null) return List.of(mapa);
-        }
-        return List.of();
-    }
-
-    private static String idDelPago(Map<?, ?> transaccion) {
-        Object id = transaccion.get("payoutId");
-        if (id == null && transaccion.get("payout") instanceof Map<?, ?> lote) id = lote.get("id");
-        return id != null ? String.valueOf(id) : null;
     }
 
     public boolean esModoApiReal() {

@@ -300,8 +300,15 @@ class WompiPayoutServiceTest {
                 .thenReturn(new ResponseEntity<>(cuerpo, HttpStatus.OK));
     }
 
+    /** Como responde el sandbox: data es una página con records, y cada transacción no trae el id de su lote. */
     private static Map<String, Object> pagina(Map<?, ?>... transacciones) {
-        return Map.of("page", 1, "records", List.of(transacciones));
+        return Map.of("page", 1, "limit", 10, "total", transacciones.length, "pages", 1, "records", List.of(transacciones));
+    }
+
+    private static Map<String, Object> transaccion(String estado) {
+        Map<String, Object> t = new java.util.HashMap<>(Map.of("id", "txn-1", "amountInCents", 6_867_000, "status", estado, "reference", "WOMPI-90-AB"));
+        t.put("failureReason", null);
+        return t;
     }
 
     private PagoAnterior.Estado estadoCon(Object data) {
@@ -313,7 +320,7 @@ class WompiPayoutServiceTest {
     @DisplayName("Con id consulta las transacciones del pago y no envía nada")
     @SuppressWarnings("unchecked")
     void consultaPorId() {
-        wompiResponde(pagina(Map.of("status", "APPROVED", "reference", "WOMPI-90-AB")));
+        wompiResponde(pagina(transaccion("APPROVED")));
 
         PagoAnterior p = apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB [ID:pay-1]"));
 
@@ -327,14 +334,14 @@ class WompiPayoutServiceTest {
     }
 
     @Test
-    @DisplayName("Sin id consulta por referencia y toma el id del pago de la respuesta")
+    @DisplayName("Sin id consulta por referencia y queda el id de la transacción, porque no trae el del lote")
     @SuppressWarnings("unchecked")
     void consultaPorReferencia() {
-        wompiResponde(pagina(Map.of("status", "APPROVED", "reference", "WOMPI-90-AB", "payout", Map.of("id", "pay-7"))));
+        wompiResponde(pagina(transaccion("APPROVED")));
 
         PagoAnterior p = apiDePruebas().consultarPagoAnterior(conReferencia("WOMPI-90-AB"));
 
-        assertEquals(new PagoAnterior(PagoAnterior.Estado.SALIO, "pay-7"), p);
+        assertEquals(new PagoAnterior(PagoAnterior.Estado.SALIO, "txn-1"), p);
         org.mockito.ArgumentCaptor<URI> uri = org.mockito.ArgumentCaptor.forClass(URI.class);
         verify(restTemplate).exchange(uri.capture(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class));
         assertEquals("https://api.sandbox.payouts.wompi.co/v1/transactions/WOMPI-90-AB", uri.getValue().toString());
@@ -344,7 +351,7 @@ class WompiPayoutServiceTest {
     @DisplayName("Solo los estados finales de no pago dicen que no salió")
     void estadosDeNoPago() {
         for (String estado : List.of("FAILED", "CANCELLED", "REJECTED")) {
-            assertEquals(PagoAnterior.Estado.NO_SALIO, estadoCon(pagina(Map.of("status", estado))), estado);
+            assertEquals(PagoAnterior.Estado.NO_SALIO, estadoCon(pagina(transaccion(estado))), estado);
         }
     }
 
@@ -352,15 +359,15 @@ class WompiPayoutServiceTest {
     @DisplayName("Un pago en curso o un estado desconocido no permiten reintentar")
     void estadosSinDecidir() {
         for (String estado : List.of("PENDING", "PROCESSING", "READY_TO_FILE", "OTRO")) {
-            assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(Map.of("status", estado))), estado);
+            assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(transaccion(estado))), estado);
         }
     }
 
     @Test
     @DisplayName("Un estado final junto a uno en curso no permite reintentar; uno aprobado manda")
     void variasTransacciones() {
-        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(Map.of("status", "FAILED"), Map.of("status", "PENDING"))));
-        assertEquals(PagoAnterior.Estado.SALIO, estadoCon(pagina(Map.of("status", "FAILED"), Map.of("status", "APPROVED"))));
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(transaccion("FAILED"), transaccion("PENDING"))));
+        assertEquals(PagoAnterior.Estado.SALIO, estadoCon(pagina(transaccion("FAILED"), transaccion("APPROVED"))));
     }
 
     @Test
@@ -384,10 +391,16 @@ class WompiPayoutServiceTest {
     }
 
     @Test
-    @DisplayName("También acepta la lista directa y una sola transacción")
+    @DisplayName("Una respuesta con otra forma no cuenta, aunque diga APPROVED")
     void otrasFormasDeRespuesta() {
-        assertEquals(PagoAnterior.Estado.NO_SALIO, estadoCon(List.of(Map.of("status", "FAILED"))));
-        assertEquals(PagoAnterior.Estado.SALIO, estadoCon(Map.of("status", "APPROVED")));
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(List.of(transaccion("APPROVED"))));
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(transaccion("APPROVED")));
+    }
+
+    @Test
+    @DisplayName("Una transacción sin referencia no se da por propia")
+    void sinReferencia() {
+        assertEquals(PagoAnterior.Estado.SIN_SABER, estadoCon(pagina(Map.of("id", "txn-1", "status", "APPROVED"))));
     }
 
     @Test
