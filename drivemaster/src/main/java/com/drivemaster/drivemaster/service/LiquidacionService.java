@@ -15,6 +15,7 @@ import com.drivemaster.drivemaster.service.dispersion.DispersionInciertaExceptio
 import com.drivemaster.drivemaster.service.dispersion.DispersionService;
 import com.drivemaster.drivemaster.service.dispersion.ResultadoDispersion;
 import com.drivemaster.drivemaster.service.dispersion.SolicitudDispersion;
+import com.drivemaster.drivemaster.service.dispersion.WompiPayoutService;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
@@ -302,6 +303,10 @@ public class LiquidacionService {
 
         String referenciaLinea = r.getReferenciaLiquidacion() != null ? r.getReferenciaLiquidacion() : (anotada.isEmpty() ? null : anotada);
         String modo = r.getModoLiquidacion() != null ? r.getModoLiquidacion() : dispersion.modo();
+        // Lo anotado sale del panel de Wompi: es el id con el que la comisión de esta línea cuenta como cobrada
+        if (salio && WompiPayoutService.MODO.equals(modo)) {
+            referenciaLinea = conIdWompi(r.getReferenciaLiquidacion() != null ? r.getReferenciaLiquidacion() : "WOMPI-" + id, anotada);
+        }
         String nota = recortar("Resuelto a mano por " + correoAdmin + ": " + razon
                 + (anotada.isEmpty() ? "" : " (ref. " + anotada + ")"), 500);
         int filas = salio
@@ -458,9 +463,13 @@ public class LiquidacionService {
             }
         } else if (confirmado) {
             log.info("Wompi Payout confirmado para reparto #{}", reparto.getId());
+            String conId = conIdWompi(reparto.getReferenciaLiquidacion(), payoutId);
             if (RepartoPago.PROCESANDO.equals(reparto.getEstado())) {
                 repartoRepository.marcarLiquidado(reparto.getId(), LocalDateTime.now(), "WOMPI",
-                        reparto.getReferenciaLiquidacion(), "WOMPI_WEBHOOK", "Confirmado vía webhook Wompi ACH");
+                        conId, "WOMPI_WEBHOOK", "Confirmado vía webhook Wompi ACH");
+            } else if (RepartoPago.LIQUIDADO.equals(reparto.getEstado())) {
+                // La respuesta al crear el pago no trajo el id: lo trae el evento
+                if (!java.util.Objects.equals(conId, reparto.getReferenciaLiquidacion())) repartoRepository.anotarReferencia(reparto.getId(), conId);
             } else if (RepartoPago.FALLIDO.equals(reparto.getEstado())
                     && resoluciones.existsByRepartoIdAndResultado(reparto.getId(), RepartoPago.FALLIDO)
                     && repartoRepository.confirmarPagoTardio(reparto.getId(), LocalDateTime.now(), "WOMPI_WEBHOOK",
@@ -473,6 +482,13 @@ public class LiquidacionService {
         } else {
             log.info("Estado de Wompi Payouts sin acción para reparto #{}: {}", reparto.getId(), status);
         }
+    }
+
+    /** La referencia de la línea con el id de Wompi, como la deja WompiPayoutService. Si ya lo tiene o no cabe, no cambia. */
+    static String conIdWompi(String referencia, String idWompi) {
+        if (referencia == null || idWompi == null || idWompi.isBlank() || referencia.contains("[ID:")) return referencia;
+        String conId = referencia + " [ID:" + idWompi + "]";
+        return conId.length() > 80 ? referencia : conId;
     }
 
     private static final Set<String> RECHAZOS_PAYOUT = Set.of("REJECTED", "FAILED", "ERROR", "DECLINED", "REVERSED", "CANCELED");

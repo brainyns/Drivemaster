@@ -50,22 +50,24 @@ public record DashboardPlataformaDTO(
                          boolean comisionSeDescuenta, double saldosAFavorPendientes) {}
 
     /**
-     * Comisión retenida según el estado de la línea del negocio. cobrada: ya se pagó el neto, sin lo simulado.
-     * cobradaSimulada: la pagada en simulación, que no movió dinero. porCobrar: retenida en líneas aún sin pagar.
-     * anulada: la de líneas anuladas por reembolso.
+     * Comisión retenida según el estado de la línea del negocio. cobrada: ya se pagó el neto; en WOMPI, solo con el id del
+     * pago. cobradaSimulada: la de líneas SIM-, que no movieron dinero. porCobrar: retenida en líneas aún sin pagar.
+     * anulada: la de líneas anuladas por reembolso. sinIdWompi: liquidada en WOMPI sin id: no cuenta hasta que llegue.
      */
-    public record ComisionRetenida(double cobrada, double cobradaSimulada, double porCobrar, double anulada) {
+    public record ComisionRetenida(double cobrada, double cobradaSimulada, double porCobrar, double anulada, double sinIdWompi) {
 
+        /** Filas de RepartoPagoRepository.comisionRetenidaPorEstado: [estado, modo, 'ID' o vacío, suma]. */
         public static ComisionRetenida de(List<Object[]> filas) {
-            double cobrada = 0, simulada = 0, porCobrar = 0, anulada = 0;
+            double cobrada = 0, simulada = 0, porCobrar = 0, anulada = 0, sinId = 0;
             for (Object[] f : filas) {
-                double monto = f[2] instanceof Number n ? n.doubleValue() : 0;
+                double monto = f[3] instanceof Number n ? n.doubleValue() : 0;
                 if ("ANULADO".equals(f[0])) anulada += monto;
                 else if (!"LIQUIDADO".equals(f[0])) porCobrar += monto;
                 else if ("SIMULADO".equals(f[1])) simulada += monto;
+                else if ("WOMPI".equals(f[1]) && !"ID".equals(f[2])) sinId += monto;
                 else cobrada += monto;
             }
-            return new ComisionRetenida(cobrada, simulada, porCobrar, anulada);
+            return new ComisionRetenida(cobrada, simulada, porCobrar, anulada, sinId);
         }
     }
 

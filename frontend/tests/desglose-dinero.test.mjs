@@ -48,6 +48,11 @@ test("cada estado del pago tiene texto y lo simulado no se llama pagado", () => 
   assert.ok(textoPago({ estado: "SIMULADO" }).includes("no se movió dinero"));
 });
 
+test("lo listo depende de que DriveMaster apruebe la liquidación", () => {
+  assert.equal(textoPago({ estado: "LISTO" }), "DriveMaster te lo transfiere cuando apruebe la liquidación.");
+  assert.ok(!leer("../src/pages/InformesTienda.jsx").includes("próxima liquidación"));
+});
+
 test("un pago hecho dice cuándo y con qué referencia", () => {
   const t = textoPago({ estado: "PAGADO", fechaPago: "2026-10-20T10:00:00", referencia: "WOMPI-12-ab34" });
   assert.ok(t.startsWith("Transferido el") && t.includes("Ref. WOMPI-12-ab34"), t);

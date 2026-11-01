@@ -40,7 +40,7 @@ export function textoPago(l) {
   if (l.estado === "PAGADO") {
     return ["Transferido", l.fechaPago && `el ${formatFecha(l.fechaPago)}`, l.referencia && `· Ref. ${l.referencia}`].filter(Boolean).join(" ");
   }
-  if (l.estado === "LISTO") return "DriveMaster te lo transfiere en la próxima liquidación.";
+  if (l.estado === "LISTO") return "DriveMaster te lo transfiere cuando apruebe la liquidación.";
   if (l.estado === "SIMULADO") return "Prueba del sistema: no se movió dinero.";
   if (l.estado === "ANULADO") return "Este pago no se hará.";
   return "Se habilita cuando se confirme la entrega.";

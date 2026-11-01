@@ -210,6 +210,7 @@ class LiquidacionServiceTest {
         assertTrue(jpql("sumaComisionRegistrada").contains("r.estado = 'INFORMATIVA'"));
         assertTrue(jpql("comisionCobradaDesde", LocalDateTime.class).contains("<> 'SIMULADO'"));
         assertTrue(jpql("comisionCobradaDesde", LocalDateTime.class).contains("r.estado = 'LIQUIDADO'"));
+        assertTrue(jpql("comisionCobradaDesde", LocalDateTime.class).contains("like '%[ID:%'"), "en WOMPI cuenta solo con el id del pago");
         assertTrue(jpql("comisionRetenidaPorEstado").contains("r.beneficiarioTipo <> 'PLATAFORMA'"), "se lee de las líneas de los negocios");
         assertTrue(jpql("sumaRepartidaPorTaller").contains("coalesce(r.montoBruto, r.monto)"), "lo movido al taller es antes de comisión");
     }
@@ -853,7 +854,7 @@ class LiquidacionServiceTest {
         servicio(manual()).resolver(1L, ADMIN, "liquidado", MOTIVO, "PANEL-123");
 
         assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
-        assertEquals("WOMPI-1-AB", r.getReferenciaLiquidacion(), "conserva la de Wompi para reconocer sus eventos");
+        assertEquals("WOMPI-1-AB [ID:PANEL-123]", r.getReferenciaLiquidacion(), "conserva la de Wompi, que reconoce sus eventos, y suma el id anotado");
         assertEquals(ADMIN, r.getLiquidadoPor());
         assertTrue(r.getNota().contains(MOTIVO) && r.getNota().contains("PANEL-123"), r.getNota());
         ArgumentCaptor<ResolucionReparto> registro = ArgumentCaptor.forClass(ResolucionReparto.class);
@@ -923,6 +924,59 @@ class LiquidacionServiceTest {
 
         esperaRechazo(HttpStatus.CONFLICT, "cambió", () -> servicio(manual()).resolver(1L, ADMIN, "FALLIDO", MOTIVO, null));
         verify(resoluciones, never()).save(any());
+    }
+
+    private static Map<String, Object> pagoConfirmadoConId(String referencia, String idWompi) {
+        return Map.of("event", "payout.updated", "data", Map.of("payout", Map.of("id", idWompi, "reference", referencia, "status", "TOTAL_PAYMENT")));
+    }
+
+    @Test
+    void elEventoDeUnPagoSinConfirmarDejaElIdDeWompiEnLaLinea() {
+        RepartoPago r = enProceso(1, "Wompi no confirmó", LocalDateTime.now());
+
+        servicio(manual()).procesarWebhookPayout(pagoConfirmadoConId("WOMPI-1-AB", "pay-9"));
+
+        assertEquals(RepartoPago.LIQUIDADO, r.getEstado());
+        assertEquals("WOMPI-1-AB [ID:pay-9]", r.getReferenciaLiquidacion());
+    }
+
+    @Test
+    void elEventoCompletaElIdDeUnaLineaLiquidadaSinEl() {
+        RepartoPago r = linea(1, RepartoPago.TALLER, null, true);
+        r.setEstado(RepartoPago.LIQUIDADO);
+        r.setReferenciaLiquidacion("WOMPI-1-AB");
+
+        servicio(manual()).procesarWebhookPayout(pagoConfirmadoConId("WOMPI-1-AB", "pay-9"));
+
+        verify(repartoRepository).anotarReferencia(1L, "WOMPI-1-AB [ID:pay-9]");
+    }
+
+    @Test
+    void elEventoRepetidoNoTocaUnaLineaQueYaTieneSuId() {
+        RepartoPago r = linea(1, RepartoPago.TALLER, null, true);
+        r.setEstado(RepartoPago.LIQUIDADO);
+        r.setReferenciaLiquidacion("WOMPI-1-AB [ID:pay-9]");
+
+        servicio(manual()).procesarWebhookPayout(pagoConfirmadoConId("WOMPI-1-AB", "pay-9"));
+
+        verify(repartoRepository, never()).anotarReferencia(anyLong(), anyString());
+    }
+
+    @Test
+    void resolverAManoEnWompiGuardaElIdAnotadoYConservaLaReferencia() {
+        RepartoPago r = enProceso(1, "Wompi no confirmó", LocalDateTime.now());
+        r.setModoLiquidacion("WOMPI");
+
+        servicio(manual()).resolver(1L, ADMIN, "LIQUIDADO", MOTIVO, "pay-9");
+
+        assertEquals("WOMPI-1-AB [ID:pay-9]", r.getReferenciaLiquidacion());
+    }
+
+    @Test
+    void laReferenciaConIdNuncaPasaDeLaColumna() {
+        assertEquals("REF", LiquidacionService.conIdWompi("REF", "x".repeat(80)));
+        assertEquals("REF", LiquidacionService.conIdWompi("REF", null));
+        assertEquals("REF [ID:a]", LiquidacionService.conIdWompi("REF [ID:a]", "b"));
     }
 
     private static Map<String, Object> pagoConfirmado(String referencia) {

@@ -192,13 +192,14 @@ class DesgloseLiquidacionServiceTest {
     @Test
     void laComisionCobradaEsSoloLaDeLineasPagadasDeVerdad() {
         ComisionRetenida c = ComisionRetenida.de(Arrays.asList(
-                new Object[]{"LIQUIDADO", "WOMPI", 20_000.0},
-                new Object[]{"LIQUIDADO", "MANUAL", 5_000.0},
-                new Object[]{"LIQUIDADO", "SIMULADO", 7_000.0},
-                new Object[]{"PENDIENTE", "", 3_000.0},
-                new Object[]{"FALLIDO", "WOMPI", 2_000.0},
-                new Object[]{"ANULADO", "", 4_000.0}));
+                new Object[]{"LIQUIDADO", "WOMPI", "ID", 20_000.0},
+                new Object[]{"LIQUIDADO", "WOMPI", "", 6_000.0},
+                new Object[]{"LIQUIDADO", "MANUAL", "", 5_000.0},
+                new Object[]{"LIQUIDADO", "SIMULADO", "", 7_000.0},
+                new Object[]{"PENDIENTE", "", "", 3_000.0},
+                new Object[]{"FALLIDO", "WOMPI", "ID", 2_000.0},
+                new Object[]{"ANULADO", "", "", 4_000.0}));
 
-        assertEquals(new ComisionRetenida(25_000, 7_000, 5_000, 4_000), c);
+        assertEquals(new ComisionRetenida(25_000, 7_000, 5_000, 4_000, 6_000), c, "sin id de Wompi no cuenta y lo SIM- nunca");
     }
 }

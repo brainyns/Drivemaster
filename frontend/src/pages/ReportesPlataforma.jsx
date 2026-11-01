@@ -178,11 +178,15 @@ function Contenido({ id, titulo, datos, token, onCambio }) {
         <h2 id="rep-cobrada" className="pp-titulo">Comisión cobrada</h2>
         <div className="ui-indicadores pp-indicadores-dinero">
           <Indicador titulo="Cobrada" valor={cop(datos.retenida?.cobrada)} tono="ok"
-            pie={datos.comisionSeDescuenta ? "Retenida en pagos ya transferidos. Dinero real, total acumulado." : "El cobro está apagado: la comisión no se descuenta todavía."} />
+            pie={datos.comisionSeDescuenta ? "Retenida en líneas liquidadas con su id de Wompi. Total acumulado." : "El cobro está apagado: la comisión no se descuenta todavía."} />
           <Indicador titulo="Por cobrar" valor={cop(datos.retenida?.porCobrar)} pie="Retenida en pagos que aún no se transfieren." />
           <Indicador titulo="Anulada" valor={cop(datos.retenida?.anulada)} pie="Era de pagos anulados por reembolso: no se cobró." />
+          {datos.retenida?.sinIdWompi > 0 && (
+            <Indicador titulo="Sin id de Wompi" valor={cop(datos.retenida.sinIdWompi)} tono="accion"
+              pie="Liquidada sin id del pago: no cuenta como cobrada hasta que llegue el evento de Wompi." />
+          )}
           {datos.retenida?.cobradaSimulada > 0 && (
-            <Indicador titulo="Simulada" valor={cop(datos.retenida.cobradaSimulada)} pie="De liquidaciones simuladas: no movió dinero." />
+            <Indicador titulo="Simulada" valor={cop(datos.retenida.cobradaSimulada)} pie="De líneas SIM-: no movió dinero ni cuenta como cobrada." />
           )}
           <Indicador titulo="Saldos a favor pendientes" valor={cop(datos.saldosAFavor?.total ?? 0)}
             tono={datos.saldosAFavor?.total > 0 ? "accion" : undefined}

@@ -403,7 +403,7 @@ test("Liquidaciones: bruto, comisión y neto de cada fila", () => {
 
 test("Reportes y dashboard: la comisión cobrada va separada de la informativa", () => {
   const p = leer("../src/pages/ReportesPlataforma.jsx");
-  for (const texto of ['titulo="Cobrada"', 'titulo="Por cobrar"', "Comisión informativa", "marcarSaldoCobrado(token, marcando.id)"]) assert.ok(p.includes(texto), texto);
+  for (const texto of ['titulo="Cobrada"', 'titulo="Por cobrar"', 'titulo="Sin id de Wompi"', "Comisión informativa", "marcarSaldoCobrado(token, marcando.id)"]) assert.ok(p.includes(texto), texto);
   const d = leer("../src/pages/DashboardPlataforma.jsx");
   assert.ok(d.includes('titulo="Comisión cobrada"') && d.includes('titulo="Comisión informativa"'));
   assert.ok(d.includes("El cobro está apagado"), "con la bandera apagada no aparenta haber cobrado");

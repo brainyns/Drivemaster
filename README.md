@@ -354,8 +354,9 @@ parámetro y pasa `null` en su lugar a `PeticionTabla.de(...)` o `RangoFechas.de
   entrenó con un dataset generado por nosotros (`ml/generar_dataset.py`), no con cotizaciones reales. Sirve para
   demostrar la integración; sus cifras no deben tomarse como referencia de mercado. El backend usa los pesos del
   modelo (`modelo_pesos.json`) directamente en Java; el servicio en Python de `ml/` es opcional.
-- **Dispersión de pagos simulada.** La liquidación calcula lo que le corresponde a cada taller y tienda, pero en
-  esta versión el envío del dinero es simulado o se marca a mano (`DISPERSION_MODO`); no hay transferencias reales.
+- **Dispersión de pagos en sandbox.** La liquidación calcula lo que le corresponde a cada taller y tienda y lo envía
+  según `DISPERSION_MODO`: `WOMPI` usa Pagos a terceros (hoy en sandbox), `MANUAL` deja anotar la transferencia del
+  banco y `SIMULADO` solo genera una referencia `SIM-`.
 - **Pagos en sandbox.** Wompi está configurado con llaves de prueba.
 - **Dos flujos de servicio.** Conviven el flujo actual (marketplace) y las órdenes del flujo anterior, que solo se
   consultan y se cierran ("Órdenes anteriores").

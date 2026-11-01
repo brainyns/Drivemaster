@@ -262,7 +262,7 @@ class PlataformaReportesTest {
         when(repartos.comisionCobradaDesde(any())).thenReturn(List.of(RepartoPago.builder().comisionRetenida(20_000.0)
                 .fechaCreacion(LocalDateTime.of(2026, 9, 5, 10, 0)).fechaLiquidacion(LocalDateTime.of(2026, 10, 3, 10, 0)).build()));
         when(repartos.comisionRetenidaPorEstado()).thenReturn(java.util.Arrays.asList(
-                new Object[]{"LIQUIDADO", "WOMPI", 20_000.0}, new Object[]{"PENDIENTE", "", 10_000.0}));
+                new Object[]{"LIQUIDADO", "WOMPI", "ID", 20_000.0}, new Object[]{"PENDIENTE", "", "", 10_000.0}));
         when(parametros.comisionRetenida()).thenReturn(true);
 
         ComisionNeta r = reportes.comisionNeta(2, OCT_2026, LocalDateTime.of(2026, 10, 10, 9, 0));

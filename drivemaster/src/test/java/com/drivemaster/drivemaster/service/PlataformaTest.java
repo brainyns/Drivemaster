@@ -223,7 +223,7 @@ class PlataformaTest {
         RepartoPagoRepository repartos = mock(RepartoPagoRepository.class);
         when(repartos.sumaComisionRegistrada()).thenReturn(80_000.0);
         when(repartos.comisionRetenidaPorEstado()).thenReturn(java.util.Arrays.asList(
-                new Object[]{"LIQUIDADO", "WOMPI", 30_000.0}, new Object[]{"POR_LIQUIDAR", "", 9_000.0}));
+                new Object[]{"LIQUIDADO", "WOMPI", "ID", 30_000.0}, new Object[]{"POR_LIQUIDAR", "", "", 9_000.0}));
         when(repartos.countByEstado(RepartoPago.POR_LIQUIDAR)).thenReturn(5L);
         ReembolsoRepository reembolsos = mock(ReembolsoRepository.class);
         when(reembolsos.countByEstado("PENDIENTE")).thenReturn(2L);

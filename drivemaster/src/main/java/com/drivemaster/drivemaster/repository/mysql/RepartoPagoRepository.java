@@ -83,17 +83,20 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
     List<Object[]> desgloseDeNegocioDesde(@Param("tipo") String tipo, @Param("id") String id, @Param("desde") LocalDateTime desde);
 
     /**
-     * La comisión que de verdad se retuvo, leída de las líneas de los negocios: [estado, modo, suma]. Así un rechazo del
-     * banco o una anulación la mueven solos, y no depende de la línea PLATAFORMA, cuyo registro no detiene un pago.
+     * La comisión que de verdad se retuvo, leída de las líneas de los negocios: [estado, modo, 'ID' si tiene id de Wompi,
+     * suma]. Así un rechazo del banco o una anulación la mueven solos, y no depende de la línea PLATAFORMA, cuyo registro
+     * no detiene un pago.
      */
-    @Query("select r.estado, coalesce(r.modoLiquidacion, ''), coalesce(sum(r.comisionRetenida), 0) from RepartoPago r "
-            + "where r.beneficiarioTipo <> 'PLATAFORMA' and r.comisionRetenida > 0 "
-            + "group by r.estado, coalesce(r.modoLiquidacion, '')")
+    @Query("select r.estado, coalesce(r.modoLiquidacion, ''), "
+            + "case when r.referenciaLiquidacion like '%[ID:%' then 'ID' else '' end, coalesce(sum(r.comisionRetenida), 0) "
+            + "from RepartoPago r where r.beneficiarioTipo <> 'PLATAFORMA' and r.comisionRetenida > 0 "
+            + "group by r.estado, coalesce(r.modoLiquidacion, ''), case when r.referenciaLiquidacion like '%[ID:%' then 'ID' else '' end")
     List<Object[]> comisionRetenidaPorEstado();
 
-    /** Líneas con comisión cobrada de verdad desde una fecha: pagadas y sin simular. */
+    /** Líneas con comisión cobrada desde una fecha: pagadas, sin simular y, las de Wompi, con el id de su pago. */
     @Query("select r from RepartoPago r where r.beneficiarioTipo <> 'PLATAFORMA' and r.comisionRetenida > 0 "
             + "and r.estado = 'LIQUIDADO' and coalesce(r.modoLiquidacion, '') <> 'SIMULADO' "
+            + "and (coalesce(r.modoLiquidacion, '') <> 'WOMPI' or r.referenciaLiquidacion like '%[ID:%') "
             + "and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde")
     List<RepartoPago> comisionCobradaDesde(@Param("desde") LocalDateTime desde);
 
@@ -197,6 +200,12 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
             + "r.nota = :nota, r.motivoFallo = null where r.id = :id and r.estado = 'FALLIDO'")
     int confirmarPagoTardio(@Param("id") Long id, @Param("ahora") LocalDateTime ahora, @Param("por") String por,
                             @Param("nota") String nota);
+
+    /** Wompi dio el id de un pago ya liquidado que no lo tenía. */
+    @Modifying
+    @Transactional
+    @Query("update RepartoPago r set r.referenciaLiquidacion = :referencia where r.id = :id and r.estado = 'LIQUIDADO'")
+    int anotarReferencia(@Param("id") Long id, @Param("referencia") String referencia);
 
     /** Wompi no confirmó el pago: la línea sigue PROCESANDO, con la referencia para reconocer su evento. */
     @Modifying

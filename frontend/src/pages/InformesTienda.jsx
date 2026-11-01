@@ -241,7 +241,7 @@ function Liquidacion({ liquidacion: l }) {
     { clave: "espera", titulo: "En espera de la entrega", monto: l.enEspera, n: l.lineasEnEspera,
       texto: "Pagos de pedidos que aún no se entregan. Se habilitan cuando el cliente confirma la recepción o validas el retiro." },
     { clave: "listo", titulo: "Listo para liquidar", monto: l.porLiquidar, n: l.lineasPorLiquidar, destacada: true,
-      texto: "Ya se entregaron: DriveMaster te los transfiere en la próxima liquidación." },
+      texto: "Ya se entregaron: DriveMaster te los transfiere cuando apruebe la liquidación." },
     { clave: "pagado", titulo: "Ya liquidado", monto: l.liquidado, n: l.lineasLiquidadas,
       texto: "Lo que ya te transfirieron." },
   ];
