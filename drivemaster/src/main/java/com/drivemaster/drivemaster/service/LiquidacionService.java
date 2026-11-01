@@ -334,12 +334,7 @@ public class LiquidacionService {
             return repartoRepository.findById(id).orElseThrow();
         }
         try {
-            ResultadoDispersion r = dispersion.liquidar(tomada, solicitud);
-            int filas = repartoRepository.marcarLiquidado(id, LocalDateTime.now(), r.modo(), r.referencia(),
-                    solicitud.actor(), texto(solicitud.nota(), solicitud.actor()));
-            if (filas == 0) {
-                log.error("La línea {} dejó de estar PROCESANDO antes de marcarse LIQUIDADA", id);
-            }
+            registrarPago(tomada, dispersion.liquidar(tomada, solicitud), solicitud);
         } catch (DispersionInciertaException e) {
             String motivo = recortar(e.getMessage(), 300);
             repartoRepository.marcarPorVerificar(id, e.getReferencia(), motivo, dispersion.modo());
@@ -356,6 +351,30 @@ public class LiquidacionService {
                     + ". Reintenta desde Liquidaciones.");
         }
         return repartoRepository.findById(id).orElseThrow();
+    }
+
+    /**
+     * El pago ya salió: si guardarlo falla, la línea sigue PROCESANDO con su referencia. Nunca FALLIDO, que se puede
+     * reintentar y pagaría dos veces. El evento de Wompi o el ADMIN la cierran.
+     */
+    private void registrarPago(RepartoPago tomada, ResultadoDispersion r, SolicitudDispersion solicitud) {
+        Long id = tomada.getId();
+        try {
+            if (repartoRepository.marcarLiquidado(id, LocalDateTime.now(), r.modo(), r.referencia(),
+                    solicitud.actor(), texto(solicitud.nota(), solicitud.actor())) == 0) {
+                log.error("La línea {} dejó de estar PROCESANDO antes de marcarse LIQUIDADA", id);
+            }
+        } catch (RuntimeException e) {
+            log.error("La línea {} se pagó con referencia {} y no se pudo guardar", id, r.referencia(), e);
+            try {
+                repartoRepository.marcarPorVerificar(id, r.referencia(),
+                        "El pago salió, pero no se pudo guardar: resuélvelo con su referencia, no lo reintentes", r.modo());
+            } catch (RuntimeException sinBase) {
+                log.error("Tampoco se pudo anotar la referencia {} en la línea {}", r.referencia(), id, sinBase);
+            }
+            avisos.alertaAdmin("Liquidación sin registrar", "El pago de " + tomada.getBeneficiarioNombre() + " (línea " + id + ", "
+                    + Math.round(tomada.getMonto()) + " COP, referencia " + r.referencia() + ") salió y no se pudo guardar. No lo reintentes.");
+        }
     }
 
     /** La comisión se llevó toda la línea: pasa con muy poco saldo, si el taller dejó de cobrar IVA tras el diagnóstico. */

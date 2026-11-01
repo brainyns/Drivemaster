@@ -827,6 +827,28 @@ class LiquidacionServiceTest {
         assertEquals(RepartoPago.LIQUIDADO, tienda.getEstado());
     }
 
+    @Test
+    void unPagoQueSalioYNoSePudoGuardarNoQuedaFallidoNiSeReintenta() {
+        RepartoPago tienda = linea(1, RepartoPago.TIENDA, "ped1", true);
+        tienda.setEstado(RepartoPago.POR_LIQUIDAR);
+        DispersionService wompi = mock(DispersionService.class);
+        when(wompi.modo()).thenReturn("WOMPI");
+        when(wompi.liquidar(any(), any())).thenReturn(new ResultadoDispersion("WOMPI", "WOMPI-1-AB [ID:p-1]", java.math.BigDecimal.TEN));
+        doThrow(new IllegalStateException("base caída")).when(repartoRepository)
+                .marcarLiquidado(anyLong(), any(), anyString(), anyString(), anyString(), any());
+        LiquidacionService s = servicio(wompi);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> s.liquidar(1L, ADMIN, null, null));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        assertEquals(RepartoPago.PROCESANDO, tienda.getEstado(), "FALLIDO se podría reintentar y pagar dos veces");
+        assertEquals("WOMPI-1-AB [ID:p-1]", tienda.getReferenciaLiquidacion());
+        verify(avisos).alertaAdmin(eq("Liquidación sin registrar"), contains("WOMPI-1-AB"));
+
+        assertThrows(ResponseStatusException.class, () -> s.liquidar(1L, ADMIN, null, null));
+        assertEquals(1, dispersiones.get(), "el segundo clic no llega a Wompi");
+    }
+
     // ─── Salida manual de una línea PROCESANDO ───────────────────────────────
 
     private static final String MOTIVO = "Revisado en el panel de Wompi el 31 de octubre";
