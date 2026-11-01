@@ -242,6 +242,10 @@ public class PedidoTiendaService {
                 // Solo informativo
             }
             avisos.pedidoNoDespachado(orden, pedido);
+            if (ReglasTrabajoTaller.ningunoLlego(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId()))) {
+                avisos.alertaAdmin("Solicitud sin repuestos", "Ninguna tienda pudo despachar los repuestos de la solicitud "
+                        + orden.getId() + ": el taller no puede iniciar la instalación. Revísala con el taller y el cliente.");
+            }
         }
         return pedido;
     }
@@ -405,6 +409,10 @@ public class PedidoTiendaService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud no está esperando repuestos");
         }
         List<PedidoTienda> previos = pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
+        if (ReglasTrabajoTaller.ningunoLlego(previos)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ninguna tienda despachó los repuestos de esta solicitud: "
+                    + "no se puede confirmar su recepción. DriveMaster la revisará.");
+        }
         List<PedidoTienda> noDespachados = previos.stream()
                 .filter(p -> PedidoTienda.NO_DESPACHADO.equals(p.getEstado())).toList();
         if (!noDespachados.isEmpty() && !confirmarFaltantes) {

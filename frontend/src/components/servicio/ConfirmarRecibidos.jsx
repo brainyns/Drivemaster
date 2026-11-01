@@ -29,6 +29,8 @@ export default function ConfirmarRecibidos({ token, solicitud, onConfirmado, onC
   const sinDespacho = (pedidos || []).filter((p) => SIN_DESPACHO.includes(p.estado));
   const noDespachados = (pedidos || []).filter((p) => p.estado === "NO_DESPACHADO");
   const hayFaltantes = noDespachados.length > 0;
+  // Sin ningún repuesto no hay trabajo que hacer: el backend lo rechaza y DriveMaster ya recibió la alerta
+  const ningunoLlego = pedidos?.length > 0 && noDespachados.length === pedidos.length;
 
   const confirmar = async () => {
     await confirmarRepuestosRecibidos(token, solicitud.id, hayFaltantes && aceptaFaltantes);
@@ -39,7 +41,7 @@ export default function ConfirmarRecibidos({ token, solicitud, onConfirmado, onC
     <ConfirmarAccion titulo="¿Confirmar repuestos recibidos?"
       mensaje="La solicitud pasa a repuestos recibidos y se habilita el pago de cada tienda que entregó. No se puede deshacer."
       textoConfirmar="Sí, confirmar recepción"
-      puedeConfirmar={pedidos !== null && (!hayFaltantes || aceptaFaltantes)}
+      puedeConfirmar={pedidos !== null && !ningunoLlego && (!hayFaltantes || aceptaFaltantes)}
       onCancelar={onCancelar} onConfirmar={confirmar}>
       {error && <p className="mk-aviso mk-aviso--error" role="alert">{error}</p>}
       {pedidos === null && !error && <p className="ss-meta">Cargando pedidos…</p>}
@@ -62,7 +64,12 @@ export default function ConfirmarRecibidos({ token, solicitud, onConfirmado, onC
       {sinDespacho.map((p) => (
         <p key={p.id} className="mk-aviso mk-aviso--aviso">La tienda {p.tiendaNombre} no ha marcado el despacho.</p>
       ))}
-      {hayFaltantes && (
+      {ningunoLlego && (
+        <p className="mk-aviso mk-aviso--error">
+          Ninguna tienda pudo despachar los repuestos: no se puede continuar con esta solicitud. DriveMaster la revisará.
+        </p>
+      )}
+      {hayFaltantes && !ningunoLlego && (
         <div className="ss-confirmar">
           <p className="mk-aviso mk-aviso--error">
             {noDespachados.length === 1

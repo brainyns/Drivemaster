@@ -44,6 +44,7 @@ class EtapasFinalesTest {
     private SolicitudServicioServiceImpl service;
     private OrdenServicioRepository ordenRepository;
     private ParametrosMarketplace parametros;
+    private ReglasTrabajoTaller reglas;
     private OrdenServicio orden;
 
     @BeforeEach
@@ -55,6 +56,7 @@ class EtapasFinalesTest {
         calificaciones = mock(CalificacionTallerService.class);
         ordenRepository = mock(OrdenServicioRepository.class);
         parametros = mock(ParametrosMarketplace.class);
+        reglas = mock(ReglasTrabajoTaller.class);
         UsuarioService usuarioService = mock(UsuarioService.class);
         VehiculoService vehiculoService = mock(VehiculoService.class);
 
@@ -62,7 +64,7 @@ class EtapasFinalesTest {
                 usuarioService, tallerService, mock(CloudinaryService.class), new TransicionOrdenService(mongoTemplate),
                 mock(AsignacionTallerService.class), parametros, avisos,
                 mock(ProductoService.class), mock(BuscadorRepuestosService.class), liquidacion, calificaciones,
-                mock(HorarioTallerService.class));
+                mock(HorarioTallerService.class), reglas);
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).tallerId("t1").usuarioId("u1")
                 .vehiculoId("v1").mecanicoNombre("Carlos").eventos(new ArrayList<>()).build();
@@ -226,6 +228,34 @@ class EtapasFinalesTest {
         assertEquals(HttpStatus.CONFLICT, saltado.getStatusCode());
         assertTrue(saltado.getReason().contains("Lista para entregar") && saltado.getReason().contains("En instalación"), saltado.getReason());
         assertFalse(saltado.getReason().contains("EN_INSTALACION"));
+    }
+
+    @Test
+    void sinPagoNiRepuestosNoAvanzaYNoSeEscribeNada() {
+        ResponseStatusException sinPago = new ResponseStatusException(HttpStatus.CONFLICT, "La cotización de esta solicitud no está pagada");
+        doThrow(sinPago).when(reglas).exigirPago(any());
+        for (String estado : java.util.List.of(EstadoOrden.REPUESTOS_RECIBIDOS, EstadoOrden.EN_INSTALACION, EstadoOrden.LISTA)) {
+            orden.setEstado(estado);
+            Runnable accion = EstadoOrden.REPUESTOS_RECIBIDOS.equals(estado) ? () -> service.iniciarInstalacion(CORREO_TALLER, "o1")
+                    : EstadoOrden.EN_INSTALACION.equals(estado) ? () -> service.marcarLista(CORREO_TALLER, "o1")
+                    : () -> service.marcarEntregada(CORREO_TALLER, "o1");
+            assertSame(sinPago, assertThrows(ResponseStatusException.class, accion::run), estado);
+        }
+
+        doNothing().when(reglas).exigirPago(any());
+        orden.setEstado(EstadoOrden.REPUESTOS_RECIBIDOS);
+        ResponseStatusException sinRepuestos = new ResponseStatusException(HttpStatus.CONFLICT, ReglasTrabajoTaller.SIN_REPUESTOS);
+        doThrow(sinRepuestos).when(reglas).exigirRepuestos(any());
+        assertSame(sinRepuestos, assertThrows(ResponseStatusException.class, () -> service.iniciarInstalacion(CORREO_TALLER, "o1")));
+
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class));
+    }
+
+    @Test
+    void unEstadoEquivocadoNoLlegaALasReglas() {
+        orden.setEstado(EstadoOrden.PAGADA);
+        assertThrows(ResponseStatusException.class, () -> service.iniciarInstalacion(CORREO_TALLER, "o1"));
+        verifyNoInteractions(reglas);
     }
 
     @Test

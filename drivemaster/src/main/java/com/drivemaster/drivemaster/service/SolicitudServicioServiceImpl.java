@@ -52,6 +52,9 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private static final int MAX_SINTOMAS = 1500;
     private static final int MAX_TEXTO_DIAGNOSTICO = 3000;
     private static final int MAX_FALLAS = 20;
+    private static final int MAX_TEXTO_FALLA = 200;
+    private static final int MAX_OBSERVACIONES = 1000;
+    private static final int MAX_DESCRIPCION_REPUESTO = 120;
     private static final int MAX_FOTOS_DIAGNOSTICO = 8;
     private static final int MAX_REPUESTOS = 30;
     private static final int MAX_CANTIDAD = 99;
@@ -73,6 +76,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private final LiquidacionService liquidacion;
     private final CalificacionTallerService calificaciones;
     private final HorarioTallerService horarios;
+    private final ReglasTrabajoTaller reglas;
 
     public SolicitudServicioServiceImpl(OrdenServicioRepository ordenRepository,
                                         TallerRepository tallerRepository,
@@ -88,8 +92,10 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                                         BuscadorRepuestosService buscador,
                                         LiquidacionService liquidacion,
                                         CalificacionTallerService calificaciones,
-                                        HorarioTallerService horarios) {
+                                        HorarioTallerService horarios,
+                                        ReglasTrabajoTaller reglas) {
         this.horarios = horarios;
+        this.reglas = reglas;
         this.calificaciones = calificaciones;
         this.liquidacion = liquidacion;
         this.productoService = productoService;
@@ -395,6 +401,12 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         if (fallas.size() > MAX_FALLAS) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Máximo " + MAX_FALLAS + " fallas");
         }
+        if (fallas.stream().anyMatch(f -> f.length() > MAX_TEXTO_FALLA)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cada falla admite hasta " + MAX_TEXTO_FALLA + " caracteres");
+        }
+        if (r.getObservaciones() != null && r.getObservaciones().trim().length() > MAX_OBSERVACIONES) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Las observaciones admiten hasta " + MAX_OBSERVACIONES + " caracteres");
+        }
         List<String> fotos = r.getFotos() != null
                 ? r.getFotos().stream().filter(f -> f != null && f.startsWith("http")).toList()
                 : List.of();
@@ -511,6 +523,10 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
 
             String descripcion = item.getDescripcion() != null && !item.getDescripcion().isBlank()
                     ? item.getDescripcion().trim() : producto.getNombre();
+            if (descripcion.length() > MAX_DESCRIPCION_REPUESTO) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "La descripción de cada repuesto admite hasta " + MAX_DESCRIPCION_REPUESTO + " caracteres");
+            }
             RepuestoSeleccionado.RepuestoSeleccionadoBuilder repuesto = RepuestoSeleccionado.builder()
                     .descripcion(descripcion)
                     .cantidad(cantidad)
@@ -639,6 +655,11 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private SolicitudServicioDTO avanzar(String correoTaller, String id, String hacia, String nota, Update cambios) {
         Taller taller = tallerOperativo(correoTaller);
         OrdenServicio orden = solicitudDelTaller(taller, id);
+        // Si el estado no permite el paso, transicionar lo rechaza con su mensaje
+        if (EstadoOrden.permitida(orden.getEstado(), hacia, EstadoOrden.TALLER)) {
+            reglas.exigirPago(orden);
+            if (EstadoOrden.EN_INSTALACION.equals(hacia)) reglas.exigirRepuestos(orden);
+        }
         OrdenServicio actualizada = transiciones.transicionar(orden, hacia, actorTaller(taller), conMecanico(nota, orden),
                 Criteria.where("tallerId").is(taller.getId()), cambios);
         return toDTO(actualizada, Vista.TALLER);

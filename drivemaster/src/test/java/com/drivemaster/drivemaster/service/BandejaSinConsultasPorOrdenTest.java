@@ -36,7 +36,7 @@ class BandejaSinConsultasPorOrdenTest {
                 vehiculos, usuarios, tallerService, mock(CloudinaryService.class), mock(TransicionOrdenService.class),
                 mock(AsignacionTallerService.class), mock(ParametrosMarketplace.class), mock(AvisosSolicitudServicio.class),
                 mock(ProductoService.class), mock(BuscadorRepuestosService.class), mock(LiquidacionService.class),
-                mock(CalificacionTallerService.class), mock(HorarioTallerService.class));
+                mock(CalificacionTallerService.class), mock(HorarioTallerService.class), mock(ReglasTrabajoTaller.class));
 
         when(tallerService.obtenerPorUsuario("t@demo.com")).thenReturn(Taller.builder().id("t1").build());
         OrdenServicio a = OrdenServicio.builder().id("a").flujo(EstadoOrden.FLUJO_MARKETPLACE).vehiculoId("v1").usuarioId("u1").build();

@@ -167,6 +167,20 @@ class PedidoTiendaServiceTest {
     }
 
     @Test
+    void siNingunaTiendaDespachoNoSeConfirmaLaRecepcionNiConfirmandoFaltantes() {
+        when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
+        when(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc("o1")).thenReturn(List.of(
+                PedidoTienda.builder().id("p1").ordenId("o1").estado(PedidoTienda.NO_DESPACHADO).build(),
+                PedidoTienda.builder().id("p2").ordenId("o1").estado(PedidoTienda.NO_DESPACHADO).build()));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> service.repuestosRecibidos("taller@demo.com", "o1", true));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        verify(transiciones, never()).transicionar(any(), anyString(), any(), anyString(), any(), any());
+    }
+
+    @Test
     void otroTallerNoConfirmaRecepcion() {
         when(tallerService.obtenerPorUsuario("otro@demo.com")).thenReturn(Taller.builder().id("t9").build());
         ResponseStatusException e = assertThrows(ResponseStatusException.class,
@@ -287,7 +301,8 @@ class PedidoTiendaServiceTest {
         when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
         PedidoTienda noDespachado = PedidoTienda.builder().id("ped3").ordenId("o1").tiendaNombre("Tienda Sur")
                 .estado(PedidoTienda.NO_DESPACHADO).build();
-        when(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc("o1")).thenReturn(List.of(noDespachado));
+        PedidoTienda despachado = PedidoTienda.builder().id("ped1").ordenId("o1").estado(PedidoTienda.DESPACHADO).build();
+        when(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc("o1")).thenReturn(List.of(despachado, noDespachado));
 
         service.repuestosRecibidos("taller@demo.com", "o1", true);
 
