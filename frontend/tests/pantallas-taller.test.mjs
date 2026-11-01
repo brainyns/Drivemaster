@@ -500,3 +500,12 @@ test("Una bandeja pedida antes de una acción no pisa el estado nuevo", () => {
   assert.ok(p.includes("versionBandeja.current += 1;"), "la acción invalida lo que estaba en camino");
   assert.ok(p.includes("if (version !== versionBandeja.current) return null;"));
 });
+
+test("Una cotización sin saldo no le pide pagar al cliente", () => {
+  const cliente = leer("../src/pages/MisServicios.jsx");
+  const publica = leer("../src/pages/CotizacionPublica.jsx");
+  const respuesta = leer("../src/components/servicio/RespuestaCotizacion.jsx");
+  assert.ok(cliente.includes("sinSaldo={vigente.totalAPagar <= 0}") && cliente.includes('"Continuar sin pago"'));
+  assert.ok(publica.includes("sinSaldo={sinSaldo}") && publica.includes("Ir a mis servicios"));
+  assert.ok(respuesta.includes("no tienes nada por pagar"));
+});

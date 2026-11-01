@@ -329,6 +329,55 @@ class CotizacionServiceTest {
         verify(transiciones, never()).transicionar(any(), anyString(), any(), anyString(), any(), any());
     }
 
+    private Cotizacion soloManoObraSinSaldo(String token) {
+        Cotizacion c = emitida(token, LocalDateTime.now().plusDays(3));
+        c.setItems(List.of(CotizacionItem.builder().tipo(CotizacionItem.MANO_OBRA).precioUnitario(40_000.0).build()));
+        c.setTotalAPagar(0.0);
+        marcaAplicada(c, Cotizacion.APROBADA);
+        return c;
+    }
+
+    @Test
+    void aprobarUnaCotizacionSinSaldoLaLlevaAlTallerSinPago() {
+        String token = TokenSeguro.generar().token();
+        soloManoObraSinSaldo(token);
+
+        service.responderPublica(new RespuestaCotizacionRequest(RespuestaCotizacionRequest.APROBAR, null, token));
+
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.APROBADA), any(), anyString(), any(), any());
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.PAGADA), eq(TransicionOrdenService.Actor.SISTEMA), contains("Sin saldo"), any(), any());
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.REPUESTOS_RECIBIDOS), eq(TransicionOrdenService.Actor.SISTEMA), anyString(), any(), any());
+    }
+
+    @Test
+    void siPasarSinPagoFallaLaAprobacionIgualQuedaYAlertaAlAdmin() {
+        String token = TokenSeguro.generar().token();
+        soloManoObraSinSaldo(token);
+        when(transiciones.transicionar(any(), eq(EstadoOrden.PAGADA), any(), anyString(), any(), any()))
+                .thenThrow(new IllegalStateException("mongo caído"));
+
+        assertEquals(Cotizacion.APROBADA, service.responderPublica(
+                new RespuestaCotizacionRequest(RespuestaCotizacionRequest.APROBAR, null, token)).getEstado());
+
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("no pudo pasar al taller"));
+    }
+
+    @Test
+    void conSaldoORepuestosLaAprobacionSigueEsperandoElPago() {
+        assertFalse(CotizacionService.sinSaldo(Cotizacion.builder().totalAPagar(1.0).items(List.of()).build()));
+        assertFalse(CotizacionService.sinSaldo(Cotizacion.builder().items(List.of()).build()), "sin el dato no se salta el pago");
+        assertFalse(CotizacionService.sinSaldo(Cotizacion.builder().totalAPagar(0.0)
+                .items(List.of(CotizacionItem.builder().tipo(CotizacionItem.REPUESTO).build())).build()), "hay repuestos por pedir");
+        assertTrue(CotizacionService.sinSaldo(Cotizacion.builder().totalAPagar(0.0).items(List.of()).build()));
+
+        String token = TokenSeguro.generar().token();
+        Cotizacion c = emitida(token, LocalDateTime.now().plusDays(3));
+        c.setTotalAPagar(164_200.0);
+        marcaAplicada(c, Cotizacion.APROBADA);
+        service.responderPublica(new RespuestaCotizacionRequest(RespuestaCotizacionRequest.APROBAR, null, token));
+        verify(transiciones, never()).transicionar(any(), eq(EstadoOrden.PAGADA), any(), anyString(), any(), any());
+    }
+
     @Test
     void aprobarDesdeElCorreoPasaLaOrdenAAprobada() {
         String token = TokenSeguro.generar().token();

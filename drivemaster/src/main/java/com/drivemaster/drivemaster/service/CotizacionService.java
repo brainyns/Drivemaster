@@ -399,6 +399,7 @@ public class CotizacionService {
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Acción no válida");
         }
 
+        OrdenServicio movida;
         LocalDateTime ahora = LocalDateTime.now();
         Cotizacion marcada = mongoTemplate.findAndModify(
                 Query.query(Criteria.where("id").is(cotizacion.getId())
@@ -423,7 +424,7 @@ public class CotizacionService {
                     + (motivo.isBlank() ? "" : ": " + motivo);
             Update cambios = EstadoOrden.CANCELADA.equals(estadoOrden)
                     ? new Update().set("motivoCierre", "El cliente rechazó la cotización") : null;
-            transiciones.transicionar(orden, estadoOrden, actor, nota,
+            movida = transiciones.transicionar(orden, estadoOrden, actor, nota,
                     Criteria.where("cotizacionId").is(cotizacion.getId()), cambios);
         } catch (RuntimeException e) {
             mongoTemplate.updateFirst(Query.query(Criteria.where("id").is(cotizacion.getId()).and("estado").is(estadoCotizacion)),
@@ -437,10 +438,30 @@ public class CotizacionService {
         if (RespuestaCotizacionRequest.RECHAZAR.equals(accion)) {
             liquidacion.ordenCanceladaPorRechazoDeCotizacion(cotizacion.getOrdenId());
         }
+        // Sin saldo no hay pago que mueva la orden: la aprobación misma la lleva al taller
+        if (RespuestaCotizacionRequest.APROBAR.equals(accion) && sinSaldo(marcada)) {
+            OrdenServicio aprobada = movida;
+            TrasGuardar.hacer(avisos, "La cotización " + marcada.getId() + " no tiene saldo, pero la solicitud " + aprobada.getId()
+                    + " no pudo pasar al taller.", () -> pasarSinPago(aprobada, marcada));
+        }
         String motivoAviso = motivo;
         TrasGuardar.hacer(avisos, "La cotización " + marcada.getId() + " quedó " + respuesta + ", pero no se pudo avisar al taller.",
                 () -> avisos.cotizacionRespondida(marcada, respuesta, motivoAviso));
         return marcada;
+    }
+
+    /** El diagnóstico cubrió todo. El anticipo solo descuenta mano de obra: con saldo 0 no puede haber repuestos por pedir. */
+    static boolean sinSaldo(Cotizacion c) {
+        return c.getTotalAPagar() != null && c.getTotalAPagar() <= 0
+                && (c.getItems() == null || c.getItems().stream().noneMatch(i -> CotizacionItem.REPUESTO.equals(i.getTipo())));
+    }
+
+    /** Lo que haría el pago, sin pago: la orden queda lista para trabajar y el taller cobra el diagnóstico al entregar. */
+    public void pasarSinPago(OrdenServicio orden, Cotizacion c) {
+        OrdenServicio pagada = transiciones.transicionar(orden, EstadoOrden.PAGADA, Actor.SISTEMA,
+                "Sin saldo por pagar: el diagnóstico cubrió la cotización v" + c.getVersion(),
+                Criteria.where("cotizacionId").is(c.getId()), null);
+        transiciones.transicionar(pagada, EstadoOrden.REPUESTOS_RECIBIDOS, Actor.SISTEMA, "Cotización solo de mano de obra", null, null);
     }
 
     private Cotizacion porToken(String token) {

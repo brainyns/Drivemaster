@@ -751,6 +751,18 @@ class PagoMarketplaceServiceTest {
     // ─── Inicio del pago ─────────────────────────────────────────────────────
 
     @Test
+    void unaAprobadaSinSaldoNoCobraYPasaAlTaller() {
+        cotizacion(new ArrayList<>(), 0);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> service.iniciarPagoCotizacion("cliente@demo.com", "o1"));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        verify(cotizacionService).pasarSinPago(orden, cotizacion);
+        verifyNoInteractions(pagoService);
+    }
+
+    @Test
     void sinStockAntesDeCobrarNoSeGeneraLinkYVuelveAlTaller() {
         cotizacion(new ArrayList<>(List.of(repuesto("p1", "s1", 3, 90_000, "DISPONIBLE"))), 107_100);
         Producto p1 = new Producto();

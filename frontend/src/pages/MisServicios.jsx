@@ -104,7 +104,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
           <div className="ss-acciones">
             <BotonPdfCotizacion cotizacionId={vigente.id} />
           </div>
-          {vigente.puedeResponder && solicitud.estado === "COTIZADA" && <RespuestaCotizacion onResponder={responder} />}
+          {vigente.puedeResponder && solicitud.estado === "COTIZADA" && <RespuestaCotizacion onResponder={responder} sinSaldo={vigente.totalAPagar <= 0} />}
           {solicitud.estado === "APROBADA" && pagoLocal && (
             <PagoLocal token={token} pago={pagoLocal} onCerrar={() => setPagoLocal(null)}
               onVerificado={async () => { setPagoLocal(null); await onCambio(); }} />
@@ -112,7 +112,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
           {solicitud.estado === "APROBADA" && vigente.estado === "APROBADA" && !pagoLocal && (
             <div className="ss-acciones">
               <button className="sv-btn" onClick={pagar} disabled={pagando}>
-                {pagando ? "Abriendo el pago..." : `Pagar ${formatPrecio(vigente.totalAPagar)}`}
+                {pagando ? "Abriendo el pago..." : vigente.totalAPagar > 0 ? `Pagar ${formatPrecio(vigente.totalAPagar)}` : "Continuar sin pago"}
               </button>
               <span className="ss-ayuda">Pago seguro con Wompi. Recibirás un comprobante de pago por correo.</span>
             </div>

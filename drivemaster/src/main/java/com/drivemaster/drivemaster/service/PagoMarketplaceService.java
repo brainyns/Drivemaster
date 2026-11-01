@@ -239,6 +239,11 @@ public class PagoMarketplaceService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "\"" + faltante + "\" ya no tiene stock suficiente. No se hizo ningún cobro: el taller actualizará la cotización.");
         }
+        // Aprobada antes de pasar sola al taller: no hay nada que cobrar y no se puede quedar aquí
+        if (CotizacionService.sinSaldo(cotizacion)) {
+            cotizacionService.pasarSinPago(orden, cotizacion);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta cotización no tiene saldo por pagar: el trabajo ya pasó al taller");
+        }
         double monto = cotizacion.getTotalAPagar() != null ? cotizacion.getTotalAPagar() : 0;
         if (monto <= 0) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La cotización no tiene saldo por pagar");
