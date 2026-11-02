@@ -20,7 +20,6 @@ import ReportesServicios     from "./pages/ReportesServicios";
 import MisPedidos            from "./pages/MisPedidos";
 import MisSolicitudes        from "./pages/MisSolicitudes";
 import PagoResultado         from "./pages/PagoResultado";
-import CheckoutPage          from "./pages/CheckoutPage";
 import DashboardPlataforma   from "./pages/DashboardPlataforma";
 import DashboardOperacion    from "./pages/DashboardOperacion";
 import ProductosPlataforma   from "./pages/ProductosPlataforma";
@@ -96,7 +95,6 @@ const TITULOS = {
   "mis-solicitudes": "Mis solicitudes",
   "pago-resultado":  "Resultado del pago",
   "mis-pedidos":     "Historial de compras",
-  "checkout":        "Enviar solicitud",
   "mi-perfil":       "Mi perfil",
   "solicitar-diagnostico": "Solicitar diagnóstico",
   "mis-servicios":   "Mis servicios",
@@ -126,7 +124,7 @@ const TITULOS = {
 
 // Páginas del cliente que se muestran sin el panel lateral.
 const PAGINAS_CLIENTE = [
-  "checkout", "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo",
+  "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo",
   "solicitar-diagnostico", "mis-servicios", "checkout-marketplace", "mis-compras", "perfil-cliente",
 ];
 
@@ -166,17 +164,6 @@ const DEFAULT_IVA = 0.19;
 const MARGEN_RENOVACION_MS = 60 * 1000;
 const ESPERA_MINIMA_MS = 5 * 1000;
 
-function calcularSubtotal(items) {
-  return items.reduce((s, i) => s + (i.precioUnitario * i.cantidad), 0);
-}
-
-function loadSolicitud() {
-  try {
-    const saved = localStorage.getItem("solicitudItems");
-    return saved ? JSON.parse(saved) : [];
-  } catch { return []; }
-}
-
 function App() {
   const [pagina,         setPagina]         = useState(initialPage);
   const [user,           setUser]           = useState(storedUser);
@@ -185,7 +172,6 @@ function App() {
   // Lo que el panel del taller le avisa al menú (solicitudes por responder, órdenes anteriores)
   const [resumenTaller, setResumenTaller] = useState({ anteriores: 0, porResponder: 0 });
   const [sessionExpired, setSessionExpired] = useState(false);
-  const [solicitudItems, setSolicitudItems] = useState(loadSolicitud);
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   // true cuando el cliente llegó a "Mis servicios" iniciando sesión desde el enlace de la cotización
   const [vieneDeCotizacion, setVieneDeCotizacion] = useState(false);
@@ -229,10 +215,6 @@ function App() {
     setTheme(nuevo);
   };
 
-  useEffect(() => {
-    localStorage.setItem("solicitudItems", JSON.stringify(solicitudItems));
-  }, [solicitudItems]);
-
   // El registro de negocios es solo para visitantes: con sesión se va al inicio del rol, como tras el login.
   // Se ajusta durante el render (patrón de React para corregir estado) para que no alcance a pintarse.
   const inicioDelRol = user ? INICIO_POR_ROL[user.rol] || "dashboard-main" : "catalogo";
@@ -245,7 +227,6 @@ function App() {
     clearSession();
     setUser(null);
     setToken(null);
-    setSolicitudItems([]);
     setPagina("catalogo");
     setSessionExpired(true);
   }, []);
@@ -330,22 +311,8 @@ function App() {
     setVieneDeCotizacion(false);
     setUser(null); setToken(null);
     setPagina("catalogo");
-    setSolicitudItems([]);
     setSessionExpired(false);
   };
-
-  const handleCompraExitosa = () => {
-    setSolicitudItems([]);
-    setPagina("catalogo");
-  };
-
-  const removeProductList = useCallback((productIds) => {
-    setSolicitudItems(prev => prev.filter(i => !productIds.includes(i.productoId)));
-  }, []);
-
-  const solicitudSubtotal = calcularSubtotal(solicitudItems);
-  const solicitudIva = solicitudSubtotal * ivaRate;
-  const solicitudTotal = solicitudSubtotal + solicitudIva;
 
   const allowedPages = {
     // VENDEDOR es un rol retirado: solo ve un aviso en su inicio (los clientes son del SUPERADMIN)
@@ -465,8 +432,6 @@ function App() {
           header={cabeceraMarketplace("compras")}
           onVolver={() => setPagina("catalogo")}
           onIrCatalogo={() => irAlCatalogoGlobal()}
-          onIrSolicitudes={() => setPagina("mis-solicitudes")}
-          onIrHistorial={() => setPagina("mis-pedidos")}
         />
       );
       return (
@@ -501,7 +466,7 @@ function App() {
         onVistaConsumida={() => setVistaCatalogo("inicio")}
         onIrLogin={() => setPagina("login")}
         onIrAdmin={() => setPagina(INICIO_POR_ROL[user?.rol] && user.rol !== "CLIENTE" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
-        onIrSolicitud={(p) => setPagina(p || "checkout")}
+        onIrSolicitud={(p) => setPagina(p || "catalogo")}
         onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         onRegistroNegocio={irARegistroNegocio}
         onIrMisCompras={() => { if (!user) guardarDestinoPostLogin("checkout-marketplace"); irA("mis-compras"); }}
@@ -514,47 +479,10 @@ function App() {
       />
     );
 
-    if (pagina === "checkout") {
-      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      if (user.rol === "CLIENTE") {
-        return <CheckoutPage
-          onCompraExitosa={handleCompraExitosa}
-          onVolver={() => setPagina("catalogo")}
-          solicitudItems={solicitudItems}
-          solicitudSubtotal={solicitudSubtotal}
-          solicitudIva={solicitudIva}
-          solicitudTotal={solicitudTotal}
-          onClearSolicitud={() => setSolicitudItems([])}
-          onRemoveProductList={removeProductList}
-        />;
-      }
-      return (
-        <div className="app-layout">
-          <Sidebar paginaActual={pagina} irA={irA} userRole={user.rol}
-            abierto={sidebarAbierto} onCerrar={() => setSidebarAbierto(false)} />
-          <main className="app-content">
-            <TopBar titulo="Enviar solicitud" user={user} onLogout={handleLogout}
-              theme={theme} onToggleTheme={toggleTheme}
-              onMenuClick={() => setSidebarAbierto(true)} />
-            <CheckoutPage
-              onCompraExitosa={handleCompraExitosa}
-              solicitudItems={solicitudItems}
-              solicitudSubtotal={solicitudSubtotal}
-              solicitudIva={solicitudIva}
-              solicitudTotal={solicitudTotal}
-              onClearSolicitud={() => setSolicitudItems([])}
-              onRemoveProductList={removeProductList}
-            />
-          </main>
-        </div>
-      );
-    }
-
-    if (pagina === "mis-solicitudes") return conCabecera(<MisSolicitudes onVolver={() => setPagina("catalogo")} />);
+    if (pagina === "mis-solicitudes") return conCabecera(<MisSolicitudes onVolver={() => setPagina("perfil-cliente")} />);
 
     if (pagina === "pago-resultado") return conCabecera(
       <PagoResultado
-        onPagoExitoso={() => setSolicitudItems([])}
         onIrSolicitudes={() => setPagina("mis-solicitudes")}
         onIrServicios={() => irA("mis-servicios")}
         onCompraCatalogoPagada={vaciarCarritoPagado}
@@ -577,7 +505,7 @@ function App() {
 
     if (pagina === "mis-pedidos") {
       if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      return conCabecera(<MisPedidos onVolver={() => setPagina("catalogo")} />);
+      return conCabecera(<MisPedidos onVolver={() => setPagina("perfil-cliente")} />);
     }
 
     if (pagina === "mis-vehiculos") {
@@ -617,7 +545,6 @@ function App() {
           onSolicitar={() => irA("solicitar-diagnostico")}
           avisoCotizacion={vieneDeCotizacion ? user.correo : null}
           onCerrarAviso={() => setVieneDeCotizacion(false)}
-          onIrHistorial={() => setPagina("mis-pedidos")}
         />,
         "servicios"
       );

@@ -1,5 +1,5 @@
 // Pruebas de la cuenta del CLIENTE: reparto de Mis compras y accesos del menú (sin dependencias: node --test)
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { clasificarCompras, compraEnCurso, estadoVentaAnterior } from "../src/components/marketplace/clasificarCompras.js";
@@ -72,16 +72,24 @@ test("el aviso cuenta solo las solicitudes viejas sin cerrar", async () => {
   assert.equal(solicitudesSinCerrar(estados.map((estado, i) => ({ id: i, estado }))).length, 4);
 });
 
-test("Historial de compras y Mis solicitudes salen del menú pero sus pantallas siguen y se llega desde otras", () => {
+test("versión anterior: Historial de compras y Mis solicitudes solo se abren desde Mi perfil, y el checkout viejo ya no existe", () => {
   const opciones = readFileSync(new URL("../src/components/public/opcionesCliente.js", import.meta.url), "utf8");
   const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  const perfil = readFileSync(new URL("../src/pages/PerfilCliente.jsx", import.meta.url), "utf8");
   const lista = opciones.slice(opciones.indexOf("["), opciones.indexOf("];"));
   assert.ok(!lista.includes('"mis-pedidos"') && !lista.includes('"mis-solicitudes"'));
-  assert.ok(app.includes('pagina === "mis-pedidos"') && app.includes('pagina === "mis-solicitudes"'), "las pantallas siguen");
-  assert.ok(app.includes('onIrSolicitudes={() => setPagina("mis-solicitudes")}'), "el aviso de Mis compras lleva a Mis solicitudes");
-  assert.ok(app.includes('onIrHistorial={() => setPagina("mis-pedidos")}'), "Mis compras y Mis servicios enlazan al historial");
+  assert.ok(app.includes('pagina === "mis-pedidos"') && app.includes('pagina === "mis-solicitudes"'), "las pantallas siguen para quien tiene datos");
+  assert.ok(!app.includes("onIrHistorial") && !app.includes("CheckoutPage") && !app.includes('"checkout"'), "sin enlaces desde el flujo nuevo");
+  for (const p of ["MisCompras", "MisServicios"]) {
+    const src = readFileSync(new URL(`../src/pages/${p}.jsx`, import.meta.url), "utf8");
+    assert.ok(!src.includes("onIrHistorial") && !src.includes("onIrSolicitudes"), `${p} no enlaza al sistema anterior`);
+  }
+  assert.ok(perfil.includes('titulo="Versión anterior"') && perfil.includes("anterior.solicitudes > 0 || anterior.historial > 0"),
+    "la sección del perfil solo aparece con datos");
+  assert.ok(!existsSync(new URL("../src/pages/CheckoutPage.jsx", import.meta.url)));
+  const pedidos = readFileSync(new URL("../src/pages/MisPedidos.jsx", import.meta.url), "utf8");
+  assert.ok(!pedidos.includes("Necesitas cambiarla") && !/\balert\(/.test(pedidos), "sin el botón muerto ni alert()");
 });
-
 test("menú final: Mi perfil, Mis compras, Mis servicios y Mis vehículos", async () => {
   const { OPCIONES_CLIENTE } = await import("../src/components/public/opcionesCliente.js");
   assert.deepEqual(OPCIONES_CLIENTE.map((o) => o.destino), ["perfil-cliente", "mis-compras", "mis-servicios", "mis-vehiculos"]);

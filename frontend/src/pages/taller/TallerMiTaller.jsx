@@ -29,6 +29,7 @@ import Icon from "../../components/public/Icon";
 import { comoLoVeElCliente, completitudPerfil, errorTarifa } from "./perfilTaller";
 import LogoEditable from "../../components/ui/LogoEditable";
 import "../../css/mi-taller.css";
+import { textoError } from "../../utils/errores";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
 
@@ -62,7 +63,7 @@ function FormTarifa({ taller, token, onGuardado, onCancelar }) {
     try {
       onGuardado(await actualizarDatosTaller(token, { tarifaHora: sinTarifa ? undefined : Number(tarifa), responsableIva }));
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -108,7 +109,7 @@ function FormHorario({ taller, token, semanaInicial, onGuardado, onCancelar }) {
       const guardada = semanaDesdeFranjas(await guardarHorario(token, taller.id, franjasDesdeSemana(semana)));
       onGuardado(guardada, await miTaller(token).catch(() => taller));
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -150,7 +151,7 @@ function FormUbicacion({ taller, token, onGuardado, onCancelar }) {
     try {
       onGuardado(await actualizarUbicacionTaller(token, punto));
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -201,7 +202,8 @@ function VistaCliente({ taller: datos }) {
 }
 
 /** Mi taller: identidad, qué tan completo está el perfil y cada sección editable por separado. */
-export default function TallerMiTaller({ taller, token, cargando, error, onRecargar, onActualizado, abrirSeccion = null }) {
+export default function TallerMiTaller({ taller, token, cargando, error, onRecargar, onActualizado, abrirSeccion = null,
+  ordenesAnteriores = 0, onVerAnteriores }) {
   // Desde el aviso del Inicio llega abrirSeccion="horario": la sección se abre ya en edición
   const [editando, setEditando] = useState(abrirSeccion === "horario" ? "horario" : null); // "servicios" | "horario" | "ubicacion"
   const [activos, setActivos] = useState(0);
@@ -222,7 +224,9 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
 
   useEffect(() => {
     if (abrirSeccion === "horario" && tallerId) document.getElementById("mt-horario")?.scrollIntoView({ block: "start" });
-  }, [abrirSeccion, tallerId]);
+    // Desde el aviso del Inicio: la sección de la versión anterior está al final
+    if (abrirSeccion === "anterior" && tallerId && ordenesAnteriores > 0) document.getElementById("mt-anterior")?.scrollIntoView({ block: "start" });
+  }, [abrirSeccion, tallerId, ordenesAnteriores]);
 
   if (!taller) {
     if (cargando) return <Esqueleto variante="formulario" cantidad={4} texto="Cargando los datos de tu taller…" />;
@@ -423,6 +427,21 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             editandoTelefono={editando === "contacto"} onEditarTelefono={() => abrir("contacto")} onCerrarTelefono={cerrar}
            
             onCorreoCambiado={(correoUsuario) => onActualizado?.({ ...taller, correoUsuario })} />
+
+          {ordenesAnteriores > 0 && onVerAnteriores && (
+            <SeccionEditable id="mt-anterior" icono="clock" titulo="Versión anterior"
+              descripcion="Órdenes que llegaron antes del sistema actual de solicitudes y cotizaciones.">
+              <div className="mt-anterior">
+                <p>
+                  Te {ordenesAnteriores === 1 ? "queda 1 orden" : `quedan ${ordenesAnteriores} órdenes`} por atender.
+                  Las nuevas llegan por Solicitudes.
+                </p>
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={onVerAnteriores}>
+                  Ver órdenes anteriores
+                </button>
+              </div>
+            </SeccionEditable>
+          )}
         </div>
 
         <aside className="ui-perfil__lateral">

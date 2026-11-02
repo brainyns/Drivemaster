@@ -131,8 +131,8 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
 
       {anteriores.length > 0 && (
         <Alerta tono="aviso" className="ini-alerta">
-          Tienes {anteriores.length} {anteriores.length === 1 ? "orden" : "órdenes"} del flujo anterior por atender.{" "}
-          <button type="button" className="ini-enlace" onClick={() => irA("taller-anteriores")}>Ver órdenes anteriores</button>
+          Tienes {anteriores.length} {anteriores.length === 1 ? "orden" : "órdenes"} de la versión anterior por atender.{" "}
+          <button type="button" className="ini-enlace" onClick={() => irA("taller-mitaller", "anterior")}>Verlas en Mi taller</button>
         </Alerta>
       )}
 

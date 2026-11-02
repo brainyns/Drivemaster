@@ -31,6 +31,7 @@ import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
 import "../css/mis-servicios.css";
 import { claveOferta, esDelTaller, etiquetaOrigen } from "../components/servicio/reglasRepuestos";
+import { textoError, textoErrorPago } from "../utils/errores";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 
@@ -63,7 +64,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
         setCotizaciones(c || []);
         setPedidos(p || []);
       })
-      .catch((e) => { if (!cancelado) setError(e.message); });
+      .catch((e) => { if (!cancelado) setError(textoError(e)); });
     return () => { cancelado = true; };
   }, [token, solicitud.id, solicitud.estado]);
 
@@ -89,7 +90,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
       }
       // Sin "local" el navegador ya va hacia Wompi: el botón sigue desactivado
     } catch (e) {
-      setError(e.message);
+      setError(textoErrorPago(e));
       setPagando(false);
       pidiendoPago.current = false;
       await onCambio();
@@ -152,7 +153,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
  * Órdenes de taller del flujo anterior, solo consulta (lo que el Historial de compras mostraba
  * como "Servicios de taller" y "Citas agendadas"). Las que siguen en curso van primero, con su estado.
  */
-function ServiciosAnteriores({ ordenes, ahora, onIrHistorial }) {
+function ServiciosAnteriores({ ordenes, ahora }) {
   if (ordenes.length === 0) return null;
   return (
     <section className="sv-anteriores" aria-labelledby="sv-anteriores-titulo">
@@ -181,18 +182,13 @@ function ServiciosAnteriores({ ordenes, ahora, onIrHistorial }) {
           </article>
         ))}
       </div>
-      {onIrHistorial && (
-        <p className="ss-meta">
-          <button className="sv-anteriores__enlace" onClick={onIrHistorial}>Ver el historial anterior completo</button>
-        </p>
-      )}
     </section>
   );
 }
 
 /** Solicitudes de diagnóstico del cliente y el avance de cada una. */
 export default function MisServicios({
-  onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso, onIrHistorial,
+  onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso,
   solicitudInicial = null,
 }) {
   const token = getToken();
@@ -216,7 +212,7 @@ export default function MisServicios({
       setSolicitudes(data || []);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }
@@ -269,7 +265,7 @@ export default function MisServicios({
       setMotivo("");
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(false);
     }
@@ -286,7 +282,7 @@ export default function MisServicios({
         setPagandoDiagnostico(false);
       }
     } catch (e) {
-      setError(e.message);
+      setError(textoErrorPago(e));
       setPagandoDiagnostico(false);
     }
   };
@@ -583,7 +579,7 @@ export default function MisServicios({
         </ul>
       )}
 
-      <ServiciosAnteriores ordenes={ordenesAnteriores} ahora={ahora} onIrHistorial={onIrHistorial} />
+      <ServiciosAnteriores ordenes={ordenesAnteriores} ahora={ahora} />
     </div>
   );
 }

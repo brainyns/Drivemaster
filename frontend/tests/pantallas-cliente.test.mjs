@@ -120,12 +120,7 @@ test("Tu carrito: confirmar al vaciar, deshacer al quitar, resumen con envío e 
 });
 
 test("quienes leen GET /mi-perfil usan los campos del DTO y un 404 no rompe el flujo de un cliente sin datos", () => {
-  const checkout = leer("../src/pages/CheckoutPage.jsx");
-  // El documento llega como "documento"; ya nadie depende de la respuesta antigua { completo: false }
-  assert.match(checkout, /identificacion: perfil\.documento \|\| ""/);
-  assert.match(checkout, /region: perfil\.region \|\| ""/);
-  assert.match(checkout, /if \(perfilRes\.ok\)/);
-  for (const ruta of ["../src/pages/CheckoutPage.jsx", "../src/pages/PerfilCliente.jsx", "../src/pages/SolicitarDiagnostico.jsx",
+  for (const ruta of ["../src/pages/PerfilCliente.jsx", "../src/pages/SolicitarDiagnostico.jsx",
     "../src/services/clienteService.js"]) {
     assert.doesNotMatch(leer(ruta), /\.completo\b|perfil\.identificacion/, ruta);
   }

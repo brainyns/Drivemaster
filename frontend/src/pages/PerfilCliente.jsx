@@ -4,6 +4,8 @@ import { actualizarMiPerfil, obtenerMiPerfil } from "../services/clienteService"
 import { cambiarPassword } from "../services/perfilService";
 import { misCompras } from "../services/catalogoService";
 import { misVentas } from "../services/ventaService";
+import { misSolicitudes } from "../services/solicitudService";
+import { misOrdenes } from "../services/ordenServicioService";
 import { misSolicitudesServicio } from "../services/solicitudServicioService";
 import { cotizacionesDeOrden } from "../services/cotizacionService";
 import { PEDIDOS_ACTIVOS, clasificarCompras, estadoVentaAnterior } from "../components/marketplace/clasificarCompras";
@@ -18,6 +20,7 @@ import Esqueleto from "../components/ui/Esqueleto";
 import SelectorCiudad from "../components/cliente/SelectorCiudad";
 import { cuerpoPerfil, datosDesdePerfil, validarClave, validarDatos } from "./reglasPerfil";
 import "../css/perfil-cliente.css";
+import { textoError } from "../utils/errores";
 
 const ULTIMOS = 3;
 
@@ -35,6 +38,27 @@ function ultimasCompras(compras, ventas) {
     return { id: x.id, titulo: `Compra #${refSolicitud(x.id)}`, anterior: x.origen === "anterior", estado: e,
       fecha: x.origen === "catalogo" ? (x.dato.fechaPago || x.dato.fechaCreacion) : x.dato.fecha, total: x.dato.total };
   });
+}
+
+/**
+ * Lo que el cliente tiene en la versión anterior de DriveMaster: solicitudes de compra y el historial de compras y
+ * citas. Si no hay nada (o no se pudo consultar), la sección no se muestra.
+ */
+function useVersionAnterior(token) {
+  const [cuenta, setCuenta] = useState({ solicitudes: 0, historial: 0 });
+  useEffect(() => {
+    let vivo = true;
+    const largo = (r) => (r.status === "fulfilled" && Array.isArray(r.value) ? r.value : []);
+    Promise.allSettled([misSolicitudes(token), misVentas(token), misOrdenes(token)]).then(([s, v, o]) => {
+      if (!vivo) return;
+      setCuenta({
+        solicitudes: largo(s).filter((x) => x.estado !== "RECHAZADO").length,
+        historial: largo(v).length + largo(o).length,
+      });
+    });
+    return () => { vivo = false; };
+  }, [token]);
+  return cuenta;
 }
 
 /** Una sección de ajustes: título, descripción breve y su contenido. */
@@ -70,7 +94,7 @@ function DatosPersonales({ token, correo, onNombre }) {
         setInicial(d);
         setErrorCarga(null);
       })
-      .catch((e) => { if (vivo) setErrorCarga({ texto: e.message, estado: e.estado }); });
+      .catch((e) => { if (vivo) setErrorCarga({ texto: textoError(e), estado: e.estado }); });
     return () => { vivo = false; };
   }, [token, intento]);
 
@@ -117,7 +141,7 @@ function DatosPersonales({ token, correo, onNombre }) {
       setIntentado(false);
       setResultado({ tono: "ok", texto: "Guardamos tus datos." });
     } catch (err) {
-      setResultado({ tono: "error", texto: err.message });
+      setResultado({ tono: "error", texto: textoError(err) });
     } finally {
       setGuardando(false);
     }
@@ -195,7 +219,7 @@ function Seguridad({ token, conGoogle }) {
       setIntentado(false);
       setResultado({ tono: "ok", texto: "Cambiamos tu contraseña. Úsala la próxima vez que entres." });
     } catch (err) {
-      setResultado({ tono: "error", texto: err.message });
+      setResultado({ tono: "error", texto: textoError(err) });
     } finally {
       setGuardando(false);
     }
@@ -276,6 +300,7 @@ export default function PerfilCliente({ header, onIr, onIrCatalogo, onSolicitarD
   const [totales, setTotales] = useState({}); // id de la solicitud → total de su cotización vigente
   const conGoogle = (user?.proveedor || "").toUpperCase() === "GOOGLE";
 
+  const anterior = useVersionAnterior(token);
   const [intentoCompras, setIntentoCompras] = useState(0);
   const [intentoServicios, setIntentoServicios] = useState(0);
 
@@ -374,6 +399,24 @@ export default function PerfilCliente({ header, onIr, onIrCatalogo, onSolicitarD
                 </button>
               </div>
             </Seccion>
+
+            {(anterior.solicitudes > 0 || anterior.historial > 0) && (
+              <Seccion id="pc-t-anterior" titulo="Versión anterior"
+                descripcion="Lo que hiciste antes del catálogo actual. Tus compras nuevas están en Mis compras.">
+                <div className="pc-anterior">
+                  {anterior.solicitudes > 0 && (
+                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onIr("mis-solicitudes")}>
+                      Solicitudes de compra ({anterior.solicitudes})
+                    </button>
+                  )}
+                  {anterior.historial > 0 && (
+                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => onIr("mis-pedidos")}>
+                      Historial de compras y citas ({anterior.historial})
+                    </button>
+                  )}
+                </div>
+              </Seccion>
+            )}
           </div>
 
           <aside className="pc-actividad" aria-label="Tu actividad">

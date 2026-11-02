@@ -17,6 +17,7 @@ import { destinoSeccion, ordenesPorAtender } from "./taller/resumenTaller";
 import "../css/servicios.css";
 import "../css/panel-taller.css";
 import "../css/taller-panel.css";
+import { textoError } from "../utils/errores";
 
 /**
  * Contenedor del panel del taller: carga lo común (datos del taller, solicitudes y órdenes del
@@ -42,10 +43,10 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
       miTaller(token), bandejaSolicitudesTaller(token), ordenesDelTaller(token),
     ]);
     if (t.status === "fulfilled") setTaller(t.value);
-    setErrorTaller(t.status === "rejected" ? t.reason?.message || "No se pudieron cargar los datos del taller." : null);
+    setErrorTaller(t.status === "rejected" ? textoError(t.reason, "No se pudieron cargar los datos del taller.") : null);
     if (version === versionBandeja.current) {
       if (s.status === "fulfilled") setSolicitudes(s.value || []);
-      else setError(s.reason?.message || "No se pudieron cargar las solicitudes.");
+      else setError(textoError(s.reason, "No se pudieron cargar las solicitudes."));
     }
     if (o.status === "fulfilled") setOrdenes(o.value || []);
     setCargando(false);
@@ -62,7 +63,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
       setError(null);
       return lista;
     } catch (e) {
-      if (version === versionBandeja.current) setError(e.message || "No se pudieron cargar las solicitudes.");
+      if (version === versionBandeja.current) setError(textoError(e, "No se pudieron cargar las solicitudes."));
       return null;
     }
   }, [token]);
@@ -125,7 +126,8 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         {seccion === "movimientos" && <TallerMovimientos key={destino.abrir || "movimientos"} irA={irA} piezaInicial={destino.abrir} />}
         {seccion === "mitaller" && (
           <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller} abrirSeccion={destino.filtro}
-            onRecargar={cargar} onActualizado={setTaller} />
+            onRecargar={cargar} onActualizado={setTaller}
+            ordenesAnteriores={anteriores.length} onVerAnteriores={() => irA("taller-anteriores")} />
         )}
         {seccion === "anteriores" && (
           <OrdenesAnteriores ordenes={ordenes} cargando={cargando} error={error} onRecargar={cargar} />

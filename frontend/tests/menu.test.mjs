@@ -67,6 +67,7 @@ test("el taller ve su menú nuevo y ya no tiene el Panel de taller único", () =
   assert.deepEqual(claves.slice(0, 9), ["taller-inicio", "taller-solicitudes", "taller-agenda", "taller-trabajos", "taller-cotizaciones",
     "taller-inventario", "taller-movimientos",
     "taller-mitaller", "taller-informes"]);
+  assert.ok(!bloque.includes("taller-anteriores"), "las órdenes de la versión anterior no están en el menú");
   assert.match(sidebar, /agenda: +<Icon name="calendar"/, "Agenda con el calendario de Icon.jsx");
 });
 
