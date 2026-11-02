@@ -141,6 +141,7 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
     @Query("select min(r.fechaCreacion) from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA'")
     java.time.LocalDateTime primeraComision();
     List<RepartoPago> findByOrdenServicioIdAndBeneficiarioTipo(String ordenServicioId, String beneficiarioTipo);
+    List<RepartoPago> findByOrdenServicioIdInAndBeneficiarioTipo(java.util.Collection<String> ordenServicioIds, String beneficiarioTipo);
 
     /**
      * El evento ocurrió (recepción confirmada / orden ENTREGADA): PENDIENTE → POR_LIQUIDAR.

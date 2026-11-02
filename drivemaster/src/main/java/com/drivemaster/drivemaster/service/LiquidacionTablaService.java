@@ -3,6 +3,7 @@ package com.drivemaster.drivemaster.service;
 import com.drivemaster.drivemaster.dto.comun.Pagina;
 import com.drivemaster.drivemaster.dto.comun.PeticionTabla;
 import com.drivemaster.drivemaster.dto.comun.RangoFechas;
+import com.drivemaster.drivemaster.dto.comun.ResumenServicioDTO;
 import com.drivemaster.drivemaster.model.CuentaBancaria;
 import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.model.Tienda;
@@ -49,8 +50,12 @@ public class LiquidacionTablaService {
     /** Solo lo necesario para reconocer la cuenta destino antes de pagar. */
     public record CuentaDestino(String banco, String tipoCuenta, String numero) {}
 
-    /** La línea con sus campos de siempre, más beneficiario (nombre actual), cuenta (null si no tiene) y si se puede resolver a mano. */
-    public record Fila(@JsonUnwrapped RepartoPago reparto, String beneficiario, CuentaDestino cuenta, boolean sePuedeResolver) {}
+    /**
+     * La línea con sus campos de siempre, más beneficiario (nombre actual), cuenta (null si no tiene), si se puede resolver
+     * a mano y, en las líneas de un taller, el total de su orden: se paga línea por línea, pero se lee por orden.
+     */
+    public record Fila(@JsonUnwrapped RepartoPago reparto, String beneficiario, CuentaDestino cuenta, boolean sePuedeResolver,
+                       ResumenServicioDTO.Fila totalOrden) {}
 
     public record Cifra(long cantidad, double monto) {
         static final Cifra CERO = new Cifra(0, 0);
@@ -72,14 +77,27 @@ public class LiquidacionTablaService {
     private List<Fila> filas(List<RepartoPago> lineas) {
         Map<String, Taller> porTaller = delTipo(lineas, RepartoPago.TALLER, talleres::findAllById, Taller::getId);
         Map<String, Tienda> porTienda = delTipo(lineas, RepartoPago.TIENDA, tiendas::findAllById, Tienda::getId);
+        Map<String, ResumenServicioDTO.Fila> porOrden = totalesPorOrden(lineas);
         return lineas.stream().map(r -> {
             if (RepartoPago.TALLER.equals(r.getBeneficiarioTipo())) {
                 Taller t = porTaller.get(r.getBeneficiarioId());
-                return fila(r, t == null ? null : t.getNombre(), t == null ? null : t.getCuentaBancaria());
+                return fila(r, t == null ? null : t.getNombre(), t == null ? null : t.getCuentaBancaria(), porOrden.get(r.getOrdenServicioId()));
             }
             Tienda t = porTienda.get(r.getBeneficiarioId());
-            return fila(r, t == null ? null : t.getNombre(), t == null ? null : t.getCuentaBancaria());
+            return fila(r, t == null ? null : t.getNombre(), t == null ? null : t.getCuentaBancaria(), null);
         }).toList();
+    }
+
+    /** Con una sola consulta, y con todas las líneas de cada orden: la otra puede estar en otra página o fuera del filtro. */
+    private Map<String, ResumenServicioDTO.Fila> totalesPorOrden(List<RepartoPago> lineas) {
+        List<String> ordenes = lineas.stream().filter(r -> RepartoPago.TALLER.equals(r.getBeneficiarioTipo()))
+                .map(RepartoPago::getOrdenServicioId).filter(Objects::nonNull).distinct().toList();
+        Map<String, ResumenServicioDTO.Fila> totales = new HashMap<>();
+        if (ordenes.isEmpty()) return totales;
+        repartos.findByOrdenServicioIdInAndBeneficiarioTipo(ordenes, RepartoPago.TALLER).stream()
+                .collect(Collectors.groupingBy(RepartoPago::getOrdenServicioId))
+                .forEach((orden, delTaller) -> totales.put(orden, ResumenServicioService.fila(delTaller)));
+        return totales;
     }
 
     private static <T> Map<String, T> delTipo(List<RepartoPago> lineas, String tipo, Function<List<String>, List<T>> buscar,
@@ -89,11 +107,11 @@ public class LiquidacionTablaService {
         return ids.isEmpty() ? Map.of() : buscar.apply(ids).stream().collect(Collectors.toMap(id, Function.identity(), (a, b) -> a));
     }
 
-    private static Fila fila(RepartoPago r, String nombreActual, CuentaBancaria cuenta) {
+    private static Fila fila(RepartoPago r, String nombreActual, CuentaBancaria cuenta, ResumenServicioDTO.Fila totalOrden) {
         String nombre = nombreActual != null && !nombreActual.isBlank() ? nombreActual : r.getBeneficiarioNombre();
         boolean conCuenta = cuenta != null && cuenta.getNumeroCuenta() != null && !cuenta.getNumeroCuenta().isBlank();
         return new Fila(r, nombre, !conCuenta ? null : new CuentaDestino(cuenta.getBanco(), cuenta.getTipoCuenta(),
-                WompiPayoutService.enmascarar(cuenta.getNumeroCuenta())), LiquidacionService.sePuedeResolver(r, LocalDateTime.now()));
+                WompiPayoutService.enmascarar(cuenta.getNumeroCuenta())), LiquidacionService.sePuedeResolver(r, LocalDateTime.now()), totalOrden);
     }
 
     Resumen resumen(LocalDate hoy) {

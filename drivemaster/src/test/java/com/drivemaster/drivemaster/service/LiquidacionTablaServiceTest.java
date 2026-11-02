@@ -80,6 +80,39 @@ class LiquidacionTablaServiceTest {
         assertEquals("Taller Guardado", filas.get(2).beneficiario(), "un nombre vacío tampoco se muestra");
     }
 
+    private static RepartoPago delTaller(long id, String orden, String concepto, double bruto, String estado) {
+        RepartoPago r = linea(id, RepartoPago.TALLER, "a1", "Taller");
+        r.setOrdenServicioId(orden);
+        r.setConcepto(concepto);
+        r.setMontoBruto(bruto);
+        r.setMonto(bruto);
+        r.setEstado(estado);
+        return r;
+    }
+
+    @Test
+    void lasLineasDelTallerTraenElTotalDeSuOrdenAunqueLaOtraNoEsteEnLaPagina() {
+        RepartoPago enLaPagina = delTaller(1, "o1", "COTIZACION", 69_000, RepartoPago.POR_LIQUIDAR);
+        RepartoPago fueraDeLaPagina = delTaller(2, "o1", "DIAGNOSTICO", 50_000, RepartoPago.LIQUIDADO);
+        when(repartos.findByOrdenServicioIdInAndBeneficiarioTipo(List.of("o1"), RepartoPago.TALLER)).thenReturn(List.of(enLaPagina, fueraDeLaPagina));
+        RepartoPago deTienda = linea(3, RepartoPago.TIENDA, "t1", "Tienda");
+        deTienda.setOrdenServicioId("o1");
+
+        var filas = tablaCon(enLaPagina, deTienda).repartos().items();
+
+        assertEquals(119_000, filas.get(0).totalOrden().totalGenerado());
+        assertEquals(2, filas.get(0).totalOrden().lineas());
+        assertEquals("PARCIAL", filas.get(0).totalOrden().estado());
+        assertEquals(null, filas.get(1).totalOrden(), "los repuestos no son del total del taller");
+    }
+
+    @Test
+    void unaLineaDeTallerSinOrdenNoRompeLaTabla() {
+        var filas = tablaCon(linea(1, RepartoPago.TALLER, "a1", "Taller")).repartos().items();
+
+        assertEquals(null, filas.get(0).totalOrden());
+    }
+
     @Test
     void laCuentaSaleEnmascaradaYNuncaCompletaEnElJson() throws Exception {
         when(tiendas.findAllById(any())).thenReturn(List.of(Tienda.builder().id("t1").nombre("Tienda").cuentaBancaria(cuenta()).build()));
