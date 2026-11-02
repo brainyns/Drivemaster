@@ -80,6 +80,11 @@ public class PedidoTienda {
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaDespacho;
     private String notaDespacho;
+    // Despacho que marcó un SUPERADMIN tras confirmarlo con la tienda: quién y por qué. Es interno: no va en el JSON
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String despachoConfirmadoPor;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String motivoDespachoConfirmado;
     private LocalDateTime fechaNoDespacho;
     // SIN_REPUESTO (no tengo el repuesto) u OTRO (con detalle obligatorio)
     private String tipoMotivoNoDespacho;

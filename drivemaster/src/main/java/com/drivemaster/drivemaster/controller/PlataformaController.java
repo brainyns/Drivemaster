@@ -16,15 +16,20 @@ import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.Usuarios
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.VentasPorTienda;
 import com.drivemaster.drivemaster.dto.plataforma.NegociosPlataformaDTO.NegocioPendiente;
 import com.drivemaster.drivemaster.dto.plataforma.NegociosPlataformaDTO.NegociosRespuesta;
+import com.drivemaster.drivemaster.service.PedidoTiendaService;
 import com.drivemaster.drivemaster.service.PlataformaConsultasService;
 import com.drivemaster.drivemaster.service.PlataformaNegociosService;
 import com.drivemaster.drivemaster.service.PlataformaReportesService;
 import com.drivemaster.drivemaster.service.PlataformaDashboardService;
 import com.drivemaster.drivemaster.service.PlataformaDetalleService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,15 +47,17 @@ public class PlataformaController {
     private final PlataformaReportesService reportes;
     private final PlataformaNegociosService negocios;
     private final PlataformaDetalleService detalle;
+    private final PedidoTiendaService pedidos;
 
     public PlataformaController(PlataformaDashboardService dashboardService, PlataformaConsultasService consultas,
                                 PlataformaReportesService reportes, PlataformaNegociosService negocios,
-                                PlataformaDetalleService detalle) {
+                                PlataformaDetalleService detalle, PedidoTiendaService pedidos) {
         this.dashboardService = dashboardService;
         this.consultas = consultas;
         this.reportes = reportes;
         this.negocios = negocios;
         this.detalle = detalle;
+        this.pedidos = pedidos;
     }
 
     @GetMapping("/dashboard")
@@ -68,6 +75,14 @@ public class PlataformaController {
     @GetMapping("/pedidos/{id}")
     public ResponseEntity<DetallePlataformaDTO.Pedido> detallePedido(@PathVariable String id) {
         return ResponseEntity.ok(detalle.pedido(id));
+    }
+
+    /** SUPERADMIN: la tienda confirmó que despachó y no lo marcó. Solo pasa el pedido a DESPACHADO: no mueve dinero. */
+    @PatchMapping("/pedidos/{id}/despachado")
+    public ResponseEntity<Void> marcarDespachado(@PathVariable String id, @RequestBody(required = false) Map<String, String> body,
+                                                 Authentication auth) {
+        pedidos.marcarDespachadoPorAdmin(auth.getName(), id, body != null ? body.get("motivo") : null);
+        return ResponseEntity.noContent().build();
     }
 
     /** SUPERADMIN: detalle de una solicitud (partes, línea de tiempo, pagos, reparto, reembolsos y pedidos). */

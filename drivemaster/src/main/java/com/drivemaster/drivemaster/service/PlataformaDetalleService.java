@@ -123,10 +123,12 @@ public class PlataformaDetalleService {
                         p.getFechaResolucionProblema())
                 : null;
 
+        OrdenServicio orden = p.getOrdenId() == null ? null : mongo.findById(p.getOrdenId(), OrdenServicio.class);
         return new Pedido(p.getId(), p.esCatalogo() ? PedidoTienda.ORIGEN_CATALOGO : PedidoTienda.ORIGEN_TALLER, p.getEstado(),
                 p.getFechaCreacion(), p.getPlazoDespachoHasta(), SemaforoPedido.despacho(p, ahora), SemaforoPedido.retiro(p, ahora),
                 parteTienda, parteCliente, parteTaller, p.getVehiculoDescripcion(), lineas, n(p.getSubtotal()), n(p.getIva()),
-                n(p.getTotal()), lineaDeTiempo(p), datosPago, reparto, devoluciones, entrega, problema);
+                n(p.getTotal()), lineaDeTiempo(p), datosPago, reparto, devoluciones, entrega, problema,
+                PedidoTiendaService.sePuedeMarcarDespachado(p, orden));
     }
 
     private static Entrega entrega(PedidoTienda p, LocalDateTime ahora) {
@@ -150,7 +152,8 @@ public class PlataformaDetalleService {
         agregar(e, "Pagado", p.getFechaCreacion(), null);
         agregar(e, "En preparación", p.getFechaPreparacion(), null);
         agregar(e, "No despachado", p.getFechaNoDespacho(), p.getMotivoNoDespacho());
-        agregar(e, "Despachado", p.getFechaDespacho(), p.getNotaDespacho());
+        agregar(e, "Despachado", p.getFechaDespacho(), p.getDespachoConfirmadoPor() != null
+                ? "Confirmado con la tienda por " + p.getDespachoConfirmadoPor() + ": " + p.getMotivoDespachoConfirmado() : p.getNotaDespacho());
         agregar(e, p.esCatalogo() ? "Recibido" : "Recibido por el taller", p.getFechaRecibido(), null);
         agregar(e, "Listo para retirar", p.getFechaListoRetiro(), null);
         agregar(e, "Retiro en revisión de DriveMaster", p.getRevisionRetiroDesde(), null);

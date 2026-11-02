@@ -57,6 +57,7 @@ class PermisosOrdenesTest {
             new Ruta(HttpMethod.PATCH, BASE + "confirmar-recepcion", List.of("CLIENTE")),
             new Ruta(HttpMethod.PATCH, BASE + "reasignar", List.of("SUPERADMIN", "ADMIN")),
             new Ruta(HttpMethod.GET, BASE + "pagos", List.of("CLIENTE")),
+            new Ruta(HttpMethod.PATCH, "/api/plataforma/pedidos/ped1/despachado", List.of("SUPERADMIN")),
             new Ruta(HttpMethod.GET, "/api/talleres/mi-taller/ordenes/o1/resumen", List.of("TALLER")),
             new Ruta(HttpMethod.GET, "/api/plataforma/ordenes/o1/resumen", List.of("SUPERADMIN")));
 

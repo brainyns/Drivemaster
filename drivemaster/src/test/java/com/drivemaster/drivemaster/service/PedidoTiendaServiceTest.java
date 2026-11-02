@@ -463,6 +463,100 @@ class PedidoTiendaServiceTest {
         verifyNoInteractions(liquidacion);
     }
 
+    // ─── Despacho confirmado por el SUPERADMIN ───────────────────────────────
+
+    private static final String MOTIVO = "Llamé a la tienda y salió ayer con la guía 123";
+
+    private void despachoAplicado() {
+        cambioAplicado(PedidoTienda.DESPACHADO, null);
+    }
+
+    @Test
+    void elSuperadminMarcaElDespachoSinMoverDinero() {
+        despachoAplicado();
+
+        PedidoTienda r = service.marcarDespachadoPorAdmin("super@demo.com", "ped1", MOTIVO);
+
+        assertEquals(PedidoTienda.DESPACHADO, r.getEstado());
+        ArgumentCaptor<Update> cambios = ArgumentCaptor.forClass(Update.class);
+        verify(mongoTemplate).findAndModify(any(Query.class), cambios.capture(), any(FindAndModifyOptions.class), eq(PedidoTienda.class));
+        Document puestos = cambios.getValue().getUpdateObject().get("$set", Document.class);
+        assertEquals("super@demo.com", puestos.get("despachoConfirmadoPor"));
+        assertEquals(MOTIVO, puestos.get("motivoDespachoConfirmado"));
+        assertNotNull(puestos.get("fechaDespacho"));
+        verifyNoInteractions(liquidacion, repartoRepository, pagoMarketplace);
+    }
+
+    @Test
+    void laLineaDeTiempoDeLaOrdenNoLlevaElMotivoNiElCorreo() {
+        despachoAplicado();
+
+        service.marcarDespachadoPorAdmin("super@demo.com", "ped1", MOTIVO);
+
+        ArgumentCaptor<String> nota = ArgumentCaptor.forClass(String.class);
+        verify(transiciones).registrar(eq(orden), any(), nota.capture(), any(), any());
+        assertEquals("DriveMaster confirmó con Tienda Norte el despacho de los repuestos", nota.getValue());
+    }
+
+    @Test
+    void despuesDeMarcarloElTallerLoConfirmaYAhiSeHabilitaElPago() {
+        pedido.setEstado(PedidoTienda.DESPACHADO);
+        pedidosDeLaOrden(pedido);
+
+        service.repuestosRecibidos("taller@demo.com", "o1");
+
+        verify(liquidacion).pedidoRecibido("ped1", "RECEPCION_CONFIRMADA_TALLER");
+    }
+
+    @Test
+    void sinMotivoSuficienteNoSeMarca() {
+        for (String motivo : java.util.Arrays.asList(null, "  ", "ok")) {
+            ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                    () -> service.marcarDespachadoPorAdmin("super@demo.com", "ped1", motivo));
+            assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        }
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class));
+    }
+
+    @Test
+    void soloSeMarcaUnPedidoDeTallerSinDespacharConLaOrdenEsperando() {
+        pedido.setEstado(PedidoTienda.NO_DESPACHADO);
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> service.marcarDespachadoPorAdmin("super@demo.com", "ped1", MOTIVO)).getStatusCode());
+
+        pedido.setEstado(PedidoTienda.PENDIENTE);
+        orden.setEstado(EstadoOrden.CANCELADA);
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> service.marcarDespachadoPorAdmin("super@demo.com", "ped1", MOTIVO)).getStatusCode());
+
+        orden.setEstado(EstadoOrden.REPUESTOS_PEDIDOS);
+        pedido.setOrigen(PedidoTienda.ORIGEN_CATALOGO);
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> service.marcarDespachadoPorAdmin("super@demo.com", "ped1", MOTIVO)).getStatusCode(), "su despacho libera el pago solo");
+
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class));
+    }
+
+    @Test
+    void siOtroLoCambioMientrasTantoNoSeTocaLaOrden() {
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> service.marcarDespachadoPorAdmin("super@demo.com", "ped1", MOTIVO));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
+        verifyNoInteractions(transiciones);
+    }
+
+    @Test
+    void elCorreoYElMotivoDelSuperadminNoSalenEnElJsonDelPedido() throws Exception {
+        pedido.setDespachoConfirmadoPor("super@demo.com");
+        pedido.setMotivoDespachoConfirmado(MOTIVO);
+
+        String json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().writeValueAsString(pedido);
+
+        assertFalse(json.contains("super@demo.com"), json);
+        assertFalse(json.contains(MOTIVO), json);
+    }
+
     // ─── 4-A: compras directas del catálogo (retiro con código y envío) ──────
 
     private PedidoTienda catalogo(String entrega, String estado, String codigo) {

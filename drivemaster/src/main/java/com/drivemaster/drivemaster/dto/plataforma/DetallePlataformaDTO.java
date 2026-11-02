@@ -45,7 +45,7 @@ public final class DetallePlataformaDTO {
                          String semaforoDespacho, String semaforoRetiro, Parte tienda, Parte cliente, Parte taller,
                          String vehiculo, List<Linea> lineas, double subtotal, double iva, double total,
                          List<Evento> lineaDeTiempo, Pago pago, List<LineaReparto> reparto, List<Reembolso> reembolsos,
-                         Entrega entrega, Problema problema) {}
+                         Entrega entrega, Problema problema, boolean sePuedeMarcarDespachado) {}
 
     /** Una solicitud de servicio: etiqueta de cada evento es el estado de la orden; pedidos, los repuestos a las tiendas. */
     public record Orden(String id, String estado, LocalDateTime fecha, Parte cliente, Parte taller, String vehiculo,

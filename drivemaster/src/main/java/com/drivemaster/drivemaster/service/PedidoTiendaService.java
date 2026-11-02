@@ -250,6 +250,47 @@ public class PedidoTiendaService {
         return pedido;
     }
 
+    // ─── Despacho confirmado por el SUPERADMIN ───────────────────────────────
+
+    static final int MINIMO_MOTIVO_DESPACHO = 10;
+
+    /** Lo que permite marcar el despacho a mano: un pedido de taller sin despachar cuya orden sigue esperando repuestos. */
+    public static boolean sePuedeMarcarDespachado(PedidoTienda p, OrdenServicio orden) {
+        return p != null && !p.esCatalogo() && sinDespachar(p) && orden != null && EstadoOrden.REPUESTOS_PEDIDOS.equals(orden.getEstado());
+    }
+
+    /**
+     * Salida para la tienda que despachó y no lo marcó: un SUPERADMIN lo confirma con ella y el pedido pasa a DESPACHADO.
+     * No mueve dinero: el pago de la tienda sigue esperando a que el taller confirme la recepción, como siempre. La
+     * compra del catálogo no pasa por aquí: su despacho programa una autoconfirmación que libera el pago.
+     */
+    public PedidoTienda marcarDespachadoPorAdmin(String correoAdmin, String pedidoId, String motivo) {
+        String razon = recortar(motivo);
+        if (razon == null || razon.length() < MINIMO_MOTIVO_DESPACHO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Explica en al menos " + MINIMO_MOTIVO_DESPACHO + " caracteres cómo se confirmó el despacho con la tienda");
+        }
+        PedidoTienda actual = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+        OrdenServicio orden = ordenDe(actual).orElse(null);
+        if (!sePuedeMarcarDespachado(actual, orden)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se marca un pedido de taller sin despachar cuya solicitud espera repuestos");
+        }
+        PedidoTienda pedido = mongoTemplate.findAndModify(
+                Query.query(Criteria.where("id").is(pedidoId).and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)),
+                new Update().set("estado", PedidoTienda.DESPACHADO).set("fechaDespacho", LocalDateTime.now())
+                        .set("despachoConfirmadoPor", correoAdmin).set("motivoDespachoConfirmado", razon),
+                FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
+        if (pedido == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El pedido cambió: revisa su estado");
+        }
+        // La línea de tiempo la ve el cliente: va sin el motivo ni el correo, que quedan en el pedido
+        TrasGuardar.hacer(avisos, "El pedido " + pedido.getId() + " quedó despachado, pero no se pudo anotar en su solicitud.",
+                () -> transiciones.registrar(orden, new Actor(EstadoOrden.ADMIN, null, "DriveMaster"),
+                        "DriveMaster confirmó con " + pedido.getTiendaNombre() + " el despacho de los repuestos", null, null));
+        return pedido;
+    }
+
     // ─── Problemas con envíos del catálogo (ADMIN) ───────────────────────────
 
     public static final String RESOLVER_ENTREGA = "CONFIRMAR_ENTREGA";
