@@ -102,6 +102,12 @@ export const textoConcepto = (concepto) => CONCEPTOS_REPARTO[concepto] || concep
  * A qué pertenece una liquidación o un reembolso: el pedido si lo hay (las compras de catálogo no tienen solicitud), si
  * no la solicitud. tipo es el de DetallePlataforma; una compra entera no tiene detalle propio: solo se muestra.
  */
+/** Enlaza la línea con el total de su orden. Con una sola línea no aporta: ya es esa cifra. */
+export function textoTotalOrden(t) {
+  if (!t || t.lineas < 2) return null;
+  return `Total orden ${cop(t.totalGenerado)} · ${t.lineas} pagos`;
+}
+
 export function referenciaLinea(f = {}) {
   if (f.pedidoTiendaId) return { tipo: "pedido", id: f.pedidoTiendaId, texto: refPedido(f.pedidoTiendaId) };
   if (f.ordenServicioId) return { tipo: "orden", id: f.ordenServicioId, texto: refPedido(f.ordenServicioId) };

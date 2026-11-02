@@ -20,7 +20,7 @@ import Campo from "../components/ui/Campo";
 import Dato from "../components/ui/Dato";
 import { unir } from "../utils/formato";
 import {
-  ESTADOS_LIQUIDACION, MAS_ESTADOS_LIQUIDACION, avisoLiquidacion, avisoModo, desgloseFila, faltaParaResolver, fechaLinea, fueraDelRango, porRevisar, referenciaLinea,
+  ESTADOS_LIQUIDACION, MAS_ESTADOS_LIQUIDACION, avisoLiquidacion, avisoModo, desgloseFila, faltaParaResolver, fechaLinea, fueraDelRango, porRevisar, referenciaLinea, textoTotalOrden,
   sePuedePagar, tarjetasLiquidaciones, textoConcepto, textoCuenta,
 } from "./admin/plataformaAdmin";
 import { unaALaVez } from "../utils/unaALaVez";
@@ -398,6 +398,7 @@ export default function Liquidaciones() {
                             </button>
                           ) : ref.texto}
                           {esRepartos && <span className="pp-sub">{textoConcepto(f.concepto)}</span>}
+                          {esRepartos && textoTotalOrden(f.totalOrden) && <span className="pp-sub liq-total-orden">{textoTotalOrden(f.totalOrden)}</span>}
                           {esRepartos && <span className="pp-sub liq-fecha-sub">{fechaLinea(f.fechaCreacion)}</span>}
                         </span>
                       </td>
@@ -476,6 +477,7 @@ export default function Liquidaciones() {
                 <Dato etiqueta="Banco">{marcando.cuenta?.banco}</Dato>
                 <Dato etiqueta="Cuenta">{unir([marcando.cuenta?.tipoCuenta && textoCuenta({ tipoCuenta: marcando.cuenta.tipoCuenta }), marcando.cuenta?.numero])}</Dato>
                 <Dato etiqueta="Concepto" ancho>{textoConcepto(marcando.concepto)} {referenciaLinea(marcando).texto}</Dato>
+                {textoTotalOrden(marcando.totalOrden) && <Dato etiqueta="Orden" ancho>{textoTotalOrden(marcando.totalOrden)}</Dato>}
                 <Dato etiqueta="Bruto">{formatPrecio(desgloseDialogo.bruto)}</Dato>
                 <Dato etiqueta="Comisión DriveMaster">{unir([desgloseDialogo.comision, desgloseDialogo.nota])}</Dato>
                 <Dato etiqueta="Se transfiere" ancho><strong>{formatPrecio(marcando.monto)}</strong></Dato>

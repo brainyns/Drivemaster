@@ -65,6 +65,7 @@
 .liq-ref { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; white-space: nowrap; }
 .liq-ref .pp-sub { letter-spacing: normal; }
 .pp-sub.liq-ref { white-space: normal; overflow-wrap: anywhere; }
+.liq-ref .liq-total-orden { max-width: 30ch; white-space: normal; line-height: 1.4; }
 .liq-texto { min-width: 11ch; max-width: 36ch; overflow-wrap: break-word; }
 .liq-estado { min-width: 170px; }
 .liq-estado .pp-sub { margin-top: 6px; line-height: 1.45; }
