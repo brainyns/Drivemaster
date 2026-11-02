@@ -15,6 +15,7 @@ import SeccionContacto from "../components/ui/SeccionContacto";
 import ChipEstado from "../components/ui/ChipEstado";
 import Campo from "../components/ui/Campo";
 import Dato from "../components/ui/Dato";
+import ValorSensible from "../components/ui/ValorSensible";
 import PieFormulario from "../components/ui/PieFormulario";
 import Alerta from "../components/ui/Alerta";
 import { avisar } from "../components/ui/avisar";
@@ -383,9 +384,9 @@ export default function DatosMiTienda({ token, onGuardado }) {
               <dl className="ui-datos">
                 <Dato etiqueta="Entidad bancaria">{t.cuentaBancaria.banco}</Dato>
                 <Dato etiqueta="Tipo de cuenta">{t.cuentaBancaria.tipoCuenta === "CORRIENTE" ? "Cuenta Corriente" : "Cuenta de Ahorros"}</Dato>
-                <Dato etiqueta="Número de cuenta">{t.cuentaBancaria.numeroCuenta}</Dato>
+                <Dato etiqueta="Número de cuenta"><ValorSensible valor={t.cuentaBancaria.numeroCuenta} etiqueta="el número de cuenta" /></Dato>
                 <Dato etiqueta="Titular">{t.cuentaBancaria.titularNombre}</Dato>
-                <Dato etiqueta="Documento">{t.cuentaBancaria.titularDocumentoTipo} {t.cuentaBancaria.titularDocumentoNumero}</Dato>
+                <Dato etiqueta="Documento"><ValorSensible valor={t.cuentaBancaria.titularDocumentoNumero} prefijo={t.cuentaBancaria.titularDocumentoTipo} etiqueta="el documento" /></Dato>
                 {t.cuentaBancaria.fechaActualizacion && (
                   <Dato etiqueta="Última actualización">{formatFecha(t.cuentaBancaria.fechaActualizacion)}</Dato>
                 )}

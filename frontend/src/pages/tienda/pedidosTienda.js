@@ -103,7 +103,7 @@ export function historialPedido(p) {
     [p.fechaRecibido, "Recibido en el taller", null],
     [p.fechaRecibidoCliente, "Entregado", p.recepcionAutomatica ? "Confirmado solo al vencer el plazo" : "Confirmado por el cliente"],
     [p.fechaProblema, "El cliente reportó un problema", p.problemaDetalle || null, "error"],
-    [p.fechaResolucionProblema, "DriveMaster resolvió el problema", p.motivoResolucion || null],
+    [p.fechaResolucionProblema, "DriveMaster resolvió el problema", resolucionPublica(p.resolucionProblema)],
     [p.fechaNoDespacho, "No se pudo despachar", p.motivoNoDespacho || null, "error"],
   ];
   return pasos
@@ -172,4 +172,14 @@ export function textoMotivoNoDespacho(tipoMotivo, detalle) {
   const nota = String(detalle ?? "").trim();
   if (tipoMotivo === "SIN_REPUESTO") return `No tengo el repuesto${nota ? `: ${nota}` : ""}`;
   return nota;
+}
+
+/**
+ * Lo que la tienda ve de la decisión de DriveMaster sobre un reclamo: un texto fijo según la decisión. La nota interna
+ * del administrador no le llega (PedidoTiendaService.paraTienda).
+ */
+export function resolucionPublica(resolucion) {
+  if (resolucion === "REEMBOLSO") return "Se reembolsó al cliente; este pedido no se paga.";
+  if (resolucion === "ENTREGA_CONFIRMADA_POR_ADMIN") return "Se confirmó la entrega; el pago sigue su curso.";
+  return null;
 }

@@ -104,7 +104,7 @@ function textoEstado(p) {
     return "Lleva 15 días o más sin retirarse y DriveMaster lo está revisando. Si el cliente llega, entrégaselo con su código.";
   }
   if (p.estado === "NO_ENTREGADO" && p.resolucionRetiro === "REEMBOLSO") {
-    return `DriveMaster lo canceló porque el cliente no lo retiró${p.motivoResolucionRetiro ? `: ${p.motivoResolucionRetiro}` : ""}. Las unidades en stock volvieron a tu inventario y este pedido no se paga.`;
+    return `DriveMaster lo canceló porque el cliente no pasó a retirarlo. Las unidades en stock volvieron a tu inventario y este pedido no se paga.`;
   }
   if (p.estado === "RETIRADO") return "El cliente retiró el pedido. El pago quedó habilitado para liquidar.";
   if (p.estado === "ENTREGADO" || p.estado === "RECIBIDO") return "Pedido entregado. El pago quedó habilitado para liquidar.";

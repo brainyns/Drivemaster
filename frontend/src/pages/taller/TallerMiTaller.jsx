@@ -24,6 +24,7 @@ import Calificacion from "../../components/ui/Calificacion";
 import CabeceraNegocio from "../../components/ui/CabeceraNegocio";
 import VistaPrevia from "../../components/ui/VistaPrevia";
 import Dato from "../../components/ui/Dato";
+import ValorSensible from "../../components/ui/ValorSensible";
 import PieFormulario from "../../components/ui/PieFormulario";
 import Icon from "../../components/public/Icon";
 import { comoLoVeElCliente, completitudPerfil, errorTarifa } from "./perfilTaller";
@@ -348,9 +349,9 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
               <dl className="ui-datos">
                 <Dato etiqueta="Entidad bancaria">{taller.cuentaBancaria.banco}</Dato>
                 <Dato etiqueta="Tipo de cuenta">{taller.cuentaBancaria.tipoCuenta === "CORRIENTE" ? "Cuenta Corriente" : "Cuenta de Ahorros"}</Dato>
-                <Dato etiqueta="Número de cuenta">{taller.cuentaBancaria.numeroCuenta}</Dato>
+                <Dato etiqueta="Número de cuenta"><ValorSensible valor={taller.cuentaBancaria.numeroCuenta} etiqueta="el número de cuenta" /></Dato>
                 <Dato etiqueta="Titular">{taller.cuentaBancaria.titularNombre}</Dato>
-                <Dato etiqueta="Documento">{taller.cuentaBancaria.titularDocumentoTipo} {taller.cuentaBancaria.titularDocumentoNumero}</Dato>
+                <Dato etiqueta="Documento"><ValorSensible valor={taller.cuentaBancaria.titularDocumentoNumero} prefijo={taller.cuentaBancaria.titularDocumentoTipo} etiqueta="el documento" /></Dato>
                 {taller.cuentaBancaria.fechaActualizacion && (
                   <Dato etiqueta="Última actualización">{formatFecha(taller.cuentaBancaria.fechaActualizacion)}</Dato>
                 )}

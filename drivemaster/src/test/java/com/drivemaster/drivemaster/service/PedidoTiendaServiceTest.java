@@ -1053,6 +1053,27 @@ class PedidoTiendaServiceTest {
     }
 
     @Test
+    void laTiendaNoVeLasNotasInternasNiQuienDecidio() {
+        PedidoTienda p = catalogo(PedidoTienda.ENVIO, PedidoTienda.NO_DESPACHADO, null).toBuilder()
+                .resolucionRetiro("REEMBOLSO").motivoResolucionRetiro("El cliente me escribió que ya no lo quiere")
+                .retiroResueltoPor("admin@drivemaster.co")
+                .resolucionProblema("REEMBOLSO").motivoResolucion("Revisé las fotos del cliente").resueltoPor("admin@drivemaster.co")
+                .motivoDespachoConfirmado("Llamé a la tienda").despachoConfirmadoPor("admin@drivemaster.co")
+                .build();
+
+        PedidoTienda vista = PedidoTiendaService.paraTienda(p);
+
+        assertEquals("REEMBOLSO", vista.getResolucionRetiro(), "sí ve qué se decidió");
+        assertEquals("REEMBOLSO", vista.getResolucionProblema());
+        assertNull(vista.getMotivoResolucionRetiro());
+        assertNull(vista.getRetiroResueltoPor());
+        assertNull(vista.getMotivoResolucion());
+        assertNull(vista.getResueltoPor());
+        assertNull(vista.getMotivoDespachoConfirmado());
+        assertNull(vista.getDespachoConfirmadoPor());
+    }
+
+    @Test
     void laTiendaSoloConsultaSusPropiosPedidos() {
         when(pedidoRepository.findByTiendaIdOrderByFechaCreacionDesc("s1")).thenReturn(List.of(pedido));
         assertEquals(List.of(pedido), service.misPedidos(CORREO_TIENDA));

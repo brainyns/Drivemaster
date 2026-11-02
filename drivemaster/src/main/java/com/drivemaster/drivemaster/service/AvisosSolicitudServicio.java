@@ -366,7 +366,7 @@ public class AvisosSolicitudServicio implements StockTallerService.AvisoStockBaj
                     enviar(correo, "El cliente reportó un problema con un envío",
                             EmailServicioBuilder.tiendaProblemaEnvio(tienda.getNombre(), pedido, detalle)));
             avisar(tienda.getUsuarioId(), Notificacion.PROBLEMA_ENVIO, "Problema reportado con un envío",
-                    "El cliente reportó un problema con el pedido " + pedido.getId() + ".", "pedidos-tienda", pedido.getId());
+                    "El cliente reportó un problema con el pedido #" + ReferenciasMovimiento.corta(pedido.getId()) + ".", "pedidos-tienda", pedido.getId());
         });
     }
 

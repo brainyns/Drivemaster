@@ -35,5 +35,5 @@
   padding: 0; background: none; border: 0; color: var(--ui-text); font: inherit; font-weight: 700;
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
 }
-.pp-enlace:hover { color: var(--ui-brand-tinta); }
+.pp-enlace:hover { color: var(--primary-text); }
 .pp-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }

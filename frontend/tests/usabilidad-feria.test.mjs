@@ -119,3 +119,27 @@ test("confirmaciones: emitir la cotización, confirmar la llegada y los movimien
     assert.match(src, /El stock pasa de \$\{/, `${ruta}: dice cómo queda el stock`);
   }
 });
+
+test("privacidad: cuenta y documento enmascarados con Mostrar, y la tienda no ve las notas internas del admin", async () => {
+  const { enmascarar } = await import("../src/utils/formato.js");
+  assert.equal(enmascarar("0123-4567 8901"), "•••• 8901");
+  assert.equal(enmascarar("1234"), "••••");
+  assert.equal(enmascarar(""), "");
+  assert.equal(enmascarar(null), "");
+  for (const ruta of ["../src/pages/DatosMiTienda.jsx", "../src/pages/taller/TallerMiTaller.jsx"]) {
+    const src = leer(ruta);
+    assert.match(src, /<ValorSensible valor=\{\w+\.cuentaBancaria\.numeroCuenta\}/, `${ruta}: cuenta`);
+    assert.match(src, /<ValorSensible valor=\{\w+\.cuentaBancaria\.titularDocumentoNumero\}/, `${ruta}: documento`);
+  }
+  assert.ok(leer("../src/components/ui/ValorSensible.jsx").includes('{visible ? "Ocultar" : "Mostrar"}'));
+
+  const { resolucionPublica, historialPedido } = await import("../src/pages/tienda/pedidosTienda.js");
+  assert.match(resolucionPublica("REEMBOLSO"), /Se reembolsó al cliente/);
+  assert.equal(resolucionPublica(undefined), null);
+  const pasos = historialPedido({ fechaCreacion: "2026-11-01T10:00:00", fechaResolucionProblema: "2026-11-02T10:00:00",
+    resolucionProblema: "ENTREGA_CONFIRMADA_POR_ADMIN", motivoResolucion: "nota interna del admin" });
+  assert.ok(!JSON.stringify(pasos).includes("nota interna"), "el historial no usa la nota del admin");
+  assert.ok(!leer("../src/pages/PedidosTienda.jsx").includes("motivoResolucionRetiro"));
+  assert.match(leer("../../drivemaster/src/main/java/com/drivemaster/drivemaster/service/PedidoTiendaService.java"),
+    /\.motivoResolucionRetiro\(null\)\.retiroResueltoPor\(null\)/);
+});

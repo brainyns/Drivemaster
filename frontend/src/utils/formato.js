@@ -65,3 +65,14 @@ export function textoPeriodo(desde, meses) {
   const [a, m, d] = desde.split("-").map(Number);
   return `desde el ${new Date(a, m - 1, d).toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}`;
 }
+
+/**
+ * Un dato sensible a la vista (cuenta bancaria, documento): solo los últimos 4 caracteres, el resto con puntos.
+ * Con 4 o menos caracteres se ocultan todos. Los espacios y guiones no cuentan.
+ */
+export function enmascarar(valor, visibles = 4) {
+  const limpio = String(valor ?? "").replace(/[\s-]/g, "");
+  if (!limpio) return "";
+  if (limpio.length <= visibles) return "•".repeat(limpio.length);
+  return `•••• ${limpio.slice(-visibles)}`;
+}

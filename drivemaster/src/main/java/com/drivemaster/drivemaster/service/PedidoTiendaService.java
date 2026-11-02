@@ -101,7 +101,13 @@ public class PedidoTiendaService {
         if (p == null) return null;
         // En un retiro la tienda ve solo el nombre y la inicial del apellido ("Laura M."), para reconocer a quien llega
         String nombreRetiro = PedidoTienda.RETIRO.equals(p.getEntrega()) ? nombreEInicial(p.getClienteNombre()) : null;
-        PedidoTienda vista = p.toBuilder().clienteId(null).clienteNombre(nombreRetiro).compraId(null).pagoId(null).build();
+        // Las notas internas del administrador (por qué decidió un retiro o un reclamo, cómo confirmó un despacho) y quién
+        // lo hizo no son para la tienda: ve solo qué se decidió, con un texto fijo (pedidosTienda.js)
+        PedidoTienda vista = p.toBuilder().clienteId(null).clienteNombre(nombreRetiro).compraId(null).pagoId(null)
+                .motivoResolucionRetiro(null).retiroResueltoPor(null)
+                .motivoResolucion(null).resueltoPor(null)
+                .motivoDespachoConfirmado(null).despachoConfirmadoPor(null)
+                .build();
         if (!PedidoTienda.ENVIO.equals(p.getEntrega())) {
             vista.setEnvioReceptor(null);
             vista.setEnvioTelefono(null);
