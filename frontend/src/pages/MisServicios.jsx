@@ -12,6 +12,7 @@ import RespuestaCotizacion from "../components/servicio/RespuestaCotizacion";
 import BotonPdfCotizacion from "../components/servicio/BotonPdfCotizacion";
 import PagoLocal from "../components/servicio/PagoLocal";
 import ConfirmarRecepcion from "../components/servicio/ConfirmarRecepcion";
+import { PagosCliente } from "../components/servicio/ResumenServicio";
 import {
   ESTADOS, ESTADOS_CANCELABLES_CLIENTE, ESTADOS_PEDIDO, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
@@ -445,6 +446,16 @@ export default function MisServicios({
             {s.estado === "ENTREGADA" && <ConfirmarRecepcion token={token} solicitud={s} onConfirmada={cargar} />}
 
             {s.cotizacionId && <CotizacionCliente token={token} solicitud={s} onCambio={cargar} />}
+
+            {/* Fuera de la cotización: una solicitud con solo el diagnóstico también tiene un pago */}
+            <PagosCliente token={token} ordenId={s.id} estado={s.estado}>
+              {(contenido) => (
+                <section className="ss-bloque" aria-labelledby={`sv-pagos-${s.id}`}>
+                  <h2 id={`sv-pagos-${s.id}`} className="ss-bloque__titulo">Lo que has pagado</h2>
+                  {contenido}
+                </section>
+              )}
+            </PagosCliente>
 
             {s.motivoCierre && ["CANCELADA", "RECHAZADA"].includes(s.estado) && (
               <p className="ss-aviso">{s.motivoCierre}</p>
