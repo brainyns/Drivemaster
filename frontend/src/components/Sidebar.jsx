@@ -66,6 +66,7 @@ const MENU_TALLER = [
   { key: "taller-agenda",      label: "Agenda",      icon: "agenda" },
   { key: "taller-trabajos",    label: "Trabajos",    icon: "taller" },
   { key: "taller-cotizaciones", label: "Cotizaciones", icon: "compras" },
+  { key: "taller-inventario",  label: "Mi inventario", icon: "invProductos" },
   { key: "taller-mitaller",    label: "Mi taller",   icon: "garaje" },
   { key: "taller-informes",     label: "Informes",    icon: "reportes" },
   { key: "taller-anteriores",  label: "Órdenes anteriores", icon: "ventas" },

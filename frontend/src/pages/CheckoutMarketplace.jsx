@@ -31,6 +31,7 @@ function porTienda(items) {
 export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, onPagada }) {
   const token = getToken();
   const user = getUser();
+  const esTaller = user?.rol === "TALLER";
   const grupos = useMemo(() => porTienda(carrito.catalogo), [carrito.catalogo]);
 
   const [entregas, setEntregas] = useState({});
@@ -52,7 +53,8 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
   const solicitud = useMemo(() => {
     const conEnvio = grupos.some((g) => (entregas[g.tienda.id] || "RETIRO") === "ENVIO");
     let vehiculoId = "";
-    try { vehiculoId = localStorage.getItem(CLAVE_VEHICULO) || ""; } catch { /* sin almacenamiento */ }
+    // El vehículo guardado es del cliente: un taller compra para su inventario, no para un vehículo
+    try { vehiculoId = esTaller ? "" : localStorage.getItem(CLAVE_VEHICULO) || ""; } catch { /* sin almacenamiento */ }
     return {
       items: carrito.catalogo.map((x) => ({ productoId: x.producto.id, cantidad: x.cantidad })),
       entregas: grupos.map((g) => ({ tiendaId: g.tienda.id, tipo: entregas[g.tienda.id] || "RETIRO" })),
@@ -64,7 +66,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
       } : {}),
       ...(vehiculoId ? { vehiculoId } : {}),
     };
-  }, [carrito.catalogo, grupos, entregas, envio]);
+  }, [carrito.catalogo, grupos, entregas, envio, esTaller]);
 
   const puedeCotizar = grupos.length > 0 && (!hayEnvio || (envioCompleto && ciudadesNoCoinciden.length === 0));
   const clave = JSON.stringify(solicitud);

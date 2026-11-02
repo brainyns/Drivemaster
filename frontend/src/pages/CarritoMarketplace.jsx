@@ -186,7 +186,8 @@ function TarjetaTienda({ grupo, otras, onCambiar, onQuitar, onVer }) {
  */
 export default function CarritoMarketplace({ header, carrito, onVolver, onVerProducto, onContinuarCatalogo, onIrLogin }) {
   const user = getUser();
-  const esCliente = user?.rol === "CLIENTE";
+  // El taller compra aquí para su inventario; las demás cuentas no compran
+  const esCliente = user?.rol === "CLIENTE" || user?.rol === "TALLER";
   const { catalogo } = carrito;
   const vacio = catalogo.length === 0;
   const tiendas = porTienda(catalogo);
@@ -216,7 +217,7 @@ export default function CarritoMarketplace({ header, carrito, onVolver, onVerPro
 
   const accionPago = (texto, onPagar, clase = "ui-btn--bloque") => {
     if (!user) return <button className={`ui-btn ui-btn--primario ui-btn--grande ${clase}`} onClick={onIrLogin}>Inicia sesión para pagar</button>;
-    if (!esCliente) return <p className="mk-nota">Para comprar entra con una cuenta de cliente.</p>;
+    if (!esCliente) return <p className="mk-nota">Para comprar entra con una cuenta de cliente o de taller.</p>;
     return (
       <button className={`ui-btn ui-btn--primario ui-btn--grande ${clase}`} onClick={onPagar}>
         {texto} <Icon name="arrow" size={16} />

@@ -9,6 +9,7 @@ import TallerInicio from "./taller/TallerInicio";
 import TallerMiTaller from "./taller/TallerMiTaller";
 import TallerCotizaciones from "./taller/TallerCotizaciones";
 import TallerInformes from "./taller/TallerInformes";
+import TallerInventario from "./taller/TallerInventario";
 import TallerAgenda from "./taller/TallerAgenda";
 import OrdenesAnteriores from "./taller/OrdenesAnteriores";
 import { destinoSeccion, ordenesPorAtender } from "./taller/resumenTaller";
@@ -21,7 +22,7 @@ import "../css/taller-panel.css";
  * flujo anterior) y muestra la sección que pide el menú lateral. También avisa al menú cuántas
  * solicitudes esperan respuesta y si quedan órdenes anteriores por atender.
  */
-export default function PanelTaller({ seccion = "inicio", param = null, irA, onResumen }) {
+export default function PanelTaller({ seccion = "inicio", param = null, irA, onResumen, onComprarInventario }) {
   const token = getToken();
   const [taller, setTaller] = useState(null);
   const [solicitudes, setSolicitudes] = useState([]);
@@ -119,6 +120,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         {seccion === "agenda" && <TallerAgenda taller={taller} irA={irA} />}
         {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}
         {seccion === "informes" && <TallerInformes />}
+        {seccion === "inventario" && <TallerInventario onComprar={onComprarInventario} />}
         {seccion === "mitaller" && (
           <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller} abrirSeccion={destino.filtro}
             onRecargar={cargar} onActualizado={setTaller} />

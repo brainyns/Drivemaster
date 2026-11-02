@@ -145,6 +145,7 @@ const SECCION_TALLER = {
   "taller-cotizaciones": "cotizaciones",
   "taller-mitaller":    "mitaller",
   "taller-informes":    "informes",
+  "taller-inventario":  "inventario",
   "taller-anteriores":  "anteriores",
   "taller-agenda":      "agenda",
 };
@@ -453,7 +454,9 @@ function App() {
         return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")}
           onVolver={() => { limpiarDestinoPostLogin(); setPagina("carrito-marketplace"); }} />;
       }
-      if (user.rol !== "CLIENTE") return <div style={{ padding: "40px" }}>Esta sección es para clientes.</div>;
+      // El taller también compra (para su inventario), pero sus compras se ven en Mi inventario
+      const esTallerComprador = user.rol === "TALLER" && pagina === "checkout-marketplace";
+      if (user.rol !== "CLIENTE" && !esTallerComprador) return <div style={{ padding: "40px" }}>Esta sección es para clientes.</div>;
       if (pagina === "mis-compras") return (
         <MisCompras
           key={idSeleccionado || "mis-compras"}
@@ -470,7 +473,7 @@ function App() {
           header={cabeceraMarketplace("carrito")}
           carrito={carrito}
           onVolverCarrito={() => setPagina("carrito-marketplace")}
-          onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); irA("mis-compras"); }}
+          onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); irA(user.rol === "TALLER" ? "taller-inventario" : "mis-compras"); }}
         />
       );
     }
@@ -554,7 +557,7 @@ function App() {
         onIrSolicitudes={() => setPagina("mis-solicitudes")}
         onIrServicios={() => irA("mis-servicios")}
         onCompraCatalogoPagada={vaciarCarritoPagado}
-        onIrMisCompras={() => irA("mis-compras")}
+        onIrMisCompras={() => irA(user?.rol === "TALLER" ? "taller-inventario" : "mis-compras")}
       />
     );
 
@@ -690,7 +693,8 @@ function App() {
     if (pagina === "usuarios")         return <Usuarios             token={token} />;
     if (pagina === "mi-perfil")        return <PerfilAdmin          />;
     if (pagina === "taller-panel" || SECCION_TALLER[pagina]) {
-      return <PanelTaller seccion={SECCION_TALLER[pagina] || "inicio"} param={idSeleccionado} irA={irA} onResumen={setResumenTaller} />;
+      return <PanelTaller seccion={SECCION_TALLER[pagina] || "inicio"} param={idSeleccionado} irA={irA} onResumen={setResumenTaller}
+        onComprarInventario={irAlCatalogoGlobal} />;
     }
     if (pagina === "admin-talleres")   return <AdminTalleres        />;
     // ADMIN: solo aprueba o rechaza; SUPERADMIN: gestión completa (y la lista unificada "Tiendas y talleres")
@@ -716,7 +720,9 @@ function App() {
   const esCliente = user?.rol === "CLIENTE";
   // El registro de negocios es público: nunca va dentro del panel, aunque haya sesión.
   const usarPanel = pagina === "catalogo" || pagina === "registro-negocio" || PAGINAS_MARKETPLACE.includes(pagina)
-    || PAGINAS_SIEMPRE_PUBLICAS.includes(pagina) || (esCliente && PAGINAS_CLIENTE.includes(pagina)) ? false
+    || PAGINAS_SIEMPRE_PUBLICAS.includes(pagina) || (esCliente && PAGINAS_CLIENTE.includes(pagina))
+    // El taller paga su compra con la misma pantalla del catálogo, sin el menú del panel
+    || (user?.rol === "TALLER" && pagina === "checkout-marketplace") ? false
     : !!user && pagina !== "catalogo";
 
   return (
