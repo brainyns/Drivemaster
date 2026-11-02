@@ -79,6 +79,14 @@ public class TablasTiendaService {
         this.mongo = mongo;
     }
 
+    private ReferenciasMovimiento referencias;
+
+    // Opcional: sin él (pruebas) los movimientos salen con su referencia interna
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setReferencias(ReferenciasMovimiento referencias) {
+        this.referencias = referencias;
+    }
+
     // ─── Inventario ─────────────────────────────────────────────────────────
 
     static final List<String> FILTROS_INVENTARIO = List.of("TODOS", "POCO", "AGOTADOS", "PUBLICADOS", "OCULTOS");
@@ -339,6 +347,7 @@ public class TablasTiendaService {
 
         long total = mongo.count(Query.query(criterio), MovimientoInventario.class);
         List<MovimientoInventario> items = mongo.find(Query.query(criterio).with(t.pageRequest(total)), MovimientoInventario.class);
+        if (referencias != null) referencias.deTienda(items, tiendaId);
         return new Movimientos(t.pagina(items, total), resumenMovimientos(tiendaId));
     }
 

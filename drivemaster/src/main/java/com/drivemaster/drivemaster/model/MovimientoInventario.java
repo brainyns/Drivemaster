@@ -4,6 +4,8 @@ import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.drivemaster.drivemaster.service.ReferenciasMovimiento;
+
 import java.time.LocalDateTime;
 
 @Document(collection = "movimientos_inventario")
@@ -31,5 +33,9 @@ public class MovimientoInventario {
 
     // Tienda dueña del producto (denormalizado para filtrar el inventario por tienda).
     private String tiendaId;
+
+    // Solo para la pantalla: "Pedido #6AE8CE" y a dónde lleva, en vez del id interno (ReferenciasMovimiento). No se guarda
+    @org.springframework.data.annotation.Transient
+    private ReferenciasMovimiento.Referencia referenciaLegible;
 }
 

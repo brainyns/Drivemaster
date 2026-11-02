@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -65,6 +66,13 @@ public class ExportacionMovimientos {
         this.usuarios = usuarios;
     }
 
+    private ReferenciasMovimiento referencias;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setReferencias(ReferenciasMovimiento referencias) {
+        this.referencias = referencias;
+    }
+
     /** Filas que cumplen los filtros, de la más reciente a la más antigua. tiendaId null = todo (personal interno). */
     public List<Fila> filas(String tiendaId, Filtros f) {
         List<MovimientoInventario> lista = tiendaId != null
@@ -73,6 +81,7 @@ public class ExportacionMovimientos {
         Map<String, Producto> porId = (tiendaId != null ? productos.findByTiendaId(tiendaId) : productos.findAll())
                 .stream().collect(Collectors.toMap(Producto::getId, Function.identity(), (a, b) -> a));
         Map<String, String> nombresUsuario = new HashMap<>();
+        Map<String, Optional<ReferenciasMovimiento.Referencia>> legibles = new HashMap<>();
 
         String q = normalizar(f.busqueda());
         LocalDateTime inicio = f.desde() != null ? f.desde().atStartOfDay() : null;
@@ -91,7 +100,13 @@ public class ExportacionMovimientos {
                 .map(m -> {
                     Producto p = porId.get(m.getProductoId());
                     String motivo = m.getMotivo() == null ? "" : m.getMotivo();
-                    if (m.getReferencia() != null && !"MANUAL".equals(m.getReferencia())) motivo += " · #" + m.getReferencia();
+                    if (m.getReferencia() != null && !"MANUAL".equals(m.getReferencia())) {
+                        // La referencia corta (Pedido #6AE8CE), no el id interno; sin el servicio (pruebas), la de siempre
+                        ReferenciasMovimiento.Referencia legible = referencias == null ? null
+                                : legibles.computeIfAbsent(m.getReferencia() + "|" + m.getMotivo(), k -> Optional.ofNullable(referencias.deTienda(m, tiendaId))).orElse(null);
+                        if (legible != null) motivo += " · " + legible.texto();
+                        else if (referencias == null) motivo += " · #" + m.getReferencia();
+                    }
                     return new Fila(m.getFecha(), p != null ? p.getNombre() : "Producto eliminado", p != null ? p.getCodigo() : null,
                             TIPOS.getOrDefault(m.getTipo(), m.getTipo()), m.getCantidad() == null ? 0 : m.getCantidad(),
                             m.getStockAnterior(), m.getStockNuevo(), motivo,
