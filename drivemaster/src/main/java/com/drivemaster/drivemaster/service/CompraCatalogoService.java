@@ -119,11 +119,34 @@ public class CompraCatalogoService {
         this.avisos = avisos;
     }
 
+    private TallerService tallerService;
+
+    // Por setter, como las demás dependencias que se agregaron después: el constructor ya es largo
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTallerService(TallerService tallerService) {
+        this.tallerService = tallerService;
+    }
+
+    /**
+     * El taller que compra para su inventario, o null si es un cliente: su compra nunca entra a un inventario.
+     * Un taller sin aprobar o en pausa no compra.
+     */
+    private String compradorTaller(Usuario comprador) {
+        if (!"TALLER".equals(comprador.getRol())) return null;
+        com.drivemaster.drivemaster.model.Taller taller = tallerService.obtenerPorUsuario(comprador.getCorreo());
+        if (!com.drivemaster.drivemaster.model.EstadoAprobacion.estaAprobado(taller.getEstadoAprobacion())
+                || !Boolean.TRUE.equals(taller.getActivo())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tu taller debe estar aprobado para comprar para tu inventario");
+        }
+        return taller.getId();
+    }
+
     // ─── Cotizar (sin efectos) ───────────────────────────────────────────────
 
     public CompraCotizadaDTO cotizar(String correoCliente, CompraRequest r) {
         Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);
         Calculo c = calcular(cliente, r);
+        compradorTaller(cliente);
         return new CompraCotizadaDTO(c.lineas, c.entregas, c.subtotal.doubleValue(), c.iva.doubleValue(),
                 c.envio.doubleValue(), c.total.doubleValue(), c.avisos);
     }
@@ -137,11 +160,13 @@ public class CompraCatalogoService {
     public Map<String, Object> iniciarPago(String correoCliente, CompraRequest r) {
         Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);
         Calculo c = calcular(cliente, r);
+        String compradorTallerId = compradorTaller(cliente);
 
         CompraCatalogo compra = compraRepository.save(CompraCatalogo.builder()
                 .clienteId(cliente.getId())
                 .clienteNombre(cliente.getNombre())
                 .clienteCorreo(cliente.getCorreo())
+                .compradorTallerId(compradorTallerId)
                 .lineas(c.lineas)
                 .entregas(c.entregas)
                 .envioReceptor(hayEnvio(c.entregas) ? texto(r.envio().receptor()) : null)
@@ -311,6 +336,7 @@ public class CompraCatalogoService {
                 .id(id)
                 .origen(PedidoTienda.ORIGEN_CATALOGO)
                 .compraId(compra.getId())
+                .compradorTallerId(compra.getCompradorTallerId())
                 .pagoId(pago.getId())
                 .clienteId(compra.getClienteId())
                 .clienteNombre(compra.getClienteNombre())

@@ -6,6 +6,9 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.List;
 
 public interface PedidoTiendaRepository extends MongoRepository<PedidoTienda, String> {
+
+    /** Lo que un taller compró para su inventario y aún no confirma que le llegó. */
+    List<PedidoTienda> findByCompradorTallerIdAndFechaEntradaInventarioIsNullOrderByFechaCreacionDesc(String compradorTallerId);
     List<PedidoTienda> findByTiendaIdOrderByFechaCreacionDesc(String tiendaId);
     List<PedidoTienda> findByOrdenIdOrderByFechaCreacionAsc(String ordenId);
     List<PedidoTienda> findByPagoId(Long pagoId);

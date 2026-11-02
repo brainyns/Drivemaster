@@ -59,6 +59,7 @@ class CompraCatalogoServiceTest {
 
     private final Map<String, Producto> productos = new HashMap<>();
     private final List<MovimientoInventario> movimientos = new ArrayList<>();
+    private UsuarioService usuarioService;
     private final Map<String, CompraCatalogo> compras = new LinkedHashMap<>();
     private final Map<String, PedidoTienda> pedidos = new LinkedHashMap<>();
     private final List<RepartoPago> repartos = new ArrayList<>();
@@ -204,7 +205,7 @@ class CompraCatalogoServiceTest {
                     "monto", Math.round(p.getMonto() * 100), "verificacionManual", false, "pagoSimulado", false);
         });
 
-        UsuarioService usuarioService = mock(UsuarioService.class);
+        usuarioService = mock(UsuarioService.class);
         when(usuarioService.obtenerPorCorreo(CORREO)).thenReturn(Usuario.builder().id("u1").nombre("Ana").correo(CORREO).rol("CLIENTE").build());
         parametros = mock(ParametrosMarketplace.class);
         when(parametros.ivaPct()).thenReturn(19.0);
@@ -922,6 +923,51 @@ class CompraCatalogoServiceTest {
                 List.of(item("pastilla", 1)), List.of(entrega("s2", "RETIRO")), null, null)));
 
         assertTrue(e.getReason().contains("ya no está disponible"), e.getReason());
+        assertTrue(compras.isEmpty());
+    }
+
+    // ─── Compra de un taller para su inventario ──────────────────────────────
+
+    private void compraUnTaller(com.drivemaster.drivemaster.model.Taller taller) {
+        when(usuarioService.obtenerPorCorreo(CORREO)).thenReturn(Usuario.builder().id("u1").nombre("AutoMax").correo(CORREO).rol("TALLER").build());
+        TallerService talleres = mock(TallerService.class);
+        when(talleres.obtenerPorUsuario(CORREO)).thenReturn(taller);
+        service.setTallerService(talleres);
+    }
+
+    private static com.drivemaster.drivemaster.model.Taller taller(String aprobacion, boolean activo) {
+        return com.drivemaster.drivemaster.model.Taller.builder().id("t1").estadoAprobacion(aprobacion).activo(activo).build();
+    }
+
+    @Test
+    void la_compra_de_un_cliente_no_lleva_comprador_taller_ni_sus_pedidos_tampoco() {
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+        service.aplicar(pago);
+
+        assertTrue(compras.values().stream().allMatch(c -> c.getCompradorTallerId() == null));
+        assertFalse(pedidos.isEmpty());
+        assertTrue(pedidos.values().stream().allMatch(p -> p.getCompradorTallerId() == null));
+    }
+
+    @Test
+    void la_compra_de_un_taller_aprobado_marca_la_compra_y_sus_pedidos() {
+        compraUnTaller(taller("APROBADO", true));
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+        service.aplicar(pago);
+
+        assertTrue(compras.values().stream().allMatch(c -> "t1".equals(c.getCompradorTallerId())));
+        assertFalse(pedidos.isEmpty());
+        assertTrue(pedidos.values().stream().allMatch(p -> "t1".equals(p.getCompradorTallerId())));
+        // La tienda vende normal: su línea y su comisión no cambian porque compre un taller
+        assertEquals(4_000.0, lineaDe("s1").getComisionCalculada());
+    }
+
+    @Test
+    void un_taller_sin_aprobar_o_en_pausa_no_compra() {
+        compraUnTaller(taller("PENDIENTE", true));
+        assertEstado(HttpStatus.FORBIDDEN, () -> service.iniciarPago(CORREO, carritoMixto()));
+        compraUnTaller(taller("APROBADO", false));
+        assertEstado(HttpStatus.FORBIDDEN, () -> service.iniciarPago(CORREO, carritoMixto()));
         assertTrue(compras.isEmpty());
     }
 }

@@ -185,13 +185,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/cotizaciones/*/pdf").hasAnyRole("CLIENTE", "TALLER")
                         .requestMatchers("/api/cotizaciones/**").denyAll()
 
-                        // Catálogo marketplace: la consulta es pública; la compra y sus códigos son del CLIENTE
+                        // Catálogo marketplace: la consulta es pública; la compra y sus códigos son del CLIENTE y del TALLER (para su inventario)
                         .requestMatchers(HttpMethod.GET, "/api/catalogo/productos", "/api/catalogo/productos/*",
                                 "/api/catalogo/filtros").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/catalogo/compras/cotizar", "/api/catalogo/compras",
                                 "/api/catalogo/pedidos/*/codigo-retiro", "/api/catalogo/pedidos/*/recibido",
-                                "/api/catalogo/pedidos/*/problema").hasRole("CLIENTE")
-                        .requestMatchers(HttpMethod.GET, "/api/catalogo/compras/mias").hasRole("CLIENTE")
+                                "/api/catalogo/pedidos/*/problema").hasAnyRole("CLIENTE", "TALLER")
+                        .requestMatchers(HttpMethod.GET, "/api/catalogo/compras/mias").hasAnyRole("CLIENTE", "TALLER")
+                        // Costo y margen: solo el taller dueño; el cliente nunca entra aquí
+                        .requestMatchers("/api/inventario-taller", "/api/inventario-taller/**").hasRole("TALLER")
                         .requestMatchers("/api/catalogo/**").denyAll()
 
                         // Marketplace: pagos (links), pedidos a tiendas y liquidaciones

@@ -40,6 +40,8 @@ public class CompraCatalogo {
     private String clienteId;
     private String clienteNombre;
     private String clienteCorreo;
+    // Solo si compró un taller aprobado: sus piezas entran a su inventario. Una compra de cliente nunca lo lleva
+    private String compradorTallerId;
 
     @Builder.Default
     private List<Linea> lineas = new ArrayList<>();

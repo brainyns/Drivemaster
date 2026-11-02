@@ -212,6 +212,16 @@ public class StockTallerService {
         }
     }
 
+    /** Precio de venta nuevo, sin pisar una venta que ocurra al mismo tiempo. */
+    public PiezaTaller cambiarPrecio(String tallerId, String piezaId, double precio) {
+        return reintentando(() -> {
+            PiezaTaller pieza = piezas.findById(piezaId).filter(p -> tallerId.equals(p.getTallerId()))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pieza no encontrada"));
+            pieza.setPrecioVenta(precio);
+            return piezas.save(pieza);
+        });
+    }
+
     /** Precio propuesto para un costo: el recargo sugerido, en pesos enteros. */
     static double sugerido(Double costo) {
         BigDecimal base = BigDecimal.valueOf(costo != null ? costo : 0);

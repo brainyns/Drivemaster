@@ -99,6 +99,10 @@ public class PedidoTienda {
     // ─── Compra directa del catálogo (origen CATALOGO) ───
     private String origen;
     private String compraId;
+    // Compra de un taller para su inventario. No es tallerId: ese es el destino de los pedidos de una cotización
+    private String compradorTallerId;
+    // Cuándo confirmó el taller que le llegó. Mientras sea null las piezas están "En camino" y no se pueden cotizar
+    private LocalDateTime fechaEntradaInventario;
     private String clienteId;
     private String clienteNombre;
     // ENVIO o RETIRO
