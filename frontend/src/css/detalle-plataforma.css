@@ -48,6 +48,7 @@
 }
 .dtp-num strong { font-size: 0.9rem; color: var(--ui-text); }
 
+.dtp-accion { justify-self: start; height: auto; min-height: 44px; padding-block: 8px; white-space: normal; }
 .dtp-totales { display: grid; gap: 4px; margin: 0; }
 .dtp-totales > div { display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--ui-muted); }
 .dtp-totales dd { margin: 0; font-variant-numeric: tabular-nums; }

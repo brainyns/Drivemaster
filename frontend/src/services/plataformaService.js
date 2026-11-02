@@ -50,6 +50,23 @@ async function leerDetalle(res, fallo) {
   return leer(res, fallo);
 }
 
+/** Solicitud: el total del taller, lo que pagó el cliente y lo que fue a las tiendas. */
+export async function resumenOrden(token, id) {
+  return leerDetalle(await apiFetch(`${BASE}/ordenes/${encodeURIComponent(id)}/resumen`, { headers: headers(token) }),
+    "No se pudo cargar el total de la solicitud.");
+}
+
+/** Pasa a DESPACHADO un pedido que la tienda confirmó por fuera. No mueve dinero. */
+export async function marcarPedidoDespachado(token, id, motivo) {
+  const res = await apiFetch(`${BASE}/pedidos/${encodeURIComponent(id)}/despachado`, {
+    method: "PATCH", headers: headers(token), body: JSON.stringify({ motivo }),
+  });
+  if (res.ok) return;
+  let mensaje = "No se pudo marcar el despacho.";
+  try { const data = await res.json(); mensaje = data.error || data.message || mensaje; } catch { /* sin cuerpo */ }
+  throw new Error(mensaje);
+}
+
 /** Pedido: productos, tienda, cliente, taller, línea de tiempo, pago Wompi, reparto y entrega. */
 export async function detallePedido(token, id) {
   return leerDetalle(await apiFetch(`${BASE}/pedidos/${encodeURIComponent(id)}`, { headers: headers(token) }),

@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import DrawerAdmin from "./DrawerAdmin";
 import ChipEstado from "../ui/ChipEstado";
 import Alerta from "../ui/Alerta";
+import Campo from "../ui/Campo";
 import Dato from "../ui/Dato";
 import Esqueleto from "../ui/Esqueleto";
 import LogoNegocio from "../ui/LogoNegocio";
-import { detalleCliente, detalleNegocio, detalleOrden, detallePedido } from "../../services/plataformaService";
+import ConfirmacionAdmin from "./ConfirmacionAdmin";
+import { ReciboOrden } from "../servicio/ResumenServicio";
+import { detalleCliente, detalleNegocio, detalleOrden, detallePedido, marcarPedidoDespachado, resumenOrden } from "../../services/plataformaService";
 import { ESTADOS as ESTADOS_ORDEN } from "../servicio/estadosServicio";
 import { ESTADOS_PEDIDO, chipsAlerta, estadoNegocio, refPedido, textoConcepto } from "../../pages/admin/plataformaAdmin";
 import {
@@ -15,6 +18,8 @@ import { formatoCop } from "../../utils/formato";
 import "../../css/admin-base.css";
 import "../../css/detalle-plataforma.css";
 
+const MINIMO_MOTIVO = 10;
+
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : null);
 const fechaHora = (iso) => (iso
   ? new Date(iso).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
@@ -22,13 +27,18 @@ const fechaHora = (iso) => (iso
 
 const CARGAR = {
   pedido: (token, o) => detallePedido(token, o.id),
-  orden: (token, o) => detalleOrden(token, o.id),
+  // Sin el total se puede seguir revisando la solicitud: el reparto línea por línea sigue ahí
+  orden: async (token, o) => {
+    const [orden, resumen] = await Promise.all([detalleOrden(token, o.id), resumenOrden(token, o.id).catch(() => null)]);
+    return { ...orden, resumen };
+  },
   cliente: (token, o) => detalleCliente(token, o.id),
   negocio: (token, o) => detalleNegocio(token, o.negocioTipo, o.id),
 };
 
 /**
- * Detalle de un pedido, una solicitud, un cliente o un negocio en el panel lateral (solo SUPERADMIN, solo lectura).
+ * Detalle de un pedido, una solicitud, un cliente o un negocio en el panel lateral (solo SUPERADMIN). Es de lectura,
+ * salvo marcar un despacho que la tienda confirmó por fuera.
  * objetivo es { tipo: "pedido" | "orden" | "cliente" | "negocio", id, negocioTipo }. Desde un detalle se abre el de sus partes (la tienda o
  * el cliente de un pedido, un pedido de un cliente…) y "Volver" regresa al anterior.
  */
@@ -36,6 +46,7 @@ export default function DetallePlataforma({ token, objetivo, onCerrar }) {
   const [pila, setPila] = useState([objetivo]);
   const actual = pila[pila.length - 1];
   const [estado, setEstado] = useState({ clave: null, datos: null, error: null });
+  const [version, setVersion] = useState(0);
   const clave = `${actual.tipo}:${actual.negocioTipo || ""}:${actual.id}`;
 
   useEffect(() => {
@@ -44,7 +55,7 @@ export default function DetallePlataforma({ token, objetivo, onCerrar }) {
       .then((datos) => { if (vivo) setEstado({ clave, datos, error: null }); })
       .catch((e) => { if (vivo) setEstado({ clave, datos: null, error: e.message }); });
     return () => { vivo = false; };
-  }, [token, actual, clave]);
+  }, [token, actual, clave, version]);
 
   const abrir = (o) => setPila((p) => [...p, o]);
   const volver = pila.length > 1 ? () => setPila((p) => p.slice(0, -1)) : null;
@@ -62,7 +73,7 @@ export default function DetallePlataforma({ token, objetivo, onCerrar }) {
       )}>
       {!listo && <Esqueleto variante="formulario" cantidad={4} texto="Cargando el detalle…" />}
       {listo && estado.error && <Alerta>{estado.error}</Alerta>}
-      {d && actual.tipo === "pedido" && <VistaPedido p={d} abrir={abrir} />}
+      {d && actual.tipo === "pedido" && <VistaPedido p={d} abrir={abrir} token={token} onCambio={() => setVersion((v) => v + 1)} />}
       {d && actual.tipo === "orden" && <VistaOrden o={d} abrir={abrir} />}
       {d && actual.tipo === "cliente" && <VistaCliente c={d} abrir={abrir} />}
       {d && actual.tipo === "negocio" && <VistaNegocio n={d} abrir={abrir} />}
@@ -89,7 +100,48 @@ function Enlace({ texto, onAbrir }) {
 
 // ─── Pedido ─────────────────────────────────────────────────────────────
 
-function VistaPedido({ p, abrir }) {
+/** La tienda despachó y no lo marcó: se confirma con ella y el taller ya puede recibirlo. No mueve dinero. */
+function MarcarDespachado({ token, pedidoId, onCambio }) {
+  const [abierto, setAbierto] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState(null);
+
+  const confirmar = async () => {
+    setEnviando(true);
+    setError(null);
+    try {
+      await marcarPedidoDespachado(token, pedidoId, motivo.trim());
+      setAbierto(false);
+      onCambio();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <>
+      <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico dtp-accion" onClick={() => setAbierto(true)}>
+        Marcar como despachado (confirmado con la tienda)
+      </button>
+      {abierto && (
+        <ConfirmacionAdmin titulo="¿Marcar el pedido como despachado?"
+          texto="No mueve dinero: el pago de la tienda se habilita cuando el taller confirme que recibió el pedido."
+          confirmar="Marcar como despachado" cargando={enviando} deshabilitado={motivo.trim().length < MINIMO_MOTIVO}
+          onConfirmar={confirmar} onCancelar={() => setAbierto(false)}>
+          <Campo id="dtp-despacho-motivo" label="Cómo lo confirmaste con la tienda" ayuda={`Mínimo ${MINIMO_MOTIVO} caracteres. Queda registrado con tu usuario y la fecha.`}>
+            <textarea className="ui-field__input" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} required />
+          </Campo>
+          {error && <Alerta>{error}</Alerta>}
+        </ConfirmacionAdmin>
+      )}
+    </>
+  );
+}
+
+function VistaPedido({ p, abrir, token, onCambio }) {
   const alertas = chipsAlerta({ ...p, diasSinRetirar: p.entrega?.diasSinRetirar });
   const nota = notaReparto(p.pago, p.reparto);
   const e = p.entrega;
@@ -99,6 +151,7 @@ function VistaPedido({ p, abrir }) {
         <ChipEstado catalogo={ESTADOS_PEDIDO} estado={p.estado} />
         {alertas.map((a) => <ChipEstado key={a.texto} tono={a.tono}>{a.texto}</ChipEstado>)}
       </div>
+      {p.sePuedeMarcarDespachado && <MarcarDespachado token={token} pedidoId={p.id} onCambio={onCambio} />}
 
       <Bloque id="dtp-partes" titulo="Quién participa">
         <dl className="ui-datos">
@@ -254,10 +307,29 @@ function ListaReembolsos({ reembolsos }) {
 
 // ─── Solicitud ──────────────────────────────────────────────────────────
 
+/** Lo que el cliente pagó, lo que fue a las tiendas y lo que generó el taller, en un solo lugar. */
+function TotalDelServicio({ r }) {
+  if (!r || (r.taller.lineas.length === 0 && r.cliente.total === 0)) return null;
+  const devuelto = r.cliente.devolucionPendiente + r.cliente.devuelto;
+  return (
+    <Bloque id="dtp-orden-total" titulo="Total del servicio">
+      <ReciboOrden resumen={r.taller} titulo="Taller" etiquetaRecibe="Recibe el taller" />
+      <dl className="dtp-totales">
+        <div><dt>Cliente pagó</dt><dd>{formatoCop(r.cliente.total)}</dd></div>
+        {devuelto > 0 && <div><dt>Devolución al cliente</dt><dd>− {formatoCop(devuelto)}</dd></div>}
+        {r.repuestos > 0 && <div><dt>Repuestos, para las tiendas</dt><dd>{formatoCop(r.repuestos)}</dd></div>}
+        {r.comisionRepuestos > 0 && <div><dt>Comisión de los repuestos</dt><dd>{formatoCop(r.comisionRepuestos)}</dd></div>}
+      </dl>
+    </Bloque>
+  );
+}
+
 function VistaOrden({ o, abrir }) {
   return (
     <>
       <div className="dtp-chips"><ChipEstado catalogo={ESTADOS_ORDEN} estado={o.estado} /></div>
+
+      <TotalDelServicio r={o.resumen} />
 
       <Bloque id="dtp-orden-partes" titulo="Quién participa">
         <dl className="ui-datos">
