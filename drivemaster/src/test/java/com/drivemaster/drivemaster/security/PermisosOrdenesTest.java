@@ -55,7 +55,10 @@ class PermisosOrdenesTest {
             new Ruta(HttpMethod.PATCH, BASE + "cancelar", List.of("CLIENTE")),
             new Ruta(HttpMethod.POST, "/api/cotizaciones/c1/responder", List.of("CLIENTE")),
             new Ruta(HttpMethod.PATCH, BASE + "confirmar-recepcion", List.of("CLIENTE")),
-            new Ruta(HttpMethod.PATCH, BASE + "reasignar", List.of("SUPERADMIN", "ADMIN")));
+            new Ruta(HttpMethod.PATCH, BASE + "reasignar", List.of("SUPERADMIN", "ADMIN")),
+            new Ruta(HttpMethod.GET, BASE + "pagos", List.of("CLIENTE")),
+            new Ruta(HttpMethod.GET, "/api/talleres/mi-taller/ordenes/o1/resumen", List.of("TALLER")),
+            new Ruta(HttpMethod.GET, "/api/plataforma/ordenes/o1/resumen", List.of("SUPERADMIN")));
 
     private int estado(Ruta r, String rol) throws Exception {
         var peticion = request(r.metodo(), r.url()).contentType(MediaType.APPLICATION_JSON).content("{}");

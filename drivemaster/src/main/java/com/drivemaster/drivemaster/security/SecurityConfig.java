@@ -157,7 +157,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/solicitudes-servicio/*/diagnostico",
                                 "/api/solicitudes-servicio/*/repuestos").hasRole("TALLER")
                         .requestMatchers(HttpMethod.GET, "/api/repuestos/buscar").hasRole("TALLER")
-                        .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/mias").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/mias", "/api/solicitudes-servicio/*/pagos").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/cancelar").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/taller").hasRole("TALLER")
                         .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/aceptar",

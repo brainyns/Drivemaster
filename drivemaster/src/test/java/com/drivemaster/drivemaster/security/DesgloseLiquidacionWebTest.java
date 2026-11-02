@@ -26,6 +26,7 @@ class DesgloseLiquidacionWebTest {
     @Autowired private MockMvc mvc;
 
     @MockBean private DesgloseLiquidacionService desglose;
+    @MockBean private com.drivemaster.drivemaster.service.ResumenServicioService resumen;
     @MockBean private JwtUtil jwtUtil;
     @MockBean private CustomUserDetailsService customUserDetailsService;
 
