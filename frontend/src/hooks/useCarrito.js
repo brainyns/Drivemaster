@@ -1,3 +1,4 @@
+import { precioQuePaga } from "../components/marketplace/reglasPrecioCatalogo";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const CLAVE = "carritoMarketplace";
@@ -65,7 +66,7 @@ export function useCarrito() {
 
   const derivados = useMemo(() => ({
     catalogo: items,
-    subtotalCatalogo: items.reduce((s, x) => s + (x.producto.precio || 0) * x.cantidad, 0),
+    subtotalCatalogo: items.reduce((s, x) => s + (precioQuePaga(x.producto) || 0) * x.cantidad, 0),
     cantidad: items.reduce((s, x) => s + x.cantidad, 0),
   }), [items]);
 

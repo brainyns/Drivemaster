@@ -1,0 +1,21 @@
+/* ── Precio del catálogo para un taller ────────────────────────────────────
+   Su precio manda; el público va tachado y más chico, en gris; el descuento, en un chip naranja suave. */
+.pc-precio { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.pc-precio__taller { font-variant-numeric: tabular-nums; }
+.pc-precio__publico {
+  font-size: 0.8em;
+  font-weight: 500;
+  color: var(--ui-muted);
+  text-decoration-thickness: 1px;
+  font-variant-numeric: tabular-nums;
+}
+.pc-precio__chip {
+  align-self: center;
+  padding: 1px 8px;
+  border-radius: var(--ui-r-full);
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: color-mix(in srgb, var(--primary) 70%, var(--ui-text));
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  white-space: nowrap;
+}

@@ -1,3 +1,5 @@
+import PrecioCatalogo from "../components/marketplace/PrecioCatalogo";
+import { precioQuePaga } from "../components/marketplace/reglasPrecioCatalogo";
 import { useEffect, useRef, useState } from "react";
 import { getUser } from "../services/authService";
 import { detalleProducto } from "../services/catalogoService";
@@ -148,8 +150,8 @@ function Linea({ item, otras, onCambiar, onQuitar, onVer }) {
           {limitada && <span className="mk-linea__max">{item.cantidad >= max ? "Máximo disponible" : `Máx. ${max}`}</span>}
         </div>
         <div className="mk-linea__precios">
-          <span className="mk-linea__unitario">{formatPrecio(p.precio)} c/u</span>
-          <strong>{formatPrecio(p.precio * item.cantidad)}</strong>
+          <span className="mk-linea__unitario"><PrecioCatalogo producto={p} /> c/u</span>
+          <strong>{formatPrecio(precioQuePaga(p) * item.cantidad)}</strong>
         </div>
         <button className="mk-enlace mk-enlace--peligro" onClick={() => onQuitar(item)}>Quitar</button>
       </div>
@@ -162,7 +164,7 @@ function Linea({ item, otras, onCambiar, onQuitar, onVer }) {
 }
 
 function TarjetaTienda({ grupo, otras, onCambiar, onQuitar, onVer }) {
-  const subtotal = grupo.items.reduce((s, x) => s + x.producto.precio * x.cantidad, 0);
+  const subtotal = grupo.items.reduce((s, x) => s + precioQuePaga(x.producto) * x.cantidad, 0);
   return (
     <article className="mk-tienda-card">
       <CabeceraTienda tienda={grupo.tienda} />

@@ -1,3 +1,4 @@
+import PrecioCatalogo from "../components/marketplace/PrecioCatalogo";
 import { useEffect, useState } from "react";
 import { getUser } from "../services/authService";
 import { detalleProducto } from "../services/catalogoService";
@@ -77,7 +78,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
             <p className="mk-tarjeta__meta">{[producto.marca, etiquetaCategoria(producto.categoria), producto.referencia && `Ref. ${producto.referencia}`].filter(Boolean).join(" · ")}</p>
             <AvisoCompatibilidad producto={producto} />
 
-            <p className="mk-detalle__precio">{formatPrecio(producto.precio)}</p>
+            <PrecioCatalogo producto={producto} etiqueta="p" className="mk-detalle__precio" />
             <p className="mk-tarjeta__meta">{textoDisponibilidad(producto)} · el IVA y el envío se calculan al pagar</p>
 
             <div className="mk-detalle__compra">

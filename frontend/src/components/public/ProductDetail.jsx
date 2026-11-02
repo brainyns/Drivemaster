@@ -1,3 +1,4 @@
+import PrecioCatalogo from "../marketplace/PrecioCatalogo";
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
 import Icon from "./Icon";
@@ -153,7 +154,7 @@ export default function ProductDetail({
           </dl>
 
           <div className="dm-detail__price">
-            <strong>{formatPrecio(producto.precio)}</strong>
+            <PrecioCatalogo producto={producto} etiqueta="strong" />
             <span>COP · el IVA y el envío se calculan al pagar</span>
           </div>
 
