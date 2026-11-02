@@ -10,6 +10,7 @@ import Esqueleto from "../../components/ui/Esqueleto";
 import EstadoVacio from "../../components/ui/EstadoVacio";
 import Icon from "../../components/public/Icon";
 import { cifrasPieza, estadoEnCamino, pct, precioConRecargo } from "./reglasInventario";
+import { plural } from "../../utils/formato";
 import "../../css/inventario-taller.css";
 
 const fecha = (f) => (f ? new Date(f).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—");
@@ -300,7 +301,7 @@ export default function TallerInventario({ onComprar }) {
             <h2 id="iv-resumen" className="ui-sr">Resumen del inventario</h2>
             <div className="ui-indicadores">
               <Indicador icono="box" titulo="Unidades en stock" valor={unidades}
-                pie={`${d.piezas.filter((p) => p.stock > 0).length} ${d.piezas.length === 1 ? "pieza" : "piezas"} con stock`} />
+                pie={plural(d.piezas.filter((p) => p.stock > 0).length, "pieza con stock", "piezas con stock")} />
               <Indicador titulo="Valor a costo" valor={formatPrecio(d.valorACosto)} pie="Lo que te costó lo que tienes" />
               <Indicador titulo="Valor a precio de venta" valor={formatPrecio(d.valorAVenta)} pie="Antes de IVA" tono={d.valorAVenta > d.valorACosto ? "ok" : undefined} />
               <Indicador icono="clock" titulo="En camino" valor={d.enCamino.length} tono={d.enCamino.some((p) => p.puedeConfirmar) ? "accion" : undefined}

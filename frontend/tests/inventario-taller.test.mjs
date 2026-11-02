@@ -79,3 +79,17 @@ test("cancelar una orden pagada pide motivo y avisa qué pasa antes de hacerlo",
   assert.match(detalle, /deshabilitado=\{motivo\.trim\(\)\.length < MINIMO_MOTIVO\}/);
   assert.match(detalle, /vuelven a su lote/);
 });
+
+test("la tienda ve como Cancelado lo que canceló DriveMaster, con su motivo", async () => {
+  const { canceladoPorDriveMaster } = await import("../src/pages/tienda/pedidosTienda.js");
+  assert.equal(canceladoPorDriveMaster({ estado: "NO_DESPACHADO", tipoMotivoNoDespacho: "ORDEN_CANCELADA" }), true);
+  assert.equal(canceladoPorDriveMaster({ estado: "NO_DESPACHADO", tipoMotivoNoDespacho: "PAGO_NO_APLICADO" }), true);
+  assert.equal(canceladoPorDriveMaster({ estado: "NO_DESPACHADO", tipoMotivoNoDespacho: "SIN_REPUESTO" }), false, "si la tienda no pudo, es No se despachó");
+  const pedidos = leer("../src/pages/PedidosTienda.jsx");
+  assert.match(pedidos, /canceladoPorDriveMaster\(p\) \? <ChipEstado tono="error">Cancelado<\/ChipEstado>/);
+  assert.match(pedidos, /p\.tipoMotivoNoDespacho === "ORDEN_CANCELADA"/);
+});
+
+test("Mi inventario dice pieza o piezas según la cantidad", () => {
+  assert.match(leer("../src/pages/taller/TallerInventario.jsx"), /plural\(d\.piezas\.filter\(\(p\) => p\.stock > 0\)\.length, "pieza con stock", "piezas con stock"\)/);
+});
