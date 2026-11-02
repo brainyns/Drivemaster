@@ -1,6 +1,6 @@
 // Pruebas del sistema compartido (components/ui + css/ui.css): que las piezas existan con su accesibilidad
 // y que las pantallas del cliente las usen en vez de reimplementarlas.
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { datosVehiculo, formatoKm } from "../src/utils/vehiculo.js";
@@ -241,4 +241,15 @@ test("Paginación: todas las listas del panel usan el mismo componente", () => {
     "taller/TallerCotizaciones", "taller/OrdenesAnteriores", "Aprobaciones", "AdminTalleres", "Liquidaciones", "ProblemasEnvios",
     "admin/RetirosSinRecoger", "Usuarios", "ClientesPlataforma", "NegociosPlataforma", "ProductosPlataforma", "PedidosEnvios"];
   for (const p of paginas) assert.ok(leer(`../src/pages/${p}.jsx`).includes("<Paginacion "), `${p} usa <Paginacion>`);
+});
+
+test("el asistente se oculta con cualquier diálogo abierto, y todos los diálogos se dejan reconocer", () => {
+  assert.ok(leer("../src/components/chat/chat.css").includes('body:has([aria-modal="true"]) .chat-widget-container { display: none; }'));
+  // El desplegable de notificaciones no bloquea la pantalla: no es modal y por eso no oculta al asistente
+  const dialogos = readdirSync(new URL("../src/", import.meta.url), { recursive: true })
+    .map((a) => a.replaceAll("\\", "/"))
+    .filter((a) => a.endsWith(".jsx") && !a.includes("__preview") && !a.endsWith("NotificationDropdown.jsx"))
+    .filter((a) => /role="(alert)?dialog"/.test(leer(`../src/${a}`)));
+  assert.ok(dialogos.length >= 6, dialogos.join());
+  for (const a of dialogos) assert.ok(leer(`../src/${a}`).includes('aria-modal="true"'), a);
 });

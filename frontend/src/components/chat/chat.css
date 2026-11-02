@@ -499,3 +499,7 @@ body:has(.auth-page) .chat-widget-container { display: none; }
     --chat-abajo: calc(var(--alto-barra-movil, 72px) + 16px); /* el alto ya incluye el margen seguro de abajo */
   }
 }
+
+/* Un diálogo abierto se lleva toda la atención: el asistente no tapa sus botones. Va por CSS para cubrir cualquier
+   diálogo de la app, también los que se agreguen, sin que cada uno tenga que avisar. La conversación no se pierde. */
+body:has([aria-modal="true"]) .chat-widget-container { display: none; }
