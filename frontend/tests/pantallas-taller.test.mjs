@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { completitudPerfil, errorHorario, errorTarifa, iniciales } from "../src/pages/taller/perfilTaller.js";
 import { yaEstabaHecho } from "../src/components/servicio/estadosTaller.js";
 import { cantidadEntera, errorCotizacion, errorFallas, lineasFallas } from "../src/components/servicio/reglasFormulariosTaller.js";
+import { avisoRecibidos, estadoRecibidos, hayQueConfirmar } from "../src/components/servicio/reglasRecibidos.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
@@ -31,6 +32,52 @@ test("Mi taller: la tarifa y el horario se validan en línea con los límites de
   assert.equal(errorTarifa("65000"), null);
   assert.equal(errorHorario("x".repeat(200)), null);
   assert.match(errorHorario("x".repeat(201)), /200 caracteres/);
+});
+
+test("Repuestos: sin despacho no se puede confirmar nada", () => {
+  const pedidos = [{ id: "a", estado: "PENDIENTE" }, { id: "b", estado: "EN_PREPARACION" }];
+  const r = estadoRecibidos(pedidos, ["a", "b"]);
+  assert.deepEqual(r.validos, [], "un pedido sin despachar no cuenta aunque llegue marcado");
+  assert.equal(r.puedeConfirmar, false);
+  assert.equal(hayQueConfirmar(pedidos), false);
+});
+
+test("Repuestos: se confirma lo despachado y la orden espera lo demás", () => {
+  const pedidos = [{ id: "a", estado: "DESPACHADO" }, { id: "b", estado: "PENDIENTE", tiendaNombre: "Tienda Sur" }];
+  assert.equal(estadoRecibidos(pedidos, []).puedeConfirmar, false, "hay que marcar algo");
+  const r = estadoRecibidos(pedidos, ["a"]);
+  assert.equal(r.puedeConfirmar, true);
+  assert.equal(r.avanza, false);
+  assert.equal(hayQueConfirmar(pedidos), true);
+  assert.deepEqual(avisoRecibidos([{ estado: "RECIBIDO" }, pedidos[1]]),
+    { tono: "info", texto: "Pedido confirmado. La solicitud sigue esperando a Tienda Sur." });
+});
+
+test("Repuestos: con todo marcado la orden avanza", () => {
+  const pedidos = [{ id: "a", estado: "RECIBIDO" }, { id: "b", estado: "DESPACHADO" }];
+  assert.equal(estadoRecibidos(pedidos, ["b"]).avanza, true);
+  assert.equal(estadoRecibidos(pedidos, []).avanza, false, "un despachado sin marcar sigue pendiente");
+  assert.equal(avisoRecibidos([{ estado: "RECIBIDO" }, { estado: "RECIBIDO" }]).tono, "ok");
+});
+
+test("Repuestos: lo que una tienda no pudo despachar se acepta antes de avanzar", () => {
+  const pedidos = [{ id: "a", estado: "DESPACHADO" }, { id: "b", estado: "NO_DESPACHADO" }];
+  assert.equal(estadoRecibidos(pedidos, ["a"]).puedeConfirmar, false);
+  assert.equal(estadoRecibidos(pedidos, ["a"], true).puedeConfirmar, true);
+  // Mientras otra tienda no responde no se pide aceptar nada: la orden aún no avanza
+  const conEspera = [...pedidos, { id: "c", estado: "PENDIENTE" }];
+  assert.equal(estadoRecibidos(conEspera, ["a"]).pideFaltantes, false);
+  assert.equal(estadoRecibidos(conEspera, ["a"]).puedeConfirmar, true);
+});
+
+test("Repuestos: si ninguna tienda despachó no hay nada que confirmar", () => {
+  const pedidos = [{ id: "a", estado: "NO_DESPACHADO" }, { id: "b", estado: "NO_DESPACHADO" }];
+  assert.equal(estadoRecibidos(pedidos, [], true).puedeConfirmar, false);
+  assert.equal(hayQueConfirmar(pedidos), false);
+});
+
+test("Repuestos: un reintento termina la orden con todo ya recibido", () => {
+  assert.equal(estadoRecibidos([{ id: "a", estado: "RECIBIDO" }], []).puedeConfirmar, true);
 });
 
 test("Mi taller: iniciales del avatar sin palabras de relleno", () => {

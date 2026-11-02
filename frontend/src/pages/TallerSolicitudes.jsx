@@ -9,6 +9,7 @@ import {
 import { cotizacionesDeOrden, cotizacionesDelTaller } from "../services/cotizacionService";
 import { pedidosDeOrden } from "../services/pedidoTiendaService";
 import ConfirmarRecibidos from "../components/servicio/ConfirmarRecibidos";
+import { SIN_DESPACHO, TEXTO_SIN_DESPACHO, avisoRecibidos, hayQueConfirmar } from "../components/servicio/reglasRecibidos";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import DiagnosticoForm from "../components/servicio/DiagnosticoForm";
 import CotizacionForm from "../components/servicio/CotizacionForm";
@@ -135,12 +136,12 @@ function enEstadoDesde(s) {
 }
 
 /** Cotizaciones emitidas, pedidos a tiendas y recepción de repuestos. */
-function SeguimientoTaller({ token, solicitud, onConfirmarRecibidos }) {
+function SeguimientoTaller({ token, solicitud, version, onConfirmarRecibidos }) {
   const [cotizaciones, setCotizaciones] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [error, setError] = useState(null);
 
-  // Se recarga cada vez que cambia el estado de la solicitud
+  // Se recarga cada vez que cambia el estado de la solicitud, o al confirmar un pedido sin que la solicitud avance
   useEffect(() => {
     let cancelado = false;
     Promise.all([cotizacionesDeOrden(token, solicitud.id), pedidosDeOrden(token, solicitud.id)])
@@ -151,7 +152,7 @@ function SeguimientoTaller({ token, solicitud, onConfirmarRecibidos }) {
       })
       .catch((e) => { if (!cancelado) setError(e.message); });
     return () => { cancelado = true; };
-  }, [token, solicitud.id, solicitud.estado]);
+  }, [token, solicitud.id, solicitud.estado, version]);
 
   const vigente = cotizaciones[0];
   return (
@@ -182,6 +183,9 @@ function SeguimientoTaller({ token, solicitud, onConfirmarRecibidos }) {
                     {p.items.map((i) => `${i.cantidad} × ${i.productoNombre}`).join(", ")}
                     {p.diasEntrega ? ` · encargo hasta ${p.diasEntrega} días` : ""}
                   </span>
+                  {solicitud.estado === "REPUESTOS_PEDIDOS" && SIN_DESPACHO.includes(p.estado) && (
+                    <span className="ss-recibido__espera">{TEXTO_SIN_DESPACHO}</span>
+                  )}
                   {p.motivoNoDespacho && <span className="ss-meta">Motivo: {p.motivoNoDespacho}</span>}
                 </span>
                 <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />
@@ -190,10 +194,12 @@ function SeguimientoTaller({ token, solicitud, onConfirmarRecibidos }) {
           </ul>
           {solicitud.estado === "REPUESTOS_PEDIDOS" && (
             <div className="ui-form-pie">
-              <button type="button" className="ui-btn ui-btn--primario" onClick={onConfirmarRecibidos}>
+              <button type="button" className="ui-btn ui-btn--primario" onClick={onConfirmarRecibidos} disabled={!hayQueConfirmar(pedidos)}>
                 Confirmar repuestos recibidos
               </button>
-              <span className="ss-ayuda">Confírmalo cuando tengas los repuestos en el taller.</span>
+              <span className="ss-ayuda">
+                {hayQueConfirmar(pedidos) ? "Confírmalo cuando tengas los repuestos en el taller." : "Podrás confirmar cuando la tienda despache."}
+              </span>
             </div>
           )}
         </section>
@@ -241,6 +247,7 @@ export default function TallerSolicitudes({
   const [confirmandoSinPruebas, setConfirmandoSinPruebas] = useState(false);
   // Solicitud cuyo "repuestos recibidos" se está confirmando (desde el detalle, la barra o la lista)
   const [confirmandoRecibidos, setConfirmandoRecibidos] = useState(null);
+  const [versionPedidos, setVersionPedidos] = useState(0);
   const [confirmandoEntrega, setConfirmandoEntrega] = useState(null);
   // Resultado de una acción, arriba de la pantalla; aparece a la vista aunque el botón estuviera abajo
   const [aviso, setAviso] = useState(null); // { tono, texto }
@@ -379,7 +386,12 @@ export default function TallerSolicitudes({
   const modalRecibidos = confirmandoRecibidos && (
     <ConfirmarRecibidos token={token} solicitud={confirmandoRecibidos}
       onCancelar={() => setConfirmandoRecibidos(null)}
-      onConfirmado={async () => { setConfirmandoRecibidos(null); await cargar(); }} />
+      onConfirmado={async (pedidos) => {
+        setConfirmandoRecibidos(null);
+        setVersionPedidos((v) => v + 1);
+        setAviso(avisoRecibidos(pedidos));
+        await cargar();
+      }} />
   );
 
   const modalEntrega = confirmandoEntrega && (
@@ -724,7 +736,7 @@ export default function TallerSolicitudes({
             )}
 
             {s.cotizacionId && (
-              <SeguimientoTaller token={token} solicitud={s} onConfirmarRecibidos={() => setConfirmandoRecibidos(s)} />
+              <SeguimientoTaller token={token} solicitud={s} version={versionPedidos} onConfirmarRecibidos={() => setConfirmandoRecibidos(s)} />
             )}
 
             {/* Fuera del seguimiento: una orden con solo el diagnóstico pagado también tiene pago */}

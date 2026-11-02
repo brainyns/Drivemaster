@@ -589,6 +589,11 @@
 
 .ss-confirmar__check input { margin-top: 3px; accent-color: var(--primary); }
 
+/* Un pedido que se puede confirmar: toda la fila es el objetivo táctil */
+.ss-recibido { display: flex; flex: 1; align-items: flex-start; gap: 10px; min-width: 0; min-height: 44px; cursor: pointer; }
+.ss-recibido input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--primary); }
+.ss-recibido__espera { font-size: 0.8125rem; font-weight: 600; color: var(--ui-text); }
+
 /* ── Ventana del buscador ──
    Se dibuja en <body> (portal) y queda centrada con 32px de margen arriba y abajo.
    Cabecera y filtros fijos arriba, pie fijo abajo: solo hace scroll la zona de tarjetas. */

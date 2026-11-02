@@ -1,21 +1,23 @@
 import { useEffect, useState } from "react";
 import { pedidosDeOrden, confirmarRepuestosRecibidos } from "../../services/pedidoTiendaService";
 import { ESTADOS_PEDIDO } from "./estadosServicio";
+import { SIN_DESPACHO, TEXTO_SIN_DESPACHO, estadoRecibidos } from "./reglasRecibidos";
 import ConfirmarAccion from "../marketplace/ConfirmarAccion";
 import ChipEstado from "../ui/ChipEstado";
 
-const SIN_DESPACHO = ["PENDIENTE", "EN_PREPARACION"];
 const TEXTO_FALTANTES = "Confirmo que recibí lo demás y sigo sin esas piezas";
 
+const articulos = (p) => (p.items || []).map((i) => `${i.cantidad} × ${i.productoNombre}`).join(", ");
+
 /**
- * Confirmación de "repuestos recibidos": lista cada pedido de la orden con su tienda y estado, avisa de las
- * tiendas que no marcaron el despacho y, si alguna no pudo despachar, muestra el motivo y exige confirmar que
- * el taller sigue sin esas piezas (el backend rechaza la petición sin esa confirmación).
- * Los pedidos se cargan al abrir, para decidir con el estado del momento.
+ * Confirmación de repuestos pedido por pedido: el taller marca los que tiene en la mano y solo puede marcar los que la
+ * tienda despachó, que son los que habilitan su pago. Si alguna tienda no pudo despachar, muestra el motivo y exige
+ * aceptar que sigue sin esas piezas antes de avanzar. Los pedidos se cargan al abrir, para decidir con el estado del momento.
  */
 export default function ConfirmarRecibidos({ token, solicitud, onConfirmado, onCancelar }) {
   const [pedidos, setPedidos] = useState(null);
   const [error, setError] = useState(null);
+  const [elegidos, setElegidos] = useState([]);
   const [aceptaFaltantes, setAceptaFaltantes] = useState(false);
 
   useEffect(() => {
@@ -26,22 +28,22 @@ export default function ConfirmarRecibidos({ token, solicitud, onConfirmado, onC
     return () => { cancelado = true; };
   }, [token, solicitud.id]);
 
-  const sinDespacho = (pedidos || []).filter((p) => SIN_DESPACHO.includes(p.estado));
-  const noDespachados = (pedidos || []).filter((p) => p.estado === "NO_DESPACHADO");
-  const hayFaltantes = noDespachados.length > 0;
-  // Sin ningún repuesto no hay trabajo que hacer: el backend lo rechaza y DriveMaster ya recibió la alerta
-  const ningunoLlego = pedidos?.length > 0 && noDespachados.length === pedidos.length;
+  const { noDespachados, validos, ningunoLlego, avanza, pideFaltantes, puedeConfirmar } = estadoRecibidos(pedidos || [], elegidos, aceptaFaltantes);
+
+  const alternar = (id) => setElegidos((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   const confirmar = async () => {
-    await confirmarRepuestosRecibidos(token, solicitud.id, hayFaltantes && aceptaFaltantes);
-    await onConfirmado();
+    const actualizados = await confirmarRepuestosRecibidos(token, solicitud.id, validos, pideFaltantes && aceptaFaltantes);
+    await onConfirmado(actualizados);
   };
 
   return (
-    <ConfirmarAccion titulo="¿Confirmar repuestos recibidos?"
-      mensaje="La solicitud pasa a repuestos recibidos y se habilita el pago de cada tienda que entregó. No se puede deshacer."
-      textoConfirmar="Sí, confirmar recepción"
-      puedeConfirmar={pedidos !== null && !ningunoLlego && (!hayFaltantes || aceptaFaltantes)}
+    <ConfirmarAccion titulo="¿Qué repuestos tienes en el taller?"
+      mensaje={avanza
+        ? "La solicitud pasa a repuestos recibidos y se habilita el pago de cada tienda confirmada. No se puede deshacer."
+        : "Marca solo lo que ya llegó: se habilita el pago de esa tienda y la solicitud sigue esperando lo demás. No se puede deshacer."}
+      textoConfirmar={avanza ? "Sí, confirmar recepción" : "Confirmar lo que llegó"}
+      puedeConfirmar={pedidos !== null && puedeConfirmar}
       onCancelar={onCancelar} onConfirmar={confirmar}>
       {error && <p className="mk-aviso mk-aviso--error" role="alert">{error}</p>}
       {pedidos === null && !error && <p className="ss-meta">Cargando pedidos…</p>}
@@ -49,27 +51,35 @@ export default function ConfirmarRecibidos({ token, solicitud, onConfirmado, onC
         <ul className="ct-items">
           {pedidos.map((p) => (
             <li key={p.id} className="ct-item">
-              <span className="ct-item__desc">
-                <strong>{p.tiendaNombre}</strong>
-                <span className="ss-meta">{(p.items || []).map((i) => `${i.cantidad} × ${i.productoNombre}`).join(", ")}</span>
-                {p.estado === "NO_DESPACHADO" && (
-                  <span className="ss-meta">Motivo: {p.motivoNoDespacho || "sin motivo registrado"}</span>
-                )}
-              </span>
+              {p.estado === "DESPACHADO" ? (
+                <label className="ss-recibido">
+                  <input type="checkbox" checked={elegidos.includes(p.id)} onChange={() => alternar(p.id)} />
+                  <span className="ct-item__desc">
+                    <strong>{p.tiendaNombre}</strong>
+                    <span className="ss-meta">{articulos(p)}</span>
+                  </span>
+                </label>
+              ) : (
+                <span className="ct-item__desc">
+                  <strong>{p.tiendaNombre}</strong>
+                  <span className="ss-meta">{articulos(p)}</span>
+                  {SIN_DESPACHO.includes(p.estado) && <span className="ss-recibido__espera">{TEXTO_SIN_DESPACHO}</span>}
+                  {p.estado === "NO_DESPACHADO" && (
+                    <span className="ss-meta">Motivo: {p.motivoNoDespacho || "sin motivo registrado"}</span>
+                  )}
+                </span>
+              )}
               <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />
             </li>
           ))}
         </ul>
       )}
-      {sinDespacho.map((p) => (
-        <p key={p.id} className="mk-aviso mk-aviso--aviso">La tienda {p.tiendaNombre} no ha marcado el despacho.</p>
-      ))}
       {ningunoLlego && (
         <p className="mk-aviso mk-aviso--error">
           Ninguna tienda pudo despachar los repuestos: no se puede continuar con esta solicitud. DriveMaster la revisará.
         </p>
       )}
-      {hayFaltantes && !ningunoLlego && (
+      {pideFaltantes && (
         <div className="ss-confirmar">
           <p className="mk-aviso mk-aviso--error">
             {noDespachados.length === 1
