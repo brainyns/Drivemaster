@@ -23,6 +23,7 @@ import {
   FILTROS_TIPO, TIPOS, erroresMovimiento, stockResultante, textoDiferencia,
 } from "./tienda/inventarioTienda";
 import { plural } from "../utils/formato";
+import { destinoReferencia } from "../utils/navegacion";
 import "../css/movimientos.css";
 
 const VACIO = { productoId: "", tipo: "ENTRADA", cantidad: "", motivo: "" };
@@ -112,7 +113,7 @@ const ORDENES_MOVIMIENTOS = [
  * Colombia), orden y página se resuelven allá; el resumen de arriba es de todo el historial. El backend ya filtra
  * por la tienda de la sesión. esTienda elige la lista de productos (nombres y el formulario).
  */
-function Movimientos({ token, esTienda = false }) {
+function Movimientos({ token, esTienda = false, irA }) {
   const [datos, setDatos] = useState(null); // { movimientos: Pagina, resumen }
   const [productos, setProductos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -315,7 +316,13 @@ function Movimientos({ token, esTienda = false }) {
                               <span className="ui-sr"> (antes {m.stockAnterior}, después {m.stockNuevo})</span>
                             </td>
                             <td data-label="Motivo" className="mov-motivo">
-                              {m.motivo || "—"}{m.referencia && <span className="mov-tenue"> · #{m.referencia}</span>}
+                              <span className="mov-motivo__cuerpo">
+                              {m.motivo || "—"}
+                              {/* La referencia corta del backend (Pedido #6AE8CE) con su enlace; sin ella, nada: nunca el id interno */}
+                              {m.referenciaLegible && (destinoReferencia(m.referenciaLegible, "movimientos") && irA ? (
+                                <> · <button type="button" className="mov-ref" onClick={() => { const d = destinoReferencia(m.referenciaLegible, "movimientos"); irA(d.pagina, d.param); }}>{m.referenciaLegible.texto}</button></>
+                              ) : <span className="mov-tenue"> · {m.referenciaLegible.texto}</span>)}
+                              </span>
                             </td>
                           </tr>
                         );

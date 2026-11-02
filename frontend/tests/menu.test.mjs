@@ -64,8 +64,8 @@ test("el taller ve su menú nuevo y ya no tiene el Panel de taller único", () =
   assert.ok(i > 0, "existe el menú del taller");
   const bloque = sidebar.slice(i, sidebar.indexOf("];", i));
   const claves = [...bloque.matchAll(/key: "([^"]+)"/g)].map((x) => x[1]);
-  assert.deepEqual(claves.slice(0, 8), ["taller-inicio", "taller-solicitudes", "taller-agenda", "taller-trabajos", "taller-cotizaciones",
-    "taller-inventario",
+  assert.deepEqual(claves.slice(0, 9), ["taller-inicio", "taller-solicitudes", "taller-agenda", "taller-trabajos", "taller-cotizaciones",
+    "taller-inventario", "taller-movimientos",
     "taller-mitaller", "taller-informes"]);
   assert.match(sidebar, /agenda: +<Icon name="calendar"/, "Agenda con el calendario de Icon.jsx");
 });

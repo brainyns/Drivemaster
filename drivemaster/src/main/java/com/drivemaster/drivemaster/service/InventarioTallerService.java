@@ -87,7 +87,7 @@ public class InventarioTallerService {
                 parametros.comisionRetenida(), PiezaTaller.RECARGO_SUGERIDO_PCT, aCosto, aVenta,
                 reembolsos.saldosPendientesDe(com.drivemaster.drivemaster.model.mysql.RepartoPago.TALLER, taller.getId()).stream()
                         .map(b -> new InventarioTallerDTO.Saldo(b.getId(), b.getSaldoAFavor(), b.getMotivo(), b.getOrdenServicioId(), b.getFechaCreacion()))
-                        .toList());
+                        .toList(), IvaTaller.esResponsable(taller));
     }
 
     /**

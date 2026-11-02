@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getToken } from "../../services/authService";
-import { cambiarPrecioPieza, confirmarLlegada, miInventario } from "../../services/inventarioTallerService";
+import { cambiarMinimoPieza, cambiarPrecioPieza, confirmarLlegada, miInventario } from "../../services/inventarioTallerService";
+import { piezasStockBajo } from "./movimientosTaller";
 import { pedirCodigoRetiro, reportarProblema } from "../../services/catalogoService";
 import { formatFechaHora, formatPrecio } from "../../components/servicio/estadosServicio";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
@@ -177,6 +178,62 @@ function EditorPrecio({ pieza, comisionPct, token, onGuardada }) {
 }
 
 
+/**
+ * Mínimo para la alerta de stock bajo: cuando el stock llega a ese número, avisa en la campanita (una vez por cruce).
+ * Vacío = sin alerta. Devuelve el inventario completo: el aviso de arriba también cambia.
+ */
+function EditorMinimo({ pieza, token, onInventario }) {
+  const [minimo, setMinimo] = useState(pieza.stockMinimo != null ? String(pieza.stockMinimo) : "");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(null);
+  const actual = pieza.stockMinimo != null ? String(pieza.stockMinimo) : "";
+  const cambio = minimo !== actual;
+
+  const guardar = async (valor) => {
+    setGuardando(true);
+    setError(null);
+    try {
+      onInventario(await cambiarMinimoPieza(token, pieza.id, valor === "" ? null : Number(valor)));
+      if (valor === "") setMinimo("");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="iv-minimo">
+      <label className="iv-campo">
+        <span className="iv-etiqueta">Avísame cuando queden</span>
+        <span className="iv-minimo__fila">
+          <span className="iv-moneda iv-moneda--corta">
+            <input inputMode="numeric" value={minimo} placeholder="—" aria-label={`Stock mínimo de ${pieza.nombre}`}
+              aria-describedby={`iv-minimo-${pieza.id}`} onChange={(e) => setMinimo(e.target.value.replace(/\D/g, "").slice(0, 4))} />
+          </span>
+          <span className="iv-meta">unidades o menos</span>
+        </span>
+      </label>
+      <p id={`iv-minimo-${pieza.id}`} className="iv-meta">
+        {pieza.stockMinimo != null ? "Te avisamos en la campanita una vez cada vez que llegue a ese número." : "Sin alerta. Escribe un número para que te avisemos antes de quedarte sin la pieza."}
+      </p>
+      {error && <p className="iv-error" role="alert">{error}</p>}
+      <div className="iv-acciones">
+        {cambio && minimo !== "" && (
+          <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" onClick={() => guardar(minimo)} disabled={guardando} aria-busy={guardando}>
+            <span>{guardando ? "Guardando…" : "Guardar mínimo"}</span>
+          </button>
+        )}
+        {pieza.stockMinimo != null && (
+          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => guardar("")} disabled={guardando}>
+            Quitar la alerta
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Compatibilidad({ pieza }) {
   if (pieza.compatibilidadUniversal) return <span className="iv-compat">Sirve a cualquier vehículo</span>;
   const modelos = pieza.modelosCompatibles || [];
@@ -185,7 +242,7 @@ function Compatibilidad({ pieza }) {
   return <span className="iv-compat" title={texto}>{texto}{modelos.length > 3 ? ` y ${modelos.length - 3} más` : ""}</span>;
 }
 
-function Pieza({ pieza, datos, token, onGuardada }) {
+function Pieza({ pieza, datos, token, onGuardada, onInventario, irA }) {
   const [abierta, setAbierta] = useState(false);
   // Las cifras de la fila son las del backend: sobre el precio que se cobraría hoy (el del taller o el tope)
   const agotada = pieza.stock === 0;
@@ -198,7 +255,10 @@ function Pieza({ pieza, datos, token, onGuardada }) {
           <Compatibilidad pieza={pieza} />
         </div>
         <dl className="iv-pieza__numeros">
-          <div><dt>En stock</dt><dd className="iv-cifra iv-cifra--grande">{agotada ? "Agotada" : pieza.stock}</dd></div>
+          <div className={pieza.stockBajo ? "iv-cifras__bajo" : ""}>
+            <dt>En stock</dt>
+            <dd className="iv-cifra iv-cifra--grande">{agotada ? "Agotada" : pieza.stock}{pieza.stockBajo && !agotada && <span className="iv-bajo">Stock bajo</span>}</dd>
+          </div>
           <div><dt>Precio público</dt><dd className="iv-cifra">{pieza.precioPublico != null ? formatPrecio(pieza.precioPublico) : "—"}</dd></div>
           <div><dt>Costo</dt><dd className="iv-cifra">{pieza.costoUnitario != null ? formatPrecio(pieza.costoUnitario) : "—"}</dd></div>
           <div className={pieza.topado ? "iv-cifras__topado" : ""}><dt>Tu precio</dt><dd className="iv-cifra">{pieza.precioCobrado ? formatPrecio(pieza.precioCobrado) : "Sin precio"}</dd></div>
@@ -213,6 +273,9 @@ function Pieza({ pieza, datos, token, onGuardada }) {
           <Icon name="chevron" size={16} className={abierta ? "iv-girado" : ""} />
         </button>
       </div>
+      {pieza.stockBajo && (
+        <p className="iv-aviso"><Icon name="alert" size={14} />{agotada ? "Se agotó" : `Quedan ${pieza.stock}`} y tu mínimo es {pieza.stockMinimo}. Pide más en el catálogo.</p>
+      )}
       {pieza.topado && (
         <p className="iv-aviso"><Icon name="alert" size={14} />El precio público bajó: al cotizar se cobra {formatPrecio(pieza.precioCobrado)}, no tus {formatPrecio(pieza.precioVenta)}.</p>
       )}
@@ -223,8 +286,17 @@ function Pieza({ pieza, datos, token, onGuardada }) {
       )}
       {abierta && (
         <div className="iv-pieza__detalle" id={`iv-detalle-${pieza.id}`}>
-          <EditorPrecio pieza={pieza} comisionPct={datos.comisionPct}
-            token={token} onGuardada={onGuardada} />
+          <div className="iv-pieza__ajustes">
+            <EditorPrecio pieza={pieza} comisionPct={datos.comisionPct}
+              token={token} onGuardada={onGuardada} />
+            <EditorMinimo pieza={pieza} token={token} onInventario={onInventario} />
+            {irA && (
+              <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico iv-pieza__mover"
+                onClick={() => irA("taller-movimientos", { abrir: pieza.id })}>
+                <Icon name="plus" size={14} /><span>Registrar un movimiento de esta pieza</span>
+              </button>
+            )}
+          </div>
           <div className="iv-lotes">
             <h4 className="iv-etiqueta">De dónde vino</h4>
             <table className="iv-tabla">
@@ -233,7 +305,7 @@ function Pieza({ pieza, datos, token, onGuardada }) {
                 {pieza.lotes.map((l) => (
                   <tr key={l.id} className={l.disponible === 0 ? "iv-tabla__vacio" : ""}>
                     <td>{fecha(l.fechaEntrada)}<span className="iv-meta"> · {l.cantidad} u.</span></td>
-                    <td>{l.tiendaNombre}</td>
+                    <td>{l.id?.startsWith("CARGA-") ? <>Carga inicial<span className="iv-meta"> · {l.tiendaNombre || "sin tienda"}</span></> : l.id?.startsWith("MANUAL-") ? <>Ajuste<span className="iv-meta"> · al costo del último lote</span></> : l.tiendaNombre}</td>
                     <td className="iv-der iv-cifra">{l.disponible}</td>
                     <td className="iv-der iv-cifra">{l.precioPagado != null ? formatPrecio(l.precioPagado) : "—"}{l.descuentoPct > 0 ? <span className="iv-meta"> · público {formatPrecio(l.precioPublico)}, −{String(l.descuentoPct).replace(".", ",")} %</span> : null}</td>
                     <td className="iv-der iv-cifra">{formatPrecio(l.costoUnitario)}{l.ivaEnCosto ? <span className="iv-meta"> con IVA</span> : null}</td>
@@ -253,7 +325,7 @@ function Pieza({ pieza, datos, token, onGuardada }) {
  * Mi inventario del taller: lo que compró en el catálogo, lo que aún viene en camino y a cuánto lo vende. Costo y
  * margen son solo del taller: el cliente ve el precio y la etiqueta "Disponible en el taller".
  */
-export default function TallerInventario({ onComprar }) {
+export default function TallerInventario({ onComprar, irA }) {
   const token = getToken();
   const [estado, setEstado] = useState({ datos: null, error: null, cargando: true });
   const [intento, setIntento] = useState(0);
@@ -278,15 +350,23 @@ export default function TallerInventario({ onComprar }) {
   const d = estado.datos;
   const unidades = d ? d.piezas.reduce((n, p) => n + p.stock, 0) : 0;
   const enPerdida = d ? d.piezas.filter((p) => p.enPerdida && p.stock > 0).length : 0;
+  const bajas = d ? piezasStockBajo(d.piezas) : [];
 
   return (
     <div className="iv-root">
       <EncabezadoPagina titulo="Mi inventario"
         descripcion="Las piezas que compraste para tu taller. Úsalas en tus cotizaciones antes de pedir a una tienda."
         acciones={(
-          <button type="button" className="ui-btn ui-btn--primario" onClick={onComprar}>
-            <Icon name="plus" size={16} /><span>Comprar para mi inventario</span>
-          </button>
+          <>
+            {irA && (
+              <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-movimientos")}>
+                <Icon name="refresh" size={16} /><span>Movimientos</span>
+              </button>
+            )}
+            <button type="button" className="ui-btn ui-btn--primario" onClick={onComprar}>
+              <Icon name="plus" size={16} /><span>Comprar para mi inventario</span>
+            </button>
+          </>
         )} />
 
       {aviso && <Alerta tono="ok" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
@@ -349,6 +429,11 @@ export default function TallerInventario({ onComprar }) {
                 Precios antes de IVA. La ganancia resta la comisión del {d.comisionPct} %{d.comisionSeDescuenta ? "." : ", que todavía no se descuenta."}
               </span>
             </div>
+            {bajas.length > 0 && (
+              <Alerta tono="aviso">
+                {bajas.length === 1 ? `${bajas[0].nombre} llegó a su mínimo.` : `${bajas.length} piezas llegaron a su mínimo.`} Pide más antes de quedarte sin stock.
+              </Alerta>
+            )}
             {enPerdida > 0 && (
               <Alerta tono="aviso">
                 {enPerdida === 1 ? "Una pieza se vende" : `${enPerdida} piezas se venden`} en pérdida después de la comisión. Revisa su precio.
@@ -361,7 +446,7 @@ export default function TallerInventario({ onComprar }) {
               </EstadoVacio>
             ) : (
               <ul className="iv-piezas">
-                {d.piezas.map((p) => <Pieza key={p.id} pieza={p} datos={d} token={token} onGuardada={reemplazarPieza} />)}
+                {d.piezas.map((p) => <Pieza key={p.id} pieza={p} datos={d} token={token} onGuardada={reemplazarPieza} onInventario={recargar} irA={irA} />)}
               </ul>
             )}
           </section>

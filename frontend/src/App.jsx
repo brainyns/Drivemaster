@@ -146,6 +146,7 @@ const SECCION_TALLER = {
   "taller-mitaller":    "mitaller",
   "taller-informes":    "informes",
   "taller-inventario":  "inventario",
+  "taller-movimientos": "movimientos",
   "taller-anteriores":  "anteriores",
   "taller-agenda":      "agenda",
 };
@@ -689,7 +690,7 @@ function App() {
     if (pagina === "proveedorNuevo")   return <ProveedorForm        onVolver={() => irA("proveedores")} token={token} />;
     if (pagina === "proveedorEditar")  return <ProveedorForm        id={idSeleccionado} onVolver={() => irA("proveedores")} token={token} />;
 
-    if (pagina === "movimientos")      return <Movimientos          token={token} esTienda={esTienda} />;
+    if (pagina === "movimientos")      return <Movimientos          token={token} esTienda={esTienda} irA={irA} />;
     if (pagina === "usuarios")         return <Usuarios             token={token} />;
     if (pagina === "mi-perfil")        return <PerfilAdmin          />;
     if (pagina === "taller-panel" || SECCION_TALLER[pagina]) {

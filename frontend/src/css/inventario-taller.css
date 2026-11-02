@@ -200,3 +200,22 @@
 .iv-moneda--error { border-color: var(--ui-error); }
 .iv-precio .iv-meta, .iv-precio .iv-error { margin: 0; max-width: 46ch; }
 .iv-precio .iv-campo { justify-self: start; }
+
+/* ── Stock bajo y mínimo ── */
+.iv-bajo {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: var(--ui-aviso);
+}
+.iv-cifras__bajo dd { color: var(--ui-aviso); }
+
+.iv-pieza__ajustes { display: grid; gap: 18px; align-content: start; }
+.iv-pieza__mover { justify-self: start; }
+
+.iv-minimo { display: grid; gap: 8px; padding-top: 16px; border-top: 1px solid var(--ui-line-soft); }
+.iv-minimo .iv-campo { justify-self: start; }
+.iv-minimo__fila { display: flex; align-items: center; gap: 10px; }
+.iv-moneda--corta { width: 5.5rem; }
+.iv-moneda--corta input { width: 100%; text-align: right; font-variant-numeric: tabular-nums; }

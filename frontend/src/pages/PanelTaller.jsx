@@ -10,6 +10,7 @@ import TallerMiTaller from "./taller/TallerMiTaller";
 import TallerCotizaciones from "./taller/TallerCotizaciones";
 import TallerInformes from "./taller/TallerInformes";
 import TallerInventario from "./taller/TallerInventario";
+import TallerMovimientos from "./taller/TallerMovimientos";
 import TallerAgenda from "./taller/TallerAgenda";
 import OrdenesAnteriores from "./taller/OrdenesAnteriores";
 import { destinoSeccion, ordenesPorAtender } from "./taller/resumenTaller";
@@ -115,12 +116,13 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         {seccion === "trabajos" && (
           <TallerSolicitudes key={`${destino.filtro || "repuestos"}-${destino.abrir || ""}`} modo="trabajos" filtroInicial={destino.filtro}
             abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined}
-            textoAfuera={destino.volverA === "taller-cotizaciones" ? "Cotizaciones" : "Inicio"} {...bandeja} />
+            textoAfuera={destino.volverA === "taller-cotizaciones" ? "Cotizaciones" : destino.volverA === "taller-movimientos" ? "Movimientos" : "Inicio"} {...bandeja} />
         )}
         {seccion === "agenda" && <TallerAgenda taller={taller} irA={irA} />}
         {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}
         {seccion === "informes" && <TallerInformes />}
-        {seccion === "inventario" && <TallerInventario onComprar={onComprarInventario} />}
+        {seccion === "inventario" && <TallerInventario onComprar={onComprarInventario} irA={irA} />}
+        {seccion === "movimientos" && <TallerMovimientos key={destino.abrir || "movimientos"} irA={irA} piezaInicial={destino.abrir} />}
         {seccion === "mitaller" && (
           <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller} abrirSeccion={destino.filtro}
             onRecargar={cargar} onActualizado={setTaller} />

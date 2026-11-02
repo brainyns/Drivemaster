@@ -56,3 +56,28 @@
   .mov-exportar { margin-left: 0; width: 100%; }
   .mov-exportar .ui-btn { flex: 1; }
 }
+
+/* Referencia corta con detalle (Orden #6AE8CE, Pedido #…): se lee como enlace, sin el peso de un botón */
+.mov-ref {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary-text);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.mov-ref:hover { text-decoration-thickness: 2px; }
+.mov-ref:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: 2px; }
+
+/* De qué lote salió y quién lo registró: una línea tenue bajo el motivo */
+.mov-lotes { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--ui-muted); }
+
+/* El motivo, su referencia, el lote y quién lo registró van juntos: en la tarjeta del celular son un solo bloque a la
+   derecha de la etiqueta, no columnas sueltas */
+.mov-motivo__cuerpo { display: block; min-width: 0; }
+.mov-tabla td.ui-table__num { white-space: nowrap; }

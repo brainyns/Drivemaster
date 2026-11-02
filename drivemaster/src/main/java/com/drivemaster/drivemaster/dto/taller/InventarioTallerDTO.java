@@ -15,7 +15,9 @@ public final class InventarioTallerDTO {
     }
 
     public record Inventario(List<Pieza> piezas, List<PedidoEnCamino> enCamino, double comisionPct, boolean comisionSeDescuenta,
-                             double recargoSugeridoPct, double valorACosto, double valorAVenta, List<Saldo> saldos) {
+                             double recargoSugeridoPct, double valorACosto, double valorAVenta, List<Saldo> saldos,
+                             // Regla D2: el costo de una carga inicial va sin IVA si es responsable y con IVA si no lo es
+                             boolean responsableIva) {
     }
 
     /**

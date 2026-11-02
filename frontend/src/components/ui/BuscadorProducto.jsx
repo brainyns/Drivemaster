@@ -9,7 +9,15 @@ import { buscarProductos } from "../../pages/tienda/inventarioTienda";
  * la referencia y cada opción muestra la foto, el nombre, el código y el stock actual. Flechas para moverse, Enter para
  * elegir y Escape para cerrar. Elegido, se reemplaza por una tarjeta con la foto y el stock, y "Cambiar" lo suelta.
  */
-export default function BuscadorProducto({ id, label = "Producto", productos, elegido, onElegir, error, autoFocus = false }) {
+const DETALLE = (p) => (p.codigo ? `Código ${p.codigo}` : "Sin código");
+
+/**
+ * detalle, etiquetaStock y stockDe adaptan la tarjeta a otros listados (las piezas del taller, el catálogo): por defecto
+ * son los de la tienda. stockDe en null oculta el stock (en el catálogo el stock es de la tienda, no del taller).
+ */
+export default function BuscadorProducto({ id, label = "Producto", productos, elegido, onElegir, error, autoFocus = false,
+  detalle = DETALLE, etiquetaStock = "Stock actual", stockDe = (p) => p.stockActual ?? 0,
+  ayuda = "Escribe el nombre, el código SKU o la referencia.", textoVacio = "Aún no tienes productos en tu catálogo." }) {
   const [texto, setTexto] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [activo, setActivo] = useState(0);
@@ -38,12 +46,14 @@ export default function BuscadorProducto({ id, label = "Producto", productos, el
           <ImagenProducto src={elegido.imagenUrl} className="ui-producto-elegido__imagen" tamanioIcono={22} />
           <span className="ui-producto-elegido__texto">
             <strong>{elegido.nombre}</strong>
-            <span>{elegido.codigo ? `Código ${elegido.codigo}` : "Sin código"}</span>
+            <span>{detalle(elegido)}</span>
           </span>
-          <span className="ui-producto-elegido__stock">
-            <span>Stock actual</span>
-            <strong>{elegido.stockActual ?? 0}</strong>
-          </span>
+          {stockDe && (
+            <span className="ui-producto-elegido__stock">
+              <span>{etiquetaStock}</span>
+              <strong>{stockDe(elegido)}</strong>
+            </span>
+          )}
           <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => onElegir(null)}
             aria-label={`Cambiar el producto ${elegido.nombre}`}>
             Cambiar
@@ -55,7 +65,7 @@ export default function BuscadorProducto({ id, label = "Producto", productos, el
 
   return (
     <div className="ui-combo">
-      <Campo id={id} label={label} error={error} ayuda="Escribe el nombre, el código SKU o la referencia.">
+      <Campo id={id} label={label} error={error} ayuda={ayuda}>
         <input className="ui-field__input" type="search" autoComplete="off" value={texto} autoFocus={autoFocus}
           role="combobox" aria-autocomplete="list" aria-expanded={mostrar} aria-controls={idLista}
           aria-activedescendant={mostrar && opciones[activo] ? `${idLista}-${activo}` : undefined}
@@ -75,15 +85,15 @@ export default function BuscadorProducto({ id, label = "Producto", productos, el
               <ImagenProducto src={p.imagenUrl} className="ui-combo__imagen" tamanioIcono={16} />
               <span className="ui-combo__texto">
                 <strong>{p.nombre}</strong>
-                <span>{p.codigo || "Sin código"}</span>
+                <span>{detalle(p)}</span>
               </span>
-              <span className="ui-combo__stock">Stock {p.stockActual ?? 0}</span>
+              {stockDe && <span className="ui-combo__stock">{etiquetaStock === "Stock actual" ? "Stock" : etiquetaStock} {stockDe(p)}</span>}
             </li>
           ))}
         </ul>
       )}
       {!mostrar && texto.trim() === "" && productos.length === 0 && (
-        <p className="ui-combo__nota"><Icon name="box" size={14} /> Aún no tienes productos en tu catálogo.</p>
+        <p className="ui-combo__nota"><Icon name="box" size={14} /> {textoVacio}</p>
       )}
     </div>
   );
