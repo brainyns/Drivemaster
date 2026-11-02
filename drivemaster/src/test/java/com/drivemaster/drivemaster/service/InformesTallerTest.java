@@ -31,6 +31,14 @@ import static org.mockito.Mockito.when;
 /** Informes del taller: cálculos, separación entre flujos y aislamiento entre talleres. */
 class InformesTallerTest {
 
+    @Test
+    void elIvaDelTotalEsLoQueNoEsBaseYNoSeInventaConLineasAntiguas() {
+        assertEquals(19_000.0, InformesTallerService.ivaDelTotal(119_000, 100_000, 0));
+        assertNull(InformesTallerService.ivaDelTotal(119_000, 100_000, 1));
+        assertNull(InformesTallerService.ivaDelTotal(0, 0, 0));
+        assertEquals(0.0, InformesTallerService.ivaDelTotal(50_000, 50_000, 0), "un taller sin IVA");
+    }
+
     private static final YearMonth HASTA = YearMonth.of(2026, 10);
     private static final LocalDateTime AHORA = LocalDateTime.of(2026, 10, 8, 12, 0);
 

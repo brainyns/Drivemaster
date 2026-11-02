@@ -194,9 +194,18 @@ public class InformesTallerService {
                 .filter(o -> enPeriodo(o.getFechaFinalizacion() != null ? o.getFechaFinalizacion() : o.getFechaCreacion(), desde))
                 .toList();
         double anterioresMano = anteriores.stream().mapToDouble(o -> o.getPrecioManoObra() == null ? 0 : o.getPrecioManoObra()).sum();
-        return new Ingresos(monto(mano), monto(diag), anulado, new Anteriores(anteriores.size(), anterioresMano),
-                com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO.Resumen.de(
-                        repartoRepository.desgloseDeNegocioDesde(RepartoPago.TALLER, tallerId, desde), parametros.comisionRetenida()));
+        var desglose = com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO.Resumen.de(
+                repartoRepository.desgloseDeNegocioDesde(RepartoPago.TALLER, tallerId, desde), parametros.comisionRetenida());
+        List<Object[]> filas = repartoRepository.basePorOrdenesDesde(RepartoPago.TALLER, tallerId, desde);
+        Object[] base = filas == null || filas.isEmpty() ? new Object[]{0L, 0.0, 0L} : filas.get(0);
+        return new Ingresos(monto(mano), monto(diag), anulado, new Anteriores(anteriores.size(), anterioresMano), desglose,
+                ((Number) base[0]).longValue(), ivaDelTotal(desglose.venta(), ((Number) base[1]).doubleValue(), ((Number) base[2]).longValue()));
+    }
+
+    /** Lo que no es base es IVA. Si una línea antigua no guardó su base, no se inventa la cifra. */
+    static Double ivaDelTotal(double total, double base, long lineasSinBase) {
+        if (total <= 0 || lineasSinBase > 0) return null;
+        return (double) Math.max(0, Math.round(total - base));
     }
 
     private static Monto monto(double[] v) {

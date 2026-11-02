@@ -82,6 +82,14 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
             + "or (r.estado <> 'LIQUIDADO' and r.fechaCreacion >= :desde))")
     List<Object[]> desgloseDeNegocioDesde(@Param("tipo") String tipo, @Param("id") String id, @Param("desde") LocalDateTime desde);
 
+    /** Para el total de un periodo, con las mismas fechas: [órdenes con líneas, base sin IVA, líneas antiguas sin base]. */
+    @Query("select count(distinct r.ordenServicioId), coalesce(sum(r.comisionBase), 0), "
+            + "coalesce(sum(case when r.comisionBase is null then 1 else 0 end), 0) from RepartoPago r "
+            + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id and r.estado <> 'ANULADO' and "
+            + "((r.estado = 'LIQUIDADO' and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde) "
+            + "or (r.estado <> 'LIQUIDADO' and r.fechaCreacion >= :desde))")
+    List<Object[]> basePorOrdenesDesde(@Param("tipo") String tipo, @Param("id") String id, @Param("desde") LocalDateTime desde);
+
     /**
      * La comisión que de verdad se retuvo, leída de las líneas de los negocios: [estado, modo, 'ID' si tiene id de Wompi,
      * suma]. Así un rechazo del banco o una anulación la mueven solos, y no depende de la línea PLATAFORMA, cuyo registro

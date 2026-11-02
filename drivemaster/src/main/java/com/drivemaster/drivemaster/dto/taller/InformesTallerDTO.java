@@ -27,8 +27,9 @@ public final class InformesTallerDTO {
     public record Anteriores(long ordenes, double manoDeObra) {}
 
     /** desglose: venta, comisión y lo que recibe el taller en el periodo; los montos de arriba ya son lo que recibe. */
+    /** ordenes: las que tienen dinero en el periodo. iva: la parte del total que es IVA; null si alguna línea antigua no guardó su base. */
     public record Ingresos(Monto manoDeObra, Monto diagnostico, double anulado, Anteriores anteriores,
-                           com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO.Resumen desglose) {}
+                           com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO.Resumen desglose, long ordenes, Double iva) {}
 
     /**
      * Minutos (con un decimal) entre la asignación al taller y su primera respuesta (aceptar y agendar, o rechazar),
