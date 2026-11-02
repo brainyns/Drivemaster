@@ -24,6 +24,7 @@ import {
   FILTROS, VACIOS, accionEntrega, accionFila, accionPrincipal, cantidadProductos, destinatario, diasSinRetirar,
   esCatalogo, esEnvio, esRetiro, historialPedido, metodoEntrega, plazoVencido, porDespachar, sinRetirar,
   subtotal, textoPlazo,
+  canceladoPorDriveMaster,
 } from "./tienda/pedidosTienda";
 import { avisar } from "../components/ui/avisar";
 import { destinoSeccion } from "../utils/navegacion";
@@ -105,6 +106,7 @@ function textoEstado(p) {
   if (p.estado === "RETIRADO") return "El cliente retiró el pedido. El pago quedó habilitado para liquidar.";
   if (p.estado === "ENTREGADO" || p.estado === "RECIBIDO") return "Pedido entregado. El pago quedó habilitado para liquidar.";
   if (p.tipoMotivoNoDespacho === "PAGO_NO_APLICADO") return `${p.motivoNoDespacho}.`;
+  if (p.tipoMotivoNoDespacho === "ORDEN_CANCELADA") return `${p.motivoNoDespacho || "Cancelada por DriveMaster"}. No lo despaches: las unidades en stock volvieron a tu inventario y este pedido no se paga.`;
   if (p.estado === "NO_DESPACHADO") return `No se despachó: ${p.motivoNoDespacho || "sin motivo registrado"}. DriveMaster reembolsa al cliente.`;
   if (p.estado === "NO_ENTREGADO") return "DriveMaster resolvió el problema con reembolso al cliente: este pedido no se paga.";
   return null;
@@ -357,7 +359,7 @@ export default function PedidosTienda({ param, irA }) {
         <EncabezadoPagina titulo={`Pedido #${refSolicitud(p.id)}`} onVolver={cerrar}
           textoVolver={desdeAfuera && destino.volverA ? "Volver" : "Pedidos"}>
           <p className="pdt-meta">
-            <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+            {canceladoPorDriveMaster(p) ? <ChipEstado tono="error">Cancelado</ChipEstado> : <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />}
             <ChipPlazo pedido={p} ahora={ahora} />
             <span>{formatFechaHora(p.fechaCreacion)}</span>
             <span>{metodoEntrega(p)}</span>
@@ -626,7 +628,7 @@ export default function PedidosTienda({ param, irA }) {
                   </span>
                 </span>
                 <span className="pdt-fila__estado">
-                  <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+                  {canceladoPorDriveMaster(p) ? <ChipEstado tono="error">Cancelado</ChipEstado> : <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />}
                   <ChipPlazo pedido={p} ahora={ahora} />
                 </span>
                 <strong className="pdt-fila__total ui-precio">{formatPrecio(p.total)}</strong>

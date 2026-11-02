@@ -183,7 +183,7 @@ public class CancelacionOrdenService {
                 Query.query(Criteria.where("id").is(p.getId()).and("estado").in(SIN_DESPACHAR)),
                 new Update().set("estado", PedidoTienda.NO_DESPACHADO).set("fechaNoDespacho", LocalDateTime.now())
                         .set("tipoMotivoNoDespacho", PedidoTienda.MOTIVO_ORDEN_CANCELADA)
-                        .set("motivoNoDespacho", texto + ": no despaches este pedido"),
+                        .set("motivoNoDespacho", texto),
                 FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
         if (cancelado == null) return false;
         for (RepartoPago r : repartos.findByPedidoTiendaId(p.getId())) {

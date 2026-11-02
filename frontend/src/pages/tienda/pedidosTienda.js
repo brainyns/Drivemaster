@@ -159,3 +159,10 @@ export function textoPlazo(p, ahora = Date.now()) {
   if (plazoVencido(p, ahora)) return `Plazo vencido el ${formatFechaHora(p.plazoDespachoHasta)}`;
   return `${esRetiro(p) ? "Déjalo listo" : "Despáchalo"} antes del ${formatFechaHora(p.plazoDespachoHasta)}`;
 }
+
+/**
+ * Lo canceló DriveMaster (la orden se canceló o el pago no se aplicó): para la tienda es "Cancelado", no "No se despachó",
+ * que es cuando la tienda misma no pudo despacharlo.
+ */
+export const canceladoPorDriveMaster = (p) => p.estado === "NO_DESPACHADO"
+  && ["ORDEN_CANCELADA", "PAGO_NO_APLICADO"].includes(p.tipoMotivoNoDespacho);
