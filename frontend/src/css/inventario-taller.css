@@ -196,3 +196,7 @@
   color: var(--ui-text);
 }
 .iv-saldos__nota { margin: 0; padding: 0 18px 14px; }
+.iv-cifras__topado dd { color: var(--ui-aviso); }
+.iv-moneda--error { border-color: var(--ui-error); }
+.iv-precio .iv-meta, .iv-precio .iv-error { margin: 0; max-width: 46ch; }
+.iv-precio .iv-campo { justify-self: start; }

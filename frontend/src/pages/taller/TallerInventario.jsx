@@ -9,7 +9,7 @@ import Alerta from "../../components/ui/Alerta";
 import Esqueleto from "../../components/ui/Esqueleto";
 import EstadoVacio from "../../components/ui/EstadoVacio";
 import Icon from "../../components/public/Icon";
-import { cifrasPieza, estadoEnCamino, pct, precioConRecargo } from "./reglasInventario";
+import { cifrasPieza, estadoEnCamino, pct } from "./reglasInventario";
 import { plural } from "../../utils/formato";
 import "../../css/inventario-taller.css";
 
@@ -105,18 +105,19 @@ function PedidoEnCamino({ p, token, onInventario, onAviso }) {
 }
 
 /**
- * El precio se escribe directo o como recargo sobre el costo; las dos casillas van juntas. Las cifras se ven mientras se
- * escribe y se guardan al confirmar. Vender en pérdida se avisa, pero no se bloquea: es decisión del taller.
+ * El precio se escribe antes de IVA y nunca puede pasar el tope: el precio público de la tienda llevado al IVA del taller,
+ * para que el cliente no pague más que en la tienda. El backend también lo valida. Las cifras se ven mientras se escribe
+ * y se guardan al confirmar. Vender en pérdida se avisa, pero no se bloquea: es decisión del taller.
  */
-function EditorPrecio({ pieza, comisionPct, recargoSugerido, token, onGuardada }) {
+function EditorPrecio({ pieza, comisionPct, token, onGuardada }) {
   const [precio, setPrecio] = useState(pieza.precioVenta ? String(Math.round(pieza.precioVenta)) : "");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const numero = Number(precio);
-  const costo = pieza.costoUnitario;
+  const tope = pieza.tope;
+  const supera = tope != null && numero > tope;
   const cambio = numero > 0 && numero !== Math.round(pieza.precioVenta || 0);
-  const vista = cifrasPieza(numero, costo, comisionPct);
-  const recargo = vista?.recargoPct ?? "";
+  const vista = cifrasPieza(numero, pieza.costoUnitario, comisionPct);
 
   const guardar = async () => {
     setGuardando(true);
@@ -132,31 +133,21 @@ function EditorPrecio({ pieza, comisionPct, recargoSugerido, token, onGuardada }
 
   return (
     <div className="iv-precio">
-      <div className="iv-precio__campos">
-        <label className="iv-campo">
-          <span className="iv-etiqueta">Precio de venta</span>
-          <span className="iv-moneda">
-            <span aria-hidden="true">$</span>
-            <input inputMode="numeric" value={precio} aria-label={`Precio de venta de ${pieza.nombre}, antes de IVA`}
-              onChange={(e) => setPrecio(e.target.value.replace(/\D/g, "").slice(0, 9))} />
-          </span>
-        </label>
-        {costo > 0 && (
-          <label className="iv-campo iv-campo--recargo">
-            <span className="iv-etiqueta">Recargo</span>
-            <span className="iv-moneda">
-              <input inputMode="decimal" value={recargo === "" ? "" : String(recargo).replace(".", ",")}
-                aria-label={`Recargo sobre el costo de ${pieza.nombre}`}
-                onChange={(e) => {
-                  const v = Number(e.target.value.replace(",", ".").replace(/[^\d.-]/g, ""));
-                  if (Number.isFinite(v)) setPrecio(String(Math.max(0, precioConRecargo(costo, v))));
-                }} />
-              <span aria-hidden="true">%</span>
-            </span>
-          </label>
-        )}
-      </div>
-      {vista && (
+      <label className="iv-campo">
+        <span className="iv-etiqueta">Tu precio al cliente, antes de IVA</span>
+        <span className={`iv-moneda${supera ? " iv-moneda--error" : ""}`}>
+          <span aria-hidden="true">$</span>
+          <input inputMode="numeric" value={precio} aria-label={`Precio de venta de ${pieza.nombre}, antes de IVA`}
+            aria-invalid={supera || undefined} aria-describedby={`iv-tope-${pieza.id}`}
+            onChange={(e) => setPrecio(e.target.value.replace(/\D/g, "").slice(0, 9))} />
+        </span>
+      </label>
+      {tope != null && (
+        <p id={`iv-tope-${pieza.id}`} className={supera ? "iv-error" : "iv-meta"}>
+          {supera ? "Supera el precio público. " : ""}Máximo {formatPrecio(tope)}: así tu cliente paga {formatPrecio(pieza.precioPublicoFinal)} con IVA, lo mismo que en {pieza.tiendaReferencia}.
+        </p>
+      )}
+      {vista && !supera && (
         <dl className="iv-cifras" aria-live="polite">
           <div><dt>Margen</dt><dd className="iv-cifra">{pct(vista.margenPct)}</dd></div>
           <div className={vista.enPerdida ? "iv-cifras__perdida" : ""}>
@@ -165,25 +156,26 @@ function EditorPrecio({ pieza, comisionPct, recargoSugerido, token, onGuardada }
           </div>
         </dl>
       )}
-      {vista?.enPerdida && (
+      {vista?.enPerdida && !supera && (
         <p className="iv-aviso" role="status"><Icon name="alert" size={14} />Con este precio pierdes {formatPrecio(-vista.ganancia)} por unidad. Puedes guardarlo igual.</p>
       )}
       {error && <p className="iv-error" role="alert">{error}</p>}
       <div className="iv-acciones">
         {cambio && (
-          <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" onClick={guardar} disabled={guardando} aria-busy={guardando}>
+          <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" onClick={guardar} disabled={guardando || supera} aria-busy={guardando}>
             <span>{guardando ? "Guardando…" : "Guardar precio"}</span>
           </button>
         )}
-        {costo > 0 && numero !== precioConRecargo(costo, recargoSugerido) && (
-          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => setPrecio(String(precioConRecargo(costo, recargoSugerido)))}>
-            Usar el sugerido (+{recargoSugerido} %)
+        {tope != null && numero !== tope && (
+          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => setPrecio(String(Math.round(tope)))}>
+            Usar el precio público ({formatPrecio(tope)})
           </button>
         )}
       </div>
     </div>
   );
 }
+
 
 function Compatibilidad({ pieza }) {
   if (pieza.compatibilidadUniversal) return <span className="iv-compat">Sirve a cualquier vehículo</span>;
@@ -195,7 +187,7 @@ function Compatibilidad({ pieza }) {
 
 function Pieza({ pieza, datos, token, onGuardada }) {
   const [abierta, setAbierta] = useState(false);
-  const cifras = cifrasPieza(pieza.precioVenta, pieza.costoUnitario, datos.comisionPct);
+  // Las cifras de la fila son las del backend: sobre el precio que se cobraría hoy (el del taller o el tope)
   const agotada = pieza.stock === 0;
   return (
     <li className={`iv-pieza${agotada ? " iv-pieza--agotada" : ""}`}>
@@ -207,12 +199,12 @@ function Pieza({ pieza, datos, token, onGuardada }) {
         </div>
         <dl className="iv-pieza__numeros">
           <div><dt>En stock</dt><dd className="iv-cifra iv-cifra--grande">{agotada ? "Agotada" : pieza.stock}</dd></div>
+          <div><dt>Precio público</dt><dd className="iv-cifra">{pieza.precioPublico != null ? formatPrecio(pieza.precioPublico) : "—"}</dd></div>
           <div><dt>Costo</dt><dd className="iv-cifra">{pieza.costoUnitario != null ? formatPrecio(pieza.costoUnitario) : "—"}</dd></div>
-          <div><dt>Precio</dt><dd className="iv-cifra">{pieza.precioVenta ? formatPrecio(pieza.precioVenta) : "Sin precio"}</dd></div>
-          <div><dt>Recargo</dt><dd className="iv-cifra">{pct(cifras?.recargoPct)}</dd></div>
-          <div><dt>Margen</dt><dd className="iv-cifra">{pct(cifras?.margenPct)}</dd></div>
-          <div className={cifras?.enPerdida ? "iv-cifras__perdida" : ""}>
-            <dt>Ganancia</dt><dd className="iv-cifra">{cifras ? formatPrecio(cifras.ganancia) : "—"}</dd>
+          <div className={pieza.topado ? "iv-cifras__topado" : ""}><dt>Tu precio</dt><dd className="iv-cifra">{pieza.precioCobrado ? formatPrecio(pieza.precioCobrado) : "Sin precio"}</dd></div>
+          <div><dt>Margen</dt><dd className="iv-cifra">{pct(pieza.margenPct)}</dd></div>
+          <div className={pieza.enPerdida ? "iv-cifras__perdida" : ""}>
+            <dt>Ganancia</dt><dd className="iv-cifra">{pieza.gananciaDespuesComision != null ? formatPrecio(pieza.gananciaDespuesComision) : "—"}</dd>
           </div>
         </dl>
         <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico iv-pieza__abrir" aria-expanded={abierta}
@@ -221,29 +213,35 @@ function Pieza({ pieza, datos, token, onGuardada }) {
           <Icon name="chevron" size={16} className={abierta ? "iv-girado" : ""} />
         </button>
       </div>
-      {cifras?.enPerdida && !abierta && (
+      {pieza.topado && (
+        <p className="iv-aviso"><Icon name="alert" size={14} />El precio público bajó: al cotizar se cobra {formatPrecio(pieza.precioCobrado)}, no tus {formatPrecio(pieza.precioVenta)}.</p>
+      )}
+      {pieza.perdidaConTope ? (
+        <p className="iv-aviso"><Icon name="alert" size={14} />Ni con el precio público máximo cubres costo y comisión: esta pieza se vende en pérdida.</p>
+      ) : pieza.enPerdida && !abierta && (
         <p className="iv-aviso"><Icon name="alert" size={14} />Se vende en pérdida: revisa el precio.</p>
       )}
       {abierta && (
         <div className="iv-pieza__detalle" id={`iv-detalle-${pieza.id}`}>
-          <EditorPrecio pieza={pieza} comisionPct={datos.comisionPct} recargoSugerido={datos.recargoSugeridoPct}
+          <EditorPrecio pieza={pieza} comisionPct={datos.comisionPct}
             token={token} onGuardada={onGuardada} />
           <div className="iv-lotes">
             <h4 className="iv-etiqueta">De dónde vino</h4>
             <table className="iv-tabla">
-              <thead><tr><th scope="col">Compra</th><th scope="col">Tienda</th><th scope="col" className="iv-der">Quedan</th><th scope="col" className="iv-der">Costo</th></tr></thead>
+              <thead><tr><th scope="col">Compra</th><th scope="col">Tienda</th><th scope="col" className="iv-der">Quedan</th><th scope="col" className="iv-der">Pagaste</th><th scope="col" className="iv-der">Costo</th></tr></thead>
               <tbody>
                 {pieza.lotes.map((l) => (
                   <tr key={l.id} className={l.disponible === 0 ? "iv-tabla__vacio" : ""}>
                     <td>{fecha(l.fechaEntrada)}<span className="iv-meta"> · {l.cantidad} u.</span></td>
                     <td>{l.tiendaNombre}</td>
                     <td className="iv-der iv-cifra">{l.disponible}</td>
+                    <td className="iv-der iv-cifra">{l.precioPagado != null ? formatPrecio(l.precioPagado) : "—"}{l.descuentoPct > 0 ? <span className="iv-meta"> · público {formatPrecio(l.precioPublico)}, −{String(l.descuentoPct).replace(".", ",")} %</span> : null}</td>
                     <td className="iv-der iv-cifra">{formatPrecio(l.costoUnitario)}{l.ivaEnCosto ? <span className="iv-meta"> con IVA</span> : null}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="iv-meta">Se usa primero lo que entró antes. Si una venta se cancela, cada unidad vuelve a su compra.</p>
+            <p className="iv-meta">Se usa primero lo que entró antes. El costo queda como se compró aunque la tienda cambie su precio o su descuento. Si una venta se cancela, cada unidad vuelve a su compra.</p>
           </div>
         </div>
       )}

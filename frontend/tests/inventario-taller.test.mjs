@@ -103,3 +103,32 @@ test("el taller ve lo que debe por repuestos que se quedó, y el admin sabe qui�
   assert.match(detalle, /resultado\.deudaTaller > 0/);
   assert.match(leer("../src/pages/ReportesPlataforma.jsx"), /t: "Lo debe", f: \(s\) => s\.deudor/);
 });
+
+test("el taller ve y paga el precio con descuento; el cliente, el público", async () => {
+  const { precioQuePaga, textoDescuento } = await import("../src/components/marketplace/reglasPrecioCatalogo.js");
+  assert.equal(precioQuePaga({ precio: 100_000, precioTaller: 80_000 }), 80_000);
+  assert.equal(precioQuePaga({ precio: 100_000 }), 100_000, "sin precio de taller, el público");
+  assert.equal(textoDescuento(12.5), "−12,5 %");
+  const componente = leer("../src/components/marketplace/PrecioCatalogo.jsx");
+  assert.match(componente, /<s className="pc-precio__publico">/, "el público va tachado");
+  for (const ruta of ["../src/components/public/ProductCard.jsx", "../src/components/public/ProductDetail.jsx", "../src/pages/DetalleProductoMarketplace.jsx", "../src/pages/CarritoMarketplace.jsx"]) {
+    assert.match(leer(ruta), /PrecioCatalogo/, `${ruta} muestra el precio del taller`);
+  }
+  assert.match(leer("../src/hooks/useCarrito.js"), /precioQuePaga\(x\.producto\)/, "el subtotal del carrito usa lo que paga");
+});
+
+test("la tienda configura su descuento para talleres de 0 a 50 % en Mi tienda", () => {
+  const mi = leer("../src/pages/DatosMiTienda.jsx");
+  assert.match(mi, /titulo="Precio para talleres"/);
+  assert.match(mi, /n < 0 \|\| n > 50/);
+  assert.match(mi, /guardar\(\{ descuentoTalleresPct: n \}\)/);
+});
+
+test("en Mi inventario el precio del taller no pasa el público y se ve el tope", () => {
+  const inv = leer("../src/pages/taller/TallerInventario.jsx");
+  assert.match(inv, /disabled=\{guardando \|\| supera\}/, "no deja guardar sobre el tope");
+  assert.match(inv, /Usar el precio público/);
+  assert.match(inv, /<dt>Precio público<\/dt>/);
+  assert.match(inv, /pieza\.perdidaConTope/);
+  assert.ok(!/Usar el sugerido \(\+/.test(inv), "ya no se sugiere costo + recargo");
+});
