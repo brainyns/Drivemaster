@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { liquidacionDePedido } from "../../services/pedidoTiendaService";
-import { liquidacionDeOrden } from "../../services/tallerService";
 import { formatPrecio } from "./estadosServicio";
 import { ESTADOS_PAGO_NEGOCIO, filaComision, filaComisionResumen, textoConceptoPago, textoPago } from "./reglasDesglose";
 import ChipEstado from "../ui/ChipEstado";
@@ -9,11 +8,11 @@ import Esqueleto from "../ui/Esqueleto";
 import "../../css/desglose-dinero.css";
 
 /** Venta → comisión → lo que recibe el negocio, como un recibo: se lee de arriba abajo y cabe en celular. */
-export function ReciboDinero({ venta, comision, recibes }) {
+export function ReciboDinero({ venta, etiquetaVenta = "Venta", notaVenta, comision, recibes }) {
   return (
     <dl className="dd-recibo">
       <div className="dd-recibo__fila">
-        <dt>Venta</dt>
+        <dt>{etiquetaVenta}{notaVenta && <span className="dd-nota">{notaVenta}</span>}</dt>
         <dd>{formatPrecio(venta)}</dd>
       </div>
       <div className="dd-recibo__fila">
@@ -29,28 +28,28 @@ export function ReciboDinero({ venta, comision, recibes }) {
 }
 
 /** Los totales de un informe. Sin ventas no dice nada: el panel ya lo explica. */
-export function ResumenDinero({ resumen }) {
+export function ResumenDinero({ resumen, etiquetaVenta, notaVenta }) {
   if (!resumen || resumen.venta <= 0) return null;
-  return <ReciboDinero venta={resumen.venta} comision={filaComisionResumen(resumen)} recibes={resumen.recibes} />;
+  return <ReciboDinero venta={resumen.venta} etiquetaVenta={etiquetaVenta} notaVenta={notaVenta} comision={filaComisionResumen(resumen)} recibes={resumen.recibes} />;
 }
 
 /**
- * El dinero de un pedido (pedidoId, para su tienda) o de una orden (ordenId, para su taller). estado recarga al avanzar.
+ * El dinero de un pedido para su tienda. estado recarga al avanzar.
  * children envuelve el contenido en la tarjeta de cada pantalla; sin líneas no se muestra nada.
  */
-export default function DesgloseDinero({ token, pedidoId, ordenId, estado, children }) {
-  const clave = `${pedidoId || ordenId}|${estado}`;
+export default function DesgloseDinero({ token, pedidoId, estado, children }) {
+  const clave = `${pedidoId}|${estado}`;
   const [intento, setIntento] = useState(0);
   const [carga, setCarga] = useState({ clave: null, datos: null, error: null });
   const pedida = `${clave}|${intento}`;
 
   useEffect(() => {
     let vivo = true;
-    (pedidoId ? liquidacionDePedido(token, pedidoId) : liquidacionDeOrden(token, ordenId))
+    liquidacionDePedido(token, pedidoId)
       .then((datos) => { if (vivo) setCarga({ clave: pedida, datos, error: null }); })
       .catch((e) => { if (vivo) setCarga({ clave: pedida, datos: null, error: e.message }); });
     return () => { vivo = false; };
-  }, [token, pedidoId, ordenId, pedida]);
+  }, [token, pedidoId, pedida]);
 
   if (carga.clave !== pedida) return children(<Esqueleto variante="lista" cantidad={1} texto="Cargando tu pago…" />);
   if (carga.error) return children(<Alerta onReintentar={() => setIntento((i) => i + 1)}>{carga.error}</Alerta>);

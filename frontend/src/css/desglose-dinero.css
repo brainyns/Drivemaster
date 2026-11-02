@@ -20,5 +20,18 @@
 .dd-recibo__fila--final dt { font-weight: 700; }
 .dd-recibo__fila--final dd { font-size: 1.125rem; font-weight: 700; }
 
+/* El total de una orden: "parte" es un paso del cálculo, no otro sumando; el total abre la segunda mitad del recibo */
+.dd-orden { display: grid; gap: 10px; min-width: 0; }
+.dd-recibo__fila--parte dt, .dd-recibo__fila--parte dd { color: var(--ui-muted); font-size: 0.8125rem; }
+.dd-recibo__fila--total { padding-top: 8px; border-top: 1px solid var(--ui-line); }
+.dd-recibo__fila--total dt { font-weight: 700; }
+.dd-recibo__fila--total .dd-nota { font-weight: 400; }
+.dd-recibo__fila--total dd { font-size: 1rem; font-weight: 700; }
+
+/* Cada pago de la orden: lo que queda debajo del total */
+.dd-pagos { display: grid; gap: 10px; margin: 0; padding: 12px 0 0; list-style: none; border-top: 1px solid var(--ui-line); }
+.dd-pago { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 4px 12px; min-width: 0; }
+.dd-pago__concepto { min-width: 0; flex: 1 1 200px; font-size: 0.875rem; color: var(--ui-text); }
+
 .dd-nota { display: block; margin: 2px 0 0; font-size: 0.8125rem; line-height: 1.4; color: var(--ui-muted); overflow-wrap: anywhere; }
 .dd-linea > .dd-nota { margin: 0; }

@@ -14,7 +14,7 @@ import LineaTiempo from "../components/servicio/LineaTiempo";
 import DiagnosticoForm from "../components/servicio/DiagnosticoForm";
 import CotizacionForm from "../components/servicio/CotizacionForm";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
-import DesgloseDinero from "../components/servicio/DesgloseDinero";
+import { ResumenOrdenTaller } from "../components/servicio/ResumenServicio";
 import {
   ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
@@ -740,14 +740,14 @@ export default function TallerSolicitudes({
             )}
 
             {/* Fuera del seguimiento: una orden con solo el diagnóstico pagado también tiene pago */}
-            <DesgloseDinero token={token} ordenId={s.id} estado={s.estado}>
+            <ResumenOrdenTaller token={token} ordenId={s.id} estado={s.estado}>
               {(contenido) => (
                 <section className="ss-bloque" aria-labelledby="st-pago">
                   <h2 id="st-pago" className="ss-bloque__titulo">Tu pago</h2>
                   {contenido}
                 </section>
               )}
-            </DesgloseDinero>
+            </ResumenOrdenTaller>
           </div>
 
           <aside className="ss-detalle__lateral" aria-labelledby="st-avance">

@@ -47,6 +47,13 @@ export async function subirFotoServicio(token, archivo) {
   return data.url;
 }
 
+/** Lo que el cliente pagó por su servicio y lo que se le devuelve. */
+export async function pagosDeServicio(token, id) {
+  const res = await apiFetch(`${BASE}/${id}/pagos`, { headers: headers(token) });
+  if (!res.ok) throw new Error("No se pudo cargar lo que has pagado.");
+  return res.json();
+}
+
 export async function misSolicitudesServicio(token) {
   const res = await apiFetch(`${BASE}/mias`, { headers: headers(token) });
   return handle(res, "Error al cargar tus servicios");

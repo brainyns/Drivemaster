@@ -11,6 +11,7 @@ import Esqueleto from "../../components/ui/Esqueleto";
 import Estrellas from "../../components/ui/Estrellas";
 import BarraProgreso from "../../components/ui/BarraProgreso";
 import { ResumenDinero } from "../../components/servicio/DesgloseDinero";
+import { notaTotalPeriodo } from "../../components/servicio/reglasDesglose";
 import Grafico from "../../components/ui/Grafico";
 import { etiquetaMes, pesosCorto } from "../../components/ui/escalaGrafico";
 import "../../css/informes-taller.css";
@@ -98,11 +99,11 @@ function Ingresos({ ingresos, periodo }) {
   const conDiagnostico = diagnostico.liquidado + diagnostico.pendiente > 0;
   const hay = manoDeObra.liquidado + manoDeObra.pendiente > 0 || conDiagnostico;
   return (
-    <Tarjeta id="ti-ingresos" titulo="Ingresos por mano de obra">
-      {hay && <ResumenDinero resumen={desglose} />}
+    <Tarjeta id="ti-ingresos" titulo="Ingresos del taller">
+      {hay && <ResumenDinero resumen={desglose} etiquetaVenta="Total generado" notaVenta={notaTotalPeriodo(ingresos)} />}
       {hay ? (
         <div className="ti-dineros">
-          <Dinero titulo="Mano de obra" monto={manoDeObra} />
+          <Dinero titulo="Saldo de cotización" monto={manoDeObra} />
           {/* Sin cobros de diagnóstico, dos $0 no dicen nada: se rotula sin costo */}
           {conDiagnostico ? <Dinero titulo="Diagnóstico" monto={diagnostico} /> : (
             <div className="ti-dinero">
@@ -118,7 +119,7 @@ function Ingresos({ ingresos, periodo }) {
         </p>
       )}
       <p className="ti-nota">
-        Cifras {periodo}, en lo que recibes. “Liquidado” cuenta por la fecha en que se te pagó y “Pendiente” (lo que aún no se te ha pagado)
+        El total generado suma lo pagado por diagnóstico y cotización, con IVA. Las demás cifras {periodo} están en lo que recibes. “Liquidado” cuenta por la fecha en que se te pagó y “Pendiente” (lo que aún no se te ha pagado)
         por la fecha en que pagó el cliente; cada pago está en uno solo de los dos.
         {anulado > 0 && ` Hay ${formatPrecio(anulado)} anulados que no cuentan.`}
       </p>
