@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.model.Cotizacion;
+import com.drivemaster.drivemaster.model.MovimientoPiezaTaller;
 import com.drivemaster.drivemaster.model.CotizacionItem;
 import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.OrdenServicio;
@@ -178,11 +179,12 @@ public class CancelacionOrdenService {
             }
         });
         paso(ordenId, "devolver las piezas al inventario del taller",
-                () -> piezas[0] = stockTaller.revertir(refInventario, texto, admin.getId()));
+                () -> piezas[0] = stockTaller.revertir(refInventario, texto, admin.getId(), MovimientoPiezaTaller.CANCELACION));
         paso(ordenId, "pasar al inventario del taller los repuestos que ya le habían llegado", () -> {
             for (PedidoTienda p : enElTaller) {
                 if (taller == null) throw new IllegalStateException("No se encontró el taller " + orden.getTallerId());
-                inventarioTaller.entrarPedido(taller, p, admin.getId());
+                inventarioTaller.entrarPedido(taller, p, admin.getId(), "Repuesto de la orden #" + ReferenciasMovimiento.corta(ordenId)
+                        + " cancelada: ya estaba en el taller y queda en tu inventario", MovimientoPiezaTaller.CANCELACION);
             }
         });
         paso(ordenId, "habilitar el pago del diagnóstico", () -> liquidacion.diagnosticoPrestado(ordenId, "ORDEN_CANCELADA_POR_ADMIN"));

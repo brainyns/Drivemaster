@@ -154,6 +154,11 @@ public class InventarioTallerService {
      * repuestos de tienda ya estaban en el taller.
      */
     public LocalDateTime entrarPedido(Taller taller, PedidoTienda pedido, String usuarioId) {
+        return entrarPedido(taller, pedido, usuarioId, null, null);
+    }
+
+    /** motivo y clase del movimiento de entrada; null = la llegada de una compra. */
+    public LocalDateTime entrarPedido(Taller taller, PedidoTienda pedido, String usuarioId, String motivo, String clase) {
         LocalDateTime ahora = LocalDateTime.now();
         double ivaPorPeso = valor(pedido.getSubtotal()) > 0 ? valor(pedido.getIva()) / pedido.getSubtotal() : 0;
         boolean ivaEnCosto = !IvaTaller.esResponsable(taller);
@@ -171,7 +176,7 @@ public class InventarioTallerService {
                     .cantidad(item.getCantidad()).disponible(item.getCantidad())
                     .costoUnitario(costo(item.getPrecioUnitario(), ivaEnCosto ? ivaPorPeso : 0)).ivaEnCosto(ivaEnCosto)
                     .precioPublico(publico).descuentoPct(item.getDescuentoPct()).precioPagado(item.getPrecioUnitario())
-                    .fechaEntrada(ahora).build(), usuarioId));
+                    .fechaEntrada(ahora).build(), usuarioId, null, motivo, clase));
         }
         return ahora;
     }
@@ -253,7 +258,8 @@ public class InventarioTallerService {
                 p.getCompatibilidadUniversal(), p.getModelosCompatibles(), lotes,
                 ref == null ? null : ref.precioPublico(), ref == null ? null : precioPublico.finalEnTienda(ref.precioPublico()),
                 ref == null ? null : ref.tiendaNombre(), tope, cobrado,
-                precio != null && tope != null && precio > tope, gananciaConTope != null && gananciaConTope < 0);
+                precio != null && tope != null && precio > tope, gananciaConTope != null && gananciaConTope < 0,
+                p.getStockMinimo(), p.getStockMinimo() != null && p.getStock() <= p.getStockMinimo());
     }
 
     private static final Comparator<PiezaTaller.Lote> FIFO = Comparator.comparing(PiezaTaller.Lote::getFechaEntrada,

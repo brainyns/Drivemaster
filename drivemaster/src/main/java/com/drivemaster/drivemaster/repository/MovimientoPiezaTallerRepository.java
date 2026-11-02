@@ -10,4 +10,6 @@ import java.util.List;
 public interface MovimientoPiezaTallerRepository extends MongoRepository<MovimientoPiezaTaller, String> {
 
     List<MovimientoPiezaTaller> findByReferenciaAndTipo(String referencia, String tipo);
+
+    List<MovimientoPiezaTaller> findByTallerIdOrderByFechaDesc(String tallerId);
 }

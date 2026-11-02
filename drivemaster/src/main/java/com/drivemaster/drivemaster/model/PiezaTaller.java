@@ -55,6 +55,9 @@ public class PiezaTaller {
     private Double precioVenta;
     // Suma de lo disponible en los lotes
     private int stock;
+    // Lo define el taller; null = sin alerta. Con stock <= mínimo se avisa una vez (avisoStockBajo) hasta que vuelva a subir
+    private Integer stockMinimo;
+    private Boolean avisoStockBajo;
     // Los lotes agotados se conservan: son el rastro del costo y a donde vuelve una devolución
     @Builder.Default
     private List<Lote> lotes = new ArrayList<>();

@@ -29,7 +29,9 @@ public final class InventarioTallerDTO {
                         // Precio público de referencia (antes de IVA y con el IVA de la tienda), de qué tienda, y el tope del taller.
                         // precioCobrado: el que se usa al cotizar hoy. topado: su precio quedó sobre el público y se cobra el tope
                         Double precioPublico, Double precioPublicoFinal, String tiendaReferencia, Double tope, Double precioCobrado,
-                        boolean topado, boolean perdidaConTope) {
+                        boolean topado, boolean perdidaConTope,
+                        // Alerta de stock bajo: el mínimo que fijó el taller (null = sin alerta) y si ya está en él o debajo
+                        Integer stockMinimo, boolean stockBajo) {
     }
 
     public record Lote(String id, String compraId, String pedidoId, String tiendaNombre, int cantidad, int disponible,

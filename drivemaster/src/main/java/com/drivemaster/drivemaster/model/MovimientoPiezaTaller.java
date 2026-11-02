@@ -25,6 +25,17 @@ public class MovimientoPiezaTaller {
     public static final String ENTRADA = "ENTRADA";
     public static final String SALIDA = "SALIDA";
     public static final String REVERSA = "REVERSA";
+    // Conteo físico: el stock queda en lo contado; cantidad es la diferencia (el signo sale de stock antes → después)
+    public static final String AJUSTE = "AJUSTE";
+
+    // Por qué se movió: lo que ve el taller en el historial. Los movimientos anteriores al campo se deducen del tipo (claseDe)
+    public static final String COMPRA = "COMPRA";
+    public static final String VENTA = "VENTA";
+    public static final String CANCELACION = "CANCELACION";
+    public static final String CARGA_INICIAL = "CARGA_INICIAL";
+    public static final String MERMA = "MERMA";
+    public static final String DEVOLUCION_TIENDA = "DEVOLUCION_TIENDA";
+    public static final String DEVOLUCION_CLIENTE = "DEVOLUCION_CLIENTE";
 
     @Id
     private String id;
@@ -32,6 +43,7 @@ public class MovimientoPiezaTaller {
     private String piezaId;
     private String piezaNombre;
     private String tipo;
+    private String clase;
     private int cantidad;
     private int stockAnterior;
     private int stockNuevo;
@@ -53,6 +65,15 @@ public class MovimientoPiezaTaller {
 
     public static String idDe(String tipo, String piezaId, String referencia) {
         return tipo + "|" + piezaId + "|" + referencia;
+    }
+
+    /** La clase guardada o, en movimientos anteriores a ella, la que corresponde a su tipo. */
+    public static String claseDe(MovimientoPiezaTaller m) {
+        if (m.getClase() != null) return m.getClase();
+        if (SALIDA.equals(m.getTipo())) return VENTA;
+        if (REVERSA.equals(m.getTipo())) return REVERSA;
+        if (AJUSTE.equals(m.getTipo())) return AJUSTE;
+        return COMPRA;
     }
 
     @Data

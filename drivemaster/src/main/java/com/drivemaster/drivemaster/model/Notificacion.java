@@ -45,6 +45,7 @@ public class Notificacion {
     public static final String VEHICULO_LISTO = "VEHICULO_LISTO";
     public static final String VEHICULO_ENTREGADO = "VEHICULO_ENTREGADO";
     public static final String ALERTA_ADMIN = "ALERTA_ADMIN";
+    public static final String STOCK_BAJO = "STOCK_BAJO";
 
     @Id
     private String id;

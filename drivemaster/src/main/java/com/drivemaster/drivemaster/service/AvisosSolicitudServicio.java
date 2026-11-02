@@ -2,6 +2,7 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.model.Cotizacion;
 import com.drivemaster.drivemaster.model.Notificacion;
+import com.drivemaster.drivemaster.model.PiezaTaller;
 import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.model.Taller;
@@ -27,7 +28,7 @@ import java.util.Optional;
  * Un fallo de envío nunca revierte el cambio de estado: se registra en el log y el flujo sigue.
  */
 @Service
-public class AvisosSolicitudServicio {
+public class AvisosSolicitudServicio implements StockTallerService.AvisoStockBajo {
 
     private static final Logger log = LoggerFactory.getLogger(AvisosSolicitudServicio.class);
 
@@ -196,6 +197,17 @@ public class AvisosSolicitudServicio {
                         + String.join(", ", piezas) + " se cobró al precio público: bajó y tu precio quedó por encima. Revísalo en Mi inventario.",
                 "taller-inventario", cotizacion.getOrdenId());
     }
+    /** Una pieza del inventario llegó a su mínimo. StockTallerService llama una sola vez cada vez que lo cruza. */
+    @Override
+    public void stockBajo(PiezaTaller pieza) {
+        tallerRepository.findById(pieza.getTallerId()).ifPresent(taller -> avisar(taller.getUsuarioId(), Notificacion.STOCK_BAJO,
+                "Stock bajo: " + pieza.getNombre(),
+                (pieza.getStock() == 0 ? "Se agotó \"" + pieza.getNombre() + "\"" : "De \"" + pieza.getNombre() + "\" te "
+                        + (pieza.getStock() == 1 ? "queda 1 unidad" : "quedan " + pieza.getStock() + " unidades"))
+                        + " y tu mínimo es " + pieza.getStockMinimo() + ". Pide más en el catálogo.",
+                "taller-inventario", pieza.getId()));
+    }
+
     /** Se cotizó una pieza del inventario y al pagar ya no alcanzó (otra orden la vendió antes): no se cobró nada. */
     public void piezaTallerSinStock(Cotizacion cotizacion, String pieza) {
         tallerRepository.findById(cotizacion.getTallerId()).ifPresent(taller -> {

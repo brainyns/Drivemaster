@@ -5,6 +5,7 @@ import com.drivemaster.drivemaster.controller.InventarioTallerController;
 import com.drivemaster.drivemaster.dto.taller.InventarioTallerDTO;
 import com.drivemaster.drivemaster.service.CancelacionOrdenService;
 import com.drivemaster.drivemaster.service.InventarioTallerService;
+import com.drivemaster.drivemaster.service.MovimientosTallerService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -40,6 +41,7 @@ class InventarioTallerWebTest {
 
     @MockBean private InventarioTallerService inventario;
     @MockBean private CancelacionOrdenService cancelacion;
+    @MockBean private MovimientosTallerService movimientos;
     @MockBean private JwtUtil jwtUtil;
     @MockBean private CustomUserDetailsService customUserDetailsService;
 
@@ -48,6 +50,9 @@ class InventarioTallerWebTest {
         for (String rol : new String[]{"CLIENTE", "TIENDA", "ADMIN", "SUPERADMIN", "VENDEDOR"}) {
             mvc.perform(get(URL).with(user("x@demo.com").roles(rol))).andExpect(status().isForbidden());
             mvc.perform(post(URL + "/pedidos/ped1/llego").with(csrf()).with(user("x@demo.com").roles(rol))).andExpect(status().isForbidden());
+            mvc.perform(get(URL + "/movimientos").with(user("x@demo.com").roles(rol))).andExpect(status().isForbidden());
+            mvc.perform(post(URL + "/movimientos").with(csrf()).with(user("x@demo.com").roles(rol))
+                    .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
         }
         mvc.perform(get(URL)).andExpect(status().isUnauthorized());
         verifyNoInteractions(inventario);
@@ -57,7 +62,7 @@ class InventarioTallerWebTest {
     void el_inventario_sale_del_taller_de_la_sesion_aunque_pidan_otro() throws Exception {
         when(inventario.inventario("a@demo.com")).thenReturn(new InventarioTallerDTO.Inventario(List.of(new InventarioTallerDTO.Pieza(
                 "t1|REF:X", "Filtro", null, null, null, null, 2, 135_000.0, 100_000.0, 35.0, 25.9, 13_500.0, 21_500.0, false, true, List.of(), List.of(),
-                150_000.0, 178_500.0, "Repuestos Sur", 150_000.0, 135_000.0, false, false)),
+                150_000.0, 178_500.0, "Repuestos Sur", 150_000.0, 135_000.0, false, false, null, false)),
                 List.of(), 10, true, 35, 200_000, 270_000, List.of()));
 
         mvc.perform(get(URL + "?tallerId=otro").with(user("a@demo.com").roles("TALLER")))

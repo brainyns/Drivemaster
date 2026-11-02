@@ -60,6 +60,10 @@ final class InventarioEnMemoria {
         when(movimientoRepository.findByReferenciaAndTipo(anyString(), anyString())).thenAnswer(i -> movimientos.values().stream()
                 .filter(m -> i.<String>getArgument(0).equals(m.getReferencia()) && i.<String>getArgument(1).equals(m.getTipo()))
                 .collect(Collectors.toCollection(ArrayList::new)));
+        when(movimientoRepository.findByTallerIdOrderByFechaDesc(anyString())).thenAnswer(i -> movimientos.values().stream()
+                .filter(m -> i.<String>getArgument(0).equals(m.getTallerId()))
+                .sorted(java.util.Comparator.comparing(MovimientoPiezaTaller::getFecha, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
+                .collect(Collectors.toCollection(ArrayList::new)));
     }
 
     private PiezaTaller guardar(PiezaTaller p) {
@@ -88,6 +92,7 @@ final class InventarioEnMemoria {
                 .nombre(p.getNombre()).marca(p.getMarca()).referencia(p.getReferencia()).categoria(p.getCategoria())
                 .imagenUrl(p.getImagenUrl()).modelosCompatibles(p.getModelosCompatibles())
                 .compatibilidadUniversal(p.getCompatibilidadUniversal()).precioVenta(p.getPrecioVenta()).stock(p.getStock())
+                .stockMinimo(p.getStockMinimo()).avisoStockBajo(p.getAvisoStockBajo())
                 .lotes(lotes).fechaCreacion(p.getFechaCreacion()).build();
     }
 
