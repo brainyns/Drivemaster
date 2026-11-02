@@ -196,7 +196,9 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
      * La línea ya no se debe pagar (ej. la solicitud se rechazó sin taller): PENDIENTE → ANULADO.
      * Solo si sigue PENDIENTE; una ya habilitada o liquidada no se toca. Devuelve 1 si la anuló.
      */
-    @Modifying
+    // Limpia la sesión de JPA: con open-in-view, una línea leída antes en la misma petición seguiría PENDIENTE y la
+    // comisión de un reembolso posterior la contaría viva (pasó al cancelar una orden: no se anuló su comisión)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("update RepartoPago r set r.estado = 'ANULADO', r.nota = :nota "
             + "where r.id = :id and r.estado = 'PENDIENTE'")
