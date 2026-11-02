@@ -107,6 +107,7 @@ function SaldosAFavor({ saldos, token, onCambio }) {
       <Tabla titulo="Saldos a favor pendientes" vacio="No hay saldos por cobrar." filas={saldos.items}
         columnas={[
           { t: "Pago", f: (s) => <>{s.referenciaPago}<span className="pp-sub">{s.motivo}</span></> },
+          { t: "Lo debe", f: (s) => s.deudor || <span className="pp-sub">El negocio que recibió la transferencia</span> },
           { t: "Saldo", der: true, f: (s) => <strong>{cop(s.monto)}</strong> },
           { t: "Acción", der: true, f: (s) => (
             <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => { setError(null); setMarcando(s); }}>Marcar cobrado</button>

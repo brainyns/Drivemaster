@@ -93,3 +93,13 @@ test("la tienda ve como Cancelado lo que canceló DriveMaster, con su motivo", a
 test("Mi inventario dice pieza o piezas según la cantidad", () => {
   assert.match(leer("../src/pages/taller/TallerInventario.jsx"), /plural\(d\.piezas\.filter\(\(p\) => p\.stock > 0\)\.length, "pieza con stock", "piezas con stock"\)/);
 });
+
+test("el taller ve lo que debe por repuestos que se quedó, y el admin sabe quién lo debe", () => {
+  const inv = leer("../src/pages/taller/TallerInventario.jsx");
+  assert.match(inv, /Lo que debes a DriveMaster/);
+  assert.match(inv, /no se descuenta de tus pagos/);
+  const detalle = leer("../src/components/admin/DetallePlataforma.jsx");
+  assert.match(detalle, /b\.saldoDeudor \? `\. Lo debe \$\{b\.saldoDeudor\}/);
+  assert.match(detalle, /resultado\.deudaTaller > 0/);
+  assert.match(leer("../src/pages/ReportesPlataforma.jsx"), /t: "Lo debe", f: \(s\) => s\.deudor/);
+});

@@ -181,3 +181,18 @@
   .iv-pieza__detalle { animation: none; }
   .iv-pieza__abrir svg { transition: none; }
 }
+
+/* ── Lo que el taller debe ── */
+.iv-saldos { display: grid; margin: 0; padding: 0; list-style: none; }
+.iv-saldos li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--ui-line-soft);
+  font-size: 0.9rem;
+  color: var(--ui-text);
+}
+.iv-saldos__nota { margin: 0; padding: 0 18px 14px; }

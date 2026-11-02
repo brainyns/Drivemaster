@@ -294,7 +294,9 @@ function ListaReembolsos({ reembolsos }) {
             {b.saldoAFavor > 0 && (
               <span className="dtp-sub">
                 <strong>A favor de DriveMaster: {formatoCop(b.saldoAFavor)}</strong>
-                {b.saldoCobradoEn ? `. Cobrado al negocio el ${fecha(b.saldoCobradoEn)}.` : ". Ya se le transfirió al negocio: hay que cobrárselo a mano."}
+                {b.saldoCobradoEn ? `. Cobrado al negocio el ${fecha(b.saldoCobradoEn)}.`
+                  : b.saldoDeudor ? `. Lo debe ${b.saldoDeudor}: se quedó con repuestos de esta orden. Hay que cobrárselo a mano.`
+                  : ". Ya se le transfirió al negocio: hay que cobrárselo a mano."}
               </span>
             )}
           </span>
@@ -354,7 +356,8 @@ function CancelarOrden({ token, ordenId, onCambio }) {
     return (
       <Alerta tono="ok">
         Solicitud cancelada. Queda un reembolso pendiente de {formatoCop(resultado.reembolso)} para hacer en Wompi
-        {resultado.pedidosYaDespachados.length > 0 ? `; ${resultado.pedidosYaDespachados.join(", ")} ya había despachado y esa parte no se reembolsó` : ""}.
+        {resultado.pedidosYaDespachados.length > 0 ? `; ${resultado.pedidosYaDespachados.join(", ")} lo tenía en camino y esa parte no se reembolsó` : ""}
+        {resultado.deudaTaller > 0 ? `. Los repuestos que ya estaban en el taller quedaron en su inventario: el taller debe ${formatoCop(resultado.deudaTaller)} a DriveMaster` : ""}.
       </Alerta>
     );
   }
@@ -365,7 +368,7 @@ function CancelarOrden({ token, ordenId, onCambio }) {
       </button>
       {abierto && (
         <ConfirmacionAdmin titulo="¿Cancelar esta solicitud pagada?"
-          texto="Se anula el pago al taller, se cancelan los pedidos que las tiendas no han despachado y las piezas del inventario del taller vuelven a su lote. Queda un reembolso pendiente para hacer en Wompi. No se puede deshacer."
+          texto="Se anula el pago al taller, se cancelan los pedidos que las tiendas no han despachado y las piezas del inventario del taller vuelven a su lote. Si un repuesto de tienda ya llegó al taller, se queda en su inventario y el taller lo debe a DriveMaster. Queda un reembolso pendiente para hacer en Wompi. No se puede deshacer."
           confirmar="Cancelar y reembolsar" variante="peligro" cargando={enviando} deshabilitado={motivo.trim().length < MINIMO_MOTIVO}
           onConfirmar={confirmar} onCancelar={() => setAbierto(false)}>
           <Campo id="dtp-cancelar-motivo" label="Por qué se cancela" ayuda={`Mínimo ${MINIMO_MOTIVO} caracteres. Lo verán el cliente y el taller, y queda registrado con tu usuario.`}>

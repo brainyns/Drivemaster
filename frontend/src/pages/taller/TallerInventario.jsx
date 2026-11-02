@@ -323,6 +323,27 @@ export default function TallerInventario({ onComprar }) {
             </section>
           )}
 
+          {d.saldos?.length > 0 && (
+            <section className="ui-card iv-seccion" aria-labelledby="iv-saldos">
+              <div className="ui-card__header">
+                <h2 id="iv-saldos" className="ui-card__titulo">Lo que debes a DriveMaster</h2>
+                <span className="ui-card__sub iv-cifra">{formatPrecio(d.saldos.reduce((s, x) => s + x.monto, 0))}</span>
+              </div>
+              <ul className="iv-saldos">
+                {d.saldos.map((s) => (
+                  <li key={s.id}>
+                    <span>
+                      Repuestos que te quedaron de una orden cancelada · {fecha(s.fecha)}
+                      <span className="iv-meta"> · ya están en tu inventario</span>
+                    </span>
+                    <strong className="iv-cifra">{formatPrecio(s.monto)}</strong>
+                  </li>
+                ))}
+              </ul>
+              <p className="iv-meta iv-saldos__nota">DriveMaster te contactará para cobrarlo. Por ahora no se descuenta de tus pagos.</p>
+            </section>
+          )}
+
           <section className="ui-card iv-seccion" aria-labelledby="iv-piezas">
             <div className="ui-card__header">
               <h2 id="iv-piezas" className="ui-card__titulo">Piezas</h2>
