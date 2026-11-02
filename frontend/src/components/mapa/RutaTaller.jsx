@@ -6,6 +6,7 @@ import { esCancelacion, rutaEnCarro } from "../../services/geoService";
 import { distanciaKm, formatoDistancia } from "../../utils/distancia";
 import { enlacesComoLlegar, formatoDuracion } from "../../utils/geo";
 import "../../css/mapa.css";
+import { textoError } from "../../utils/errores";
 
 /** Encuadra el mapa para que se vean todos los puntos (la ruta o, sin ella, el cliente y el taller). */
 function Encuadrar({ puntos }) {
@@ -41,7 +42,7 @@ export default function RutaTaller({ origen, taller }) {
     const k = `${oLat},${oLng};${tLat},${tLng}`;
     rutaEnCarro({ latitud: oLat, longitud: oLng }, { latitud: tLat, longitud: tLng }, { signal: control.signal })
       .then((ruta) => setResultado({ clave: k, ruta }))
-      .catch((e) => { if (!esCancelacion(e)) setResultado({ clave: k, error: e.message }); });
+      .catch((e) => { if (!esCancelacion(e)) setResultado({ clave: k, error: textoError(e) }); });
     return () => control.abort();
   }, [oLat, oLng, tLat, tLng]);
 

@@ -22,6 +22,7 @@ import { FILTROS, NIVEL, coincide, contar, nivelStock, ordenar, porEncargo, publ
 import "../css/productos.css";
 import { etiquetaCategoria } from "../utils/categorias";
 import { plural } from "../utils/formato";
+import { textoError } from "../utils/errores";
 
 /** Stock con su número y, si pide atención, el chip con texto (el color nunca va solo). */
 function Stock({ p }) {
@@ -160,7 +161,7 @@ function InventarioTienda({ onNuevo, onEditar, token }) {
       setDatos(r);
       setError(null);
     } catch (e) {
-      if (vivo()) setError(e.message);
+      if (vivo()) setError(textoError(e));
     } finally {
       if (vivo()) setCargando(false);
     }
@@ -193,7 +194,7 @@ function InventarioTienda({ onNuevo, onEditar, token }) {
         : { tono: "ok", texto: `“${p.nombre}” quedó oculto: no sale en el catálogo ni se puede comprar.` });
       await cargar();
     } catch (e) {
-      setAviso({ tono: "error", texto: e.message });
+      setAviso({ tono: "error", texto: textoError(e) });
     } finally {
       setCambiando(null);
     }
@@ -305,7 +306,7 @@ function ProductosGenerales({ onNuevo, onEditar, token }) {
       setProductos((await listarProductos(token)) || []);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }
@@ -335,7 +336,7 @@ function ProductosGenerales({ onNuevo, onEditar, token }) {
         ? { tono: "ok", texto: `“${p.nombre}” ya se ve en el catálogo.` }
         : { tono: "ok", texto: `“${p.nombre}” quedó oculto: no sale en el catálogo ni se puede comprar.` });
     } catch (e) {
-      setAviso({ tono: "error", texto: e.message });
+      setAviso({ tono: "error", texto: textoError(e) });
     } finally {
       setCambiando(null);
     }

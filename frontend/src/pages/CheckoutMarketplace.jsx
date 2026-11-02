@@ -7,6 +7,8 @@ import { guardarPagoPendiente } from "../components/marketplace/pagoPendiente";
 import "../css/marketplace.css";
 import "../css/cotizacion.css";
 import Icon from "../components/public/Icon";
+import { textoError, textoErrorPago } from "../utils/errores";
+import Alerta from "../components/ui/Alerta";
 
 const CLAVE_VEHICULO = "marketplaceVehiculoId";
 
@@ -78,7 +80,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
     const t = setTimeout(() => {
       cotizarCompra(token, solicitud)
         .then((datos) => { if (vivo) setRespuesta({ clave, datos, error: null }); })
-        .catch((e) => { if (vivo) setRespuesta({ clave, datos: null, error: e.message }); });
+        .catch((e) => { if (vivo) setRespuesta({ clave, datos: null, error: textoError(e) }); });
     }, 400);
     return () => { vivo = false; clearTimeout(t); };
   }, [clave, puedeCotizar, solicitud, token]);
@@ -117,7 +119,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
         window.location.href = data.checkoutUrl;
       }
     } catch (e) {
-      setErrorPago(e.message);
+      setErrorPago(textoErrorPago(e));
       setPagando(false);
     }
   };
@@ -224,7 +226,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
           </div>
         )}
         {errorCotizacion && <p className="mk-aviso mk-aviso--error" role="alert">{errorCotizacion} Revisa tu carrito y vuelve a intentar.</p>}
-        {errorPago && <p className="mk-aviso mk-aviso--error" role="alert">{errorPago}</p>}
+        {errorPago && <Alerta onCerrar={() => setErrorPago(null)}>{errorPago}</Alerta>}
 
         <section className="mk-pago" aria-live="polite">
           <div>

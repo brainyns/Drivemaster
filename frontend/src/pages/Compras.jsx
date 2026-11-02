@@ -15,6 +15,7 @@ import ChipEstado from "../components/ui/ChipEstado";
 import { ESTADOS_COMPRA, estadoCompra, filtrarCompras, refCompra, resumenCompras, topProveedores, unidades } from "./tienda/comprasTienda";
 import { plural } from "../utils/formato";
 import "../css/compras-tienda.css";
+import { textoError } from "../utils/errores";
 
 const SIN_FILTROS = { busqueda: "", desde: "", hasta: "", minimo: "", maximo: "", estado: "" };
 const FILTROS_ESTADO = [["", "Todas"], ["PENDIENTE", "Pendientes"], ["RECIBIDA", "Recibidas"], ["CANCELADA", "Canceladas"]];
@@ -45,7 +46,7 @@ function Compras({ onNueva, onDetalle, token }) {
       setCompras((await listarCompras(token)) || []);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }

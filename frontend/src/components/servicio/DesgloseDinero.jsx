@@ -6,6 +6,7 @@ import ChipEstado from "../ui/ChipEstado";
 import Alerta from "../ui/Alerta";
 import Esqueleto from "../ui/Esqueleto";
 import "../../css/desglose-dinero.css";
+import { textoError } from "../../utils/errores";
 
 /** Venta → comisión → lo que recibe el negocio, como un recibo: se lee de arriba abajo y cabe en celular. */
 export function ReciboDinero({ venta, etiquetaVenta = "Venta", notaVenta, comision, recibes }) {
@@ -47,7 +48,7 @@ export default function DesgloseDinero({ token, pedidoId, estado, children }) {
     let vivo = true;
     liquidacionDePedido(token, pedidoId)
       .then((datos) => { if (vivo) setCarga({ clave: pedida, datos, error: null }); })
-      .catch((e) => { if (vivo) setCarga({ clave: pedida, datos: null, error: e.message }); });
+      .catch((e) => { if (vivo) setCarga({ clave: pedida, datos: null, error: textoError(e) }); });
     return () => { vivo = false; };
   }, [token, pedidoId, pedida]);
 

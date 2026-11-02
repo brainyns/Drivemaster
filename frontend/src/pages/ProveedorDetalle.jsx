@@ -18,6 +18,7 @@ import { recibePdf, textoCondicionPago } from "./tienda/proveedoresTienda";
 import { formatoFecha, plural } from "../utils/formato";
 import "../css/proveedores.css";
 import "../css/compras-tienda.css";
+import { textoError } from "../utils/errores";
 
 /**
  * Un proveedor con sus datos y todo lo que se le ha comprado: historial (fecha, referencia, factura, productos, estado y
@@ -36,7 +37,7 @@ export default function ProveedorDetalle({ id, onVolver, onEditar, onCompra, tok
       setCompras(c || []);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     }
   }, [id, token]);
 

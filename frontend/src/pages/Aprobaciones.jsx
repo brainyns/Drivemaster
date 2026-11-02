@@ -24,6 +24,7 @@ import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/aprobaciones-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const clave = (n) => `${n.tipo}-${n.id}`;
 const tieneUbicacion = (n) => n.latitud != null && n.longitud != null;
@@ -145,7 +146,7 @@ export default function Aprobaciones({ token }) {
       ]);
       setErrorCarga(null);
     } catch (e) {
-      setErrorCarga(e.message);
+      setErrorCarga(textoError(e));
     }
   }, [token]);
 
@@ -176,7 +177,7 @@ export default function Aprobaciones({ token }) {
       setConfirmacion(null);
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(null);
     }

@@ -10,6 +10,7 @@ import Interruptor from "../components/ui/Interruptor";
 import { avisar } from "../components/ui/avisar";
 import { avisoDigitoNit, correoValido, erroresProveedor, nombreRepetido } from "./tienda/proveedoresTienda";
 import "../css/proveedores.css";
+import { textoError } from "../utils/errores";
 
 /**
  * Alta o edición de un proveedor. Solo el nombre es obligatorio; si tiene correo, la tienda decide si le llega el PDF
@@ -41,7 +42,7 @@ export default function ProveedorForm({ id, onVolver, token }) {
         contacto: data.contacto || "", direccion: data.direccion || "",
         condicionPago: data.condicionPago || "", diasCredito: data.diasCredito ?? "",
       }))
-      .catch((err) => setErrorCarga(err.message))
+      .catch((err) => setErrorCarga(textoError(err)))
       .finally(() => setCargando(false));
   }, [id, token, esEdicion]);
 
@@ -92,7 +93,7 @@ export default function ProveedorForm({ id, onVolver, token }) {
         setErroresServidor(campos);
         requestAnimationFrame(() => document.querySelector(".prv-root [aria-invalid='true']")?.focus());
       } else {
-        setErrorGuardar(err.message);
+        setErrorGuardar(textoError(err));
       }
       setGuardando(false);
     }

@@ -15,6 +15,7 @@ import { notaTotalPeriodo } from "../../components/servicio/reglasDesglose";
 import Grafico from "../../components/ui/Grafico";
 import { etiquetaMes, pesosCorto } from "../../components/ui/escalaGrafico";
 import "../../css/informes-taller.css";
+import { textoError } from "../../utils/errores";
 
 const PERIODOS = [3, 6, 12];
 // Menos calificaciones que esto: se muestran, pero se avisa que el promedio aún dice poco.
@@ -236,7 +237,7 @@ export default function TallerInformes() {
     const id = setTimeout(() => {
       informesTaller(token, meses)
         .then((datos) => { if (!cancelado) setEstado({ clave, datos, error: null }); })
-        .catch((e) => { if (!cancelado) setEstado({ clave, datos: null, error: e.message }); });
+        .catch((e) => { if (!cancelado) setEstado({ clave, datos: null, error: textoError(e) }); });
     }, 0);
     return () => { cancelado = true; clearTimeout(id); };
   }, [token, meses, clave]);

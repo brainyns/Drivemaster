@@ -6,6 +6,7 @@ import { INTENTOS_CODIGO, MINUTOS_CODIGO } from "../../pages/contactoNegocio";
 import Campo from "../ui/Campo";
 import CampoClave from "../ui/CampoClave";
 import Alerta from "../ui/Alerta";
+import { textoError } from "../../utils/errores";
 
 const enfocar = (errores, orden) => {
   const primero = orden.find((c) => errores[c]);
@@ -45,7 +46,7 @@ export default function RecuperarClave({ correoInicial = "", onListo, onVolver }
       setIntentado(false);
       setCodigo("");
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
     } finally {
       setCargando(false);
     }
@@ -62,7 +63,7 @@ export default function RecuperarClave({ correoInicial = "", onListo, onVolver }
       const { mensaje } = await confirmarRecuperacion(correo, codigo, password);
       onListo(mensaje, correo.trim());
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setCargando(false);
     }
   };

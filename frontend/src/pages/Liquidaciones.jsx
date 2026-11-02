@@ -29,6 +29,7 @@ import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/liquidaciones-plataforma.css";
+import { textoError } from "../utils/errores";
 
 /** Columnas de las liquidaciones que se pueden ordenar (lista blanca de LiquidacionService.ORDEN_REPARTOS). */
 const ORDENES_REPARTOS = [
@@ -119,7 +120,7 @@ export default function Liquidaciones() {
       }
       setErrorCarga(null);
     } catch (e) {
-      if (peticion === ultimaPeticion.current) setErrorCarga(e.message);
+      if (peticion === ultimaPeticion.current) setErrorCarga(textoError(e));
     } finally {
       if (peticion === ultimaPeticion.current) setCargando(false);
     }
@@ -186,7 +187,7 @@ export default function Liquidaciones() {
         // La fila dice su estado real aunque la recarga falle
         if (e.estado) setFilas((lista) => lista.map((f) => (f.id === id ? { ...f, estado: e.estado, referenciaLiquidacion: e.referencia ?? f.referenciaLiquidacion } : f)));
       } else {
-        setError(e.message);
+        setError(textoError(e));
       }
       await cargar(); // un fallo también cambia la línea (queda FALLIDO o sin confirmar)
     } finally {
@@ -204,7 +205,7 @@ export default function Liquidaciones() {
       setResolviendoId(null);
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(false);
     }

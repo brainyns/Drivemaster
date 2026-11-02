@@ -7,6 +7,7 @@ import "../../css/cotizacion.css";
 import Icon from "../public/Icon";
 import { MAX_TIEMPO_HORAS, errorCotizacion } from "./reglasFormulariosTaller";
 import { unaALaVez } from "../../utils/unaALaVez";
+import { textoError } from "../../utils/errores";
 
 const lineaVacia = () => ({ descripcion: "", modalidad: "ITEM", valor: "", horas: "" });
 
@@ -48,7 +49,7 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
     try {
       await accion();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(false);
     }

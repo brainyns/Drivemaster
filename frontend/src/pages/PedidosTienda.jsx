@@ -32,6 +32,7 @@ import { plural } from "../utils/formato";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/pedidos-tienda.css";
+import { textoError } from "../utils/errores";
 
 /**
  * Chip del plazo de un pedido por despachar (vencido en rojo, si no en ámbar) o, en uno listo que el cliente no recoge,
@@ -168,7 +169,7 @@ export default function PedidosTienda({ param, irA }) {
         page: pagina, size: 20, sort: textoOrden(orden) }));
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }
@@ -250,7 +251,7 @@ export default function PedidosTienda({ param, irA }) {
         : `Pedido #${refSolicitud(p.id)} listo para retirar: avisamos al cliente.`);
       await cargar();
     } catch (e) {
-      avisar(e.message, "error");
+      avisar(textoError(e), "error");
     } finally {
       setOcupadoFila(null);
     }
@@ -282,7 +283,7 @@ export default function PedidosTienda({ param, irA }) {
       setAviso(mensajeOk);
       await cargar();
     } catch (e) {
-      setErrores({ accion: e.message });
+      setErrores({ accion: textoError(e) });
     } finally {
       setProcesando(false);
     }
@@ -318,7 +319,7 @@ export default function PedidosTienda({ param, irA }) {
       await cargar();
     } catch (e) {
       const extra = /no es correcto/i.test(e.message) ? " Si el cliente te muestra un código de otra tienda o de otro pedido, no sirve aquí." : "";
-      setErrores({ codigo: `${e.message}${extra}` });
+      setErrores({ codigo: `${textoError(e)}${extra}` });
       campoCodigo.current?.focus();
     } finally {
       setProcesando(false);

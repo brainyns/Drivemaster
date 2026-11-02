@@ -17,6 +17,7 @@ import Icon from "../components/public/Icon";
 import { coincideProveedor, recibePdf } from "./tienda/proveedoresTienda";
 import { formatoFecha, plural } from "../utils/formato";
 import "../css/proveedores.css";
+import { textoError } from "../utils/errores";
 
 
 /** Directorio de los proveedores de la tienda: a quién le compra y a dónde llega el PDF de cada compra. */
@@ -37,7 +38,7 @@ export default function Proveedores({ onNuevo, onEditar, onDetalle, token }) {
       setProveedores((await listarProveedores(token)) || []);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }
@@ -79,7 +80,7 @@ export default function Proveedores({ onNuevo, onEditar, onDetalle, token }) {
     try {
       await exportarProveedores(token);
     } catch (e) {
-      setAviso({ tono: "error", texto: `No pudimos generar el reporte. ${e.message}` });
+      setAviso({ tono: "error", texto: `No pudimos generar el reporte. ${textoError(e, "Inténtalo de nuevo.")}` });
     } finally {
       setExportando(false);
     }

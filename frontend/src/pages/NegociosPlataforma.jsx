@@ -21,6 +21,7 @@ import {
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/negocios-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const TAMANO = 20;
 const clave = (n) => `${n.tipo}-${n.id}`;
@@ -133,7 +134,7 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
       setDatos(r);
       setError(null);
     } catch (e) {
-      if (vivo()) setError(e.message);
+      if (vivo()) setError(textoError(e));
     } finally {
       if (vivo()) setCargando(false);
     }
@@ -161,7 +162,7 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
       setAbierto(null);
       setVersion((v) => v + 1);
     } catch (e) {
-      setErrorAccion(e.message);
+      setErrorAccion(textoError(e));
     } finally {
       setProcesando(null);
     }

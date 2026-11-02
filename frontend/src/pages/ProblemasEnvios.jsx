@@ -18,6 +18,7 @@ import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/problemas-envio.css";
+import { textoError } from "../utils/errores";
 
 const abierto = (p) => p.estado === "DESPACHADO" && !p.resolucionProblema;
 const RESOLUCION = {
@@ -47,7 +48,7 @@ export default function ProblemasEnvios() {
       setProblemas(await problemasDeEnvio(token));
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     }
   }, [token]);
 
@@ -55,7 +56,7 @@ export default function ProblemasEnvios() {
     let vivo = true;
     problemasDeEnvio(token)
       .then((lista) => { if (vivo) setProblemas(lista); })
-      .catch((e) => { if (vivo) setError(e.message); });
+      .catch((e) => { if (vivo) setError(textoError(e)); });
     return () => { vivo = false; };
   }, [token]);
 
@@ -80,7 +81,7 @@ export default function ProblemasEnvios() {
     try {
       await resolverProblemaEnvio(token, pedido.id, resolucion, motivo.trim());
     } catch (e) {
-      setErrorDecision(e.message);
+      setErrorDecision(textoError(e));
       setResolviendo(false);
       await cargar(); // si otra persona ya lo resolvió, la lista lo refleja
       return;

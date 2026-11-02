@@ -13,6 +13,7 @@ import Icon from "../../components/public/Icon";
 import { cifrasPieza, estadoEnCamino, pct } from "./reglasInventario";
 import { plural } from "../../utils/formato";
 import "../../css/inventario-taller.css";
+import { textoError } from "../../utils/errores";
 
 const fecha = (f) => (f ? new Date(f).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—");
 
@@ -29,7 +30,7 @@ function PedidoEnCamino({ p, token, onInventario, onAviso }) {
     try {
       await fn();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setOcupado(null);
     }
@@ -126,7 +127,7 @@ function EditorPrecio({ pieza, comisionPct, token, onGuardada }) {
     try {
       onGuardada(await cambiarPrecioPieza(token, pieza.id, numero));
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setGuardando(false);
     }
@@ -196,7 +197,7 @@ function EditorMinimo({ pieza, token, onInventario }) {
       onInventario(await cambiarMinimoPieza(token, pieza.id, valor === "" ? null : Number(valor)));
       if (valor === "") setMinimo("");
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setGuardando(false);
     }
@@ -335,7 +336,7 @@ export default function TallerInventario({ onComprar, irA }) {
     let vivo = true;
     miInventario(token)
       .then((datos) => { if (vivo) setEstado({ datos, error: null, cargando: false }); })
-      .catch((e) => { if (vivo) setEstado((s) => ({ ...s, error: e.message, cargando: false })); });
+      .catch((e) => { if (vivo) setEstado((s) => ({ ...s, error: textoError(e), cargando: false })); });
     return () => { vivo = false; };
   }, [token, intento]);
 

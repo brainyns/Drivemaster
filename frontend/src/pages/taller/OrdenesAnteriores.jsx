@@ -15,6 +15,7 @@ import Esqueleto from "../../components/ui/Esqueleto";
 import Icon from "../../components/public/Icon";
 import "../../css/servicios.css";
 import "../../css/panel-taller.css";
+import { textoError } from "../../utils/errores";
 
 /**
  * Órdenes del flujo anterior (cotizar → pagar → iniciar → finalizar). Se conservan solo
@@ -116,7 +117,7 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
       await confirmarPagoOrden(token, id);
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(null);
     }
@@ -129,7 +130,7 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
       await cargar();
       setTab("proceso");
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(null);
     }
@@ -142,7 +143,7 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
       await cargar();
       setTab("finalizadas");
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(null);
     }
@@ -156,7 +157,7 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
       setFechasCita(prev => ({ ...prev, [id]: "" }));
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(null);
     }

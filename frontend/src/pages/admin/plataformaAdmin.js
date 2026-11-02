@@ -2,6 +2,7 @@
 // componentes: lo prueban los tests con node --test. No agrega reglas de negocio: ordena y nombra lo que ya llega.
 
 import { esErrorConexion } from "../../services/conexion.js";
+import { textoError } from "../../utils/errores.js";
 
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
@@ -83,7 +84,7 @@ export function avisoLiquidacion(e = {}) {
   }
   if (e.status === 409 && e.estado === "PROCESANDO") {
     return e.sinConfirmar
-      ? { tono: "aviso", estado: "PROCESANDO", accion: "Revisar", texto: e.message }
+      ? { tono: "aviso", estado: "PROCESANDO", accion: "Revisar", texto: textoError(e) }
       : { tono: "info", estado: "PROCESANDO", accion: "Ver estado", texto: "Ya se está pagando: no se envió otro pago." };
   }
   if (esErrorConexion(e)) {

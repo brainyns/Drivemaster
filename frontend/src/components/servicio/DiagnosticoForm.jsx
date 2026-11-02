@@ -7,6 +7,7 @@ import Icon from "../public/Icon";
 import { cantidadEntera, errorFallas, lineasFallas } from "./reglasFormulariosTaller";
 import { unaALaVez } from "../../utils/unaALaVez";
 import { claveOferta, vendedor } from "./reglasRepuestos";
+import { textoError } from "../../utils/errores";
 
 const MIN_HALLAZGOS = 10;
 
@@ -110,7 +111,7 @@ export default function DiagnosticoForm({ token, solicitud, mecanicos, onGuardad
         });
         onGuardado(actualizada);
       } catch (err) {
-        setError(err.message);
+        setError(textoError(err));
       } finally {
         setGuardando(false);
       }

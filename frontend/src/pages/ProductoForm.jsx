@@ -33,6 +33,7 @@ function unirErrores(servidor, cliente) {
 import "../css/producto-form.css";
 import { etiquetaCategoria } from "../utils/categorias";
 import { formatoCop } from "../utils/formato";
+import { textoError } from "../utils/errores";
 
 /**
  * Sugerencias de la IA para el producto (solo TIENDA): categoría de la lista y compatibilidades "por confirmar".
@@ -49,7 +50,7 @@ function useSugerenciasIA(form, token) {
       const datos = await sugerirProducto(token, form, CATEGORIAS);
       setEstado({ cargando: false, error: null, datos });
     } catch (e) {
-      setEstado({ cargando: false, error: e.message, datos: null });
+      setEstado({ cargando: false, error: textoError(e), datos: null });
     }
   };
 
@@ -208,7 +209,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
         });
         if (data.imagenUrl) setImagenPreview(data.imagenUrl);
       })
-      .catch((e) => setServerError(e.message))
+      .catch((e) => setServerError(textoError(e)))
       .finally(() => setCargandoProducto(false));
   }, [id, token, esEdicion]);
 
@@ -331,7 +332,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
         setErroresServidor(erroresDelServidor(err.campos));
         enfocarPrimerError();
       } else {
-        setServerError(err.message);
+        setServerError(textoError(err));
         resumenRef.current?.scrollIntoView({ block: "center" });
       }
       setGuardando(false);
@@ -345,7 +346,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
         await subirImagenProducto(productoId, imagenFile, token);
       } catch (err) {
         // El producto ya quedó guardado: se avisa y se vuelve a la lista (repetir el guardado lo duplicaría)
-        avisar(`Guardamos “${nombre}”, pero la foto no se subió: ${err.message} Vuelve a intentarlo desde Editar.`, "aviso");
+        avisar(`Guardamos “${nombre}”, pero la foto no se subió. ${textoError(err, "")} Vuelve a intentarlo desde Editar.`, "aviso");
         onVolver();
         return;
       }

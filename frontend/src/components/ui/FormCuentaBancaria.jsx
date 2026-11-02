@@ -2,6 +2,7 @@ import { useState } from "react";
 import Campo from "./Campo";
 import PieFormulario from "./PieFormulario";
 import { BANCOS_COLOMBIA, TIPOS_CUENTA, TIPOS_DOCUMENTO } from "../../utils/bancosColombia";
+import { textoError } from "../../utils/errores";
 
 const NUMERO_CUENTA_REGEX = /^[0-9-]{4,25}$/;
 const NUMERO_DOC_REGEX = /^[0-9a-zA-Z-]{4,30}$/;
@@ -72,7 +73,7 @@ export default function FormCuentaBancaria({ cuenta, onGuardar, onCancelar }) {
         titularDocumentoNumero: titularDocumentoNumero.trim(),
       });
     } catch (err) {
-      setErrorServidor(err.message || "Error al guardar los datos bancarios");
+      setErrorServidor(textoError(err, "Error al guardar los datos bancarios"));
       setGuardando(false);
     }
   };

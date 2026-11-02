@@ -5,6 +5,7 @@ import Alerta from "../components/ui/Alerta";
 import { MENSAJE_SIN_CONEXION } from "../services/conexion";
 import { CIUDADES_ORDENADAS } from "../utils/ciudades";
 import "../css/Login.css";
+import { textoError } from "../utils/errores";
 
 export default function Register({ onRegister, onBack }) {
   const [nombre, setNombre] = useState("");
@@ -27,7 +28,7 @@ export default function Register({ onRegister, onBack }) {
       const response = await register({ nombre, correo, password, ciudad });
       onRegister(response);
     } catch (e) {
-      setError(e.message || "Error al registrar");
+      setError(textoError(e, "Error al registrar"));
     } finally {
       setLoading(false);
     }

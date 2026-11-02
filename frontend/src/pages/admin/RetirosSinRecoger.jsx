@@ -11,6 +11,7 @@ import Paginacion from "../../components/ui/Paginacion";
 import { paginar, usePaginacion } from "../../components/ui/reglasPaginacion";
 import { avisar } from "../../components/ui/avisar";
 import { capitalizar, unir } from "../../utils/formato";
+import { textoError } from "../../utils/errores";
 
 const abierto = (r) => r.estado === "LISTO_PARA_RETIRAR" && !r.resolucionRetiro;
 const DECISION = {
@@ -36,7 +37,7 @@ export default function RetirosSinRecoger({ token }) {
       setLista(await retirosSinRecoger(token));
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     }
   }, [token]);
 
@@ -68,7 +69,7 @@ export default function RetirosSinRecoger({ token }) {
     try {
       await resolverRetiroSinRecoger(token, retiro.id, tipo, motivo.trim());
     } catch (e) {
-      setErrorDecision(e.message);
+      setErrorDecision(textoError(e));
       setResolviendo(false);
       await cargar(); // si el cliente lo retiró o alguien ya decidió, la lista lo refleja
       return;

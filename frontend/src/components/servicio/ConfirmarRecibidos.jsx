@@ -4,6 +4,7 @@ import { ESTADOS_PEDIDO } from "./estadosServicio";
 import { SIN_DESPACHO, TEXTO_SIN_DESPACHO, estadoRecibidos } from "./reglasRecibidos";
 import ConfirmarAccion from "../marketplace/ConfirmarAccion";
 import ChipEstado from "../ui/ChipEstado";
+import { textoError } from "../../utils/errores";
 
 const TEXTO_FALTANTES = "Confirmo que recibí lo demás y sigo sin esas piezas";
 
@@ -24,7 +25,7 @@ export default function ConfirmarRecibidos({ token, solicitud, onConfirmado, onC
     let cancelado = false;
     pedidosDeOrden(token, solicitud.id)
       .then((p) => { if (!cancelado) setPedidos(p || []); })
-      .catch((e) => { if (!cancelado) setError(e.message); });
+      .catch((e) => { if (!cancelado) setError(textoError(e)); });
     return () => { cancelado = true; };
   }, [token, solicitud.id]);
 

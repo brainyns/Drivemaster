@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "../services/http";
 import { crearUsuario, eliminarUsuario, getUser } from "../services/authService";
 import { enCursoUsuario, usuariosPlataforma } from "../services/plataformaService";
-import { errorDeRespuesta } from "../utils/errores";
+import { errorDeRespuesta, textoError } from "../utils/errores";
 import { formatoFecha } from "../utils/formato";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
@@ -94,7 +94,7 @@ function FormNuevo({ onCreado, onCancelar }) {
       onCreado(creado?.nombre || form.nombre.trim());
     } catch (err) {
       const campos = erroresDelServidor(err.message);
-      if (campos) { setServidor(campos); enfocar(ref.current, true); } else setError(err.message);
+      if (campos) { setServidor(campos); enfocar(ref.current, true); } else setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -171,7 +171,7 @@ function FormEditar({ usuario, soyYo = false, onGuardado, onCancelar }) {
       await actualizarUsuario(usuario.id, cuerpoEdicion(form, usuario));
       onGuardado(form.nombre.trim());
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -268,7 +268,7 @@ export default function Usuarios({ token }) {
         pagina: r.usuarios });
       setError(null);
     } catch (e) {
-      if (vivo()) setError(e.message);
+      if (vivo()) setError(textoError(e));
     } finally {
       if (vivo()) setCargando(false);
     }
@@ -310,7 +310,7 @@ export default function Usuarios({ token }) {
       setAviso({ tono: "ok", texto: `${u.nombre} ya puede iniciar sesión de nuevo.` });
       recargar();
     } catch (e) {
-      setAviso({ tono: "error", texto: `No pudimos activar a ${u.nombre}. ${e.message}` });
+      setAviso({ tono: "error", texto: `No pudimos activar a ${u.nombre}. ${textoError(e, "Inténtalo de nuevo.")}` });
     } finally {
       setActivando(null);
     }

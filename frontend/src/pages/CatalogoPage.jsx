@@ -14,6 +14,7 @@ import ProductDetail from "../components/public/ProductDetail";
 import Footer from "../components/public/Footer";
 import Icon from "../components/public/Icon";
 import "../css/catalog.css";
+import { textoError } from "../utils/errores";
 
 const TODAS = "Todas";
 
@@ -64,7 +65,7 @@ export default function CatalogoPage({
     let vivo = true;
     cargarTodosLosProductos({})
       .then(({ items }) => { if (vivo) setBase({ items, listo: true, error: null }); })
-      .catch((e) => { if (vivo) setBase({ items: [], listo: true, error: e.message }); });
+      .catch((e) => { if (vivo) setBase({ items: [], listo: true, error: textoError(e) }); });
     filtrosCatalogo().then((f) => { if (vivo) setOpciones(f); }).catch(() => {});
     return () => { vivo = false; };
   }, []);
@@ -86,7 +87,7 @@ export default function CatalogoPage({
     let vivo = true;
     cargarTodosLosProductos({ q, ciudad: ciudadActiva, tiendaId: tiendaActiva, categoria: categoriaActiva, vehiculoId, orden })
       .then(({ items }) => { if (vivo) setRespuesta({ clave, items, error: null }); })
-      .catch((e) => { if (vivo) setRespuesta({ clave, items: [], error: e.message }); });
+      .catch((e) => { if (vivo) setRespuesta({ clave, items: [], error: textoError(e) }); });
     return () => { vivo = false; };
   }, [clave, sinFiltrosDeServidor, vista, q, ciudadActiva, tiendaActiva, categoriaActiva, vehiculoId, orden]);
 

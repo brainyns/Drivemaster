@@ -23,6 +23,7 @@ import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/marketplace.css";
 import "../css/solicitar-diagnostico.css";
+import { textoError } from "../utils/errores";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -67,7 +68,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
         setVehiculos(v.value || []);
         if (!vehiculoIdInicial && v.value?.length === 1) setVehiculoId(v.value[0].id);
       } else {
-        setError(v.reason.message);
+        setError(textoError(v.reason));
       }
       if (p.status === "fulfilled") {
         setCiudad((c) => c || p.value?.ciudad || "");
@@ -131,7 +132,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
       });
       setResultado(creada);
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
     } finally {
       setEnviando(false);
     }

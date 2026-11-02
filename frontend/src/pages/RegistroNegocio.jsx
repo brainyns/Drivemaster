@@ -14,6 +14,7 @@ import {
 } from "./pasosRegistroNegocio";
 import "../css/Login.css";
 import "../css/registro-negocio.css";
+import { textoError } from "../utils/errores";
 
 const TIPOS = [
   {
@@ -138,7 +139,7 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
         setDuplicado({ campo: campoRepetido, mensaje: err.message, valor: form[campoRepetido] });
         setIndice(pasos.indexOf(pasoRepetido));
       } else {
-        setErrorServidor(err.message);
+        setErrorServidor(textoError(err));
       }
     } finally {
       setEnviando(false);

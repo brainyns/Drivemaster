@@ -15,6 +15,7 @@ import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/listas-plataforma.css";
 import { etiquetaCategoria } from "../utils/categorias";
+import { textoError } from "../utils/errores";
 
 const TAMANO = 20;
 
@@ -82,7 +83,7 @@ export default function ProductosPlataforma({ token }) {
       setDatos(r);
       setError(null);
     } catch (e) {
-      if (vivo()) setError(e.message);
+      if (vivo()) setError(textoError(e));
     } finally {
       if (vivo()) setCargando(false);
     }

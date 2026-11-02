@@ -6,6 +6,7 @@ import ChipEstado from "../ui/ChipEstado";
 import Alerta from "../ui/Alerta";
 import Esqueleto from "../ui/Esqueleto";
 import "../../css/desglose-dinero.css";
+import { textoError } from "../../utils/errores";
 
 /** Pide un resumen y lo vuelve a pedir cuando cambia la clave. Reintentar repite la misma consulta. */
 function useResumen(pedir, clave) {
@@ -17,7 +18,7 @@ function useResumen(pedir, clave) {
     let vivo = true;
     pedir()
       .then((datos) => { if (vivo) setCarga({ pedida, datos, error: null }); })
-      .catch((e) => { if (vivo) setCarga({ pedida, datos: null, error: e.message }); });
+      .catch((e) => { if (vivo) setCarga({ pedida, datos: null, error: textoError(e) }); });
     return () => { vivo = false; };
     // pedir cambia en cada render: lo que decide volver a pedir es la clave
     // eslint-disable-next-line react-hooks/exhaustive-deps

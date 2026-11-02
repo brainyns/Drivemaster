@@ -19,6 +19,7 @@ import {
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/pedidos-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const TAMANO = 20;
 const REFRESCO_MS = 30000;
@@ -54,7 +55,7 @@ export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = 
     setCargando(true);
     return pedidosPlataforma(token, { ...filtros, ...fechas, page: pagina, size: TAMANO, sort: textoOrden(orden) })
       .then((datos) => setEstado({ datos, error: null, actualizado: new Date() }))
-      .catch((e) => setEstado((previo) => ({ ...previo, error: e.message })))
+      .catch((e) => setEstado((previo) => ({ ...previo, error: textoError(e) })))
       .finally(() => setCargando(false));
   }, [token, filtros, fechas, pagina, orden, errorFechas]);
 

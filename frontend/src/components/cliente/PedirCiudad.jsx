@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { actualizarMiPerfil } from "../../services/clienteService";
 import SelectorCiudad from "./SelectorCiudad";
 import "../../css/marketplace.css";
+import { textoError } from "../../utils/errores";
 
 /**
  * Ventana obligatoria para el cliente que no tiene ciudad (las cuentas creadas antes de pedirla, y las de Google):
@@ -24,7 +25,7 @@ export default function PedirCiudad({ token, onGuardada }) {
       const perfil = await actualizarMiPerfil(token, { ciudad });
       onGuardada(perfil?.ciudad || ciudad);
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };

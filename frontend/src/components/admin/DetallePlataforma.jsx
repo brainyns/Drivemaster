@@ -17,6 +17,7 @@ import {
 import { formatoCop } from "../../utils/formato";
 import "../../css/admin-base.css";
 import "../../css/detalle-plataforma.css";
+import { textoError } from "../../utils/errores";
 
 const MINIMO_MOTIVO = 10;
 
@@ -53,7 +54,7 @@ export default function DetallePlataforma({ token, objetivo, onCerrar }) {
     let vivo = true;
     CARGAR[actual.tipo](token, actual)
       .then((datos) => { if (vivo) setEstado({ clave, datos, error: null }); })
-      .catch((e) => { if (vivo) setEstado({ clave, datos: null, error: e.message }); });
+      .catch((e) => { if (vivo) setEstado({ clave, datos: null, error: textoError(e) }); });
     return () => { vivo = false; };
   }, [token, actual, clave, version]);
 
@@ -115,7 +116,7 @@ function MarcarDespachado({ token, pedidoId, onCambio }) {
       setAbierto(false);
       onCambio();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setEnviando(false);
     }
@@ -346,7 +347,7 @@ function CancelarOrden({ token, ordenId, onCambio }) {
       setAbierto(false);
       onCambio();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setEnviando(false);
     }

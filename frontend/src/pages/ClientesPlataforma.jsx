@@ -16,6 +16,7 @@ import { capitalizar } from "../utils/formato";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/listas-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const TAMANO = 20;
 
@@ -65,7 +66,7 @@ export default function ClientesPlataforma({ token }) {
       setDatos(r);
       setError(null);
     } catch (e) {
-      if (vivo()) setError(e.message);
+      if (vivo()) setError(textoError(e));
     } finally {
       if (vivo()) setCargando(false);
     }

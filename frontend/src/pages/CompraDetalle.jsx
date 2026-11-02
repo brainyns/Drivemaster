@@ -16,6 +16,7 @@ import { ESTADOS_COMPRA, estadoCompra, etiquetaMetodoPago, refCompra, unidades }
 import { recibePdf } from "./tienda/proveedoresTienda";
 import { plural } from "../utils/formato";
 import "../css/compras-tienda.css";
+import { textoError } from "../utils/errores";
 
 const fechaHora = (f) => (f
   ? new Date(f).toLocaleString("es-CO", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -43,7 +44,7 @@ function CompraDetalle({ id, onVolver, token }) {
       // La compra guarda solo el id del proveedor; si ya no existe, se muestra sin sus datos
       obtenerProveedor(c.proveedorId, token).then(setProveedor).catch(() => setProveedor(null));
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     }
   }, [id, token]);
 
@@ -62,7 +63,7 @@ function CompraDetalle({ id, onVolver, token }) {
     try {
       await descargarPdfCompra(id, token);
     } catch (e) {
-      setErrorPdf(`No pudimos generar el PDF. ${e.message}`);
+      setErrorPdf(`No pudimos generar el PDF. ${textoError(e, "Inténtalo de nuevo.")}`);
     } finally {
       setDescargando(false);
     }

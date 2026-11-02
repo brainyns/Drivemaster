@@ -40,6 +40,7 @@ import "../css/cotizacion.css";
 import "../css/solicitudes-taller.css";
 import "../css/marketplace.css"; // el diálogo de ConfirmarAccion
 import { claveOferta, vendedor } from "../components/servicio/reglasRepuestos";
+import { textoError } from "../utils/errores";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 const TONO_URGENCIA = { BAJA: "ok", MEDIA: "info", ALTA: "aviso", CRITICA: "error" };
@@ -153,7 +154,7 @@ function SeguimientoTaller({ token, solicitud, version, onConfirmarRecibidos }) 
         setCotizaciones(c || []);
         setPedidos(p || []);
       })
-      .catch((e) => { if (!cancelado) setError(e.message); });
+      .catch((e) => { if (!cancelado) setError(textoError(e)); });
     return () => { cancelado = true; };
   }, [token, solicitud.id, solicitud.estado, version]);
 
@@ -277,7 +278,7 @@ export default function TallerSolicitudes({
       setCotizacionesPorId(Object.fromEntries((cots || []).map((c) => [c.id, c])));
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setExtrasListos(true);
     }
@@ -369,7 +370,7 @@ export default function TallerSolicitudes({
       try {
         await trasFallo(s, e);
       } catch (fallo) {
-        setError(fallo.message);
+        setError(textoError(fallo));
       }
     } finally {
       setProcesando(false);

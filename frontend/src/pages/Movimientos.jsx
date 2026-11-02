@@ -25,6 +25,7 @@ import {
 import { plural } from "../utils/formato";
 import { destinoReferencia } from "../utils/navegacion";
 import "../css/movimientos.css";
+import { textoError } from "../utils/errores";
 
 const VACIO = { productoId: "", tipo: "ENTRADA", cantidad: "", motivo: "" };
 
@@ -59,7 +60,7 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
       await registrarMovimiento({ ...form, cantidad: Number(form.cantidad), motivo: form.motivo.trim() }, token);
       onGuardado(`${tipo.label === "Ajuste" ? "Ajuste registrado" : `${tipo.label} registrada`}: ${producto.nombre} quedó con ${plural(resultado, "unidad", "unidades")}.`);
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -136,7 +137,7 @@ function Movimientos({ token, esTienda = false, irA }) {
       setDatos(r);
       setError(null);
     } catch (e) {
-      if (vivo()) setError(e.message);
+      if (vivo()) setError(textoError(e));
     } finally {
       if (vivo()) setCargando(false);
     }
@@ -169,7 +170,7 @@ function Movimientos({ token, esTienda = false, irA }) {
       await exportarMovimientos(filtros, formato, token);
       avisar(`Descargamos ${plural(totalFiltrado, "movimiento")} en ${formato === "pdf" ? "PDF" : "Excel"}.`);
     } catch (e) {
-      avisar(`No pudimos generar el archivo. ${e.message}`, "error");
+      avisar(`No pudimos generar el archivo. ${textoError(e, "Inténtalo de nuevo.")}`, "error");
     } finally {
       setExportando(null);
     }

@@ -8,6 +8,7 @@ import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const PERIODOS = [
   { k: "dia", l: "Hoy" },
@@ -56,7 +57,7 @@ export default function ReportesServicios({ token }) {
     let cancelado = false;
     getReportesServicios(token, periodo)
       .then((d) => { if (!cancelado) setData(d); })
-      .catch((e) => { if (!cancelado) setError(e.message); })
+      .catch((e) => { if (!cancelado) setError(textoError(e)); })
       .finally(() => { if (!cancelado) setCargando(false); });
     return () => { cancelado = true; };
   }, [periodo, token, version]);

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getToken } from "../../services/authService";
 import { descargarPdfCotizacion } from "../../services/cotizacionService";
 import Icon from "../public/Icon";
+import { textoError } from "../../utils/errores";
 
 /** "Descargar PDF" de una cotización (taller y cliente). El PDF lo genera el backend; si falla, el error queda al lado. */
 export default function BotonPdfCotizacion({ cotizacionId, className = "ui-btn ui-btn--secundario ui-btn--chico" }) {
@@ -14,7 +15,7 @@ export default function BotonPdfCotizacion({ cotizacionId, className = "ui-btn u
     try {
       await descargarPdfCotizacion(getToken(), cotizacionId);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setDescargando(false);
     }

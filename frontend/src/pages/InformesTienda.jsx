@@ -6,6 +6,7 @@ import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
 import { ResumenDinero } from "../components/servicio/DesgloseDinero";
 import "../css/informes-tienda.css";
+import { textoError } from "../utils/errores";
 
 const PERIODOS = [3, 6, 12];
 
@@ -299,7 +300,7 @@ function ResumenIA({ token }) {
     let vivo = true;
     resumenAsistente(token)
       .then((texto) => { if (vivo) setResumen({ texto, error: null }); })
-      .catch((e) => { if (vivo) setResumen({ texto: null, error: e.message }); });
+      .catch((e) => { if (vivo) setResumen({ texto: null, error: textoError(e) }); });
     return () => { vivo = false; };
   }, [token]);
 
@@ -343,7 +344,7 @@ export default function InformesTienda({ token, onIr }) {
     let vivo = true;
     informesTienda(token, meses)
       .then((datos) => { if (vivo) setEstado({ clave, datos, error: null, hora: new Date() }); })
-      .catch((e) => { if (vivo) setEstado((p) => ({ ...p, clave, error: e.message })); });
+      .catch((e) => { if (vivo) setEstado((p) => ({ ...p, clave, error: textoError(e) })); });
     return () => { vivo = false; };
   }, [token, meses, clave]);
 

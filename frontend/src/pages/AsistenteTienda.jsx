@@ -5,6 +5,7 @@ import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import ChipEstado from "../components/ui/ChipEstado";
 import Icon from "../components/public/Icon";
 import "../css/asistente-tienda.css";
+import { textoError } from "../utils/errores";
 
 const SUGERENCIAS = [
   "¿Cómo van mis ventas frente al mes pasado?",
@@ -110,7 +111,7 @@ export default function AsistenteTienda({ token }) {
       setMensajes((m) => [...m, { rol: "asistente", texto: r.respuesta, error: r.error }]);
       setDetras(r.detras);
     } catch (e) {
-      setMensajes((m) => [...m, { rol: "asistente", texto: e.message, error: true }]);
+      setMensajes((m) => [...m, { rol: "asistente", texto: textoError(e), error: true }]);
     } finally {
       setPensando(false);
       campo.current?.focus();

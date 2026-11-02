@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { verificarPago } from "../../services/solicitudService";
 import { simularPago } from "../../services/pagoMarketplaceService";
+import { textoErrorPago } from "../../utils/errores";
 
 const ESTADO_WOMPI = {
   APPROVED: "Pago aprobado.",
@@ -45,7 +46,7 @@ export default function PagoLocal({ token, pago, onVerificado, onCerrar }) {
       setMensaje(ESTADO_WOMPI[res?.estado] || `Estado: ${res?.estado || "desconocido"}`);
       if (res?.estado === "APPROVED") await onVerificado();
     } catch (e) {
-      setError(e.message);
+      setError(textoErrorPago(e, "No pudimos verificar el pago."));
     } finally {
       setProcesando(false);
     }

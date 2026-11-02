@@ -13,6 +13,7 @@ import Esqueleto from "../components/ui/Esqueleto";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/reportes-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
@@ -95,7 +96,7 @@ function SaldosAFavor({ saldos, token, onCambio }) {
       setMarcando(null);
       onCambio();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(false);
     }
@@ -230,7 +231,7 @@ export default function ReportesPlataforma({ token, filtroInicial }) {
     let vivo = true;
     def.cargar(token, meses)
       .then((datos) => { if (vivo) setEstado({ clave, datos, error: null }); })
-      .catch((e) => { if (vivo) setEstado({ clave, datos: null, error: e.message }); });
+      .catch((e) => { if (vivo) setEstado({ clave, datos: null, error: textoError(e) }); });
     return () => { vivo = false; };
   }, [token, def, meses, clave]);
 

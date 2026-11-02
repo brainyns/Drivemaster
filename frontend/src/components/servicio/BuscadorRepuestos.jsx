@@ -7,6 +7,7 @@ import { etiquetaCategoria } from "../../utils/categorias";
 import { formatoDistancia } from "../../utils/distancia";
 import { claveOferta } from "./reglasRepuestos";
 import { textoIvaOferta } from "./desgloseIva";
+import { textoError } from "../../utils/errores";
 
 /**
  * Ventana del buscador de repuestos en todas las tiendas (aprobadas y activas).
@@ -39,7 +40,7 @@ function VentanaBuscador({ token, solicitud, elegidos, onElegir, onCerrar }) {
       }));
       setBuscado(true);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setBuscando(false);
     }

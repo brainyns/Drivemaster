@@ -10,6 +10,7 @@ import Icon from "../components/public/Icon";
 import { barras, urgentesDashboard } from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const REFRESCO_MS = 60000;
 
@@ -95,7 +96,7 @@ export default function DashboardPlataforma({ token, onIr }) {
     setCargando(true);
     return dashboardPlataforma(token)
       .then((datos) => setEstado({ datos, error: null }))
-      .catch((e) => setEstado((previo) => ({ datos: previo.datos, error: e.message })))
+      .catch((e) => setEstado((previo) => ({ datos: previo.datos, error: textoError(e) })))
       .finally(() => setCargando(false));
   }, [token]);
 

@@ -25,6 +25,7 @@ import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/servicios-plataforma.css";
+import { textoError } from "../utils/errores";
 
 // Estado de cada orden con el formato de catálogo de ChipEstado
 const ESTADO_ORDEN = {
@@ -81,7 +82,7 @@ export default function AdminTalleres() {
       setTalleres(await listarTalleres(token));
       setCargado(true);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }
@@ -144,7 +145,7 @@ export default function AdminTalleres() {
       setFormAbierto(false);
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setGuardando(false);
     }
@@ -157,7 +158,7 @@ export default function AdminTalleres() {
     try {
       setPedidos(await ordenesPorTallerAdmin(token, t.id));
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargandoPedidos(false);
     }
@@ -168,7 +169,7 @@ export default function AdminTalleres() {
       await activarDesactivarTaller(token, t.id, !t.activo);
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     }
   };
 

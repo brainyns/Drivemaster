@@ -29,6 +29,7 @@ import {
 import { plural } from "../../utils/formato";
 import { destinoReferencia } from "../../utils/navegacion";
 import "../../css/movimientos.css";
+import { textoError } from "../../utils/errores";
 
 const VACIO = { clase: "AJUSTE", piezaId: "", productoId: "", cantidad: "", costo: "", motivo: "" };
 const fecha = (f) => (f ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—");
@@ -79,7 +80,7 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
         ? `Carga inicial registrada: ${plural(Number(form.cantidad), "unidad", "unidades")} de ${pieza.nombre}.`
         : `${tipo.label} registrado: ${pieza.nombre} quedó con ${plural(resultado, "unidad", "unidades")}.`);
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -182,7 +183,7 @@ export default function TallerMovimientos({ irA, piezaInicial = null }) {
       setDatos(r);
       setError(null);
     } catch (e) {
-      if (vivo()) setError(e.message);
+      if (vivo()) setError(textoError(e));
     } finally {
       if (vivo()) setCargando(false);
     }
@@ -219,7 +220,7 @@ export default function TallerMovimientos({ irA, piezaInicial = null }) {
       await exportarMovimientosTaller(token, filtros, formato);
       avisar(`Descargamos ${plural(totalFiltrado, "movimiento")} en ${formato === "pdf" ? "PDF" : "Excel"}.`);
     } catch (e) {
-      avisar(`No pudimos generar el archivo. ${e.message}`, "error");
+      avisar(`No pudimos generar el archivo. ${textoError(e, "Inténtalo de nuevo.")}`, "error");
     } finally {
       setExportando(null);
     }

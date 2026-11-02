@@ -6,6 +6,7 @@ import Icon from "../components/public/Icon";
 import Alerta from "../components/ui/Alerta";
 import { etiquetaCategoria } from "../utils/categorias";
 import { conPrefijo } from "../utils/negocio";
+import { textoError } from "../utils/errores";
 
 const formatPrecio = (p) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(p || 0);
@@ -37,7 +38,7 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
       setRepuestos(r);
       setHistorial(h);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }

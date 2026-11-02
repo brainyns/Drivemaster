@@ -18,6 +18,7 @@ import "../../css/servicios.css";
 import "../../css/solicitud-servicio.css";
 import "../../css/cotizacion.css";
 import "../../css/cotizaciones-taller.css";
+import { textoError } from "../../utils/errores";
 
 const TITULO_VACIO = {
   emitidas: "Nada esperando respuesta",
@@ -97,7 +98,7 @@ export default function TallerCotizaciones({ irA }) {
       setCotizaciones((await cotizacionesDelTaller(token)) || []);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }

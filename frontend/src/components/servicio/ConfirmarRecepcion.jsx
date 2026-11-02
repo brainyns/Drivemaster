@@ -2,6 +2,7 @@ import { useState } from "react";
 import { confirmarRecepcion } from "../../services/solicitudServicioService";
 import { formatFecha, formatFechaHora } from "./estadosServicio";
 import Icon from "../public/Icon";
+import { textoError } from "../../utils/errores";
 
 /**
  * El cliente confirma que recibió el vehículo. La calificación al taller es
@@ -34,7 +35,7 @@ export default function ConfirmarRecepcion({ token, solicitud, onConfirmada }) {
       await confirmarRecepcion(token, solicitud.id, calificacion || null, comentario.trim() || null);
       await onConfirmada();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
       setEnviando(false);
     }
   };

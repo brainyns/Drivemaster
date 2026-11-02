@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { textoError } from "../../utils/errores";
 
 /**
  * Confirmación antes de una acción que no se deshace (ya lo recibí, reportar un problema, pedir un
@@ -37,7 +38,7 @@ export default function ConfirmarAccion({
     try {
       await onConfirmar(pedirMotivo ? motivo.trim() : undefined);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
       setProcesando(false);
     } finally {
       enviando.current = false;

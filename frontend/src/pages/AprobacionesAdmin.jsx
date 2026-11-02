@@ -16,6 +16,7 @@ import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/aprobaciones-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const clave = (n) => `${n.tipo}-${n.id}`;
 const nombreTipo = (n) => (n.tipo === "TIENDA" ? "Tienda" : "Taller");
@@ -37,7 +38,7 @@ export default function AprobacionesAdmin({ token }) {
   const cargar = useCallback(() => (
     negociosPendientes(token)
       .then((lista) => setEstado({ lista, error: null }))
-      .catch((e) => setEstado((p) => ({ ...p, error: e.message })))
+      .catch((e) => setEstado((p) => ({ ...p, error: textoError(e) })))
   ), [token]);
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export default function AprobacionesAdmin({ token }) {
       setMotivo("");
       cargar();
     } catch (e) {
-      setErrorAccion(e.message);
+      setErrorAccion(textoError(e));
     } finally {
       setProcesando(null);
     }

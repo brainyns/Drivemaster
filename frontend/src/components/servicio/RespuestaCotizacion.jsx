@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { textoError } from "../../utils/errores";
 
 const OPCIONES = [
   { accion: "APROBAR",  label: "Aprobar" },
@@ -38,7 +39,7 @@ export default function RespuestaCotizacion({ onResponder, accionInicial = null,
     try {
       await onResponder(accion, motivo.trim() || null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
       setEnviando(false);
     }
   };

@@ -11,6 +11,7 @@ import TiendaVendedor from "../components/marketplace/TiendaVendedor";
 import "../css/marketplace.css";
 import Icon from "../components/public/Icon";
 import { etiquetaCategoria } from "../utils/categorias";
+import { textoError } from "../utils/errores";
 
 const CLAVE_VEHICULO = "marketplaceVehiculoId";
 
@@ -32,7 +33,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
     try { vehiculoId = esCliente ? localStorage.getItem(CLAVE_VEHICULO) || "" : ""; } catch { /* sin almacenamiento */ }
     detalleProducto(productoId, vehiculoId)
       .then((p) => { if (vivo) setRespuesta({ producto: p, error: null }); })
-      .catch((e) => { if (vivo) setRespuesta({ producto: null, error: e.message }); });
+      .catch((e) => { if (vivo) setRespuesta({ producto: null, error: textoError(e) }); });
     return () => { vivo = false; };
   }, [productoId, esCliente]);
 

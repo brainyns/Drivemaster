@@ -25,6 +25,7 @@ import {
   horarioSoloTexto,
 } from "./tienda/perfilTienda";
 import "../css/mi-tienda.css";
+import { textoError } from "../utils/errores";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
 const ESTADO = {
@@ -48,7 +49,7 @@ function useGuardar(token, onGuardado) {
     try {
       onGuardado(await actualizarMiTienda(token, datos));
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
       setGuardando(false);
     }
   };
@@ -132,7 +133,7 @@ function FormHorario({ tienda, token, onGuardado, onCancelar }) {
     try {
       onGuardado(await guardarHorarioTienda(token, franjasDesdeSemana(semana)));
     } catch (er) {
-      setError(er.message); // la semana editada se conserva
+      setError(textoError(er)); // la semana editada se conserva
       setGuardando(false);
     }
   };
@@ -226,14 +227,14 @@ function ResumenSemanal({ token }) {
     let vivo = true;
     resumenSemanal(token)
       .then((r) => { if (vivo) setActivo(r.activo); })
-      .catch((e) => { if (vivo) setAviso({ error: true, texto: e.message }); });
+      .catch((e) => { if (vivo) setAviso({ error: true, texto: textoError(e) }); });
     return () => { vivo = false; };
   }, [token]);
 
   const ejecutar = async (accion) => {
     setOcupado(true);
     setAviso(null);
-    try { await accion(); } catch (e) { setAviso({ error: true, texto: e.message }); } finally { setOcupado(false); }
+    try { await accion(); } catch (e) { setAviso({ error: true, texto: textoError(e) }); } finally { setOcupado(false); }
   };
 
   const cambiar = (e) => ejecutar(async () => {
@@ -277,7 +278,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
       setTienda(await miTienda(token));
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     }
   }, [token]);
 
