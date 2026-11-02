@@ -406,7 +406,7 @@ test("Liquidaciones: sistema compartido, estados con texto y el número de trans
   for (const llamada of ["repartosTabla(token, { estado, ...fechas, page: pagina, size: 20, sort: textoOrden(orden) })", "listarReembolsos(token, estado)", "liquidarReparto(token, id,", "marcarReembolsado(token, id,", "obtenerModo(token)"]) {
     assert.ok(p.includes(llamada), `falta ${llamada}`);
   }
-  assert.ok(p.includes("deshabilitado={esRepartos && esManual && !numero.trim()}"));
+  assert.ok(p.includes("deshabilitado={(esRepartos ? esManual : true) && !numero.trim()}"), "manual y reembolsos exigen el número");
 });
 
 test("Servicios: sistema compartido, cifras con Indicador y el formulario con Campo, sin cambiar las llamadas", () => {

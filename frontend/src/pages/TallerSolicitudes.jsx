@@ -27,6 +27,7 @@ import Paginacion from "../components/ui/Paginacion";
 import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
+import { avisar } from "../components/ui/avisar";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Pasos from "../components/ui/Pasos";
@@ -429,6 +430,7 @@ export default function TallerSolicitudes({
 
   const rechazar = () => ejecutar(async () => {
     await rechazarSolicitudServicio(token, seleccionada.id, motivo.trim() || null);
+    avisar("Solicitud rechazada: pasó al siguiente taller cercano.");
     // Pasa al siguiente taller: sale de esta bandeja. Si se abrió desde Inicio, se vuelve allá.
     if (desdeAfuera) { onVolver(); return; }
     setSeleccionadaId(null);
@@ -581,6 +583,9 @@ export default function TallerSolicitudes({
                   </>
                 ) : (
                   <>
+                    <Alerta tono="info" className="st-aviso-rechazo">
+                      Si la rechazas, la solicitud pasa al siguiente taller cercano y sale de tu bandeja (queda en Cerradas).
+                    </Alerta>
                     <Campo id="ss-motivo-rechazo" label="Motivo del rechazo" opcional ayuda="Se registra en el historial de la solicitud.">
                       <textarea className="ui-field__input" rows={3} maxLength={300} autoFocus
                         value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ej. Sin cupo esta semana" />

@@ -143,3 +143,9 @@ test("privacidad: cuenta y documento enmascarados con Mostrar, y la tienda no ve
   assert.match(leer("../../drivemaster/src/main/java/com/drivemaster/drivemaster/service/PedidoTiendaService.java"),
     /\.motivoResolucionRetiro\(null\)\.retiroResueltoPor\(null\)/);
 });
+
+test("rechazar una solicitud avisa que pasa a otro taller", () => {
+  const src = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(src.includes("Si la rechazas, la solicitud pasa al siguiente taller cercano"), "antes de confirmar");
+  assert.ok(src.includes('avisar("Solicitud rechazada: pasó al siguiente taller cercano.")'), "después de rechazar");
+});
