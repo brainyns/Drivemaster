@@ -130,8 +130,9 @@ public class PlataformaDashboardService {
                 tiendas.pendientes() + talleres.pendientes(),
                 despachosPorVencer(ahora), retirosSinRecoger(ahora));
 
-        return new DashboardPlataformaDTO(ahora, tiendas, talleres, clientes, productos, productosMasVendidos(),
-                tiendasMasVendedoras(), porEstado, dinero, planes, alertas);
+        List<String> archivadas = tiendasArchivadas();
+        return new DashboardPlataformaDTO(ahora, tiendas, talleres, clientes, productos, productosMasVendidos(archivadas),
+                tiendasMasVendedoras(archivadas), porEstado, dinero, planes, alertas);
     }
 
     /**
@@ -192,9 +193,22 @@ public class PlataformaDashboardService {
         return mongo.count(Query.query(Criteria.where("_id").gte(new ObjectId(fecha))), Producto.class);
     }
 
-    private List<ProductoVendido> productosMasVendidos() {
+    /** Ids de las tiendas archivadas (la antigua tienda DriveMaster, duplicados): sus ventas no entran en los rankings. */
+    private List<String> tiendasArchivadas() {
+        Query q = Query.query(Criteria.where("estadoAprobacion").is(EstadoAprobacion.ARCHIVADO));
+        q.fields().include("_id");
+        return mongo.find(q, Tienda.class).stream().map(Tienda::getId).toList();
+    }
+
+    /** Pedidos que cuentan como venta: despachados o en curso, y de una tienda que no está archivada. */
+    private static Criteria ventasValidas(List<String> archivadas) {
+        Criteria c = Criteria.where("estado").nin(PedidoTienda.NO_DESPACHADO, PedidoTienda.NO_ENTREGADO);
+        return archivadas.isEmpty() ? c : c.and("tiendaId").nin(archivadas);
+    }
+
+    private List<ProductoVendido> productosMasVendidos(List<String> archivadas) {
         return agrupar("pedidos_tienda",
-                Aggregation.match(Criteria.where("estado").nin(PedidoTienda.NO_DESPACHADO, PedidoTienda.NO_ENTREGADO)),
+                Aggregation.match(ventasValidas(archivadas)),
                 Aggregation.unwind("items"),
                 Aggregation.match(Criteria.where("items.productoId").ne(null)),
                 Aggregation.group("items.productoId").first("items.productoNombre").as("nombre")
@@ -207,9 +221,9 @@ public class PlataformaDashboardService {
                 .toList();
     }
 
-    private List<TiendaVendedora> tiendasMasVendedoras() {
+    private List<TiendaVendedora> tiendasMasVendedoras(List<String> archivadas) {
         return agrupar("pedidos_tienda",
-                Aggregation.match(Criteria.where("estado").nin(PedidoTienda.NO_DESPACHADO, PedidoTienda.NO_ENTREGADO)),
+                Aggregation.match(ventasValidas(archivadas)),
                 Aggregation.group("tiendaId").first("tiendaNombre").as("nombre").count().as("pedidos")
                         .sum("total").as("ventas"),
                 Aggregation.sort(Sort.by(Sort.Direction.DESC, "ventas")),

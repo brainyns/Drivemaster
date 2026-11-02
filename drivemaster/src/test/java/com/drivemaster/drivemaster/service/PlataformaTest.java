@@ -202,6 +202,33 @@ class PlataformaTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void lasTiendasArchivadasNoSalenEnLosRankingsDeVentas() {
+        MongoTemplate mongo = mock(MongoTemplate.class);
+        Tienda driveMaster = new Tienda();
+        driveMaster.setId("tienda-drivemaster");
+        when(mongo.find(any(Query.class), eq(Tienda.class))).thenReturn(List.of(driveMaster));
+        AggregationResults<Document> vacio = mock(AggregationResults.class);
+        when(vacio.getMappedResults()).thenReturn(List.of());
+        List<String> consultas = new java.util.ArrayList<>();
+        when(mongo.aggregate(any(Aggregation.class), anyString(), eq(Document.class))).thenAnswer(i -> {
+            if ("pedidos_tienda".equals(i.getArgument(1))) consultas.add(((Aggregation) i.getArgument(0)).toString());
+            return vacio;
+        });
+        ParametrosMarketplace parametros = mock(ParametrosMarketplace.class);
+        when(parametros.comisionPct()).thenReturn(10.0);
+
+        new PlataformaDashboardService(mongo, mock(PagoRepository.class), mock(RepartoPagoRepository.class),
+                mock(ReembolsoRepository.class), mock(SuscripcionRepository.class), parametros)
+                .dashboard(LocalDateTime.of(2026, 11, 2, 12, 0));
+
+        // Productos más vendidos y tiendas más vendedoras: las dos consultas dejan fuera a la tienda archivada
+        List<String> rankings = consultas.stream().filter(c -> c.contains("NO_DESPACHADO")).toList();
+        assertEquals(2, rankings.size(), String.valueOf(consultas));
+        rankings.forEach(c -> assertTrue(c.contains("tiendaId") && c.contains("$nin") && c.contains("tienda-drivemaster"), c));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void elPanelSeparaAprobadasPendientesYRechazadasYElDineroMovidoDeLaComision() {
         MongoTemplate mongo = mock(MongoTemplate.class);
         // count: devuelve según lo que filtra la consulta
