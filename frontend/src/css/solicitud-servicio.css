@@ -774,6 +774,14 @@
 
 .ss-oferta:hover { border-color: var(--ui-muted); }
 .ss-oferta--elegida { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+
+/* "Tu inventario" va antes que las tiendas y se distingue sin gritar: un fondo apenas cálido y el nombre del grupo */
+.ss-ofertas__grupo { display: grid; gap: var(--ui-sp-2); }
+.ss-ofertas__grupo + .ss-ofertas__grupo { margin-top: var(--ui-sp-5); padding-top: var(--ui-sp-4); border-top: 1px solid var(--ui-line-soft); }
+.ss-ofertas__titulo { margin: 0; font-size: 0.875rem; font-weight: 650; color: var(--ui-text); }
+.ss-ofertas__grupo > .ss-meta { margin: 0 0 var(--ui-sp-2); }
+.ss-oferta--propia { background: color-mix(in srgb, var(--primary) 5%, var(--ui-surface)); }
+.ss-oferta--propia .ss-oferta__tienda { font-weight: 600; color: var(--ui-text); }
 .ss-oferta--bloqueada { opacity: 0.72; }
 
 /* Mismo recuadro en todas las tarjetas: blanco también en tema oscuro, porque las fotos de los repuestos

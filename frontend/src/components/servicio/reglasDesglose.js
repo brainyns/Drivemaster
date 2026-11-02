@@ -53,13 +53,14 @@ export const notaIva = (iva) => (iva > 0 ? `Incluye ${formatPrecio(iva)} de IVA`
  * una parte del cálculo y no otro sumando. Una orden con solo el diagnóstico no muestra lo que no pasó.
  */
 export function filasOrden(r, etiquetaRecibe) {
-  const conCotizacion = r.manoDeObra > 0 || r.anticipo > 0;
+  const conCotizacion = r.manoDeObra > 0 || r.anticipo > 0 || r.repuestosTaller > 0;
   return [
     { etiqueta: "Diagnóstico pagado", valor: formatPrecio(r.diagnosticoPagado) },
     ...(conCotizacion ? [
       { etiqueta: "Mano de obra con IVA", valor: formatPrecio(r.manoDeObra) },
+      ...(r.repuestosTaller > 0 ? [{ etiqueta: "Repuestos del taller con IVA", valor: formatPrecio(r.repuestosTaller) }] : []),
       { etiqueta: "Anticipo del diagnóstico", valor: `− ${formatPrecio(r.anticipo)}` },
-      { etiqueta: "Cotización pagada", valor: formatPrecio(r.cotizacionPagada), nota: "Mano de obra menos anticipo", tipo: "parte" },
+      { etiqueta: "Cotización pagada", valor: formatPrecio(r.cotizacionPagada), nota: r.repuestosTaller > 0 ? "Mano de obra y repuestos, menos anticipo" : "Mano de obra menos anticipo", tipo: "parte" },
     ] : []),
     { etiqueta: "Total generado por el taller", valor: formatPrecio(r.totalGenerado), nota: notaIva(r.iva), tipo: "total" },
     filaComisionOrden(r),

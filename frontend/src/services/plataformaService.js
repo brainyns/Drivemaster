@@ -144,3 +144,17 @@ export async function clientesPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/clientes${consulta(filtros)}`, { headers: headers(token) }),
     "No se pudieron cargar los clientes.");
 }
+
+/**
+ * SUPERADMIN: cancela una solicitud pagada antes de la instalación. Deja el reembolso pendiente, cancela los pedidos
+ * sin despachar y devuelve las piezas del taller a su lote. Devuelve { reembolso, pedidosCancelados, pedidosYaDespachados }.
+ */
+export async function cancelarOrdenPagada(token, id, motivo) {
+  const res = await apiFetch(`${BASE}/ordenes/${encodeURIComponent(id)}/cancelar`, {
+    method: "POST", headers: headers(token), body: JSON.stringify({ motivo }),
+  });
+  if (res.ok) return res.json();
+  let mensaje = "No se pudo cancelar la solicitud.";
+  try { const data = await res.json(); mensaje = data.error || data.message || mensaje; } catch { /* sin cuerpo */ }
+  throw new Error(mensaje);
+}

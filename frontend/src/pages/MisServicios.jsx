@@ -30,6 +30,7 @@ import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
 import "../css/mis-servicios.css";
+import { claveOferta, esDelTaller, etiquetaOrigen } from "../components/servicio/reglasRepuestos";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 
@@ -428,8 +429,8 @@ export default function MisServicios({
                 <h2 className="ss-bloque__titulo">Repuestos propuestos</h2>
                 <ul className="ss-lista">
                   {s.repuestos.map((r) => (
-                    <li key={r.productoId}>
-                      {r.cantidad} × {r.descripcion} <span className="ss-meta">({r.marca} · {r.tiendaNombre})</span>
+                    <li key={claveOferta(r)}>
+                      {r.cantidad} × {r.descripcion} <span className="ss-meta">({[r.marca, !esDelTaller(r) && r.tiendaNombre, etiquetaOrigen(r)].filter(Boolean).join(" · ")})</span>
                     </li>
                   ))}
                 </ul>

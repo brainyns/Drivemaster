@@ -1,6 +1,7 @@
 // Desglose del IVA de una cotización, con la misma regla que el backend (CalculadoraCotizacion.lineasIva), que la usa
 // en el correo y el PDF: si los porcentajes de repuestos y mano de obra coinciden, una sola línea "IVA (19 %)"; si no,
-// una por tipo, solo de los tipos que tiene la cotización.
+// una por tipo, solo de los tipos que tiene la cotización. Los repuestos del inventario del taller llevan el IVA del
+// taller: con ellos las líneas dicen de quién es cada IVA.
 
 export const formatPct = (v) => (v == null ? "" : `${Number.isInteger(v) ? v : v.toFixed(1).replace(".", ",")} %`);
 
@@ -9,8 +10,12 @@ export function lineasIva(c) {
   const pctRepuestos = c.ivaRepuestosPct ?? c.ivaPct ?? 0;
   const pctManoObra = c.ivaManoObraPct ?? c.ivaPct ?? 0;
   if (pctRepuestos === pctManoObra) return [{ texto: `IVA (${formatPct(pctRepuestos)})`, monto: c.iva }];
+  const piezas = c.subtotalRepuestosTaller > 0;
   const lineas = [];
-  if (c.subtotalRepuestos > 0) lineas.push({ texto: `IVA repuestos (${formatPct(pctRepuestos)})`, monto: c.ivaRepuestos });
-  if (c.subtotalManoObra > 0) lineas.push({ texto: `IVA mano de obra (${formatPct(pctManoObra)})`, monto: c.ivaManoObra });
+  if (c.subtotalRepuestos > 0) {
+    lineas.push({ texto: `${piezas ? "IVA repuestos de tiendas" : "IVA repuestos"} (${formatPct(pctRepuestos)})`, monto: c.ivaRepuestos });
+  }
+  if (piezas) lineas.push({ texto: `IVA del taller (${formatPct(pctManoObra)})`, monto: (c.ivaManoObra || 0) + (c.ivaRepuestosTaller || 0) });
+  else if (c.subtotalManoObra > 0) lineas.push({ texto: `IVA mano de obra (${formatPct(pctManoObra)})`, monto: c.ivaManoObra });
   return lineas;
 }

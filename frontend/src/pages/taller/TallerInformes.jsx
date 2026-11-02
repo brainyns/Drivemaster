@@ -96,14 +96,18 @@ function Dinero({ titulo, monto }) {
 
 function Ingresos({ ingresos, periodo }) {
   const { manoDeObra, diagnostico, anulado, anteriores, desglose } = ingresos;
+  // Las cuentas anteriores al inventario del taller no traen esta cifra
+  const repuestos = ingresos.repuestosTaller || { liquidado: 0, pendiente: 0, lineasLiquidadas: 0, lineasPendientes: 0 };
+  const conRepuestos = repuestos.liquidado + repuestos.pendiente > 0;
   const conDiagnostico = diagnostico.liquidado + diagnostico.pendiente > 0;
-  const hay = manoDeObra.liquidado + manoDeObra.pendiente > 0 || conDiagnostico;
+  const hay = manoDeObra.liquidado + manoDeObra.pendiente > 0 || conDiagnostico || conRepuestos;
   return (
     <Tarjeta id="ti-ingresos" titulo="Ingresos del taller">
       {hay && <ResumenDinero resumen={desglose} etiquetaVenta="Total generado" notaVenta={notaTotalPeriodo(ingresos)} />}
       {hay ? (
         <div className="ti-dineros">
-          <Dinero titulo="Saldo de cotización" monto={manoDeObra} />
+          <Dinero titulo={conRepuestos ? "Mano de obra" : "Saldo de cotización"} monto={manoDeObra} />
+          {conRepuestos && <Dinero titulo="Repuestos del taller" monto={repuestos} />}
           {/* Sin cobros de diagnóstico, dos $0 no dicen nada: se rotula sin costo */}
           {conDiagnostico ? <Dinero titulo="Diagnóstico" monto={diagnostico} /> : (
             <div className="ti-dinero">
@@ -119,7 +123,7 @@ function Ingresos({ ingresos, periodo }) {
         </p>
       )}
       <p className="ti-nota">
-        El total generado suma lo pagado por diagnóstico y cotización, con IVA. Las demás cifras {periodo} están en lo que recibes. “Liquidado” cuenta por la fecha en que se te pagó y “Pendiente” (lo que aún no se te ha pagado)
+        El total generado suma lo pagado por diagnóstico y cotización, con IVA.{conRepuestos ? " Tus repuestos van aparte de la mano de obra, aunque se paguen juntos." : ""} Las demás cifras {periodo} están en lo que recibes. “Liquidado” cuenta por la fecha en que se te pagó y “Pendiente” (lo que aún no se te ha pagado)
         por la fecha en que pagó el cliente; cada pago está en uno solo de los dos.
         {anulado > 0 && ` Hay ${formatPrecio(anulado)} anulados que no cuentan.`}
       </p>
@@ -174,7 +178,7 @@ function MesAMes({ serie }) {
           { nombre: "Entregados", valores: serie.map((m) => m.entregados) },
         ]} alto={120} />
       <p className="ti-nota">
-        Ingresos: mano de obra y diagnóstico, en el mes en que se te pagaron. Solicitudes, en el mes en que llegaron;
+        Ingresos: mano de obra, diagnóstico y repuestos de tu inventario, en el mes en que se te pagaron. Solicitudes, en el mes en que llegaron;
         entregados, en el mes de la entrega.
       </p>
     </Tarjeta>

@@ -39,6 +39,7 @@ import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
 import "../css/solicitudes-taller.css";
 import "../css/marketplace.css"; // el diálogo de ConfirmarAccion
+import { claveOferta, vendedor } from "../components/servicio/reglasRepuestos";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 const TONO_URGENCIA = { BAJA: "ok", MEDIA: "info", ALTA: "aviso", CRITICA: "error" };
@@ -103,11 +104,13 @@ function ChipEstadoSolicitud({ s }) {
 function ResumenEconomico({ cotizacion: c }) {
   if (!c) return null;
   const repuestos = (c.subtotalRepuestos || 0) + (c.ivaRepuestos || 0);
+  const delTaller = (c.subtotalRepuestosTaller || 0) + (c.ivaRepuestosTaller || 0);
   const manoObra = (c.subtotalManoObra || 0) + (c.ivaManoObra || 0);
   return (
     <span className="st-tarjeta__dinero">
       <span>Total aprobado <strong className="ui-precio">{formatPrecio(c.total)}</strong></span>
-      <span>Repuestos <strong className="ui-precio">{formatPrecio(repuestos)}</strong></span>
+      {delTaller > 0 && <span>Tus repuestos <strong className="ui-precio">{formatPrecio(delTaller)}</strong></span>}
+      {repuestos > 0 && <span>{delTaller > 0 ? "De tiendas" : "Repuestos"} <strong className="ui-precio">{formatPrecio(repuestos)}</strong></span>}
       <span>Mano de obra <strong className="ui-precio">{formatPrecio(manoObra)}</strong></span>
       <span className="st-tarjeta__dinero-nota">IVA incluido</span>
     </span>
@@ -649,10 +652,10 @@ export default function TallerSolicitudes({
                   {s.repuestos?.length > 0 ? (
                     <ul className="ss-lista">
                       {s.repuestos.map((r) => (
-                        <li key={r.productoId}>
+                        <li key={claveOferta(r)}>
                           {r.cantidad} × {r.descripcion}{" "}
                           <span className="ss-meta">
-                            {r.productoNombre} · {r.tiendaNombre} · {formatPrecio((r.precioReferencia || 0) * r.cantidad)}
+                            {r.productoNombre} · {vendedor(r)} · {formatPrecio((r.precioReferencia || 0) * r.cantidad)}
                             {r.disponibilidad === "ENCARGO" && ` · Encargo${r.diasEntrega ? ` (${r.diasEntrega} días)` : ""}`}
                             {r.compatibilidadConfirmada && ` · Compatibilidad confirmada por ${r.confirmadoPorMecanicoNombre}`}
                           </span>

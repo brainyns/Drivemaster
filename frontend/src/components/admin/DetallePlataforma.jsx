@@ -8,7 +8,7 @@ import Esqueleto from "../ui/Esqueleto";
 import LogoNegocio from "../ui/LogoNegocio";
 import ConfirmacionAdmin from "./ConfirmacionAdmin";
 import { ReciboOrden } from "../servicio/ResumenServicio";
-import { detalleCliente, detalleNegocio, detalleOrden, detallePedido, marcarPedidoDespachado, resumenOrden } from "../../services/plataformaService";
+import { cancelarOrdenPagada, detalleCliente, detalleNegocio, detalleOrden, detallePedido, marcarPedidoDespachado, resumenOrden } from "../../services/plataformaService";
 import { ESTADOS as ESTADOS_ORDEN } from "../servicio/estadosServicio";
 import { ESTADOS_PEDIDO, chipsAlerta, estadoNegocio, refPedido, textoConcepto } from "../../pages/admin/plataformaAdmin";
 import {
@@ -74,7 +74,7 @@ export default function DetallePlataforma({ token, objetivo, onCerrar }) {
       {!listo && <Esqueleto variante="formulario" cantidad={4} texto="Cargando el detalle…" />}
       {listo && estado.error && <Alerta>{estado.error}</Alerta>}
       {d && actual.tipo === "pedido" && <VistaPedido p={d} abrir={abrir} token={token} onCambio={() => setVersion((v) => v + 1)} />}
-      {d && actual.tipo === "orden" && <VistaOrden o={d} abrir={abrir} />}
+      {d && actual.tipo === "orden" && <VistaOrden o={d} abrir={abrir} token={token} onCambio={() => setVersion((v) => v + 1)} />}
       {d && actual.tipo === "cliente" && <VistaCliente c={d} abrir={abrir} />}
       {d && actual.tipo === "negocio" && <VistaNegocio n={d} abrir={abrir} />}
     </DrawerAdmin>
@@ -324,10 +324,64 @@ function TotalDelServicio({ r }) {
   );
 }
 
-function VistaOrden({ o, abrir }) {
+
+/**
+ * Cancelar una solicitud pagada antes de instalar. Es lo único que reembolsa una orden ya pagada: por eso pide motivo y
+ * dice qué va a pasar con cada parte antes de hacerlo.
+ */
+function CancelarOrden({ token, ordenId, onCambio }) {
+  const [abierto, setAbierto] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState(null);
+  const [resultado, setResultado] = useState(null);
+
+  const confirmar = async () => {
+    setEnviando(true);
+    setError(null);
+    try {
+      setResultado(await cancelarOrdenPagada(token, ordenId, motivo.trim()));
+      setAbierto(false);
+      onCambio();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  if (resultado) {
+    return (
+      <Alerta tono="ok">
+        Solicitud cancelada. Queda un reembolso pendiente de {formatoCop(resultado.reembolso)} para hacer en Wompi
+        {resultado.pedidosYaDespachados.length > 0 ? `; ${resultado.pedidosYaDespachados.join(", ")} ya había despachado y esa parte no se reembolsó` : ""}.
+      </Alerta>
+    );
+  }
+  return (
+    <>
+      <button type="button" className="ui-btn ui-btn--peligro ui-btn--chico dtp-accion" onClick={() => setAbierto(true)}>
+        Cancelar y reembolsar
+      </button>
+      {abierto && (
+        <ConfirmacionAdmin titulo="¿Cancelar esta solicitud pagada?"
+          texto="Se anula el pago al taller, se cancelan los pedidos que las tiendas no han despachado y las piezas del inventario del taller vuelven a su lote. Queda un reembolso pendiente para hacer en Wompi. No se puede deshacer."
+          confirmar="Cancelar y reembolsar" variante="peligro" cargando={enviando} deshabilitado={motivo.trim().length < MINIMO_MOTIVO}
+          onConfirmar={confirmar} onCancelar={() => setAbierto(false)}>
+          <Campo id="dtp-cancelar-motivo" label="Por qué se cancela" ayuda={`Mínimo ${MINIMO_MOTIVO} caracteres. Lo verán el cliente y el taller, y queda registrado con tu usuario.`}>
+            <textarea className="ui-field__input" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} required />
+          </Campo>
+          {error && <Alerta>{error}</Alerta>}
+        </ConfirmacionAdmin>
+      )}
+    </>
+  );
+}
+function VistaOrden({ o, abrir, token, onCambio }) {
   return (
     <>
       <div className="dtp-chips"><ChipEstado catalogo={ESTADOS_ORDEN} estado={o.estado} /></div>
+      {o.sePuedeCancelar && <CancelarOrden token={token} ordenId={o.id} onCambio={onCambio} />}
 
       <TotalDelServicio r={o.resumen} />
 
