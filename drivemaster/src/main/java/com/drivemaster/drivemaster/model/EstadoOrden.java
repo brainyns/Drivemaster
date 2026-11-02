@@ -101,7 +101,9 @@ public final class EstadoOrden {
                     REPUESTOS_RECIBIDOS, Set.of(TALLER),
                     CANCELADA, Set.of(ADMIN))),
             Map.entry(REPUESTOS_RECIBIDOS, Map.of(
-                    EN_INSTALACION, Set.of(TALLER, MECANICO))),
+                    EN_INSTALACION, Set.of(TALLER, MECANICO),
+                    // Hasta antes de instalar, el SUPERADMIN puede cancelar y reembolsar
+                    CANCELADA, Set.of(ADMIN))),
             Map.entry(EN_INSTALACION, Map.of(
                     LISTA, Set.of(TALLER, MECANICO))),
             Map.entry(LISTA, Map.of(

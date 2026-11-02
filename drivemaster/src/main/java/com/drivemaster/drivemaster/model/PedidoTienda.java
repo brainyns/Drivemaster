@@ -50,6 +50,8 @@ public class PedidoTienda {
     public static final String MOTIVO_OTRO = "OTRO";
     // Lo cancela el sistema: el pago falló al aplicarse y se reembolsa. Queda NO_DESPACHADO, con los demás cancelados
     public static final String MOTIVO_PAGO_NO_APLICADO = "PAGO_NO_APLICADO";
+    // Lo cancela el SUPERADMIN junto con la orden pagada, antes de la instalación
+    public static final String MOTIVO_ORDEN_CANCELADA = "ORDEN_CANCELADA";
 
     @Id
     private String id;

@@ -77,6 +77,12 @@ public class RepartoPago {
     private Double comisionCalculada;
     private Double comisionRetenida;
 
+    // Parte de esta línea que son repuestos del inventario del taller (nulos si no los hay): su valor con IVA, su base sin
+    // IVA y lo que le queda tras la comisión. Va en la misma línea para hacer una sola transferencia por orden
+    private Double piezasBruto;
+    private Double piezasBase;
+    private Double piezasNeto;
+
     @Column(length = 12, nullable = false)
     private String estado;
 

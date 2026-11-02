@@ -209,7 +209,7 @@ public class PlataformaDetalleService {
 
         return new Orden(o.getId(), o.getEstado(), o.getFechaCreacion(), parteCliente, parteTaller, o.getVehiculoDescripcion(),
                 o.getSintomas() != null ? o.getSintomas() : o.getProductoNombre(), o.getMotivoCierre(), n(o.getTotal()),
-                tiempo, pagosOrden, reparto, devoluciones, pedidos);
+                tiempo, pagosOrden, reparto, devoluciones, pedidos, CancelacionOrdenService.sePuedeCancelar(o));
     }
 
     // ─── Cliente ────────────────────────────────────────────────────────────

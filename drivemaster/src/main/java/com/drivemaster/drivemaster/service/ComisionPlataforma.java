@@ -175,7 +175,9 @@ final class ComisionPlataforma {
                     ComisionPlataforma::retenida).min(restante);
         }
         double montoPago = pago.getMonto() != null ? pago.getMonto() : 0;
-        if (montoPago <= 0 || montoReembolso >= montoPago - 0.5) {
+        // Con retención cada línea sabe su comisión: lo que queda en las vivas es lo único que sigue contando
+        boolean conRetencion = pedidoTiendaId == null && lineas.stream().anyMatch(r -> esDeUnNegocio(r) && retenida(r).signum() > 0);
+        if (montoPago <= 0 || montoReembolso >= montoPago - 0.5 || conRetencion) {
             BigDecimal enLineasVivas = suma(lineas.stream()
                     .filter(r -> esDeUnNegocio(r) && !RepartoPago.ANULADO.equals(r.getEstado())).toList(), ComisionPlataforma::retenida);
             return restante.subtract(enLineasVivas).max(BigDecimal.ZERO);

@@ -167,9 +167,14 @@ public class LiquidacionService {
      * liquidar (decisión 17). Nunca lanza.
      */
     public void ordenCanceladaPorRechazoDeCotizacion(String ordenId) {
+        diagnosticoPrestado(ordenId, "COTIZACION_RECHAZADA_POR_CLIENTE");
+    }
+
+    /** La orden se cerró sin reparación, pero el diagnóstico sí se hizo: su línea queda habilitada. Nunca lanza. */
+    public void diagnosticoPrestado(String ordenId, String evento) {
         try {
             for (RepartoPago r : lineasDiagnosticoDelTaller(ordenId)) {
-                lineaLista(r, "COTIZACION_RECHAZADA_POR_CLIENTE");
+                lineaLista(r, evento);
             }
         } catch (Exception e) {
             log.error("No se pudo habilitar la liquidación del diagnóstico de la orden {}", ordenId, e);

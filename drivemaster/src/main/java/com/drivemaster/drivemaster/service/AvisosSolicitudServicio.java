@@ -167,6 +167,37 @@ public class AvisosSolicitudServicio {
         });
     }
 
+    /** El SUPERADMIN canceló una orden pagada. */
+    public void ordenPagadaCancelada(OrdenServicio orden, double reembolso, String motivo) {
+        String devolucion = reembolso > 0 ? " Te devolveremos " + Math.round(reembolso) + " COP." : "";
+        cliente(orden).ifPresent(c -> enviar(c.getCorreo(), "Tu servicio fue cancelado",
+                EmailServicioBuilder.adminAlerta("Tu servicio fue cancelado", "El servicio de " + orden.getVehiculoDescripcion()
+                        + " fue cancelado." + devolucion + motivo(motivo))));
+        avisar(orden.getUsuarioId(), Notificacion.PAGO_NO_APLICADO, "Tu servicio fue cancelado",
+                "El servicio de " + vehiculo(orden) + " fue cancelado." + devolucion, "mis-servicios", orden.getId());
+        taller(orden).ifPresent(t -> avisar(t.getUsuarioId(), Notificacion.COTIZACION_TIENDA_NO_DISPONIBLE, "Servicio cancelado",
+                "DriveMaster canceló el servicio de " + vehiculo(orden) + ". Si usaba piezas de tu inventario, ya volvieron a su lote." + motivo(motivo),
+                "taller-trabajos", orden.getId()));
+    }
+
+    /** Una tienda no debe despachar un pedido de una orden cancelada. */
+    public void pedidoCanceladoPorOrden(PedidoTienda pedido) {
+        tiendaRepository.findById(pedido.getTiendaId()).ifPresent(t -> avisar(t.getUsuarioId(), Notificacion.COTIZACION_TIENDA_NO_DISPONIBLE,
+                "Pedido cancelado", "No despaches este pedido: la solicitud se canceló. Tus unidades volvieron al stock.", "pedidos-tienda", pedido.getId()));
+    }
+
+    /** Se cotizó una pieza del inventario y al pagar ya no alcanzó (otra orden la vendió antes): no se cobró nada. */
+    public void piezaTallerSinStock(Cotizacion cotizacion, String pieza) {
+        tallerRepository.findById(cotizacion.getTallerId()).ifPresent(taller -> {
+            String texto = "La cotización v" + cotizacion.getVersion() + " de " + vehiculo(cotizacion.getVehiculoDescripcion())
+                    + " pide \"" + pieza + "\" de tu inventario y ya no alcanza. Emite una nueva cotización.";
+            correoTaller(taller).ifPresent(correo -> enviar(correo, "Vuelve a cotizar: no alcanza una pieza de tu inventario",
+                    EmailServicioBuilder.adminAlerta("Vuelve a cotizar", texto)));
+            avisar(taller.getUsuarioId(), Notificacion.COTIZACION_TIENDA_NO_DISPONIBLE, "Vuelve a cotizar", texto,
+                    "taller-cotizaciones", cotizacion.getOrdenId());
+        });
+    }
+
     // ─── Pagos del marketplace (Fase 3-B) ────────────────────────────────────
 
     public void comprobantePago(OrdenServicio orden, PagoEntity pago, String concepto,

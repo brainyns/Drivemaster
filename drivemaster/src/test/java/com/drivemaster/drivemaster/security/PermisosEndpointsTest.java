@@ -87,21 +87,23 @@ class PermisosEndpointsTest {
         verifyNoInteractions(pedidoTiendaService);
     }
 
-    // ─── Confirmar recepción y reportar problema: solo el CLIENTE ────────────
+    // ─── Confirmar recepción y reportar problema: el CLIENTE y el TALLER que compró ────
 
     @Test
-    void soloElClienteConfirmaLaRecepcionOReportaUnProblema() throws Exception {
+    void soloQuienCompraConfirmaLaRecepcionOReportaUnProblema() throws Exception {
         for (String ruta : new String[]{"/api/catalogo/pedidos/p1/recibido", "/api/catalogo/pedidos/p1/problema"}) {
             MockHttpServletRequestBuilder base = post(ruta).contentType(MediaType.APPLICATION_JSON).content("{\"detalle\":\"no llegó\"}");
             mvc.perform(base.with(user("ana@demo.com").roles("CLIENTE"))).andExpect(status().isOk());
-            for (String rol : new String[]{"ADMIN", "SUPERADMIN", "TIENDA", "TALLER"}) {
+            mvc.perform(post(ruta).contentType(MediaType.APPLICATION_JSON).content("{\"detalle\":\"no llegó\"}")
+                    .with(user("taller@demo.com").roles("TALLER"))).andExpect(status().isOk());
+            for (String rol : new String[]{"ADMIN", "SUPERADMIN", "TIENDA"}) {
                 mvc.perform(post(ruta).contentType(MediaType.APPLICATION_JSON).content("{\"detalle\":\"x\"}")
                         .with(user("otro@demo.com").roles(rol))).andExpect(status().isForbidden());
             }
             mvc.perform(post(ruta).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
         }
-        verify(recepcionEnvioService, times(1)).confirmarRecepcion(anyString(), anyString());
-        verify(recepcionEnvioService, times(1)).reportarProblema(anyString(), anyString(), anyString());
+        verify(recepcionEnvioService, times(2)).confirmarRecepcion(anyString(), anyString());
+        verify(recepcionEnvioService, times(2)).reportarProblema(anyString(), anyString(), anyString());
     }
 
     // ─── Retiro y despacho: solo la TIENDA ───────────────────────────────────
@@ -131,12 +133,13 @@ class PermisosEndpointsTest {
     }
 
     @Test
-    void soloElClienteCotizaPagaYVeSusCompras() throws Exception {
+    void soloElClienteYElTallerCotizanPaganYVenSusCompras() throws Exception {
         String[][] rutas = {{"POST", "/api/catalogo/compras/cotizar"}, {"POST", "/api/catalogo/compras"},
                 {"GET", "/api/catalogo/compras/mias"}, {"POST", "/api/catalogo/pedidos/p1/codigo-retiro"}};
         for (String[] r : rutas) {
             mvc.perform(pedido(r).with(user("ana@demo.com").roles("CLIENTE"))).andExpect(status().isOk());
-            for (String rol : new String[]{"TIENDA", "TALLER", "ADMIN"}) {
+            mvc.perform(pedido(r).with(user("taller@demo.com").roles("TALLER"))).andExpect(status().isOk());
+            for (String rol : new String[]{"TIENDA", "ADMIN"}) {
                 mvc.perform(pedido(r).with(user("otro@demo.com").roles(rol))).andExpect(status().isForbidden());
             }
             mvc.perform(pedido(r)).andExpect(status().isUnauthorized());

@@ -50,7 +50,8 @@ public final class DetallePlataformaDTO {
     /** Una solicitud de servicio: etiqueta de cada evento es el estado de la orden; pedidos, los repuestos a las tiendas. */
     public record Orden(String id, String estado, LocalDateTime fecha, Parte cliente, Parte taller, String vehiculo,
                         String detalle, String motivoCierre, double total, List<Evento> lineaDeTiempo, List<Pago> pagos,
-                        List<LineaReparto> reparto, List<Reembolso> reembolsos, List<PedidoResumen> pedidos) {}
+                        List<LineaReparto> reparto, List<Reembolso> reembolsos, List<PedidoResumen> pedidos,
+                        boolean sePuedeCancelar) {}
 
     // ─── Cliente ────────────────────────────────────────────────────────────
 
