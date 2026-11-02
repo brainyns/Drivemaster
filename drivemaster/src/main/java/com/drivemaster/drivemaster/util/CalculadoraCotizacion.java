@@ -93,6 +93,28 @@ public final class CalculadoraCotizacion {
         return lineas;
     }
 
+
+    /** Precio por unidad de un repuesto como lo paga el cliente: base antes de IVA, su IVA y el total. */
+    public record PrecioFinal(double base, double ivaPct, double iva, double total) {
+        public boolean sinIva() {
+            return ivaPct == 0;
+        }
+    }
+
+    /**
+     * Si la cotización mezcla dos IVA (taller no responsable o con otro porcentaje), el mismo repuesto se ve con bases
+     * distintas según quién lo vende: la línea aclara su precio final por unidad. null si no es repuesto o no hace falta.
+     * Mismo redondeo al peso que los totales; el frontend sigue la misma regla en desgloseIva.js.
+     */
+    public static PrecioFinal precioFinal(Cotizacion c, CotizacionItem i) {
+        if (!CotizacionItem.REPUESTO.equals(i.getTipo()) || i.getPrecioUnitario() == null) return null;
+        if (c.pctRepuestos() == c.pctManoObra()) return null;
+        double pct = i.esDelTaller() ? c.pctManoObra() : c.pctRepuestos();
+        double base = i.getPrecioUnitario();
+        double iva = redondear(base * pct / 100.0);
+        return new PrecioFinal(base, pct, iva, base + iva);
+    }
+
     /** "19 %", "0 %", "5,5 %". */
     public static String pct(double pct) {
         return (pct == Math.floor(pct) ? String.valueOf((long) pct) : String.valueOf(pct).replace('.', ',')) + " %";

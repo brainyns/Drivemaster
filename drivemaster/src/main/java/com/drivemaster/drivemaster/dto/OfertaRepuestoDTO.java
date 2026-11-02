@@ -41,7 +41,13 @@ public class OfertaRepuestoDTO {
     private String tiendaBarrio;
     private Double distanciaKm;
 
+    // Antes de IVA, como entra en la cotización
     private Double precio;
+    // IVA de quien vende la pieza: el general si es de una tienda, el del taller (0 % si no es responsable) si es suya
+    private Double ivaPct;
+    private Double ivaMonto;
+    // Lo que paga el cliente por unidad: así se comparan el taller y las tiendas
+    private Double precioFinal;
     private Integer stock;
 
     // DISPONIBLE (alcanza la cantidad), ENCARGO, PARCIAL (hay menos de lo pedido) o AGOTADO

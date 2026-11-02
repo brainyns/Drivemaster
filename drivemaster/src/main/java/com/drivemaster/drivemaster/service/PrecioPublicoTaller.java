@@ -70,6 +70,16 @@ public class PrecioPublicoTaller {
         return tope;
     }
 
+    /** IVA que cobran las tiendas (el general). */
+    public double ivaTienda() {
+        return parametros.ivaPct();
+    }
+
+    /** IVA que cobra este taller: el general, o 0 % si no es responsable. */
+    public double ivaTaller(Taller taller) {
+        return IvaTaller.pct(taller, parametros.ivaPct());
+    }
+
     /** El mismo precio, con el IVA que pagaría el cliente en la tienda. */
     public double finalEnTienda(double precioPublico) {
         return Math.round(precioPublico * (100 + parametros.ivaPct()) / 100.0);

@@ -87,15 +87,15 @@ public final class PdfCotizacionBuilder {
             List<CotizacionItem> manoObra = c.getItems().stream().filter(i -> !CotizacionItem.REPUESTO.equals(i.getTipo())).toList();
             if (!delTaller.isEmpty()) {
                 doc.add(seccion("Repuestos del taller"));
-                doc.add(tablaItems(delTaller, true));
+                doc.add(tablaItems(c, delTaller, true));
             }
             if (!deTiendas.isEmpty()) {
                 doc.add(seccion(delTaller.isEmpty() ? "Repuestos" : "Repuestos de tiendas"));
-                doc.add(tablaItems(deTiendas, true));
+                doc.add(tablaItems(c, deTiendas, true));
             }
             if (!manoObra.isEmpty()) {
                 doc.add(seccion("Mano de obra"));
-                doc.add(tablaItems(manoObra, false));
+                doc.add(tablaItems(c, manoObra, false));
             }
             doc.add(tablaTotales(totales(c)));
             pie(doc, c);
@@ -160,14 +160,14 @@ public final class PdfCotizacionBuilder {
     }
 
     /** Una fila por ítem: descripción con su detalle debajo y el valor a la derecha. */
-    private static PdfPTable tablaItems(List<CotizacionItem> items, boolean repuestos) throws Exception {
+    private static PdfPTable tablaItems(Cotizacion c, List<CotizacionItem> items, boolean repuestos) throws Exception {
         PdfPTable tabla = new PdfPTable(2);
         tabla.setWidthPercentage(100);
         tabla.setWidths(new float[]{4.2f, 1.3f});
         for (CotizacionItem i : items) {
             Phrase desc = new Phrase();
             desc.add(new Chunk((repuestos ? i.getCantidad() + " × " : "") + texto(i.getDescripcion()), NORMAL));
-            String detalle = repuestos ? detalleRepuesto(i)
+            String detalle = repuestos ? detalleRepuesto(c, i)
                     : CotizacionItem.POR_HORAS.equals(i.getModalidad()) ? horas(i.getHoras()) + " h × " + moneda(i.getPrecioUnitario()) : "";
             if (!detalle.isEmpty()) desc.add(new Chunk("\n" + detalle, META));
             tabla.addCell(fila(desc, Element.ALIGN_LEFT));
@@ -242,13 +242,22 @@ public final class PdfCotizacionBuilder {
 
     // ─── Formato ─────────────────────────────────────────────────────────────
 
-    private static String detalleRepuesto(CotizacionItem i) {
+    private static String detalleRepuesto(Cotizacion c, CotizacionItem i) {
         String detalle = unir(" · ", i.getMarca(), i.getReferencia(), i.getTiendaNombre());
         if ("ENCARGO".equals(i.getDisponibilidad())) {
             detalle = unir(" · ", detalle, "Encargo" + (i.getDiasEntrega() != null ? " (" + i.getDiasEntrega() + " días)" : ""));
         }
         // El cliente sabe de dónde sale cada repuesto; nunca ve costo ni margen
-        return unir(" · ", detalle, i.esDelTaller() ? "Disponible en el taller" : "Se pide a tienda");
+        detalle = unir(" · ", detalle, i.esDelTaller() ? "Disponible en el taller" : "Se pide a tienda");
+        String iva = aclaracionIva(CalculadoraCotizacion.precioFinal(c, i));
+        return iva.isEmpty() ? detalle : detalle + "\n" + iva;
+    }
+
+    /** "$ 34.510 c/u, sin IVA" o "$ 34.510 c/u con IVA ($ 29.000 + IVA $ 5.510)": así se comparan las líneas. */
+    public static String aclaracionIva(CalculadoraCotizacion.PrecioFinal p) {
+        if (p == null) return "";
+        return p.sinIva() ? moneda(p.total()) + " c/u, sin IVA"
+                : moneda(p.total()) + " c/u con IVA (" + moneda(p.base()) + " + IVA " + moneda(p.iva()) + ")";
     }
 
     /** Los últimos 6 caracteres del id, como la referencia corta de la pantalla. */

@@ -68,7 +68,8 @@ public class BuscadorRepuestosService {
             .thenComparing(o -> CotizacionItem.ORIGEN_TALLER.equals(o.getOrigen()) ? 0 : 1)
             .thenComparing(o -> RANGO_DISPONIBILIDAD.getOrDefault(o.getDisponibilidad(), 9))
             .thenComparing(OfertaRepuestoDTO::getDistanciaKm, Comparator.nullsLast(Comparator.naturalOrder()))
-            .thenComparing(OfertaRepuestoDTO::getPrecio, Comparator.nullsLast(Comparator.naturalOrder()));
+            .thenComparing((OfertaRepuestoDTO o) -> o.getPrecioFinal() != null ? o.getPrecioFinal() : o.getPrecio(),
+                    Comparator.nullsLast(Comparator.naturalOrder()));
 
     private final MongoTemplate mongoTemplate;
     private final TiendaRepository tiendaRepository;
@@ -125,7 +126,7 @@ public class BuscadorRepuestosService {
                 .toList();
 
         Map<String, Tienda> tiendas = tiendasOperativas();
-        if (tiendas.isEmpty()) return agrupar(delTaller);
+        if (tiendas.isEmpty()) return agrupar(conPrecioFinal(delTaller, taller));
 
         Set<String> tiendasSeleccion = (orden.getRepuestos() != null ? orden.getRepuestos() : List.<RepuestoSeleccionado>of())
                 .stream().map(RepuestoSeleccionado::getTiendaId).filter(Objects::nonNull).collect(Collectors.toSet());
@@ -140,7 +141,26 @@ public class BuscadorRepuestosService {
                 .toList();
         List<Oferta> todas = new ArrayList<>(delTaller);
         todas.addAll(ofertas);
-        return agrupar(todas);
+        return agrupar(conPrecioFinal(todas, taller));
+    }
+
+    /** Pone a cada oferta su IVA y su precio final al cliente, el número que se compara entre taller y tiendas. */
+    private List<Oferta> conPrecioFinal(List<Oferta> ofertas, Taller taller) {
+        if (precioPublico == null) return ofertas;
+        double ivaTienda = precioPublico.ivaTienda();
+        double ivaTaller = precioPublico.ivaTaller(taller);
+        ofertas.forEach(o -> conIva(o.dto(), CotizacionItem.ORIGEN_TALLER.equals(o.dto().getOrigen()) ? ivaTaller : ivaTienda));
+        return ofertas;
+    }
+
+    /** Mismo redondeo al peso que la cotización. */
+    static OfertaRepuestoDTO conIva(OfertaRepuestoDTO o, double ivaPct) {
+        o.setIvaPct(ivaPct);
+        if (o.getPrecio() == null) return o;
+        double iva = Math.round(o.getPrecio() * ivaPct / 100.0);
+        o.setIvaMonto(iva);
+        o.setPrecioFinal(o.getPrecio() + iva);
+        return o;
     }
 
     /**
