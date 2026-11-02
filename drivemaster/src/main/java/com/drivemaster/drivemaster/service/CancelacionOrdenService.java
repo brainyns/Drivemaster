@@ -64,6 +64,7 @@ public class CancelacionOrdenService {
     private final PagoMarketplaceService pagoMarketplace;
     private final StockTallerService stockTaller;
     private final MovimientoInventarioService movimientos;
+    private final com.drivemaster.drivemaster.repository.MovimientoInventarioRepository movimientoRepository;
     private final LiquidacionService liquidacion;
     private final UsuarioService usuarios;
     private final AvisosSolicitudServicio avisos;
@@ -73,6 +74,7 @@ public class CancelacionOrdenService {
                                    PagoRepository pagos, RepartoPagoRepository repartos, ReembolsoRepository reembolsos,
                                    TransicionOrdenService transiciones, PagoMarketplaceService pagoMarketplace,
                                    StockTallerService stockTaller, MovimientoInventarioService movimientos,
+                                   com.drivemaster.drivemaster.repository.MovimientoInventarioRepository movimientoRepository,
                                    LiquidacionService liquidacion, UsuarioService usuarios, AvisosSolicitudServicio avisos,
                                    MongoTemplate mongoTemplate) {
         this.ordenes = ordenes;
@@ -85,6 +87,7 @@ public class CancelacionOrdenService {
         this.pagoMarketplace = pagoMarketplace;
         this.stockTaller = stockTaller;
         this.movimientos = movimientos;
+        this.movimientoRepository = movimientoRepository;
         this.liquidacion = liquidacion;
         this.usuarios = usuarios;
         this.avisos = avisos;
@@ -132,7 +135,7 @@ public class CancelacionOrdenService {
         paso(ordenId, "cancelar los pedidos a las tiendas", () -> {
             for (PedidoTienda p : pedidos.findByPagoId(pago.getId())) {
                 if (PedidoTienda.NO_DESPACHADO.equals(p.getEstado())) continue; // ya se reembolsó por su cuenta
-                if (cancelarPedido(p, texto, refInventario)) {
+                if (cancelarPedido(p, texto, ordenId)) {
                     cancelados[0]++;
                 } else {
                     yaDespachados.add(p.getTiendaNombre());
@@ -174,7 +177,7 @@ public class CancelacionOrdenService {
      * Cancela el pedido si la tienda aún no lo despacha, anula su línea y le devuelve sus unidades. false si ya salió,
      * incluso si despachó justo ahora: la escritura condicional lo decide.
      */
-    private boolean cancelarPedido(PedidoTienda p, String texto, String refInventario) {
+    private boolean cancelarPedido(PedidoTienda p, String texto, String ordenId) {
         if (!SIN_DESPACHAR.contains(p.getEstado())) return false;
         PedidoTienda cancelado = mongoTemplate.findAndModify(
                 Query.query(Criteria.where("id").is(p.getId()).and("estado").in(SIN_DESPACHAR)),
@@ -186,14 +189,33 @@ public class CancelacionOrdenService {
         for (RepartoPago r : repartos.findByPedidoTiendaId(p.getId())) {
             if (RepartoPago.TIENDA.equals(r.getBeneficiarioTipo())) repartos.anularPendiente(r.getId(), recortar(texto));
         }
-        for (CotizacionItem item : p.getItems()) {
-            if ("ENCARGO".equals(item.getDisponibilidad()) || item.getProductoId() == null) continue;
-            movimientos.registrarMovimiento(item.getProductoId(), "ENTRADA", item.getCantidad(), "Orden cancelada por DriveMaster", refInventario, null);
-        }
+        devolverStock(p, texto, ordenId);
         avisos.pedidoCanceladoPorOrden(cancelado);
         return true;
     }
 
+
+    /**
+     * Las unidades en stock del pedido vuelven a la tienda: una ENTRADA "Devolución por cancelación" con la referencia de la
+     * orden y el motivo. La referencia es la misma si se repite: lo que ya volvió no vuelve dos veces. Los encargos nunca se
+     * descontaron. Si un producto falla, se alerta y siguen los demás.
+     */
+    void devolverStock(PedidoTienda p, String texto, String ordenId) {
+        String referencia = "CANCELACION-" + ordenId + "-" + p.getId();
+        for (CotizacionItem item : p.getItems() != null ? p.getItems() : List.<CotizacionItem>of()) {
+            if ("ENCARGO".equals(item.getDisponibilidad()) || item.getProductoId() == null
+                    || item.getCantidad() == null || item.getCantidad() <= 0) continue;
+            if (movimientoRepository.existsByProductoIdAndTipoAndReferencia(item.getProductoId(), "ENTRADA", referencia)) continue;
+            try {
+                movimientos.registrarMovimiento(item.getProductoId(), "ENTRADA", item.getCantidad(),
+                        recortar("Devolución por cancelación de la orden " + ordenId + ". " + texto), referencia, null);
+            } catch (RuntimeException e) {
+                log.error("Orden {} cancelada: no volvió al stock de {} el producto {}", ordenId, p.getTiendaNombre(), item.getProductoId(), e);
+                avisos.alertaAdmin("Stock sin devolver", "La orden " + ordenId + " se canceló, pero " + item.getCantidad() + " u. de \""
+                        + item.getProductoNombre() + "\" no volvieron al stock de " + p.getTiendaNombre() + ": corrígelo a mano.");
+            }
+        }
+    }
     private void paso(String ordenId, String nombre, Runnable accion) {
         try {
             accion.run();

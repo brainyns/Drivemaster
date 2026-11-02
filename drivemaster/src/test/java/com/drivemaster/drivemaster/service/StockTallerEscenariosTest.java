@@ -90,6 +90,7 @@ class StockTallerEscenariosTest {
     private CancelacionOrdenService cancelacion;
     private AvisosSolicitudServicio avisos;
     private CotizacionService cotizacionService;
+    private MovimientoInventarioRepository movimientoRepository;
 
     @BeforeEach
     void setUp() {
@@ -125,11 +126,13 @@ class StockTallerEscenariosTest {
             x.setStockActual(x.getStockActual() + i.<Integer>getArgument(1));
             return x;
         });
-        MovimientoInventarioRepository movimientoRepository = mock(MovimientoInventarioRepository.class);
+        movimientoRepository = mock(MovimientoInventarioRepository.class);
         when(movimientoRepository.save(any())).thenAnswer(i -> {
             movimientosTienda.add(i.getArgument(0));
             return i.getArgument(0);
         });
+        when(movimientoRepository.existsByProductoIdAndTipoAndReferencia(anyString(), anyString(), anyString())).thenAnswer(i -> movimientosTienda.stream()
+                .anyMatch(m -> i.getArgument(0).equals(m.getProductoId()) && i.getArgument(1).equals(m.getTipo()) && i.getArgument(2).equals(m.getReferencia())));
         MovimientoInventarioService movimientoService = new MovimientoInventarioServiceImpl(movimientoRepository, productoService);
 
         PedidoTiendaRepository pedidoRepository = mock(PedidoTiendaRepository.class);
@@ -207,7 +210,8 @@ class StockTallerEscenariosTest {
                     PedidoTienda x = pedidos.get(((Query) i.getArgument(0)).getQueryObject().getString("_id"));
                     if (x == null) x = pedidos.values().stream().filter(y -> i.getArgument(0).toString().contains(y.getId())).findFirst().orElseThrow();
                     if (!List.of(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION, PedidoTienda.DESPACHADO).contains(x.getEstado())) return null;
-                    x.setEstado(String.valueOf(((Update) i.getArgument(1)).getUpdateObject().get("$set", org.bson.Document.class).get("estado")));
+                    org.springframework.beans.BeanWrapperImpl bean = new org.springframework.beans.BeanWrapperImpl(x);
+                    ((Update) i.getArgument(1)).getUpdateObject().get("$set", org.bson.Document.class).forEach(bean::setPropertyValue);
                     return x;
                 });
 
@@ -275,7 +279,7 @@ class StockTallerEscenariosTest {
         LiquidacionService liquidacion = new LiquidacionService(repartoRepository, reembolsoRepository, pagoRepository, mock(DispersionService.class),
                 avisos, mock(ResolucionRepartoRepository.class));
         cancelacion = new CancelacionOrdenService(ordenRepository, cotizacionRepository, pedidoRepository, pagoRepository, repartoRepository,
-                reembolsoRepository, transiciones, pagoMarketplace, inventario.stock, movimientoService, liquidacion, usuarioService, avisos, mongo);
+                reembolsoRepository, transiciones, pagoMarketplace, inventario.stock, movimientoService, movimientoRepository, liquidacion, usuarioService, avisos, mongo);
     }
 
     // ─── Pasos ───────────────────────────────────────────────────────────────
@@ -409,6 +413,19 @@ class StockTallerEscenariosTest {
         // El inventario recupera exactamente lo que salió de cada lote
         assertEquals(lotesAntes, inventario.disponiblePorLote(PIEZA));
         assertEquals(5, inventario.stock.disponible("t1", PIEZA));
+        // Los dos inventarios: la tienda recupera su unidad con un solo movimiento, con la orden y el motivo
+        List<MovimientoInventario> devoluciones = movimientosTienda.stream().filter(m -> "ENTRADA".equals(m.getTipo())).toList();
+        assertEquals(1, devoluciones.size());
+        assertEquals(1, devoluciones.get(0).getCantidad());
+        assertTrue(devoluciones.get(0).getMotivo().startsWith("Devolución por cancelación de la orden o1"), devoluciones.get(0).getMotivo());
+        assertTrue(devoluciones.get(0).getMotivo().contains(MOTIVO));
+        assertTrue(devoluciones.get(0).getReferencia().startsWith("CANCELACION-o1-"));
+        assertEquals(PedidoTienda.MOTIVO_ORDEN_CANCELADA, aTienda.getTipoMotivoNoDespacho());
+        verify(avisos).pedidoCanceladoPorOrden(aTienda);
+        // Repetir la devolución no suma otra vez
+        cancelacion.devolverStock(aTienda, "otra vez", "o1");
+        assertEquals(15, stockTienda());
+        assertEquals(1, movimientosTienda.stream().filter(m -> "ENTRADA".equals(m.getTipo())).count());
         assertEquals(EstadoOrden.CANCELADA, ordenes.get("o1").getEstado());
         assertEquals(Cotizacion.ANULADA, cotizaciones.get("c1").getEstado());
     }
