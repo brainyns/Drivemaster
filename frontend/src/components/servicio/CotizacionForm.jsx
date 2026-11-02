@@ -8,6 +8,7 @@ import Icon from "../public/Icon";
 import { MAX_TIEMPO_HORAS, errorCotizacion } from "./reglasFormulariosTaller";
 import { unaALaVez } from "../../utils/unaALaVez";
 import { textoError } from "../../utils/errores";
+import ConfirmarAccion from "../marketplace/ConfirmarAccion";
 
 const lineaVacia = () => ({ descripcion: "", modalidad: "ITEM", valor: "", horas: "" });
 
@@ -23,6 +24,7 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
   const [vista, setVista] = useState(null);
   const [error, setError] = useState(null);
   const [procesando, setProcesando] = useState(false);
+  const [confirmando, setConfirmando] = useState(false); // "¿Enviar la cotización a…?" antes de emitirla
   const enviando = useRef(false);
 
   const cambiar = (n, campo, valor) => {
@@ -135,12 +137,19 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
           )}
           <CotizacionDetalle cotizacion={vista} mostrarComision sinEstado />
           <div className="ss-acciones">
-            <button className="sv-btn" onClick={emitir} disabled={procesando}>
+            <button className="sv-btn" onClick={() => setConfirmando(true)} disabled={procesando}>
               {procesando ? "Enviando..." : "Emitir y enviar al cliente"}
             </button>
           </div>
           <p className="ss-ayuda">El cliente recibe un correo para aprobar, pedir cambios o rechazar.</p>
         </div>
+      )}
+      {confirmando && vista && (
+        <ConfirmarAccion titulo={`¿Enviar la cotización a ${solicitud.clienteNombre || "el cliente"}?`}
+          textoConfirmar="Sí, enviarla"
+          mensaje={`Total para el cliente: ${formatPrecio(vista.total)}. Le llega un correo para aprobarla, pedir cambios o rechazarla; después ya no la puedes editar, solo enviar una nueva versión.`}
+          onCancelar={() => setConfirmando(false)}
+          onConfirmar={async () => { setConfirmando(false); await emitir(); }} />
       )}
       {/* Debajo de los botones: "Calcular" y "Emitir" quedan al final de la sección */}
       {error && <p className="ss-alerta" role="alert">{error}</p>}

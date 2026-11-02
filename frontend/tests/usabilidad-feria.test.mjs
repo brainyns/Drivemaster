@@ -101,3 +101,21 @@ test("reembolsos: marcarlo hecho exige el N.º de la transacción de Wompi y el 
   assert.ok(inicio.includes('ir("liquidaciones", "reembolsos")'), "el aviso lleva a la lista");
   assert.match(leer("../src/App.jsx"), /<Liquidaciones key=\{idSeleccionado \|\| "liquidaciones"\} vistaInicial=\{idSeleccionado\} \/>/);
 });
+
+test("confirmaciones: emitir la cotización, confirmar la llegada y los movimientos manuales piden un sí antes", () => {
+  const cot = leer("../src/components/servicio/CotizacionForm.jsx");
+  assert.ok(cot.includes("onClick={() => setConfirmando(true)}") && cot.includes("¿Enviar la cotización a ${solicitud.clienteNombre"),
+    "emitir abre el diálogo con el nombre del cliente");
+  assert.ok(cot.includes("onConfirmar={async () => { setConfirmando(false); await emitir(); }}"));
+
+  const inv = leer("../src/pages/taller/TallerInventario.jsx");
+  assert.ok(inv.includes("onClick={() => setConfirmaLlegada(true)}"), "Confirmar que llegó abre el diálogo");
+  assert.ok(inv.includes("¿Llegaron ${unidades === 1") && inv.includes("queda habilitada para cobrar"));
+
+  for (const ruta of ["../src/pages/taller/TallerMovimientos.jsx", "../src/pages/Movimientos.jsx"]) {
+    const src = leer(ruta);
+    assert.ok(src.includes("setConfirmando(true);") && src.includes("onConfirmar={guardar}"), `${ruta}: confirma antes de guardar`);
+    assert.ok(src.includes("<blockquote>{form.motivo.trim()}</blockquote>"), `${ruta}: muestra el motivo`);
+    assert.match(src, /El stock pasa de \$\{/, `${ruta}: dice cómo queda el stock`);
+  }
+});

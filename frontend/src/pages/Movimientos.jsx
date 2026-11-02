@@ -26,6 +26,7 @@ import { plural } from "../utils/formato";
 import { destinoReferencia } from "../utils/navegacion";
 import "../css/movimientos.css";
 import { textoError } from "../utils/errores";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 
 const VACIO = { productoId: "", tipo: "ENTRADA", cantidad: "", motivo: "" };
 
@@ -41,6 +42,7 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
   const [tocado, setTocado] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmando, setConfirmando] = useState(false); // el resumen del movimiento antes de guardarlo
   const producto = productos.find((p) => p.id === form.productoId);
   const errores = tocado ? erroresMovimiento(form, producto?.stockActual) : {};
   const resultado = producto ? stockResultante(form.tipo, producto.stockActual, form.cantidad) : null;
@@ -54,6 +56,11 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
     if (guardando) return;
     setTocado(true);
     if (Object.keys(erroresMovimiento(form, producto?.stockActual)).length) return;
+    setConfirmando(true);
+  };
+
+  const guardar = async () => {
+    setConfirmando(false);
     setGuardando(true);
     setError(null);
     try {
@@ -67,6 +74,17 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
 
   return (
     <form className="ui-form" onSubmit={enviar} noValidate>
+      {confirmando && producto && (
+        <ConfirmarAccion titulo={`¿Registrar ${tipo.label === "Ajuste" ? "el ajuste" : `la ${tipo.label.toLowerCase()}`} de ${producto.nombre}?`}
+          textoConfirmar="Sí, registrar" peligro={form.tipo === "SALIDA"}
+          mensaje={`El stock pasa de ${disponible} a ${resultado}. Queda en el historial con tu nombre.`}
+          onCancelar={() => setConfirmando(false)} onConfirmar={guardar}>
+          <figure className="ui-motivo-cita">
+            <figcaption>Motivo</figcaption>
+            <blockquote>{form.motivo.trim()}</blockquote>
+          </figure>
+        </ConfirmarAccion>
+      )}
       <fieldset className="mov-tipos">
         <legend className="ui-field__label">Tipo de movimiento</legend>
         {Object.entries(TIPOS).map(([valor, t]) => (

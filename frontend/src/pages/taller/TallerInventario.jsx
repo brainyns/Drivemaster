@@ -14,6 +14,7 @@ import { cifrasPieza, estadoEnCamino, pct } from "./reglasInventario";
 import { plural } from "../../utils/formato";
 import "../../css/inventario-taller.css";
 import { textoError } from "../../utils/errores";
+import ConfirmarAccion from "../../components/marketplace/ConfirmarAccion";
 
 const fecha = (f) => (f ? new Date(f).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—");
 
@@ -22,7 +23,9 @@ function PedidoEnCamino({ p, token, onInventario, onAviso }) {
   const [ocupado, setOcupado] = useState(null);
   const [problema, setProblema] = useState(null);
   const [error, setError] = useState(null);
+  const [confirmaLlegada, setConfirmaLlegada] = useState(false);
   const estado = estadoEnCamino(p);
+  const unidades = p.lineas.reduce((s, l) => s + (Number(l.cantidad) || 0), 0);
 
   const hacer = async (accion, fn) => {
     setOcupado(accion);
@@ -79,13 +82,21 @@ function PedidoEnCamino({ p, token, onInventario, onAviso }) {
 
       {error && <Alerta onCerrar={() => setError(null)}>{error}</Alerta>}
 
+      {confirmaLlegada && (
+        <ConfirmarAccion titulo={`¿Llegaron ${unidades === 1 ? "1 unidad" : `${unidades} unidades`}?`} textoConfirmar="Sí, llegaron"
+          mensaje={`El stock de tu inventario se actualiza y ${p.tiendaNombre} queda habilitada para cobrar. Si llegó algo incompleto o dañado, mejor reporta un problema.`}
+          onCancelar={() => setConfirmaLlegada(false)}
+          onConfirmar={() => hacer("llego", async () => {
+            setConfirmaLlegada(false);
+            onInventario(await confirmarLlegada(token, p.id));
+            onAviso(`Las piezas de ${p.tiendaNombre} ya están en tu inventario.`);
+          })} />
+      )}
+
       <div className="iv-acciones">
         {p.puedeConfirmar && (
           <button type="button" className="ui-btn ui-btn--primario ui-btn--chico" disabled={!!ocupado} aria-busy={ocupado === "llego"}
-            onClick={() => hacer("llego", async () => {
-              onInventario(await confirmarLlegada(token, p.id));
-              onAviso(`Las piezas de ${p.tiendaNombre} ya están en tu inventario.`);
-            })}>
+            onClick={() => setConfirmaLlegada(true)}>
             {ocupado !== "llego" && <Icon name="check" size={16} />}<span>{ocupado === "llego" ? "Confirmando…" : "Confirmar que llegó"}</span>
           </button>
         )}

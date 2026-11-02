@@ -30,6 +30,7 @@ import { plural } from "../../utils/formato";
 import { destinoReferencia } from "../../utils/navegacion";
 import "../../css/movimientos.css";
 import { textoError } from "../../utils/errores";
+import ConfirmarAccion from "../../components/marketplace/ConfirmarAccion";
 
 const VACIO = { clase: "AJUSTE", piezaId: "", productoId: "", cantidad: "", costo: "", motivo: "" };
 const fecha = (f) => (f ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—");
@@ -47,6 +48,7 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [catalogo, setCatalogo] = useState(null); // productos del catálogo para la carga inicial
+  const [confirmando, setConfirmando] = useState(false); // el resumen del movimiento antes de guardarlo
   const carga = form.clase === "CARGA_INICIAL";
 
   useEffect(() => {
@@ -69,6 +71,11 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
     if (guardando) return;
     setTocado(true);
     if (Object.keys(erroresMovimientoTaller(form, pieza)).length) return;
+    setConfirmando(true);
+  };
+
+  const guardar = async () => {
+    setConfirmando(false);
     setGuardando(true);
     setError(null);
     try {
@@ -87,6 +94,19 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
 
   return (
     <form className="ui-form" onSubmit={enviar} noValidate>
+      {confirmando && pieza && (
+        <ConfirmarAccion titulo={`¿Registrar ${tipo.label.toLowerCase()} de ${pieza.nombre}?`} textoConfirmar="Sí, registrar"
+          peligro={tipo.sentido === "sale"}
+          mensaje={carga
+            ? `Entran ${plural(Number(form.cantidad), "unidad", "unidades")} como un lote nuevo, a ${formatPrecio(Number(String(form.costo).replace(/\./g, "")))} cada una. No mueve dinero.`
+            : `El stock pasa de ${pieza.stock} a ${resultado}. No mueve dinero y queda en el historial con tu nombre.`}
+          onCancelar={() => setConfirmando(false)} onConfirmar={guardar}>
+          <figure className="ui-motivo-cita">
+            <figcaption>Motivo</figcaption>
+            <blockquote>{form.motivo.trim()}</blockquote>
+          </figure>
+        </ConfirmarAccion>
+      )}
       <fieldset className="mov-tipos">
         <legend className="ui-field__label">Tipo de movimiento</legend>
         {Object.entries(CLASES_MANUALES).map(([valor, t]) => (
