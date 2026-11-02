@@ -190,6 +190,32 @@ function FormEntrega({ tienda, token, onGuardado, onCancelar }) {
   );
 }
 
+/** Descuento sobre el precio público para talleres aprobados que compran en el catálogo. Los clientes no lo ven. */
+function FormDescuentoTalleres({ tienda, token, onGuardado, onCancelar }) {
+  const [pct, setPct] = useState(String(tienda.descuentoTalleresPct ?? 20));
+  const [errorCampo, setErrorCampo] = useState(null);
+  const { guardar, guardando, error } = useGuardar(token, onGuardado);
+
+  const enviar = (e) => {
+    e.preventDefault();
+    const n = Number(String(pct).replace(",", "."));
+    const err = pct === "" || !Number.isFinite(n) || n < 0 || n > 50 ? "Escribe un descuento de 0 a 50 %." : null;
+    setErrorCampo(err);
+    if (!err) guardar({ descuentoTalleresPct: n });
+  };
+
+  return (
+    <form className="ui-form" onSubmit={enviar} noValidate>
+      <Campo id="mtd-descuento" label="Descuento para talleres (%)" error={errorCampo}
+        ayuda="De 0 a 50 %. Los talleres aprobados ven y pagan tu precio con este descuento; tu comisión es sobre lo que pagan. Con 0 % pagan el precio público.">
+        <input className="ui-field__input ui-form__corto" type="number" inputMode="decimal" min="0" max="50" step="0.5" autoFocus
+          value={pct} onChange={(e) => { setPct(e.target.value); if (errorCampo) setErrorCampo(null); }} />
+      </Campo>
+      <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar descuento" />
+    </form>
+  );
+}
+
 /** Interruptor del resumen semanal por correo (lunes 7:00) y envío de prueba al correo del dueño. */
 function ResumenSemanal({ token }) {
   const [activo, setActivo] = useState(null);
@@ -243,7 +269,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
   const [tienda, setTienda] = useState(null);
   const [error, setError] = useState(null);
   const [reintentando, setReintentando] = useState(false);
-  const [editando, setEditando] = useState(null); // "ubicacion" | "horario" | "entrega" | "contacto"
+  const [editando, setEditando] = useState(null); // "ubicacion" | "horario" | "entrega" | "talleres" | "contacto"
   const [avisoLogo, setAvisoLogo] = useState(null); // { tono, texto }
 
   const cargar = useCallback(async () => {
@@ -423,6 +449,22 @@ export default function DatosMiTienda({ token, onGuardado }) {
                   {t.costoEnvio != null
                     ? <>{formatPrecio(t.costoEnvio)} <span className="mtd-detalle">· solo dentro de {t.ciudad || "tu ciudad"}</span></>
                     : <ChipEstado tono="apagado">No ofreces envíos</ChipEstado>}
+                </Dato>
+              </dl>
+            )}
+          </SeccionEditable>
+
+          <SeccionEditable id="mtd-talleres" icono="tool" titulo="Precio para talleres"
+            descripcion="Los talleres aprobados compran tus repuestos para su inventario con este descuento."
+            onEditar={() => abrir("talleres")} editando={editando === "talleres"}>
+            {editando === "talleres" ? (
+              <FormDescuentoTalleres tienda={t} token={token} onCancelar={cerrar} onGuardado={guardado("talleres", "Descuento para talleres guardado.")} />
+            ) : (
+              <dl className="ui-datos">
+                <Dato etiqueta="Descuento">
+                  {(t.descuentoTalleresPct ?? 20) > 0
+                    ? <>{String(t.descuentoTalleresPct ?? 20).replace(".", ",")} % <span className="mtd-detalle">· los clientes siguen viendo tu precio público</span></>
+                    : <ChipEstado tono="apagado">Sin descuento: pagan el precio público</ChipEstado>}
                 </Dato>
               </dl>
             )}
