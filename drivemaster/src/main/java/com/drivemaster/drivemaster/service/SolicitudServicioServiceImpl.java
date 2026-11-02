@@ -495,17 +495,19 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         Vehiculo vehiculo = vehiculoService.obtenerEntidad(orden.getVehiculoId());
         Map<String, RepuestoSeleccionado> confirmadosAntes = (orden.getRepuestos() != null ? orden.getRepuestos() : List.<RepuestoSeleccionado>of())
                 .stream()
-                .filter(rep -> Boolean.TRUE.equals(rep.getCompatibilidadConfirmada()) && rep.getProductoId() != null)
-                .collect(Collectors.toMap(RepuestoSeleccionado::getProductoId, rep -> rep, (a, b) -> a));
+                .filter(rep -> Boolean.TRUE.equals(rep.getCompatibilidadConfirmada()) && claveRepuesto(rep) != null)
+                .collect(Collectors.toMap(SolicitudServicioServiceImpl::claveRepuesto, rep -> rep, (a, b) -> a));
 
         List<RepuestoSeleccionado> seleccion = new ArrayList<>();
         List<String> confirmaciones = new ArrayList<>();
         Set<String> productosVistos = new HashSet<>();
         for (SeleccionRepuestosRequest.Item item : items) {
-            if (item.getProductoId() == null || item.getProductoId().isBlank()) {
+            boolean delTaller = item.getPiezaTallerId() != null && !item.getPiezaTallerId().isBlank();
+            String clave = delTaller ? item.getPiezaTallerId() : item.getProductoId();
+            if (clave == null || clave.isBlank()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cada repuesto debe tener un producto elegido");
             }
-            if (!productosVistos.add(item.getProductoId())) {
+            if (!productosVistos.add(clave)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Un mismo producto aparece dos veces: ajusta la cantidad en una sola línea");
             }
@@ -513,16 +515,26 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             if (cantidad < 1 || cantidad > MAX_CANTIDAD) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cantidad debe estar entre 1 y " + MAX_CANTIDAD);
             }
-            Producto producto;
-            try {
-                producto = productoService.obtenerPorId(item.getProductoId());
-            } catch (RuntimeException e) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Uno de los productos elegidos ya no existe");
+            // La misma pieza puede venir del inventario y de una tienda: son dos líneas con claves distintas
+            OfertaRepuestoDTO oferta;
+            if (delTaller) {
+                oferta = buscador.ofertaDePieza(item.getPiezaTallerId(), cantidad, taller, vehiculo);
+            } else {
+                Producto producto;
+                try {
+                    producto = productoService.obtenerPorId(item.getProductoId());
+                } catch (RuntimeException e) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Uno de los productos elegidos ya no existe");
+                }
+                oferta = buscador.ofertaParaSeleccion(producto, cantidad, taller, vehiculo);
+                oferta.setProductoId(producto.getId());
+                oferta.setNombre(producto.getNombre());
+                oferta.setMarca(producto.getMarca());
+                oferta.setReferencia(producto.getReferencia());
             }
-            OfertaRepuestoDTO oferta = buscador.ofertaParaSeleccion(producto, cantidad, taller, vehiculo);
 
             String descripcion = item.getDescripcion() != null && !item.getDescripcion().isBlank()
-                    ? item.getDescripcion().trim() : producto.getNombre();
+                    ? item.getDescripcion().trim() : oferta.getNombre();
             if (descripcion.length() > MAX_DESCRIPCION_REPUESTO) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "La descripción de cada repuesto admite hasta " + MAX_DESCRIPCION_REPUESTO + " caracteres");
@@ -530,10 +542,12 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             RepuestoSeleccionado.RepuestoSeleccionadoBuilder repuesto = RepuestoSeleccionado.builder()
                     .descripcion(descripcion)
                     .cantidad(cantidad)
-                    .productoId(producto.getId())
-                    .productoNombre(producto.getNombre())
-                    .marca(producto.getMarca())
-                    .referencia(producto.getReferencia())
+                    .productoId(oferta.getProductoId())
+                    .origen(oferta.getOrigen())
+                    .piezaTallerId(oferta.getPiezaTallerId())
+                    .productoNombre(oferta.getNombre())
+                    .marca(oferta.getMarca())
+                    .referencia(oferta.getReferencia())
                     .tiendaId(oferta.getTiendaId())
                     .tiendaNombre(oferta.getTiendaNombre())
                     .precioReferencia(oferta.getPrecio())
@@ -545,13 +559,13 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             if (oferta.isRequiereConfirmacion()) {
                 if (!Boolean.TRUE.equals(item.getConfirmoCompatibilidad())) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "Confirma que \"" + producto.getNombre() + "\" es compatible con el vehículo: no tiene datos de compatibilidad");
+                            "Confirma que \"" + oferta.getNombre() + "\" es compatible con el vehículo: no tiene datos de compatibilidad");
                 }
                 if (mecanicoId == null) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                             "Asigna el mecánico responsable antes de confirmar compatibilidades");
                 }
-                RepuestoSeleccionado anterior = confirmadosAntes.get(producto.getId());
+                RepuestoSeleccionado anterior = confirmadosAntes.get(clave);
                 if (anterior != null) {
                     repuesto.compatibilidadConfirmada(true)
                             .confirmadoPorMecanicoId(anterior.getConfirmadoPorMecanicoId())
@@ -563,7 +577,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                             .confirmadoPorMecanicoNombre(mecanicoNombre)
                             .fechaConfirmacion(LocalDateTime.now());
                     confirmaciones.add("Compatibilidad confirmada por " + mecanicoNombre + ": "
-                            + producto.getNombre() + " (" + oferta.getTiendaNombre() + ")");
+                            + oferta.getNombre() + " (" + (delTaller ? "inventario del taller" : oferta.getTiendaNombre()) + ")");
                 }
             }
             seleccion.add(repuesto.build());
@@ -573,8 +587,16 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
 
     private static String notaSeleccion(List<RepuestoSeleccionado> seleccion) {
         if (seleccion.isEmpty()) return "Sin repuestos (solo mano de obra)";
-        long tiendas = seleccion.stream().map(RepuestoSeleccionado::getTiendaId).distinct().count();
-        return seleccion.size() + " repuesto(s) elegidos en " + tiendas + " tienda(s)";
+        long delTaller = seleccion.stream().filter(RepuestoSeleccionado::esDelTaller).count();
+        long tiendas = seleccion.stream().filter(r -> !r.esDelTaller()).map(RepuestoSeleccionado::getTiendaId).distinct().count();
+        if (delTaller == 0) return seleccion.size() + " repuesto(s) elegidos en " + tiendas + " tienda(s)";
+        return seleccion.size() + " repuesto(s) elegidos: " + delTaller + " del inventario del taller y "
+                + (seleccion.size() - delTaller) + " en " + tiendas + " tienda(s)";
+    }
+
+    /** Lo que identifica una línea: la pieza del inventario o el producto de la tienda. */
+    private static String claveRepuesto(RepuestoSeleccionado r) {
+        return r.esDelTaller() ? r.getPiezaTallerId() : r.getProductoId();
     }
 
     // ─── Etapas finales ──────────────────────────────────────────────────────

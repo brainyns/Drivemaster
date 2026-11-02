@@ -2,15 +2,18 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.OfertaRepuestoDTO;
 import com.drivemaster.drivemaster.dto.RepuestoBuscadoDTO;
+import com.drivemaster.drivemaster.model.CotizacionItem;
 import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.OrdenServicio;
+import com.drivemaster.drivemaster.model.PiezaTaller;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.RepuestoSeleccionado;
 import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.model.Vehiculo;
 import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
+import com.drivemaster.drivemaster.repository.PiezaTallerRepository;
 import com.drivemaster.drivemaster.repository.TiendaRepository;
 import com.drivemaster.drivemaster.util.CompatibilidadVehiculo;
 import com.drivemaster.drivemaster.util.HaversineUtil;
@@ -61,6 +64,8 @@ public class BuscadorRepuestosService {
 
     static final Comparator<OfertaRepuestoDTO> RECOMENDACION = Comparator
             .comparing((OfertaRepuestoDTO o) -> o.isSeleccionable() ? 0 : 1)
+            // Lo que el taller ya tiene va antes que cualquier tienda
+            .thenComparing(o -> CotizacionItem.ORIGEN_TALLER.equals(o.getOrigen()) ? 0 : 1)
             .thenComparing(o -> RANGO_DISPONIBILIDAD.getOrDefault(o.getDisponibilidad(), 9))
             .thenComparing(OfertaRepuestoDTO::getDistanciaKm, Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing(OfertaRepuestoDTO::getPrecio, Comparator.nullsLast(Comparator.naturalOrder()));
@@ -70,12 +75,15 @@ public class BuscadorRepuestosService {
     private final OrdenServicioRepository ordenRepository;
     private final TallerService tallerService;
     private final VehiculoService vehiculoService;
+    private final PiezaTallerRepository piezaRepository;
 
     public BuscadorRepuestosService(MongoTemplate mongoTemplate,
                                     TiendaRepository tiendaRepository,
                                     OrdenServicioRepository ordenRepository,
                                     TallerService tallerService,
-                                    VehiculoService vehiculoService) {
+                                    VehiculoService vehiculoService,
+                                    PiezaTallerRepository piezaRepository) {
+        this.piezaRepository = piezaRepository;
         this.mongoTemplate = mongoTemplate;
         this.tiendaRepository = tiendaRepository;
         this.ordenRepository = ordenRepository;
@@ -106,8 +114,15 @@ public class BuscadorRepuestosService {
         }
         int unidades = cantidad != null && cantidad > 0 ? cantidad : 1;
         Vehiculo vehiculo = vehiculoService.obtenerEntidad(orden.getVehiculoId());
+        // "Tu inventario" va primero y no depende de que haya tiendas operando
+        List<Oferta> delTaller = piezaRepository.findByTallerIdAndStockGreaterThan(taller.getId(), 0).stream()
+                .filter(p -> coincide(p, texto, referencia))
+                .map(p -> new Oferta(comoProducto(p), evaluarPieza(p, unidades, vehiculo)))
+                .filter(o -> !soloCompatibles || COMPATIBLE.equals(o.dto().getCompatibilidad()))
+                .toList();
+
         Map<String, Tienda> tiendas = tiendasOperativas();
-        if (tiendas.isEmpty()) return List.of();
+        if (tiendas.isEmpty()) return agrupar(delTaller);
 
         Set<String> tiendasSeleccion = (orden.getRepuestos() != null ? orden.getRepuestos() : List.<RepuestoSeleccionado>of())
                 .stream().map(RepuestoSeleccionado::getTiendaId).filter(Objects::nonNull).collect(Collectors.toSet());
@@ -120,7 +135,27 @@ public class BuscadorRepuestosService {
                 })
                 .filter(o -> !soloCompatibles || COMPATIBLE.equals(o.dto().getCompatibilidad()))
                 .toList();
-        return agrupar(ofertas);
+        List<Oferta> todas = new ArrayList<>(delTaller);
+        todas.addAll(ofertas);
+        return agrupar(todas);
+    }
+
+    /**
+     * Valida una pieza del inventario elegida para la orden. Solo este taller la usa, y solo lo que ya confirmó que le
+     * llegó: lo que está en camino no es stock. Rechaza lo NO_COMPATIBLE y más unidades de las que tiene.
+     */
+    public OfertaRepuestoDTO ofertaDePieza(String piezaId, int cantidad, Taller taller, Vehiculo vehiculo) {
+        PiezaTaller pieza = piezaRepository.findById(piezaId).filter(p -> taller.getId().equals(p.getTallerId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Esa pieza ya no está en tu inventario"));
+        OfertaRepuestoDTO oferta = evaluarPieza(pieza, cantidad, vehiculo);
+        if (NO_COMPATIBLE.equals(oferta.getCompatibilidad())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "\"" + pieza.getNombre() + "\": " + oferta.getMotivo());
+        }
+        if (pieza.getStock() < cantidad) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "De \"" + pieza.getNombre() + "\" solo tienes "
+                    + pieza.getStock() + " en tu inventario: pide el resto a una tienda");
+        }
+        return oferta;
     }
 
     /**
@@ -189,6 +224,70 @@ public class BuscadorRepuestosService {
     }
 
     // ─── Evaluación y agrupación (sin acceso a datos: probadas en unitarias) ──
+
+    /**
+     * Oferta de una pieza del inventario. A diferencia de una tienda, se puede elegir aunque no alcance: se usa lo que
+     * hay y el resto se pide a una tienda. Nunca lleva el costo: esto llega a la cotización.
+     */
+    static OfertaRepuestoDTO evaluarPieza(PiezaTaller p, int cantidad, Vehiculo vehiculo) {
+        String compatibilidad = CompatibilidadVehiculo.estado(comoProducto(p), vehiculo);
+        int stock = p.getStock();
+        String disponibilidad = stock >= cantidad ? OfertaRepuestoDTO.DISPONIBLE
+                : stock > 0 ? OfertaRepuestoDTO.PARCIAL : OfertaRepuestoDTO.AGOTADO;
+        boolean conPrecio = p.getPrecioVenta() != null && p.getPrecioVenta() > 0;
+        boolean seleccionable = !NO_COMPATIBLE.equals(compatibilidad) && stock > 0 && conPrecio;
+
+        String estado = NO_COMPATIBLE.equals(compatibilidad) ? NO_COMPATIBLE
+                : stock <= 0 ? OfertaRepuestoDTO.AGOTADO : compatibilidad;
+        String motivo = null;
+        if (NO_COMPATIBLE.equals(compatibilidad)) {
+            motivo = "No es compatible con " + CompatibilidadVehiculo.describir(vehiculo);
+        } else if (!conPrecio) {
+            motivo = "Ponle precio de venta en Mi inventario";
+        } else if (stock < cantidad) {
+            motivo = "Tienes " + stock + " de " + cantidad + ": pide las otras " + (cantidad - stock) + " a una tienda";
+        } else if (POR_CONFIRMAR.equals(compatibilidad)) {
+            motivo = "Sin datos de compatibilidad: confirma que le sirve al vehículo";
+        }
+
+        return OfertaRepuestoDTO.builder()
+                .piezaTallerId(p.getId())
+                .origen(CotizacionItem.ORIGEN_TALLER)
+                .nombre(p.getNombre())
+                .marca(p.getMarca())
+                .referencia(p.getReferencia())
+                .imagenUrl(p.getImagenUrl())
+                .precio(p.getPrecioVenta())
+                .stock(stock)
+                .disponibilidad(disponibilidad)
+                .compatibilidad(compatibilidad)
+                .estado(estado)
+                .seleccionable(seleccionable)
+                .requiereConfirmacion(seleccionable && POR_CONFIRMAR.equals(compatibilidad))
+                .motivo(motivo)
+                .build();
+    }
+
+    /** La pieza con la forma de un producto: comparte las reglas de compatibilidad y de agrupación. */
+    private static Producto comoProducto(PiezaTaller p) {
+        Producto producto = new Producto();
+        producto.setNombre(p.getNombre());
+        producto.setMarca(p.getMarca());
+        producto.setReferencia(p.getReferencia());
+        producto.setCategoria(p.getCategoria());
+        producto.setImagenUrl(p.getImagenUrl());
+        producto.setModelosCompatibles(p.getModelosCompatibles());
+        producto.setCompatibilidadUniversal(p.getCompatibilidadUniversal());
+        return producto;
+    }
+
+    private static boolean coincide(PiezaTaller p, String texto, String referencia) {
+        String t = normalizar(texto);
+        String ref = normalizar(referencia);
+        boolean porTexto = t.length() < MIN_TEXTO || java.util.stream.Stream.of(p.getNombre(), p.getCategoria(), p.getMarca(), p.getReferencia())
+                .anyMatch(campo -> normalizar(campo).contains(t));
+        return porTexto && (ref.length() < MIN_TEXTO || normalizar(p.getReferencia()).contains(ref));
+    }
 
     /** Oferta de un producto con su estado frente al vehículo y la cantidad pedida. */
     static OfertaRepuestoDTO evaluar(Producto p, Tienda tienda, int cantidad, Taller taller, Vehiculo vehiculo) {
@@ -276,8 +375,8 @@ public class BuscadorRepuestosService {
                     .categoria(base.getCategoria())
                     .imagenUrl(lista.stream().map(o -> o.producto().getImagenUrl())
                             .filter(Objects::nonNull).findFirst().orElse(null))
-                    .stockTotal(ordenadas.stream().mapToInt(o -> o.getStock() != null ? o.getStock() : 0).sum())
-                    .tiendasConStock((int) ordenadas.stream().filter(o -> o.getStock() != null && o.getStock() > 0).count())
+                    .stockTotal(deTiendas(ordenadas).mapToInt(o -> o.getStock() != null ? o.getStock() : 0).sum())
+                    .tiendasConStock((int) deTiendas(ordenadas).filter(o -> o.getStock() != null && o.getStock() > 0).count())
                     .ofertas(ordenadas)
                     .build());
         });
@@ -286,6 +385,10 @@ public class BuscadorRepuestosService {
                 .comparing((RepuestoBuscadoDTO g) -> g.getOfertas().get(0), RECOMENDACION)
                 .thenComparing(RepuestoBuscadoDTO::getNombre, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
         return grupos;
+    }
+
+    private static java.util.stream.Stream<OfertaRepuestoDTO> deTiendas(List<OfertaRepuestoDTO> ofertas) {
+        return ofertas.stream().filter(o -> !CotizacionItem.ORIGEN_TALLER.equals(o.getOrigen()));
     }
 
     /** Misma referencia = misma pieza; sin referencia se agrupa por marca + nombre. */

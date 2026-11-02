@@ -49,7 +49,9 @@ public class Cotizacion {
     private List<CotizacionItem> items = new ArrayList<>();
 
     // Totales (antes de IVA, IVA por tipo y total)
+    // subtotalRepuestos e ivaRepuestos son de las tiendas; los del inventario del taller van aparte y llevan el IVA del taller
     private Double subtotalRepuestos;
+    private Double subtotalRepuestosTaller;
     private Double subtotalManoObra;
     private Double subtotal;
     /**
@@ -61,6 +63,7 @@ public class Cotizacion {
     private Double ivaRepuestosPct;
     private Double ivaManoObraPct;
     private Double ivaRepuestos;
+    private Double ivaRepuestosTaller;
     private Double ivaManoObra;
     private Double iva;
     private Double total;

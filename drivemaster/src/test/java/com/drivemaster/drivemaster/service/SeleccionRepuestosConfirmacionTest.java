@@ -150,4 +150,54 @@ class SeleccionRepuestosConfirmacionTest {
         assertThrows(ResponseStatusException.class, () -> service.seleccionarRepuestos(CORREO, "o1", pedido(true)));
         verify(transiciones, never()).registrar(any(), any(), anyString(), any(Criteria.class), any(Update.class), anyList());
     }
+
+    // ─── Piezas del inventario del taller ────────────────────────────────────
+
+    private static final String PIEZA = "t1|REF:AC1";
+
+    private void hayPieza() {
+        when(buscador.ofertaDePieza(eq(PIEZA), anyInt(), any(), any())).thenReturn(OfertaRepuestoDTO.builder()
+                .piezaTallerId(PIEZA).origen("TALLER").nombre("Aceite 10W-30").precio(50_000.0)
+                .disponibilidad(OfertaRepuestoDTO.DISPONIBLE).compatibilidad("COMPATIBLE").build());
+    }
+
+    private static Item delInventario(int cantidad) {
+        return new Item("Aceite de motor", cantidad, null, null, PIEZA);
+    }
+
+    @Test
+    void la_misma_pieza_puede_venir_del_inventario_y_de_una_tienda_en_dos_lineas() {
+        hayPieza();
+        service.seleccionarRepuestos(CORREO, "o1", new SeleccionRepuestosRequest(List.of(delInventario(2), new Item("Aceite de motor", 3, "p1", true))));
+
+        ArgumentCaptor<Update> update = ArgumentCaptor.forClass(Update.class);
+        verify(transiciones).registrar(any(), any(), anyString(), any(), update.capture(), anyList());
+        List<RepuestoSeleccionado> elegidos = repuestosGuardados(update);
+        assertEquals(2, elegidos.size());
+        assertTrue(elegidos.get(0).esDelTaller());
+        assertEquals(PIEZA, elegidos.get(0).getPiezaTallerId());
+        assertEquals(2, elegidos.get(0).getCantidad());
+        assertNull(elegidos.get(0).getProductoId());
+        assertNull(elegidos.get(0).getTiendaId());
+        assertFalse(elegidos.get(1).esDelTaller());
+        assertEquals("p1", elegidos.get(1).getProductoId());
+        assertEquals(3, elegidos.get(1).getCantidad());
+    }
+
+    @Test
+    void una_misma_pieza_del_inventario_no_va_en_dos_lineas() {
+        hayPieza();
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.seleccionarRepuestos(CORREO, "o1",
+                new SeleccionRepuestosRequest(List.of(delInventario(1), delInventario(1)))));
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+    }
+
+    @Test
+    void pedir_mas_de_lo_que_hay_en_el_inventario_se_rechaza() {
+        when(buscador.ofertaDePieza(eq(PIEZA), eq(5), any(), any()))
+                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "solo tienes 2"));
+        assertThrows(ResponseStatusException.class, () -> service.seleccionarRepuestos(CORREO, "o1",
+                new SeleccionRepuestosRequest(List.of(delInventario(5)))));
+        verify(transiciones, never()).registrar(any(), any(), anyString(), any(), any(), anyList());
+    }
 }

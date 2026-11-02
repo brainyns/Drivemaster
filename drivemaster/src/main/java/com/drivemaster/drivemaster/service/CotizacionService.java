@@ -121,7 +121,8 @@ public class CotizacionService {
             Vehiculo vehiculo = orden.getVehiculoId() != null ? vehiculoService.obtenerEntidad(orden.getVehiculoId()) : null;
 
             java.util.Map<String, Object> p = new java.util.HashMap<>();
-            p.put("monto_repuestos", cot.getSubtotalRepuestos() != null ? cot.getSubtotalRepuestos() : 0.0);
+            p.put("monto_repuestos", (cot.getSubtotalRepuestos() != null ? cot.getSubtotalRepuestos() : 0.0)
+                    + (cot.getSubtotalRepuestosTaller() != null ? cot.getSubtotalRepuestosTaller() : 0.0));
             p.put("monto_mano_obra", cot.getSubtotalManoObra() != null ? cot.getSubtotalManoObra() : 0.0);
             p.put("total_con_iva", cot.getTotal() != null ? cot.getTotal() : 0.0);
 
@@ -193,11 +194,14 @@ public class CotizacionService {
         CotizacionDTO dto = CotizacionDTO.completa(c);
         double manoObra = c.getSubtotalManoObra() != null ? c.getSubtotalManoObra() : 0;
         double ivaManoObra = c.getIvaManoObra() != null ? c.getIvaManoObra() : Math.round(manoObra * c.pctManoObra() / 100.0);
+        // Sus repuestos son una venta suya: pagan comisión sobre el precio sin IVA y le llegan con su IVA
+        double piezas = c.getSubtotalRepuestosTaller() != null ? c.getSubtotalRepuestosTaller() : 0;
+        double ivaPiezas = c.getIvaRepuestosTaller() != null ? c.getIvaRepuestosTaller() : 0;
         boolean seDescuenta = parametros.comisionRetenida();
-        double comision = Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(manoObra), parametros.comisionPct()));
+        double comision = Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(manoObra + piezas), parametros.comisionPct()));
         dto.setComisionTaller(comision);
         dto.setComisionSeDescuenta(seDescuenta);
-        dto.setRecibeTaller(manoObra + ivaManoObra - (seDescuenta ? comision : 0));
+        dto.setRecibeTaller(manoObra + ivaManoObra + piezas + ivaPiezas - (seDescuenta ? comision : 0));
         return dto;
     }
 
@@ -487,6 +491,10 @@ public class CotizacionService {
         if (!repuestos.isEmpty()) {
             Vehiculo vehiculo = vehiculoService.obtenerEntidad(orden.getVehiculoId());
             for (RepuestoSeleccionado rep : repuestos) {
+                if (rep.esDelTaller()) {
+                    items.add(itemDelTaller(rep, taller, vehiculo));
+                    continue;
+                }
                 Producto producto;
                 try {
                     producto = productoService.obtenerPorId(rep.getProductoId());
@@ -583,6 +591,7 @@ public class CotizacionService {
                 .vehiculoDescripcion(orden.getVehiculoDescripcion())
                 .items(items)
                 .subtotalRepuestos(t.subtotalRepuestos())
+                .subtotalRepuestosTaller(t.subtotalRepuestosTaller())
                 .subtotalManoObra(t.subtotalManoObra())
                 .subtotal(t.subtotal())
                 // El porcentaje único solo si los dos coinciden: así nadie lo lee como el IVA de toda la cotización
@@ -590,6 +599,7 @@ public class CotizacionService {
                 .ivaRepuestosPct(ivaRepuestosPct)
                 .ivaManoObraPct(ivaManoObraPct)
                 .ivaRepuestos(t.ivaRepuestos())
+                .ivaRepuestosTaller(t.ivaRepuestosTaller())
                 .ivaManoObra(t.ivaManoObra())
                 .iva(t.iva())
                 .total(t.total())
@@ -601,6 +611,31 @@ public class CotizacionService {
                 .tiempoEstimadoHoras(tiempo)
                 .diasEntregaRepuestos(diasEntrega > 0 ? diasEntrega : null)
                 .observaciones(observaciones != null && !observaciones.isBlank() ? observaciones : null)
+                .build();
+    }
+
+    /** Línea de una pieza del inventario: vuelve a validarla y congela el precio de hoy, sin tienda ni producto. */
+    private CotizacionItem itemDelTaller(RepuestoSeleccionado rep, Taller taller, Vehiculo vehiculo) {
+        int cantidad = rep.getCantidad() != null ? rep.getCantidad() : 1;
+        OfertaRepuestoDTO oferta = buscador.ofertaDePieza(rep.getPiezaTallerId(), cantidad, taller, vehiculo);
+        if (oferta.isRequiereConfirmacion() && !Boolean.TRUE.equals(rep.getCompatibilidadConfirmada())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Falta confirmar la compatibilidad de \"" + oferta.getNombre() + "\": vuelve a elegir los repuestos");
+        }
+        if (oferta.getPrecio() == null || oferta.getPrecio() <= 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "\"" + oferta.getNombre() + "\" no tiene precio de venta en tu inventario");
+        }
+        return CotizacionItem.builder()
+                .tipo(CotizacionItem.REPUESTO)
+                .origen(CotizacionItem.ORIGEN_TALLER)
+                .piezaTallerId(rep.getPiezaTallerId())
+                .descripcion(rep.getDescripcion() != null ? rep.getDescripcion() : oferta.getNombre())
+                .productoNombre(oferta.getNombre())
+                .marca(oferta.getMarca())
+                .referencia(oferta.getReferencia())
+                .disponibilidad(OfertaRepuestoDTO.DISPONIBLE)
+                .cantidad(cantidad)
+                .precioUnitario(oferta.getPrecio())
                 .build();
     }
 

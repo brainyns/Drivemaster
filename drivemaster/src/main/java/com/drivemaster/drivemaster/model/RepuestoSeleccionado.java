@@ -27,6 +27,10 @@ public class RepuestoSeleccionado {
     private String tiendaId;
     private String tiendaNombre;
 
+    // TALLER: sale del inventario del taller (piezaTallerId) y no lleva productoId ni tienda. Sin dato: de una tienda
+    private String origen;
+    private String piezaTallerId;
+
     private Double precioReferencia;
 
     // DISPONIBLE o ENCARGO al momento de elegirlo
@@ -43,4 +47,8 @@ public class RepuestoSeleccionado {
     private String confirmadoPorMecanicoId;
     private String confirmadoPorMecanicoNombre;
     private LocalDateTime fechaConfirmacion;
+
+    public boolean esDelTaller() {
+        return CotizacionItem.ORIGEN_TALLER.equals(origen);
+    }
 }

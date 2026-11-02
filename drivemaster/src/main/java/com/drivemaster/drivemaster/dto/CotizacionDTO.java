@@ -35,6 +35,7 @@ public class CotizacionDTO {
     private List<CotizacionItem> items;
 
     private Double subtotalRepuestos;
+    private Double subtotalRepuestosTaller;
     private Double subtotalManoObra;
     private Double subtotal;
     private Double ivaPct;
@@ -42,6 +43,7 @@ public class CotizacionDTO {
     private Double ivaRepuestosPct;
     private Double ivaManoObraPct;
     private Double ivaRepuestos;
+    private Double ivaRepuestosTaller;
     private Double ivaManoObra;
     private Double iva;
     private Double total;
@@ -82,6 +84,7 @@ public class CotizacionDTO {
                 .referencia(i.getReferencia())
                 .tiendaNombre(i.getTiendaNombre())
                 .disponibilidad(i.getDisponibilidad())
+                .origen(i.getOrigen())
                 .diasEntrega(i.getDiasEntrega())
                 .modalidad(i.getModalidad())
                 .horas(i.getHoras())
@@ -108,12 +111,14 @@ public class CotizacionDTO {
                 .vehiculoDescripcion(c.getVehiculoDescripcion())
                 .items(items)
                 .subtotalRepuestos(c.getSubtotalRepuestos())
+                .subtotalRepuestosTaller(c.getSubtotalRepuestosTaller())
                 .subtotalManoObra(c.getSubtotalManoObra())
                 .subtotal(c.getSubtotal())
                 .ivaPct(c.getIvaPct())
                 .ivaRepuestosPct(c.pctRepuestos())
                 .ivaManoObraPct(c.pctManoObra())
                 .ivaRepuestos(c.getIvaRepuestos())
+                .ivaRepuestosTaller(c.getIvaRepuestosTaller())
                 .ivaManoObra(c.getIvaManoObra())
                 .iva(c.getIva())
                 .total(c.getTotal())

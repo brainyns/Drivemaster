@@ -25,7 +25,10 @@ public class OfertaRepuestoDTO {
     public static final String PARCIAL = "PARCIAL";
     public static final String AGOTADO = "AGOTADO";
 
+    // Oferta de una tienda. La del inventario del taller trae piezaTallerId y origen TALLER, sin productoId ni tienda
     private String productoId;
+    private String piezaTallerId;
+    private String origen;
     private String codigo;
     private String nombre;
     private String marca;

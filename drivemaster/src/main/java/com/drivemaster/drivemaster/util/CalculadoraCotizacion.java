@@ -10,6 +10,7 @@ import java.util.List;
  * Totales de una cotización. Todo en COP redondeado al peso.
  *
  *  - Subtotales antes de IVA por tipo (repuestos / mano de obra).
+ *  - Repuestos del inventario del taller aparte: los vende el taller, así que llevan el IVA de su mano de obra.
  *  - IVA por tipo, cada uno con su porcentaje: los repuestos con el parámetro IVA y la mano de obra con el del
  *    taller (0 % si no es responsable, ver IvaTaller). Así el reparto es exacto: tienda = repuestos + su IVA;
  *    taller = mano de obra + su IVA − anticipo.
@@ -22,8 +23,8 @@ public final class CalculadoraCotizacion {
     private CalculadoraCotizacion() {
     }
 
-    public record Totales(double subtotalRepuestos, double subtotalManoObra, double subtotal,
-                          double ivaRepuestos, double ivaManoObra, double iva, double total,
+    public record Totales(double subtotalRepuestos, double subtotalRepuestosTaller, double subtotalManoObra, double subtotal,
+                          double ivaRepuestos, double ivaRepuestosTaller, double ivaManoObra, double iva, double total,
                           double anticipo, double totalAPagar, double comision) {
     }
 
@@ -38,6 +39,7 @@ public final class CalculadoraCotizacion {
     public static Totales calcular(List<CotizacionItem> items, double ivaRepuestosPct, double ivaManoObraPct,
                                    double anticipoDisponible, double comisionPct) {
         double repuestos = 0;
+        double repuestosTaller = 0;
         double manoObra = 0;
         for (CotizacionItem item : items) {
             double precio = item.getPrecioUnitario() != null ? item.getPrecioUnitario() : 0;
@@ -48,19 +50,21 @@ public final class CalculadoraCotizacion {
                 sub = redondear((item.getCantidad() != null ? item.getCantidad() : 0) * precio);
             }
             item.setSubtotal(sub);
-            if (CotizacionItem.REPUESTO.equals(item.getTipo())) repuestos += sub;
+            if (CotizacionItem.REPUESTO.equals(item.getTipo()) && item.esDelTaller()) repuestosTaller += sub;
+            else if (CotizacionItem.REPUESTO.equals(item.getTipo())) repuestos += sub;
             else manoObra += sub;
         }
 
         double ivaRepuestos = redondear(repuestos * ivaRepuestosPct / 100.0);
         double ivaManoObra = redondear(manoObra * ivaManoObraPct / 100.0);
-        double subtotal = repuestos + manoObra;
-        double iva = ivaRepuestos + ivaManoObra;
+        double ivaRepuestosTaller = redondear(repuestosTaller * ivaManoObraPct / 100.0);
+        double subtotal = repuestos + repuestosTaller + manoObra;
+        double iva = ivaRepuestos + ivaRepuestosTaller + ivaManoObra;
         double total = subtotal + iva;
         double anticipo = Math.min(Math.max(anticipoDisponible, 0), manoObra + ivaManoObra);
         double comision = redondear(subtotal * comisionPct / 100.0);
 
-        return new Totales(repuestos, manoObra, subtotal, ivaRepuestos, ivaManoObra, iva, total,
+        return new Totales(repuestos, repuestosTaller, manoObra, subtotal, ivaRepuestos, ivaRepuestosTaller, ivaManoObra, iva, total,
                 anticipo, total - anticipo, comision);
     }
 
@@ -76,10 +80,14 @@ public final class CalculadoraCotizacion {
             return List.of(new LineaIva("IVA (" + pct(pctRepuestos) + ")", valor(c.getIva())));
         }
         List<LineaIva> lineas = new ArrayList<>();
+        double piezas = valor(c.getSubtotalRepuestosTaller());
+        // Con piezas del inventario hay repuestos de dos dueños: el rótulo dice de quién es cada IVA
         if (valor(c.getSubtotalRepuestos()) > 0) {
-            lineas.add(new LineaIva("IVA repuestos (" + pct(pctRepuestos) + ")", valor(c.getIvaRepuestos())));
+            lineas.add(new LineaIva((piezas > 0 ? "IVA repuestos de tiendas (" : "IVA repuestos (") + pct(pctRepuestos) + ")", valor(c.getIvaRepuestos())));
         }
-        if (valor(c.getSubtotalManoObra()) > 0) {
+        if (piezas > 0) {
+            lineas.add(new LineaIva("IVA del taller (" + pct(pctManoObra) + ")", valor(c.getIvaManoObra()) + valor(c.getIvaRepuestosTaller())));
+        } else if (valor(c.getSubtotalManoObra()) > 0) {
             lineas.add(new LineaIva("IVA mano de obra (" + pct(pctManoObra) + ")", valor(c.getIvaManoObra())));
         }
         return lineas;
