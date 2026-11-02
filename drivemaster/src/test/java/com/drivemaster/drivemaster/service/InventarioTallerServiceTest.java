@@ -53,7 +53,7 @@ class InventarioTallerServiceTest {
         when(productoService.obtenerPorId("p1")).thenReturn(producto);
 
         service = new InventarioTallerService(tallerService, memoria.piezaRepository, pedidos, productoService, memoria.stock,
-                recepcion, mock(MongoTemplate.class), parametros);
+                recepcion, mock(MongoTemplate.class), parametros, mock(com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository.class));
     }
 
     private PedidoTienda pedido(String estado, String entrega) {

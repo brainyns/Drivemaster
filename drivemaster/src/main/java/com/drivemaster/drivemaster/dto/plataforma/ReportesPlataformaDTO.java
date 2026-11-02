@@ -44,7 +44,8 @@ public final class ReportesPlataformaDTO {
     public record MesComision(String mes, double registrada, double anulada, double neta, double cobrada) {}
 
     /** Un saldo que hay que cobrarle a un negocio. id es el del reembolso, para marcarlo cobrado. */
-    public record SaldoAFavor(Long id, double monto, String motivo, String referenciaPago, LocalDateTime fecha) {}
+    /** deudor: quién lo debe, si se sabe (los anteriores solo dicen el pago). */
+    public record SaldoAFavor(Long id, double monto, String motivo, String referenciaPago, LocalDateTime fecha, String deudor) {}
 
     /** Reembolsos de líneas ya pagadas: el dinero salió dos veces y se recupera a mano. */
     public record SaldosAFavor(double total, long cantidad, List<SaldoAFavor> items) {}

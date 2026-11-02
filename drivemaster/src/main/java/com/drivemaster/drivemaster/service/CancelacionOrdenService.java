@@ -5,6 +5,7 @@ import com.drivemaster.drivemaster.model.CotizacionItem;
 import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.PedidoTienda;
+import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.mysql.PagoEntity;
 import com.drivemaster.drivemaster.model.mysql.Reembolso;
@@ -40,7 +41,9 @@ import java.util.Set;
  * antes, falla y no se toca nada; dos clics no cancelan dos veces. Desde ahí cada paso corre aunque otro falle, y lo que
  * falle se alerta: el cliente no puede quedar sin su reembolso porque, por ejemplo, un pedido no se pudo cancelar.
  *
- * Lo que una tienda ya despachó no se cancela: su parte no se reembolsa, su línea sigue su curso y el ADMIN lo resuelve
+ * Lo que una tienda ya entregó al taller (RECIBIDO) se queda en el taller: entra a su inventario como un lote, el cliente
+ * recupera también esa parte y el taller la debe a DriveMaster (saldo a favor, se cobra a mano; la tienda cobra su venta).
+ * Lo que va en camino (DESPACHADO) no se cancela: su parte no se reembolsa, su línea sigue su curso y el ADMIN lo resuelve
  * con la tienda y el taller. El diagnóstico tampoco se reembolsa: el taller ya lo hizo y su pago queda habilitado.
  *
  * El dinero: queda un reembolso pendiente y la línea del taller anulada. El ADMIN lo hace en Wompi, como los demás.
@@ -69,6 +72,8 @@ public class CancelacionOrdenService {
     private final UsuarioService usuarios;
     private final AvisosSolicitudServicio avisos;
     private final MongoTemplate mongoTemplate;
+    private final com.drivemaster.drivemaster.repository.TallerRepository talleres;
+    private final InventarioTallerService inventarioTaller;
 
     public CancelacionOrdenService(OrdenServicioRepository ordenes, CotizacionRepository cotizaciones, PedidoTiendaRepository pedidos,
                                    PagoRepository pagos, RepartoPagoRepository repartos, ReembolsoRepository reembolsos,
@@ -76,7 +81,8 @@ public class CancelacionOrdenService {
                                    StockTallerService stockTaller, MovimientoInventarioService movimientos,
                                    com.drivemaster.drivemaster.repository.MovimientoInventarioRepository movimientoRepository,
                                    LiquidacionService liquidacion, UsuarioService usuarios, AvisosSolicitudServicio avisos,
-                                   MongoTemplate mongoTemplate) {
+                                   MongoTemplate mongoTemplate, com.drivemaster.drivemaster.repository.TallerRepository talleres,
+                                   InventarioTallerService inventarioTaller) {
         this.ordenes = ordenes;
         this.cotizaciones = cotizaciones;
         this.pedidos = pedidos;
@@ -92,10 +98,13 @@ public class CancelacionOrdenService {
         this.usuarios = usuarios;
         this.avisos = avisos;
         this.mongoTemplate = mongoTemplate;
+        this.talleres = talleres;
+        this.inventarioTaller = inventarioTaller;
     }
 
     /** Lo que pasó: cuánto se reembolsa, cuántos pedidos se cancelaron y cuáles ya habían salido de la tienda. */
-    public record Resultado(double reembolso, int pedidosCancelados, List<String> pedidosYaDespachados, int piezasDevueltas) {
+    public record Resultado(double reembolso, int pedidosCancelados, List<String> pedidosYaDespachados, int piezasDevueltas,
+                            double deudaTaller) {
     }
 
     /** Si esta orden se puede cancelar: pagada de verdad y antes de la instalación. */
@@ -120,13 +129,16 @@ public class CancelacionOrdenService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "No se encontró el pago de esta solicitud"));
         Usuario admin = usuarios.obtenerPorCorreo(correoAdmin);
 
+        Taller taller = orden.getTallerId() != null ? talleres.findById(orden.getTallerId()).orElse(null) : null;
         String texto = "Cancelada por DriveMaster: " + razon;
         OrdenServicio cancelada = transiciones.transicionar(orden, EstadoOrden.CANCELADA,
                 new Actor(EstadoOrden.ADMIN, admin.getId(), admin.getNombre()), texto, null,
                 new Update().set("motivoCierre", texto));
 
         List<String> yaDespachados = new ArrayList<>();
+        List<PedidoTienda> enElTaller = new ArrayList<>();
         double[] retenido = {0};
+        double[] deudaTaller = {0};
         int[] cancelados = {0};
         int[] piezas = {0};
         double[] reembolso = {0};
@@ -137,9 +149,14 @@ public class CancelacionOrdenService {
                 if (PedidoTienda.NO_DESPACHADO.equals(p.getEstado())) continue; // ya se reembolsó por su cuenta
                 if (cancelarPedido(p, texto, ordenId)) {
                     cancelados[0]++;
+                } else if (PedidoTienda.RECIBIDO.equals(p.getEstado())) {
+                    // Ya está en el taller: la tienda cobra su venta, la pieza se queda en el taller y él la debe
+                    enElTaller.add(p);
+                    deudaTaller[0] += valor(p.getTotal());
                 } else {
+                    // Va en camino: ni está en la tienda ni en el taller. Lo resuelve el ADMIN
                     yaDespachados.add(p.getTiendaNombre());
-                    retenido[0] += p.getTotal() != null ? p.getTotal() : 0;
+                    retenido[0] += valor(p.getTotal());
                 }
             }
         });
@@ -155,22 +172,36 @@ public class CancelacionOrdenService {
             double yaDevuelto = reembolsos.findByPagoId(pago.getId()).stream()
                     .mapToDouble(Reembolso::getMonto).sum();
             reembolso[0] = Math.max(0, valor(pago.getMonto()) - yaDevuelto - retenido[0]);
-            if (reembolso[0] > 0) pagoMarketplace.registrarReembolsoDeCancelacion(pago, reembolso[0], texto);
+            if (reembolso[0] > 0) {
+                pagoMarketplace.registrarReembolsoDeCancelacion(pago, reembolso[0], texto, deudaTaller[0], orden.getTallerId(),
+                        taller != null ? taller.getNombre() : orden.getTallerNombre());
+            }
         });
         paso(ordenId, "devolver las piezas al inventario del taller",
                 () -> piezas[0] = stockTaller.revertir(refInventario, texto, admin.getId()));
+        paso(ordenId, "pasar al inventario del taller los repuestos que ya le habían llegado", () -> {
+            for (PedidoTienda p : enElTaller) {
+                if (taller == null) throw new IllegalStateException("No se encontró el taller " + orden.getTallerId());
+                inventarioTaller.entrarPedido(taller, p, admin.getId());
+            }
+        });
         paso(ordenId, "habilitar el pago del diagnóstico", () -> liquidacion.diagnosticoPrestado(ordenId, "ORDEN_CANCELADA_POR_ADMIN"));
         paso(ordenId, "anular la cotización", () -> cotizaciones.findById(orden.getCotizacionId()).ifPresent(c -> {
             c.setEstado(Cotizacion.ANULADA);
             c.setMotivoRespuesta(texto);
             cotizaciones.save(c);
         }));
-        paso(ordenId, "avisar al cliente y al taller", () -> avisos.ordenPagadaCancelada(cancelada, reembolso[0], razon));
+        paso(ordenId, "avisar al cliente y al taller", () -> avisos.ordenPagadaCancelada(cancelada, reembolso[0], razon, deudaTaller[0]));
         if (!yaDespachados.isEmpty()) {
             avisos.alertaAdmin("Cancelación con pedidos despachados", "La solicitud " + ordenId + " se canceló, pero "
                     + String.join(", ", yaDespachados) + " ya había despachado: esa parte no se reembolsó. Resuélvelo con la tienda y el taller.");
         }
-        return new Resultado(reembolso[0], cancelados[0], yaDespachados, piezas[0]);
+        if (!enElTaller.isEmpty()) {
+            avisos.alertaAdmin("Saldo a favor por cobrar", "La solicitud " + ordenId + " se canceló con repuestos de tienda que ya estaban en "
+                    + (taller != null ? taller.getNombre() : "el taller") + ": quedaron en su inventario y debe " + Math.round(deudaTaller[0])
+                    + " COP a DriveMaster. Cóbralo y márcalo en Reportes.");
+        }
+        return new Resultado(reembolso[0], cancelados[0], yaDespachados, piezas[0], deudaTaller[0]);
     }
 
     /**

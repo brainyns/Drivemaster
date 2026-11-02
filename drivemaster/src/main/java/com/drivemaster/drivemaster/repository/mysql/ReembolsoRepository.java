@@ -18,6 +18,11 @@ public interface ReembolsoRepository extends JpaRepository<Reembolso, Long> {
     List<Reembolso> findByPagoId(Long pagoId);
     List<Reembolso> findByOrdenServicioId(String ordenServicioId);
 
+    /** Lo que un negocio debe a DriveMaster y aún no se le cobra. */
+    @Query("select b from Reembolso b where b.saldoDeudorTipo = :tipo and b.saldoDeudorId = :id and b.saldoAFavor > 0 "
+            + "and b.saldoCobradoEn is null order by b.fechaCreacion")
+    List<Reembolso> saldosPendientesDe(@Param("tipo") String tipo, @Param("id") String id);
+
     @Query("select coalesce(sum(b.monto), 0) from Reembolso b where b.estado = 'PENDIENTE'")
     double sumaPendiente();
 

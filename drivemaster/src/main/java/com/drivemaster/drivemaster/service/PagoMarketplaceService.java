@@ -692,10 +692,21 @@ public class PagoMarketplaceService {
 
     /**
      * Reembolso de una orden cancelada. Sus líneas ya se anularon, y las de los pedidos despachados siguen vigentes y no
-     * entran en este dinero: nada de lo devuelto se había transferido, así que no queda saldo a favor.
+     * entran en este dinero. deudaTaller: los repuestos de tienda que ya habían llegado al taller se quedan en su
+     * inventario y se le devuelven al cliente; el taller los debe a DriveMaster (saldo a favor, se cobra a mano).
      */
-    Reembolso registrarReembolsoDeCancelacion(PagoEntity pago, double monto, String motivo) {
-        return guardarReembolso(pago, null, monto, motivo, 0);
+    Reembolso registrarReembolsoDeCancelacion(PagoEntity pago, double monto, String motivo, double deudaTaller,
+                                              String tallerId, String tallerNombre) {
+        // El saldo se anota aparte: no es dinero ya transferido a un negocio, así que no lleva esa alerta
+        Reembolso r = guardarReembolso(pago, null, monto, motivo, 0);
+        if (r != null && deudaTaller > 0) {
+            r.setSaldoAFavor(deudaTaller);
+            r.setSaldoDeudorTipo(RepartoPago.TALLER);
+            r.setSaldoDeudorId(tallerId);
+            r.setSaldoDeudorNombre(tallerNombre);
+            return reembolsoRepository.save(r);
+        }
+        return r;
     }
 
     /**

@@ -42,6 +42,12 @@ public class Reembolso {
 
     // Lo que ya se le había transferido al negocio por este dinero: a favor de DriveMaster, se le cobra a mano
     private Double saldoAFavor;
+    // Quién debe ese saldo, si se sabe. Lo usa la cancelación: los repuestos de tienda que ya llegaron se quedan en el
+    // taller y él los debe (TALLER + id + nombre). Nulos en los saldos anteriores, de líneas ya transferidas
+    @Column(length = 10)
+    private String saldoDeudorTipo;
+    private String saldoDeudorId;
+    private String saldoDeudorNombre;
     // Cuándo se le cobró al negocio y quién lo anotó: sin esto el saldo sigue pendiente
     private LocalDateTime saldoCobradoEn;
     @Column(length = 120)

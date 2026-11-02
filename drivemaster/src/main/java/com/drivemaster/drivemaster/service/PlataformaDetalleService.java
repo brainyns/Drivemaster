@@ -319,7 +319,8 @@ public class PlataformaDetalleService {
     private static com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso reembolso(
             com.drivemaster.drivemaster.model.mysql.Reembolso b) {
         return new com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO.Reembolso(
-                n(b.getMonto()), b.getEstado(), b.getMotivo(), b.getFechaCreacion(), b.getFechaRealizado(), b.getSaldoAFavor(), b.getSaldoCobradoEn());
+                n(b.getMonto()), b.getEstado(), b.getMotivo(), b.getFechaCreacion(), b.getFechaRealizado(), b.getSaldoAFavor(), b.getSaldoCobradoEn(),
+                b.getSaldoDeudorNombre());
     }
 
     private static PedidoResumen resumen(PedidoTienda p) {

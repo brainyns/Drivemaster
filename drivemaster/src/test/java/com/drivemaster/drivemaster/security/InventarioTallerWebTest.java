@@ -57,7 +57,7 @@ class InventarioTallerWebTest {
     void el_inventario_sale_del_taller_de_la_sesion_aunque_pidan_otro() throws Exception {
         when(inventario.inventario("a@demo.com")).thenReturn(new InventarioTallerDTO.Inventario(List.of(new InventarioTallerDTO.Pieza(
                 "t1|REF:X", "Filtro", null, null, null, null, 2, 135_000.0, 100_000.0, 35.0, 25.9, 13_500.0, 21_500.0, false, true, List.of(), List.of())),
-                List.of(), 10, true, 35, 200_000, 270_000));
+                List.of(), 10, true, 35, 200_000, 270_000, List.of()));
 
         mvc.perform(get(URL + "?tallerId=otro").with(user("a@demo.com").roles("TALLER")))
                 .andExpect(status().isOk())
@@ -76,7 +76,7 @@ class InventarioTallerWebTest {
         verifyNoInteractions(cancelacion);
 
         when(cancelacion.cancelar(eq("root@demo.com"), anyString(), any()))
-                .thenReturn(new CancelacionOrdenService.Resultado(100_000, 1, List.of(), 1));
+                .thenReturn(new CancelacionOrdenService.Resultado(100_000, 1, List.of(), 1, 0));
         mvc.perform(post(ruta).with(csrf()).with(user("root@demo.com").roles("SUPERADMIN"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\"El cliente desistió\"}")).andExpect(status().isOk());
         verify(cancelacion).cancelar("root@demo.com", "o1", "El cliente desistió");

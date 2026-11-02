@@ -185,10 +185,15 @@ class StockTallerEscenariosTest {
         ReembolsoRepository reembolsoRepository = mock(ReembolsoRepository.class);
         when(reembolsoRepository.save(any())).thenAnswer(i -> {
             Reembolso r = i.getArgument(0);
-            r.setId(++secuencia);
-            reembolsos.add(r);
+            if (r.getId() == null) {
+                r.setId(++secuencia);
+                reembolsos.add(r);
+            }
             return r;
         });
+        when(reembolsoRepository.saldosPendientesDe(anyString(), anyString())).thenAnswer(i -> reembolsos.stream()
+                .filter(r -> i.getArgument(0).equals(r.getSaldoDeudorTipo()) && i.getArgument(1).equals(r.getSaldoDeudorId())
+                        && r.getSaldoAFavor() != null && r.getSaldoAFavor() > 0 && r.getSaldoCobradoEn() == null).toList());
         when(reembolsoRepository.findByPagoId(anyLong())).thenAnswer(i -> reembolsos.stream()
                 .filter(r -> i.<Long>getArgument(0).equals(r.getPagoId())).toList());
 
@@ -274,12 +279,13 @@ class StockTallerEscenariosTest {
             return x;
         });
         inventarioTaller = new InventarioTallerService(tallerService, inventario.piezaRepository, pedidoRepository, productoService,
-                inventario.stock, recepcion, mongo, parametros);
+                inventario.stock, recepcion, mongo, parametros, reembolsoRepository);
 
         LiquidacionService liquidacion = new LiquidacionService(repartoRepository, reembolsoRepository, pagoRepository, mock(DispersionService.class),
                 avisos, mock(ResolucionRepartoRepository.class));
         cancelacion = new CancelacionOrdenService(ordenRepository, cotizacionRepository, pedidoRepository, pagoRepository, repartoRepository,
-                reembolsoRepository, transiciones, pagoMarketplace, inventario.stock, movimientoService, movimientoRepository, liquidacion, usuarioService, avisos, mongo);
+                reembolsoRepository, transiciones, pagoMarketplace, inventario.stock, movimientoService, movimientoRepository, liquidacion, usuarioService, avisos, mongo,
+                tallerRepository, inventarioTaller);
     }
 
     // ─── Pasos ───────────────────────────────────────────────────────────────
@@ -614,5 +620,60 @@ class StockTallerEscenariosTest {
 
         assertEquals(pago.getMonto(), reembolsos.get(0).getMonto());
         verify(avisos).alertaAdmin(eq("Cancelación incompleta"), contains("devolver las piezas"));
+    }
+
+    @Test
+    void si_el_repuesto_de_tienda_ya_llego_al_taller_entra_a_su_inventario_y_el_taller_lo_debe() {
+        elTallerCompraYRecibe(2);
+        PagoEntity pago = elClientePaga(itemTaller(1, 135_000), itemTienda(1, 100_000), manoDeObra(50_000));
+        PedidoTienda llego = pedidosDe(pago).get(0);
+        llego.setEstado(PedidoTienda.RECIBIDO);
+        RepartoPago lineaTienda = lineas.stream().filter(r -> llego.getId().equals(r.getPedidoTiendaId())).findFirst().orElseThrow();
+        assertEquals(17, stockTienda());
+
+        CancelacionOrdenService.Resultado r = cancelacion.cancelar(CORREO_ADMIN, "o1", MOTIVO);
+
+        // El cliente recupera todo, también lo de la tienda
+        assertEquals(pago.getMonto(), r.reembolso());
+        assertEquals(1, reembolsos.size());
+        Reembolso reembolso = reembolsos.get(0);
+        assertEquals(pago.getMonto(), reembolso.getMonto());
+        // El taller debe lo que cobró la tienda, y queda dicho quién lo debe
+        assertEquals(llego.getTotal(), r.deudaTaller());
+        assertEquals(119_000, reembolso.getSaldoAFavor());
+        assertEquals(RepartoPago.TALLER, reembolso.getSaldoDeudorTipo());
+        assertEquals("t1", reembolso.getSaldoDeudorId());
+        assertEquals("AutoMax", reembolso.getSaldoDeudorNombre());
+        // La pieza se queda en el taller: su pieza del inventario recupera la vendida y suma el lote de este pedido
+        assertEquals(3, inventario.stock.disponible("t1", PIEZA));
+        assertEquals(1, inventario.disponiblePorLote(PIEZA).get(llego.getId() + "|p1"));
+        PiezaTaller.Lote lote = inventario.piezas.get(PIEZA).getLotes().stream()
+                .filter(l -> (llego.getId() + "|p1").equals(l.getId())).findFirst().orElseThrow();
+        assertEquals(100_000, lote.getCostoUnitario(), "Lo que cobró la tienda, sin IVA: el taller es responsable");
+        // La tienda vende normal: no recupera la unidad ni pierde su línea
+        assertEquals(PedidoTienda.RECIBIDO, llego.getEstado());
+        assertEquals(17, stockTienda());
+        assertEquals(RepartoPago.PENDIENTE, lineaTienda.getEstado());
+        assertEquals(RepartoPago.ANULADO, lineaTaller(pago).getEstado());
+        // El taller la ve en Mi inventario y el admin recibe la alerta
+        var saldos = inventarioTaller.inventario(CORREO_TALLER).saldos();
+        assertEquals(1, saldos.size());
+        assertEquals(119_000, saldos.get(0).monto());
+        verify(avisos).alertaAdmin(eq("Saldo a favor por cobrar"), contains("AutoMax"));
+        verify(avisos).ordenPagadaCancelada(any(), eq(pago.getMonto()), eq(MOTIVO), eq(119_000.0));
+    }
+
+    @Test
+    void lo_que_llego_al_taller_no_entra_dos_veces_si_ya_estaba_su_lote() {
+        elTallerCompraYRecibe(1);
+        PagoEntity pago = elClientePaga(itemTienda(1, 100_000));
+        PedidoTienda llego = pedidosDe(pago).get(0);
+        llego.setEstado(PedidoTienda.RECIBIDO);
+        Taller t = taller;
+        inventarioTaller.entrarPedido(t, llego, "admin");
+
+        cancelacion.cancelar(CORREO_ADMIN, "o1", MOTIVO);
+
+        assertEquals(2, inventario.stock.disponible("t1", PIEZA), "1 de la compra + 1 del pedido, una sola vez");
     }
 }

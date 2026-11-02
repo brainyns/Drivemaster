@@ -168,7 +168,7 @@ public class AvisosSolicitudServicio {
     }
 
     /** El SUPERADMIN canceló una orden pagada. */
-    public void ordenPagadaCancelada(OrdenServicio orden, double reembolso, String motivo) {
+    public void ordenPagadaCancelada(OrdenServicio orden, double reembolso, String motivo, double deudaTaller) {
         String devolucion = reembolso > 0 ? " Te devolveremos " + Math.round(reembolso) + " COP." : "";
         cliente(orden).ifPresent(c -> enviar(c.getCorreo(), "Tu servicio fue cancelado",
                 EmailServicioBuilder.adminAlerta("Tu servicio fue cancelado", "El servicio de " + orden.getVehiculoDescripcion()
@@ -176,7 +176,9 @@ public class AvisosSolicitudServicio {
         avisar(orden.getUsuarioId(), Notificacion.PAGO_NO_APLICADO, "Tu servicio fue cancelado",
                 "El servicio de " + vehiculo(orden) + " fue cancelado." + devolucion, "mis-servicios", orden.getId());
         taller(orden).ifPresent(t -> avisar(t.getUsuarioId(), Notificacion.COTIZACION_TIENDA_NO_DISPONIBLE, "Servicio cancelado",
-                "DriveMaster canceló el servicio de " + vehiculo(orden) + ". Si usaba piezas de tu inventario, ya volvieron a su lote." + motivo(motivo),
+                "DriveMaster canceló el servicio de " + vehiculo(orden) + ". Si usaba piezas de tu inventario, ya volvieron a su lote."
+                        + (deudaTaller > 0 ? " Los repuestos de tienda que ya te habían llegado quedaron en tu inventario: debes "
+                                + Math.round(deudaTaller) + " COP a DriveMaster (lo ves en Mi inventario)." : "") + motivo(motivo),
                 "taller-trabajos", orden.getId()));
     }
 

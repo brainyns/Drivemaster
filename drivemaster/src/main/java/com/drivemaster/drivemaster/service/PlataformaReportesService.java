@@ -255,7 +255,8 @@ public class PlataformaReportesService {
 
     private SaldosAFavor saldosAFavor() {
         List<SaldoAFavor> items = reembolsoRepository.saldosAFavorPendientes().stream()
-                .map(b -> new SaldoAFavor(b.getId(), b.getSaldoAFavor(), b.getMotivo(), b.getReferenciaPago(), b.getFechaCreacion()))
+                .map(b -> new SaldoAFavor(b.getId(), b.getSaldoAFavor(), b.getMotivo(), b.getReferenciaPago(), b.getFechaCreacion(),
+                        b.getSaldoDeudorNombre()))
                 .toList();
         return new SaldosAFavor(items.stream().mapToDouble(SaldoAFavor::monto).sum(), items.size(), items);
     }

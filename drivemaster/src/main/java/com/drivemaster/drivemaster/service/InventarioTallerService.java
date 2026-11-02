@@ -50,10 +50,12 @@ public class InventarioTallerService {
     private final RecepcionEnvioService recepcion;
     private final MongoTemplate mongoTemplate;
     private final ParametrosMarketplace parametros;
+    private final com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository reembolsos;
 
     public InventarioTallerService(TallerService tallerService, PiezaTallerRepository piezas, PedidoTiendaRepository pedidos,
                                    ProductoService productoService, StockTallerService stock, RecepcionEnvioService recepcion,
-                                   MongoTemplate mongoTemplate, ParametrosMarketplace parametros) {
+                                   MongoTemplate mongoTemplate, ParametrosMarketplace parametros,
+                                   com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository reembolsos) {
         this.tallerService = tallerService;
         this.piezas = piezas;
         this.pedidos = pedidos;
@@ -62,6 +64,7 @@ public class InventarioTallerService {
         this.recepcion = recepcion;
         this.mongoTemplate = mongoTemplate;
         this.parametros = parametros;
+        this.reembolsos = reembolsos;
     }
 
     public InventarioTallerDTO.Inventario inventario(String correoTaller) {
@@ -78,7 +81,10 @@ public class InventarioTallerService {
             aVenta += p.getStock() * valor(p.getPrecioVenta());
         }
         return new InventarioTallerDTO.Inventario(propias.stream().map(p -> pieza(p, pct)).toList(), enCamino, pct,
-                parametros.comisionRetenida(), PiezaTaller.RECARGO_SUGERIDO_PCT, aCosto, aVenta);
+                parametros.comisionRetenida(), PiezaTaller.RECARGO_SUGERIDO_PCT, aCosto, aVenta,
+                reembolsos.saldosPendientesDe(com.drivemaster.drivemaster.model.mysql.RepartoPago.TALLER, taller.getId()).stream()
+                        .map(b -> new InventarioTallerDTO.Saldo(b.getId(), b.getSaldoAFavor(), b.getMotivo(), b.getOrdenServicioId(), b.getFechaCreacion()))
+                        .toList());
     }
 
     /** El precio es libre y mayor que 0, antes de IVA. Vender en pérdida se avisa, pero es decisión del taller. */
@@ -112,24 +118,35 @@ public class InventarioTallerService {
         }
         if (PedidoTienda.DESPACHADO.equals(pedido.getEstado())) recepcion.confirmarRecepcion(correoTaller, pedidoId);
 
-        LocalDateTime ahora = LocalDateTime.now();
-        double ivaPorPeso = valor(pedido.getSubtotal()) > 0 ? valor(pedido.getIva()) / pedido.getSubtotal() : 0;
-        boolean ivaEnCosto = !IvaTaller.esResponsable(taller);
-        for (CotizacionItem item : pedido.getItems()) {
-            if (item.getCantidad() == null || item.getCantidad() <= 0) continue;
-            stock.entrar(new StockTallerService.Entrada(taller.getId(), datosDePieza(item), PiezaTaller.Lote.builder()
-                    .id(pedido.getId() + "|" + item.getProductoId()).compraId(pedido.getCompraId()).pedidoId(pedido.getId())
-                    .productoId(item.getProductoId()).tiendaId(pedido.getTiendaId()).tiendaNombre(pedido.getTiendaNombre())
-                    .cantidad(item.getCantidad()).disponible(item.getCantidad())
-                    .costoUnitario(costo(item.getPrecioUnitario(), ivaEnCosto ? ivaPorPeso : 0)).ivaEnCosto(ivaEnCosto)
-                    .fechaEntrada(ahora).build(), pedido.getClienteId()));
-        }
+        LocalDateTime ahora = entrarPedido(taller, pedido, pedido.getClienteId());
         // Al final: si algo falla a mitad, repetir la confirmación completa lo que faltó sin duplicar los lotes ya creados
         mongoTemplate.updateFirst(Query.query(Criteria.where("id").is(pedidoId).and("fechaEntradaInventario").is(null)),
                 new Update().set("fechaEntradaInventario", ahora), PedidoTienda.class);
         return inventario(correoTaller);
     }
 
+
+    /**
+     * Las líneas de un pedido entran al inventario del taller como lotes, con el costo de la regla D2: lo que cobró la
+     * tienda, sin IVA si el taller lo descuenta y con IVA si no es responsable. El lote se llama pedidoId|productoId: entrar
+     * dos veces el mismo pedido no suma dos veces. Lo usan la llegada de una compra y la cancelación de una orden cuyos
+     * repuestos de tienda ya estaban en el taller.
+     */
+    public LocalDateTime entrarPedido(Taller taller, PedidoTienda pedido, String usuarioId) {
+        LocalDateTime ahora = LocalDateTime.now();
+        double ivaPorPeso = valor(pedido.getSubtotal()) > 0 ? valor(pedido.getIva()) / pedido.getSubtotal() : 0;
+        boolean ivaEnCosto = !IvaTaller.esResponsable(taller);
+        for (CotizacionItem item : pedido.getItems() != null ? pedido.getItems() : List.<CotizacionItem>of()) {
+            if (item.getCantidad() == null || item.getCantidad() <= 0) continue;
+            stock.entrar(new StockTallerService.Entrada(taller.getId(), datosDePieza(item), PiezaTaller.Lote.builder()
+                    .id(pedido.getId() + "|" + item.getProductoId()).compraId(pedido.getCompraId()).pedidoId(pedido.getId())
+                    .productoId(item.getProductoId()).tiendaId(pedido.getTiendaId()).tiendaNombre(pedido.getTiendaNombre())
+                    .cantidad(item.getCantidad()).disponible(item.getCantidad())
+                    .costoUnitario(costo(item.getPrecioUnitario(), ivaEnCosto ? ivaPorPeso : 0)).ivaEnCosto(ivaEnCosto)
+                    .fechaEntrada(ahora).build(), usuarioId));
+        }
+        return ahora;
+    }
     /** Ya salió de la tienda hacia el taller. Una entrega confirmada sola por plazo también cuenta. */
     private static boolean llego(PedidoTienda p) {
         return PedidoTienda.RETIRO.equals(p.getEntrega())

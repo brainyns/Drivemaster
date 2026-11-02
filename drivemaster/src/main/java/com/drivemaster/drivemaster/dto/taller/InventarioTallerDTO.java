@@ -15,7 +15,7 @@ public final class InventarioTallerDTO {
     }
 
     public record Inventario(List<Pieza> piezas, List<PedidoEnCamino> enCamino, double comisionPct, boolean comisionSeDescuenta,
-                             double recargoSugeridoPct, double valorACosto, double valorAVenta) {
+                             double recargoSugeridoPct, double valorACosto, double valorAVenta, List<Saldo> saldos) {
     }
 
     /**
@@ -40,6 +40,10 @@ public final class InventarioTallerDTO {
     }
 
     public record LineaEnCamino(String nombre, String marca, String referencia, int cantidad, Double precioUnitario) {
+    }
+
+    /** Lo que el taller debe a DriveMaster y aún no se le cobra (repuestos que se quedó al cancelarse una orden). */
+    public record Saldo(Long id, double monto, String motivo, String ordenId, LocalDateTime fecha) {
     }
 
     public record CambioPrecio(Double precioVenta) {
