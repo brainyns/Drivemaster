@@ -14,6 +14,15 @@ test("los datos del vehículo salen con su etiqueta y en orden", () => {
   assert.equal(formatoKm(""), null);
 });
 
+test("el traductor del navegador no puede romper Informes", () => {
+  const html = leer("../index.html");
+  assert.match(html, /<html lang="es" translate="no"/);
+  assert.match(html, /<meta name="google" content="notranslate" \/>/);
+  // Un nodo que aparece junto a texto suelto es lo que hace fallar insertBefore cuando el traductor cambia ese texto.
+  assert.match(leer("../src/pages/InformesTienda.jsx"), /<span>\{cargando \? "Actualizando…" : "Actualizar"\}<\/span>/);
+  assert.match(leer("../src/components/ui/Alerta.jsx"), /<span>\{reintentando \? "Reintentando…" : "Reintentar"\}<\/span>/);
+});
+
 test("Campo asocia la etiqueta y pone aria-invalid y aria-describedby al control", () => {
   const campo = leer("../src/components/ui/Campo.jsx");
   assert.match(campo, /<label htmlFor=\{id\}/);

@@ -259,7 +259,7 @@ function Liquidacion({ liquidacion: l }) {
               <span>{f.titulo}</span>
               <strong className="it-cifra">{cop(f.monto)}</strong>
             </div>
-            <p>{f.n > 0 ? `${num(f.n)} ${f.n === 1 ? "pedido" : "pedidos"}. ` : ""}{f.texto}</p>
+            <p>{`${f.n > 0 ? `${num(f.n)} ${f.n === 1 ? "pedido" : "pedidos"}. ` : ""}${f.texto}`}</p>
           </li>
         ))}
       </ul>
@@ -365,7 +365,7 @@ export default function InformesTienda({ token, onIr }) {
             </div>
             <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setVersion((v) => v + 1)}
               disabled={cargando} aria-busy={cargando}>
-              {!cargando && <Icon name="refresh" size={16} />}{cargando ? "Actualizando…" : "Actualizar"}
+              {!cargando && <Icon name="refresh" size={16} />}<span>{cargando ? "Actualizando…" : "Actualizar"}</span>
             </button>
           </>
         )} />

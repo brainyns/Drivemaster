@@ -18,7 +18,7 @@ export default function Alerta({ tono = "error", children, onReintentar, reinten
             <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={onReintentar}
               disabled={reintentando} aria-busy={reintentando}>
               {!reintentando && <Icon name="refresh" size={14} />}
-              {reintentando ? "Reintentando…" : "Reintentar"}
+              <span>{reintentando ? "Reintentando…" : "Reintentar"}</span>
             </button>
           )}
           {onCerrar && (
