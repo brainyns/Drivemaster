@@ -172,19 +172,26 @@ public class InformesTallerService {
     private Ingresos ingresos(String tallerId, List<OrdenServicio> todas, LocalDateTime desde) {
         double[] mano = new double[4];  // liquidado, líneas liquidadas, pendiente, líneas pendientes
         double[] diag = new double[4];
+        double[] piezas = new double[4];  // lo mismo, de los repuestos del inventario dentro de esas líneas
         double anulado = 0;
         for (Object[] fila : repartoRepository.resumenPorConceptoYEstadoDesde(RepartoPago.TALLER, tallerId, desde)) {
             String concepto = String.valueOf(fila[0]);
             String estado = String.valueOf(fila[1]);
             long lineas = fila[2] instanceof Number c ? c.longValue() : 0;
             double monto = fila[3] instanceof Number s ? s.doubleValue() : 0;
+            double dePiezas = fila.length > 4 && fila[4] instanceof Number p ? p.doubleValue() : 0;
             double[] destino = COTIZACION.equals(concepto) ? mano : DIAGNOSTICO.equals(concepto) ? diag : null;
             if (RepartoPago.ANULADO.equals(estado)) {
                 anulado += monto;
             } else if (destino != null) {
                 int base = RepartoPago.LIQUIDADO.equals(estado) ? 0 : 2;
-                destino[base] += monto;
+                destino[base] += monto - (destino == mano ? dePiezas : 0);
                 destino[base + 1] += lineas;
+                // Las piezas viajan en la línea de la mano de obra: aquí se separan para que cada cifra diga lo que es
+                if (dePiezas > 0 && !RepartoPago.ANULADO.equals(estado)) {
+                    piezas[base] += dePiezas;
+                    piezas[base + 1] += lineas;
+                }
             }
         }
         // Órdenes del flujo anterior (sin flujo marketplace) finalizadas en el periodo: su mano de obra queda aparte,
@@ -198,7 +205,7 @@ public class InformesTallerService {
                 repartoRepository.desgloseDeNegocioDesde(RepartoPago.TALLER, tallerId, desde), parametros.comisionRetenida());
         List<Object[]> filas = repartoRepository.basePorOrdenesDesde(RepartoPago.TALLER, tallerId, desde);
         Object[] base = filas == null || filas.isEmpty() ? new Object[]{0L, 0.0, 0L} : filas.get(0);
-        return new Ingresos(monto(mano), monto(diag), anulado, new Anteriores(anteriores.size(), anterioresMano), desglose,
+        return new Ingresos(monto(mano), monto(piezas), monto(diag), anulado, new Anteriores(anteriores.size(), anterioresMano), desglose,
                 ((Number) base[0]).longValue(), ivaDelTotal(desglose.venta(), ((Number) base[1]).doubleValue(), ((Number) base[2]).longValue()));
     }
 

@@ -82,11 +82,16 @@ public final class PdfCotizacionBuilder {
             encabezado(doc, c);
             doc.add(datos(c, taller));
 
-            List<CotizacionItem> repuestos = c.getItems().stream().filter(i -> CotizacionItem.REPUESTO.equals(i.getTipo())).toList();
+            List<CotizacionItem> delTaller = c.getItems().stream().filter(i -> CotizacionItem.REPUESTO.equals(i.getTipo()) && i.esDelTaller()).toList();
+            List<CotizacionItem> deTiendas = c.getItems().stream().filter(i -> CotizacionItem.REPUESTO.equals(i.getTipo()) && !i.esDelTaller()).toList();
             List<CotizacionItem> manoObra = c.getItems().stream().filter(i -> !CotizacionItem.REPUESTO.equals(i.getTipo())).toList();
-            if (!repuestos.isEmpty()) {
-                doc.add(seccion("Repuestos"));
-                doc.add(tablaItems(repuestos, true));
+            if (!delTaller.isEmpty()) {
+                doc.add(seccion("Repuestos del taller"));
+                doc.add(tablaItems(delTaller, true));
+            }
+            if (!deTiendas.isEmpty()) {
+                doc.add(seccion(delTaller.isEmpty() ? "Repuestos" : "Repuestos de tiendas"));
+                doc.add(tablaItems(deTiendas, true));
             }
             if (!manoObra.isEmpty()) {
                 doc.add(seccion("Mano de obra"));
@@ -242,7 +247,8 @@ public final class PdfCotizacionBuilder {
         if ("ENCARGO".equals(i.getDisponibilidad())) {
             detalle = unir(" · ", detalle, "Encargo" + (i.getDiasEntrega() != null ? " (" + i.getDiasEntrega() + " días)" : ""));
         }
-        return detalle;
+        // El cliente sabe de dónde sale cada repuesto; nunca ve costo ni margen
+        return unir(" · ", detalle, i.esDelTaller() ? "Disponible en el taller" : "Se pide a tienda");
     }
 
     /** Los últimos 6 caracteres del id, como la referencia corta de la pantalla. */

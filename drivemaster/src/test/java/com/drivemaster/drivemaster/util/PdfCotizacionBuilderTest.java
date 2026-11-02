@@ -101,4 +101,22 @@ class PdfCotizacionBuilderTest {
 
         assertTrue(t.contains("AutoMax"));
     }
+
+    @Test
+    void con_piezas_del_taller_separa_de_quien_es_cada_repuesto_y_no_trae_costo() throws Exception {
+        Cotizacion c = cotizacion(0);
+        java.util.List<CotizacionItem> items = new java.util.ArrayList<>(c.getItems());
+        items.add(0, CotizacionItem.builder().tipo(CotizacionItem.REPUESTO).origen(CotizacionItem.ORIGEN_TALLER)
+                .descripcion("Filtro de aceite").marca("Mann").cantidad(1).precioUnitario(40_000.0).subtotal(40_000.0).build());
+        c.setItems(items);
+        c.setSubtotalRepuestosTaller(40_000.0);
+
+        String t = texto(PdfCotizacionBuilder.construir(c, null));
+
+        for (String esperado : List.of("Repuestos del taller", "Repuestos de tiendas", "Mano de obra", "Disponible en el taller", "Se pide a tienda")) {
+            assertTrue(t.contains(esperado), "falta en el PDF: " + esperado + "\n---\n" + t);
+        }
+        assertFalse(t.toLowerCase().contains("costo"));
+        assertFalse(t.toLowerCase().contains("margen"));
+    }
 }

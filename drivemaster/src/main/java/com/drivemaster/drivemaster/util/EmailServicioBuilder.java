@@ -80,7 +80,7 @@ public final class EmailServicioBuilder {
         StringBuilder filas = new StringBuilder();
         for (CotizacionItem i : c.getItems()) {
             String detalle = CotizacionItem.REPUESTO.equals(i.getTipo())
-                    ? e(i.getProductoNombre()) + " · " + e(i.getTiendaNombre())
+                    ? e(i.getProductoNombre()) + (i.esDelTaller() ? " · Disponible en el taller" : " · " + e(i.getTiendaNombre()) + " · Se pide a tienda")
                         + ("ENCARGO".equals(i.getDisponibilidad()) && i.getDiasEntrega() != null
                             ? " · encargo " + i.getDiasEntrega() + " días" : "")
                     : (CotizacionItem.POR_HORAS.equals(i.getModalidad()) ? i.getHoras() + " h × " + moneda(i.getPrecioUnitario()) : "Mano de obra");

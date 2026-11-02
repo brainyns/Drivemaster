@@ -102,7 +102,8 @@ public class ResumenServicioService {
         List<DesgloseLiquidacionDTO.Linea> detalle = lineas.stream()
                 .sorted(Comparator.comparing(RepartoPago::getFechaCreacion, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(r -> DesgloseLiquidacionService.linea(r, seDescuenta)).toList();
-        return new Taller(diagnostico, cotizacionPagada + anticipo, anticipo, cotizacionPagada, total, iva(vivas, total),
+        double repuestosTaller = suma(vivas, r -> r.getPiezasBruto() != null ? r.getPiezasBruto() : 0);
+        return new Taller(diagnostico, cotizacionPagada + anticipo - repuestosTaller, repuestosTaller, anticipo, cotizacionPagada, total, iva(vivas, total),
                 suma(vivas, ResumenServicioService::comision), suma(vivas, ResumenServicioService::descontada), seDescuenta,
                 suma(vivas, ResumenServicioService::neto), estado(vivas), detalle);
     }

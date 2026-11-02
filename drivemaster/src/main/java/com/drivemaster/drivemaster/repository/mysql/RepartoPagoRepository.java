@@ -42,7 +42,7 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
     List<Object[]> resumenPorEstado(@Param("tipo") String tipo, @Param("id") String id);
 
     /** Lo repartido a un beneficiario por concepto y estado: [concepto, estado, líneas, suma]. */
-    @Query("select r.concepto, r.estado, count(r), sum(r.monto) from RepartoPago r "
+    @Query("select r.concepto, r.estado, count(r), sum(r.monto), sum(coalesce(r.piezasNeto, 0)) from RepartoPago r "
             + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id group by r.concepto, r.estado")
     List<Object[]> resumenPorConceptoYEstado(@Param("tipo") String tipo, @Param("id") String id);
 
@@ -51,7 +51,7 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
      * cuenta una sola vez, en su estado actual: la liquidada por la fecha en que se pagó (las antiguas sin esa fecha, por
      * la de creación) y las demás por la fecha en que se creó (cuando el cliente pagó).
      */
-    @Query("select r.concepto, r.estado, count(r), sum(r.monto) from RepartoPago r "
+    @Query("select r.concepto, r.estado, count(r), sum(r.monto), sum(coalesce(r.piezasNeto, 0)) from RepartoPago r "
             + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id and "
             + "((r.estado = 'LIQUIDADO' and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde) "
             + "or (r.estado <> 'LIQUIDADO' and r.fechaCreacion >= :desde)) "

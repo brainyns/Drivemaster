@@ -351,4 +351,30 @@ class InformesTallerTest {
         assertEquals(6, service.informes("A", 0, HASTA, AHORA).mesesConsultados());
         verify(reparto, org.mockito.Mockito.atLeastOnce()).resumenPorConceptoYEstadoDesde(eq(RepartoPago.TALLER), eq("A"), any());
     }
+
+    @Test
+    void los_repuestos_del_taller_no_se_cuentan_como_mano_de_obra() {
+        // Línea COTIZACION de 200.000: 120.000 son piezas (netas de comisión) y el resto, mano de obra
+        when(reparto.resumenPorConceptoYEstadoDesde(anyString(), anyString(), any())).thenReturn(List.of(
+                new Object[]{"COTIZACION", RepartoPago.LIQUIDADO, 1L, 200_000.0, 120_000.0},
+                new Object[]{"COTIZACION", RepartoPago.PENDIENTE, 1L, 90_000.0, 30_000.0},
+                new Object[]{"COTIZACION", RepartoPago.ANULADO, 1L, 70_000.0, 50_000.0}));
+
+        var ingresos = informes("A").ingresos();
+
+        assertEquals(80_000, ingresos.manoDeObra().liquidado());
+        assertEquals(60_000, ingresos.manoDeObra().pendiente());
+        assertEquals(120_000, ingresos.repuestosTaller().liquidado());
+        assertEquals(30_000, ingresos.repuestosTaller().pendiente());
+        assertEquals(70_000, ingresos.anulado(), "Lo anulado no suma en ninguno de los dos");
+    }
+
+    @Test
+    void sin_piezas_las_filas_de_siempre_dan_lo_de_siempre() {
+        when(reparto.resumenPorConceptoYEstadoDesde(anyString(), anyString(), any())).thenReturn(List.<Object[]>of(
+                new Object[]{"COTIZACION", RepartoPago.LIQUIDADO, 1L, 200_000.0}));
+        var ingresos = informes("A").ingresos();
+        assertEquals(200_000, ingresos.manoDeObra().liquidado());
+        assertEquals(0, ingresos.repuestosTaller().liquidado());
+    }
 }

@@ -17,11 +17,11 @@ public final class ResumenServicioDTO {
     public static final String PARCIAL = "PARCIAL";
 
     /**
-     * diagnosticoPagado + manoDeObra − anticipo = totalGenerado, y manoDeObra − anticipo = cotizacionPagada.
-     * manoDeObra lleva su IVA. iva: la parte del total que es IVA; null en líneas anteriores al desglose, que no guardaron su base.
+     * diagnosticoPagado + manoDeObra + repuestosTaller − anticipo = totalGenerado, y manoDeObra + repuestosTaller − anticipo = cotizacionPagada.
+     * manoDeObra y repuestosTaller (los del inventario del taller) llevan su IVA. iva: la parte del total que es IVA; null en líneas anteriores al desglose, que no guardaron su base.
      * comision: la que corresponde; comisionDescontada: la que sí se descontó.
      */
-    public record Taller(double diagnosticoPagado, double manoDeObra, double anticipo, double cotizacionPagada, double totalGenerado,
+    public record Taller(double diagnosticoPagado, double manoDeObra, double repuestosTaller, double anticipo, double cotizacionPagada, double totalGenerado,
                          Double iva, double comision, double comisionDescontada, boolean comisionSeDescuenta, double recibe,
                          String estado, List<DesgloseLiquidacionDTO.Linea> lineas) {}
 

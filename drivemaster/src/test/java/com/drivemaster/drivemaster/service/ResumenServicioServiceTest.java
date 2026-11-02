@@ -284,4 +284,16 @@ class ResumenServicioServiceTest {
         assertEquals(20_000, a.comisionRepuestos());
         assertEquals(357_000, a.cliente().total());
     }
+
+    @Test
+    void el_recibo_separa_los_repuestos_del_taller_de_la_mano_de_obra() {
+        RepartoPago linea = linea("COTIZACION", RepartoPago.POR_LIQUIDAR, 220_150, 185_000, 18_500);
+        linea.setPiezasBruto(160_650.0);
+
+        Taller t = calcular(orden(), aprobada(0, 220_150), linea);
+
+        assertEquals(59_500, t.manoDeObra());
+        assertEquals(160_650, t.repuestosTaller());
+        assertEquals(t.totalGenerado(), t.diagnosticoPagado() + t.manoDeObra() + t.repuestosTaller() - t.anticipo(), "el recibo cuadra");
+    }
 }
