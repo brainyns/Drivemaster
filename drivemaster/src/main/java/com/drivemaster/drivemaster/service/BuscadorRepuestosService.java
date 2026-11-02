@@ -76,13 +76,16 @@ public class BuscadorRepuestosService {
     private final TallerService tallerService;
     private final VehiculoService vehiculoService;
     private final PiezaTallerRepository piezaRepository;
+    private final PrecioPublicoTaller precioPublico;
 
     public BuscadorRepuestosService(MongoTemplate mongoTemplate,
                                     TiendaRepository tiendaRepository,
                                     OrdenServicioRepository ordenRepository,
                                     TallerService tallerService,
                                     VehiculoService vehiculoService,
-                                    PiezaTallerRepository piezaRepository) {
+                                    PiezaTallerRepository piezaRepository,
+                                    PrecioPublicoTaller precioPublico) {
+        this.precioPublico = precioPublico;
         this.piezaRepository = piezaRepository;
         this.mongoTemplate = mongoTemplate;
         this.tiendaRepository = tiendaRepository;
@@ -117,7 +120,7 @@ public class BuscadorRepuestosService {
         // "Tu inventario" va primero y no depende de que haya tiendas operando
         List<Oferta> delTaller = piezaRepository.findByTallerIdAndStockGreaterThan(taller.getId(), 0).stream()
                 .filter(p -> coincide(p, texto, referencia))
-                .map(p -> new Oferta(comoProducto(p), evaluarPieza(p, unidades, vehiculo)))
+                .map(p -> new Oferta(comoProducto(p), evaluarPieza(p, unidades, vehiculo, tope(p, taller))))
                 .filter(o -> !soloCompatibles || COMPATIBLE.equals(o.dto().getCompatibilidad()))
                 .toList();
 
@@ -147,7 +150,7 @@ public class BuscadorRepuestosService {
     public OfertaRepuestoDTO ofertaDePieza(String piezaId, int cantidad, Taller taller, Vehiculo vehiculo) {
         PiezaTaller pieza = piezaRepository.findById(piezaId).filter(p -> taller.getId().equals(p.getTallerId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Esa pieza ya no está en tu inventario"));
-        OfertaRepuestoDTO oferta = evaluarPieza(pieza, cantidad, vehiculo);
+        OfertaRepuestoDTO oferta = evaluarPieza(pieza, cantidad, vehiculo, tope(pieza, taller));
         if (NO_COMPATIBLE.equals(oferta.getCompatibilidad())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "\"" + pieza.getNombre() + "\": " + oferta.getMotivo());
         }
@@ -229,12 +232,24 @@ public class BuscadorRepuestosService {
      * Oferta de una pieza del inventario. A diferencia de una tienda, se puede elegir aunque no alcance: se usa lo que
      * hay y el resto se pide a una tienda. Nunca lleva el costo: esto llega a la cotización.
      */
+    private Double tope(PiezaTaller p, Taller taller) {
+        return precioPublico == null ? null : precioPublico.tope(p, taller);
+    }
+
     static OfertaRepuestoDTO evaluarPieza(PiezaTaller p, int cantidad, Vehiculo vehiculo) {
+        return evaluarPieza(p, cantidad, vehiculo, null);
+    }
+
+    /** tope: el precio público llevado al IVA del taller; si su precio quedó por encima, se cotiza al tope. */
+    static OfertaRepuestoDTO evaluarPieza(PiezaTaller p, int cantidad, Vehiculo vehiculo, Double tope) {
         String compatibilidad = CompatibilidadVehiculo.estado(comoProducto(p), vehiculo);
         int stock = p.getStock();
         String disponibilidad = stock >= cantidad ? OfertaRepuestoDTO.DISPONIBLE
                 : stock > 0 ? OfertaRepuestoDTO.PARCIAL : OfertaRepuestoDTO.AGOTADO;
-        boolean conPrecio = p.getPrecioVenta() != null && p.getPrecioVenta() > 0;
+        // Sin el cast, el ternario desempaqueta un precio null y lanza NullPointerException
+        Double precio = p.getPrecioVenta() != null && tope != null ? (Double) Math.min(p.getPrecioVenta(), tope) : p.getPrecioVenta();
+        boolean topado = p.getPrecioVenta() != null && tope != null && p.getPrecioVenta() > tope;
+        boolean conPrecio = precio != null && precio > 0;
         boolean seleccionable = !NO_COMPATIBLE.equals(compatibilidad) && stock > 0 && conPrecio;
 
         String estado = NO_COMPATIBLE.equals(compatibilidad) ? NO_COMPATIBLE
@@ -246,6 +261,8 @@ public class BuscadorRepuestosService {
             motivo = "Ponle precio de venta en Mi inventario";
         } else if (stock < cantidad) {
             motivo = "Tienes " + stock + " de " + cantidad + ": pide las otras " + (cantidad - stock) + " a una tienda";
+        } else if (topado) {
+            motivo = "Se cotiza a $" + String.format(java.util.Locale.ROOT, "%,.0f", precio).replace(',', '.') + ": el precio público bajó y tu precio quedó por encima";
         } else if (POR_CONFIRMAR.equals(compatibilidad)) {
             motivo = "Sin datos de compatibilidad: confirma que le sirve al vehículo";
         }
@@ -257,13 +274,14 @@ public class BuscadorRepuestosService {
                 .marca(p.getMarca())
                 .referencia(p.getReferencia())
                 .imagenUrl(p.getImagenUrl())
-                .precio(p.getPrecioVenta())
+                .precio(precio)
                 .stock(stock)
                 .disponibilidad(disponibilidad)
                 .compatibilidad(compatibilidad)
                 .estado(estado)
                 .seleccionable(seleccionable)
                 .requiereConfirmacion(seleccionable && POR_CONFIRMAR.equals(compatibilidad))
+                .precioTopado(topado)
                 .motivo(motivo)
                 .build();
     }

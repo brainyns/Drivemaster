@@ -155,7 +155,8 @@ public class CotizacionService {
     public CotizacionDTO emitir(String correoTaller, String ordenId, CrearCotizacionRequest r) {
         Taller taller = tallerOperativo(correoTaller);
         OrdenServicio orden = ordenCotizable(taller, ordenId);
-        Cotizacion cotizacion = armar(taller, orden, r);
+        List<String> topadas = new ArrayList<>();
+        Cotizacion cotizacion = armar(taller, orden, r, topadas);
 
         Cotizacion anterior = cotizacionRepository.findFirstByOrdenIdOrderByVersionDesc(orden.getId()).orElse(null);
         TokenSeguro.Generado token = TokenSeguro.generar();
@@ -185,6 +186,7 @@ public class CotizacionService {
                             .and("estado").is(Cotizacion.EMITIDA).and("id").ne(emitida.getId())),
                     new Update().set("estado", Cotizacion.REEMPLAZADA).set("tokenUsado", true), Cotizacion.class);
             avisos.cotizacionEmitida(cotizada, emitida, token.token());
+            if (!topadas.isEmpty()) avisos.precioTallerTopado(taller, emitida, topadas);
         });
         return paraTaller(cotizacion);
     }
@@ -484,6 +486,11 @@ public class CotizacionService {
      * el buscador y con el precio actual de la tienda) y la mano de obra del pedido.
      */
     private Cotizacion armar(Taller taller, OrdenServicio orden, CrearCotizacionRequest r) {
+        return armar(taller, orden, r, new ArrayList<>());
+    }
+
+    /** topadas: los nombres de las piezas del inventario que se cotizaron al tope del precio público. */
+    private Cotizacion armar(Taller taller, OrdenServicio orden, CrearCotizacionRequest r, List<String> topadas) {
         List<CotizacionItem> items = new ArrayList<>();
         int diasEntrega = 0;
 
@@ -492,7 +499,7 @@ public class CotizacionService {
             Vehiculo vehiculo = vehiculoService.obtenerEntidad(orden.getVehiculoId());
             for (RepuestoSeleccionado rep : repuestos) {
                 if (rep.esDelTaller()) {
-                    items.add(itemDelTaller(rep, taller, vehiculo));
+                    items.add(itemDelTaller(rep, taller, vehiculo, topadas));
                     continue;
                 }
                 Producto producto;
@@ -615,9 +622,10 @@ public class CotizacionService {
     }
 
     /** Línea de una pieza del inventario: vuelve a validarla y congela el precio de hoy, sin tienda ni producto. */
-    private CotizacionItem itemDelTaller(RepuestoSeleccionado rep, Taller taller, Vehiculo vehiculo) {
+    private CotizacionItem itemDelTaller(RepuestoSeleccionado rep, Taller taller, Vehiculo vehiculo, List<String> topadas) {
         int cantidad = rep.getCantidad() != null ? rep.getCantidad() : 1;
         OfertaRepuestoDTO oferta = buscador.ofertaDePieza(rep.getPiezaTallerId(), cantidad, taller, vehiculo);
+        if (oferta.isPrecioTopado()) topadas.add(oferta.getNombre());
         if (oferta.isRequiereConfirmacion() && !Boolean.TRUE.equals(rep.getCompatibilidadConfirmada())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Falta confirmar la compatibilidad de \"" + oferta.getNombre() + "\": vuelve a elegir los repuestos");

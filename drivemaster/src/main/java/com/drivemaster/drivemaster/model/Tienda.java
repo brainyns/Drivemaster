@@ -43,6 +43,10 @@ public class Tienda {
     // Costo fijo de envío de la tienda, en pesos. null = la tienda no hace envíos (solo retiro).
     private Double costoEnvio;
 
+    // Descuento sobre el precio público para talleres aprobados que compran en el catálogo. Sin dato: el inicial, 20 %
+    // (ver DescuentoTaller). La tienda lo cambia en Mi tienda, de 0 a 50 %
+    private Double descuentoTalleresPct;
+
     // Logo o foto del local (URL de Cloudinary); lo sube la dueña desde Mi tienda o el administrador.
     private String logoUrl;
 

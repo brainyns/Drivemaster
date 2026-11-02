@@ -51,11 +51,13 @@ public class InventarioTallerService {
     private final MongoTemplate mongoTemplate;
     private final ParametrosMarketplace parametros;
     private final com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository reembolsos;
+    private final PrecioPublicoTaller precioPublico;
 
     public InventarioTallerService(TallerService tallerService, PiezaTallerRepository piezas, PedidoTiendaRepository pedidos,
                                    ProductoService productoService, StockTallerService stock, RecepcionEnvioService recepcion,
                                    MongoTemplate mongoTemplate, ParametrosMarketplace parametros,
-                                   com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository reembolsos) {
+                                   com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository reembolsos,
+                                   PrecioPublicoTaller precioPublico) {
         this.tallerService = tallerService;
         this.piezas = piezas;
         this.pedidos = pedidos;
@@ -65,6 +67,7 @@ public class InventarioTallerService {
         this.mongoTemplate = mongoTemplate;
         this.parametros = parametros;
         this.reembolsos = reembolsos;
+        this.precioPublico = precioPublico;
     }
 
     public InventarioTallerDTO.Inventario inventario(String correoTaller) {
@@ -80,14 +83,17 @@ public class InventarioTallerService {
             for (PiezaTaller.Lote l : p.getLotes()) aCosto += l.getDisponible() * valor(l.getCostoUnitario());
             aVenta += p.getStock() * valor(p.getPrecioVenta());
         }
-        return new InventarioTallerDTO.Inventario(propias.stream().map(p -> pieza(p, pct)).toList(), enCamino, pct,
+        return new InventarioTallerDTO.Inventario(propias.stream().map(p -> pieza(p, pct, taller)).toList(), enCamino, pct,
                 parametros.comisionRetenida(), PiezaTaller.RECARGO_SUGERIDO_PCT, aCosto, aVenta,
                 reembolsos.saldosPendientesDe(com.drivemaster.drivemaster.model.mysql.RepartoPago.TALLER, taller.getId()).stream()
                         .map(b -> new InventarioTallerDTO.Saldo(b.getId(), b.getSaldoAFavor(), b.getMotivo(), b.getOrdenServicioId(), b.getFechaCreacion()))
                         .toList());
     }
 
-    /** El precio es libre y mayor que 0, antes de IVA. Vender en pérdida se avisa, pero es decisión del taller. */
+    /**
+     * El precio es libre, mayor que 0 y antes de IVA, pero nunca por encima del precio público: el cliente no puede pagar
+     * más por la pieza del taller que en la tienda. Vender en pérdida se avisa, pero es decisión del taller.
+     */
     public InventarioTallerDTO.Pieza cambiarPrecio(String correoTaller, String piezaId, Double precio) {
         Taller taller = operativo(correoTaller);
         if (precio == null || precio <= 0 || precio > PRECIO_MAXIMO) {
@@ -95,7 +101,22 @@ public class InventarioTallerService {
         }
         double pesos = Dinero.aDouble(Dinero.pesos(precio));
         if (pesos <= 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El precio debe ser mayor que 0");
-        return pieza(stock.cambiarPrecio(taller.getId(), piezaId, pesos), parametros.comisionPct());
+        PiezaTaller actual = piezas.findById(piezaId).filter(p -> taller.getId().equals(p.getTallerId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pieza no encontrada"));
+        PrecioPublicoTaller.Referencia ref = precioPublico.referencia(actual);
+        if (ref != null) {
+            double tope = precioPublico.tope(ref.precioPublico(), taller);
+            if (pesos > tope) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tu precio no puede superar el precio público: máximo "
+                        + pesosTexto(tope) + " antes de IVA. Con eso tu cliente paga " + pesosTexto(precioPublico.finalEnTienda(ref.precioPublico()))
+                        + ", lo mismo que en " + ref.tiendaNombre() + ".");
+            }
+        }
+        return pieza(stock.cambiarPrecio(taller.getId(), piezaId, pesos), parametros.comisionPct(), taller);
+    }
+
+    private static String pesosTexto(double v) {
+        return "$" + java.text.NumberFormat.getIntegerInstance(new java.util.Locale("es", "CO")).format(Math.round(v));
     }
 
     /**
@@ -138,11 +159,18 @@ public class InventarioTallerService {
         boolean ivaEnCosto = !IvaTaller.esResponsable(taller);
         for (CotizacionItem item : pedido.getItems() != null ? pedido.getItems() : List.<CotizacionItem>of()) {
             if (item.getCantidad() == null || item.getCantidad() <= 0) continue;
-            stock.entrar(new StockTallerService.Entrada(taller.getId(), datosDePieza(item), PiezaTaller.Lote.builder()
+            // Lo congelado: el público de la compra (o el del producto hoy, en compras anteriores al descuento) y lo pagado
+            Producto producto = producto(item.getProductoId());
+            Double publico = item.getPrecioPublico() != null ? item.getPrecioPublico()
+                    : producto != null && producto.getPrecioVenta() != null ? producto.getPrecioVenta() : item.getPrecioUnitario();
+            PiezaTaller datos = datosDePieza(item);
+            if (publico != null && publico > 0) datos.setPrecioVenta(precioPublico.tope(publico, taller));
+            stock.entrar(new StockTallerService.Entrada(taller.getId(), datos, PiezaTaller.Lote.builder()
                     .id(pedido.getId() + "|" + item.getProductoId()).compraId(pedido.getCompraId()).pedidoId(pedido.getId())
                     .productoId(item.getProductoId()).tiendaId(pedido.getTiendaId()).tiendaNombre(pedido.getTiendaNombre())
                     .cantidad(item.getCantidad()).disponible(item.getCantidad())
                     .costoUnitario(costo(item.getPrecioUnitario(), ivaEnCosto ? ivaPorPeso : 0)).ivaEnCosto(ivaEnCosto)
+                    .precioPublico(publico).descuentoPct(item.getDescuentoPct()).precioPagado(item.getPrecioUnitario())
                     .fechaEntrada(ahora).build(), usuarioId));
         }
         return ahora;
@@ -192,25 +220,40 @@ public class InventarioTallerService {
         return taller;
     }
 
-    private static InventarioTallerDTO.Pieza pieza(PiezaTaller p, double comisionPct) {
+    /**
+     * Las cifras de una pieza. El precio que cuenta es el que se cobraría hoy: el del taller, o el tope si el precio
+     * público bajó y el del taller quedó por encima. enPerdida: con ese precio no cubre costo y comisión.
+     */
+    private InventarioTallerDTO.Pieza pieza(PiezaTaller p, double comisionPct, Taller taller) {
         Double costo = costoActual(p);
+        PrecioPublicoTaller.Referencia ref = precioPublico.referencia(p);
+        Double tope = ref == null ? null : precioPublico.tope(ref.precioPublico(), taller);
         Double precio = p.getPrecioVenta();
+        Double cobrado = precio == null ? null : tope != null ? (Double) Math.min(precio, tope) : precio;
         Double recargo = null;
         Double margen = null;
         Double comision = null;
         Double ganancia = null;
-        if (precio != null && precio > 0 && costo != null) {
-            comision = Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(precio), comisionPct));
-            ganancia = precio - costo - comision;
-            margen = porcentaje(precio - costo, precio);
-            recargo = costo > 0 ? porcentaje(precio - costo, costo) : null;
+        if (cobrado != null && cobrado > 0 && costo != null) {
+            comision = Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(cobrado), comisionPct));
+            ganancia = cobrado - costo - comision;
+            margen = porcentaje(cobrado - costo, cobrado);
+            recargo = costo > 0 ? porcentaje(cobrado - costo, costo) : null;
+        }
+        Double gananciaConTope = null;
+        if (tope != null && costo != null) {
+            gananciaConTope = tope - costo - Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(tope), comisionPct));
         }
         List<InventarioTallerDTO.Lote> lotes = p.getLotes().stream().sorted(FIFO)
                 .map(l -> new InventarioTallerDTO.Lote(l.getId(), l.getCompraId(), l.getPedidoId(), l.getTiendaNombre(), l.getCantidad(),
-                        l.getDisponible(), l.getCostoUnitario(), l.getIvaEnCosto(), l.getFechaEntrada())).toList();
+                        l.getDisponible(), l.getCostoUnitario(), l.getIvaEnCosto(), l.getFechaEntrada(), l.getPrecioPublico(),
+                        l.getDescuentoPct(), l.getPrecioPagado())).toList();
         return new InventarioTallerDTO.Pieza(p.getId(), p.getNombre(), p.getMarca(), p.getReferencia(), p.getCategoria(), p.getImagenUrl(),
                 p.getStock(), precio, costo, recargo, margen, comision, ganancia, ganancia != null && ganancia < 0,
-                p.getCompatibilidadUniversal(), p.getModelosCompatibles(), lotes);
+                p.getCompatibilidadUniversal(), p.getModelosCompatibles(), lotes,
+                ref == null ? null : ref.precioPublico(), ref == null ? null : precioPublico.finalEnTienda(ref.precioPublico()),
+                ref == null ? null : ref.tiendaNombre(), tope, cobrado,
+                precio != null && tope != null && precio > tope, gananciaConTope != null && gananciaConTope < 0);
     }
 
     private static final Comparator<PiezaTaller.Lote> FIFO = Comparator.comparing(PiezaTaller.Lote::getFechaEntrada,

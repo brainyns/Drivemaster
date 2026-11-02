@@ -68,4 +68,7 @@ public class OfertaRepuestoDTO {
 
     // La tienda ya surte otros repuestos de esta orden (se intenta primero una sola tienda)
     private boolean mismaTiendaQueSeleccion;
+
+    // Solo ofertas del inventario del taller: su precio quedó sobre el público y se cotiza al tope
+    private boolean precioTopado;
 }

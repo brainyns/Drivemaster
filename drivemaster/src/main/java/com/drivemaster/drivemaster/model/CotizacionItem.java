@@ -35,6 +35,10 @@ public class CotizacionItem {
     // TALLER: sale del inventario del taller y no tiene tienda, productoId ni pedido. El costo nunca va aquí: el cliente ve estos ítems
     private String origen;
     private String piezaTallerId;
+    // Compra de un taller en el catálogo: el precio público y el descuento con que se le vendió (precioUnitario es lo que
+    // pagó). Nulos en cotizaciones y en compras de clientes
+    private Double precioPublico;
+    private Double descuentoPct;
 
     // Mano de obra: ITEM (valor fijo) o HORAS (horas × tarifa por hora del taller)
     private String modalidad;

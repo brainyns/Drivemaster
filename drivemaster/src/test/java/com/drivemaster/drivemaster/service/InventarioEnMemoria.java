@@ -81,7 +81,8 @@ final class InventarioEnMemoria {
         List<PiezaTaller.Lote> lotes = p.getLotes().stream().map(l -> PiezaTaller.Lote.builder().id(l.getId())
                 .compraId(l.getCompraId()).pedidoId(l.getPedidoId()).productoId(l.getProductoId()).tiendaId(l.getTiendaId())
                 .tiendaNombre(l.getTiendaNombre()).cantidad(l.getCantidad()).disponible(l.getDisponible())
-                .costoUnitario(l.getCostoUnitario()).ivaEnCosto(l.getIvaEnCosto()).fechaEntrada(l.getFechaEntrada()).build())
+                .costoUnitario(l.getCostoUnitario()).precioPublico(l.getPrecioPublico()).descuentoPct(l.getDescuentoPct())
+                .precioPagado(l.getPrecioPagado()).ivaEnCosto(l.getIvaEnCosto()).fechaEntrada(l.getFechaEntrada()).build())
                 .collect(Collectors.toCollection(ArrayList::new));
         return PiezaTaller.builder().id(p.getId()).version(p.getVersion()).tallerId(p.getTallerId()).clave(p.getClave())
                 .nombre(p.getNombre()).marca(p.getMarca()).referencia(p.getReferencia()).categoria(p.getCategoria())

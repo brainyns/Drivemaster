@@ -958,8 +958,8 @@ class CompraCatalogoServiceTest {
         assertTrue(compras.values().stream().allMatch(c -> "t1".equals(c.getCompradorTallerId())));
         assertFalse(pedidos.isEmpty());
         assertTrue(pedidos.values().stream().allMatch(p -> "t1".equals(p.getCompradorTallerId())));
-        // La tienda vende normal: su línea y su comisión no cambian porque compre un taller
-        assertEquals(4_000.0, lineaDe("s1").getComisionCalculada());
+        // La tienda vende con su descuento para talleres (20 % inicial) y su comisión es sobre lo que pagó el taller
+        assertEquals(3_200.0, lineaDe("s1").getComisionCalculada());
     }
 
     @Test
@@ -969,5 +969,49 @@ class CompraCatalogoServiceTest {
         compraUnTaller(taller("APROBADO", false));
         assertEstado(HttpStatus.FORBIDDEN, () -> service.iniciarPago(CORREO, carritoMixto()));
         assertTrue(compras.isEmpty());
+    }
+
+    // ─── Descuento para talleres ─────────────────────────────────────────────
+
+    @Test
+    void el_taller_paga_con_el_descuento_de_cada_tienda_y_queda_congelado_el_precio_publico() {
+        tiendas.get(1).setDescuentoTalleresPct(30.0);   // s2 fija el suyo; s1 nunca lo tocó: 20 %
+        compraUnTaller(taller("APROBADO", true));
+
+        CompraCatalogoService.Calculo c = service.calcular(Usuario.builder().id("u1").rol("TALLER").build(), carritoMixto(), true);
+
+        CompraCatalogo.Linea filtro = c.lineas().stream().filter(l -> l.getProductoId().equals("filtro")).findFirst().orElseThrow();
+        CompraCatalogo.Linea pastilla = c.lineas().stream().filter(l -> l.getProductoId().equals("pastilla")).findFirst().orElseThrow();
+        assertEquals(16_000, filtro.getPrecioUnitario());
+        assertEquals(20_000, filtro.getPrecioPublico());
+        assertEquals(20.0, filtro.getDescuentoPct());
+        assertEquals(32_000, filtro.getSubtotal());
+        assertEquals(21_000, pastilla.getPrecioUnitario());
+        assertEquals(30.0, pastilla.getDescuentoPct());
+    }
+
+    @Test
+    void el_cliente_paga_el_precio_publico_y_no_se_le_guarda_descuento() {
+        CompraCatalogoService.Calculo c = service.calcular(Usuario.builder().id("u1").rol("CLIENTE").build(), carritoMixto());
+        CompraCatalogo.Linea filtro = c.lineas().stream().filter(l -> l.getProductoId().equals("filtro")).findFirst().orElseThrow();
+        assertEquals(20_000, filtro.getPrecioUnitario());
+        assertNull(filtro.getPrecioPublico());
+        assertNull(filtro.getDescuentoPct());
+    }
+
+    @Test
+    void un_descuento_de_cero_cobra_el_precio_publico_tambien_al_taller() {
+        tiendas.get(0).setDescuentoTalleresPct(0.0);
+        CompraCatalogoService.Calculo c = service.calcular(Usuario.builder().id("u1").rol("TALLER").build(), carritoMixto(), true);
+        assertEquals(20_000, c.lineas().stream().filter(l -> l.getProductoId().equals("filtro")).findFirst().orElseThrow().getPrecioUnitario());
+    }
+
+    @Test
+    void el_descuento_de_la_tienda_va_de_0_a_50() {
+        assertEquals(20, com.drivemaster.drivemaster.util.DescuentoTaller.pct(Tienda.builder().build()));
+        assertEquals(12.5, com.drivemaster.drivemaster.util.DescuentoTaller.validar(12.5));
+        for (Double malo : new Double[]{-1.0, 50.5, null, Double.NaN}) {
+            assertEstado(HttpStatus.BAD_REQUEST, () -> com.drivemaster.drivemaster.util.DescuentoTaller.validar(malo));
+        }
     }
 }

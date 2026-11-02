@@ -82,6 +82,11 @@ public class PiezaTaller {
         private int disponible;
         // Sin IVA si el taller es responsable (lo descuenta); con IVA si no lo es (es parte de su costo)
         private Double costoUnitario;
+        // Congelados al comprar: el precio público de la tienda, su descuento para talleres y lo que se pagó por unidad
+        // (antes de IVA). Si la tienda cambia después, el costo de este lote no cambia
+        private Double precioPublico;
+        private Double descuentoPct;
+        private Double precioPagado;
         private Boolean ivaEnCosto;
         private LocalDateTime fechaEntrada;
     }

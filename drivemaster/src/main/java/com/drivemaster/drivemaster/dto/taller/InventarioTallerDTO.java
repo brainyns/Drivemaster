@@ -25,11 +25,17 @@ public final class InventarioTallerDTO {
     public record Pieza(String id, String nombre, String marca, String referencia, String categoria, String imagenUrl,
                         int stock, Double precioVenta, Double costoUnitario, Double recargoPct, Double margenPct,
                         Double comision, Double gananciaDespuesComision, boolean enPerdida, Boolean compatibilidadUniversal,
-                        List<Compatibilidad> modelosCompatibles, List<Lote> lotes) {
+                        List<Compatibilidad> modelosCompatibles, List<Lote> lotes,
+                        // Precio público de referencia (antes de IVA y con el IVA de la tienda), de qué tienda, y el tope del taller.
+                        // precioCobrado: el que se usa al cotizar hoy. topado: su precio quedó sobre el público y se cobra el tope
+                        Double precioPublico, Double precioPublicoFinal, String tiendaReferencia, Double tope, Double precioCobrado,
+                        boolean topado, boolean perdidaConTope) {
     }
 
     public record Lote(String id, String compraId, String pedidoId, String tiendaNombre, int cantidad, int disponible,
-                       Double costoUnitario, Boolean ivaEnCosto, LocalDateTime fechaEntrada) {
+                       Double costoUnitario, Boolean ivaEnCosto, LocalDateTime fechaEntrada,
+                       // Congelados al comprar
+                       Double precioPublico, Double descuentoPct, Double precioPagado) {
     }
 
     /** Pedido de una compra del taller que aún no entra al inventario. puedeConfirmar: ya salió de la tienda. */

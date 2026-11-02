@@ -33,6 +33,7 @@ class InventarioTallerServiceTest {
     private ParametrosMarketplace parametros;
     private InventarioTallerService service;
     private Taller taller;
+    private Producto productoP1;
 
     @BeforeEach
     void setUp() {
@@ -43,17 +44,20 @@ class InventarioTallerServiceTest {
         recepcion = mock(RecepcionEnvioService.class);
         parametros = mock(ParametrosMarketplace.class);
         when(parametros.comisionPct()).thenReturn(10.0);
+        when(parametros.ivaPct()).thenReturn(19.0);
 
         ProductoService productoService = mock(ProductoService.class);
-        Producto producto = new Producto();
+        Producto producto = productoP1 = new Producto();
         producto.setId("p1");
         producto.setNombre("Pastillas");
         producto.setReferencia("BP1");
         producto.setCompatibilidadUniversal(true);
+        producto.setPrecioVenta(150_000.0);
         when(productoService.obtenerPorId("p1")).thenReturn(producto);
 
         service = new InventarioTallerService(tallerService, memoria.piezaRepository, pedidos, productoService, memoria.stock,
-                recepcion, mock(MongoTemplate.class), parametros, mock(com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository.class));
+                recepcion, mock(MongoTemplate.class), parametros, mock(com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository.class),
+                new PrecioPublicoTaller(productoService, parametros));
     }
 
     private PedidoTienda pedido(String estado, String entrega) {
@@ -93,7 +97,7 @@ class InventarioTallerServiceTest {
         assertEquals("com1", lote.getCompraId());
         assertEquals("Repuestos Sur", lote.getTiendaNombre());
         assertEquals(100_000, lote.getCostoUnitario());
-        assertEquals(135_000, memoria.piezas.get(PIEZA).getPrecioVenta());
+        assertEquals(150_000, memoria.piezas.get(PIEZA).getPrecioVenta(), "Entra al precio público: el taller es responsable de IVA");
         assertTrue(memoria.piezas.get(PIEZA).getCompatibilidadUniversal());
     }
 
@@ -191,12 +195,12 @@ class InventarioTallerServiceTest {
 
         InventarioTallerDTO.Pieza p = service.inventario(CORREO).piezas().get(0);
 
-        assertEquals(135_000, p.precioVenta());
+        assertEquals(150_000, p.precioVenta());
         assertEquals(100_000, p.costoUnitario());
-        assertEquals(35.0, p.recargoPct());
-        assertEquals(25.9, p.margenPct());
-        assertEquals(13_500, p.comision());
-        assertEquals(21_500, p.gananciaDespuesComision());
+        assertEquals(50.0, p.recargoPct());
+        assertEquals(33.3, p.margenPct());
+        assertEquals(15_000, p.comision());
+        assertEquals(35_000, p.gananciaDespuesComision());
         assertFalse(p.enPerdida());
     }
 
@@ -229,6 +233,67 @@ class InventarioTallerServiceTest {
         service.confirmarLlegada(CORREO, "ped1");
         InventarioTallerDTO.Inventario i = service.inventario(CORREO);
         assertEquals(500_000, i.valorACosto());
-        assertEquals(675_000, i.valorAVenta());
+        assertEquals(750_000, i.valorAVenta());
+    }
+
+    // ─── Tope en el precio público ───────────────────────────────────────────
+
+    private void enInventario() {
+        pedido(PedidoTienda.ENTREGADO, PedidoTienda.ENVIO);
+        service.confirmarLlegada(CORREO, "ped1");
+    }
+
+    @Test
+    void el_backend_no_deja_subir_el_precio_sobre_el_publico() {
+        enInventario();
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.cambiarPrecio(CORREO, PIEZA, 150_001.0));
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        assertTrue(e.getReason().contains("no puede superar el precio público"), e.getReason());
+        assertTrue(e.getReason().contains("$150.000"), e.getReason());
+        assertEquals(150_000, service.cambiarPrecio(CORREO, PIEZA, 150_000.0).precioVenta());
+        assertEquals(120_000, service.cambiarPrecio(CORREO, PIEZA, 120_000.0).precioVenta(), "Bajarlo sí se puede");
+    }
+
+    @Test
+    void el_no_responsable_de_iva_puede_cobrar_hasta_lo_que_el_cliente_paga_con_iva_en_la_tienda() {
+        taller.setResponsableIva(false);
+        enInventario();
+        InventarioTallerDTO.Pieza p = service.inventario(CORREO).piezas().get(0);
+        assertEquals(178_500, p.tope(), "150.000 + 19 % = 178.500: el cliente paga lo mismo, sin IVA del taller");
+        assertEquals(178_500, p.precioVenta(), "Entra con el tope como precio");
+        assertEquals(178_500, p.precioPublicoFinal());
+        assertThrows(ResponseStatusException.class, () -> service.cambiarPrecio(CORREO, PIEZA, 178_501.0));
+    }
+
+    @Test
+    void si_el_publico_baja_se_cobra_el_publico_y_se_marca() {
+        enInventario();
+        service.cambiarPrecio(CORREO, PIEZA, 140_000.0);
+        productoP1.setPrecioVenta(110_000.0);
+
+        InventarioTallerDTO.Pieza p = service.inventario(CORREO).piezas().get(0);
+
+        assertTrue(p.topado());
+        assertEquals(140_000, p.precioVenta());
+        assertEquals(110_000, p.precioCobrado());
+        assertEquals(110_000 - 100_000 - 11_000, p.gananciaDespuesComision());
+        assertTrue(p.perdidaConTope(), "Con el tope ya no cubre costo y comisión");
+    }
+
+    @Test
+    void el_costo_queda_congelado_aunque_la_tienda_cambie_precio_o_descuento() {
+        PedidoTienda p = pedido(PedidoTienda.ENTREGADO, PedidoTienda.ENVIO);
+        p.getItems().get(0).setPrecioPublico(125_000.0);
+        p.getItems().get(0).setDescuentoPct(20.0);
+        // La tienda sube su precio después de la compra
+        productoP1.setPrecioVenta(300_000.0);
+
+        service.confirmarLlegada(CORREO, "ped1");
+
+        PiezaTaller.Lote lote = memoria.piezas.get(PIEZA).getLotes().get(0);
+        assertEquals(100_000, lote.getCostoUnitario());
+        assertEquals(100_000, lote.getPrecioPagado());
+        assertEquals(125_000, lote.getPrecioPublico());
+        assertEquals(20.0, lote.getDescuentoPct());
     }
 }

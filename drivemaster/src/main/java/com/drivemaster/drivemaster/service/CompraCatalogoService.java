@@ -23,6 +23,7 @@ import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import com.drivemaster.drivemaster.util.CodigoRetiro;
 import com.drivemaster.drivemaster.util.CompatibilidadVehiculo;
 import com.drivemaster.drivemaster.util.Dinero;
+import com.drivemaster.drivemaster.util.DescuentoTaller;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,8 +146,8 @@ public class CompraCatalogoService {
 
     public CompraCotizadaDTO cotizar(String correoCliente, CompraRequest r) {
         Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);
-        Calculo c = calcular(cliente, r);
-        compradorTaller(cliente);
+        // El taller se reconoce antes de calcular: paga con el descuento de cada tienda
+        Calculo c = calcular(cliente, r, compradorTaller(cliente) != null);
         return new CompraCotizadaDTO(c.lineas, c.entregas, c.subtotal.doubleValue(), c.iva.doubleValue(),
                 c.envio.doubleValue(), c.total.doubleValue(), c.avisos);
     }
@@ -159,8 +160,8 @@ public class CompraCatalogoService {
      */
     public Map<String, Object> iniciarPago(String correoCliente, CompraRequest r) {
         Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);
-        Calculo c = calcular(cliente, r);
         String compradorTallerId = compradorTaller(cliente);
+        Calculo c = calcular(cliente, r, compradorTallerId != null);
 
         CompraCatalogo compra = compraRepository.save(CompraCatalogo.builder()
                 .clienteId(cliente.getId())
@@ -325,7 +326,8 @@ public class CompraCatalogoService {
                 .tipo(CotizacionItem.REPUESTO).productoId(l.getProductoId()).productoNombre(l.getProductoNombre())
                 .marca(l.getMarca()).referencia(l.getReferencia()).tiendaId(l.getTiendaId()).tiendaNombre(l.getTiendaNombre())
                 .disponibilidad("ENCARGO".equals(l.getTipo()) ? "ENCARGO" : "DISPONIBLE").diasEntrega(l.getDiasEntrega())
-                .cantidad(l.getCantidad()).precioUnitario(l.getPrecioUnitario()).subtotal(l.getSubtotal()).build()).toList();
+                .cantidad(l.getCantidad()).precioUnitario(l.getPrecioUnitario()).subtotal(l.getSubtotal())
+                .precioPublico(l.getPrecioPublico()).descuentoPct(l.getDescuentoPct()).build()).toList();
         Integer dias = items.stream().filter(i -> "ENCARGO".equals(i.getDisponibilidad()) && i.getDiasEntrega() != null)
                 .map(CotizacionItem::getDiasEntrega).max(Integer::compare).orElse(null);
         LocalDateTime ahora = LocalDateTime.now();
@@ -476,6 +478,11 @@ public class CompraCatalogoService {
     }
 
     Calculo calcular(Usuario cliente, CompraRequest r) {
+        return calcular(cliente, r, false);
+    }
+
+    /** conDescuentoTaller: compra un taller aprobado; cada línea lleva el descuento de su tienda y el precio público congelado. */
+    Calculo calcular(Usuario cliente, CompraRequest r, boolean conDescuentoTaller) {
         if (r == null || r.items() == null || r.items().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El carrito está vacío");
         }
@@ -521,11 +528,14 @@ public class CompraCatalogoService {
                         : "De \"" + p.getNombre() + "\" (" + tienda.getNombre() + ") solo hay " + stock
                           + " disponible(s). No se hizo ningún cobro.");
             }
+            double pctTaller = DescuentoTaller.pct(tienda);
+            double precioPagado = conDescuentoTaller ? DescuentoTaller.precio(p.getPrecioVenta(), pctTaller) : p.getPrecioVenta();
             lineas.add(CompraCatalogo.Linea.builder()
                     .productoId(p.getId()).productoNombre(p.getNombre()).marca(p.getMarca()).referencia(p.getReferencia())
                     .imagenUrl(p.getImagenUrl()).tiendaId(tienda.getId()).tiendaNombre(tienda.getNombre())
-                    .cantidad(e.getValue()).precioUnitario(p.getPrecioVenta())
-                    .subtotal(Dinero.aDouble(Dinero.pesos(BigDecimal.valueOf(p.getPrecioVenta()).multiply(BigDecimal.valueOf(e.getValue())))))
+                    .cantidad(e.getValue()).precioUnitario(precioPagado)
+                    .precioPublico(conDescuentoTaller ? p.getPrecioVenta() : null).descuentoPct(conDescuentoTaller ? pctTaller : null)
+                    .subtotal(Dinero.aDouble(Dinero.pesos(BigDecimal.valueOf(precioPagado).multiply(BigDecimal.valueOf(e.getValue())))))
                     .tipo(encargo ? "ENCARGO" : "STOCK").diasEntrega(encargo ? p.getDiasEntregaEncargo() : null).build());
             if (vehiculo != null) {
                 String estado = CompatibilidadVehiculo.estado(p, vehiculo);

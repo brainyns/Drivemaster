@@ -188,6 +188,14 @@ public class AvisosSolicitudServicio {
                 "Pedido cancelado", "No despaches este pedido: la solicitud se canceló. Tus unidades volvieron al stock.", "pedidos-tienda", pedido.getId()));
     }
 
+
+    /** Una pieza del inventario se cotizó al precio público porque el del taller había quedado por encima. */
+    public void precioTallerTopado(Taller taller, Cotizacion cotizacion, List<String> piezas) {
+        avisar(taller.getUsuarioId(), Notificacion.COTIZACION_TIENDA_NO_DISPONIBLE, "Se cotizó al precio público",
+                "En la cotización v" + cotizacion.getVersion() + " de " + vehiculo(cotizacion.getVehiculoDescripcion()) + ", "
+                        + String.join(", ", piezas) + " se cobró al precio público: bajó y tu precio quedó por encima. Revísalo en Mi inventario.",
+                "taller-inventario", cotizacion.getOrdenId());
+    }
     /** Se cotizó una pieza del inventario y al pagar ya no alcanzó (otra orden la vendió antes): no se cobró nada. */
     public void piezaTallerSinStock(Cotizacion cotizacion, String pieza) {
         tallerRepository.findById(cotizacion.getTallerId()).ifPresent(taller -> {

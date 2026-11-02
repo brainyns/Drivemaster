@@ -182,4 +182,36 @@ class PiezasTallerEnCotizacionTest {
                 .map(f -> f.getName().toLowerCase(Locale.ROOT))
                 .forEach(nombre -> assertTrue(Stream.of("costo", "margen", "ganancia").noneMatch(nombre::contains), nombre));
     }
+
+    // ─── Tope por precio público ─────────────────────────────────────────────
+
+    @Test
+    void el_tope_compara_como_paga_el_cliente_con_el_iva_de_cada_uno() {
+        assertEquals(100_000, PrecioPublicoTaller.topeDe(100_000, 19, 19), "Responsable: el mismo público");
+        assertEquals(119_000, PrecioPublicoTaller.topeDe(100_000, 19, 0), "No responsable: el público con IVA, porque no le suma IVA");
+        assertEquals(33_613, PrecioPublicoTaller.topeDe(33_613, 19, 19));
+    }
+
+    @Test
+    void si_el_precio_del_taller_quedo_sobre_el_publico_se_cotiza_al_publico_y_se_dice() {
+        OfertaRepuestoDTO o = BuscadorRepuestosService.evaluarPieza(pieza(3, 135_000.0), 1, SPARK, 120_000.0);
+        assertEquals(120_000, o.getPrecio());
+        assertTrue(o.isPrecioTopado());
+        assertTrue(o.getMotivo().startsWith("Se cotiza a $120.000"), o.getMotivo());
+
+        OfertaRepuestoDTO bajo = BuscadorRepuestosService.evaluarPieza(pieza(3, 100_000.0), 1, SPARK, 120_000.0);
+        assertEquals(100_000, bajo.getPrecio(), "Si está por debajo, se respeta el del taller");
+        assertFalse(bajo.isPrecioTopado());
+    }
+
+    @Test
+    void un_taller_aprobado_ve_el_precio_con_descuento_de_cada_tienda_y_el_cliente_no() {
+        var dto = new com.drivemaster.drivemaster.dto.catalogo.ProductoCatalogoDTO("p1", "Pastillas", null, null, null, null, 100_000.0,
+                "STOCK", true, 3, null, null, null, null, null, null, null);
+        var paraTaller = dto.paraTaller(25);
+        assertEquals(100_000, paraTaller.precio(), "El público sigue a la vista, tachado");
+        assertEquals(75_000, paraTaller.precioTaller());
+        assertEquals(25.0, paraTaller.descuentoTallerPct());
+        assertNull(dto.precioTaller(), "Un cliente no ve precio de taller");
+    }
 }

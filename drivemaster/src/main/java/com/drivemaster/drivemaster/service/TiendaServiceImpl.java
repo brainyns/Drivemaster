@@ -183,6 +183,7 @@ public class TiendaServiceImpl implements TiendaService {
             validarCostoEnvio(r);
             tienda.setCostoEnvio(costoEnvioDe(r));
         }
+        if (r.getDescuentoTalleresPct() != null) tienda.setDescuentoTalleresPct(com.drivemaster.drivemaster.util.DescuentoTaller.validar(r.getDescuentoTalleresPct()));
         return tienda;
     }
 
@@ -257,6 +258,7 @@ public class TiendaServiceImpl implements TiendaService {
                 .horario(t.getHorario())
                 .horarioSemanal(t.getHorarioSemanal())
                 .costoEnvio(t.getCostoEnvio())
+                .descuentoTalleresPct(com.drivemaster.drivemaster.util.DescuentoTaller.pct(t))
                 .datosCompletos(t.tieneDatosCompletos())
                 .fechaRegistro(t.getFechaRegistro())
                 .fechaAprobacion(t.getFechaAprobacion())

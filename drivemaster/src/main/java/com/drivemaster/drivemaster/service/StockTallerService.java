@@ -61,7 +61,10 @@ public class StockTallerService {
             int anterior = pieza.getStock();
             pieza.getLotes().add(lote);
             pieza.setStock(anterior + lote.getDisponible());
-            if (pieza.getPrecioVenta() == null) pieza.setPrecioVenta(sugerido(lote.getCostoUnitario()));
+            // Precio inicial: el que propone quien llama (el tope por precio público); sin él, el recargo sugerido sobre el costo
+            if (pieza.getPrecioVenta() == null) {
+                pieza.setPrecioVenta(e.datos().getPrecioVenta() != null ? e.datos().getPrecioVenta() : sugerido(lote.getCostoUnitario()));
+            }
             PiezaTaller guardada = piezas.save(pieza);
             registrarEntrada(guardada, lote, anterior, e.usuarioId());
             return guardada;

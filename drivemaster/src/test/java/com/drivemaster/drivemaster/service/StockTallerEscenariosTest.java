@@ -279,7 +279,7 @@ class StockTallerEscenariosTest {
             return x;
         });
         inventarioTaller = new InventarioTallerService(tallerService, inventario.piezaRepository, pedidoRepository, productoService,
-                inventario.stock, recepcion, mongo, parametros, reembolsoRepository);
+                inventario.stock, recepcion, mongo, parametros, reembolsoRepository, new PrecioPublicoTaller(productoService, parametros));
 
         LiquidacionService liquidacion = new LiquidacionService(repartoRepository, reembolsoRepository, pagoRepository, mock(DispersionService.class),
                 avisos, mock(ResolucionRepartoRepository.class));
@@ -459,7 +459,7 @@ class StockTallerEscenariosTest {
 
         assertEquals(1, salida.getLotes().size());
         assertEquals(2, salida.getLotes().get(0).getCantidad());
-        assertEquals(100_000, salida.getLotes().get(0).getCostoUnitario());
+        assertEquals(80_000, salida.getLotes().get(0).getCostoUnitario(), "Lo que pagó el taller: 100.000 con el 20 % de descuento");
         assertEquals(pago.getId(), salida.getPagoId());
         assertEquals("o1", salida.getOrdenId());
     }
@@ -469,9 +469,9 @@ class StockTallerEscenariosTest {
         elTallerCompraYRecibe(1);
         RepartoPago lineaTienda = lineas.stream().filter(r -> RepartoPago.TIENDA.equals(r.getBeneficiarioTipo())).findFirst().orElseThrow();
         RepartoPago comisionCompra = lineas.stream().filter(r -> RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())).findFirst().orElseThrow();
-        assertEquals(10_000, lineaTienda.getComisionRetenida(), "10 % de 100.000 sin IVA");
-        assertEquals(109_000, lineaTienda.getMonto(), "119.000 con IVA menos la comisión");
-        assertEquals(10_000, comisionCompra.getMonto());
+        assertEquals(8_000, lineaTienda.getComisionRetenida(), "10 % de lo que pagó el taller: 80.000 sin IVA");
+        assertEquals(87_200, lineaTienda.getMonto(), "95.200 con IVA menos la comisión");
+        assertEquals(8_000, comisionCompra.getMonto());
 
         PagoEntity venta = elClientePaga(itemTaller(1, 135_000), manoDeObra(50_000));
 
@@ -515,7 +515,7 @@ class StockTallerEscenariosTest {
         assertEquals(0, inventario.stock.disponible("t1", PIEZA));
 
         ResponseStatusException e = assertThrows(ResponseStatusException.class, () ->
-                new BuscadorRepuestosService(null, null, null, null, null, inventario.piezaRepository)
+                new BuscadorRepuestosService(null, null, null, null, null, inventario.piezaRepository, null)
                         .ofertaDePieza(PIEZA, 1, taller, new com.drivemaster.drivemaster.model.Vehiculo()));
         assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
     }
