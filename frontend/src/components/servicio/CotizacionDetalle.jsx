@@ -1,6 +1,6 @@
 import Etiqueta from "./Etiqueta";
 import { ESTADOS_COTIZACION, formatFechaHora, formatPrecio } from "./estadosServicio";
-import { lineasIva } from "./desgloseIva";
+import { lineasIva, precioFinalLinea, textoPrecioFinal } from "./desgloseIva";
 import { esDelTaller, etiquetaOrigen } from "./reglasRepuestos";
 import "../../css/cotizacion.css";
 
@@ -42,6 +42,8 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
                     {[i.marca, i.referencia, !esDelTaller(i) && i.tiendaNombre].filter(Boolean).join(" · ")}
                     {i.disponibilidad === "ENCARGO" && ` · Encargo${i.diasEntrega ? ` (${i.diasEntrega} días)` : ""}`}
                   </span>
+                  {/* Con dos IVA distintos, el precio final por unidad deja comparar la misma pieza entre líneas */}
+                  {precioFinalLinea(c, i) && <span className="ss-meta ct-item__final">{textoPrecioFinal(precioFinalLinea(c, i), formatPrecio)}</span>}
                   <span className={`ct-origen ct-origen--${g.clave}`}>{etiquetaOrigen(i)}</span>
                 </span>
                 <span className="ct-item__valor">{formatPrecio(i.subtotal)}</span>

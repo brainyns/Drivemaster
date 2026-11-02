@@ -6,6 +6,7 @@ import Icon from "../public/Icon";
 import { etiquetaCategoria } from "../../utils/categorias";
 import { formatoDistancia } from "../../utils/distancia";
 import { claveOferta } from "./reglasRepuestos";
+import { textoIvaOferta } from "./desgloseIva";
 
 /**
  * Ventana del buscador de repuestos en todas las tiendas (aprobadas y activas).
@@ -228,7 +229,11 @@ function TarjetaOferta({ oferta: o, categoria, elegido, onElegir }) {
         )}
       </div>
       <div className="ss-oferta__pie">
-        <strong className="ss-oferta__precio">{formatPrecio(o.precio)}</strong>
+        {/* El número grande es lo que paga el cliente: así taller y tiendas se comparan igual */}
+        <span className="ss-oferta__monto">
+          <strong className="ss-oferta__precio">{formatPrecio(o.precioFinal ?? o.precio)}</strong>
+          {textoIvaOferta(o, formatPrecio) && <span className="ss-oferta__iva">{textoIvaOferta(o, formatPrecio)}</span>}
+        </span>
         <button type="button" className="sv-btn ss-btn-elegir" disabled={!o.seleccionable || elegido}
           onClick={onElegir} aria-describedby={o.motivo ? `motivo-${id}` : undefined}>
           {elegido ? "Elegido" : "Elegir"}

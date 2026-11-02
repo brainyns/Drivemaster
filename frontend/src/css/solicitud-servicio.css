@@ -897,6 +897,15 @@
 
 .ss-btn-elegir { padding: 7px 16px; white-space: nowrap; }
 
+.ss-oferta__monto { display: flex; flex-direction: column; min-width: 0; }
+
+.ss-oferta__iva {
+  font-size: var(--fs-etiqueta);
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .ss-oferta__motivo {
   margin-top: auto;
   padding-top: var(--ui-sp-2);

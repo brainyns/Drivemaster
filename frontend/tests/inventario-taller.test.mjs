@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { cifrasPieza, estadoEnCamino, pct, precioConRecargo } from "../src/pages/taller/reglasInventario.js";
 import { claveOferta, etiquetaOrigen, vendedor } from "../src/components/servicio/reglasRepuestos.js";
-import { lineasIva } from "../src/components/servicio/desgloseIva.js";
+import { lineasIva, precioFinalLinea, textoIvaOferta, textoPrecioFinal } from "../src/components/servicio/desgloseIva.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
@@ -131,4 +131,28 @@ test("en Mi inventario el precio del taller no pasa el público y se ve el tope"
   assert.match(inv, /<dt>Precio público<\/dt>/);
   assert.match(inv, /pieza\.perdidaConTope/);
   assert.ok(!/Usar el sugerido \(\+/.test(inv), "ya no se sugiere costo + recargo");
+});
+
+const pesos = (v) => `$${Math.round(v).toLocaleString("es-CO")}`;
+
+test("en el buscador la misma pieza del taller y de la tienda muestra el mismo precio final", () => {
+  const taller = { origen: "TALLER", precio: 34_510, ivaPct: 0, ivaMonto: 0, precioFinal: 34_510 };
+  const tienda = { origen: "TIENDA", precio: 29_000, ivaPct: 19, ivaMonto: 5_510, precioFinal: 34_510 };
+  assert.equal(taller.precioFinal, tienda.precioFinal);
+  assert.equal(textoIvaOferta(taller, pesos), "Sin IVA: tu taller no cobra IVA");
+  assert.equal(textoIvaOferta(tienda, pesos), "$29.000 + IVA $5.510");
+  assert.equal(textoIvaOferta({ precio: 29_000 }, pesos), "", "sin precio final del backend no se inventa la aclaración");
+  const tarjeta = leer("../src/components/servicio/BuscadorRepuestos.jsx");
+  assert.match(tarjeta, /formatPrecio\(o\.precioFinal \?\? o\.precio\)/, "el número grande es el precio final");
+});
+
+test("en la cotización cada línea aclara su precio final con la misma regla que el backend", () => {
+  const c = { ivaRepuestosPct: 19, ivaManoObraPct: 0 };
+  const taller = precioFinalLinea(c, { tipo: "REPUESTO", origen: "TALLER", precioUnitario: 34_510 });
+  const tienda = precioFinalLinea(c, { tipo: "REPUESTO", origen: "TIENDA", precioUnitario: 29_000 });
+  assert.equal(taller.total, tienda.total);
+  assert.equal(textoPrecioFinal(taller, pesos), "$34.510 c/u, sin IVA");
+  assert.equal(textoPrecioFinal(tienda, pesos), "$34.510 c/u con IVA ($29.000 + IVA $5.510)");
+  assert.equal(precioFinalLinea({ ivaRepuestosPct: 19, ivaManoObraPct: 19 }, { tipo: "REPUESTO", precioUnitario: 29_000 }), null, "con un solo IVA no hace falta");
+  assert.equal(precioFinalLinea(c, { tipo: "MANO_OBRA", precioUnitario: 50_000 }), null);
 });
