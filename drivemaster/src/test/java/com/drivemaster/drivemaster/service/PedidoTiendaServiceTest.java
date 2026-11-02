@@ -146,24 +146,177 @@ class PedidoTiendaServiceTest {
         verifyNoInteractions(pagoMarketplace, repartoRepository);
     }
 
+    /** Pedidos de la orden; findAndModify los pasa a RECIBIDO como la escritura condicional real: solo si siguen DESPACHADO. */
+    private void pedidosDeLaOrden(PedidoTienda... pedidos) {
+        when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
+        when(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc("o1")).thenAnswer(i -> List.of(pedidos));
+        when(mongoTemplate.findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class)))
+                .thenAnswer(i -> {
+                    Document filtro = ((Query) i.getArgument(0)).getQueryObject();
+                    for (PedidoTienda p : pedidos) {
+                        if (p.getId().equals(filtro.get("id")) && PedidoTienda.DESPACHADO.equals(p.getEstado())) {
+                            p.setEstado(PedidoTienda.RECIBIDO);
+                            return p;
+                        }
+                    }
+                    return null;
+                });
+    }
+
+    private static PedidoTienda deLaOrden(String id, String tienda, String estado) {
+        return PedidoTienda.builder().id(id).ordenId("o1").tiendaNombre(tienda).estado(estado).build();
+    }
+
+    private void verificaQueLaOrdenNoAvanzo() {
+        verify(transiciones, never()).transicionar(any(), anyString(), any(), anyString(), any(), any());
+    }
+
     @Test
     void elTallerConfirmaLaRecepcion() {
-        when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
+        pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO));
 
         service.repuestosRecibidos("taller@demo.com", "o1");
 
         verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.REPUESTOS_RECIBIDOS), any(), anyString(), any(), isNull());
-        verify(mongoTemplate).updateMulti(any(Query.class), any(Update.class), eq(PedidoTienda.class));
+        verify(liquidacion).pedidoRecibido("ped1", "RECEPCION_CONFIRMADA_TALLER");
     }
 
     @Test
-    void siCerrarLosPedidosFallaLaRecepcionIgualQuedaYAlertaAlAdmin() {
-        when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
-        doThrow(new IllegalStateException("mongo caído")).when(mongoTemplate).updateMulti(any(Query.class), any(Update.class), eq(PedidoTienda.class));
+    void siNingunPedidoSeDespachoNoSeConfirmaNadaNiSeHabilitaElPago() {
+        for (String estado : List.of(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)) {
+            pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", estado));
+
+            ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.repuestosRecibidos("taller@demo.com", "o1"));
+
+            assertEquals(HttpStatus.CONFLICT, e.getStatusCode(), estado);
+            assertEquals("La tienda aún no despacha: Tienda Norte", e.getReason(), estado);
+        }
+        verifyNoInteractions(liquidacion);
+        verificaQueLaOrdenNoAvanzo();
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class));
+    }
+
+    @Test
+    void nombrarUnPedidoSinDespacharCortaAntesDeConfirmarLosDemas() {
+        pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO), deLaOrden("ped2", "Tienda Sur", PedidoTienda.PENDIENTE));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> service.repuestosRecibidos("taller@demo.com", "o1", List.of("ped1", "ped2"), false));
+
+        assertEquals("La tienda aún no despacha: Tienda Sur", e.getReason());
+        verifyNoInteractions(liquidacion);
+        verificaQueLaOrdenNoAvanzo();
+    }
+
+    @Test
+    void conOtraTiendaSinDespacharSeConfirmaLoDespachadoYLaOrdenEspera() {
+        PedidoTienda norte = deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO);
+        pedidosDeLaOrden(norte, deLaOrden("ped2", "Tienda Sur", PedidoTienda.EN_PREPARACION));
+
+        service.repuestosRecibidos("taller@demo.com", "o1", List.of("ped1"), false);
+
+        assertEquals(PedidoTienda.RECIBIDO, norte.getEstado());
+        verify(liquidacion).pedidoRecibido("ped1", "RECEPCION_CONFIRMADA_TALLER");
+        verify(liquidacion, never()).pedidoRecibido(eq("ped2"), anyString());
+        verify(transiciones).registrar(eq(orden), any(), eq("Repuestos recibidos de Tienda Norte"), any(), any());
+        verificaQueLaOrdenNoAvanzo();
+    }
+
+    @Test
+    void elPedidoDespachadoQueNoSeEligeNoSeRecibeYLaOrdenEspera() {
+        PedidoTienda sur = deLaOrden("ped2", "Tienda Sur", PedidoTienda.DESPACHADO);
+        pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO), sur);
+
+        service.repuestosRecibidos("taller@demo.com", "o1", List.of("ped1"), false);
+
+        assertEquals(PedidoTienda.DESPACHADO, sur.getEstado());
+        verify(liquidacion, never()).pedidoRecibido(eq("ped2"), anyString());
+        verificaQueLaOrdenNoAvanzo();
+    }
+
+    @Test
+    void laOrdenAvanzaAlConfirmarElUltimoPedido() {
+        pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", PedidoTienda.RECIBIDO), deLaOrden("ped2", "Tienda Sur", PedidoTienda.DESPACHADO));
+
+        service.repuestosRecibidos("taller@demo.com", "o1", List.of("ped2"), false);
+
+        verify(liquidacion, never()).pedidoRecibido(eq("ped1"), anyString());
+        verify(liquidacion).pedidoRecibido("ped2", "RECEPCION_CONFIRMADA_TALLER");
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.REPUESTOS_RECIBIDOS), any(), eq("Repuestos recibidos en el taller"), any(), isNull());
+    }
+
+    @Test
+    void repetirLaConfirmacionDeUnPedidoRecibidoNoPagaDosVeces() {
+        pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", PedidoTienda.RECIBIDO), deLaOrden("ped2", "Tienda Sur", PedidoTienda.PENDIENTE));
+
+        assertDoesNotThrow(() -> service.repuestosRecibidos("taller@demo.com", "o1", List.of("ped1"), false));
+
+        verifyNoInteractions(liquidacion);
+        verificaQueLaOrdenNoAvanzo();
+    }
+
+    @Test
+    void unPedidoQueNoEsDeLaOrdenNoSeConfirma() {
+        pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO));
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                () -> service.repuestosRecibidos("taller@demo.com", "o1", List.of("ajeno"), false));
+
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
+        verifyNoInteractions(liquidacion);
+    }
+
+    @Test
+    void siCerrarElPedidoFallaLaOrdenNoAvanzaYSePuedeRepetir() {
+        PedidoTienda norte = deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO);
+        pedidosDeLaOrden(norte);
+        doThrow(new IllegalStateException("mongo caído")).when(mongoTemplate)
+                .findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class));
+
+        assertThrows(IllegalStateException.class, () -> service.repuestosRecibidos("taller@demo.com", "o1"));
+
+        verifyNoInteractions(liquidacion);
+        verificaQueLaOrdenNoAvanzo();
+    }
+
+    @Test
+    void siFallaLaTransicionLaConfirmacionRepetidaTerminaSinPagarDosVeces() {
+        pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO));
+        when(transiciones.transicionar(any(), anyString(), any(), anyString(), any(), any()))
+                .thenThrow(new IllegalStateException("mongo caído")).thenReturn(orden);
+
+        assertThrows(IllegalStateException.class, () -> service.repuestosRecibidos("taller@demo.com", "o1"));
+        service.repuestosRecibidos("taller@demo.com", "o1");
+
+        verify(liquidacion, times(1)).pedidoRecibido("ped1", "RECEPCION_CONFIRMADA_TALLER");
+        verify(transiciones, times(2)).transicionar(eq(orden), eq(EstadoOrden.REPUESTOS_RECIBIDOS), any(), anyString(), any(), isNull());
+    }
+
+    @Test
+    void siNoSePuedeHabilitarElPagoElPedidoQuedaRecibidoYSeAlerta() {
+        pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO));
+        doThrow(new IllegalStateException("postgres caído")).when(liquidacion).pedidoRecibido(anyString(), anyString());
 
         assertDoesNotThrow(() -> service.repuestosRecibidos("taller@demo.com", "o1"));
 
-        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("quedaron recibidos"));
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("no se pudo habilitar el pago de Tienda Norte"));
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.REPUESTOS_RECIBIDOS), any(), anyString(), any(), isNull());
+    }
+
+    @Test
+    void siLaTiendaDejaDeDespacharMientrasSeConfirmaNoSeHabilitaSuPago() {
+        PedidoTienda norte = deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO);
+        when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
+        when(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc("o1")).thenReturn(List.of(norte));
+        // La escritura condicional no encontró el pedido DESPACHADO
+        when(mongoTemplate.findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class))).thenReturn(null);
+
+        service.repuestosRecibidos("taller@demo.com", "o1");
+
+        verifyNoInteractions(liquidacion);
+        ArgumentCaptor<Query> filtro = ArgumentCaptor.forClass(Query.class);
+        verify(mongoTemplate).findAndModify(filtro.capture(), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class));
+        assertEquals(PedidoTienda.DESPACHADO, filtro.getValue().getQueryObject().get("estado"));
     }
 
     @Test
@@ -259,21 +412,14 @@ class PedidoTiendaServiceTest {
     @Test
     void alConfirmarLaRecepcionLaLineaDeCadaTiendaQuedaListaParaLiquidar() {
         when(tallerService.obtenerPorUsuario("taller@demo.com")).thenReturn(Taller.builder().id("t1").nombre("AutoMax").build());
-        PedidoTienda sinDespacho = PedidoTienda.builder().id("ped1").ordenId("o1").estado(PedidoTienda.PENDIENTE).build();
-        PedidoTienda despachado = PedidoTienda.builder().id("ped2").ordenId("o1").estado(PedidoTienda.DESPACHADO).build();
-        PedidoTienda noDespachado = PedidoTienda.builder().id("ped3").ordenId("o1").estado(PedidoTienda.NO_DESPACHADO).build();
-        PedidoTienda sinDespachoDespues = PedidoTienda.builder().id("ped1").ordenId("o1").estado(PedidoTienda.RECIBIDO).build();
-        PedidoTienda despachadoDespues = PedidoTienda.builder().id("ped2").ordenId("o1").estado(PedidoTienda.RECIBIDO).build();
-        when(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc("o1"))
-                .thenReturn(List.of(sinDespacho, despachado, noDespachado))
-                .thenReturn(List.of(sinDespachoDespues, despachadoDespues, noDespachado));
+        pedidosDeLaOrden(deLaOrden("ped1", "Tienda Norte", PedidoTienda.DESPACHADO), deLaOrden("ped2", "Tienda Centro", PedidoTienda.DESPACHADO),
+                deLaOrden("ped3", "Tienda Sur", PedidoTienda.NO_DESPACHADO));
 
         // Hay un NO_DESPACHADO: el taller confirma que sigue sin esas piezas
         service.repuestosRecibidos("taller@demo.com", "o1", true);
 
-        // La tienda que no marcó el despacho también queda lista, y el evento lo deja registrado
-        verify(liquidacion).pedidoRecibido(eq("ped1"), contains("no había marcado el despacho"));
-        verify(liquidacion).pedidoRecibido(eq("ped2"), eq("RECEPCION_CONFIRMADA_TALLER"));
+        verify(liquidacion).pedidoRecibido("ped1", "RECEPCION_CONFIRMADA_TALLER");
+        verify(liquidacion).pedidoRecibido("ped2", "RECEPCION_CONFIRMADA_TALLER");
         // El pedido que la tienda no pudo despachar no se liquida
         verify(liquidacion, never()).pedidoRecibido(eq("ped3"), anyString());
     }
@@ -293,7 +439,7 @@ class PedidoTiendaServiceTest {
         assertTrue(e.getReason().contains("Tienda Sur"));
         assertTrue(e.getReason().contains("No tengo el repuesto"));
         verifyNoInteractions(transiciones, liquidacion);
-        verify(mongoTemplate, never()).updateMulti(any(Query.class), any(Update.class), eq(PedidoTienda.class));
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(PedidoTienda.class));
     }
 
     @Test
@@ -302,7 +448,7 @@ class PedidoTiendaServiceTest {
         PedidoTienda noDespachado = PedidoTienda.builder().id("ped3").ordenId("o1").tiendaNombre("Tienda Sur")
                 .estado(PedidoTienda.NO_DESPACHADO).build();
         PedidoTienda despachado = PedidoTienda.builder().id("ped1").ordenId("o1").estado(PedidoTienda.DESPACHADO).build();
-        when(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc("o1")).thenReturn(List.of(despachado, noDespachado));
+        pedidosDeLaOrden(despachado, noDespachado);
 
         service.repuestosRecibidos("taller@demo.com", "o1", true);
 

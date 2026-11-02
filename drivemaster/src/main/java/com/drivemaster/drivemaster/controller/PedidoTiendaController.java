@@ -4,6 +4,7 @@ import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.dto.plataforma.RetiroSinRecogerDTO;
 import com.drivemaster.drivemaster.service.PedidoTiendaService;
 import com.drivemaster.drivemaster.service.RetiroPendienteService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -113,6 +115,16 @@ public class PedidoTiendaController {
                                                         Authentication auth) {
         // confirmarFaltantes: el taller sigue sin las piezas de una tienda que no despachó
         boolean confirmarFaltantes = body != null && Boolean.TRUE.equals(body.get("confirmarFaltantes"));
-        return ResponseEntity.ok(service.repuestosRecibidos(auth.getName(), ordenId, confirmarFaltantes));
+        return ResponseEntity.ok(service.repuestosRecibidos(auth.getName(), ordenId, pedidosElegidos(body), confirmarFaltantes));
+    }
+
+    /** Los pedidos que el taller tiene en la mano; sin la lista, todos los despachados. */
+    private static List<String> pedidosElegidos(Map<String, Object> body) {
+        Object pedidoIds = body != null ? body.get("pedidoIds") : null;
+        if (pedidoIds == null) return null;
+        if (!(pedidoIds instanceof List<?> lista)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "pedidoIds debe ser una lista");
+        }
+        return lista.stream().map(String::valueOf).toList();
     }
 }

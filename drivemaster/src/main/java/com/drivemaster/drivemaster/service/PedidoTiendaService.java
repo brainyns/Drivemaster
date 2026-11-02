@@ -24,9 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Pedidos de repuestos a las tiendas (uno por tienda y cotización pagada).
@@ -390,16 +390,21 @@ public class PedidoTiendaService {
     // ─── Taller ──────────────────────────────────────────────────────────────
 
     /**
-     * El taller confirma que recibió los repuestos. Vale aunque la tienda no haya
-     * marcado el despacho (el taller los tiene en la mano); los no despachados no
-     * cambian. Si alguna tienda no pudo despachar, el taller debe confirmar que sigue
-     * sin esas piezas (confirmarFaltantes); si no, se rechaza.
+     * El taller confirma los repuestos que tiene en la mano, pedido por pedido. Solo vale un pedido que la tienda marcó
+     * DESPACHADO: es el único que pasa a RECIBIDO y habilita el pago de su tienda. pedidoIds null confirma todos los
+     * despachados. La orden avanza cuando ningún pedido sigue por despachar o por confirmar; si alguna tienda no pudo
+     * despachar, además debe confirmar que sigue sin esas piezas (confirmarFaltantes). Los pedidos se cierran antes de
+     * mover la orden: si algo falla a mitad, repetir la confirmación termina lo que faltó.
      */
     public List<PedidoTienda> repuestosRecibidos(String correoTaller, String ordenId) {
         return repuestosRecibidos(correoTaller, ordenId, false);
     }
 
     public List<PedidoTienda> repuestosRecibidos(String correoTaller, String ordenId, boolean confirmarFaltantes) {
+        return repuestosRecibidos(correoTaller, ordenId, null, confirmarFaltantes);
+    }
+
+    public List<PedidoTienda> repuestosRecibidos(String correoTaller, String ordenId, List<String> pedidoIds, boolean confirmarFaltantes) {
         Taller taller = tallerService.obtenerPorUsuario(correoTaller);
         OrdenServicio orden = ordenMarketplace(ordenId);
         if (!taller.getId().equals(orden.getTallerId())) {
@@ -413,9 +418,18 @@ public class PedidoTiendaService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ninguna tienda despachó los repuestos de esta solicitud: "
                     + "no se puede confirmar su recepción. DriveMaster la revisará.");
         }
-        List<PedidoTienda> noDespachados = previos.stream()
-                .filter(p -> PedidoTienda.NO_DESPACHADO.equals(p.getEstado())).toList();
-        if (!noDespachados.isEmpty() && !confirmarFaltantes) {
+        List<PedidoTienda> elegidos = porConfirmar(previos, pedidoIds);
+        List<PedidoTienda> sinDespacho = previos.stream().filter(PedidoTiendaService::sinDespachar).toList();
+        boolean quedaUnoDespachado = previos.stream().filter(PedidoTiendaService::despachado).count() > elegidos.size();
+        boolean avanza = sinDespacho.isEmpty() && !quedaUnoDespachado;
+        if (elegidos.isEmpty() && !avanza) {
+            // Un segundo clic sobre lo que ya quedó confirmado no es un error
+            if (pedidoIds != null && !pedidoIds.isEmpty()) return previos;
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    sinDespacho.isEmpty() ? "Elige los pedidos que ya tienes en el taller" : aunNoDespacha(sinDespacho));
+        }
+        List<PedidoTienda> noDespachados = noDespachados(previos);
+        if (avanza && !noDespachados.isEmpty() && !confirmarFaltantes) {
             String detalle = noDespachados.stream()
                     .map(p -> p.getTiendaNombre() + (p.getMotivoNoDespacho() != null ? " (motivo: " + p.getMotivoNoDespacho() + ")" : ""))
                     .collect(java.util.stream.Collectors.joining(", "));
@@ -424,32 +438,68 @@ public class PedidoTiendaService {
                     : "Las tiendas " + detalle + " no despacharon sus repuestos.")
                     + " Si recibiste lo demás y sigues sin esas piezas, confírmalo para continuar.");
         }
-        String nota = noDespachados.isEmpty() ? "Repuestos recibidos en el taller"
-                : "Repuestos recibidos en el taller; el taller confirmó que sigue sin los de "
-                        + noDespachados.stream().map(PedidoTienda::getTiendaNombre).collect(java.util.stream.Collectors.joining(", "));
-        transiciones.transicionar(orden, EstadoOrden.REPUESTOS_RECIBIDOS,
-                new Actor(EstadoOrden.TALLER, taller.getId(), taller.getNombre()), nota,
-                Criteria.where("tallerId").is(taller.getId()), null);
-        Map<String, String> estadoPrevio = new HashMap<>();
-        for (PedidoTienda p : previos) {
-            estadoPrevio.put(p.getId(), p.getEstado());
-        }
-        TrasGuardar.hacer(avisos, "Los repuestos de la solicitud " + orden.getId() + " quedaron recibidos, pero no se pudieron "
-                + "cerrar sus pedidos ni habilitar el pago de las tiendas.", () -> {
-            mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())
-                            .and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION, PedidoTienda.DESPACHADO)),
+
+        List<String> recibidos = new ArrayList<>();
+        for (PedidoTienda p : elegidos) {
+            // Condicional: solo un pedido que sigue despachado se recibe y se le habilita el pago a su tienda
+            PedidoTienda recibido = mongoTemplate.findAndModify(
+                    Query.query(Criteria.where("id").is(p.getId()).and("ordenId").is(orden.getId()).and("estado").is(PedidoTienda.DESPACHADO)),
                     new Update().set("estado", PedidoTienda.RECIBIDO).set("fechaRecibido", LocalDateTime.now()),
-                    PedidoTienda.class);
-            // Recepción confirmada: la línea de cada tienda queda lista para liquidar (también si no marcó despacho)
-            for (PedidoTienda p : pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId())) {
-                if (!PedidoTienda.RECIBIDO.equals(p.getEstado())) continue;
-                String previo = estadoPrevio.get(p.getId());
-                String evento = "RECEPCION_CONFIRMADA_TALLER" + (PedidoTienda.PENDIENTE.equals(previo)
-                        ? " (la tienda no había marcado el despacho)" : "");
-                liquidacion.pedidoRecibido(p.getId(), evento);
-            }
-        });
+                    FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
+            if (recibido == null) continue;
+            recibidos.add(recibido.getTiendaNombre());
+            TrasGuardar.hacer(avisos, "El pedido " + recibido.getId() + " quedó recibido, pero no se pudo habilitar el pago de "
+                    + recibido.getTiendaNombre() + ".", () -> liquidacion.pedidoRecibido(recibido.getId(), "RECEPCION_CONFIRMADA_TALLER"));
+        }
+
+        Actor actor = new Actor(EstadoOrden.TALLER, taller.getId(), taller.getNombre());
+        List<PedidoTienda> actuales = pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
+        List<PedidoTienda> faltantes = noDespachados(actuales);
+        boolean completos = actuales.stream().noneMatch(p -> sinDespachar(p) || despachado(p));
+        if (completos && (faltantes.isEmpty() || confirmarFaltantes)) {
+            String nota = faltantes.isEmpty() ? "Repuestos recibidos en el taller"
+                    : "Repuestos recibidos en el taller; el taller confirmó que sigue sin los de "
+                            + faltantes.stream().map(PedidoTienda::getTiendaNombre).collect(java.util.stream.Collectors.joining(", "));
+            transiciones.transicionar(orden, EstadoOrden.REPUESTOS_RECIBIDOS, actor, nota,
+                    Criteria.where("tallerId").is(taller.getId()), null);
+        } else if (!recibidos.isEmpty()) {
+            TrasGuardar.hacer(avisos, "No se pudo anotar en la solicitud " + orden.getId() + " la recepción parcial de repuestos.",
+                    () -> transiciones.registrar(orden, actor, "Repuestos recibidos de " + String.join(", ", recibidos), null, null));
+        }
         return pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
+    }
+
+    /** Lo que se confirma de verdad: lo ya recibido no se repite, y un pedido sin despachar corta todo antes de cambiar nada. */
+    private static List<PedidoTienda> porConfirmar(List<PedidoTienda> pedidos, List<String> pedidoIds) {
+        if (pedidoIds == null) return pedidos.stream().filter(PedidoTiendaService::despachado).toList();
+        List<PedidoTienda> elegidos = new ArrayList<>();
+        for (String id : new LinkedHashSet<>(pedidoIds)) {
+            PedidoTienda p = pedidos.stream().filter(x -> id.equals(x.getId())).findFirst()
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+            if (sinDespachar(p)) throw new ResponseStatusException(HttpStatus.CONFLICT, aunNoDespacha(List.of(p)));
+            if (PedidoTienda.NO_DESPACHADO.equals(p.getEstado())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "La tienda " + p.getTiendaNombre() + " no despachó este pedido");
+            }
+            if (despachado(p)) elegidos.add(p);
+        }
+        return elegidos;
+    }
+
+    private static boolean sinDespachar(PedidoTienda p) {
+        return PedidoTienda.PENDIENTE.equals(p.getEstado()) || PedidoTienda.EN_PREPARACION.equals(p.getEstado());
+    }
+
+    private static boolean despachado(PedidoTienda p) {
+        return PedidoTienda.DESPACHADO.equals(p.getEstado());
+    }
+
+    private static List<PedidoTienda> noDespachados(List<PedidoTienda> pedidos) {
+        return pedidos.stream().filter(p -> PedidoTienda.NO_DESPACHADO.equals(p.getEstado())).toList();
+    }
+
+    private static String aunNoDespacha(List<PedidoTienda> pedidos) {
+        String nombres = pedidos.stream().map(PedidoTienda::getTiendaNombre).collect(java.util.stream.Collectors.joining(", "));
+        return (pedidos.size() == 1 ? "La tienda aún no despacha: " : "Las tiendas aún no despachan: ") + nombres;
     }
 
     // ─── Consulta por orden ──────────────────────────────────────────────────
