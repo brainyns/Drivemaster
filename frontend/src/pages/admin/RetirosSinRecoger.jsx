@@ -12,6 +12,7 @@ import { paginar, usePaginacion } from "../../components/ui/reglasPaginacion";
 import { avisar } from "../../components/ui/avisar";
 import { capitalizar, unir } from "../../utils/formato";
 import { textoError } from "../../utils/errores";
+import { MINIMO_MOTIVO, ayudaMotivo } from "../../utils/motivo";
 
 const abierto = (r) => r.estado === "LISTO_PARA_RETIRAR" && !r.resolucionRetiro;
 const DECISION = {
@@ -182,8 +183,8 @@ export default function RetirosSinRecoger({ token }) {
 
       {decision && (
         <ConfirmacionAdmin titulo={textos.titulo} texto={textos.mensaje} confirmar={textos.confirmar} variante={textos.variante}
-          cargando={resolviendo} deshabilitado={!motivo.trim()} onConfirmar={resolver} onCancelar={() => setDecision(null)}>
-          <Campo id="pre-retiro-motivo" label="Motivo de tu decisión" ayuda="Queda registrado con tu nombre y fecha.">
+          cargando={resolviendo} deshabilitado={motivo.trim().length < MINIMO_MOTIVO} onConfirmar={resolver} onCancelar={() => setDecision(null)}>
+          <Campo id="pre-retiro-motivo" label="Motivo de tu decisión" ayuda={`${ayudaMotivo(motivo)} Queda registrado con tu nombre y fecha.`}>
             <textarea className="ui-field__input pre-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={500} required />
           </Campo>
           {errorDecision && <Alerta>{errorDecision}</Alerta>}

@@ -140,10 +140,13 @@ class RetiroPendienteServiceTest {
                 () -> service.resolver("admin@demo.com", "ped1", "REEMBOLSO", "  "));
         assertEquals(HttpStatus.BAD_REQUEST, sinMotivo.getStatusCode());
         assertThrows(ResponseStatusException.class, () -> service.resolver("admin@demo.com", "ped1", "REGALAR", "x"));
+        ResponseStatusException corto = assertThrows(ResponseStatusException.class,
+                () -> service.resolver("admin@demo.com", "ped1", "REEMBOLSO", "no vino"));
+        assertEquals(HttpStatus.BAD_REQUEST, corto.getStatusCode());
 
         when(pedidoRepository.findById("ped1")).thenReturn(Optional.of(listo("ped1", 4))); // aún no llega a revisión
         ResponseStatusException e = assertThrows(ResponseStatusException.class,
-                () -> service.resolver("admin@demo.com", "ped1", "REEMBOLSO", "motivo"));
+                () -> service.resolver("admin@demo.com", "ped1", "REEMBOLSO", "El cliente no vino"));
         assertEquals(HttpStatus.CONFLICT, e.getStatusCode());
         verifyNoInteractions(pagoMarketplace);
     }

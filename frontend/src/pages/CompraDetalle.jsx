@@ -11,6 +11,7 @@ import ImagenProducto from "../components/marketplace/ImagenProducto";
 import Icon from "../components/public/Icon";
 import ChipEstado from "../components/ui/ChipEstado";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
+import { MINIMO_MOTIVO } from "../utils/motivo";
 import { avisar } from "../components/ui/avisar";
 import { ESTADOS_COMPRA, estadoCompra, etiquetaMetodoPago, refCompra, unidades } from "./tienda/comprasTienda";
 import { recibePdf } from "./tienda/proveedoresTienda";
@@ -93,8 +94,8 @@ function CompraDetalle({ id, onVolver, token }) {
     setConfirmar(null);
     avisar(`Compra recibida: se sumaron ${plural(totalUnidades, "unidad", "unidades")} al stock.`);
   };
-  const cancelar = async () => {
-    setCompra(await cancelarCompra(compra.id, null, token));
+  const cancelar = async (motivo) => {
+    setCompra(await cancelarCompra(compra.id, motivo, token));
     setConfirmar(null);
     avisar("Compra cancelada. El stock no cambió.");
   };
@@ -216,6 +217,7 @@ function CompraDetalle({ id, onVolver, token }) {
       {confirmar === "CANCELAR" && (
         <ConfirmarAccion titulo={`¿Cancelar la compra ${refCompra(compra.id)}?`} peligro textoConfirmar="Cancelar compra"
           mensaje="La compra queda cancelada y el stock no cambia. Esto no se puede deshacer."
+          pedirMotivo etiquetaMotivo="Por qué la cancelas" minimoMotivo={MINIMO_MOTIVO} ayudaMotivo="Queda en el historial de la compra."
           onConfirmar={cancelar} onCancelar={() => setConfirmar(null)} />
       )}
     </div>

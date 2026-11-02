@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.util.Motivos;
 import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.PedidoTienda;
@@ -202,9 +203,7 @@ public class PedidoTiendaService {
     public PedidoTienda noPuedoDespachar(String correoTienda, String pedidoId, String tipoMotivo, String detalle) {
         String tipo = tipoMotivo != null ? tipoMotivo.trim().toUpperCase() : "";
         String nota = recortar(detalle);
-        if (PedidoTienda.MOTIVO_OTRO.equals(tipo) && nota == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cuéntanos por qué no puedes despachar");
-        }
+        if (PedidoTienda.MOTIVO_OTRO.equals(tipo)) nota = Motivos.obligatorio(nota, "no puedes despachar", 500);
         if (!PedidoTienda.MOTIVO_SIN_REPUESTO.equals(tipo) && !PedidoTienda.MOTIVO_OTRO.equals(tipo)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Elige el motivo: no tengo el repuesto u otro motivo");
         }

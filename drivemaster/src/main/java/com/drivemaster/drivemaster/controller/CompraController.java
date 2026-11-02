@@ -50,7 +50,7 @@ public class CompraController {
         return ResponseEntity.ok(compraService.recibirCompra(id, alcanceTienda.tienda(auth).getId()));
     }
 
-    /** Una compra pendiente no va a llegar: pasa a CANCELADA (motivo opcional) sin tocar el stock. */
+    /** Una compra pendiente no va a llegar: pasa a CANCELADA (motivo obligatorio) sin tocar el stock. */
     @PatchMapping("/{id}/cancelar")
     public ResponseEntity<Compra> cancelar(@PathVariable String id, @RequestBody(required = false) Map<String, String> body,
                                            Authentication auth) {

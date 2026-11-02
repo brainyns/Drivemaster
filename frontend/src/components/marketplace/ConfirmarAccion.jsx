@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { textoError } from "../../utils/errores";
+import { ayudaMotivo, errorMotivo } from "../../utils/motivo";
+import "../../css/marketplace.css";
 
 /**
  * Confirmación antes de una acción que no se deshace (ya lo recibí, reportar un problema, pedir un
  * código nuevo...). Con `pedirMotivo` exige escribir el motivo antes de poder confirmar. `children` agrega
  * contenido bajo el mensaje y `puedeConfirmar={false}` deja el botón desactivado (ej. falta un check).
- * Mientras se envía, el botón también queda desactivado. Escape y el fondo cancelan; el foco entra al diálogo.
+ * Con minimoMotivo (las cancelaciones usan MINIMO_MOTIVO) el motivo debe tener al menos esos caracteres, con la
+ * cuenta bajo el campo. Mientras se envía, el botón también queda desactivado. Escape y el fondo cancelan; el foco entra al diálogo.
  */
 export default function ConfirmarAccion({
   titulo, mensaje, textoConfirmar = "Confirmar", peligro = false,
-  pedirMotivo = false, etiquetaMotivo = "Motivo", ayudaMotivo,
+  pedirMotivo = false, etiquetaMotivo = "Motivo", ayudaMotivo: ayuda, minimoMotivo = 0,
   puedeConfirmar = true, children,
   onConfirmar, onCancelar,
 }) {
@@ -30,6 +33,11 @@ export default function ConfirmarAccion({
     if (enviando.current || !puedeConfirmar) return;
     if (pedirMotivo && !motivo.trim()) {
       setError(`Escribe el ${etiquetaMotivo.toLowerCase()} para continuar.`);
+      return;
+    }
+    const corto = pedirMotivo && minimoMotivo > 0 ? errorMotivo(motivo, minimoMotivo) : null;
+    if (corto) {
+      setError(corto);
       return;
     }
     enviando.current = true;
@@ -55,8 +63,12 @@ export default function ConfirmarAccion({
         {pedirMotivo && (
           <div className="mk-campo">
             <label htmlFor="mk-modal-motivo">{etiquetaMotivo}</label>
-            <textarea id="mk-modal-motivo" maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-            {ayudaMotivo && <span className="mk-tarjeta__meta">{ayudaMotivo}</span>}
+            <textarea id="mk-modal-motivo" maxLength={500} value={motivo} onChange={(e) => { setMotivo(e.target.value); setError(null); }} />
+            {(ayuda || minimoMotivo > 0) && (
+              <span className="mk-tarjeta__meta" aria-live="polite">
+                {[ayuda, minimoMotivo > 0 && ayudaMotivo(motivo, minimoMotivo)].filter(Boolean).join(" ")}
+              </span>
+            )}
           </div>
         )}
         {error && <p className="mk-aviso mk-aviso--error" role="alert">{error}</p>}

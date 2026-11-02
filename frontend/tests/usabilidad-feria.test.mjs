@@ -53,3 +53,34 @@ test("ninguna pantalla muestra e.message crudo ni usa alert()", () => {
     assert.doesNotMatch(src, /(^|[^.\w])(window\.)?alert\(/m, `${ruta} usa alert()`);
   }
 });
+
+test("motivos: 10 caracteres en todas las cancelaciones, sin contar los espacios", async () => {
+  const { MINIMO_MOTIVO, errorMotivo, faltanMotivo, ayudaMotivo } = await import("../src/utils/motivo.js");
+  assert.equal(MINIMO_MOTIVO, 10);
+  assert.match(errorMotivo("   "), /Escribe el motivo/);
+  assert.match(errorMotivo("  no vino "), /mínimo 10 caracteres \(te faltan 3\)/);
+  assert.equal(errorMotivo("El cliente no vino"), null);
+  assert.equal(faltanMotivo("123456789"), 1);
+  assert.match(ayudaMotivo(""), /faltan 10/);
+  assert.match(ayudaMotivo("1234567890"), /listo/);
+  // El backend usa el mismo número
+  assert.match(leer("../../drivemaster/src/main/java/com/drivemaster/drivemaster/util/Motivos.java"), /MINIMO = 10;/);
+});
+
+test("motivos: cada cancelación pide el mínimo y muestra el motivo en el diálogo antes de confirmar", async () => {
+  const { textoMotivoNoDespacho } = await import("../src/pages/tienda/pedidosTienda.js");
+  assert.equal(textoMotivoNoDespacho("SIN_REPUESTO", ""), "No tengo el repuesto");
+  assert.equal(textoMotivoNoDespacho("OTRO", "  Se dañó el repuesto "), "Se dañó el repuesto");
+
+  const servicios = leer("../src/pages/MisServicios.jsx");
+  assert.match(servicios, /pedirMotivo etiquetaMotivo="Por qué la cancelas" minimoMotivo=\{MINIMO_MOTIVO\}/, "cliente");
+  assert.ok(!servicios.includes("(opcional)"), "el motivo del cliente ya no es opcional");
+  assert.match(leer("../src/pages/CompraDetalle.jsx"), /minimoMotivo=\{MINIMO_MOTIVO\}/, "compra a proveedor");
+  const pedidos = leer("../src/pages/PedidosTienda.jsx");
+  assert.ok(pedidos.includes("errorMotivo(nota)") && pedidos.includes("<blockquote>{textoMotivoNoDespacho(tipoMotivo, nota)}</blockquote>"),
+    "tienda: no puedo despachar");
+  assert.match(leer("../src/pages/admin/RetirosSinRecoger.jsx"), /deshabilitado=\{motivo\.trim\(\)\.length < MINIMO_MOTIVO\}/, "retiros sin recoger");
+  assert.match(leer("../src/components/admin/DetallePlataforma.jsx"), /import \{ MINIMO_MOTIVO \} from "..\/..\/utils\/motivo"/, "admin");
+  const dialogo = leer("../src/components/marketplace/ConfirmarAccion.jsx");
+  assert.ok(dialogo.includes("errorMotivo(motivo, minimoMotivo)") && dialogo.includes("ayudaMotivo(motivo, minimoMotivo)"));
+});

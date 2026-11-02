@@ -166,3 +166,10 @@ export function textoPlazo(p, ahora = Date.now()) {
  */
 export const canceladoPorDriveMaster = (p) => p.estado === "NO_DESPACHADO"
   && ["ORDEN_CANCELADA", "PAGO_NO_APLICADO"].includes(p.tipoMotivoNoDespacho);
+
+/** El motivo de "No puedo despachar" tal como lo guarda el backend (PedidoTiendaService.noPuedoDespachar). */
+export function textoMotivoNoDespacho(tipoMotivo, detalle) {
+  const nota = String(detalle ?? "").trim();
+  if (tipoMotivo === "SIN_REPUESTO") return `No tengo el repuesto${nota ? `: ${nota}` : ""}`;
+  return nota;
+}

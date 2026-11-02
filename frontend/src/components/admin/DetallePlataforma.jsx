@@ -18,8 +18,7 @@ import { formatoCop } from "../../utils/formato";
 import "../../css/admin-base.css";
 import "../../css/detalle-plataforma.css";
 import { textoError } from "../../utils/errores";
-
-const MINIMO_MOTIVO = 10;
+import { MINIMO_MOTIVO } from "../../utils/motivo";
 
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : null);
 const fechaHora = (iso) => (iso

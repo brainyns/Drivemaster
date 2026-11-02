@@ -122,6 +122,11 @@ class PedidoTiendaServiceTest {
         e = assertThrows(ResponseStatusException.class,
                 () -> service.noPuedoDespachar(CORREO_TIENDA, "ped1", PedidoTienda.MOTIVO_OTRO, " "));
         assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        // y de al menos 10 caracteres, como todas las cancelaciones
+        e = assertThrows(ResponseStatusException.class,
+                () -> service.noPuedoDespachar(CORREO_TIENDA, "ped1", PedidoTienda.MOTIVO_OTRO, "no hay"));
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+        assertTrue(e.getReason().contains("10 caracteres"));
         verifyNoInteractions(pagoMarketplace);
     }
 

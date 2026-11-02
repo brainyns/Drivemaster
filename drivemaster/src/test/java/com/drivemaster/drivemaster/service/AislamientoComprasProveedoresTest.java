@@ -318,7 +318,7 @@ class AislamientoComprasProveedoresTest {
 
         // Un segundo clic no vuelve a sumar, y una recibida no se cancela
         assertEstado(HttpStatus.CONFLICT, () -> compraService.recibirCompra(pendiente.getId(), "A"));
-        assertEstado(HttpStatus.CONFLICT, () -> compraService.cancelarCompra(pendiente.getId(), "A", null));
+        assertEstado(HttpStatus.CONFLICT, () -> compraService.cancelarCompra(pendiente.getId(), "A", "El proveedor no respondió"));
         verify(movimientos, times(1)).registrarMovimiento(anyString(), anyString(), any(), anyString(), anyString(), anyString());
         // Otra tienda ni la ve
         assertEstado(HttpStatus.NOT_FOUND, () -> compraService.recibirCompra(pendiente.getId(), "B"));
@@ -344,7 +344,7 @@ class AislamientoComprasProveedoresTest {
         Compra legado = compraService.registrarCompra(compraDe(provA.getId(), "pA", 1), tiendaA);
         legado.setEstado(null); // como las guardadas antes de los estados
         assertEquals(Compra.RECIBIDA, legado.estadoEfectivo());
-        assertEstado(HttpStatus.CONFLICT, () -> compraService.cancelarCompra(legado.getId(), "A", null));
+        assertEstado(HttpStatus.CONFLICT, () -> compraService.cancelarCompra(legado.getId(), "A", "El proveedor no respondió"));
     }
 
     @Test

@@ -3,6 +3,7 @@
 
 import { esErrorConexion } from "../../services/conexion.js";
 import { textoError } from "../../utils/errores.js";
+import { MINIMO_MOTIVO } from "../../utils/motivo.js";
 
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
@@ -184,7 +185,7 @@ export function avisoModo(m) {
 }
 
 /** Lo que falta para poder enviar la salida manual; el backend lo exige igual. */
-export const MINIMO_MOTIVO_RESOLVER = 10;
+export const MINIMO_MOTIVO_RESOLVER = MINIMO_MOTIVO;
 export function faltaParaResolver({ resultado, motivo = "", referencia = "" } = {}) {
   if (!resultado) return "Indica si el pago salió.";
   if (motivo.trim().length < MINIMO_MOTIVO_RESOLVER) return `Explica el motivo en al menos ${MINIMO_MOTIVO_RESOLVER} caracteres.`;

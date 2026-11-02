@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.util.Motivos;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -105,8 +106,7 @@ public class CompraServiceImpl implements CompraService {
     /** PENDIENTE → CANCELADA. No toca el stock (nunca se sumó). Una compra recibida no se cancela. */
     @Override
     public Compra cancelarCompra(String id, String tiendaId, String motivo) {
-        String limpio = motivo == null || motivo.isBlank() ? null : motivo.trim();
-        if (limpio != null && limpio.length() > 300) limpio = limpio.substring(0, 300);
+        String limpio = Motivos.obligatorio(motivo, "cancelas la compra", 300);
         return cambiarPendiente(id, tiendaId, new Update()
                 .set("estado", Compra.CANCELADA).set("fechaCancelacion", LocalDateTime.now())
                 .set("motivoCancelacion", limpio), "cancelar");

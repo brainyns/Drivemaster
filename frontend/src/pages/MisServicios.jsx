@@ -23,6 +23,8 @@ import ChipEstado from "../components/ui/ChipEstado";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Alerta from "../components/ui/Alerta";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
+import { MINIMO_MOTIVO } from "../utils/motivo";
 import Icon from "../components/public/Icon";
 import { FILTROS_SERVICIOS, MINIMO_PARA_FILTRAR, contarServicios, filtrarServicios } from "../components/servicio/filtrosServicios";
 import { conPrefijo } from "../utils/negocio";
@@ -199,8 +201,6 @@ export default function MisServicios({
   const [seleccionadaId, setSeleccionadaId] = useState(solicitudInicial);
   const avisoVisto = useRef(false);
   const [cancelando, setCancelando] = useState(false);
-  const [motivo, setMotivo] = useState("");
-  const [procesando, setProcesando] = useState(false);
   const [pagandoDiagnostico, setPagandoDiagnostico] = useState(false);
   const [pagoDiagnosticoLocal, setPagoDiagnosticoLocal] = useState(null);
   const [filtro, setFiltro] = useState("todas");
@@ -256,19 +256,11 @@ export default function MisServicios({
     return () => clearInterval(buscar);
   }, [abiertaDesdeAviso]);
 
-  const cancelar = async () => {
-    setProcesando(true);
-    setError(null);
-    try {
-      await cancelarSolicitudServicio(token, seleccionada.id, motivo.trim() || null);
-      setCancelando(false);
-      setMotivo("");
-      await cargar();
-    } catch (e) {
-      setError(textoError(e));
-    } finally {
-      setProcesando(false);
-    }
+  // El diálogo muestra el error si falla (y queda abierto para corregir el motivo)
+  const cancelar = async (motivo) => {
+    await cancelarSolicitudServicio(token, seleccionada.id, motivo);
+    setCancelando(false);
+    await cargar();
   };
 
   // Solo pide el link y redirige a Wompi; la confirmación la hace el backend.
@@ -460,20 +452,13 @@ export default function MisServicios({
 
             {cancelable && (
               <section className="ss-bloque">
-                {cancelando ? (
-                  <>
-                    <label className="ss-bloque__titulo" htmlFor="ss-motivo">¿Por qué cancelas? (opcional)</label>
-                    <textarea id="ss-motivo" className="ss-textarea" rows={3} maxLength={300}
-                      value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-                    <div className="ss-acciones">
-                      <button className="sv-btn ss-btn-peligro" onClick={cancelar} disabled={procesando}>
-                        {procesando ? "Cancelando..." : "Confirmar cancelación"}
-                      </button>
-                      <button className="sv-btn-outline" onClick={() => setCancelando(false)} disabled={procesando}>Volver</button>
-                    </div>
-                  </>
-                ) : (
-                  <button className="sv-btn-outline" onClick={() => setCancelando(true)}>Cancelar solicitud</button>
+                <button className="sv-btn-outline" onClick={() => setCancelando(true)}>Cancelar solicitud</button>
+                {cancelando && (
+                  <ConfirmarAccion titulo="¿Cancelar esta solicitud?" peligro textoConfirmar="Cancelar solicitud"
+                    mensaje={s.tallerNombre ? `Le avisamos a ${s.tallerNombre} que ya no la necesitas.` : "Dejamos de buscarte un taller."}
+                    pedirMotivo etiquetaMotivo="Por qué la cancelas" minimoMotivo={MINIMO_MOTIVO}
+                    ayudaMotivo="Lo verá el taller y queda en el historial."
+                    onConfirmar={cancelar} onCancelar={() => setCancelando(false)} />
                 )}
               </section>
             )}

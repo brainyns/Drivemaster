@@ -39,7 +39,7 @@ export async function recibirCompra(id, token) {
   return res.json();
 }
 
-/** Una compra pendiente no va a llegar: pasa a cancelada (motivo opcional) sin tocar el stock. */
+/** Una compra pendiente no va a llegar: pasa a cancelada (con motivo de al menos 10 caracteres) sin tocar el stock. */
 export async function cancelarCompra(id, motivo, token) {
   const res = await apiFetch(`${BASE_URL}/${id}/cancelar`, {
     method: "PATCH", headers: buildHeaders(token), body: JSON.stringify({ motivo: motivo || null }),

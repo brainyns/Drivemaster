@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.util.Motivos;
 import com.drivemaster.drivemaster.dto.AceptarSolicitudRequest;
 import com.drivemaster.drivemaster.dto.CrearSolicitudServicioRequest;
 import com.drivemaster.drivemaster.dto.DiagnosticoRequest;
@@ -235,7 +236,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "La solicitud ya no se puede cancelar desde la app (estado: " + EstadoOrden.nombre(orden.getEstado()) + ")");
         }
-        String texto = motivo != null && !motivo.isBlank() ? motivo.trim() : "Cancelada por el cliente";
+        String texto = Motivos.obligatorio(motivo, "cancelas la solicitud", 500);
         String tallerAnterior = orden.getTallerId();
         OrdenServicio cancelada = transiciones.transicionar(orden, EstadoOrden.CANCELADA,
                 new Actor(EstadoOrden.CLIENTE, cliente.getId(), cliente.getNombre()), texto, null,

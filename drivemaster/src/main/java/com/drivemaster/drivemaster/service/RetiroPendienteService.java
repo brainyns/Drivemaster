@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.util.Motivos;
 import com.drivemaster.drivemaster.model.CotizacionItem;
 import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
@@ -131,11 +132,7 @@ public class RetiroPendienteService {
         if (!SEGUIR_ESPERANDO.equals(d) && !REEMBOLSO.equals(d)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La decisión debe ser SEGUIR_ESPERANDO o REEMBOLSO");
         }
-        String razon = motivo == null || motivo.isBlank() ? null : motivo.trim();
-        if (razon == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe el motivo de tu decisión: queda registrado");
-        }
-        if (razon.length() > MAX_MOTIVO) razon = razon.substring(0, MAX_MOTIVO);
+        String razon = Motivos.obligatorio(motivo, "lo decides: queda registrado", MAX_MOTIVO);
         PedidoTienda actual = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
         if (actual.getRevisionRetiroDesde() == null || !PedidoTienda.LISTO_PARA_RETIRAR.equals(actual.getEstado())) {

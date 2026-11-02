@@ -24,7 +24,7 @@ import {
   FILTROS, VACIOS, accionEntrega, accionFila, accionPrincipal, cantidadProductos, destinatario, diasSinRetirar,
   esCatalogo, esEnvio, esRetiro, historialPedido, metodoEntrega, plazoVencido, porDespachar, sinRetirar,
   subtotal, textoPlazo,
-  canceladoPorDriveMaster,
+  canceladoPorDriveMaster, textoMotivoNoDespacho,
 } from "./tienda/pedidosTienda";
 import { avisar } from "../components/ui/avisar";
 import { destinoSeccion } from "../utils/navegacion";
@@ -33,6 +33,8 @@ import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/pedidos-tienda.css";
 import { textoError } from "../utils/errores";
+import { ayudaMotivo, errorMotivo } from "../utils/motivo";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 
 /**
  * Chip del plazo de un pedido por despachar (vencido en rojo, si no en ámbar) o, en uno listo que el cliente no recoge,
@@ -151,6 +153,7 @@ export default function PedidosTienda({ param, irA }) {
   const [abiertoId, setAbiertoId] = useState(destino.abrir);
   const [modo, setModo] = useState(null); // null | DESPACHAR | NO_DESPACHAR
   const [nota, setNota] = useState("");
+  const [confirmaNoDespacho, setConfirmaNoDespacho] = useState(null); // pedido por cancelar, tras revisar el motivo
   const [tipoMotivo, setTipoMotivo] = useState("");
   const [errores, setErrores] = useState({}); // motivo, nota, codigo, accion
   const [procesando, setProcesando] = useState(false);
@@ -293,10 +296,10 @@ export default function PedidosTienda({ param, irA }) {
     if (modo === "NO_DESPACHAR") {
       const faltan = {};
       if (!tipoMotivo) faltan.motivo = "Elige el motivo.";
-      if (tipoMotivo === "OTRO" && !nota.trim()) faltan.nota = "Cuéntanos por qué no puedes despachar.";
+      if (tipoMotivo === "OTRO") { const e = errorMotivo(nota); if (e) faltan.nota = e; }
       if (Object.keys(faltan).length) { setErrores(faltan); return; }
-      ejecutar(() => noPuedoDespachar(token, pedido.id, tipoMotivo, nota.trim() || null),
-        "Registramos que no puedes despachar este pedido. DriveMaster reembolsará al cliente.");
+      // Antes de cancelar se muestra el motivo tal como quedará en el historial
+      setConfirmaNoDespacho(pedido);
       return;
     }
     ejecutar(() => despacharPedido(token, pedido.id, nota.trim() || null), "Pedido despachado. Avisamos al cliente.");
@@ -491,7 +494,7 @@ export default function PedidosTienda({ param, irA }) {
                       label={modo === "DESPACHAR" ? (esEnvio(p) ? "Guía o datos del envío" : "Nota del despacho") : "Detalle"}
                       ayuda={modo === "DESPACHAR"
                         ? (esEnvio(p) ? "El cliente la ve en su compra." : "Por ejemplo, el mensajero o la guía.")
-                        : `Se cancela tu parte del pedido y DriveMaster reembolsa ${formatPrecio(p.total)} al cliente.`}>
+                        : `${tipoMotivo === "OTRO" ? `${ayudaMotivo(nota)} ` : ""}Se cancela tu parte del pedido y DriveMaster reembolsa ${formatPrecio(p.total)} al cliente.`}>
                       <textarea className="ui-field__input" rows={3} maxLength={500} autoFocus={modo === "DESPACHAR"}
                         value={nota} onChange={(e) => { setNota(e.target.value); if (errores.nota) setErrores({}); }} />
                     </Campo>
@@ -525,6 +528,24 @@ export default function PedidosTienda({ param, irA }) {
             </DesgloseDinero>
           </aside>
         </div>
+
+        {confirmaNoDespacho && (
+          <ConfirmarAccion titulo={`¿No puedes despachar el pedido #${refSolicitud(confirmaNoDespacho.id)}?`} peligro
+            textoConfirmar="Sí, no puedo despacharlo"
+            mensaje={`Se cancela tu parte del pedido y DriveMaster reembolsa ${formatPrecio(confirmaNoDespacho.total)} al cliente. No se puede deshacer.`}
+            onCancelar={() => setConfirmaNoDespacho(null)}
+            onConfirmar={async () => {
+              const pedido = confirmaNoDespacho;
+              setConfirmaNoDespacho(null);
+              await ejecutar(() => noPuedoDespachar(token, pedido.id, tipoMotivo, nota.trim() || null),
+                "Registramos que no puedes despachar este pedido. DriveMaster reembolsará al cliente.");
+            }}>
+            <figure className="ui-motivo-cita">
+              <figcaption>Motivo que queda en el historial</figcaption>
+              <blockquote>{textoMotivoNoDespacho(tipoMotivo, nota)}</blockquote>
+            </figure>
+          </ConfirmarAccion>
+        )}
 
         {accionBarra && (
           <BarraAccionMovil etiqueta="Total del pedido" valor={formatPrecio(p.total)} nota={plazo || undefined}>
