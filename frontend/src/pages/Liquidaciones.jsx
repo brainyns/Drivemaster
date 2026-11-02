@@ -73,10 +73,11 @@ const tipoBeneficiario = (f) => (f.beneficiarioTipo === "TALLER" ? "Taller" : "T
  * confirmación; en SIMULADO el evento liquida solo y no mueve dinero. Los reembolsos siempre se hacen fuera (panel de
  * Wompi). Una línea sin confirmar por Wompi se resuelve a mano, con motivo y registro.
  */
-export default function Liquidaciones() {
+export default function Liquidaciones({ vistaInicial = null }) {
   const token = getToken();
-  const [vista, setVista] = useState("repartos");
-  const [estado, setEstado] = useState("POR_LIQUIDAR");
+  // Desde el aviso del Inicio llega vistaInicial="reembolsos": abre los reembolsos pendientes
+  const [vista, setVista] = useState(vistaInicial === "reembolsos" ? "reembolsos" : "repartos");
+  const [estado, setEstado] = useState(vistaInicial === "reembolsos" ? "PENDIENTE" : "POR_LIQUIDAR");
   const [modo, setModo] = useState(null); // { modo, automatica, dineroReal }
   const [numero, setNumero] = useState("");
   const [filas, setFilas] = useState([]);
@@ -174,7 +175,7 @@ export default function Liquidaciones() {
       if (esRepartos) {
         await liquidarReparto(token, id, { numeroTransferencia: numero.trim() || null, nota: nota.trim() || null });
       }
-      else await marcarReembolsado(token, id, nota.trim() || null);
+      else await marcarReembolsado(token, id, numero.trim(), nota.trim() || null);
       setMarcandoId(null);
       setNota("");
       setNumero("");
@@ -415,6 +416,7 @@ export default function Liquidaciones() {
                           </span>
                         )}
                         {esRepartos && (f.estado === "FALLIDO" || f.estado === "PROCESANDO") && f.motivoFallo && <span className="pp-sub liq-fallo">{f.motivoFallo}</span>}
+                        {!esRepartos && f.transaccionReembolso && <span className="pp-sub">Transacción Wompi {f.transaccionReembolso}</span>}
                         {f.nota && <span className="pp-sub">{f.nota}</span>}
                       </td>
                       {esRepartos && <td data-label="Bruto" className="pp-num liq-col-desglose">{formatPrecio(desglose.bruto)}</td>}
@@ -467,7 +469,7 @@ export default function Liquidaciones() {
           texto={esRepartos ? null : `Reembolso de ${referenciaLinea(marcando).texto}. Hazlo primero en el panel de Wompi.`}
           confirmar={esRepartos ? `Liquidar ${formatPrecio(marcando.monto)}` : "Confirmar"}
           cargando={procesando}
-          deshabilitado={esRepartos && esManual && !numero.trim()}
+          deshabilitado={(esRepartos ? esManual : true) && !numero.trim()}
           onConfirmar={() => marcar(marcando.id)}
           onCancelar={() => { setMarcandoId(null); setError(null); }}
         >
@@ -493,6 +495,13 @@ export default function Liquidaciones() {
           {esRepartos && esManual && (
             <Campo id="liq-numero" label="N.º de transferencia" ayuda="Obligatorio: la referencia del pago en el banco.">
               <input className="ui-field__input" maxLength={80} required value={numero} onChange={(e) => setNumero(e.target.value)} />
+            </Campo>
+          )}
+          {!esRepartos && (
+            <Campo id="liq-transaccion" label="N.º de la transacción del reembolso en Wompi"
+              ayuda="Obligatorio: cópialo del panel de Wompi después de hacer el reembolso.">
+              <input className="ui-field__input" maxLength={80} required autoComplete="off" spellCheck={false}
+                value={numero} onChange={(e) => setNumero(e.target.value)} />
             </Campo>
           )}
           <Campo id="liq-nota" label="Nota" opcional>

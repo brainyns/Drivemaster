@@ -63,4 +63,7 @@ public class Reembolso {
     private LocalDateTime fechaRealizado;
     @Column(length = 500)
     private String nota;
+    /** N.º de la transacción del reembolso en Wompi: obligatorio al marcarlo REALIZADO (las filas anteriores no lo tienen). */
+    @Column(length = 80)
+    private String transaccionReembolso;
 }

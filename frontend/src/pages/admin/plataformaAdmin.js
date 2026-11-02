@@ -374,3 +374,11 @@ export function estadosConPedidos(porEstado = {}) {
   const orden = Object.keys(ESTADOS_PEDIDO);
   return [...orden.filter((e) => porEstado[e]), ...Object.keys(porEstado).filter((e) => !orden.includes(e) && porEstado[e])];
 }
+
+/** Aviso del Inicio: cuántos reembolsos esperan y por cuánto. null si no hay ninguno. */
+export function resumenReembolsos(lista) {
+  const pendientes = (Array.isArray(lista) ? lista : []).filter((r) => r.estado === "PENDIENTE");
+  if (pendientes.length === 0) return null;
+  const total = pendientes.reduce((s, r) => s + (Number(r.monto) || 0), 0);
+  return { cantidad: pendientes.length, total };
+}

@@ -84,3 +84,20 @@ test("motivos: cada cancelación pide el mínimo y muestra el motivo en el diál
   const dialogo = leer("../src/components/marketplace/ConfirmarAccion.jsx");
   assert.ok(dialogo.includes("errorMotivo(motivo, minimoMotivo)") && dialogo.includes("ayudaMotivo(motivo, minimoMotivo)"));
 });
+
+test("reembolsos: marcarlo hecho exige el N.º de la transacción de Wompi y el Inicio avisa cuántos faltan", async () => {
+  const { resumenReembolsos } = await import("../src/pages/admin/plataformaAdmin.js");
+  assert.equal(resumenReembolsos([]), null);
+  assert.equal(resumenReembolsos([{ estado: "REALIZADO", monto: 10 }]), null);
+  assert.deepEqual(resumenReembolsos([{ estado: "PENDIENTE", monto: 50000 }, { estado: "PENDIENTE", monto: 25500 }, { estado: "REALIZADO", monto: 9 }]),
+    { cantidad: 2, total: 75500 });
+
+  const liq = leer("../src/pages/Liquidaciones.jsx");
+  assert.ok(liq.includes('id="liq-transaccion"') && liq.includes("marcarReembolsado(token, id, numero.trim(), nota.trim() || null)"));
+  assert.ok(liq.includes("deshabilitado={(esRepartos ? esManual : true) && !numero.trim()}"), "sin número no se confirma");
+  assert.match(leer("../src/services/liquidacionService.js"), /JSON\.stringify\(\{ transaccion, nota \}\)/);
+  const inicio = leer("../src/pages/DashboardPlataforma.jsx");
+  assert.ok(inicio.includes('reembolsos.cantidad === 1 ? "reembolso pendiente" : "reembolsos pendientes"'));
+  assert.ok(inicio.includes('ir("liquidaciones", "reembolsos")'), "el aviso lleva a la lista");
+  assert.match(leer("../src/App.jsx"), /<Liquidaciones key=\{idSeleccionado \|\| "liquidaciones"\} vistaInicial=\{idSeleccionado\} \/>/);
+});

@@ -68,9 +68,10 @@ export async function marcarSaldoCobrado(token, id) {
   return handle(res, "No se pudo marcar el saldo como cobrado");
 }
 
-export async function marcarReembolsado(token, id, nota) {
+/** El reembolso ya se hizo en Wompi: transaccion es el N.º de esa transacción (obligatorio). */
+export async function marcarReembolsado(token, id, transaccion, nota) {
   const res = await apiFetch(`${BASE}/reembolsos/${id}/realizado`, {
-    method: "PATCH", headers: headers(token), body: JSON.stringify({ nota }),
+    method: "PATCH", headers: headers(token), body: JSON.stringify({ transaccion, nota }),
   });
   return handle(res, "No se pudo marcar como reembolsado");
 }

@@ -220,6 +220,28 @@ class LiquidacionServiceTest {
     }
 
     @Test
+    void marcarUnReembolsoExigeElNumeroDeTransaccionDeWompi() {
+        LiquidacionService service = servicio(new com.drivemaster.drivemaster.service.dispersion.SimulatedDispersionService());
+        Reembolso pendiente = Reembolso.builder().id(9L).monto(50_000.0).estado(Reembolso.PENDIENTE).build();
+        when(reembolsoRepository.findById(9L)).thenReturn(Optional.of(pendiente));
+
+        for (String malo : new String[] { null, "  ", "ab", "12 34 56", "x".repeat(81) }) {
+            ResponseStatusException e = assertThrows(ResponseStatusException.class,
+                    () -> service.marcarReembolsado(9L, ADMIN, malo, null));
+            assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode(), String.valueOf(malo));
+        }
+        assertEquals(Reembolso.PENDIENTE, pendiente.getEstado(), "sin número no cambia nada");
+
+        Reembolso hecho = service.marcarReembolsado(9L, ADMIN, " 12345-1668624561-38705 ", "Devuelto completo");
+        assertEquals(Reembolso.REALIZADO, hecho.getEstado());
+        assertEquals("12345-1668624561-38705", hecho.getTransaccionReembolso());
+        assertNotNull(hecho.getFechaRealizado());
+        // Un segundo intento no lo vuelve a marcar
+        assertEquals(HttpStatus.CONFLICT, assertThrows(ResponseStatusException.class,
+                () -> service.marcarReembolsado(9L, ADMIN, "12345-1668624561-38705", null)).getStatusCode());
+    }
+
+    @Test
     void marcarUnSaldoCobradoSoloFuncionaUnaVez() {
         LiquidacionService service = servicio(new com.drivemaster.drivemaster.service.dispersion.SimulatedDispersionService());
         Reembolso cobrado = Reembolso.builder().id(7L).saldoAFavor(218_000.0).build();

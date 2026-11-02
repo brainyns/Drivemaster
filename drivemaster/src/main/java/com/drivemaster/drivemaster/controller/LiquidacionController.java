@@ -95,7 +95,8 @@ public class LiquidacionController {
     public ResponseEntity<Reembolso> realizado(@PathVariable Long id,
                                                @RequestBody(required = false) Map<String, String> body,
                                                Authentication auth) {
-        return ResponseEntity.ok(service.marcarReembolsado(id, auth.getName(), body != null ? body.get("nota") : null));
+        return ResponseEntity.ok(service.marcarReembolsado(id, auth.getName(),
+                body != null ? body.get("transaccion") : null, body != null ? body.get("nota") : null));
     }
 
     /** El negocio ya devolvió lo que quedó a favor de DriveMaster en este reembolso. */

@@ -477,7 +477,19 @@ public class LiquidacionService {
                 : reembolsoRepository.findAllByOrderByFechaCreacionDesc();
     }
 
-    public Reembolso marcarReembolsado(Long id, String correoAdmin, String nota) {
+    /** Patrón del N.º de transacción de Wompi: el mismo que el N.º de transferencia de las liquidaciones MANUAL. */
+    static final java.util.regex.Pattern TRANSACCION_VALIDA = java.util.regex.Pattern.compile("[A-Za-z0-9._/\\-]{3,80}");
+
+    /** El ADMIN ya devolvió el dinero en Wompi: queda REALIZADO con el N.º de la transacción del reembolso. */
+    public Reembolso marcarReembolsado(Long id, String correoAdmin, String transaccion, String nota) {
+        String numero = transaccion == null ? "" : transaccion.trim();
+        if (numero.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escribe el número de la transacción del reembolso en Wompi");
+        }
+        if (!TRANSACCION_VALIDA.matcher(numero).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "El número de transacción solo puede llevar letras, números y . _ / - (3 a 80 caracteres)");
+        }
         Reembolso r = reembolsoRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Reembolso no encontrado"));
         if (!Reembolso.PENDIENTE.equals(r.getEstado())) {
@@ -485,6 +497,7 @@ public class LiquidacionService {
         }
         r.setEstado(Reembolso.REALIZADO);
         r.setFechaRealizado(LocalDateTime.now());
+        r.setTransaccionReembolso(numero);
         r.setNota(texto(nota, correoAdmin));
         return reembolsoRepository.save(r);
     }

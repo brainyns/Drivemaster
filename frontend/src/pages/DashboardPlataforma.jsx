@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { dashboardPlataforma } from "../services/plataformaService";
+import { listarReembolsos } from "../services/liquidacionService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Indicador from "../components/ui/Indicador";
 import ChipEstado from "../components/ui/ChipEstado";
@@ -7,7 +8,7 @@ import Alerta from "../components/ui/Alerta";
 import Esqueleto from "../components/ui/Esqueleto";
 import BarraProgreso from "../components/ui/BarraProgreso";
 import Icon from "../components/public/Icon";
-import { barras, urgentesDashboard } from "./admin/plataformaAdmin";
+import { barras, resumenReembolsos, urgentesDashboard } from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import { textoError } from "../utils/errores";
@@ -92,8 +93,12 @@ export default function DashboardPlataforma({ token, onIr }) {
   const [estado, setEstado] = useState({ datos: null, error: null });
   const [cargando, setCargando] = useState(true);
 
+  const [reembolsos, setReembolsos] = useState(null); // { cantidad, total } o null
+
   const cargar = useCallback(() => {
     setCargando(true);
+    // El aviso de reembolsos es aparte: si falla, el panel sigue igual
+    listarReembolsos(token, "PENDIENTE").then((l) => setReembolsos(resumenReembolsos(l))).catch(() => {});
     return dashboardPlataforma(token)
       .then((datos) => setEstado({ datos, error: null }))
       .catch((e) => setEstado((previo) => ({ datos: previo.datos, error: textoError(e) })))
@@ -146,6 +151,14 @@ export default function DashboardPlataforma({ token, onIr }) {
   return (
     <div className="ss-panel--plataforma pp-root">
       {encabezado}
+
+      {reembolsos && (
+        <Alerta tono="aviso" className="pp-bloque-sep pp-reembolsos">
+          Tienes {reembolsos.cantidad} {reembolsos.cantidad === 1 ? "reembolso pendiente" : "reembolsos pendientes"} por{" "}
+          <strong>{cop(reembolsos.total)}</strong>. Hazlos en Wompi y márcalos con el número de la transacción.{" "}
+          <button type="button" className="pp-enlace" onClick={() => ir("liquidaciones", "reembolsos")}>Ver los reembolsos</button>
+        </Alerta>
+      )}
 
       {error && (
         <Alerta tono="aviso" className="pp-bloque-sep" onReintentar={cargar} reintentando={cargando}>
