@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { informesTienda, resumenAsistente } from "../services/informesTiendaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Glosario from "../components/ui/Glosario";
+import BandaDinero from "../components/ui/BandaDinero";
+import EsteMes from "../components/ui/EsteMes";
+import { bandaDinero, loTuyoDelMes } from "../utils/bandaDinero";
 import Indicador from "../components/ui/Indicador";
 import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
@@ -286,7 +289,9 @@ function Resumen({ datos, onIr }) {
           pie={`${num(datos.ventas.pedidos)} ${datos.ventas.pedidos === 1 ? "pedido" : "pedidos"}`} />
         <Indicador icono="clock" titulo="Despacho promedio" valor={duracion(datos.despacho.horasPromedio)}
           pie={datos.despacho.porcentajeATiempo != null ? `${datos.despacho.porcentajeATiempo} % a tiempo` : "Sin despachos medidos aún"} />
-        <Indicador titulo="Por recibir" valor={cop(datos.liquidacion.porLiquidar)} tono={datos.liquidacion.porLiquidar > 0 ? "ok" : undefined}
+        <Indicador titulo="Ya te pagaron" valor={cop(datos.liquidacion.liquidado)} tono="ok"
+          pie={`${num(datos.liquidacion.lineasLiquidadas)} ${datos.liquidacion.lineasLiquidadas === 1 ? "pedido" : "pedidos"}`} />
+        <Indicador titulo="Por recibir" valor={cop(datos.liquidacion.porLiquidar)} tono={datos.liquidacion.porLiquidar > 0 ? "accion" : undefined}
           pie={`${cop(datos.liquidacion.enEspera)} falta que se entregue`} />
         <Indicador icono="alert" titulo="Stock bajo" valor={num(stock)} tono={stock > 0 ? "accion" : undefined}
           pie={stock === 0 ? "Nada por reponer" : stock === 1 ? "Producto por reponer" : "Productos por reponer"}
@@ -375,6 +380,9 @@ export default function InformesTienda({ token, onIr }) {
           </>
         )} />
 
+      <EsteMes version={version} detalle="Lo tuyo, después de IVA y comisión"
+        cargar={() => informesTienda(token, 1).then((m) => loTuyoDelMes(m.dinero?.desglose, m.dinero?.iva))} />
+
       {error && !cargando && (
         <Alerta className="it-alerta" onReintentar={() => setVersion((v) => v + 1)}>
           No pudimos cargar los informes. {error}{datos ? " Se muestran los últimos datos." : ""}
@@ -393,6 +401,7 @@ export default function InformesTienda({ token, onIr }) {
             </div>
           )}
 
+          <BandaDinero titulo={`Tu dinero en los últimos ${datos.mesesConsultados} meses`} banda={bandaDinero(datos.dinero?.desglose, datos.dinero?.iva)} />
           <Resumen datos={datos} onIr={onIr} />
 
           <div className="it-rejilla">

@@ -63,6 +63,13 @@ public class PlataformaReportesService {
     private final RepartoPagoRepository repartoRepository;
     private final ReembolsoRepository reembolsoRepository;
     private final ParametrosMarketplace parametros;
+    // Opcional para no cambiar el constructor que usan las pruebas: sin él, el dinero que pasó se muestra en 0
+    private com.drivemaster.drivemaster.repository.mysql.PagoRepository pagoRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setPagoRepository(com.drivemaster.drivemaster.repository.mysql.PagoRepository pagoRepository) {
+        this.pagoRepository = pagoRepository;
+    }
 
     public PlataformaReportesService(MongoTemplate mongo, RepartoPagoRepository repartoRepository,
                                      ReembolsoRepository reembolsoRepository, ParametrosMarketplace parametros) {
@@ -250,7 +257,8 @@ public class PlataformaReportesService {
         double anulada = filas.stream().mapToDouble(MesComision::anulada).sum();
         return new ComisionNeta(ahora, filas, registrada, anulada, registrada - anulada, porConcepto,
                 DashboardPlataformaDTO.ComisionRetenida.de(repartoRepository.comisionRetenidaPorEstado()),
-                parametros.comisionRetenida(), saldosAFavor());
+                parametros.comisionRetenida(), saldosAFavor(),
+                pagoRepository == null ? 0 : pagoRepository.sumaMovidaMarketplaceDesde(desde));
     }
 
     private SaldosAFavor saldosAFavor() {

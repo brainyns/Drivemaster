@@ -197,3 +197,34 @@ test("palabras simples: no quedan los términos viejos del dinero y del inventar
     assert.match(leer(ruta), /<Glosario (className="[^"]+" )?claves=\{\[/, `${ruta}: glosario`);
   }
 });
+
+test("informes claros: banda Ventas − IVA − Comisión = Lo tuyo, Este mes con meses=1 y las cifras de cada rol", async () => {
+  const { bandaDinero, loTuyoDelMes, gananciaDelMes } = await import("../src/utils/bandaDinero.js");
+  const desglose = { venta: 595000, comision: 50000, comisionDescontada: 50000, recibes: 545000, comisionSeDescuenta: true };
+  assert.deepEqual(bandaDinero(desglose, 95000), { ventas: 595000, iva: 95000, comision: 50000, comisionSeDescuenta: true, loTuyo: 450000 });
+  // Con el cobro apagado no se resta una comisión que no se descontó
+  assert.equal(bandaDinero({ ...desglose, comisionDescontada: 0, comisionSeDescuenta: false }, 95000).loTuyo, 500000);
+  assert.equal(bandaDinero(desglose, null).loTuyo, null, "sin IVA conocido no se inventa lo tuyo");
+  assert.equal(bandaDinero(null, 0), null);
+  assert.equal(loTuyoDelMes(desglose, 95000), 450000);
+  assert.equal(gananciaDelMes({ meses: [{ mes: "2026-10", cobrada: 10 }, { mes: "2026-11", cobrada: 12345.6 }] }), 12346);
+  assert.equal(gananciaDelMes({ meses: [] }), null);
+
+  const taller = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(taller.includes("informesTaller(token, 1).then((m) => loTuyoDelMes(m.ingresos?.desglose, m.ingresos?.iva))"), "taller: este mes exacto");
+  assert.ok(taller.includes("bandaDinero(d.ingresos.desglose, d.ingresos.iva)"));
+  assert.ok(taller.includes('<Indicador titulo="Mano de obra"') && taller.includes('<Indicador titulo="Repuestos"'), "mano de obra y repuestos separados");
+  assert.ok(taller.includes("<Grafico"), "gráfica");
+
+  const tienda = leer("../src/pages/InformesTienda.jsx");
+  assert.ok(tienda.includes("informesTienda(token, 1).then((m) => loTuyoDelMes(m.dinero?.desglose, m.dinero?.iva))"), "tienda: este mes exacto");
+  assert.ok(tienda.includes("bandaDinero(datos.dinero?.desglose, datos.dinero?.iva)"));
+  assert.ok(tienda.includes('<Indicador titulo="Ya te pagaron"') && tienda.includes('<Indicador titulo="Por recibir"'));
+
+  const admin = leer("../src/pages/ReportesPlataforma.jsx");
+  for (const t of ['titulo="Tu ganancia"', 'titulo="Por cobrar"', 'titulo="Dinero que pasó por la plataforma"', "<Grafico"]) assert.ok(admin.includes(t), t);
+  assert.ok(admin.includes("reporteComisionPlataforma(token, { meses: 1 }).then(gananciaDelMes)"), "admin: este mes exacto");
+
+  const esteMes = leer("../src/components/ui/EsteMes.jsx");
+  assert.ok(!/<(input|select|button)/.test(esteMes), "Este mes es solo lectura");
+});

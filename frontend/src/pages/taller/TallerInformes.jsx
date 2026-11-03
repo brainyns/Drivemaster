@@ -7,6 +7,9 @@ import { duracionMinutos, plural, textoPeriodo } from "../../utils/formato";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
 import InfoAyuda from "../../components/ui/InfoAyuda";
 import Glosario from "../../components/ui/Glosario";
+import BandaDinero from "../../components/ui/BandaDinero";
+import EsteMes from "../../components/ui/EsteMes";
+import { bandaDinero, loTuyoDelMes } from "../../utils/bandaDinero";
 import Indicador from "../../components/ui/Indicador";
 import Alerta from "../../components/ui/Alerta";
 import Esqueleto from "../../components/ui/Esqueleto";
@@ -266,6 +269,9 @@ export default function TallerInformes() {
         )}
       />
 
+      <EsteMes version={intento} detalle="Lo tuyo, después de IVA y comisión"
+        cargar={() => informesTaller(token, 1).then((m) => loTuyoDelMes(m.ingresos?.desglose, m.ingresos?.iva))} />
+
       {!cargando && estado.error && (
         <Alerta onReintentar={() => setIntento((n) => n + 1)}>{estado.error}</Alerta>
       )}
@@ -284,11 +290,15 @@ export default function TallerInformes() {
           <section aria-labelledby="ti-resumen">
             <h2 id="ti-resumen" className="ui-sr">Resumen del periodo</h2>
             <p className="ti-periodo">Todas las cifras {periodo}.</p>
+            <BandaDinero titulo={`Tu dinero ${periodo}`} banda={bandaDinero(d.ingresos.desglose, d.ingresos.iva)} />
             <div className="ui-indicadores ti-indicadores">
               <Indicador icono="tool" titulo="Servicios" valor={d.servicios.total}
                 pie={`${entregados} ${entregados === 1 ? "entregado" : "entregados"} en ${d.mesesConsultados} meses`} />
-              <Indicador titulo="Mano de obra ya pagada" valor={formatPrecio(d.ingresos.manoDeObra.liquidado)} tono="ok"
-                pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} falta por entregar en ${d.mesesConsultados} meses`} />
+              {/* Mano de obra y repuestos por separado: cada uno con lo que ya te pagaron */}
+              <Indicador titulo="Mano de obra" valor={formatPrecio(d.ingresos.manoDeObra.liquidado + d.ingresos.manoDeObra.pendiente)} tono="ok"
+                pie={`Ya te pagaron ${formatPrecio(d.ingresos.manoDeObra.liquidado)}`} />
+              <Indicador titulo="Repuestos" valor={formatPrecio((d.ingresos.repuestosTaller?.liquidado || 0) + (d.ingresos.repuestosTaller?.pendiente || 0))}
+                pie={`Ya te pagaron ${formatPrecio(d.ingresos.repuestosTaller?.liquidado || 0)}`} />
               <Indicador icono="star" titulo="Calificación"
                 valor={d.calificacion.promedio == null ? "Nuevo" : decimal(d.calificacion.promedio)}
                 pie={d.calificacion.total > 0 ? `${plural(d.calificacion.total, "calificación", "calificaciones")} de clientes en ${d.mesesConsultados} meses` : "Sin calificaciones en el periodo"} />

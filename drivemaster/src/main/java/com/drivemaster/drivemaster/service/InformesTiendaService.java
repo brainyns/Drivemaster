@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.Dinero;
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.Despacho;
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.Informes;
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.Liquidacion;
@@ -76,7 +77,28 @@ public class InformesTiendaService {
                 .withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
         return new Informes(ahora, m, ventasPorMes(tiendaId, m, hasta, desde), productosMasVendidos(tiendaId, desde),
                 stockBajo(tiendaId), pedidosPorEstado(tiendaId, desde), despacho(tiendaId, desdeLocal, ahora),
-                liquidacion(tiendaId));
+                liquidacion(tiendaId), dinero(tiendaId, desdeLocal));
+    }
+
+    // ─── El dinero del periodo: venta, IVA, comisión y lo que queda ─────────────
+
+    private Dinero dinero(String tiendaId, LocalDateTime desde) {
+        var desglose = DesgloseLiquidacionDTO.Resumen.de(
+                repartoRepository.desgloseDeNegocioDesde(RepartoPago.TIENDA, tiendaId, desde), parametros.comisionRetenida());
+        List<String> ids = repartoRepository.pedidosDeNegocioDesde(RepartoPago.TIENDA, tiendaId, desde);
+        return new Dinero(desglose, ivaDePedidos(ids));
+    }
+
+    /** Suma del IVA de los pedidos. null si alguno no guardó su IVA: no se inventa la cifra. */
+    private Double ivaDePedidos(List<String> ids) {
+        if (ids == null || ids.isEmpty()) return 0.0;
+        double iva = 0;
+        List<PedidoTienda> pedidos = mongo.find(Query.query(Criteria.where("_id").in(ids)), PedidoTienda.class);
+        for (PedidoTienda p : pedidos) {
+            if (p.getIva() == null) return null;
+            iva += p.getIva();
+        }
+        return (double) Math.round(iva);
     }
 
     // ─── Ventas por mes ──────────────────────────────────────────────────────

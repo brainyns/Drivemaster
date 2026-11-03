@@ -8,6 +8,9 @@ import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Indicador from "../components/ui/Indicador";
 import Glosario from "../components/ui/Glosario";
+import EsteMes from "../components/ui/EsteMes";
+import Grafico from "../components/ui/Grafico";
+import { gananciaDelMes } from "../utils/bandaDinero";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
@@ -175,8 +178,29 @@ function Contenido({ id, titulo, datos, token, onCambio }) {
           { t: "Canceladas", der: true, f: (t) => num(t.canceladas) }, { t: "Repartido al taller", der: true, f: (t) => cop(t.movidoAlTaller) }]} />
     );
   }
+  const ganancia = (datos.meses || []).reduce((s, m) => s + (Number(m.cobrada) || 0), 0);
   return (
     <>
+      <section className="pp-seccion" aria-labelledby="rep-tu-dinero">
+        <h2 id="rep-tu-dinero" className="pp-titulo">Tu dinero en el período</h2>
+        <div className="ui-indicadores pp-indicadores-dinero">
+          <Indicador titulo="Tu ganancia" valor={cop(ganancia)} tono="ok" ayuda="La comisión que DriveMaster ya cobró en pagos transferidos."
+            pie="Comisión cobrada en los meses elegidos." />
+          <Indicador titulo="Por cobrar" valor={cop(datos.retenida?.porCobrar)} ayuda="Comisión de pagos que todavía no se transfieren al negocio."
+            pie="Se cobra al transferir cada pago." />
+          <Indicador titulo="Dinero que pasó por la plataforma" valor={cop(datos.movido)}
+            ayuda="Todo lo que pagaron los clientes con Wompi. La mayor parte es de los talleres y las tiendas."
+            pie="Pagos de clientes en los meses elegidos. No es tu ingreso." />
+        </div>
+        {(datos.meses || []).length > 1 && ganancia > 0 && (
+          <div className="rep-grafico">
+            <h3 className="rep-grafico__titulo">Tu ganancia por mes</h3>
+            <Grafico titulo="Tu ganancia por mes" etiquetas={datos.meses.map((m) => mesLargo(m.mes))}
+              series={[{ nombre: "Comisión cobrada", valores: datos.meses.map((m) => Number(m.cobrada) || 0) }]}
+              formato={cop} />
+          </div>
+        )}
+      </section>
       <section className="pp-seccion" aria-labelledby="rep-cobrada">
         <h2 id="rep-cobrada" className="pp-titulo">Comisión cobrada</h2>
         <div className="ui-indicadores pp-indicadores-dinero">
@@ -249,6 +273,11 @@ export default function ReportesPlataforma({ token, filtroInicial }) {
           <button key={p.id} type="button" className="ui-chip" aria-pressed={pestana === p.id} onClick={() => setPestana(p.id)}>{p.titulo}</button>
         ))}
       </div>
+
+      {pestana === "comision" && (
+        <EsteMes version={version} detalle="Tu ganancia: la comisión que ya cobraste"
+          cargar={() => reporteComisionPlataforma(token, { meses: 1 }).then(gananciaDelMes)} />
+      )}
 
       <div className="rep-cabecera pp-bloque-sep">
         <p className="rep-nota">{def.nota}</p>

@@ -33,3 +33,7 @@
   }
   .ui-table--tarjetas.rep-tabla tfoot td { padding: 6px 0; background: none; border: 0; }
 }
+
+/* Tu ganancia por mes, bajo las tres cifras del dinero */
+.rep-grafico { margin-top: 20px; padding: 16px 18px; background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); }
+.rep-grafico__titulo { margin: 0 0 12px; font-size: 0.9375rem; font-weight: 600; color: var(--ui-text); }

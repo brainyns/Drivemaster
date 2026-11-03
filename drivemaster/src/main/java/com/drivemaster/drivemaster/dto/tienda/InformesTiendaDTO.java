@@ -36,7 +36,13 @@ public final class InformesTiendaDTO {
                               double liquidado, long lineasLiquidadas, double anulado,
                               com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO.Resumen desglose) {}
 
+    /**
+     * El dinero del periodo, con las mismas fechas que los informes del taller: desglose (venta con IVA, comisión y lo
+     * que recibe) de las líneas del periodo e iva, la suma del IVA de sus pedidos. iva es null si algún pedido no lo guardó.
+     */
+    public record Dinero(com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO.Resumen desglose, Double iva) {}
+
     public record Informes(LocalDateTime generadoEn, int mesesConsultados, VentasPorMes ventas,
                            List<ProductoVendido> productosMasVendidos, StockBajo stockBajo,
-                           Map<String, Long> pedidosPorEstado, Despacho despacho, Liquidacion liquidacion) {}
+                           Map<String, Long> pedidosPorEstado, Despacho despacho, Liquidacion liquidacion, Dinero dinero) {}
 }

@@ -57,7 +57,7 @@ public final class ReportesPlataformaDTO {
     public record ComisionNeta(LocalDateTime generadoEn, List<MesComision> meses, double registrada, double anulada,
                                double neta, Map<String, Double> netaPorConcepto,
                                DashboardPlataformaDTO.ComisionRetenida retenida, boolean comisionSeDescuenta,
-                               SaldosAFavor saldosAFavor) {}
+                               SaldosAFavor saldosAFavor, double movido) {}
 
     // ─── Usuarios ────────────────────────────────────────────────────────────
 
