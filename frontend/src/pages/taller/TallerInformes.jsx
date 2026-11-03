@@ -6,6 +6,7 @@ import { ESTADOS_TALLER, faseDe } from "../../components/servicio/estadosTaller"
 import { duracionMinutos, plural, textoPeriodo } from "../../utils/formato";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
 import InfoAyuda from "../../components/ui/InfoAyuda";
+import Glosario from "../../components/ui/Glosario";
 import Indicador from "../../components/ui/Indicador";
 import Alerta from "../../components/ui/Alerta";
 import Esqueleto from "../../components/ui/Esqueleto";
@@ -129,6 +130,7 @@ function Ingresos({ ingresos, periodo }) {
         El total generado suma lo pagado por diagnóstico y cotización, con IVA.{conRepuestos ? " Tus repuestos van aparte de la mano de obra, aunque se paguen juntos." : ""} Las demás cifras {periodo} están en lo que recibes. “Ya te pagaron” cuenta por la fecha en que se te pagó y “Falta que se entregue” por la fecha en que pagó el cliente; cada pago está en uno solo de los dos.
         {anulado > 0 && ` Hay ${formatPrecio(anulado)} cancelados que no cuentan.`}
       </p>
+      <Glosario claves={["Adelanto del diagnóstico", "Resta de la cotización", "Ya te pagaron", "Falta que se entregue", "Comisión"]} />
       {anteriores.ordenes > 0 && (
         <p className="ti-nota ti-nota--aparte">
           Aparte, del flujo anterior: {anteriores.ordenes} {anteriores.ordenes === 1 ? "orden finalizada" : "órdenes finalizadas"} por{" "}

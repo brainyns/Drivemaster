@@ -7,7 +7,7 @@ export const TIPOS = {
     ayuda: "Mercancía que llega sin una compra (devolución, traslado): se suma al stock. Si viene de una compra a proveedor, regístrala en Compras." },
   SALIDA: { label: "Salida", plural: "Salidas", tono: "error", signo: "−", campo: "Unidades que salen",
     ayuda: "Salió sin pasar por un pedido (daño, uso interno): se resta del stock." },
-  AJUSTE: { label: "Ajuste", plural: "Ajustes", tono: "aviso", signo: "", campo: "Stock contado",
+  AJUSTE: { label: "Conteo físico", plural: "Conteos físicos", tono: "aviso", signo: "", campo: "Stock contado",
     ayuda: "Conteo físico: el stock queda exactamente en este número." },
 };
 

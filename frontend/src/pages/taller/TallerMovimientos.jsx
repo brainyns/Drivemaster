@@ -284,7 +284,7 @@ export default function TallerMovimientos({ irA, piezaInicial = null }) {
               <Indicador titulo="Movimientos" valor={resumen.total.toLocaleString("es-CO")} pie="En todo el historial" />
               <Indicador titulo="Unidades que entraron" valor={resumen.entradas.toLocaleString("es-CO")} tono="ok" />
               <Indicador titulo="Unidades que salieron" valor={resumen.salidas.toLocaleString("es-CO")} />
-              <Indicador titulo="Ajustes por conteo" valor={resumen.ajustes.toLocaleString("es-CO")} />
+              <Indicador titulo="Conteos físicos" valor={resumen.ajustes.toLocaleString("es-CO")} />
             </div>
           </section>
 

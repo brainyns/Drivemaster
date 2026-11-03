@@ -48,3 +48,15 @@
 @media (max-width: 480px) {
   .ia-globo { min-width: 0; max-width: 220px; }
 }
+
+/* El "?" mide 20 px, pero el área que se toca llega a 44 px */
+.ia-boton { position: relative; }
+.ia-boton::after { content: ""; position: absolute; inset: -12px; }
+
+/* Fila de glosario bajo las cifras */
+.ia-glosario {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 12px 0 0;
+  font-size: 0.8125rem; color: var(--ui-muted, #62666a);
+}
+.ia-glosario__titulo { font-weight: 600; color: var(--ui-text, #17191c); }
+.ia-glosario__item { display: inline-flex; align-items: center; }

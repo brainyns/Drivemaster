@@ -240,15 +240,15 @@ export default function DashboardPlataforma({ token, onIr }) {
             pie={`${d.dinero.comisionPct} % sobre el valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}. Informativa: no es dinero cobrado.`}
             onClick={() => ir("reportes-plataforma", "comision")} />
           {d.dinero.liquidacionAutomatica && !d.dinero.porLiquidar ? (
-            <Indicador titulo="Liquidado automáticamente (simulado)" valor={cop(d.dinero.liquidadoSimulado)}
-              pie={`La liquidación simulada paga a cada negocio al entregarse el pedido. Liquidado en total: ${cop(d.dinero.liquidado)}.`}
+            <Indicador titulo="Pagado automáticamente (simulado)" valor={cop(d.dinero.liquidadoSimulado)}
+              pie={`El pago simulado le paga a cada negocio al entregarse el pedido. Pagado en total: ${cop(d.dinero.liquidado)}.`}
               onClick={() => ir("liquidaciones")} />
           ) : (
-            <Indicador titulo="Por liquidar a negocios" valor={cop(d.dinero.porLiquidar)}
-              pie={`Ya habilitado para pagar a talleres y tiendas. Liquidado en total: ${cop(d.dinero.liquidado)}.`}
+            <Indicador titulo="Por pagar a negocios" valor={cop(d.dinero.porLiquidar)}
+              pie={`Ya habilitado para pagar a talleres y tiendas. Pagado en total: ${cop(d.dinero.liquidado)}.`}
               onClick={() => ir("liquidaciones")} />
           )}
-          <Indicador titulo="En espera de entrega" valor={cop(d.dinero.enEspera)}
+          <Indicador titulo="Falta que se entregue" valor={cop(d.dinero.enEspera)}
             pie="De los negocios: se habilita para pagar cuando el pedido se entrega o se recibe." />
         </div>
       </section>

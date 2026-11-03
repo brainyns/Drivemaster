@@ -143,7 +143,7 @@ export default function MisSolicitudes({ onVolver }) {
                     </button>
                   )}
                   {(s.estado === "PENDIENTE" || (s.estado === "APROBADO" && s.metodoPago !== "WOMPI")) && (
-                    <span className="sq-badge sq-pending">En espera</span>
+                    <span className="sq-badge sq-pending">Pendiente</span>
                   )}
                   {s.estado === "PAGADO" && (
                     <span className="sq-badge sq-badge-venta">Pagado</span>

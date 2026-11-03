@@ -7,6 +7,7 @@ import { marcarSaldoCobrado } from "../services/liquidacionService";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Indicador from "../components/ui/Indicador";
+import Glosario from "../components/ui/Glosario";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
@@ -180,12 +181,12 @@ function Contenido({ id, titulo, datos, token, onCambio }) {
         <h2 id="rep-cobrada" className="pp-titulo">Comisión cobrada</h2>
         <div className="ui-indicadores pp-indicadores-dinero">
           <Indicador titulo="Cobrada" valor={cop(datos.retenida?.cobrada)} tono="ok"
-            pie={datos.comisionSeDescuenta ? "Retenida en líneas liquidadas con su id de Wompi. Total acumulado." : "El cobro está apagado: la comisión no se descuenta todavía."} />
+            pie={datos.comisionSeDescuenta ? "Retenida en pagos hechos con su id de Wompi. Total acumulado." : "El cobro está apagado: la comisión no se descuenta todavía."} />
           <Indicador titulo="Por cobrar" valor={cop(datos.retenida?.porCobrar)} pie="Retenida en pagos que aún no se transfieren." />
           <Indicador titulo="Cancelada" valor={cop(datos.retenida?.anulada)} pie="Era de pagos cancelados por reembolso: no se cobró." />
           {datos.retenida?.sinIdWompi > 0 && (
             <Indicador titulo="Sin id de Wompi" valor={cop(datos.retenida.sinIdWompi)} tono="accion"
-              pie="Liquidada sin id del pago: no cuenta como cobrada hasta que llegue el evento de Wompi." />
+              pie="Pagada sin id del pago: no cuenta como cobrada hasta que llegue el evento de Wompi." />
           )}
           {datos.retenida?.cobradaSimulada > 0 && (
             <Indicador titulo="Simulada" valor={cop(datos.retenida.cobradaSimulada)} pie="De líneas SIM-: no movió dinero ni cuenta como cobrada." />
@@ -194,6 +195,7 @@ function Contenido({ id, titulo, datos, token, onCambio }) {
             tono={datos.saldosAFavor?.total > 0 ? "accion" : undefined}
             pie="Reembolsos de pagos ya transferidos al negocio: se le cobran a mano." />
         </div>
+        <Glosario claves={["Tu ganancia", "Por cobrar", "Cancelados", "Saldo a favor"]} />
       </section>
       <SaldosAFavor saldos={datos.saldosAFavor} token={token} onCambio={onCambio} />
       <section className="pp-seccion" aria-labelledby="rep-informativa">

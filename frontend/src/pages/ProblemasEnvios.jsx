@@ -89,7 +89,7 @@ export default function ProblemasEnvios() {
     setResolviendo(false);
     setDecision(null);
     setAviso(resolucion === "REEMBOLSAR"
-      ? `Registramos el reembolso de ${formatPrecio(pedido.total)}. Recuerda hacerlo en el panel de Wompi y marcarlo en Liquidaciones y reembolsos.`
+      ? `Registramos el reembolso de ${formatPrecio(pedido.total)}. Recuerda hacerlo en el panel de Wompi y marcarlo en Pagos y reembolsos.`
       : `Entrega confirmada: el pago de ${formatPrecio(pedido.total)} a ${pedido.tiendaNombre} quedó habilitado.`);
     await cargar();
   };

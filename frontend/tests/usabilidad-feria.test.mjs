@@ -170,3 +170,30 @@ test("celular: los lotes pasan a tarjetas, las tablas anchas tienen scroll y los
   assert.match(tactil, /\.ui-btn, \.ui-btn--chico, \.ui-chip, \.dm-btn, \.sv-btn/);
   assert.match(tactil, /min-height: 44px;/);
 });
+
+test("palabras simples: no quedan los términos viejos del dinero y del inventario en ninguna pantalla", async () => {
+  // Texto visible: lo que va entre comillas, en plantillas o entre etiquetas. Los nombres del código (liquidado,
+  // porLiquidar, rutas /liquidaciones) no son texto y no cuentan.
+  const VIEJOS = [/\bLiquidad[oa]s?\b/, /\bliquidad[oa]s?\b/, /\b[Ll]iquidar\b/, /\b[Ll]iquidaci(ón|ones)\b/, /\b[Ee]n espera\b/,
+    /\b[Ss]aldo de (la )?cotización\b/, /\b[Aa]nticipo\b/, /\b[Mm]ermas?\b/, /\b[Cc]arga inicial\b/, /\b[Aa]justes? por conteo\b/,
+    /\b[Aa]nulad[oa]s?\b/, /[Rr]esponsable de IVA/];
+  // En las plantillas solo cuenta el texto: las expresiones ${…} son código
+  const textos = (src) => [...src.matchAll(/"([^"\n]*)"|`([^`]*)`|>([^<>{}\n]+)</g)]
+    .map((m) => m[1] ?? (m[2] != null ? m[2].replace(/\$\{[^}]*\}/g, " ") : m[3]));
+  const codigo = (t) => /^[\w./-]+$/.test(t) || /^\/api|\$\{BASE\}|import |from /.test(t);
+  for (const ruta of pantallas()) {
+    const src = readFileSync(ruta, "utf8").replace(/^\s*(\/\/|\*|\/\*).*$/gm, "");
+    for (const t of textos(src)) {
+      if (codigo(t)) continue;
+      for (const viejo of VIEJOS) assert.doesNotMatch(t, viejo, `${ruta}: «${t.slice(0, 80)}»`);
+    }
+  }
+  const { GLOSARIO, terminos } = await import("../src/utils/glosario.js");
+  for (const t of ["Ya te pagaron", "Por recibir", "Falta que se entregue", "Adelanto del diagnóstico", "Resta de la cotización", "Comisión", "IVA"]) {
+    assert.ok(GLOSARIO[t], t);
+  }
+  assert.deepEqual(terminos("IVA", "no existe").map((x) => x.termino), ["IVA"]);
+  for (const ruta of ["../src/pages/InformesTienda.jsx", "../src/pages/taller/TallerInformes.jsx", "../src/pages/ReportesPlataforma.jsx", "../src/pages/Liquidaciones.jsx"]) {
+    assert.match(leer(ruta), /<Glosario (className="[^"]+" )?claves=\{\[/, `${ruta}: glosario`);
+  }
+});

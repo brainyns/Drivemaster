@@ -47,12 +47,12 @@ export function urgentesDashboard(a = {}) {
       titulo: (n) => `${num(n)} ${plural(n, "pedido sin retirar", "pedidos sin retirar")}`,
       detalle: "Listos en la tienda hace 3 días o más; a los 15 pasan a tu revisión.", accion: "Ver pedidos" },
     { clave: "fallidas", n: a.liquidacionesFallidas, tono: "error", estado: "Pago fallido", pagina: "liquidaciones",
-      titulo: (n) => `${num(n)} ${plural(n, "liquidación fallida", "liquidaciones fallidas")}`,
+      titulo: (n) => `${num(n)} ${plural(n, "pago fallido", "pagos fallidos")}`,
       detalle: "Pagos a talleres o tiendas que no se pudieron completar.", accion: "Revisar" },
     // Los reembolsos pendientes no van aquí: los avisa el banner de arriba del Inicio, que lleva directo a su lista
     { clave: "liquidar", n: a.liquidacionesPendientes, tono: "info", estado: "Por pagar", pagina: "liquidaciones",
-      titulo: (n) => `${num(n)} ${plural(n, "liquidación por pagar", "liquidaciones por pagar")}`,
-      detalle: "Dinero ya habilitado para pagar a talleres y tiendas.", accion: "Ver liquidaciones" },
+      titulo: (n) => `${num(n)} ${plural(n, "pago por hacer", "pagos por hacer")}`,
+      detalle: "Dinero ya habilitado para pagar a talleres y tiendas.", accion: "Ver pagos" },
   ];
   return items.filter((x) => (x.n || 0) > 0).map(({ titulo, ...x }) => ({ ...x, titulo: titulo(x.n) }));
 }
@@ -116,7 +116,7 @@ export function referenciaLinea(f = {}) {
 }
 
 /** Los estados a la vista y los que van dentro de "Más". "" es Todos. */
-export const ESTADOS_LIQUIDACION = [["POR_LIQUIDAR", "Por pagar"], ["PENDIENTE", "Falta que se entregue"], ["LIQUIDADO", "Ya te pagaron"]];
+export const ESTADOS_LIQUIDACION = [["POR_LIQUIDAR", "Por pagar"], ["PENDIENTE", "Falta que se entregue"], ["LIQUIDADO", "Pagados"]];
 export const MAS_ESTADOS_LIQUIDACION = [["FALLIDO", "Fallidos"], ["PROCESANDO", "Sin confirmar"], ["ANULADO", "Cancelados"], ["", "Todos"]];
 
 const TIPOS_CUENTA = { AHORROS: "Ahorros", CORRIENTE: "Corriente" };
@@ -152,7 +152,7 @@ export function tarjetasLiquidaciones(r) {
     { titulo: "Por pagar", valor: cop(r.porPagar.monto), pie: `${pagos(r.porPagar.cantidad)} ${plural(r.porPagar.cantidad, "listo", "listos")}`,
       estado: "POR_LIQUIDAR", tono: r.porPagar.cantidad > 0 ? "accion" : undefined },
     { titulo: "Falta que se entregue", valor: cop(r.enEspera.monto), pie: pagos(r.enEspera.cantidad), estado: "PENDIENTE" },
-    { titulo: "Ya te pagaron este mes", valor: cop(r.pagadoMes.monto), pie: `${pagos(r.pagadoMes.cantidad)}${simulado}`, estado: "LIQUIDADO" },
+    { titulo: "Pagado este mes", valor: cop(r.pagadoMes.monto), pie: `${pagos(r.pagadoMes.cantidad)}${simulado}`, estado: "LIQUIDADO" },
   ];
 }
 

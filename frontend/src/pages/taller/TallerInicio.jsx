@@ -241,10 +241,10 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                       Ver informes
                     </button>
                   </div>
-                  <Grafico titulo={`Ingresos liquidados por semana, últimas ${semanas.length} semanas`}
+                  <Grafico titulo={`Ingresos ya pagados por semana, últimas ${semanas.length} semanas`}
                     etiquetas={semanas.map((s) => etiquetaSemana(s.inicio))}
                     detalles={semanas.map((s) => `Semana del ${etiquetaSemana(s.inicio)}`)}
-                    series={[{ nombre: "Ingresos liquidados", valores: semanas.map((s) => s.ingresosLiquidados) }]}
+                    series={[{ nombre: "Ingresos ya pagados", valores: semanas.map((s) => s.ingresosLiquidados) }]}
                     formato={formatPrecio} formatoEje={pesosCorto} alto={120} />
                   <p className="ini-bloque__nota">Mano de obra y diagnóstico ya pagados, por la semana en que se te pagaron.</p>
                 </section>

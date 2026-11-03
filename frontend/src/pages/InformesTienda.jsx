@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { informesTienda, resumenAsistente } from "../services/informesTiendaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
-import InfoAyuda from "../components/ui/InfoAyuda";
+import Glosario from "../components/ui/Glosario";
 import Indicador from "../components/ui/Indicador";
 import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
@@ -268,6 +268,7 @@ function Liquidacion({ liquidacion: l }) {
         ))}
       </ul>
       {l.anulado > 0 && <p className="it-nota">{cop(l.anulado)} se cancelaron por pedidos no despachados o reembolsados.</p>}
+      <Glosario claves={["Falta que se entregue", "Por recibir", "Ya te pagaron", "Cancelados"]} />
     </>
   );
 }

@@ -78,7 +78,7 @@ export default function RetirosSinRecoger({ token }) {
     setResolviendo(false);
     setDecision(null);
     avisar(tipo === "REEMBOLSO"
-      ? `Cancelamos el pedido y registramos el reembolso de ${formatPrecio(retiro.total)}. Recuerda hacerlo en Wompi y marcarlo en Liquidaciones y reembolsos.`
+      ? `Cancelamos el pedido y registramos el reembolso de ${formatPrecio(retiro.total)}. Recuerda hacerlo en Wompi y marcarlo en Pagos y reembolsos.`
       : "Listo: el pedido sigue esperando al cliente en la tienda.");
     await cargar();
   };

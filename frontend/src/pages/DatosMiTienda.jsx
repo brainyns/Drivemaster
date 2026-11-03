@@ -367,7 +367,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
           </SeccionEditable>
 
           <SeccionEditable id="mtd-cuenta" icono="card" titulo="Cuenta bancaria para transferencias"
-            descripcion="Cuenta donde recibirás el pago de tus liquidaciones por ventas de repuestos."
+            descripcion="Cuenta donde recibirás el pago de tus ventas de repuestos."
             onEditar={() => abrir("cuenta")}
             textoEditar={t.cuentaBancaria ? "Editar cuenta" : "Registrar cuenta"}
             editando={editando === "cuenta"}>
@@ -393,7 +393,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
               </dl>
             ) : (
               <Alerta tono="aviso">
-                Aún no has registrado tu cuenta bancaria. Es indispensable para recibir el pago de tus liquidaciones.
+                Aún no has registrado tu cuenta bancaria. Es indispensable para recibir tus pagos.
               </Alerta>
             )}
           </SeccionEditable>

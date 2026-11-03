@@ -13,6 +13,7 @@ import SelectorFechas from "../components/ui/SelectorFechas";
 import SelectorOrden from "../components/ui/SelectorOrden";
 import ChipEstado from "../components/ui/ChipEstado";
 import Indicador from "../components/ui/Indicador";
+import Glosario from "../components/ui/Glosario";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
@@ -55,7 +56,7 @@ const ESTADO_REPARTO = {
   POR_LIQUIDAR: { label: "Por pagar", tono: "aviso" },
   PROCESANDO: { label: "Procesando", tono: "proceso" },
   SIN_CONFIRMAR: { label: "Sin confirmar", tono: "aviso" },
-  LIQUIDADO: { label: "Ya te pagaron", tono: "ok" },
+  LIQUIDADO: { label: "Pagado", tono: "ok" },
   FALLIDO: { label: "Fallido", tono: "error" },
   ANULADO: { label: "Cancelado", tono: "apagado" },
 };
@@ -234,7 +235,7 @@ export default function Liquidaciones({ vistaInicial = null }) {
 
   // En la fila, corto para que la acción quepa junto al monto; el diálogo dice el nombre completo
   const pagarAl = (f) => (f.beneficiarioTipo === "TIENDA" ? "Pagar a la tienda" : "Pagar al taller");
-  const textoBoton = (f) => (esRepartos && esWompi ? (f.estado === "FALLIDO" ? "Reintentar" : pagarAl(f)) : textoAccion(f));
+  const textoBoton = (f) => (!esRepartos ? textoAccion(f) : f.estado === "FALLIDO" ? "Reintentar" : pagarAl(f));
 
   const abrirMarcar = (f) => { setMarcandoId(f.id); setNota(""); setNumero(""); setError(null); };
   const abrirResolver = (f) => { setResolviendoId(f.id); setResolucion({ resultado: "", motivo: "", referencia: "" }); setError(null); };
@@ -268,6 +269,7 @@ export default function Liquidaciones({ vistaInicial = null }) {
           ))}
         </div>
       )}
+      {esRepartos && <Glosario className="pp-bloque-sep" claves={["Por pagar", "Falta que se entregue", "Pagado", "Se transfiere", "Comisión"]} />}
       {!esRepartos && !cargando && !errorCarga && filas.length > 0 && (
         <div className="ui-indicadores pp-bloque-sep liq-resumen liq-resumen--una">
           <Indicador titulo="Pendiente en esta lista" valor={formatPrecio(totalPendienteReembolso)} tono={totalPendienteReembolso > 0 ? "accion" : undefined}

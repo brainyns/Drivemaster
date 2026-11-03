@@ -64,7 +64,7 @@ test("la pantalla del taller reutiliza los componentes de Inventario de la tiend
   for (const c of ["Indicador", "FiltroFechas", "SelectorOrden", "EncabezadoOrden", "Paginacion", "BuscadorProducto", "movimientos.css"]) {
     assert.match(pantalla, new RegExp(c), c);
   }
-  for (const t of ["Unidades que entraron", "Unidades que salieron", "Ajustes por conteo", "Excel", "PDF"]) assert.match(pantalla, new RegExp(t));
+  for (const t of ["Unidades que entraron", "Unidades que salieron", "Conteos físicos", "Excel", "PDF"]) assert.match(pantalla, new RegExp(t));
   assert.match(leer("../src/components/Sidebar.jsx"), /key: "taller-movimientos"/);
   const inventario = leer("../src/pages/taller/TallerInventario.jsx");
   assert.match(inventario, /irA\("taller-movimientos"\)/);

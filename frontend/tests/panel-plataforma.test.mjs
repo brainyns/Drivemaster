@@ -209,7 +209,7 @@ test("Pedidos y envíos: semáforo de despacho y de retiro con los mismos colore
 
 test("Vistas de detalle: reparto, entrega y ubicación con nombres claros, y se abren desde las tablas", () => {
   assert.equal(BENEFICIARIO.PLATAFORMA, "Comisión DriveMaster");
-  assert.equal(ESTADOS_REPARTO.PENDIENTE.label, "En espera de entrega");
+  assert.equal(ESTADOS_REPARTO.PENDIENTE.label, "Falta que se entregue");
   assert.equal(textoEntrega({ tipo: "RETIRO" }), "Retiro en la tienda");
   assert.equal(textoEntrega(null), "Sin definir");
   assert.match(notaReparto({ pedidosDelPago: 2 }, [{ delPago: true }]), /cubre 2 pedidos/);
@@ -330,7 +330,7 @@ const resumenLiq = {
 test("Liquidaciones: tres tarjetas; lo que espera la entrega no se presenta como por pagar y lo simulado va aparte", () => {
   const [pagar, espera, pagado] = tarjetasLiquidaciones(resumenLiq);
   assert.deepEqual([pagar.titulo, pagar.pie, pagar.estado, pagar.tono], ["Por pagar", "1 pago listo", "POR_LIQUIDAR", "accion"]);
-  assert.deepEqual([espera.titulo, espera.pie, espera.estado, espera.tono], ["En espera de entrega", "18 pagos", "PENDIENTE", undefined]);
+  assert.deepEqual([espera.titulo, espera.pie, espera.estado, espera.tono], ["Falta que se entregue", "18 pagos", "PENDIENTE", undefined]);
   assert.equal(pagado.estado, "LIQUIDADO");
   assert.ok(pagado.pie.startsWith("20 pagos · ") && pagado.pie.endsWith(" simulados"), pagado.pie);
   assert.equal(tarjetasLiquidaciones({ ...resumenLiq, pagadoMesSimulado: 0 })[2].pie, "20 pagos");
@@ -452,7 +452,7 @@ test("Liquidaciones: bruto, comisión y neto de cada fila", () => {
   assert.equal(anterior.nota, "No se descontó en este pago");
 
   const p = leer("../src/pages/Liquidaciones.jsx");
-  for (const texto of ['data-label="Bruto"', 'data-label="Comisión"', '"Neto"', 'etiqueta="Se transfiere"']) assert.ok(p.includes(texto), texto);
+  for (const texto of ['data-label="Bruto"', 'data-label="Comisión"', '>Se transfiere</EncabezadoOrden>', 'etiqueta="Se transfiere"']) assert.ok(p.includes(texto), texto);
 });
 
 test("Reportes y dashboard: la comisión cobrada va separada de la informativa", () => {

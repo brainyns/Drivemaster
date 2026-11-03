@@ -332,7 +332,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
           </SeccionEditable>
 
           <SeccionEditable id="mt-cuenta" icono="card" titulo="Cuenta bancaria para transferencias"
-            descripcion="Cuenta donde recibirás el pago de tus liquidaciones y mano de obra."
+            descripcion="Cuenta donde recibirás el pago de tu mano de obra y tus repuestos."
             onEditar={() => abrir("cuenta")}
             textoEditar={taller.cuentaBancaria ? "Editar cuenta" : "Registrar cuenta"}
             editando={editando === "cuenta"}>
@@ -358,7 +358,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
               </dl>
             ) : (
               <Alerta tono="aviso">
-                Aún no has registrado tu cuenta bancaria. Es indispensable para recibir el pago de tus liquidaciones.
+                Aún no has registrado tu cuenta bancaria. Es indispensable para recibir tus pagos.
               </Alerta>
             )}
           </SeccionEditable>

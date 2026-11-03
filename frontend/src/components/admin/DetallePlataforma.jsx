@@ -269,7 +269,7 @@ function ListaReparto({ reparto }) {
           <span>
             <strong>{BENEFICIARIO[r.beneficiarioTipo] || r.beneficiarioTipo}</strong>
             <span className="dtp-sub">{[r.beneficiarioTipo === "PLATAFORMA" ? null : r.beneficiario,
-              r.fechaLiquidacion && `liquidado el ${fecha(r.fechaLiquidacion)}${r.modoLiquidacion === "SIMULADO" ? " (simulado)" : ""}`,
+              r.fechaLiquidacion && `pagado el ${fecha(r.fechaLiquidacion)}${r.modoLiquidacion === "SIMULADO" ? " (simulado)" : ""}`,
               r.nota].filter(Boolean).join(" · ")}</span>
           </span>
           <span className="dtp-num">
@@ -564,7 +564,7 @@ function VistaNegocio({ n, abrir }) {
         <dl className="ui-datos">
           <Dato etiqueta={tienda ? "Pedidos" : "Órdenes"}>{String(t.pedidos)}</Dato>
           <Dato etiqueta="Vendido">{formatoCop(t.vendido)}</Dato>
-          <Dato etiqueta="Ya te pagaron">{formatoCop(t.liquidado)}</Dato>
+          <Dato etiqueta="Ya pagado">{formatoCop(t.liquidado)}</Dato>
           <Dato etiqueta="Por pagar">{formatoCop(t.porLiquidar)}</Dato>
           <Dato etiqueta="Falta que se entregue">{formatoCop(t.enEspera)}</Dato>
         </dl>

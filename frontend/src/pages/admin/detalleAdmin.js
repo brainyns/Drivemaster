@@ -13,7 +13,7 @@ export const ESTADOS_REPARTO = {
   PENDIENTE: { label: "Falta que se entregue", tono: "aviso" },
   POR_LIQUIDAR: { label: "Por pagar", tono: "info" },
   PROCESANDO: { label: "Procesando", tono: "proceso" },
-  LIQUIDADO: { label: "Ya te pagaron", tono: "ok" },
+  LIQUIDADO: { label: "Pagado", tono: "ok" },
   FALLIDO: { label: "Falló el pago", tono: "error" },
   ANULADO: { label: "Cancelado", tono: "apagado" },
   INFORMATIVA: { label: "Informativa", tono: "apagado" },

@@ -106,8 +106,8 @@ function textoEstado(p) {
   if (p.estado === "NO_ENTREGADO" && p.resolucionRetiro === "REEMBOLSO") {
     return `DriveMaster lo canceló porque el cliente no pasó a retirarlo. Las unidades en stock volvieron a tu inventario y este pedido no se paga.`;
   }
-  if (p.estado === "RETIRADO") return "El cliente retiró el pedido. El pago quedó habilitado para liquidar.";
-  if (p.estado === "ENTREGADO" || p.estado === "RECIBIDO") return "Pedido entregado. El pago quedó habilitado para liquidar.";
+  if (p.estado === "RETIRADO") return "El cliente retiró el pedido. Tu pago quedó habilitado: DriveMaster te lo transfiere.";
+  if (p.estado === "ENTREGADO" || p.estado === "RECIBIDO") return "Pedido entregado. Tu pago quedó habilitado: DriveMaster te lo transfiere.";
   if (p.tipoMotivoNoDespacho === "PAGO_NO_APLICADO") return `${p.motivoNoDespacho}.`;
   if (p.tipoMotivoNoDespacho === "ORDEN_CANCELADA") return `${p.motivoNoDespacho || "Cancelada por DriveMaster"}. No lo despaches: las unidades en stock volvieron a tu inventario y este pedido no se paga.`;
   if (p.estado === "NO_DESPACHADO") return `No se despachó: ${p.motivoNoDespacho || "sin motivo registrado"}. DriveMaster reembolsa al cliente.`;
@@ -318,7 +318,7 @@ export default function PedidosTienda({ param, irA }) {
     try {
       await validarCodigoRetiro(token, pedido.id, limpio);
       setCodigo("");
-      setAviso(`Entrega registrada: el pedido #${refSolicitud(pedido.id)} quedó como retirado y su pago quedó habilitado para liquidar.`);
+      setAviso(`Entrega registrada: el pedido #${refSolicitud(pedido.id)} quedó como retirado y tu pago quedó habilitado: DriveMaster te lo transfiere.`);
       await cargar();
     } catch (e) {
       const extra = /no es correcto/i.test(e.message) ? " Si el cliente te muestra un código de otra tienda o de otro pedido, no sirve aquí." : "";

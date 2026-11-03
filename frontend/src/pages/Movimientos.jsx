@@ -65,7 +65,7 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
     setError(null);
     try {
       await registrarMovimiento({ ...form, cantidad: Number(form.cantidad), motivo: form.motivo.trim() }, token);
-      onGuardado(`${tipo.label === "Ajuste" ? "Ajuste registrado" : `${tipo.label} registrada`}: ${producto.nombre} quedó con ${plural(resultado, "unidad", "unidades")}.`);
+      onGuardado(`${form.tipo === "AJUSTE" ? "Conteo físico registrado" : `${tipo.label} registrada`}: ${producto.nombre} quedó con ${plural(resultado, "unidad", "unidades")}.`);
     } catch (err) {
       setError(textoError(err));
       setGuardando(false);
@@ -75,7 +75,7 @@ function FormMovimiento({ productos, token, onGuardado, onCancelar }) {
   return (
     <form className="ui-form" onSubmit={enviar} noValidate>
       {confirmando && producto && (
-        <ConfirmarAccion titulo={`¿Registrar ${tipo.label === "Ajuste" ? "el ajuste" : `la ${tipo.label.toLowerCase()}`} de ${producto.nombre}?`}
+        <ConfirmarAccion titulo={`¿Registrar ${form.tipo === "AJUSTE" ? "el conteo físico" : `la ${tipo.label.toLowerCase()}`} de ${producto.nombre}?`}
           textoConfirmar="Sí, registrar" peligro={form.tipo === "SALIDA"}
           mensaje={`El stock pasa de ${disponible} a ${resultado}. Queda en el historial con tu nombre.`}
           onCancelar={() => setConfirmando(false)} onConfirmar={guardar}>
@@ -242,7 +242,7 @@ function Movimientos({ token, esTienda = false, irA }) {
               <Indicador titulo="Movimientos" valor={resumen.total.toLocaleString("es-CO")} pie="En todo el historial" />
               <Indicador titulo="Unidades que entraron" valor={resumen.entradas.toLocaleString("es-CO")} tono="ok" />
               <Indicador titulo="Unidades que salieron" valor={resumen.salidas.toLocaleString("es-CO")} />
-              <Indicador titulo="Ajustes por conteo" valor={resumen.ajustes.toLocaleString("es-CO")} />
+              <Indicador titulo="Conteos físicos" valor={resumen.ajustes.toLocaleString("es-CO")} />
             </div>
           </section>
 
