@@ -41,7 +41,8 @@ test("Dashboard: lo urgente va primero (aprobaciones y pedidos con problema) y s
     [["atrasados", "atrasados", "error"], ["por-vencer", "por-vencer", "aviso"], ["sin-retirar", "sin-retirar", "aviso"]]);
   assert.equal(semaforo[1].titulo, "2 despachos por vencer");
   assert.equal(semaforo[2].titulo, "1 pedido sin retirar");
-  assert.match(urgentesDashboard({ reembolsosPendientes: 2, montoReembolsosPendientes: 150000 })[0].detalle, /150\.000/);
+  // Los reembolsos los avisa solo el banner del Inicio: no se repiten en lo urgente
+  assert.deepEqual(urgentesDashboard({ reembolsosPendientes: 2, montoReembolsosPendientes: 150000 }), []);
 });
 
 test("Dashboard: las barras siguen el orden de los estados, dejan al final los desconocidos y suman 100%", () => {

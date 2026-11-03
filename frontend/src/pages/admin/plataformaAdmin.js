@@ -49,9 +49,7 @@ export function urgentesDashboard(a = {}) {
     { clave: "fallidas", n: a.liquidacionesFallidas, tono: "error", estado: "Pago fallido", pagina: "liquidaciones",
       titulo: (n) => `${num(n)} ${plural(n, "liquidación fallida", "liquidaciones fallidas")}`,
       detalle: "Pagos a talleres o tiendas que no se pudieron completar.", accion: "Revisar" },
-    { clave: "reembolsos", n: a.reembolsosPendientes, tono: "error", estado: "Reembolso", pagina: "liquidaciones",
-      titulo: (n) => `${num(n)} ${plural(n, "reembolso pendiente", "reembolsos pendientes")}`,
-      detalle: `${cop(a.montoReembolsosPendientes)} por devolver a clientes.`, accion: "Revisar" },
+    // Los reembolsos pendientes no van aquí: los avisa el banner de arriba del Inicio, que lleva directo a su lista
     { clave: "liquidar", n: a.liquidacionesPendientes, tono: "info", estado: "Por pagar", pagina: "liquidaciones",
       titulo: (n) => `${num(n)} ${plural(n, "liquidación por pagar", "liquidaciones por pagar")}`,
       detalle: "Dinero ya habilitado para pagar a talleres y tiendas.", accion: "Ver liquidaciones" },
