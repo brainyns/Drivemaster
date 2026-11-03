@@ -1493,3 +1493,29 @@ th.ui-table__num .ui-orden { flex-direction: row-reverse; }
 }
 .ui-sensible__boton:hover { background: var(--ui-surface-2); }
 .ui-sensible__boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+/* ── Pantallas táctiles: toda acción de al menos 44 px de alto ─────────────────────────────────────────────────────
+   En celular y tableta un dedo no acierta un botón de 32 px; con mouse los tamaños de arriba se quedan como están.
+   Los enlaces dentro de un texto ganan área con relleno y margen negativo, sin mover las líneas. */
+@media (pointer: coarse) {
+  .ui-btn, .ui-btn--chico, .ui-chip, .dm-btn, .sv-btn, .sv-btn-outline, .ss-btn-peligro, .ss-btn-elegir,
+  .ui-sensible__boton, .ui-paginacion__numero, .ui-alerta__acciones button, .mapa-boton, .mapa-boton--chico,
+  .dtp-accion, .apr-peligro, .pre-peligro, .srv-peligro, .usr-desactivar, .ped-alerta,
+  .ui-volver, .mk-volver, .sq-volver, .sv-volver, .auth-back, .auth-enviar, .ui-pasos__ir, .sd-faltan__ir {
+    min-height: 44px;
+  }
+  .ui-btn--chico { padding-block: 8px; }
+  .ss-btn-icono, .header-icon-btn, .ui-aviso__cerrar, .ui-clave__ver, .ag-nav__flecha, .ss-fotos__quitar {
+    min-width: 44px; min-height: 44px;
+  }
+  .mk-enlace, .pp-enlace, .ini-enlace, .dtp-enlace, .mov-ref, .nt-link, .dm-link, .link-button, .ss-timeline__ver {
+    padding-block: 10px; margin-block: -10px;
+  }
+}
+
+/* Celular: el botón de editar de una sección baja bajo el título en vez de salirse de la tarjeta */
+@media (max-width: 480px) {
+  .ui-seccion__cabecera { flex-wrap: wrap; }
+  .ui-seccion__texto { flex-basis: calc(100% - 48px); }
+  .ui-seccion__cabecera > .ui-btn, .ui-seccion__cabecera > .ui-seccion__acciones { margin-left: 48px; }
+}

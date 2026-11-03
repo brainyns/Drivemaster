@@ -311,16 +311,16 @@ function Pieza({ pieza, datos, token, onGuardada, onInventario, irA }) {
           </div>
           <div className="iv-lotes">
             <h4 className="iv-etiqueta">De dónde vino</h4>
-            <table className="iv-tabla">
+            <table className="iv-tabla iv-tabla--tarjetas">
               <thead><tr><th scope="col">Compra</th><th scope="col">Tienda</th><th scope="col" className="iv-der">Quedan</th><th scope="col" className="iv-der">Pagaste</th><th scope="col" className="iv-der">Costo</th></tr></thead>
               <tbody>
                 {pieza.lotes.map((l) => (
                   <tr key={l.id} className={l.disponible === 0 ? "iv-tabla__vacio" : ""}>
-                    <td>{fecha(l.fechaEntrada)}<span className="iv-meta"> · {l.cantidad} u.</span></td>
-                    <td>{l.id?.startsWith("CARGA-") ? <>Carga inicial<span className="iv-meta"> · {l.tiendaNombre || "sin tienda"}</span></> : l.id?.startsWith("MANUAL-") ? <>Ajuste<span className="iv-meta"> · al costo del último lote</span></> : l.tiendaNombre}</td>
-                    <td className="iv-der iv-cifra">{l.disponible}</td>
-                    <td className="iv-der iv-cifra">{l.precioPagado != null ? formatPrecio(l.precioPagado) : "—"}{l.descuentoPct > 0 ? <span className="iv-meta"> · público {formatPrecio(l.precioPublico)}, −{String(l.descuentoPct).replace(".", ",")} %</span> : null}</td>
-                    <td className="iv-der iv-cifra">{formatPrecio(l.costoUnitario)}{l.ivaEnCosto ? <span className="iv-meta"> con IVA</span> : null}</td>
+                    <td data-label="Compra">{fecha(l.fechaEntrada)}<span className="iv-meta"> · {l.cantidad} u.</span></td>
+                    <td data-label="Tienda">{l.id?.startsWith("CARGA-") ? <>Carga inicial<span className="iv-meta"> · {l.tiendaNombre || "sin tienda"}</span></> : l.id?.startsWith("MANUAL-") ? <>Ajuste<span className="iv-meta"> · al costo del último lote</span></> : l.tiendaNombre}</td>
+                    <td data-label="Quedan" className="iv-der iv-cifra">{l.disponible}</td>
+                    <td data-label="Pagaste" className="iv-der iv-cifra">{l.precioPagado != null ? formatPrecio(l.precioPagado) : "—"}{l.descuentoPct > 0 ? <span className="iv-meta"> · público {formatPrecio(l.precioPublico)}, −{String(l.descuentoPct).replace(".", ",")} %</span> : null}</td>
+                    <td data-label="Costo" className="iv-der iv-cifra">{formatPrecio(l.costoUnitario)}{l.ivaEnCosto ? <span className="iv-meta"> con IVA</span> : null}</td>
                   </tr>
                 ))}
               </tbody>

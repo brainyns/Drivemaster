@@ -149,3 +149,24 @@ test("rechazar una solicitud avisa que pasa a otro taller", () => {
   assert.ok(src.includes("Si la rechazas, la solicitud pasa al siguiente taller cercano"), "antes de confirmar");
   assert.ok(src.includes('avisar("Solicitud rechazada: pasó al siguiente taller cercano.")'), "después de rechazar");
 });
+
+test("celular: los lotes pasan a tarjetas, las tablas anchas tienen scroll y los botones táctiles miden 44 px", () => {
+  const inv = leer("../src/pages/taller/TallerInventario.jsx");
+  assert.ok(inv.includes('className="iv-tabla iv-tabla--tarjetas"'));
+  for (const etiqueta of ["Compra", "Tienda", "Quedan", "Pagaste", "Costo"]) assert.ok(inv.includes(`data-label="${etiqueta}"`), etiqueta);
+  assert.match(leer("../src/css/inventario-taller.css"), /@media \(max-width: 600px\) \{\s*\.iv-tabla--tarjetas thead \{ display: none; \}/);
+
+  // Toda tabla de las pantallas está dentro de un contenedor con scroll o es de tarjetas
+  for (const ruta of pantallas()) {
+    const src = readFileSync(ruta, "utf8");
+    if (!src.includes("<table") || ruta.endsWith("Grafico.jsx")) continue;
+    const conScroll = /ui-table-wrap|mk-tabla-scroll|--tarjetas|it-solo-lectores/.test(src);
+    assert.ok(conScroll, `${ruta}: tabla sin scroll ni tarjetas`);
+  }
+
+  const ui = leer("../src/css/ui.css");
+  const tactil = ui.slice(ui.indexOf("@media (pointer: coarse)"));
+  assert.ok(tactil.length > 30, "hay reglas para pantallas táctiles");
+  assert.match(tactil, /\.ui-btn, \.ui-btn--chico, \.ui-chip, \.dm-btn, \.sv-btn/);
+  assert.match(tactil, /min-height: 44px;/);
+});

@@ -211,6 +211,7 @@ function StockBajo({ stock, onIr }) {
   }
   return (
     <>
+      <div className="ui-table-wrap">
       <table className="it-tabla">
         <thead><tr><th scope="col">Producto</th><th scope="col" className="it-der">Stock</th><th scope="col" className="it-der">Mínimo</th></tr></thead>
         <tbody>
@@ -226,6 +227,7 @@ function StockBajo({ stock, onIr }) {
           ))}
         </tbody>
       </table>
+      </div>
       <footer className="it-pie">
         <span>{stock.total > stock.items.length ? `Mostrando ${stock.items.length} de ${stock.total}` : `${stock.total} ${stock.total === 1 ? "producto" : "productos"}`}</span>
         <span className="it-pie__acciones">

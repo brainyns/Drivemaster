@@ -219,3 +219,17 @@
 .iv-minimo__fila { display: flex; align-items: center; gap: 10px; }
 .iv-moneda--corta { width: 5.5rem; }
 .iv-moneda--corta input { width: 100%; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Lotes en celular: cada lote es una tarjeta corta, con la etiqueta delante de cada dato (como Movimientos) */
+@media (max-width: 600px) {
+  .iv-tabla--tarjetas thead { display: none; }
+  .iv-tabla--tarjetas, .iv-tabla--tarjetas tbody, .iv-tabla--tarjetas tr, .iv-tabla--tarjetas td { display: block; }
+  .iv-tabla--tarjetas tbody { display: grid; gap: 8px; }
+  .iv-tabla--tarjetas tr { padding: 8px 12px; border: 1px solid var(--ui-line); border-radius: var(--ui-r-md); background: var(--ui-surface); }
+  .iv-tabla--tarjetas td {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 4px 0; border: 0; text-align: right;
+  }
+  .iv-tabla--tarjetas td::before {
+    content: attr(data-label); flex-shrink: 0; font-size: 0.75rem; font-weight: 600; color: var(--ui-muted); text-align: left;
+  }
+}
