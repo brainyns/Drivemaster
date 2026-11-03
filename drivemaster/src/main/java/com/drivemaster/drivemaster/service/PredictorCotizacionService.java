@@ -157,10 +157,10 @@ public class PredictorCotizacionService {
 
         List<String> recs = new ArrayList<>();
         if (rawNums[8] > 24.0) {
-            recs.add("El tiempo de respuesta fue alto (> 24h). Enviar la cotización en las primeras 4 horas eleva la probabilidad hasta un 35%.");
+            recs.add("El tiempo de respuesta fue alto (más de 24 h). Enviar la cotización en las primeras 4 horas eleva la probabilidad hasta un 35 %.");
         }
         if (rawNums[1] > 15.0) {
-            recs.add(String.format("El cliente está a %.1f km del taller. Ofrece facilidades de cita o inspección rápida.", rawNums[1]));
+            recs.add("El cliente está a " + com.drivemaster.drivemaster.util.Dinero.decimal(rawNums[1]) + " km del taller. Ofrece facilidades de cita o inspección rápida.");
         }
         if (totalConIva > 1200000.0) {
             recs.add("El monto total es elevado. Considera ofrecer repuestos alternativos o formas de pago.");

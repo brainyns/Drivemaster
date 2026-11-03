@@ -11,7 +11,7 @@ import Esqueleto from "../../components/ui/Esqueleto";
 import EstadoVacio from "../../components/ui/EstadoVacio";
 import Icon from "../../components/public/Icon";
 import { cifrasPieza, estadoEnCamino, pct } from "./reglasInventario";
-import { plural } from "../../utils/formato";
+import { plural, porcentaje } from "../../utils/formato";
 import "../../css/inventario-taller.css";
 import { textoError } from "../../utils/errores";
 import ConfirmarAccion from "../../components/marketplace/ConfirmarAccion";
@@ -438,7 +438,7 @@ export default function TallerInventario({ onComprar, irA }) {
             <div className="ui-card__header">
               <h2 id="iv-piezas" className="ui-card__titulo">Piezas</h2>
               <span className="ui-card__sub">
-                Precios antes de IVA. La ganancia resta la comisión del {d.comisionPct} %{d.comisionSeDescuenta ? "." : ", que todavía no se descuenta."}
+                Precios antes de IVA. La ganancia resta la comisión del {porcentaje(d.comisionPct)}{d.comisionSeDescuenta ? "." : ", que todavía no se descuenta."}
               </span>
             </div>
             {bajas.length > 0 && (

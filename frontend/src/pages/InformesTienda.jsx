@@ -11,6 +11,7 @@ import Icon from "../components/public/Icon";
 import { ResumenDinero } from "../components/servicio/DesgloseDinero";
 import "../css/informes-tienda.css";
 import { textoError } from "../utils/errores";
+import { decimal, porcentaje, horas } from "../utils/formato";
 
 const PERIODOS = [3, 6, 12];
 
@@ -186,13 +187,13 @@ function Despacho({ despacho, onIr }) {
       ) : (
         <>
           <div className="it-despacho__dato">
-            <span className="it-despacho__valor it-cifra">{dias ? (horasPromedio / 24).toFixed(1) : horasPromedio}</span>
+            <span className="it-despacho__valor it-cifra">{dias ? decimal(horasPromedio / 24) : decimal(horasPromedio)}</span>
             <span className="it-despacho__unidad">{dias ? "días" : "horas"} en promedio</span>
           </div>
           <p className="it-despacho__sub">{num(despachados)} {despachados === 1 ? "pedido medido" : "pedidos medidos"} en el período</p>
           {porcentajeATiempo != null && (
-            <div className="it-meter" role="img" aria-label={`${porcentajeATiempo}% despachado a tiempo`}>
-              <div className="it-meter__fila"><span>Despachados a tiempo</span><strong className="it-cifra">{porcentajeATiempo}%</strong></div>
+            <div className="it-meter" role="img" aria-label={`${porcentaje(porcentajeATiempo)} despachado a tiempo`}>
+              <div className="it-meter__fila"><span>Despachados a tiempo</span><strong className="it-cifra">{porcentaje(porcentajeATiempo)}</strong></div>
               <span className="it-hilo it-hilo--grueso" aria-hidden="true"><span style={{ width: `${porcentajeATiempo}%` }} /></span>
             </div>
           )}
@@ -277,7 +278,7 @@ function Liquidacion({ liquidacion: l }) {
 }
 
 /** Despacho promedio en horas o, desde 48 h, en días. */
-const duracion = (h) => (h == null ? "—" : h >= 48 ? `${(h / 24).toLocaleString("es-CO", { maximumFractionDigits: 1 })} días` : `${h} h`);
+const duracion = (h) => (h == null ? "—" : h >= 48 ? `${decimal(h / 24)} días` : horas(h));
 
 function Resumen({ datos, onIr }) {
   const stock = datos.stockBajo.total;
@@ -288,7 +289,7 @@ function Resumen({ datos, onIr }) {
         <Indicador titulo="Ventas del período" valor={cop(datos.ventas.ventas)}
           pie={`${num(datos.ventas.pedidos)} ${datos.ventas.pedidos === 1 ? "pedido" : "pedidos"}`} />
         <Indicador icono="clock" titulo="Despacho promedio" valor={duracion(datos.despacho.horasPromedio)}
-          pie={datos.despacho.porcentajeATiempo != null ? `${datos.despacho.porcentajeATiempo} % a tiempo` : "Sin despachos medidos aún"} />
+          pie={datos.despacho.porcentajeATiempo != null ? `${porcentaje(datos.despacho.porcentajeATiempo)} a tiempo` : "Sin despachos medidos aún"} />
         <Indicador titulo="Ya te pagaron" valor={cop(datos.liquidacion.liquidado)} tono="ok"
           pie={`${num(datos.liquidacion.lineasLiquidadas)} ${datos.liquidacion.lineasLiquidadas === 1 ? "pedido" : "pedidos"}`} />
         <Indicador titulo="Por recibir" valor={cop(datos.liquidacion.porLiquidar)} tono={datos.liquidacion.porLiquidar > 0 ? "accion" : undefined}

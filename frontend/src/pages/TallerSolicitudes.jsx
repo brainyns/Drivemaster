@@ -42,6 +42,7 @@ import "../css/solicitudes-taller.css";
 import "../css/marketplace.css"; // el diálogo de ConfirmarAccion
 import { claveOferta, vendedor } from "../components/servicio/reglasRepuestos";
 import { textoError } from "../utils/errores";
+import { kilometros } from "../utils/formato";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 const TONO_URGENCIA = { BAJA: "ok", MEDIA: "info", ALTA: "aviso", CRITICA: "error" };
@@ -526,7 +527,7 @@ export default function TallerSolicitudes({
                   <dt>Ubicación</dt>
                   <dd>
                     {[s.barrio, s.ciudad].filter(Boolean).join(", ") || "Sin indicar"}
-                    {s.distanciaTallerKm != null && ` · a ${s.distanciaTallerKm.toFixed(1)} km`}
+                    {s.distanciaTallerKm != null && ` · a ${kilometros(s.distanciaTallerKm)}`}
                   </dd>
                 </div>
                 {s.preferenciaHorario && (
@@ -908,7 +909,7 @@ export default function TallerSolicitudes({
                   <span className="st-tarjeta__meta">
                     #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}
                     {[s.barrio, s.ciudad].some(Boolean) && ` · ${[s.barrio, s.ciudad].filter(Boolean).join(", ")}`}
-                    {s.distanciaTallerKm != null && ` · ${s.distanciaTallerKm.toFixed(1)} km`}
+                    {s.distanciaTallerKm != null && ` · ${kilometros(s.distanciaTallerKm)}`}
                     {s.fechaRevision && <> · <Icon name="calendar" size={14} /> Revisión: {formatFechaHora(s.fechaRevision)}</>}
                     {s.mecanicoNombre && ` · ${s.mecanicoNombre}`}
                   </span>

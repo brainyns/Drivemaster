@@ -12,6 +12,7 @@ import { barras, resumenReembolsos, urgentesDashboard } from "./admin/plataforma
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import { textoError } from "../utils/errores";
+import { porcentaje } from "../utils/formato";
 
 const REFRESCO_MS = 60000;
 
@@ -116,7 +117,7 @@ export default function DashboardPlataforma({ token, onIr }) {
 
   const encabezado = (
     <EncabezadoPagina titulo="Panel de la plataforma"
-      descripcion="DriveMaster administra el marketplace, no vende: su ingreso es la comisión del 10% sobre cada pago."
+      descripcion="DriveMaster administra el marketplace, no vende: su ingreso es la comisión del 10 % sobre cada pago."
       acciones={(
         <>
           {d && <span className="pp-actualizado">Actualizado a las {hora(d.generadoEn)}</span>}
@@ -237,7 +238,7 @@ export default function DashboardPlataforma({ token, onIr }) {
               onClick={() => ir("reportes-plataforma", "comision")} />
           )}
           <Indicador titulo="Comisión informativa" valor={cop(d.dinero.comisionRegistrada)}
-            pie={`${d.dinero.comisionPct} % sobre el valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}. Informativa: no es dinero cobrado.`}
+            pie={`${porcentaje(d.dinero.comisionPct)} sobre el valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}. Informativa: no es dinero cobrado.`}
             onClick={() => ir("reportes-plataforma", "comision")} />
           {d.dinero.liquidacionAutomatica && !d.dinero.porLiquidar ? (
             <Indicador titulo="Pagado automáticamente (simulado)" valor={cop(d.dinero.liquidadoSimulado)}

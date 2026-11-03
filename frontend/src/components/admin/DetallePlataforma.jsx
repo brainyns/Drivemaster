@@ -14,7 +14,7 @@ import { ESTADOS_PEDIDO, chipsAlerta, estadoNegocio, refPedido, textoConcepto } 
 import {
   BENEFICIARIO, ESTADOS_PAGO, ESTADOS_REPARTO, notaReparto, textoEntrega, textoVehiculo, ubicacionNegocio,
 } from "../../pages/admin/detalleAdmin";
-import { formatoCop } from "../../utils/formato";
+import { formatoCop, decimal } from "../../utils/formato";
 import "../../css/admin-base.css";
 import "../../css/detalle-plataforma.css";
 import { textoError } from "../../utils/errores";
@@ -603,7 +603,7 @@ function VistaNegocio({ n, abrir }) {
               <Dato etiqueta="Especialidades" ancho>{n.especialidades?.length ? n.especialidades.join(", ") : null}</Dato>
               <Dato etiqueta="Mano de obra">{n.precioManoObra ? formatoCop(n.precioManoObra) : null}</Dato>
               <Dato etiqueta="Tarifa por hora">{n.tarifaHora ? formatoCop(n.tarifaHora) : null}</Dato>
-              <Dato etiqueta="Calificación">{n.calificaciones ? `${(n.calificacion || 0).toFixed(1)} (${n.calificaciones})` : "Sin calificaciones"}</Dato>
+              <Dato etiqueta="Calificación">{n.calificaciones ? `${decimal(n.calificacion || 0, { fijo: 1 })} (${n.calificaciones})` : "Sin calificaciones"}</Dato>
               <Dato etiqueta="Mecánicos" ancho>{n.mecanicos?.length
                 ? n.mecanicos.map((m) => `${m.nombre}${m.especialidad ? ` (${m.especialidad})` : ""}${m.activo ? "" : " · inactivo"}`).join(", ")
                 : null}</Dato>

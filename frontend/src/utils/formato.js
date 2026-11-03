@@ -76,3 +76,23 @@ export function enmascarar(valor, visibles = 4) {
   if (limpio.length <= visibles) return "•".repeat(limpio.length);
   return `•••• ${limpio.slice(-visibles)}`;
 }
+
+// ── Números con formato de Colombia (es-CO): coma decimal y punto de miles ─────────────────────────────────────────
+// 41,3 h · 83,9 % · 0,7 km · 1.234,5. Nunca "41.3" ni "83.9%": así lo lee cualquier persona en Colombia.
+
+/** Un número con hasta `max` decimales (o exactamente `fijo` si se pide, como una calificación 4,0). */
+export function decimal(n, { max = 1, fijo = null } = {}) {
+  const v = Number(n);
+  if (n == null || !Number.isFinite(v)) return "—";
+  const d = fijo ?? undefined;
+  return v.toLocaleString("es-CO", { minimumFractionDigits: d ?? 0, maximumFractionDigits: d ?? max });
+}
+
+/** "83,9 %" con espacio, como se escribe en español. null → "—". */
+export const porcentaje = (n, max = 1) => (n == null ? "—" : `${decimal(n, { max })} %`);
+
+/** "41,3 h". */
+export const horas = (n) => (n == null ? "—" : `${decimal(n)} h`);
+
+/** "0,7 km". */
+export const kilometros = (n) => (n == null ? "—" : `${decimal(n)} km`);

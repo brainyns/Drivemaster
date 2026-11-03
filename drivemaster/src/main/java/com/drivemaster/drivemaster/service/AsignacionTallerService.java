@@ -84,7 +84,7 @@ public class AsignacionTallerService {
                 .set("aceptadaPorTaller", false);
 
         String nota = "Asignada a " + taller.getNombre()
-                + (elegido.distanciaKm() != null ? String.format(Locale.ROOT, " (%.1f km)", elegido.distanciaKm()) : "")
+                + (elegido.distanciaKm() != null ? " (" + com.drivemaster.drivemaster.util.Dinero.decimal(elegido.distanciaKm()) + " km)" : "")
                 + (taller.getId().equals(orden.getTallerElegidoId()) ? ", elegido por el cliente" : "");
         OrdenServicio asignada = transiciones.transicionar(orden, EstadoOrden.ASIGNADA_A_TALLER, Actor.SISTEMA,
                 nota, null, cambios);

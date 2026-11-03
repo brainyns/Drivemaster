@@ -24,6 +24,7 @@ import "../css/solicitud-servicio.css";
 import "../css/marketplace.css";
 import "../css/solicitar-diagnostico.css";
 import { textoError } from "../utils/errores";
+import { kilometros } from "../utils/formato";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -158,7 +159,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
                 {resultado.tallerElegidoId && resultado.tallerElegidoId === resultado.tallerId
                   ? "La enviamos al taller que elegiste, " : "La asignamos a "}
                 <strong>{resultado.tallerNombre}</strong>
-                {resultado.distanciaTallerKm != null && ` (a ${resultado.distanciaTallerKm.toFixed(1)} km)`}.
+                {resultado.distanciaTallerKm != null && ` (a ${kilometros(resultado.distanciaTallerKm)})`}.
                 El taller te propondrá una fecha para revisar tu vehículo; te avisaremos por correo.
               </p>
               <RutaTaller

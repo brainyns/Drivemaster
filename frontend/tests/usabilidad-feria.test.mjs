@@ -228,3 +228,30 @@ test("informes claros: banda Ventas − IVA − Comisión = Lo tuyo, Este mes co
   const esteMes = leer("../src/components/ui/EsteMes.jsx");
   assert.ok(!/<(input|select|button)/.test(esteMes), "Este mes es solo lectura");
 });
+
+test("formato es-CO: coma decimal, punto de miles y espacio antes de %, en todo lo visible", async () => {
+  const { decimal, porcentaje, horas, kilometros } = await import("../src/utils/formato.js");
+  assert.equal(horas(41.3), "41,3 h");
+  assert.equal(porcentaje(83.9), "83,9 %");
+  assert.equal(kilometros(0.7), "0,7 km");
+  assert.equal(decimal(1234.5), "1.234,5");
+  assert.equal(decimal(4, { fijo: 1 }), "4,0");
+  assert.equal(decimal(19.46), "19,5");
+  assert.equal(porcentaje(null), "—");
+  const { formatoDistancia } = await import("../src/utils/distancia.js").catch(() => ({}));
+  if (formatoDistancia) assert.equal(formatoDistancia(3.4), "a 3,4 km");
+
+  // Ningún número decimal se escribe con toFixed (punto) en una pantalla, salvo las coordenadas del mapa
+  for (const ruta of pantallas()) {
+    const src = readFileSync(ruta, "utf8");
+    src.split(/\r?\n/).forEach((linea, i) => {
+      if (!linea.includes(".toFixed(") || /latitud|longitud|clavePunto/.test(linea)) return;
+      assert.fail(`${ruta}:${i + 1} usa toFixed: ${linea.trim().slice(0, 90)}`);
+    });
+    // Ni porcentajes pegados al número ("83%")
+    for (const m of src.matchAll(/\{[^}]+\}%|\$\{[^}]+\}%/g)) {
+      if (/width|height|style|transform/.test(m[0] + src.slice(Math.max(0, m.index - 40), m.index))) continue;
+      assert.fail(`${ruta}: porcentaje sin formato: ${m[0]}`);
+    }
+  }
+});

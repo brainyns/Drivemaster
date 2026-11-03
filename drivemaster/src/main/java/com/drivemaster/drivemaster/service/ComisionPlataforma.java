@@ -214,7 +214,8 @@ final class ComisionPlataforma {
                     .monto(Dinero.aDouble(comision))
                     .estado(RepartoPago.RETENIDA)
                     .liquidacionPorEvento(false)
-                    .nota("Comisión retenida " + pct + "% sobre $" + suma(lineas, r -> Dinero.pesos(r.getComisionBase())).toPlainString()
+                    .nota("Comisión retenida " + com.drivemaster.drivemaster.util.CalculadoraCotizacion.pct(pct) + " sobre "
+                            + Dinero.texto(suma(lineas, r -> Dinero.pesos(r.getComisionBase())))
                             + " (antes de IVA)")
                     .fechaCreacion(LocalDateTime.now())
                     .build());
@@ -245,7 +246,7 @@ final class ComisionPlataforma {
                     .monto(Dinero.aDouble(comision))
                     .estado(RepartoPago.INFORMATIVA)
                     .liquidacionPorEvento(false)
-                    .nota("Comisión informativa " + pct + "% sobre $" + base.toPlainString() + " (antes de IVA)")
+                    .nota("Comisión informativa " + com.drivemaster.drivemaster.util.CalculadoraCotizacion.pct(pct) + " sobre " + Dinero.texto(base) + " (antes de IVA)")
                     .fechaCreacion(LocalDateTime.now())
                     .build());
         } catch (RuntimeException e) {

@@ -9,6 +9,7 @@ import Esqueleto from "../components/ui/Esqueleto";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import { textoError } from "../utils/errores";
+import { porcentaje } from "../utils/formato";
 
 const PERIODOS = [
   { k: "dia", l: "Hoy" },
@@ -19,7 +20,7 @@ const PERIODOS = [
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 
-const pct = (n) => `${Math.round(n || 0)}%`;
+const pct = (n) => porcentaje(Math.round(n || 0));
 
 /** Ranking como barras: se lee el orden de un vistazo, sin tabular. La barra es relativa al primero. */
 function Ranking({ id, titulo, nota, filas }) {

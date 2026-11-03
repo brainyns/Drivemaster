@@ -5,7 +5,7 @@ import { ordenesPorTallerAdmin } from "../services/ordenServicioService";
 import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
 import DrawerAdmin from "../components/admin/DrawerAdmin";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
-import { capitalizar } from "../utils/formato";
+import { capitalizar, decimal } from "../utils/formato";
 import Calificacion from "../components/ui/Calificacion";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
@@ -233,7 +233,7 @@ export default function AdminTalleres() {
           <Indicador titulo="Recibiendo servicios" valor={resumen.activos} tono={resumen.activos > 0 ? "ok" : undefined} />
           <Indicador titulo="Pausados" valor={resumen.inactivos} />
           <Indicador icono="star" titulo="Calificación promedio"
-            valor={resumen.promedio != null ? resumen.promedio.toFixed(1) : "Sin datos"}
+            valor={resumen.promedio != null ? decimal(resumen.promedio, { fijo: 1 }) : "Sin datos"}
             pie={resumen.promedio != null ? "De los talleres que ya tienen calificaciones" : "Ningún taller tiene calificaciones aún"} />
         </section>
       )}

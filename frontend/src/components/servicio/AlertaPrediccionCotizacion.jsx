@@ -1,6 +1,7 @@
 import ChipEstado from "../ui/ChipEstado";
 import BarraProgreso from "../ui/BarraProgreso";
 import "../../css/cotizacion.css";
+import { porcentaje } from "../../utils/formato";
 
 /**
  * Componente que muestra la probabilidad de aprobación predicha por Machine Learning
@@ -36,17 +37,17 @@ export default function AlertaPrediccionCotizacion({ prediccion }) {
         <div>
           <span className="apc__origen">IA predictiva DriveMaster · Proyecto de aula</span>
           <h4 className="apc__titulo">
-            Probabilidad estimada de aprobación: <span className="apc__cifra">{pctAprobacion}%</span>
+            Probabilidad estimada de aprobación: <span className="apc__cifra">{porcentaje(pctAprobacion)}</span>
           </h4>
         </div>
         <ChipEstado tono={riesgo.tono}>{riesgo.etiqueta}</ChipEstado>
       </div>
 
-      <BarraProgreso valor={pctAprobacion} tono={riesgo.tono} etiqueta={`Aprobación estimada: ${pctAprobacion}%`} />
+      <BarraProgreso valor={pctAprobacion} tono={riesgo.tono} etiqueta={`Aprobación estimada: ${porcentaje(pctAprobacion)}`} />
 
       <div className="apc__cifras">
-        <span>Aprobación estimada: {pctAprobacion}%</span>
-        <span>Riesgo de rechazo: {pctRechazo}%</span>
+        <span>Aprobación estimada: {porcentaje(pctAprobacion)}</span>
+        <span>Riesgo de rechazo: {porcentaje(pctRechazo)}</span>
       </div>
 
       {/* Recomendaciones generadas por el modelo */}

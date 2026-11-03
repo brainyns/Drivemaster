@@ -3,6 +3,7 @@ import { ESTADOS_COTIZACION, formatFechaHora, formatPrecio } from "./estadosServ
 import { aclaracionUnidad, explicacionAdelanto, totalesCotizacion, totalLinea } from "./desgloseIva";
 import { esDelTaller, etiquetaOrigen } from "./reglasRepuestos";
 import "../../css/cotizacion.css";
+import { horas } from "../../utils/formato";
 
 /**
  * Desglose de una cotización (repuestos, mano de obra, IVA, anticipo y total a
@@ -98,7 +99,7 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
       {explicacionAdelanto(c, formatPrecio) && <p className="ss-meta ct-adelanto">{explicacionAdelanto(c, formatPrecio)}</p>}
 
       <p className="ss-meta">
-        {c.tiempoEstimadoHoras ? `Tiempo estimado del trabajo: ${c.tiempoEstimadoHoras} h · ` : ""}
+        {c.tiempoEstimadoHoras ? `Tiempo estimado del trabajo: ${horas(c.tiempoEstimadoHoras)} · ` : ""}
         {c.diasEntregaRepuestos ? `Repuestos por encargo: hasta ${c.diasEntregaRepuestos} días · ` : ""}
         {c.vigenciaHasta && `Válida hasta ${formatFechaHora(c.vigenciaHasta)}`}
       </p>

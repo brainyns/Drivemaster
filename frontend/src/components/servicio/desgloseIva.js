@@ -2,7 +2,9 @@
 // presentan. El IVA NO se suma aparte: va incluido en los precios y se informa cuánto lleva la cotización.
 // Regla de líneas idéntica a CalculadoraCotizacion (ivaDeLinea / lineaConIva).
 
-export const formatPct = (v) => (v == null ? "" : `${Number.isInteger(v) ? v : v.toFixed(1).replace(".", ",")} %`);
+import { porcentaje } from "../../utils/formato.js";
+
+export const formatPct = (v) => (v == null ? "" : porcentaje(v));
 
 const valor = (v) => (v == null ? 0 : v);
 
