@@ -61,10 +61,16 @@ test("todas las pestañas muestran su contador, también en cero", () => {
   assert.ok(!pagina.includes("conteo[f.key] > 0 &&"));
 });
 
-test("el detalle deja solo \"Total a pagar\" si no hay anticipo y dice cuánto recibe el taller", () => {
+test("el resumen sigue el orden único: Total, Incluye IVA, Adelanto, Total a pagar", async () => {
+  const { totalesCotizacion } = await import("../src/components/servicio/desgloseIva.js");
+  const base = { total: 100, iva: 19, totalAPagar: 100, anticipoDiagnostico: 0 };
+  assert.deepEqual(totalesCotizacion(base).map((f) => f.texto), ["Total", "Incluye IVA de", "Total a pagar"]);
+  const conAdelanto = totalesCotizacion({ ...base, anticipoDiagnostico: 50, totalAPagar: 50 });
+  assert.deepEqual(conAdelanto.map((f) => f.texto), ["Total", "Incluye IVA de", "Adelanto del diagnóstico", "Total a pagar"]);
+  assert.equal(conAdelanto[2].monto, -50);
   const detalle = readFileSync(new URL("../src/components/servicio/CotizacionDetalle.jsx", import.meta.url), "utf8");
-  assert.match(detalle, /\{c\.anticipoDiagnostico > 0 && \(\s*<>\s*<div className="ct-totales__fila"><dt>Total<\/dt>/,
-    "\"Total\" solo aparece con anticipo");
+  assert.ok(detalle.includes("totalesCotizacion(c).map("), "el detalle (cliente, página pública e impresión) usa el resumen único");
+  assert.ok(!detalle.includes("<dt>Subtotal</dt>"), "el subtotal aparte ya no existe");
   assert.ok(detalle.includes("c.recibeTaller"), "lo que recibe viene del backend, con o sin comisión");
 });
 

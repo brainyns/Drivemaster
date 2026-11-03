@@ -191,9 +191,28 @@ public class CotizacionService {
         return paraTaller(cotizacion);
     }
 
+    /**
+     * La tarifa original del diagnóstico cuando el cliente la pagó (la cotización solo guarda la parte aplicada);
+     * null si no está disponible o no se pagó. Es dato que ya vio el cliente en su orden y el taller en la suya.
+     */
+    private Double tarifaDiagnosticoDe(Cotizacion c) {
+        if (c.getAnticipoDiagnostico() == null || c.getAnticipoDiagnostico() <= 0) return null;
+        return ordenRepository.findById(c.getOrdenId())
+                .filter(o -> EstadoOrden.PAGO_PAGADO.equals(o.getPagoDiagnosticoEstado()) && o.getTarifaDiagnostico() != null)
+                .map(OrdenServicio::getTarifaDiagnostico)
+                .orElse(null);
+    }
+
+    /** La misma vista completa, con la tarifa del diagnóstico cuando la hay (para explicar el adelanto). */
+    private CotizacionDTO conTarifa(CotizacionDTO dto, Cotizacion c) {
+        dto.setDiagnosticoPagado(tarifaDiagnosticoDe(c));
+        return dto;
+    }
+
     /** La vista completa más lo que recibirá el taller. El cliente nunca ve estos campos. */
     private CotizacionDTO paraTaller(Cotizacion c) {
         CotizacionDTO dto = CotizacionDTO.completa(c);
+        dto.setDiagnosticoPagado(tarifaDiagnosticoDe(c));
         double manoObra = c.getSubtotalManoObra() != null ? c.getSubtotalManoObra() : 0;
         double ivaManoObra = c.getIvaManoObra() != null ? c.getIvaManoObra() : Math.round(manoObra * c.pctManoObra() / 100.0);
         // Sus repuestos son una venta suya: pagan comisión sobre el precio sin IVA y le llegan con su IVA
@@ -223,7 +242,7 @@ public class CotizacionService {
         }
         return cotizacionRepository.findByOrdenIdOrderByVersionDesc(orden.getId()).stream()
                 .filter(c -> !EstadoOrden.TALLER.equals(actor) || orden.getTallerId().equals(c.getTallerId()))
-                .map(c -> EstadoOrden.TALLER.equals(actor) ? paraTaller(c) : CotizacionDTO.completa(c))
+                .map(c -> EstadoOrden.TALLER.equals(actor) ? paraTaller(c) : conTarifa(CotizacionDTO.completa(c), c))
                 .toList();
     }
 
@@ -250,7 +269,7 @@ public class CotizacionService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cotización no encontrada");
         }
         if (taller == null) taller = tallerDe(cotizacion);
-        return PdfCotizacionBuilder.construir(cotizacion, taller);
+        return PdfCotizacionBuilder.construir(cotizacion, taller, tarifaDiagnosticoDe(cotizacion));
     }
 
     /** Taller de la cotización para los datos del PDF; si ya no existe, el PDF usa el nombre guardado en la cotización. */
@@ -281,14 +300,15 @@ public class CotizacionService {
         if (!CotizacionDTO.respondible(cotizacion)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta cotización ya no se puede responder");
         }
-        return CotizacionDTO.completa(aplicarRespuesta(cotizacion, r, false));
+        return conTarifa(CotizacionDTO.completa(aplicarRespuesta(cotizacion, r, false)), cotizacion);
     }
 
     // ─── Enlace del correo (sin sesión) ──────────────────────────────────────
 
     /** Detalle de la cotización del enlace. Error genérico si el token no sirve. */
     public CotizacionDTO consultarPublica(String token) {
-        return CotizacionDTO.publica(porToken(token));
+        Cotizacion cotizacion = porToken(token);
+        return conTarifa(CotizacionDTO.publica(cotizacion), cotizacion);
     }
 
     public CotizacionDTO responderPublica(RespuestaCotizacionRequest r) {
@@ -296,7 +316,7 @@ public class CotizacionService {
         if (!CotizacionDTO.respondible(cotizacion)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ENLACE_INVALIDO);
         }
-        return CotizacionDTO.publica(aplicarRespuesta(cotizacion, r, true));
+        return conTarifa(CotizacionDTO.publica(aplicarRespuesta(cotizacion, r, true)), cotizacion);
     }
 
     // ─── Vencimientos ────────────────────────────────────────────────────────

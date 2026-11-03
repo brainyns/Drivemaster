@@ -77,6 +77,11 @@ public final class EmailServicioBuilder {
      * al servidor: no queda en logs de Vercel ni de Render.
      */
     public static String clienteCotizacion(String cliente, Cotizacion c, String enlaceBase) {
+        return clienteCotizacion(cliente, c, enlaceBase, null);
+    }
+
+    /** Cotización para el cliente; diagnosticoPagado es la tarifa original del diagnóstico (null si no se conoce). */
+    public static String clienteCotizacion(String cliente, Cotizacion c, String enlaceBase, Double diagnosticoPagado) {
         StringBuilder filas = new StringBuilder();
         for (CotizacionItem i : c.getItems()) {
             String detalle = CotizacionItem.REPUESTO.equals(i.getTipo())
@@ -85,17 +90,21 @@ public final class EmailServicioBuilder {
                             ? " · encargo " + i.getDiasEntrega() + " días" : "")
                     : (CotizacionItem.POR_HORAS.equals(i.getModalidad()) ? i.getHoras() + " h × " + moneda(i.getPrecioUnitario()) : "Mano de obra");
             String cantidad = CotizacionItem.REPUESTO.equals(i.getTipo()) ? i.getCantidad() + " × " : "";
+            // Cada línea muestra el valor con IVA (los precios del catálogo son sin IVA; el taller fija los suyos)
+            double conIva = CalculadoraCotizacion.lineaConIva(c, i);
             filas.append(PlantillaCorreo.filaDetalle(cantidad + e(i.getDescripcion()) + "<br/>" + PlantillaCorreo.nota(detalle),
-                    moneda(i.getSubtotal())));
+                    moneda(conIva)));
         }
-        StringBuilder iva = new StringBuilder();
-        for (CalculadoraCotizacion.LineaIva l : CalculadoraCotizacion.lineasIva(c)) iva.append(linea(l.texto(), l.monto()));
-        String totales = linea("Subtotal", c.getSubtotal())
-                + iva
-                + linea("Total", c.getTotal())
-                + (c.getAnticipoDiagnostico() != null && c.getAnticipoDiagnostico() > 0
-                    ? linea("Diagnóstico ya pagado", -c.getAnticipoDiagnostico()) : "")
+        // El IVA no se suma aparte: va incluido; se informa cuánto lleva
+        int anticipo = c.getAnticipoDiagnostico() != null ? c.getAnticipoDiagnostico().intValue() : 0;
+        String totales = linea("Total", c.getTotal())
+                + linea("Incluye IVA de", c.getIva())
+                + (anticipo > 0 ? linea("Adelanto del diagnóstico", -(double) anticipo) : "")
                 + filaTotal("Total a pagar", moneda(c.getTotalAPagar()));
+        String explicacionAdelanto = anticipo > 0
+                ? parrafo(PlantillaCorreo.nota(e(CalculadoraCotizacion.explicacionAdelanto(
+                        anticipo, diagnosticoPagado, CalculadoraCotizacion.manoObraConIva(c), v -> moneda(v)))))
+                : "";
 
         String extras = (c.getTiempoEstimadoHoras() != null ? "Tiempo estimado del trabajo: " + c.getTiempoEstimadoHoras() + " h<br/>" : "")
                 + (c.getDiasEntregaRepuestos() != null ? "Entrega de repuestos por encargo: hasta " + c.getDiasEntregaRepuestos() + " días<br/>" : "")
@@ -107,6 +116,7 @@ public final class EmailServicioBuilder {
                 + parrafo("<strong>" + e(c.getTallerNombre()) + "</strong> preparó la cotización para tu <strong>"
                         + e(c.getVehiculoDescripcion()) + "</strong>. Revísala y decide.")
                 + PlantillaCorreo.tabla(filas + totales)
+                + explicacionAdelanto
                 + recuadro(extras)
                 + "<p style=\"margin:20px 0 8px;\">"
                 + PlantillaCorreo.boton("Revisar y aprobar", enlaceBase + "&accion=aprobar")

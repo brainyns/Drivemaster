@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.model.Cotizacion;
+import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.Notificacion;
 import com.drivemaster.drivemaster.model.PiezaTaller;
 import com.drivemaster.drivemaster.model.OrdenServicio;
@@ -128,7 +129,9 @@ public class AvisosSolicitudServicio implements StockTallerService.AvisoStockBaj
         String enlace = frontendUrl.replaceAll("/+$", "") + "/cotizacion#token=" + token;
         cliente(orden).ifPresent(c -> enviar(c.getCorreo(),
                 "Tu cotización de " + cotizacion.getTallerNombre() + " está lista",
-                EmailServicioBuilder.clienteCotizacion(c.getNombre(), cotizacion, enlace)));
+                EmailServicioBuilder.clienteCotizacion(c.getNombre(), cotizacion, enlace,
+                        EstadoOrden.PAGO_PAGADO.equals(orden.getPagoDiagnosticoEstado()) && orden.getTarifaDiagnostico() != null
+                                ? orden.getTarifaDiagnostico() : null)));
         avisar(orden.getUsuarioId(), Notificacion.COTIZACION_EMITIDA, "Tu cotización está lista",
                 cotizacion.getTallerNombre() + " envió la cotización de " + vehiculo(orden) + ".",
                 "mis-servicios", orden.getId());

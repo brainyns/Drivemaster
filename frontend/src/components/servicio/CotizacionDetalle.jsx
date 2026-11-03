@@ -1,6 +1,6 @@
 import Etiqueta from "./Etiqueta";
 import { ESTADOS_COTIZACION, formatFechaHora, formatPrecio } from "./estadosServicio";
-import { lineasIva, precioFinalLinea, textoPrecioFinal } from "./desgloseIva";
+import { aclaracionUnidad, explicacionAdelanto, totalesCotizacion, totalLinea } from "./desgloseIva";
 import { esDelTaller, etiquetaOrigen } from "./reglasRepuestos";
 import "../../css/cotizacion.css";
 
@@ -42,11 +42,10 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
                     {[i.marca, i.referencia, !esDelTaller(i) && i.tiendaNombre].filter(Boolean).join(" · ")}
                     {i.disponibilidad === "ENCARGO" && ` · Encargo${i.diasEntrega ? ` (${i.diasEntrega} días)` : ""}`}
                   </span>
-                  {/* Con dos IVA distintos, el precio final por unidad deja comparar la misma pieza entre líneas */}
-                  {precioFinalLinea(c, i) && <span className="ss-meta ct-item__final">{textoPrecioFinal(precioFinalLinea(c, i), formatPrecio)}</span>}
+                  {aclaracionUnidad(c, i, formatPrecio) && <span className="ss-meta ct-item__final">{aclaracionUnidad(c, i, formatPrecio)}</span>}
                   <span className={`ct-origen ct-origen--${g.clave}`}>{etiquetaOrigen(i)}</span>
                 </span>
-                <span className="ct-item__valor">{formatPrecio(i.subtotal)}</span>
+                <span className="ct-item__valor">{formatPrecio(totalLinea(c, i))}</span>
               </li>
             ))}
           </ul>
@@ -65,7 +64,7 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
                     <span className="ss-meta">{i.horas} h × {formatPrecio(i.precioUnitario)}</span>
                   )}
                 </span>
-                <span className="ct-item__valor">{formatPrecio(i.subtotal)}</span>
+                <span className="ct-item__valor">{formatPrecio(totalLinea(c, i))}</span>
               </li>
             ))}
           </ul>
@@ -73,21 +72,11 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
       )}
 
       <dl className="ct-totales">
-        <div className="ct-totales__fila"><dt>Subtotal</dt><dd>{formatPrecio(c.subtotal)}</dd></div>
-        {/* Una línea si repuestos y mano de obra llevan el mismo IVA; si no (taller no responsable), una por tipo */}
-        {lineasIva(c).map((l) => (
-          <div key={l.texto} className="ct-totales__fila"><dt>{l.texto}</dt><dd>{formatPrecio(l.monto)}</dd></div>
+        {totalesCotizacion(c).map((f) => (
+          <div key={f.clave} className={`ct-totales__fila${f.tono === "info" ? " ct-totales__fila--info" : f.tono === "descuento" ? " ct-totales__fila--descuento" : f.tono === "final" ? " ct-totales__fila--final" : ""}`}>
+            <dt>{f.texto}</dt><dd>{f.monto < 0 ? `− ${formatPrecio(-f.monto)}` : formatPrecio(f.monto)}</dd>
+          </div>
         ))}
-        {/* Sin anticipo, el total y el total a pagar son la misma cifra: solo queda el segundo */}
-        {c.anticipoDiagnostico > 0 && (
-          <>
-            <div className="ct-totales__fila"><dt>Total</dt><dd>{formatPrecio(c.total)}</dd></div>
-            <div className="ct-totales__fila ct-totales__fila--descuento">
-              <dt>Diagnóstico ya pagado</dt><dd>− {formatPrecio(c.anticipoDiagnostico)}</dd>
-            </div>
-          </>
-        )}
-        <div className="ct-totales__fila ct-totales__fila--final"><dt>Total a pagar</dt><dd>{formatPrecio(c.totalAPagar)}</dd></div>
         {mostrarComision && c.comisionTaller != null && (
           <div className="ct-totales__fila ct-totales__fila--info">
             <dt>Comisión DriveMaster{seDescuenta ? (delTaller.length > 0 ? " sobre tu mano de obra y tus repuestos" : " sobre tu mano de obra") : " (no se descuenta todavía)"}</dt>
@@ -99,13 +88,14 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
             <dt>
               Recibes
               <span className="ss-meta">
-                {delTaller.length > 0 ? "Mano de obra y tus repuestos, con su IVA" : "Mano de obra con su IVA"}{seDescuenta ? ", menos la comisión" : ""}{c.anticipoDiagnostico > 0 ? ", incluido el diagnóstico ya pagado" : ""}.{deTiendas.length > 0 ? " Los repuestos de tiendas van a cada tienda." : ""}
+                {delTaller.length > 0 ? "Mano de obra y tus repuestos, con su IVA" : "Mano de obra con su IVA"}{seDescuenta ? ", menos la comisión" : ""}{c.anticipoDiagnostico > 0 ? ", incluido el adelanto del diagnóstico" : ""}.{deTiendas.length > 0 ? " Los repuestos de tiendas van a cada tienda." : ""}
               </span>
             </dt>
             <dd>{formatPrecio(recibe)}</dd>
           </div>
         )}
       </dl>
+      {explicacionAdelanto(c, formatPrecio) && <p className="ss-meta ct-adelanto">{explicacionAdelanto(c, formatPrecio)}</p>}
 
       <p className="ss-meta">
         {c.tiempoEstimadoHoras ? `Tiempo estimado del trabajo: ${c.tiempoEstimadoHoras} h · ` : ""}

@@ -48,6 +48,9 @@ public class CotizacionDTO {
     private Double iva;
     private Double total;
     private Double anticipoDiagnostico;
+    // Tarifa original del diagnóstico cuando el cliente lo pagó (la cotización solo guarda la parte aplicada);
+    // null si no está disponible o no se pagó. Para explicar el adelanto, ve CotizacionDetalle.
+    private Double diagnosticoPagado;
     private Double totalAPagar;
     // Solo en la vista completa
     private Double comisionInformativa;

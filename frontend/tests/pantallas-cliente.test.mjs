@@ -112,8 +112,8 @@ test("Tu carrito: confirmar al vaciar, deshacer al quitar, resumen con envío e 
   assert.match(p, /<ConfirmarAccion\s+titulo="Vaciar el carrito"/);
   assert.match(p, /Deshacer/);
   assert.match(p, /<dt>Envío<\/dt>/);
-  assert.match(p, /<dt>IVA<\/dt>/);
-  assert.match(p, /<BarraAccionMovil etiqueta="Subtotal"/);
+  assert.match(p, /<dt>Incluye IVA de<\/dt>/);
+  assert.match(p, /<BarraAccionMovil etiqueta="Subtotal \(IVA incluido\)"/);
   assert.match(p, /<EstadoVacio icono="box" titulo="Tu carrito está vacío"/);
   // El paso al pago sigue siendo el mismo
   assert.match(p, /onPagar: onContinuarCatalogo/);

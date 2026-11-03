@@ -55,7 +55,7 @@ class PdfCotizacionBuilderTest {
         assertTrue(new String(pdf, 0, 5).startsWith("%PDF"));
         for (String esperado : List.of("Cotización v2", "AutoMax", "Cra 7 # 45-10, Chapinero, Bogotá", "3001234567",
                 "Mazda 3 2019", "2 × Pastillas de freno", "Bosch · BP-123 · Repuestos El Sol · Encargo (3 días)",
-                "Cambio de pastillas", "1,5 h ×", "IVA (19 %)", "28.500", "Diagnóstico ya pagado", "Total a pagar",
+                "Cambio de pastillas", "1,5 h ×", "Total", "Incluye IVA de", "28.500", "Adelanto del diagnóstico", "Total a pagar",
                 "128.500", "Válida hasta el 8 de octubre de 2026", "Nota del taller: Incluye revisión de discos")) {
             assertTrue(t.contains(esperado), "falta en el PDF: " + esperado + "\n---\n" + t);
         }
@@ -65,18 +65,18 @@ class PdfCotizacionBuilderTest {
     void sinAnticipoSoloQuedaElTotalAPagar() {
         var lineas = PdfCotizacionBuilder.totales(cotizacion(0));
 
-        assertEquals(List.of("Subtotal", "IVA (19 %)", "Total a pagar"), lineas.stream().map(l -> l.texto()).toList());
+        assertEquals(List.of("Total", "Incluye IVA de", "Total a pagar"), lineas.stream().map(l -> l.texto()).toList());
         assertEquals(178_500.0, lineas.get(2).monto());
     }
 
     @Test
-    void conAnticipoElDiagnosticoSeDescuentaDelTotal() {
+    void conAnticipoElAdelantoSeDescuentaDelTotal() {
         var lineas = PdfCotizacionBuilder.totales(cotizacion(50_000));
 
-        assertEquals(List.of("Subtotal", "IVA (19 %)", "Total", "Diagnóstico ya pagado", "Total a pagar"),
+        assertEquals(List.of("Total", "Incluye IVA de", "Adelanto del diagnóstico", "Total a pagar"),
                 lineas.stream().map(l -> l.texto()).toList());
-        assertEquals(-50_000.0, lineas.get(3).monto());
-        assertEquals(128_500.0, lineas.get(4).monto());
+        assertEquals(-50_000.0, lineas.get(2).monto());
+        assertEquals(128_500.0, lineas.get(3).monto());
     }
 
     @Test
@@ -91,9 +91,11 @@ class PdfCotizacionBuilderTest {
         var lineas = PdfCotizacionBuilder.totales(c);
         String t = texto(PdfCotizacionBuilder.construir(c, null));
 
-        assertEquals(List.of("Subtotal", "IVA repuestos (19 %)", "IVA mano de obra (0 %)", "Total a pagar"),
+        assertEquals(List.of("Total", "Incluye IVA de", "Total a pagar"),
                 lineas.stream().map(l -> l.texto()).toList());
-        assertTrue(t.contains("IVA repuestos (19 %)") && t.contains("IVA mano de obra (0 %)"));
+        assertTrue(t.contains("Incluye IVA de") && t.contains("17.100"));
+        // En régimen mixto cada línea aclara su precio final con su propio IVA
+        assertTrue(t.contains("c/u con IVA"), "la línea del repuesto aclara su IVA: " + t);
     }
 
     @Test

@@ -11,11 +11,12 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Montos de la factura (correo y PDF): el diseño puede cambiar, pero las líneas de Subtotal, IVA y
- * Total deben salir iguales. Cambiar cómo se muestra el IVA es una decisión aparte, no de diseño.
+ * Montos de la factura (correo y PDF): los montos NO cambian, pero las líneas muestran
+ * el precio final con IVA incluido; el IVA se informa aparte y no se suma.
  */
 class FacturaMontosTest {
 
@@ -49,31 +50,32 @@ class FacturaMontosTest {
         return v;
     }
 
-    /** Sin etiquetas y con espacios normales: lo que lee el cliente. */
+    /** Sin etiquetas, con espacios normales y sin espacios duros: lo que lee el cliente. */
     private static String textoDe(String html) {
         return html.replaceAll("(?s)<style.*?</style>", " ").replaceAll("<[^>]+>", " ")
-                .replace("&nbsp;", " ").replace(' ', ' ').replaceAll("\\s+", " ");
+                .replace("&nbsp;", " ").replace(' ', ' ').replace('\u00A0', ' ').replaceAll("\\s+", " ");
     }
 
     private static void contieneMontos(String texto) {
-        assertTrue(texto.contains("Subtotal $ 350.000"), "Subtotal: " + texto);
-        assertTrue(texto.contains("IVA (19%) $ 66.500"), "IVA: " + texto);
         assertTrue(texto.contains("Total $ 416.500"), "Total: " + texto);
+        assertTrue(texto.contains("Incluye IVA de") && texto.contains("66.500"), "Incluye IVA: " + texto);
+        assertFalse(texto.contains("Subtotal $ 350.000"), "El subtotal ya no se muestra como monto aparte: " + texto);
         assertTrue(texto.contains("WOMPI $ 416.500"), "Forma de pago: " + texto);
-        assertTrue(texto.contains("$ 100.000") && texto.contains("$ 200.000") && texto.contains("$ 150.000"), "Líneas: " + texto);
+        // Líneas con IVA incluido: 119.000 c/u, 238.000 la línea de pastillas, 178.500 el aceite
+        assertTrue(texto.contains("119.000") && texto.contains("238.000") && texto.contains("178.500"), "Líneas: " + texto);
     }
 
     @Test
-    void elCorreoDeLaFacturaMantieneSubtotalIvaYTotal() {
+    void elCorreoDeLaFacturaMantieneTotalEIncluyeIva() {
         contieneMontos(textoDe(EmailVentaBuilder.construir(usuario(), venta(), IVA)));
     }
 
     @Test
-    void elPdfDeLaFacturaMantieneSubtotalIvaYTotal() throws Exception {
+    void elPdfDeLaFacturaMantieneTotalEIncluyeIva() throws Exception {
         PdfReader lector = new PdfReader(PdfVentaBuilder.construir(usuario(), venta(), IVA));
-        String texto = new PdfTextExtractor(lector).getTextFromPage(1).replace(' ', ' ').replaceAll("\\s+", " ");
-        assertTrue(texto.contains("IVA (19%)$ 66.500") || texto.contains("IVA (19%) $ 66.500"), "IVA: " + texto);
-        assertTrue(texto.contains("Subtotal"), "Etiquetas: " + texto);
-        assertTrue(texto.contains("$ 350.000") && texto.contains("$ 416.500"), "Montos: " + texto);
+        String texto = new PdfTextExtractor(lector).getTextFromPage(1).replace('\u00A0', ' ').replace(' ', ' ').replaceAll("\\s+", " ");
+        assertTrue(texto.contains("Incluye IVA de") && texto.contains("66.500"), "IVA: " + texto);
+        assertTrue(texto.contains("$ 416.500"), "Total: " + texto);
+        assertTrue(texto.contains("238.000") && texto.contains("178.500"), "Líneas: " + texto);
     }
 }

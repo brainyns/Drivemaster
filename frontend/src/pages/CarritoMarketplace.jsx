@@ -1,5 +1,6 @@
 import PrecioCatalogo from "../components/marketplace/PrecioCatalogo";
 import { precioQuePaga } from "../components/marketplace/reglasPrecioCatalogo";
+import { conIva } from "../components/marketplace/iva";
 import { useEffect, useRef, useState } from "react";
 import { getUser } from "../services/authService";
 import { detalleProducto } from "../services/catalogoService";
@@ -151,7 +152,7 @@ function Linea({ item, otras, onCambiar, onQuitar, onVer }) {
         </div>
         <div className="mk-linea__precios">
           <span className="mk-linea__unitario"><PrecioCatalogo producto={p} /> c/u</span>
-          <strong>{formatPrecio(precioQuePaga(p) * item.cantidad)}</strong>
+          <strong>{formatPrecio(conIva(precioQuePaga(p)) * item.cantidad)}</strong>
         </div>
         <button className="mk-enlace mk-enlace--peligro" onClick={() => onQuitar(item)}>Quitar</button>
       </div>
@@ -164,7 +165,7 @@ function Linea({ item, otras, onCambiar, onQuitar, onVer }) {
 }
 
 function TarjetaTienda({ grupo, otras, onCambiar, onQuitar, onVer }) {
-  const subtotal = grupo.items.reduce((s, x) => s + precioQuePaga(x.producto) * x.cantidad, 0);
+  const subtotal = grupo.items.reduce((s, x) => s + conIva(precioQuePaga(x.producto)) * x.cantidad, 0);
   return (
     <article className="mk-tienda-card">
       <CabeceraTienda tienda={grupo.tienda} />
@@ -175,7 +176,7 @@ function TarjetaTienda({ grupo, otras, onCambiar, onQuitar, onVer }) {
       </ul>
       <footer className="mk-tienda-card__pie">
         <span>{etiquetaUnidades(unidades(grupo.items))}</span>
-        <span>Subtotal de la tienda <strong>{formatPrecio(subtotal)}</strong></span>
+        <span>Subtotal (IVA incluido) de la tienda <strong>{formatPrecio(subtotal)}</strong></span>
       </footer>
     </article>
   );
@@ -193,6 +194,9 @@ export default function CarritoMarketplace({ header, carrito, onVolver, onVerPro
   const { catalogo } = carrito;
   const vacio = catalogo.length === 0;
   const tiendas = porTienda(catalogo);
+  // IVA incluido en los precios: total de referencia (el definitivo lo calcula el backend al pagar)
+  const totalConIva = catalogo.reduce((s, x) => s + conIva(precioQuePaga(x.producto)) * x.cantidad, 0);
+  const ivaIncluido = catalogo.reduce((s, x) => s + (conIva(precioQuePaga(x.producto)) - precioQuePaga(x.producto)) * x.cantidad, 0);
   const otras = useOtrasTiendas(carrito.items.map((x) => x.producto));
 
   // Quitar un producto se puede deshacer unos segundos
@@ -230,7 +234,7 @@ export default function CarritoMarketplace({ header, carrito, onVolver, onVerPro
   const grupos = [
     catalogo.length > 0 && {
       clave: "tiendas", titulo: "Productos de las tiendas", detalle: `${tiendas.length} ${tiendas.length === 1 ? "tienda" : "tiendas"} · un solo pago`,
-      cantidad: unidades(catalogo), subtotal: carrito.subtotalCatalogo, texto: "Continuar con el pago", onPagar: onContinuarCatalogo,
+      cantidad: unidades(catalogo), subtotal: totalConIva, texto: "Continuar con el pago", onPagar: onContinuarCatalogo,
     },
   ].filter(Boolean);
 
@@ -283,14 +287,14 @@ export default function CarritoMarketplace({ header, carrito, onVolver, onVerPro
                   <dl className="mk-totales mk-totales--carrito">
                     <div><dt>{g.titulo}</dt><dd className="ui-precio">{formatPrecio(g.subtotal)}</dd></div>
                     <div><dt>Envío</dt><dd>Se elige en el siguiente paso</dd></div>
-                    <div><dt>IVA</dt><dd>Se calcula al pagar</dd></div>
-                    <div className="mk-totales__final"><dt>Subtotal</dt><dd className="ui-precio">{formatPrecio(g.subtotal)}</dd></div>
+                    <div><dt>Incluye IVA de</dt><dd>{formatPrecio(ivaIncluido)}</dd></div>
+                    <div className="mk-totales__final"><dt>Subtotal (IVA incluido)</dt><dd className="ui-precio">{formatPrecio(g.subtotal)}</dd></div>
                   </dl>
                   <span className="mk-resumen__detalle">{etiquetaUnidades(g.cantidad)} · {g.detalle}</span>
                   {g.onPagar && <div className="mk-resumen__accion mk-solo-escritorio">{accionPago(g.texto, g.onPagar)}</div>}
                 </div>
               ))}
-              <p className="mk-resumen__nota">El total final, con el envío o el retiro y el IVA, lo ves antes de pagar.</p>
+              <p className="mk-resumen__nota">El total final, con el envío o el retiro y el IVA incluido, lo ves antes de pagar.</p>
               <ul className="mk-confianza">
                 <li><IconoEscudo size={18} /><span>Pago seguro con Wompi</span></li>
                 <li><IconoCamion size={18} /><span>Retiro en tienda o envío, según cada tienda</span></li>
@@ -302,7 +306,7 @@ export default function CarritoMarketplace({ header, carrito, onVolver, onVerPro
       </main>
 
       {!vacio && grupos[0] && (
-        <BarraAccionMovil etiqueta="Subtotal" valor={formatPrecio(grupos[0].subtotal)} nota="Envío e IVA en el siguiente paso">
+        <BarraAccionMovil etiqueta="Subtotal (IVA incluido)" valor={formatPrecio(grupos[0].subtotal)} nota="IVA incluido; el envío se elige al pagar">
           {accionPago("Pagar", grupos[0].onPagar, "")}
         </BarraAccionMovil>
       )}

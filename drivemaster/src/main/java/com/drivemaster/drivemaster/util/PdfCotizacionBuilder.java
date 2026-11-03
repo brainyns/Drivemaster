@@ -55,23 +55,28 @@ public final class PdfCotizacionBuilder {
     public record Linea(String texto, double monto) {}
 
     /**
-     * Totales en el orden de la pantalla. Sin anticipo, el total y el total a pagar son la misma cifra: solo queda el
-     * segundo. El IVA va desglosado como en la pantalla (ver {@link CalculadoraCotizacion#lineasIva}).
+     * Totales en el orden de la pantalla. El IVA no se suma aparte: va incluido y se informa aparte. Sin adelanto,
+     * Total y Total a pagar son la misma cifra: se muestran igualmente, para que el orden siempre sea el mismo.
      */
     public static List<Linea> totales(Cotizacion c) {
         List<Linea> lineas = new ArrayList<>();
-        lineas.add(new Linea("Subtotal", valor(c.getSubtotal())));
-        for (CalculadoraCotizacion.LineaIva l : CalculadoraCotizacion.lineasIva(c)) lineas.add(new Linea(l.texto(), l.monto()));
+        lineas.add(new Linea("Total", valor(c.getTotal())));
+        // Informativa: el IVA de la cotización; no se suma a nada
+        lineas.add(new Linea("Incluye IVA de", valor(c.getIva())));
         double anticipo = valor(c.getAnticipoDiagnostico());
         if (anticipo > 0) {
-            lineas.add(new Linea("Total", valor(c.getTotal())));
-            lineas.add(new Linea("Diagnóstico ya pagado", -anticipo));
+            lineas.add(new Linea("Adelanto del diagnóstico", -anticipo));
         }
         lineas.add(new Linea("Total a pagar", valor(c.getTotalAPagar())));
         return lineas;
     }
 
     public static byte[] construir(Cotizacion c, Taller taller) {
+        return construir(c, taller, null);
+    }
+
+    /** diagnosticoPagado: la tarifa original del diagnóstico (null si no se conoce); sirve para explicar el adelanto. */
+    public static byte[] construir(Cotizacion c, Taller taller, Double diagnosticoPagado) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Document doc = new Document(PageSize.LETTER, 48, 48, 48, 48);
             PdfWriter.getInstance(doc, out);
@@ -98,6 +103,17 @@ public final class PdfCotizacionBuilder {
                 doc.add(tablaItems(c, manoObra, false));
             }
             doc.add(tablaTotales(totales(c)));
+            // Cómo se aplicó el adelanto del diagnóstico, si hubo
+            double anticipo = valor(c.getAnticipoDiagnostico());
+            if (anticipo > 0) {
+                Paragraph nota = new Paragraph(
+                        CalculadoraCotizacion.explicacionAdelanto(anticipo, diagnosticoPagado,
+                                CalculadoraCotizacion.manoObraConIva(c), v -> moneda(v)),
+                        META);
+                nota.setSpacingBefore(4);
+                nota.setSpacingAfter(2);
+                doc.add(nota);
+            }
             pie(doc, c);
             doc.close();
             return out.toByteArray();
@@ -171,7 +187,7 @@ public final class PdfCotizacionBuilder {
                     : CotizacionItem.POR_HORAS.equals(i.getModalidad()) ? horas(i.getHoras()) + " h × " + moneda(i.getPrecioUnitario()) : "";
             if (!detalle.isEmpty()) desc.add(new Chunk("\n" + detalle, META));
             tabla.addCell(fila(desc, Element.ALIGN_LEFT));
-            tabla.addCell(fila(new Phrase(moneda(i.getSubtotal()), NORMAL), Element.ALIGN_RIGHT));
+            tabla.addCell(fila(new Phrase(moneda(CalculadoraCotizacion.lineaConIva(c, i)), NORMAL), Element.ALIGN_RIGHT));
         }
         return tabla;
     }
@@ -185,7 +201,9 @@ public final class PdfCotizacionBuilder {
         for (int n = 0; n < lineas.size(); n++) {
             Linea l = lineas.get(n);
             boolean ultima = n == lineas.size() - 1;
-            Font font = ultima ? new Font(Font.HELVETICA, 12, Font.BOLD, TEXTO) : NORMAL;
+            boolean informativa = "Incluye IVA de".equals(l.texto());
+            Font font = ultima ? new Font(Font.HELVETICA, 12, Font.BOLD, TEXTO)
+                    : informativa ? new Font(Font.HELVETICA, 8.5f, Font.NORMAL, TENUE) : NORMAL;
             // Guion y no "−": Helvetica (WinAnsi) no tiene el signo menos tipográfico
             String monto = l.monto() < 0 ? "- " + moneda(-l.monto()) : moneda(l.monto());
             PdfPCell texto = fila(new Phrase(l.texto(), font), Element.ALIGN_LEFT);

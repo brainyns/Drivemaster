@@ -367,7 +367,7 @@ export default function CatalogoPage({
                         onRestablecer={limpiarFiltros}
                       />
                       <p className="dm-disclaimer">
-                        Los precios y las existencias los define cada tienda. El IVA y el envío se calculan al pagar;
+                        Los precios ya incluyen IVA. Las existencias y el envío los define cada tienda (el envío se elige al pagar);
                         confirma la referencia antes de comprar.
                       </p>
                     </>

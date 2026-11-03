@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { cifrasPieza, estadoEnCamino, pct, precioConRecargo } from "../src/pages/taller/reglasInventario.js";
 import { claveOferta, etiquetaOrigen, vendedor } from "../src/components/servicio/reglasRepuestos.js";
-import { lineasIva, precioFinalLinea, textoIvaOferta, textoPrecioFinal } from "../src/components/servicio/desgloseIva.js";
+import { aclaracionUnidad, explicacionAdelanto, ivaDeLinea, textoIvaOferta, totalLinea, totalesCotizacion } from "../src/components/servicio/desgloseIva.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
@@ -44,12 +44,36 @@ test("la misma pieza del inventario y de una tienda son dos líneas distintas", 
   assert.equal(vendedor(deTienda), "Repuestos Sur");
 });
 
-test("con piezas del taller el IVA dice de quién es cada parte, igual que el PDF", () => {
-  const c = { ivaRepuestosPct: 19, ivaManoObraPct: 0, subtotalRepuestos: 50_000, ivaRepuestos: 9_500,
-    subtotalRepuestosTaller: 100_000, ivaRepuestosTaller: 0, subtotalManoObra: 10_000, ivaManoObra: 0 };
-  assert.deepEqual(lineasIva(c), [{ texto: "IVA repuestos de tiendas (19 %)", monto: 9_500 }, { texto: "IVA del taller (0 %)", monto: 0 }]);
-  assert.deepEqual(lineasIva({ ...c, subtotalRepuestosTaller: 0 }),
-    [{ texto: "IVA repuestos (19 %)", monto: 9_500 }, { texto: "IVA mano de obra (0 %)", monto: 0 }], "sin piezas, como siempre");
+test("la cotización informa el IVA sin sumarlo y explica el adelanto", () => {
+  const c = { ivaRepuestosPct: 19, ivaManoObraPct: 0,
+    subtotalRepuestos: 50_000, ivaRepuestos: 9_500, subtotalRepuestosTaller: 100_000, ivaRepuestosTaller: 0,
+    subtotalManoObra: 10_000, ivaManoObra: 0, subtotal: 160_000, iva: 9_500, total: 169_500,
+    anticipoDiagnostico: 0, totalAPagar: 169_500 };
+  assert.deepEqual(totalesCotizacion(c).map((f) => f.texto), ["Total", "Incluye IVA de", "Total a pagar"]);
+  assert.deepEqual(totalesCotizacion(c).map((f) => [f.texto, f.monto]),
+    [["Total", 169_500], ["Incluye IVA de", 9_500], ["Total a pagar", 169_500]]);
+  const conAnticipo = totalesCotizacion({ ...c, anticipoDiagnostico: 10_000, totalAPagar: 159_500 });
+  assert.deepEqual(conAnticipo.map((f) => f.texto), ["Total", "Incluye IVA de", "Adelanto del diagnóstico", "Total a pagar"]);
+  assert.equal(conAnticipo[2].monto, -10_000);
+  // El IVA de cada línea sigue la regla del backend
+  assert.equal(ivaDeLinea(c, { tipo: "REPUESTO", origen: "TIENDA", subtotal: 50_000 }), 9_500);
+  assert.equal(ivaDeLinea(c, { tipo: "REPUESTO", origen: "TALLER", subtotal: 100_000 }), 0);
+  assert.equal(ivaDeLinea({ ...c, ivaManoObraPct: 0 }, { tipo: "MANO_OBRA", subtotal: 10_000 }), 0);
+});
+
+test("la explicación del adelanto dice la verdad con lo que se sabe", () => {
+  const fmt = (v) => `$${Math.round(v).toLocaleString("es-CO")}`;
+  const base = { subtotalManoObra: 100_000, ivaManoObra: 19_000 }; // mano de obra con IVA: 119.000
+  // Sin la tarifa original y al tope del adelanto: se usó para pagar la mano de obra
+  assert.equal(explicacionAdelanto({ ...base, anticipoDiagnostico: 119_000 }, fmt),
+    "Se usaron los $119.000 del diagnóstico para pagar la mano de obra.");
+  // Sin tocar el tope: se descontó completo
+  assert.equal(explicacionAdelanto({ ...base, anticipoDiagnostico: 50_000 }, fmt),
+    "Se descontaron los $50.000 del diagnóstico.");
+  // Con la tarifa original (el caso del correo y del PDF): dice de cuánto era y cuánto se usó
+  assert.equal(explicacionAdelanto({ ...base, anticipoDiagnostico: 25_000, diagnosticoPagado: 50_000 }, fmt),
+    "Diagnóstico $50.000 · se usaron $25.000 para pagar la mano de obra.");
+  assert.equal(explicacionAdelanto({ ...base, anticipoDiagnostico: 0 }, fmt), null);
 });
 
 test("el detalle de la cotización separa repuestos del taller, de tiendas y mano de obra, con su etiqueta", () => {
@@ -146,13 +170,15 @@ test("en el buscador la misma pieza del taller y de la tienda muestra el mismo p
   assert.match(tarjeta, /formatPrecio\(o\.precioFinal \?\? o\.precio\)/, "el número grande es el precio final");
 });
 
-test("en la cotización cada línea aclara su precio final con la misma regla que el backend", () => {
+test("en la cotización cada línea muestra su precio final con IVA", () => {
   const c = { ivaRepuestosPct: 19, ivaManoObraPct: 0 };
-  const taller = precioFinalLinea(c, { tipo: "REPUESTO", origen: "TALLER", precioUnitario: 34_510 });
-  const tienda = precioFinalLinea(c, { tipo: "REPUESTO", origen: "TIENDA", precioUnitario: 29_000 });
-  assert.equal(taller.total, tienda.total);
-  assert.equal(textoPrecioFinal(taller, pesos), "$34.510 c/u, sin IVA");
-  assert.equal(textoPrecioFinal(tienda, pesos), "$34.510 c/u con IVA ($29.000 + IVA $5.510)");
-  assert.equal(precioFinalLinea({ ivaRepuestosPct: 19, ivaManoObraPct: 19 }, { tipo: "REPUESTO", precioUnitario: 29_000 }), null, "con un solo IVA no hace falta");
-  assert.equal(precioFinalLinea(c, { tipo: "MANO_OBRA", precioUnitario: 50_000 }), null);
+  const taller = { tipo: "REPUESTO", origen: "TALLER", precioUnitario: 34_510, subtotal: 34_510 };
+  const tienda = { tipo: "REPUESTO", origen: "TIENDA", precioUnitario: 29_000, subtotal: 29_000 };
+  assert.equal(totalLinea(c, taller), 34_510);
+  assert.equal(totalLinea(c, tienda), 34_510);
+  assert.equal(aclaracionUnidad(c, taller, pesos), "$34.510 c/u, sin IVA");
+  assert.equal(aclaracionUnidad(c, tienda, pesos), "$34.510 c/u con IVA ($29.000 + IVA $5.510)");
+  // Con un solo IVA también muestra el precio final
+  assert.equal(aclaracionUnidad({ ivaRepuestosPct: 19, ivaManoObraPct: 19 }, tienda, pesos), "$34.510 c/u con IVA ($29.000 + IVA $5.510)");
+  assert.equal(aclaracionUnidad(c, { tipo: "MANO_OBRA", precioUnitario: 50_000 }, pesos), "");
 });

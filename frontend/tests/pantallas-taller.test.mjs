@@ -475,21 +475,17 @@ test("Cotización en PDF: el taller lo descarga junto a Imprimir y el cliente de
   assert.ok(cliente.includes("<BotonPdfCotizacion cotizacionId={vigente.id} />"), "también en la vista del cliente");
 });
 
-test("IVA por taller: una línea si los porcentajes coinciden y una por tipo si no", async () => {
-  const { lineasIva } = await import("../src/components/servicio/desgloseIva.js");
+test("IVA incluido: el detalle informa el IVA sin sumarlo y explica el adelanto", async () => {
+  const { totalesCotizacion, ivaDeLinea } = await import("../src/components/servicio/desgloseIva.js");
   const base = { subtotalRepuestos: 100_000, subtotalManoObra: 50_000, ivaRepuestos: 19_000 };
-  assert.deepEqual(lineasIva({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 19, ivaManoObra: 9_500, iva: 28_500 }),
-    [{ texto: "IVA (19 %)", monto: 28_500 }]);
-  assert.deepEqual(lineasIva({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 0, ivaManoObra: 0, iva: 19_000 }), [
-    { texto: "IVA repuestos (19 %)", monto: 19_000 },
-    { texto: "IVA mano de obra (0 %)", monto: 0 },
-  ]);
-  assert.deepEqual(lineasIva({ ...base, subtotalRepuestos: 0, ivaRepuestosPct: 19, ivaManoObraPct: 0, ivaManoObra: 0, iva: 0 }),
-    [{ texto: "IVA mano de obra (0 %)", monto: 0 }], "solo los tipos que tiene la cotización");
-  assert.deepEqual(lineasIva({ ...base, ivaPct: 19, ivaManoObra: 9_500, iva: 28_500 }), [{ texto: "IVA (19 %)", monto: 28_500 }],
-    "las cotizaciones anteriores solo traen ivaPct");
+  assert.deepEqual(totalesCotizacion({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 19, ivaManoObra: 9_500, iva: 28_500, total: 178_500, totalAPagar: 178_500 }).map((f) => f.texto),
+    ["Total", "Incluye IVA de", "Total a pagar"]);
+  assert.equal(ivaDeLinea({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 19 }, { tipo: "REPUESTO", subtotal: 100_000 }), 19_000);
+  const conAnticipo = totalesCotizacion({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 19, ivaManoObra: 9_500, iva: 28_500, total: 178_500, anticipoDiagnostico: 50_000, totalAPagar: 128_500 });
+  assert.deepEqual(conAnticipo.map((f) => f.texto), ["Total", "Incluye IVA de", "Adelanto del diagnóstico", "Total a pagar"]);
+  assert.equal(conAnticipo[2].monto, -50_000);
   const detalle = leer("../src/components/servicio/CotizacionDetalle.jsx");
-  assert.ok(detalle.includes("lineasIva(c).map("), "el detalle (cliente, página pública e impresión) usa el desglose");
+  assert.ok(detalle.includes("totalesCotizacion(c).map("), "el detalle (cliente, página pública e impresión) usa el resumen único");
 });
 
 test("IVA por taller: Mi taller elige si es responsable de IVA junto a la tarifa", () => {

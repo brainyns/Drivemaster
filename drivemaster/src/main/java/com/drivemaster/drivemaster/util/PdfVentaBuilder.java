@@ -77,10 +77,8 @@ public class PdfVentaBuilder {
                         "dd 'de' MMMM 'de' yyyy, HH:mm", Locale.forLanguageTag("es-CO")))
                     : "—";
 
-            double subtotalBruto = venta.getProductos() != null ? venta.getProductos().stream()
-                    .mapToDouble(d -> d.getSubtotal() != null ? d.getSubtotal() : 0).sum() : 0;
-            double ivaValor = subtotalBruto * iva;
-            int    ivaPct   = (int) Math.round(iva * 100);
+            double ivaValor = venta.getProductos() != null ? venta.getProductos().stream()
+                    .mapToDouble(d -> d.getSubtotal() != null ? d.getSubtotal() : 0).sum() * iva : 0;
 
             BaseFont bf     = BaseFont.createFont(BaseFont.HELVETICA,      BaseFont.CP1252, false);
             BaseFont bfBold = BaseFont.createFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, false);
@@ -160,8 +158,8 @@ public class PdfVentaBuilder {
             drawLine(cb, 0, tblTopY - tblHdr, PW, BORDER);
             drawTableHeader(cb, bf, PAD,                               tblTopY - 13, "PRODUCTO",     TEXT_MUTED);
             drawTableHeaderCenter(cb, bf, PAD + wNom + wCant * 0.5f,  tblTopY - 13, "CANT.",        TEXT_MUTED);
-            drawTableHeaderRight(cb, bf,  PAD + wNom + wCant + wPU,   tblTopY - 13, "PRECIO UNIT.", TEXT_MUTED);
-            drawTableHeaderRight(cb, bf,  PW - PAD,                   tblTopY - 13, "SUBTOTAL",     TEXT_MUTED);
+            drawTableHeaderRight(cb, bf,  PAD + wNom + wCant + wPU,   tblTopY - 13, "PRECIO UNIT. (IVA INCL.)", TEXT_MUTED);
+            drawTableHeaderRight(cb, bf,  PW - PAD,                   tblTopY - 13, "SUBTOTAL (IVA INCL.)",     TEXT_MUTED);
 
             float rowY = tblTopY - tblHdr;
             boolean odd = true;
@@ -173,8 +171,8 @@ public class PdfVentaBuilder {
 
                     drawText(cb, bf,     9, safe(d.getNombre()),                      PAD,                          rowY - 15, TEXT_BODY);
                     drawTextCenter(cb, bf, 9, String.valueOf(d.getCantidad()),         PAD + wNom + wCant * 0.5f,   rowY - 15, TEXT_MUTED);
-                    drawTextRight(cb, bf,  9, fmt.format(d.getPrecioUnitario()),       PAD + wNom + wCant + wPU,    rowY - 15, TEXT_MUTED);
-                    drawTextRight(cb, bfBold, 9, fmt.format(d.getSubtotal()),          PW - PAD,                   rowY - 15, TEXT_STRONG);
+                    drawTextRight(cb, bf,  9, fmt.format((d.getPrecioUnitario() != null ? d.getPrecioUnitario() : 0) * (1 + iva)), PAD + wNom + wCant + wPU,    rowY - 15, TEXT_MUTED);
+                    drawTextRight(cb, bfBold, 9, fmt.format((d.getSubtotal() != null ? d.getSubtotal() : 0) * (1 + iva)),  PW - PAD,                   rowY - 15, TEXT_STRONG);
 
                     rowY -= rowH;
                     odd = !odd;
@@ -208,10 +206,8 @@ public class PdfVentaBuilder {
             drawRect(cb, panX, botY - botH, 3, botH, ORANGE);
 
             float totY2 = botY - 18;
-            drawText(cb, bf, 9, "Subtotal", panX + 12, totY2, TEXT_MUTED);
-            drawTextRight(cb, bf, 9, fmt.format(subtotalBruto), panX + halfW - 10, totY2, TEXT_BODY);
-            totY2 -= 18;
-            drawText(cb, bf, 9, "IVA (" + ivaPct + "%)", panX + 12, totY2, TEXT_MUTED);
+            // El IVA no se suma aparte: va incluido; se informa cuánto lleva
+            drawText(cb, bf, 9, "Incluye IVA de", panX + 12, totY2, TEXT_MUTED);
             drawTextRight(cb, bf, 9, fmt.format(ivaValor), panX + halfW - 10, totY2, TEXT_BODY);
             totY2 -= 8;
             drawLine(cb, panX + 10, totY2, halfW - 20, BORDER);

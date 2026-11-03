@@ -155,7 +155,7 @@ export default function ProductDetail({
 
           <div className="dm-detail__price">
             <PrecioCatalogo producto={producto} etiqueta="strong" />
-            <span>COP · el IVA y el envío se calculan al pagar</span>
+            <span>COP · IVA incluido</span>
           </div>
 
           <div className="dm-detail__qty">

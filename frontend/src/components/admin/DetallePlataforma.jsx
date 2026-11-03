@@ -144,6 +144,8 @@ function MarcarDespachado({ token, pedidoId, onCambio }) {
 function VistaPedido({ p, abrir, token, onCambio }) {
   const alertas = chipsAlerta({ ...p, diasSinRetirar: p.entrega?.diasSinRetirar });
   const nota = notaReparto(p.pago, p.reparto);
+  // El IVA de la compra se deduce del propio pedido (el backend lo calcula por tienda); no se asume un porcentaje
+  const conIva = (neto) => (p.subtotal > 0 ? neto * (1 + p.iva / p.subtotal) : neto);
   const e = p.entrega;
   return (
     <>
@@ -180,13 +182,13 @@ function VistaPedido({ p, abrir, token, onCambio }) {
                 <strong>{l.producto || "Producto"}</strong>
                 <span className="dtp-sub">{[l.marca, l.referencia, l.disponibilidad === "ENCARGO" ? "Encargo" : null].filter(Boolean).join(" · ")}</span>
               </span>
-              <span className="dtp-num">{l.cantidad} × {formatoCop(l.precioUnitario)}<strong>{formatoCop(l.subtotal)}</strong></span>
+              <span className="dtp-num">{l.cantidad} × {formatoCop(conIva(l.precioUnitario))}<strong>{formatoCop(conIva(l.subtotal))}</strong></span>
             </li>
           ))}
         </ul>
         <dl className="dtp-totales">
-          <div><dt>Subtotal</dt><dd>{formatoCop(p.subtotal)}</dd></div>
-          <div><dt>IVA</dt><dd>{formatoCop(p.iva)}</dd></div>
+          <div><dt>Productos (IVA incluido)</dt><dd>{formatoCop(conIva(p.subtotal))}</dd></div>
+          <div><dt>Incluye IVA de</dt><dd>{formatoCop(p.iva)}</dd></div>
           {e?.costoEnvio > 0 && <div><dt>Envío</dt><dd>{formatoCop(e.costoEnvio)}</dd></div>}
           <div className="dtp-totales__total"><dt>Total</dt><dd>{formatoCop(p.total)}</dd></div>
         </dl>

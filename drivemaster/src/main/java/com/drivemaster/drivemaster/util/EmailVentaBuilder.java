@@ -36,10 +36,9 @@ public class EmailVentaBuilder {
                 ? venta.getId().substring(Math.max(0, venta.getId().length() - 8)).toUpperCase()
                 : "—";
 
-        double subtotalBruto = venta.getProductos().stream()
+        double ivaValor = venta.getProductos().stream()
                 .mapToDouble(d -> d.getSubtotal() != null ? d.getSubtotal() : 0)
-                .sum();
-        double ivaValor = subtotalBruto * iva;
+                .sum() * iva;
         int ivaPct = (int) Math.round(iva * 100);
 
         String derecha = PlantillaCorreo.etiquetaHtml("Factura de venta")
@@ -48,8 +47,8 @@ public class EmailVentaBuilder {
 
         String cuerpo = datosCliente(usuario, fecha, venta.getEstado())
                 + rotulo("Detalle de productos")
-                + tablaProductos(venta)
-                + pagosYTotales(venta, subtotalBruto, ivaPct, ivaValor);
+                + tablaProductos(venta, ivaPct)
+                + pagosYTotales(venta, ivaValor);
 
         return PlantillaCorreo.documento("Factura DriveMaster #" + idCorto, derecha, null, cuerpo, PIE);
     }
@@ -74,18 +73,20 @@ public class EmailVentaBuilder {
                 + "</td></tr></table>";
     }
 
-    private static String tablaProductos(Venta venta) {
+    private static String tablaProductos(Venta venta, int ivaPct) {
         StringBuilder filas = new StringBuilder();
         for (DetalleVenta d : venta.getProductos()) {
+            double conIva = (d.getPrecioUnitario() != null ? d.getPrecioUnitario() : 0) * (1 + ivaPct / 100.0);
+            double linea = conIva * (d.getCantidad() != null ? d.getCantidad() : 0);
             filas.append("<tr>")
                     .append(celda(e(d.getNombre()), "left", ""))
                     .append(celda(String.valueOf(d.getCantidad()), "center", ""))
-                    .append(celda(moneda(d.getPrecioUnitario()), "right", "white-space:nowrap;"))
-                    .append(celda(moneda(d.getSubtotal()), "right", "white-space:nowrap;font-weight:600;"))
+                    .append(celda(moneda(conIva), "right", "white-space:nowrap;"))
+                    .append(celda(moneda(linea), "right", "white-space:nowrap;font-weight:600;"))
                     .append("</tr>");
         }
         return "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 20px;border-collapse:collapse;\">"
-                + "<tr>" + titulo("Producto", "left") + titulo("Cant.", "center") + titulo("Precio unit.", "right") + titulo("Subtotal", "right") + "</tr>"
+                + "<tr>" + titulo("Producto", "left") + titulo("Cant.", "center") + titulo("Precio unit. (IVA incluido)", "right") + titulo("Subtotal (IVA incluido)", "right") + "</tr>"
                 + filas + "</table>";
     }
 
@@ -100,7 +101,7 @@ public class EmailVentaBuilder {
                 + ";color:" + COLOR_TEXTO + ";font-size:13px;text-align:" + alineacion + ";" + extra + "\">" + html + "</td>";
     }
 
-    private static String pagosYTotales(Venta venta, double subtotal, int ivaPct, double ivaValor) {
+    private static String pagosYTotales(Venta venta, double ivaValor) {
         StringBuilder pagos = new StringBuilder();
         for (Pago p : venta.getPagos()) {
             pagos.append(filaDato(p.getMetodo(), moneda(p.getMonto())));
@@ -112,9 +113,8 @@ public class EmailVentaBuilder {
                 + "</td>"
                 + "<td class=\"dm-apilar\" width=\"50%\" valign=\"top\" style=\"vertical-align:top;\">"
                 + rotulo("Resumen")
-                + PlantillaCorreo.tabla(filaDato("Subtotal", moneda(subtotal))
-                        + filaDato("IVA (" + ivaPct + "%)", moneda(ivaValor))
-                        + filaTotal("Total", moneda(venta.getTotal())))
+                + PlantillaCorreo.tabla(filaTotal("Total", moneda(venta.getTotal()))
+                        + filaDato("Incluye IVA de", moneda(ivaValor)))
                 + "</td></tr></table>";
     }
 }

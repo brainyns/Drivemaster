@@ -184,8 +184,8 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
 
               {detalle && (
                 <dl className="mk-totales">
-                  <div><dt>Productos</dt><dd>{formatPrecio(detalle.subtotal)}</dd></div>
-                  <div><dt>IVA</dt><dd>{formatPrecio(detalle.iva)}</dd></div>
+                  <div><dt>Productos (IVA incluido)</dt><dd>{formatPrecio(detalle.subtotal + detalle.iva)}</dd></div>
+                  <div><dt>Incluye IVA de</dt><dd>{formatPrecio(detalle.iva)}</dd></div>
                   <div><dt>Envío</dt><dd>{detalle.tipo === "ENVIO" ? formatPrecio(detalle.costoEnvio) : "Sin costo"}</dd></div>
                   <div className="mk-totales__final"><dt>Total de {t.nombre}</dt><dd>{formatPrecio(detalle.total)}</dd></div>
                 </dl>
@@ -234,13 +234,13 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
             <strong className="mk-pago__total">
               {calculando ? "Calculando..." : cotizacion ? formatPrecio(cotizacion.total) : "—"}
             </strong>
-            {cotizacion && <span className="mk-tarjeta__meta">Productos {formatPrecio(cotizacion.subtotal)} · IVA {formatPrecio(cotizacion.iva)} · Envío {formatPrecio(cotizacion.costoEnvio)}</span>}
+            {cotizacion && <span className="mk-tarjeta__meta">Productos (IVA incluido) {formatPrecio(cotizacion.subtotal + cotizacion.iva)} · Envío {formatPrecio(cotizacion.costoEnvio)} · Incluye IVA de {formatPrecio(cotizacion.iva)}</span>}
           </div>
           <button className="dm-btn dm-btn--primary" onClick={pagar} disabled={bloqueado}>
             {pagando ? "Preparando el pago..." : "Pagar con Wompi"}
           </button>
         </section>
-        <p className="mk-nota">El valor lo calcula DriveMaster al pagar. Antes de cobrar revisamos que haya stock en todas las tiendas; si algo se agota después, te devolvemos todo el pago.</p>
+        <p className="mk-nota">Los precios ya incluyen IVA (se informa cuánto lleva). El valor lo calcula DriveMaster al pagar; antes de cobrar revisamos que haya stock en todas las tiendas, y si algo se agota después, te devolvemos todo el pago.</p>
 
         {pagoLocal && (
           <PagoLocal token={token} pago={pagoLocal} onCerrar={() => setPagoLocal(null)} onVerificado={alVerificar} />

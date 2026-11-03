@@ -69,6 +69,43 @@ public final class CalculadoraCotizacion {
     }
 
     /**
+     * La frase que explica al cliente cómo se aplicó el adelanto del diagnóstico. anticipo es la parte aplicada
+     * (la cotización solo guarda esa); diagnosticoPagado es la tarifa original cuando se conoce (null si no).
+     * manoObraConIva = mano de obra con su IVA: el tope del adelanto. Nunca inventa cifras: sin la tarifa,
+     * describe la aplicada.
+     */
+    public static String explicacionAdelanto(double anticipo, Double diagnosticoPagado, double manoObraConIva,
+                                             java.util.function.DoubleFunction<String> moneda) {
+        if (diagnosticoPagado != null && diagnosticoPagado > anticipo) {
+            return "Diagnóstico " + moneda.apply(diagnosticoPagado) + " · se usaron " + moneda.apply(anticipo)
+                    + " para pagar la mano de obra.";
+        }
+        if (anticipo < manoObraConIva) {
+            return "Se descontaron los " + moneda.apply(anticipo) + " del diagnóstico.";
+        }
+        return "Se usaron los " + moneda.apply(anticipo) + " del diagnóstico para pagar la mano de obra.";
+    }
+
+    /** Mano de obra con su IVA: el tope hasta donde llega el adelanto. */
+    public static double manoObraConIva(Cotizacion c) {
+        return valor(c.getSubtotalManoObra()) + valor(c.getIvaManoObra());
+    }
+
+    /** IVA de una línea: repuestos con el del tipo que venden (taller o tienda), mano de obra con el del taller. */
+    public static double ivaDeLinea(Cotizacion c, CotizacionItem i) {
+        double sub = valor(i.getSubtotal());
+        double pct = CotizacionItem.REPUESTO.equals(i.getTipo())
+                ? (i.esDelTaller() ? c.pctManoObra() : c.pctRepuestos())
+                : c.pctManoObra();
+        return redondear(sub * pct / 100.0);
+    }
+
+    /** Total de una línea con su IVA (lo que ve el cliente por línea). */
+    public static double lineaConIva(Cotizacion c, CotizacionItem i) {
+        return valor(i.getSubtotal()) + ivaDeLinea(c, i);
+    }
+
+    /**
      * Desglose del IVA para el cliente (correo y PDF; el frontend sigue la misma regla en desgloseIva.js). Si los dos
      * porcentajes coinciden, una sola línea "IVA (19 %)" con todo el IVA. Si no, una por tipo, solo de los tipos que
      * tiene la cotización: "IVA repuestos (19 %)" e "IVA mano de obra (0 %)".

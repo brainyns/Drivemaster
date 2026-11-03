@@ -60,6 +60,7 @@ import Alerta from "./components/ui/Alerta";
 import Avisos from "./components/ui/Avisos";
 import PedirCiudad from "./components/cliente/PedirCiudad";
 import { miTienda } from "./services/tiendaService";
+import { setIvaPct } from "./components/marketplace/iva";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
 
@@ -198,7 +199,7 @@ function App() {
         if (res.ok) {
           const p = await res.json();
           const v = parseFloat(p.valor);
-          if (!isNaN(v)) setIvaRate(v / 100);
+          if (!isNaN(v)) { setIvaRate(v / 100); setIvaPct(v); }
         }
       } catch { /* fallback 19% */ }
     };
