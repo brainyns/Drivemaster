@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { informesTienda, resumenAsistente } from "../services/informesTiendaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import InfoAyuda from "../components/ui/InfoAyuda";
 import Indicador from "../components/ui/Indicador";
 import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
@@ -241,16 +242,16 @@ function StockBajo({ stock, onIr }) {
 
 function Liquidacion({ liquidacion: l }) {
   const filas = [
-    { clave: "espera", titulo: "En espera de la entrega", monto: l.enEspera, n: l.lineasEnEspera,
+    { clave: "espera", titulo: "Falta que se entregue", monto: l.enEspera, n: l.lineasEnEspera,
       texto: "Pagos de pedidos que aún no se entregan. Se habilitan cuando el cliente confirma la recepción o validas el retiro." },
-    { clave: "listo", titulo: "Listo para liquidar", monto: l.porLiquidar, n: l.lineasPorLiquidar, destacada: true,
-      texto: "Ya se entregaron: DriveMaster te los transfiere cuando apruebe la liquidación." },
-    { clave: "pagado", titulo: "Ya liquidado", monto: l.liquidado, n: l.lineasLiquidadas,
+    { clave: "listo", titulo: "Por recibir", monto: l.porLiquidar, n: l.lineasPorLiquidar, destacada: true,
+      texto: "Ya se entregaron: DriveMaster te los transfiere cuando apruebe el pago." },
+    { clave: "pagado", titulo: "Ya te pagaron", monto: l.liquidado, n: l.lineasLiquidadas,
       texto: "Lo que ya te transfirieron." },
   ];
   const vacio = filas.every((f) => f.n === 0);
   if (vacio) {
-    return <Vacio titulo="Todavía no tienes dinero por liquidar" texto="Cada pedido pagado aparece aquí desde que el cliente paga hasta que te lo transferimos." />;
+    return <Vacio titulo="Todavía no tienes dinero por recibir" texto="Cada pedido pagado aparece aquí desde que el cliente paga hasta que te lo transferimos." />;
   }
   return (
     <>
@@ -266,7 +267,7 @@ function Liquidacion({ liquidacion: l }) {
           </li>
         ))}
       </ul>
-      {l.anulado > 0 && <p className="it-nota">{cop(l.anulado)} se anularon por pedidos no despachados o reembolsados.</p>}
+      {l.anulado > 0 && <p className="it-nota">{cop(l.anulado)} se cancelaron por pedidos no despachados o reembolsados.</p>}
     </>
   );
 }
@@ -284,8 +285,8 @@ function Resumen({ datos, onIr }) {
           pie={`${num(datos.ventas.pedidos)} ${datos.ventas.pedidos === 1 ? "pedido" : "pedidos"}`} />
         <Indicador icono="clock" titulo="Despacho promedio" valor={duracion(datos.despacho.horasPromedio)}
           pie={datos.despacho.porcentajeATiempo != null ? `${datos.despacho.porcentajeATiempo} % a tiempo` : "Sin despachos medidos aún"} />
-        <Indicador titulo="Por liquidar" valor={cop(datos.liquidacion.porLiquidar)} tono={datos.liquidacion.porLiquidar > 0 ? "ok" : undefined}
-          pie={`${cop(datos.liquidacion.enEspera)} en espera de entrega`} />
+        <Indicador titulo="Por recibir" valor={cop(datos.liquidacion.porLiquidar)} tono={datos.liquidacion.porLiquidar > 0 ? "ok" : undefined}
+          pie={`${cop(datos.liquidacion.enEspera)} falta que se entregue`} />
         <Indicador icono="alert" titulo="Stock bajo" valor={num(stock)} tono={stock > 0 ? "accion" : undefined}
           pie={stock === 0 ? "Nada por reponer" : stock === 1 ? "Producto por reponer" : "Productos por reponer"}
           onClick={stock > 0 ? () => onIr?.("productos") : undefined} />
@@ -414,7 +415,7 @@ export default function InformesTienda({ token, onIr }) {
             <Panel ancho="7" titulo="Stock bajo" nota="Productos en o bajo su stock mínimo (o 5 unidades si no definiste uno).">
               <StockBajo stock={datos.stockBajo} onIr={onIr} />
             </Panel>
-            <Panel ancho="5" titulo="Lo pendiente de liquidar" nota="El dinero de tus pedidos, según en qué etapa está. Cada cifra es lo que recibes.">
+            <Panel ancho="5" titulo="Lo que falta por recibir" nota="El dinero de tus pedidos, según en qué etapa está. Cada cifra es lo que recibes.">
               <Liquidacion liquidacion={datos.liquidacion} />
             </Panel>
           </div>

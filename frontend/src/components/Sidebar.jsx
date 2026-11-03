@@ -51,7 +51,7 @@ const menu = [
   {
     key: "finanzas", label: "Finanzas", icon: "reportes",
     subItems: [
-      { key: "liquidaciones",    label: "Liquidaciones",      icon: "reportes" },
+      { key: "liquidaciones",    label: "Pagos",              icon: "reportes" },
       { key: "problemas-envios", label: "Problemas de envío", icon: "aprobaciones" },
     ],
   },

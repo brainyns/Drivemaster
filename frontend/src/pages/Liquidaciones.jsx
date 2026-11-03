@@ -40,7 +40,7 @@ const ORDENES_REPARTOS = [
 ];
 
 const VISTAS = [
-  { key: "repartos", label: "Liquidaciones" },
+  { key: "repartos", label: "Pagos" },
   { key: "reembolsos", label: "Reembolsos" },
 ];
 
@@ -51,13 +51,13 @@ const RANGOS = [{ clave: "mes", label: "Este mes" }, { clave: "7d", label: "Últ
 
 // Estado de cada línea con el formato de catálogo de ChipEstado
 const ESTADO_REPARTO = {
-  PENDIENTE: { label: "En espera", tono: "apagado" },
+  PENDIENTE: { label: "Falta que se entregue", tono: "apagado" },
   POR_LIQUIDAR: { label: "Por pagar", tono: "aviso" },
   PROCESANDO: { label: "Procesando", tono: "proceso" },
   SIN_CONFIRMAR: { label: "Sin confirmar", tono: "aviso" },
-  LIQUIDADO: { label: "Pagado", tono: "ok" },
+  LIQUIDADO: { label: "Ya te pagaron", tono: "ok" },
   FALLIDO: { label: "Fallido", tono: "error" },
-  ANULADO: { label: "Anulado", tono: "apagado" },
+  ANULADO: { label: "Cancelado", tono: "apagado" },
 };
 const ESTADO_REEMBOLSO = {
   PENDIENTE: { label: "Pendiente", tono: "aviso" },
@@ -230,10 +230,11 @@ export default function Liquidaciones({ vistaInicial = null }) {
   const textoAccion = (f) => (!esRepartos ? "Marcar reembolsado"
     : f.estado === "FALLIDO" ? (esWompi ? "Reintentar con Wompi" : "Reintentar")
     : esManual ? "Registrar pago"
-    : esWompi ? "Liquidar con Wompi" : "Liquidar (simulado)");
+    : esWompi ? "Pagar con Wompi" : "Pagar (simulado)");
 
   // En la fila, corto para que la acción quepa junto al monto; el diálogo dice el nombre completo
-  const textoBoton = (f) => (esRepartos && esWompi ? (f.estado === "FALLIDO" ? "Reintentar" : "Liquidar") : textoAccion(f));
+  const pagarAl = (f) => (f.beneficiarioTipo === "TIENDA" ? "Pagar a la tienda" : "Pagar al taller");
+  const textoBoton = (f) => (esRepartos && esWompi ? (f.estado === "FALLIDO" ? "Reintentar" : pagarAl(f)) : textoAccion(f));
 
   const abrirMarcar = (f) => { setMarcandoId(f.id); setNota(""); setNumero(""); setError(null); };
   const abrirResolver = (f) => { setResolviendoId(f.id); setResolucion({ resultado: "", motivo: "", referencia: "" }); setError(null); };
@@ -245,7 +246,7 @@ export default function Liquidaciones({ vistaInicial = null }) {
 
   return (
     <div className="ss-panel--plataforma pp-root liq-root">
-      <EncabezadoPagina titulo="Liquidaciones y reembolsos"
+      <EncabezadoPagina titulo="Pagos y reembolsos"
         descripcion="Pagos a talleres y tiendas, y reembolsos a clientes. Cada pago queda registrado con su referencia." />
 
       {aviso && !aviso.grande && <p className="liq-modo pp-bloque-sep"><strong>Dinero real</strong>{aviso.texto.replace("Dinero real", "")}</p>}
@@ -341,7 +342,7 @@ export default function Liquidaciones({ vistaInicial = null }) {
         <div className={`ui-card ui-table-card${cargando ? " pp-actualizando" : ""}`} aria-busy={cargando}>
           <div className="ui-table-wrap">
             <table className={`ui-table ui-table--tarjetas liq-tabla${esRepartos ? " liq-tabla--repartos" : ""}`}>
-              <caption className="ui-sr">{esRepartos ? "Liquidaciones a talleres y tiendas" : "Reembolsos a clientes"}</caption>
+              <caption className="ui-sr">{esRepartos ? "Pagos a talleres y tiendas" : "Reembolsos a clientes"}</caption>
               <thead>
                 <tr>
                   {esRepartos
@@ -359,7 +360,7 @@ export default function Liquidaciones({ vistaInicial = null }) {
                     ? <>
                       <th scope="col" className="pp-num liq-col-desglose">Bruto</th>
                       <th scope="col" className="pp-num liq-col-desglose">Comisión</th>
-                      <EncabezadoOrden campo="monto" orden={orden} onOrdenar={ordenar} className="pp-num">Neto</EncabezadoOrden>
+                      <EncabezadoOrden campo="monto" orden={orden} onOrdenar={ordenar} className="pp-num">Se transfiere</EncabezadoOrden>
                     </>
                     : <th scope="col" className="pp-num">Monto</th>}
                   <th scope="col"><span className="ui-sr">Acción</span></th>
@@ -425,7 +426,7 @@ export default function Liquidaciones({ vistaInicial = null }) {
                           <span>{desglose.comision}{desglose.nota && <span className="pp-sub">{desglose.nota}</span>}</span>
                         </td>
                       )}
-                      <td data-label={esRepartos ? "Neto" : "Monto"} className="pp-num liq-monto">
+                      <td data-label={esRepartos ? "Se transfiere" : "Monto"} className="pp-num liq-monto">
                         <span>
                           {formatPrecio(f.monto)}
                           {esRepartos && (
@@ -459,7 +460,7 @@ export default function Liquidaciones({ vistaInicial = null }) {
       )}
       {filas.length > 0 && (
         esRepartos
-          ? <Paginacion {...propsPaginacion(tabla?.repartos)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de liquidaciones" />
+          ? <Paginacion {...propsPaginacion(tabla?.repartos)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de pagos" />
           : <Paginacion pagina={pag.pagina} total={filas.length} onCambiar={pag.cambiar} etiqueta="Páginas de reembolsos" />
       )}
 
@@ -467,7 +468,7 @@ export default function Liquidaciones({ vistaInicial = null }) {
         <ConfirmacionAdmin
           titulo={esRepartos ? `${textoAccion(marcando)} · ${formatPrecio(marcando.monto)}` : `Marcar reembolsado · ${formatPrecio(marcando.monto)}`}
           texto={esRepartos ? null : `Reembolso de ${referenciaLinea(marcando).texto}. Hazlo primero en el panel de Wompi.`}
-          confirmar={esRepartos ? `Liquidar ${formatPrecio(marcando.monto)}` : "Confirmar"}
+          confirmar={esRepartos ? `Pagar ${formatPrecio(marcando.monto)}` : "Confirmar"}
           cargando={procesando}
           deshabilitado={(esRepartos ? esManual : true) && !numero.trim()}
           onConfirmar={() => marcar(marcando.id)}

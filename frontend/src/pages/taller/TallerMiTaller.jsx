@@ -36,11 +36,11 @@ const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
 
 /** Régimen de IVA del taller: decide el IVA de su mano de obra y su diagnóstico (los repuestos llevan el IVA vigente). */
 const REGIMENES_IVA = [
-  { valor: true, titulo: "Responsable de IVA", detalle: "Tu mano de obra y el diagnóstico llevan el IVA vigente." },
-  { valor: false, titulo: "No responsable de IVA", detalle: "Tu mano de obra y el diagnóstico van al 0 %." },
+  { valor: true, titulo: "Cobra IVA", detalle: "Tu mano de obra y el diagnóstico llevan el IVA vigente." },
+  { valor: false, titulo: "No cobra IVA", detalle: "Tu mano de obra y el diagnóstico van al 0 %." },
 ];
 
-const textoRegimenIva = (responsable) => (responsable === false ? "No responsable de IVA (0 %)" : "Responsable de IVA");
+const textoRegimenIva = (responsable) => (responsable === false ? "No cobra IVA (0 %)" : "Cobra IVA");
 
 /**
  * Formulario de la tarifa por hora y el régimen de IVA: solo viajan esos dos campos (el horario queda como estaba).

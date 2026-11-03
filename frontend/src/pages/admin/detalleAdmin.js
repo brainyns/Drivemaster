@@ -8,14 +8,14 @@ export const BENEFICIARIO = {
   PLATAFORMA: "Comisión DriveMaster",
 };
 
-/** Estados de una línea del reparto, en palabras del panel de liquidaciones. */
+/** Estados de una línea del pago, en palabras del panel de pagos. */
 export const ESTADOS_REPARTO = {
-  PENDIENTE: { label: "En espera de entrega", tono: "aviso" },
-  POR_LIQUIDAR: { label: "Por liquidar", tono: "info" },
+  PENDIENTE: { label: "Falta que se entregue", tono: "aviso" },
+  POR_LIQUIDAR: { label: "Por pagar", tono: "info" },
   PROCESANDO: { label: "Procesando", tono: "proceso" },
-  LIQUIDADO: { label: "Liquidado", tono: "ok" },
+  LIQUIDADO: { label: "Ya te pagaron", tono: "ok" },
   FALLIDO: { label: "Falló el pago", tono: "error" },
-  ANULADO: { label: "Anulado", tono: "apagado" },
+  ANULADO: { label: "Cancelado", tono: "apagado" },
   INFORMATIVA: { label: "Informativa", tono: "apagado" },
   RETENIDA: { label: "Retenida", tono: "ok" },
 };

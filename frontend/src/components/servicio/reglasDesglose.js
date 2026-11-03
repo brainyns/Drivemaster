@@ -4,11 +4,11 @@ import { formatFecha, formatPrecio } from "./estadosServicio.js";
 
 /** Estado del pago para el negocio. Lo simulado no se llama pagado: no movió dinero. */
 export const ESTADOS_PAGO_NEGOCIO = {
-  EN_ESPERA: { label: "En espera", tono: "aviso" },
+  EN_ESPERA: { label: "Falta que se entregue", tono: "aviso" },
   LISTO: { label: "Listo", tono: "info" },
-  PAGADO: { label: "Pagado", tono: "ok" },
+  PAGADO: { label: "Ya te pagaron", tono: "ok" },
   SIMULADO: { label: "Simulado", tono: "apagado" },
-  ANULADO: { label: "Anulado", tono: "error" },
+  ANULADO: { label: "Cancelado", tono: "error" },
   // Solo del total de una orden: una línea ya se pagó y la otra no
   PARCIAL: { label: "Pagado en parte", tono: "proceso" },
   SIN_PAGOS: { label: "Sin pagos", tono: "apagado" },
@@ -59,8 +59,8 @@ export function filasOrden(r, etiquetaRecibe) {
     ...(conCotizacion ? [
       { etiqueta: "Mano de obra con IVA", valor: formatPrecio(r.manoDeObra) },
       ...(r.repuestosTaller > 0 ? [{ etiqueta: "Repuestos del taller con IVA", valor: formatPrecio(r.repuestosTaller) }] : []),
-      { etiqueta: "Anticipo del diagnóstico", valor: `− ${formatPrecio(r.anticipo)}` },
-      { etiqueta: "Cotización pagada", valor: formatPrecio(r.cotizacionPagada), nota: r.repuestosTaller > 0 ? "Mano de obra y repuestos, menos anticipo" : "Mano de obra menos anticipo", tipo: "parte" },
+      { etiqueta: "Adelanto del diagnóstico", valor: `− ${formatPrecio(r.anticipo)}` },
+      { etiqueta: "Cotización pagada", valor: formatPrecio(r.cotizacionPagada), nota: r.repuestosTaller > 0 ? "Mano de obra y repuestos, menos el adelanto" : "Mano de obra menos el adelanto", tipo: "parte" },
     ] : []),
     { etiqueta: "Total generado por el taller", valor: formatPrecio(r.totalGenerado), nota: notaIva(r.iva), tipo: "total" },
     filaComisionOrden(r),
@@ -94,7 +94,7 @@ export function textoPago(l) {
   if (l.estado === "PAGADO") {
     return ["Transferido", l.fechaPago && `el ${formatFecha(l.fechaPago)}`, l.referencia && `· Ref. ${l.referencia}`].filter(Boolean).join(" ");
   }
-  if (l.estado === "LISTO") return "DriveMaster te lo transfiere cuando apruebe la liquidación.";
+  if (l.estado === "LISTO") return "DriveMaster te lo transfiere cuando apruebe el pago.";
   if (l.estado === "SIMULADO") return "Prueba del sistema: no se movió dinero.";
   if (l.estado === "ANULADO") return "Este pago no se hará.";
   return "Se habilita cuando se confirme la entrega.";

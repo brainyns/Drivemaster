@@ -564,11 +564,11 @@ function VistaNegocio({ n, abrir }) {
         <dl className="ui-datos">
           <Dato etiqueta={tienda ? "Pedidos" : "Órdenes"}>{String(t.pedidos)}</Dato>
           <Dato etiqueta="Vendido">{formatoCop(t.vendido)}</Dato>
-          <Dato etiqueta="Liquidado">{formatoCop(t.liquidado)}</Dato>
-          <Dato etiqueta="Por liquidar">{formatoCop(t.porLiquidar)}</Dato>
-          <Dato etiqueta="En espera de entrega">{formatoCop(t.enEspera)}</Dato>
+          <Dato etiqueta="Ya te pagaron">{formatoCop(t.liquidado)}</Dato>
+          <Dato etiqueta="Por pagar">{formatoCop(t.porLiquidar)}</Dato>
+          <Dato etiqueta="Falta que se entregue">{formatoCop(t.enEspera)}</Dato>
         </dl>
-        <p className="dtp-nota">Liquidado, por liquidar y en espera son su parte del reparto, sin la comisión.</p>
+        <p className="dtp-nota">Son la parte del negocio, sin la comisión.</p>
       </Bloque>
 
       {tienda ? (

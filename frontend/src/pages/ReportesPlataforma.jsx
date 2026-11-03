@@ -182,7 +182,7 @@ function Contenido({ id, titulo, datos, token, onCambio }) {
           <Indicador titulo="Cobrada" valor={cop(datos.retenida?.cobrada)} tono="ok"
             pie={datos.comisionSeDescuenta ? "Retenida en líneas liquidadas con su id de Wompi. Total acumulado." : "El cobro está apagado: la comisión no se descuenta todavía."} />
           <Indicador titulo="Por cobrar" valor={cop(datos.retenida?.porCobrar)} pie="Retenida en pagos que aún no se transfieren." />
-          <Indicador titulo="Anulada" valor={cop(datos.retenida?.anulada)} pie="Era de pagos anulados por reembolso: no se cobró." />
+          <Indicador titulo="Cancelada" valor={cop(datos.retenida?.anulada)} pie="Era de pagos cancelados por reembolso: no se cobró." />
           {datos.retenida?.sinIdWompi > 0 && (
             <Indicador titulo="Sin id de Wompi" valor={cop(datos.retenida.sinIdWompi)} tono="accion"
               pie="Liquidada sin id del pago: no cuenta como cobrada hasta que llegue el evento de Wompi." />
@@ -200,14 +200,14 @@ function Contenido({ id, titulo, datos, token, onCambio }) {
         <h2 id="rep-informativa" className="pp-titulo">Comisión informativa</h2>
         <div className="ui-indicadores">
           <Indicador titulo="Registrada" valor={cop(datos.registrada)} pie="En los pagos aprobados del período sin descuento." />
-          <Indicador titulo="Anulada por reembolsos" valor={cop(datos.anulada)} pie="Se descuenta cuando se reembolsa un pago." />
-          <Indicador titulo="Comisión neta" valor={cop(datos.neta)} pie="Registrada menos anulada. No es dinero cobrado." />
+          <Indicador titulo="Cancelada por reembolsos" valor={cop(datos.anulada)} pie="Se descuenta cuando se reembolsa un pago." />
+          <Indicador titulo="Comisión neta" valor={cop(datos.neta)} pie="Registrada menos cancelada. No es dinero cobrado." />
         </div>
       </section>
       <Tabla titulo={titulo} vacio="Todavía no hay comisión registrada."
         filas={datos.meses.map((m) => ({ ...m, id: m.mes }))}
         columnas={[{ t: "Mes", f: (m) => mesLargo(m.mes) }, { t: "Cobrada", der: true, f: (m) => <strong>{cop(m.cobrada)}</strong> },
-          { t: "Registrada", der: true, f: (m) => cop(m.registrada) }, { t: "Anulada", der: true, f: (m) => cop(m.anulada) },
+          { t: "Registrada", der: true, f: (m) => cop(m.registrada) }, { t: "Cancelada", der: true, f: (m) => cop(m.anulada) },
           { t: "Neta informativa", der: true, f: (m) => cop(m.neta) }]} />
     </>
   );

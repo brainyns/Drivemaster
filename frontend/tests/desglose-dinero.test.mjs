@@ -49,8 +49,8 @@ test("cada estado del pago tiene texto y lo simulado no se llama pagado", () => 
   assert.ok(textoPago({ estado: "SIMULADO" }).includes("no se movió dinero"));
 });
 
-test("lo listo depende de que DriveMaster apruebe la liquidación", () => {
-  assert.equal(textoPago({ estado: "LISTO" }), "DriveMaster te lo transfiere cuando apruebe la liquidación.");
+test("lo listo depende de que DriveMaster apruebe el pago", () => {
+  assert.equal(textoPago({ estado: "LISTO" }), "DriveMaster te lo transfiere cuando apruebe el pago.");
   assert.ok(!leer("../src/pages/InformesTienda.jsx").includes("próxima liquidación"));
 });
 
@@ -83,7 +83,7 @@ const etiquetas = (filas) => filas.map((f) => f.etiqueta);
 
 test("el recibo de una orden sigue el orden acordado y dice cuánto es IVA", () => {
   const filas = filasOrden(orden(), "Recibes");
-  assert.deepEqual(etiquetas(filas), ["Diagnóstico pagado", "Mano de obra con IVA", "Anticipo del diagnóstico", "Cotización pagada",
+  assert.deepEqual(etiquetas(filas), ["Diagnóstico pagado", "Mano de obra con IVA", "Adelanto del diagnóstico", "Cotización pagada",
     "Total generado por el taller", "Comisión DriveMaster", "Recibes"]);
   assert.ok(pesos(filas[2].valor).startsWith("− "));
   assert.equal(filas[3].tipo, "parte", "cotización pagada es un paso del cálculo, no otro sumando");

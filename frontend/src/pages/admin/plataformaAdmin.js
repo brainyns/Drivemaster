@@ -116,8 +116,8 @@ export function referenciaLinea(f = {}) {
 }
 
 /** Los estados a la vista y los que van dentro de "Más". "" es Todos. */
-export const ESTADOS_LIQUIDACION = [["POR_LIQUIDAR", "Por pagar"], ["PENDIENTE", "En espera"], ["LIQUIDADO", "Pagados"]];
-export const MAS_ESTADOS_LIQUIDACION = [["FALLIDO", "Fallidos"], ["PROCESANDO", "Sin confirmar"], ["ANULADO", "Anulados"], ["", "Todos"]];
+export const ESTADOS_LIQUIDACION = [["POR_LIQUIDAR", "Por pagar"], ["PENDIENTE", "Falta que se entregue"], ["LIQUIDADO", "Ya te pagaron"]];
+export const MAS_ESTADOS_LIQUIDACION = [["FALLIDO", "Fallidos"], ["PROCESANDO", "Sin confirmar"], ["ANULADO", "Cancelados"], ["", "Todos"]];
 
 const TIPOS_CUENTA = { AHORROS: "Ahorros", CORRIENTE: "Corriente" };
 
@@ -151,8 +151,8 @@ export function tarjetasLiquidaciones(r) {
   return [
     { titulo: "Por pagar", valor: cop(r.porPagar.monto), pie: `${pagos(r.porPagar.cantidad)} ${plural(r.porPagar.cantidad, "listo", "listos")}`,
       estado: "POR_LIQUIDAR", tono: r.porPagar.cantidad > 0 ? "accion" : undefined },
-    { titulo: "En espera de entrega", valor: cop(r.enEspera.monto), pie: pagos(r.enEspera.cantidad), estado: "PENDIENTE" },
-    { titulo: "Pagado este mes", valor: cop(r.pagadoMes.monto), pie: `${pagos(r.pagadoMes.cantidad)}${simulado}`, estado: "LIQUIDADO" },
+    { titulo: "Falta que se entregue", valor: cop(r.enEspera.monto), pie: pagos(r.enEspera.cantidad), estado: "PENDIENTE" },
+    { titulo: "Ya te pagaron este mes", valor: cop(r.pagadoMes.monto), pie: `${pagos(r.pagadoMes.cantidad)}${simulado}`, estado: "LIQUIDADO" },
   ];
 }
 
@@ -177,7 +177,7 @@ export function avisoModo(m) {
   if (m.dineroReal === false) {
     return { grande: true, texto: m.modo === "WOMPI"
       ? "Sandbox de Wompi: los pagos NO mueven dinero real. Cada pago lo apruebas tú."
-      : "Modo simulado: las liquidaciones se hacen solas y NO mueven dinero real (referencias SIM-…)." };
+      : "Modo simulado: los pagos se hacen solos y NO mueven dinero real (referencias SIM-…)." };
   }
   return null;
 }

@@ -19,7 +19,7 @@ async function handle(res, msgDefault) {
 
 export async function listarRepartos(token, estado) {
   const res = await apiFetch(`${BASE}/repartos${estado ? `?estado=${estado}` : ""}`, { headers: headers(token) });
-  return handle(res, "No se pudieron cargar las liquidaciones");
+  return handle(res, "No se pudieron cargar los pagos");
 }
 
 /**
@@ -28,13 +28,13 @@ export async function listarRepartos(token, estado) {
  */
 export async function repartosTabla(token, parametros) {
   const res = await apiFetch(`${BASE}/repartos/tabla${consultaTabla(parametros)}`, { headers: headers(token) });
-  return handle(res, "No se pudieron cargar las liquidaciones");
+  return handle(res, "No se pudieron cargar los pagos");
 }
 
 /** Modo de dispersión del backend: { modo: "SIMULADO" | "MANUAL" | "WOMPI", automatica, dineroReal } */
 export async function obtenerModo(token) {
   const res = await apiFetch(`${BASE}/modo`, { headers: headers(token) });
-  return handle(res, "No se pudo consultar el modo de liquidación");
+  return handle(res, "No se pudo consultar el modo de pago");
 }
 
 // Wompi puede tardar 75 s en el peor caso (cuenta, bancos y pago) y Render otro tanto si está dormido: cortar antes
@@ -46,7 +46,7 @@ export async function liquidarReparto(token, id, { numeroTransferencia, nota } =
   const res = await apiFetch(`${BASE}/repartos/${id}/liquidar`, {
     method: "PATCH", headers: headers(token), body: JSON.stringify({ numeroTransferencia, nota }),
   }, LIMITE_LIQUIDAR_MS);
-  return handle(res, "No se pudo liquidar");
+  return handle(res, "No se pudo hacer el pago");
 }
 
 /** Salida manual de una línea PROCESANDO sin evento de Wompi: resultado LIQUIDADO (sí salió) o FALLIDO (no salió). */

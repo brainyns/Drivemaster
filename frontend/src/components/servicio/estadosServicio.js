@@ -45,7 +45,7 @@ export const ESTADOS_COTIZACION = {
   CAMBIOS_SOLICITADOS: { label: "Cambios solicitados",  tono: "aviso" },
   VENCIDA:             { label: "Vencida",              tono: "error" },
   REEMPLAZADA:         { label: "Reemplazada",          tono: "info" },
-  ANULADA:             { label: "Anulada (sin stock)",  tono: "error" },
+  ANULADA:             { label: "Cancelada (sin stock)",  tono: "error" },
 };
 
 export const ESTADOS_PEDIDO = {

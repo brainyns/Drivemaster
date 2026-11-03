@@ -71,5 +71,5 @@ export const ESTADOS_COTIZACION_TALLER = {
   RECHAZADA:           { label: "Rechazada",           tono: "cancelada" },
   VENCIDA:             { label: "Vencida",             tono: "cancelada" },
   REEMPLAZADA:         { label: "Reemplazada",         tono: "cancelada" },
-  ANULADA:             { label: "Anulada (sin stock)", tono: "cancelada" },
+  ANULADA:             { label: "Cancelada (sin stock)", tono: "cancelada" },
 };

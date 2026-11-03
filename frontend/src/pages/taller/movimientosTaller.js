@@ -4,11 +4,11 @@
 
 /** Lo que el taller registra a mano. sentido: lo que hace con el stock. Ninguno mueve dinero. */
 export const CLASES_MANUALES = {
-  AJUSTE: { label: "Ajuste por conteo", sentido: "fija", campo: "Stock contado",
+  AJUSTE: { label: "Conteo físico", sentido: "fija", campo: "Stock contado",
     ayuda: "Contaste las piezas: el stock queda en ese número. Si falta, sale del lote más antiguo." },
-  CARGA_INICIAL: { label: "Carga inicial", sentido: "entra", campo: "Unidades",
+  CARGA_INICIAL: { label: "Stock inicial", sentido: "entra", campo: "Unidades",
     ayuda: "Piezas que ya tenías antes de DriveMaster. Entran como un lote nuevo con el costo que indiques." },
-  MERMA: { label: "Merma", sentido: "sale", campo: "Unidades dañadas o perdidas",
+  MERMA: { label: "Pérdida o daño", sentido: "sale", campo: "Unidades dañadas o perdidas",
     ayuda: "Se dañó o se perdió. Sale del lote más antiguo." },
   DEVOLUCION_TIENDA: { label: "Devolución a la tienda", sentido: "sale", campo: "Unidades que devuelves",
     ayuda: "Se la devolviste a la tienda. El reembolso, si lo hay, lo arreglas con ella." },
@@ -22,9 +22,9 @@ export const CLASES = {
   VENTA: { label: "Venta en cotización", tono: "info" },
   CANCELACION: { label: "Devolución por cancelación", tono: "ok" },
   REVERSA: { label: "Reversa de venta", tono: "ok" },
-  AJUSTE: { label: "Ajuste por conteo", tono: "aviso" },
-  CARGA_INICIAL: { label: "Carga inicial", tono: "ok" },
-  MERMA: { label: "Merma", tono: "error" },
+  AJUSTE: { label: "Conteo físico", tono: "aviso" },
+  CARGA_INICIAL: { label: "Stock inicial", tono: "ok" },
+  MERMA: { label: "Pérdida o daño", tono: "error" },
   DEVOLUCION_TIENDA: { label: "Devolución a la tienda", tono: "error" },
   DEVOLUCION_CLIENTE: { label: "Devolución del cliente", tono: "ok" },
 };

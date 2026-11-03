@@ -117,7 +117,7 @@ const TITULOS = {
   "informes-tienda": "Informes",
   "asistente-tienda": "Asistente",
   "pedidos-tienda":  "Pedidos",
-  "liquidaciones":   "Liquidaciones y reembolsos",
+  "liquidaciones":   "Pagos y reembolsos",
   "problemas-envios": "Problemas de envío",
   "pedidos-envios":  "Pedidos y envíos",
   "mi-tienda":       "Mi tienda",

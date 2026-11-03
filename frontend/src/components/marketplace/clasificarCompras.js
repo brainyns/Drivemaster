@@ -26,7 +26,7 @@ export const ESTADO_VENTA_ANTERIOR = {
   EN_CAMINO: { label: "En camino", tono: "ok", enCurso: true },
   ENTREGADO: { label: "Entregada", tono: "ok", enCurso: false },
   COMPLETADA: { label: "Completada", tono: "ok", enCurso: false },
-  ANULADA: { label: "Anulada", tono: "error", enCurso: false },
+  ANULADA: { label: "Cancelada", tono: "error", enCurso: false },
   CANCELADA: { label: "Cancelada", tono: "error", enCurso: false },
 };
 

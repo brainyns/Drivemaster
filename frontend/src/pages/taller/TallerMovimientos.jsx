@@ -38,7 +38,7 @@ const hora = (f) => (f ? new Date(f).toLocaleTimeString("es-CO", { hour: "2-digi
 const refPieza = (p) => (p.referencia ? `Ref. ${p.referencia}` : p.marca || "Sin referencia");
 
 /**
- * Movimiento manual del taller. Ajuste, merma y devoluciones eligen una pieza del inventario; la carga inicial elige
+ * Movimiento manual del taller. Conteo físico, pérdidas y devoluciones eligen una pieza del inventario; el stock inicial elige
  * una del catálogo (así funcionan el precio público y el tope) y pide el costo. El stock que resulta se ve antes de
  * guardar. Va en la página, como en la tienda: es corto y conviene ver la lista al terminar.
  */
@@ -47,7 +47,7 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
   const [tocado, setTocado] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
-  const [catalogo, setCatalogo] = useState(null); // productos del catálogo para la carga inicial
+  const [catalogo, setCatalogo] = useState(null); // productos del catálogo para el stock inicial
   const [confirmando, setConfirmando] = useState(false); // el resumen del movimiento antes de guardarlo
   const carga = form.clase === "CARGA_INICIAL";
 
@@ -84,7 +84,7 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
         cantidad: Number(form.cantidad), costo: carga ? Number(String(form.costo).replace(/\./g, "")) : null, motivo: form.motivo.trim(),
       });
       onGuardado(carga
-        ? `Carga inicial registrada: ${plural(Number(form.cantidad), "unidad", "unidades")} de ${pieza.nombre}.`
+        ? `Stock inicial registrado: ${plural(Number(form.cantidad), "unidad", "unidades")} de ${pieza.nombre}.`
         : `${tipo.label} registrado: ${pieza.nombre} quedó con ${plural(resultado, "unidad", "unidades")}.`);
     } catch (err) {
       setError(textoError(err));
@@ -130,7 +130,7 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
         ) : (
           <BuscadorProducto id="mov-pieza" label="Pieza" productos={piezas} elegido={pieza} error={errores.pieza}
             autoFocus={!piezaInicial} etiquetaStock="En tu taller" stockDe={(p) => p.stock} detalle={refPieza}
-            ayuda="Escribe el nombre o la referencia." textoVacio="Aún no tienes piezas: usa la carga inicial o compra en el catálogo."
+            ayuda="Escribe el nombre o la referencia." textoVacio="Aún no tienes piezas: usa el stock inicial o compra en el catálogo."
             onElegir={(p) => setForm((f) => ({ ...f, piezaId: p ? p.id : "" }))} />
         )}
         <Campo id="mov-cantidad" label={tipo.campo} error={errores.cantidad}
@@ -175,7 +175,7 @@ const ORDENES = [
 
 /**
  * Movimientos del inventario del taller: la misma pantalla que "Inventario" de la tienda. Las compras, ventas y
- * cancelaciones se anotan solas; aquí también quedan los ajustes, la carga inicial, las mermas y las devoluciones.
+ * cancelaciones se anotan solas; aquí también quedan los ajustes, el stock inicial, las pérdidas o daños y las devoluciones.
  * piezaInicial: abre el formulario con esa pieza (desde "Mi inventario").
  */
 export default function TallerMovimientos({ irA, piezaInicial = null }) {
@@ -328,7 +328,7 @@ export default function TallerMovimientos({ irA, piezaInicial = null }) {
               </EstadoVacio>
             ) : (
               <EstadoVacio icono="box" titulo="Aún no hay movimientos"
-                texto="Cuando confirmes la llegada de una compra o vendas una pieza en una cotización, queda aquí. Si ya tenías piezas, regístralas con una carga inicial.">
+                texto="Cuando confirmes la llegada de una compra o vendas una pieza en una cotización, queda aquí. Si ya tenías piezas, regístralas con el stock inicial.">
                 {botonRegistrar}
               </EstadoVacio>
             ))

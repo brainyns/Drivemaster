@@ -30,7 +30,7 @@ const ESTADOS_COMPRA = {
   COMPLETADA: { label: "Completada", tono: "ok" },
   ENTREGADO: { label: "Entregado", tono: "ok" },
   EN_CAMINO: { label: "En camino", tono: "aviso" },
-  ANULADA: { label: "Anulada", tono: "neutro" },
+  ANULADA: { label: "Cancelada", tono: "neutro" },
   CANCELADA: { label: "Cancelada", tono: "error" },
   PENDIENTE_PAGO: { label: "Pendiente de pago", tono: "aviso" },
 };

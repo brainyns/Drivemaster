@@ -6,7 +6,7 @@ import { textoErrorPago } from "../../utils/errores";
 const ESTADO_WOMPI = {
   APPROVED: "Pago aprobado.",
   DECLINED: "Wompi rechazó el pago. No se hizo ningún cobro.",
-  VOIDED: "El pago fue anulado.",
+  VOIDED: "El pago fue cancelado.",
   ERROR: "El pago terminó con error.",
   PENDING: "El pago sigue pendiente en Wompi. Intenta verificar en unos segundos.",
   NO_ENCONTRADO: "No encontramos esa transacción en Wompi. Revisa el ID.",
