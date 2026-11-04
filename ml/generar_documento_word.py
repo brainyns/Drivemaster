@@ -1,6 +1,6 @@
 """
 Generador de Documento Word (.docx)
-Explicación detallada del Modelo Predictivo de Aprobación de Cotizaciones - DriveMaster
+Explicación detallada del Modelo Predictivo de Aprobación de Cotizaciones - DriveMaster (Versión Pulida XAI 2.0)
 Autores: Brainy Blanco, Sebastian Ortega, Juan Cantillo, Elias Puello
 """
 
@@ -8,9 +8,9 @@ import os
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
-from docx.oxml import parse_xml, OxmlElement
-from docx.oxml.ns import nsdecls, qn
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 
 def set_cell_background(cell, fill_hex):
     tcPr = cell._element.get_or_add_tcPr()
@@ -42,12 +42,10 @@ def crear_documento():
 
     COLOR_PRIMARIO = RGBColor(15, 76, 129)     # Azul Institucional
     COLOR_SECUNDARIO = RGBColor(30, 41, 59)   # Slate oscuro
-    COLOR_GRIS = RGBColor(100, 116, 139)       # Gris texto secundario
-    COLOR_VERDE = RGBColor(16, 185, 129)      # Verde acento
     COLOR_FONDO_TABLA = "F1F5F9"
     COLOR_HEADER_TABLA = "0F4C81"
 
-    # --- PORTADA / ENCABEZADO ---
+    # --- ENCABEZADO ---
     title_p = doc.add_paragraph()
     title_p.paragraph_format.space_before = Pt(10)
     title_p.paragraph_format.space_after = Pt(4)
@@ -59,7 +57,7 @@ def crear_documento():
 
     h1_p = doc.add_paragraph()
     h1_p.paragraph_format.space_after = Pt(14)
-    run_title = h1_p.add_run("Modelo Predictivo para Estimar la Probabilidad de Aprobación de una Cotización de Servicio en DriveMaster")
+    run_title = h1_p.add_run("Modelo Predictivo y de Explicabilidad (XAI) para la Aprobación de Cotizaciones en DriveMaster")
     run_title.font.name = "Calibri"
     run_title.font.size = Pt(22)
     run_title.font.bold = True
@@ -76,7 +74,7 @@ def crear_documento():
     p_meta.add_run("DriveMaster (Marketplace Automotriz & Red de Talleres)\n")
     r3 = p_meta.add_run("Módulo: ")
     r3.bold = True
-    p_meta.add_run("Inteligencia de Negocio y Minería de Datos (Machine Learning)")
+    p_meta.add_run("Machine Learning, Inteligencia de Negocio y Explicabilidad (XAI 2.0)")
 
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
 
@@ -86,12 +84,12 @@ def crear_documento():
 
     p1 = doc.add_paragraph(
         "En la plataforma DriveMaster, los talleres mecánicos reciben solicitudes de diagnóstico y mantenimiento "
-        "de clientes automotrices. Para responder a una solicitud, el taller formula una cotización formal que incluye "
-        "los repuestos (provenientes de tiendas de autopartes asociadas), la mano de obra calificada y el IVA del 19 %."
+        "de clientes particulares y flotillas. Para responder a una solicitud, el taller formula una cotización formal que incluye "
+        "los repuestos (provenientes de tiendas de autopartes asociadas en el marketplace), la mano de obra calificada y el IVA del 19 %."
     )
     p2 = doc.add_paragraph(
-        "Tradicionalmente, el taller no cuenta con ninguna herramienta para anticipar si el cliente va a aceptar "
-        "o a rechazar la propuesta. Cada cotización rechazada genera consecuencias negativas para el ecosistema:"
+        "Tradicionalmente, el taller opera 'a ciegas' sin saber si el cliente va a aceptar "
+        "o rechazar la propuesta. Cada cotización rechazada genera consecuencias negativas para el ecosistema:"
     )
     
     b1 = doc.add_paragraph(style='List Bullet')
@@ -100,56 +98,45 @@ def crear_documento():
     b1.add_run("El personal del taller dedica tiempo inspeccionando y cotizando sin concretar el trabajo.")
 
     b2 = doc.add_paragraph(style='List Bullet')
-    r = b2.add_run("Pérdida de ventas en tiendas asociadas: ")
+    r = b2.add_run("Pérdida de tracción del cliente: ")
     r.bold = True
-    b2.add_run("Los repuestos cotizados que no se compran representan lucro cesante para los comercios.")
+    b2.add_run("El cliente que recibe una cotización desproporcionada o demorada suele desertar de la plataforma.")
 
     b3 = doc.add_paragraph(style='List Bullet')
-    r = b3.add_run("Fuga del cliente: ")
+    r = b3.add_run("Falta de retroalimentación constructiva: ")
     r.bold = True
-    b3.add_run("Un cliente que percibe un precio desproporcionado o sufre una respuesta tardía abandona la plataforma.")
+    b3.add_run("El taller no sabe si el rechazo se debió al precio, a la demora en responder, a la distancia geográfica o a la reputación.")
 
-    doc.add_paragraph(
-        "La integración del modelo predictivo resuelve este problema suministrando una alerta temprana en tiempo real "
-        "al taller en el preciso momento en que está estructurando la cotización, permitiéndole tomar decisiones correctivas "
-        "(como ajustar tarifas, cambiar repuestos o priorizar clientes) antes de enviarla."
-    )
-
-    # --- SECCIÓN 2: OBJETIVO Y VARIABLE OBJETIVO ---
-    h_sec2 = doc.add_heading("2. Definición del Modelo y Variable Objetivo", level=1)
+    # --- SECCIÓN 2: FORMULACIÓN MATEMÁTICA ---
+    h_sec2 = doc.add_heading("2. Formulación Matemática y Algoritmo Seleccionado", level=1)
     h_sec2.style.font.color.rgb = COLOR_PRIMARIO
 
     doc.add_paragraph(
-        "El objetivo es desarrollar un modelo predictivo de clasificación supervisada capaz de estimar "
-        "la probabilidad matemática (entre 0.0 y 1.0) de que una cotización sea aprobada por el cliente."
+        "Se implementó un modelo de Regresión Logística Optimizada con Descenso de Gradiente Adam "
+        "(Adaptive Moment Estimation), regularización L2 y feature engineering no lineal. "
+        "La probabilidad de aprobación P(Y=1|X) se calcula mediante la función sigmoide:"
     )
 
-    p_var = doc.add_paragraph()
-    r = p_var.add_run("Variable Objetivo (Target): ")
-    r.bold = True
-    p_var.add_run("aprobacion_cotizacion\n")
-    r = p_var.add_run("Tipo: ")
-    r.bold = True
-    p_var.add_run("Categórica Binaria (1 = Sí / Aprobada, 0 = No / Rechazada o Cancelada).\n")
-    r = p_var.add_run("Origen en el Sistema: ")
-    r.bold = True
-    p_var.add_run("Se mapea del estado final de las solicitudes y órdenes en la base de datos (estados APROBADA vs. RECHAZADA/CANCELADA).")
-
-    # --- SECCIÓN 3: CRITERIOS Y VARIABLES PREDICTORAS ---
-    h_sec3 = doc.add_heading("3. Criterios de Predicción y Variables Predictoras (Explicación Detallada)", level=1)
-    h_sec3.style.font.color.rgb = COLOR_PRIMARIO
+    doc.add_paragraph("P(Y = 1 | X) = σ(z) = 1 / (1 + exp(-z))\n"
+                      "z = b + Σ (w_j · x_j_norm)")
 
     doc.add_paragraph(
-        "El modelo evalúa 12 variables predictoras extraídas del contexto del vehículo, el taller, la logística "
-        "y los componentes económicos de la cotización. A continuación se detalla cada criterio y su impacto en la decisión del cliente:"
+        "Ventajas de esta formulación para el ecosistema DriveMaster:\n"
+        "1. Inferencia ultrarrápida (< 1 ms por solicitud) con complejidad temporal O(n).\n"
+        "2. Portabilidad matemática total: Se ejecuta en Python estándar y en un motor embebido en Java Spring Boot.\n"
+        "3. Explicabilidad Directa (XAI): Cada variable x_j aporta un valor w_j · x_j_norm al logit, lo que permite "
+        "explicar con exactitud qué factores suman o restan probabilidad en cada cotización individual."
     )
 
-    # Tabla de variables
+    # --- SECCIÓN 3: INGENIERÍA DE VARIABLES ---
+    h_sec3 = doc.add_heading("3. Ingeniería de Características e Interacciones", level=1)
+    h_sec3.style.font.color.rgb = COLOR_PRIMARIO
+
     table = doc.add_table(rows=1, cols=4)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
 
-    headers = ["Variable", "Tipo de Dato", "Significado en la App", "Impacto en la Probabilidad"]
+    headers = ["Variable / Característica", "Tipo de Dato", "Significado en DriveMaster", "Impacto / Coeficiente"]
     hdr_cells = table.rows[0].cells
     for i, h in enumerate(headers):
         hdr_cells[i].text = h
@@ -163,18 +150,16 @@ def crear_documento():
             run.font.size = Pt(9.5)
 
     criterios_data = [
-        ("tiempo_respuesta_horas", "Numérica continua", "Horas transcurridas desde que el cliente creó la solicitud hasta que el taller formuló la cotización.", "CRÍTICO (-0.647): Mayor demora disminuye drásticamente la probabilidad. Responder en las primeras 4h eleva la aprobación."),
-        ("calificacion_taller", "Numérica (1.0 - 5.0)", "Reputación y rating promedio obtenido por el taller a partir de reseñas de clientes previos.", "POSITIVO (+0.524): Talleres con rating ≥ 4.6 generan mayor confianza e inducen mayor tasa de aceptación."),
-        ("distancia_km", "Numérica continua", "Distancia geográfica estimada entre la ubicación del cliente y la sede física del taller.", "NEGATIVO (-0.400): Distancias mayores a 15-20 km desalientan al cliente por costos de desplazamiento y grúa."),
-        ("anio_vehiculo", "Numérica entera", "Año del vehículo (antigüedad).", "POSITIVO (+0.312): Autos más recientes suelen tener dueños dispuestos a realizar mantenimientos preventivos formalizados."),
-        ("total_con_iva", "Numérica (COP)", "Monto total facturable con el 19% de IVA y deducción de tarifa de diagnóstico.", "NEGATIVO (-0.280): Cotizaciones con total elevado (> $1.200.000 COP) experimentan mayor tasa de rechazo."),
-        ("monto_repuestos", "Numérica (COP)", "Subtotal acumulado de repuestos físicos de tiendas necesarios para el trabajo.", "NEGATIVO (-0.264): Repuestos costosos encarecen la orden. Sugiere ofrecer alternativas OEM o genéricas certificadas."),
-        ("num_tiendas", "Numérica entera", "Número de tiendas de autopartes distintas requeridas para abastecer la orden.", "NEGATIVO (-0.217): Múltiples tiendas involucradas generan incertidumbre en tiempos de entrega y múltiples envíos."),
-        ("monto_mano_obra", "Numérica (COP)", "Valor cobrado por el taller por concepto de trabajo técnico mecánico.", "NEGATIVO (-0.178): Mano de obra desfasada frente a los promedios del mercado causa rechazo directo."),
-        ("cantidad_repuestos", "Numérica entera", "Número total de unidades de repuestos cotizados.", "Permite medir la complejidad de la reparación en conjunto con la mano de obra."),
-        ("proporcion_repuestos", "Numérica (0.0 - 1.0)", "Relación entre el costo de repuestos y el costo total de la cotización.", "Mide el equilibrio entre materiales y servicio técnico."),
+        ("calificacion_taller", "Numérica (1.0 - 5.0)", "Reputación y rating promedio obtenido por el taller a partir de reseñas de clientes.", "ALTO POSITIVO (+2.688): Talleres con alta reputación generan confianza contundente."),
+        ("antiguedad_x_precio", "Interacción continua", "Producto de la antigüedad del carro (2026 - año) por el total cotizado.", "CRÍTICO NEGATIVO (-1.756): Un valor alto en un vehículo antiguo dispara la tasa de rechazo."),
+        ("log_tiempo_respuesta", "Logarítmica continua", "Transformación cóncava ln(horas + 1) del tiempo de respuesta del taller.", "CRÍTICO NEGATIVO (-1.643): Responder en las primeras 3h maximiza conversión; superar 24h perjudica fuertemente."),
+        ("log_distancia", "Logarítmica continua", "Distancia geográfica cliente-taller en escala logarítmica.", "NEGATIVO (-1.430): Distancias considerables desincentivan la aceptación por costo y tiempo de traslado."),
+        ("total_con_iva", "Numérica (COP)", "Monto total facturable con 19% de IVA y repuestos.", "NEGATIVO (-1.195): Presupuestos que superan los rangos promedio experimentan mayor sensibilidad al precio."),
+        ("monto_mano_obra", "Numérica (COP)", "Tarifa cobrada por el taller por concepto de servicio técnico mecánico.", "NEGATIVO (-0.622): Sensibilidad moderada a la mano de obra cotizada."),
+        ("num_tiendas", "Numérica entera", "Número de tiendas de autopartes involucradas para abastecer los repuestos.", "NEGATIVO (-0.582): Dispersión logística genera incertidumbre en tiempos de entrega."),
+        ("reputacion_vs_distancia", "Ratio de interacción", "Calificación del taller dividida por la distancia geográfica logarítmica.", "Mide la disposición del cliente a desplazarse si la reputación del taller es sobresaliente."),
         ("marca_vehiculo", "Categórica (One-Hot)", "Marca del auto (Chevrolet, Renault, Mazda, Toyota, Kia, Nissan, etc.).", "Segmenta el poder adquisitivo esperado y costo relativo de repuestos por fabricante."),
-        ("tipo_servicio", "Categórica (One-Hot)", "Categoría del trabajo (Frenos, Suspensión, Mantenimiento preventivo, Motor, etc.).", "Distingue servicios de alta urgencia (frenos/motor) frente a servicios electivos o preventivos.")
+        ("tipo_servicio", "Categórica (One-Hot)", "Categoría del trabajo (Frenos, Suspensión, Mantenimiento preventivo, Motor, etc.).", "Distingue servicios de alta urgencia (frenos/motor) frente a servicios electivos.")
     ]
 
     for row_idx, fila in enumerate(criterios_data):
@@ -192,44 +177,43 @@ def crear_documento():
 
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
 
-    # --- SECCIÓN 4: ARQUITECTURA DE INTEGRACIÓN ---
-    h_sec4 = doc.add_heading("4. Arquitectura de Integración en DriveMaster", level=1)
+    # --- SECCIÓN 4: ARQUITECTURA DE INTEGRACIÓN Y EXPLICABILIDAD ---
+    h_sec4 = doc.add_heading("4. Arquitectura de Integración y Explicabilidad (XAI 2.0)", level=1)
     h_sec4.style.font.color.rgb = COLOR_PRIMARIO
 
     doc.add_paragraph(
-        "Para garantizar alta disponibilidad y desacoplamiento, el modelo se implementó bajo una "
-        "arquitectura de microservicio con fallback automático nativo:"
+        "Para garantizar alta resiliencia y cero fallos operativos, la solución opera con una arquitectura redundante:"
     )
 
     b_a1 = doc.add_paragraph(style='List Bullet')
-    r = b_a1.add_run("Microservicio en Python (FastAPI / HTTP Server): ")
+    r = b_a1.add_run("Microservicio en Python (ml/app.py): ")
     r.bold = True
-    b_a1.add_run("Ejecuta en el puerto 8000 exponiendo endpoints REST (/predict, /metricas, /) procesando la inferencia en milisegundos.")
+    b_a1.add_run("Expone /predict y /metricas en el puerto 8000, calculando en tiempo real las contribuciones de cada factor positivo y de riesgo.")
 
     b_a2 = doc.add_paragraph(style='List Bullet')
-    r = b_a2.add_run("Backend en Java (Spring Boot 3.4.5): ")
+    r = b_a2.add_run("Motor Embebido en Java Spring Boot (PredictorCotizacionService): ")
     r.bold = True
-    b_a2.add_run("El servicio PredictorCotizacionService consulta la API de Python al previsualizar la cotización. Si Python estuviese apagado, activa un motor interno de fallback en Java que resuelve la función sigmoide con los pesos exactos (modelo_pesos.json), garantizando cero fallos.")
+    b_a2.add_run("Consume el microservicio Python. Si este no responde, activa inmediatamente el motor de fallback en memoria Java utilizando los pesos calibrados (modelo_pesos.json).")
 
     b_a3 = doc.add_paragraph(style='List Bullet')
-    r = b_a3.add_run("Frontend en React (Vite): ")
+    r = b_a3.add_run("Frontend en React (AlertaPrediccionCotizacion.jsx): ")
     r.bold = True
-    b_a3.add_run("El componente AlertaPrediccionCotizacion.jsx renderiza en tiempo real el porcentaje de probabilidad, el semáforo de riesgo y las recomendaciones automáticas.")
+    b_a3.add_run("Renderiza el semáforo visual de riesgo, la barra de probabilidad y el desglose de 'Factores a Favor' vs 'Puntos de Riesgo' con sugerencias concretas.")
 
-    # --- SECCIÓN 5: MÉTRICAS ACADÉMICAS ---
+    # --- SECCIÓN 5: MÉTRICAS Y RESULTADOS ---
     h_sec5 = doc.add_heading("5. Evaluación del Modelo y Métricas Obtenidas", level=1)
     h_sec5.style.font.color.rgb = COLOR_PRIMARIO
 
     doc.add_paragraph(
-        "El modelo fue entrenado con un dataset estructurado de 1.600 cotizaciones sintéticas realistas y evaluado "
-        "en un conjunto de prueba independiente (20% = 320 cotizaciones) mediante división estratificada:"
+        "El modelo fue entrenado con 2.500 registros y evaluado rigurosamente en un conjunto de prueba independiente "
+        "del 20% (500 cotizaciones no vistas durante el entrenamiento):"
     )
 
     t_met = doc.add_table(rows=1, cols=3)
     t_met.alignment = WD_TABLE_ALIGNMENT.CENTER
     t_met.rows[0].cells[0].text = "Métrica"
     t_met.rows[0].cells[1].text = "Resultado Obtenido"
-    t_met.rows[0].cells[2].text = "Interpretación Académica"
+    t_met.rows[0].cells[2].text = "Interpretación Académica y de Negocio"
     for c in t_met.rows[0].cells:
         set_cell_background(c, COLOR_HEADER_TABLA)
         set_cell_margins(c, 120, 120, 160, 160)
@@ -240,12 +224,14 @@ def crear_documento():
             r.font.size = Pt(9.5)
 
     metricas_rows = [
-        ("Sensibilidad (Recall)", "82.54 %", "Capacidad destacada para capturar más del 82 % de las cotizaciones que terminarán siendo aprobadas."),
-        ("Puntuación F1 (F1-Score)", "74.11 %", "Media armónica que demuestra solidez equilibrando precisión y exhaustividad."),
-        ("Área Bajo la Curva (ROC-AUC)", "0.7100", "Indica una buena capacidad del modelo para distinguir cotizaciones exitosas de cotizaciones en riesgo."),
-        ("Exactitud (Accuracy)", "65.94 %", "Porcentaje de acierto global sobre el conjunto de prueba independiente."),
-        ("Verdaderos Positivos (TP)", "156", "Cotizaciones aprobadas predichas con éxito."),
-        ("Verdaderos Negativos (TN)", "55", "Cotizaciones rechazadas anticipadas a tiempo.")
+        ("Área Bajo la Curva ROC (ROC-AUC)", "0.9715", "Excelente capacidad de discriminación entre cotizaciones exitosas y rechazadas."),
+        ("Sensibilidad (Recall)", "96.81 %", "Captura el 96.8% de todas las cotizaciones aprobadas, minimizando falsos negativos."),
+        ("Exactitud (Accuracy)", "91.80 %", "Tasa de acierto global sobresaliente en el conjunto de prueba independiente."),
+        ("Puntuación F1 (F1-Score)", "92.22 %", "Balance armónico óptimo entre precisión y exhaustividad."),
+        ("Precisión (Precision)", "88.04 %", "Cuando el modelo predice aprobación, acierta en el 88 % de las ocasiones."),
+        ("Umbral de Decisión Calibrado", "0.40", "Umbral óptimo obtenido mediante optimización de la métrica F1 en validación."),
+        ("Verdaderos Positivos (TP)", "243", "Cotizaciones aprobadas predichas con precisión."),
+        ("Verdaderos Negativos (TN)", "216", "Cotizaciones rechazadas anticipadas a tiempo.")
     ]
 
     for idx, (m, val, desc) in enumerate(metricas_rows):
@@ -266,19 +252,16 @@ def crear_documento():
 
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
 
-    # --- SECCIÓN 6: CÓMO SE USA EN LA APP ---
+    # --- SECCIÓN 6: PASO A PASO ---
     h_sec6 = doc.add_heading("6. Flujo de Uso en la Aplicación (Paso a Paso)", level=1)
     h_sec6.style.font.color.rgb = COLOR_PRIMARIO
 
     pasos = [
-        ("Paso 1: Recepción de la Solicitud", "El cliente sube su auto, describe el problema y selecciona repuestos si los conoce. El taller recibe la solicitud en su bandeja de entrada."),
-        ("Paso 2: Formulación de la Cotización", "El taller ingresa los trabajos de mano de obra (por horas o valor fijo)."),
-        ("Paso 3: Cálculo y Evaluación Predictiva", "Al hacer clic en 'Calcular totales', el backend envía las variables al modelo de Machine Learning, el cual evalúa los 12 criterios y responde en 20 ms."),
-        ("Paso 4: Interpretación de los Niveles de Riesgo", "El taller visualiza un panel con el indicador de riesgo:\n"
-         "  • Riesgo Bajo (Verde, ≥ 70%): La cotización es competitiva y se recomienda enviarla.\n"
-         "  • Riesgo Moderado (Ámbar, 45% - 69%): Se sugiere revisar repuestos alternativos o afinar mano de obra.\n"
-         "  • Riesgo Alto (Rojo, < 45%): Alerta de alta probabilidad de rechazo con sugerencias puntuales (ej. demora en la respuesta o monto excesivo)."),
-        ("Paso 5: Ajuste o Emisión Final", "El taller ajusta su propuesta según las sugerencias o la emite directamente con plena consciencia de su probabilidad de éxito.")
+        ("Paso 1: Recepción de la Solicitud", "El cliente sube la información de su vehículo, describe la necesidad y solicita presupuesto."),
+        ("Paso 2: Formulación y Previsualización", "El taller ingresa mano de obra y selecciona repuestos de tiendas vinculadas."),
+        ("Paso 3: Evaluación Predictiva y Explicabilidad Instantánea", "Al presionar 'Calcular', la IA evalúa las 14 variables e interacciones y responde en < 10 ms."),
+        ("Paso 4: Análisis de Factores de Éxito y Riesgo", "El taller revisa los 'Factores a Favor' (ej. respuesta ágil, reputación) y los 'Puntos de Riesgo' (ej. precio para la antigüedad del auto)."),
+        ("Paso 5: Optimización y Emisión", "El taller ajusta el presupuesto si lo desea y emite la cotización al cliente con alta certidumbre de aprobación.")
     ]
 
     for titulo, desc in pasos:
@@ -288,11 +271,10 @@ def crear_documento():
         r.font.color.rgb = COLOR_SECUNDARIO
         p.add_run(desc)
 
-    # Guardar documento
+    # Guardar documento en la raíz del proyecto
     OUTPUT_PATH = os.path.join(r"c:\Users\Sebastian Ortega\Desktop\DriveMaster\Drivemaster", "Modelo_Predictivo_DriveMaster.docx")
     doc.save(OUTPUT_PATH)
     print(f"Documento Word generado exitosamente en: {OUTPUT_PATH}")
 
 if __name__ == "__main__":
     crear_documento()
-

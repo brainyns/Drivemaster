@@ -56,6 +56,7 @@ export default function Login({
   const [recuperando, setRecuperando] = useState(false);
   const [avisoOk, setAvisoOk] = useState(null);
   const googleBtnRef = useRef(null);
+  const handleGoogleRef = useRef();
 
   const handleGoogleResponse = async (response) => {
     try {
@@ -69,13 +70,14 @@ export default function Login({
       setLoading(false);
     }
   };
+  handleGoogleRef.current = handleGoogleResponse;
 
   useEffect(() => {
     const pintarBoton = () => {
       if (!window.google?.accounts?.id || !googleBtnRef.current) return;
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
-        callback: handleGoogleResponse,
+        callback: (res) => handleGoogleRef.current?.(res),
       });
       window.google.accounts.id.renderButton(googleBtnRef.current, {
         theme: "outline",

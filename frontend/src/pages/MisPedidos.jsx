@@ -140,7 +140,7 @@ export default function MisPedidos({ onVolver }) {
         setCargando(false);
       }
     })();
-  }, []);
+  }, [token]);
 
   // Las ventas de taller se muestran en su propia sección usando el estado real
   // de la orden, así que se excluyen del historial de compras de producto.

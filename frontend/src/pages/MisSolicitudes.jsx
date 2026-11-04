@@ -1,5 +1,5 @@
 import { apiFetch } from "../services/http";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getToken } from "../services/authService";
 import { crearPago, verificarPago, getWompiRedirectUrl } from "../services/solicitudService";
 import "../css/solicitudes.css";
@@ -37,7 +37,7 @@ export default function MisSolicitudes({ onVolver }) {
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  const cargar = async () => {
+  const cargar = useCallback(async () => {
     setCargando(true);
     try {
       const res = await apiFetch(`${BASE}/mis-solicitudes`, {
@@ -49,7 +49,7 @@ export default function MisSolicitudes({ onVolver }) {
     } finally {
       setCargando(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     cargar();
@@ -65,7 +65,7 @@ export default function MisSolicitudes({ onVolver }) {
           }
         });
     }
-  }, []);
+  }, [cargar, token]);
 
   const [pagando, setPagando] = useState(null);
   const [errorPago, setErrorPago] = useState(null);

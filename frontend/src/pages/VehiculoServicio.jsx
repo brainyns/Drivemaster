@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getToken } from "../services/authService";
 import { obtenerVehiculo, repuestosCompatibles, historialVehiculo } from "../services/vehiculoService";
 import "../css/servicios.css";
@@ -25,7 +25,7 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
-  const cargarTodo = async () => {
+  const cargarTodo = useCallback(async () => {
     setCargando(true);
     setError("");
     try {
@@ -42,9 +42,9 @@ export default function VehiculoServicio({ vehiculoId, onVolver, onSolicitarDiag
     } finally {
       setCargando(false);
     }
-  };
+  }, [token, vehiculoId]);
 
-  useEffect(() => { cargarTodo(); }, [vehiculoId]);
+  useEffect(() => { cargarTodo(); }, [cargarTodo]);
 
   if (cargando) return <div className="sv-root"><p className="sv-empty">Cargando...</p></div>;
 
