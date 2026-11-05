@@ -77,6 +77,7 @@ public class ProductoServiceImpl implements ProductoService {
         existente.setPrecioVenta(producto.getPrecioVenta());
         existente.setStockMinimo(producto.getStockMinimo());
         existente.setImagenUrl(producto.getImagenUrl());
+        existente.setImagenIa(producto.getImagenIa());
         // La tienda dueña no se cambia al editar.
         existente.setReferencia(producto.getReferencia());
         existente.setUbicacion(producto.getUbicacion());
@@ -137,6 +138,7 @@ public class ProductoServiceImpl implements ProductoService {
         c.setTipo(p.getTipo());
         c.setActivo(p.getActivo());
         c.setImagenUrl(p.getImagenUrl());
+        c.setImagenIa(p.getImagenIa());
         c.setTiendaId(p.getTiendaId());
         c.setReferencia(p.getReferencia());
         c.setDiasEntregaEncargo(p.getDiasEntregaEncargo());
@@ -301,6 +303,7 @@ public class ProductoServiceImpl implements ProductoService {
         Producto producto = obtenerPorId(id);
         String url = cloudinaryService.subirImagen(archivo);
         producto.setImagenUrl(url);
+        producto.setImagenIa(false);
         productoRepository.save(producto);
         return url;
     }

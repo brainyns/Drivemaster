@@ -10,7 +10,7 @@ import java.util.List;
  * POR_CONFIRMAR. Solo avisa; nunca oculta el producto.
  */
 public record ProductoCatalogoDTO(String id, String nombre, String marca, String categoria, String referencia,
-                                  String imagenUrl, Double precio, String tipo, boolean disponible,
+                                  String imagenUrl, boolean imagenIa, Double precio, String tipo, boolean disponible,
                                   Integer stock, Integer diasEntrega,
                                   String compatibilidad, String avisoCompatibilidad,
                                   TiendaCatalogoDTO tienda,
@@ -18,7 +18,7 @@ public record ProductoCatalogoDTO(String id, String nombre, String marca, String
                                   List<ProductoCatalogoDTO> otrasTiendas) {
 
     public ProductoCatalogoDTO conOtrasTiendas(List<ProductoCatalogoDTO> otras) {
-        return new ProductoCatalogoDTO(id, nombre, marca, categoria, referencia, imagenUrl, precio, tipo, disponible,
+        return new ProductoCatalogoDTO(id, nombre, marca, categoria, referencia, imagenUrl, imagenIa, precio, tipo, disponible,
                 stock, diasEntrega, compatibilidad, avisoCompatibilidad, tienda, otras);
     }
 }

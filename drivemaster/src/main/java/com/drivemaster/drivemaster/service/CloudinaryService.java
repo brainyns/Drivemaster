@@ -36,6 +36,12 @@ public class CloudinaryService {
         return (String) result.get("url");
     }
 
+    /** Sube una imagen dada como URL o data URI (base64), p. ej. la generada con IA. */
+    public String subirDesdeUrl(String urlODataUri) throws IOException {
+        Map<?, ?> result = cloudinary.uploader().upload(urlODataUri, ObjectUtils.asMap("folder", folder));
+        return (String) result.get("secure_url");
+    }
+
     public void eliminarImagen(String publicId) throws IOException {
         cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
     }

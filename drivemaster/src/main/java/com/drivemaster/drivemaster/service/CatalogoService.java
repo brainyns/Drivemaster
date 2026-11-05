@@ -190,7 +190,7 @@ public class CatalogoService {
             }
         }
         return new ProductoCatalogoDTO(p.getId(), p.getNombre(), p.getMarca(), p.getCategoria(), p.getReferencia(),
-                p.getImagenUrl(), p.getPrecioVenta(), encargo ? "ENCARGO" : "STOCK", encargo || stock > 0,
+                p.getImagenUrl(), Boolean.TRUE.equals(p.getImagenIa()), p.getPrecioVenta(), encargo ? "ENCARGO" : "STOCK", encargo || stock > 0,
                 encargo ? null : Math.min(stock, STOCK_VISIBLE_MAX), encargo ? p.getDiasEntregaEncargo() : null,
                 compatibilidad, aviso, aTiendaDTO(tienda), null);
     }

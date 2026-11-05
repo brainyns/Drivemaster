@@ -6,6 +6,7 @@ import com.drivemaster.drivemaster.model.MovimientoInventario;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.security.AlcanceTienda;
 import com.drivemaster.drivemaster.service.MovimientoInventarioService;
+import com.drivemaster.drivemaster.service.ImagenIaService;
 import com.drivemaster.drivemaster.service.ProductoService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -29,11 +30,14 @@ public class ProductoController {
     private final MovimientoInventarioService movimientoInventarioService;
     private final AlcanceTienda alcanceTienda;
     private final String chatToolsSecret;
+    private final ImagenIaService imagenIaService;
 
     public ProductoController(ProductoService productoService,
                               MovimientoInventarioService movimientoInventarioService,
                               AlcanceTienda alcanceTienda,
-                              @Value("${n8n.tools.secret:}") String chatToolsSecret) {
+                              @Value("${n8n.tools.secret:}") String chatToolsSecret,
+                              ImagenIaService imagenIaService) {
+        this.imagenIaService = imagenIaService;
         this.productoService = productoService;
         this.movimientoInventarioService = movimientoInventarioService;
         this.alcanceTienda = alcanceTienda;
@@ -126,6 +130,13 @@ public class ProductoController {
         alcanceTienda.productoGestionable(auth, id);
         String url = productoService.subirImagen(id, archivo);
         return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    // GENERAR IMAGEN CON IA a partir de los datos del formulario (el producto puede no existir aún).
+    // Devuelve la URL ya subida a Cloudinary; el formulario la guarda con imagenIa=true al guardar el producto.
+    @PostMapping("/imagen-ia")
+    public ResponseEntity<Map<String, String>> generarImagenIa(@RequestBody Producto datos) {
+        return ResponseEntity.ok(Map.of("url", imagenIaService.generar(datos)));
     }
 
     // Sin N8N_TOOLS_SECRET la herramienta queda cerrada: nginx publica todo /api/, así que
