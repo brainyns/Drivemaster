@@ -10,6 +10,7 @@ import Dato from "./Dato";
 import PieFormulario from "./PieFormulario";
 import Alerta from "./Alerta";
 import Icon from "../public/Icon";
+import { textoError } from "../../utils/errores";
 
 const hora = (iso) => new Date(iso).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" });
 
@@ -29,7 +30,7 @@ function FormTelefono({ id, inicial, ayuda, guardar, onGuardado, onCancelar }) {
     try {
       onGuardado(await guardar(normalizarTelefono(telefono)));
     } catch (ex) {
-      setError(ex.message);
+      setError(textoError(ex));
       setGuardando(false);
     }
   };
@@ -71,7 +72,7 @@ function FormCorreoNuevo({ id, correoActual, inicial, onEnviado, onCancelar }) {
     try {
       onEnviado(await solicitarCambioCorreo(password, correo));
     } catch (ex) {
-      setError(ex.message);
+      setError(textoError(ex));
       setGuardando(false);
     }
   };
@@ -118,7 +119,7 @@ function FormCodigo({ id, pendiente, onConfirmado, onOtroCodigo, onCancelar }) {
       await confirmarCambioCorreo(codigo);
       onConfirmado(pendiente.correoNuevo);
     } catch (ex) {
-      setError(ex.message);
+      setError(textoError(ex));
       setGuardando(false);
     }
   };

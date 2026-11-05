@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { informesTienda, resumenAsistente } from "../services/informesTiendaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Glosario from "../components/ui/Glosario";
+import BandaDinero from "../components/ui/BandaDinero";
+import EsteMes from "../components/ui/EsteMes";
+import { bandaDinero, loTuyoDelMes } from "../utils/bandaDinero";
 import Indicador from "../components/ui/Indicador";
 import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
+import { ResumenDinero } from "../components/servicio/DesgloseDinero";
 import "../css/informes-tienda.css";
+import { textoError } from "../utils/errores";
+import { decimal, porcentaje, horas } from "../utils/formato";
 
 const PERIODOS = [3, 6, 12];
 
@@ -93,7 +100,7 @@ function VentasPorMes({ ventas }) {
                 type="button"
                 className={`it-barra${i === indice ? " is-activa" : ""}${i === meses.length - 1 ? " is-actual" : ""}`}
                 style={{ "--h": `${Math.max(m.ventas > 0 ? 3 : 0, (m.ventas / max) * 100)}%`, "--i": i }}
-                aria-label={`${mesLargo(m.mes)}: ${num(m.pedidos)} pedidos, ${cop(m.ventas)}`}
+                aria-label={`${mesLargo(m.mes)}: ${num(m.pedidos)} ${m.pedidos === 1 ? "pedido" : "pedidos"}, ${cop(m.ventas)}`}
                 aria-pressed={i === indice}
                 onClick={() => setActivo(i)}
                 onMouseEnter={() => setActivo(i)}
@@ -180,13 +187,13 @@ function Despacho({ despacho, onIr }) {
       ) : (
         <>
           <div className="it-despacho__dato">
-            <span className="it-despacho__valor it-cifra">{dias ? (horasPromedio / 24).toFixed(1) : horasPromedio}</span>
+            <span className="it-despacho__valor it-cifra">{dias ? decimal(horasPromedio / 24) : decimal(horasPromedio)}</span>
             <span className="it-despacho__unidad">{dias ? "días" : "horas"} en promedio</span>
           </div>
           <p className="it-despacho__sub">{num(despachados)} {despachados === 1 ? "pedido medido" : "pedidos medidos"} en el período</p>
           {porcentajeATiempo != null && (
-            <div className="it-meter" role="img" aria-label={`${porcentajeATiempo}% despachado a tiempo`}>
-              <div className="it-meter__fila"><span>Despachados a tiempo</span><strong className="it-cifra">{porcentajeATiempo}%</strong></div>
+            <div className="it-meter" role="img" aria-label={`${porcentaje(porcentajeATiempo)} despachado a tiempo`}>
+              <div className="it-meter__fila"><span>Despachados a tiempo</span><strong className="it-cifra">{porcentaje(porcentajeATiempo)}</strong></div>
               <span className="it-hilo it-hilo--grueso" aria-hidden="true"><span style={{ width: `${porcentajeATiempo}%` }} /></span>
             </div>
           )}
@@ -209,6 +216,7 @@ function StockBajo({ stock, onIr }) {
   }
   return (
     <>
+      <div className="ui-table-wrap">
       <table className="it-tabla">
         <thead><tr><th scope="col">Producto</th><th scope="col" className="it-der">Stock</th><th scope="col" className="it-der">Mínimo</th></tr></thead>
         <tbody>
@@ -224,6 +232,7 @@ function StockBajo({ stock, onIr }) {
           ))}
         </tbody>
       </table>
+      </div>
       <footer className="it-pie">
         <span>{stock.total > stock.items.length ? `Mostrando ${stock.items.length} de ${stock.total}` : `${stock.total} ${stock.total === 1 ? "producto" : "productos"}`}</span>
         <span className="it-pie__acciones">
@@ -237,19 +246,20 @@ function StockBajo({ stock, onIr }) {
 
 function Liquidacion({ liquidacion: l }) {
   const filas = [
-    { clave: "espera", titulo: "En espera de la entrega", monto: l.enEspera, n: l.lineasEnEspera,
+    { clave: "espera", titulo: "Falta que se entregue", monto: l.enEspera, n: l.lineasEnEspera,
       texto: "Pagos de pedidos que aún no se entregan. Se habilitan cuando el cliente confirma la recepción o validas el retiro." },
-    { clave: "listo", titulo: "Listo para liquidar", monto: l.porLiquidar, n: l.lineasPorLiquidar, destacada: true,
-      texto: "Ya se entregaron: DriveMaster te los transfiere en la próxima liquidación." },
-    { clave: "pagado", titulo: "Ya liquidado", monto: l.liquidado, n: l.lineasLiquidadas,
+    { clave: "listo", titulo: "Por recibir", monto: l.porLiquidar, n: l.lineasPorLiquidar, destacada: true,
+      texto: "Ya se entregaron: DriveMaster te los transfiere cuando apruebe el pago." },
+    { clave: "pagado", titulo: "Ya te pagaron", monto: l.liquidado, n: l.lineasLiquidadas,
       texto: "Lo que ya te transfirieron." },
   ];
   const vacio = filas.every((f) => f.n === 0);
   if (vacio) {
-    return <Vacio titulo="Todavía no tienes dinero por liquidar" texto="Cada pedido pagado aparece aquí desde que el cliente paga hasta que te lo transferimos." />;
+    return <Vacio titulo="Todavía no tienes dinero por recibir" texto="Cada pedido pagado aparece aquí desde que el cliente paga hasta que te lo transferimos." />;
   }
   return (
     <>
+      <ResumenDinero resumen={l.desglose} />
       <ul className="it-liquidacion">
         {filas.map((f) => (
           <li key={f.clave} className={f.destacada ? "is-destacada" : ""}>
@@ -257,17 +267,18 @@ function Liquidacion({ liquidacion: l }) {
               <span>{f.titulo}</span>
               <strong className="it-cifra">{cop(f.monto)}</strong>
             </div>
-            <p>{f.n > 0 ? `${num(f.n)} ${f.n === 1 ? "pedido" : "pedidos"}. ` : ""}{f.texto}</p>
+            <p>{`${f.n > 0 ? `${num(f.n)} ${f.n === 1 ? "pedido" : "pedidos"}. ` : ""}${f.texto}`}</p>
           </li>
         ))}
       </ul>
-      {l.anulado > 0 && <p className="it-nota">{cop(l.anulado)} se anularon por pedidos no despachados o reembolsados.</p>}
+      {l.anulado > 0 && <p className="it-nota">{cop(l.anulado)} se cancelaron por pedidos no despachados o reembolsados.</p>}
+      <Glosario claves={["Falta que se entregue", "Por recibir", "Ya te pagaron", "Cancelados"]} />
     </>
   );
 }
 
 /** Despacho promedio en horas o, desde 48 h, en días. */
-const duracion = (h) => (h == null ? "—" : h >= 48 ? `${(h / 24).toLocaleString("es-CO", { maximumFractionDigits: 1 })} días` : `${h} h`);
+const duracion = (h) => (h == null ? "—" : h >= 48 ? `${decimal(h / 24)} días` : horas(h));
 
 function Resumen({ datos, onIr }) {
   const stock = datos.stockBajo.total;
@@ -278,9 +289,11 @@ function Resumen({ datos, onIr }) {
         <Indicador titulo="Ventas del período" valor={cop(datos.ventas.ventas)}
           pie={`${num(datos.ventas.pedidos)} ${datos.ventas.pedidos === 1 ? "pedido" : "pedidos"}`} />
         <Indicador icono="clock" titulo="Despacho promedio" valor={duracion(datos.despacho.horasPromedio)}
-          pie={datos.despacho.porcentajeATiempo != null ? `${datos.despacho.porcentajeATiempo} % a tiempo` : "Sin despachos medidos aún"} />
-        <Indicador titulo="Por liquidar" valor={cop(datos.liquidacion.porLiquidar)} tono={datos.liquidacion.porLiquidar > 0 ? "ok" : undefined}
-          pie={`${cop(datos.liquidacion.enEspera)} en espera de entrega`} />
+          pie={datos.despacho.porcentajeATiempo != null ? `${porcentaje(datos.despacho.porcentajeATiempo)} a tiempo` : "Sin despachos medidos aún"} />
+        <Indicador titulo="Ya te pagaron" valor={cop(datos.liquidacion.liquidado)} tono="ok"
+          pie={`${num(datos.liquidacion.lineasLiquidadas)} ${datos.liquidacion.lineasLiquidadas === 1 ? "pedido" : "pedidos"}`} />
+        <Indicador titulo="Por recibir" valor={cop(datos.liquidacion.porLiquidar)} tono={datos.liquidacion.porLiquidar > 0 ? "accion" : undefined}
+          pie={`${cop(datos.liquidacion.enEspera)} falta que se entregue`} />
         <Indicador icono="alert" titulo="Stock bajo" valor={num(stock)} tono={stock > 0 ? "accion" : undefined}
           pie={stock === 0 ? "Nada por reponer" : stock === 1 ? "Producto por reponer" : "Productos por reponer"}
           onClick={stock > 0 ? () => onIr?.("productos") : undefined} />
@@ -297,7 +310,7 @@ function ResumenIA({ token }) {
     let vivo = true;
     resumenAsistente(token)
       .then((texto) => { if (vivo) setResumen({ texto, error: null }); })
-      .catch((e) => { if (vivo) setResumen({ texto: null, error: e.message }); });
+      .catch((e) => { if (vivo) setResumen({ texto: null, error: textoError(e) }); });
     return () => { vivo = false; };
   }, [token]);
 
@@ -341,7 +354,7 @@ export default function InformesTienda({ token, onIr }) {
     let vivo = true;
     informesTienda(token, meses)
       .then((datos) => { if (vivo) setEstado({ clave, datos, error: null, hora: new Date() }); })
-      .catch((e) => { if (vivo) setEstado((p) => ({ ...p, clave, error: e.message })); });
+      .catch((e) => { if (vivo) setEstado((p) => ({ ...p, clave, error: textoError(e) })); });
     return () => { vivo = false; };
   }, [token, meses, clave]);
 
@@ -363,10 +376,13 @@ export default function InformesTienda({ token, onIr }) {
             </div>
             <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setVersion((v) => v + 1)}
               disabled={cargando} aria-busy={cargando}>
-              {!cargando && <Icon name="refresh" size={16} />}{cargando ? "Actualizando…" : "Actualizar"}
+              {!cargando && <Icon name="refresh" size={16} />}<span>{cargando ? "Actualizando…" : "Actualizar"}</span>
             </button>
           </>
         )} />
+
+      <EsteMes version={version} detalle="Lo tuyo, después de IVA y comisión"
+        cargar={() => informesTienda(token, 1).then((m) => loTuyoDelMes(m.dinero?.desglose, m.dinero?.iva))} />
 
       {error && !cargando && (
         <Alerta className="it-alerta" onReintentar={() => setVersion((v) => v + 1)}>
@@ -386,6 +402,7 @@ export default function InformesTienda({ token, onIr }) {
             </div>
           )}
 
+          <BandaDinero titulo={`Tu dinero en los últimos ${datos.mesesConsultados} meses`} banda={bandaDinero(datos.dinero?.desglose, datos.dinero?.iva)} />
           <Resumen datos={datos} onIr={onIr} />
 
           <div className="it-rejilla">
@@ -409,7 +426,7 @@ export default function InformesTienda({ token, onIr }) {
             <Panel ancho="7" titulo="Stock bajo" nota="Productos en o bajo su stock mínimo (o 5 unidades si no definiste uno).">
               <StockBajo stock={datos.stockBajo} onIr={onIr} />
             </Panel>
-            <Panel ancho="5" titulo="Lo pendiente de liquidar" nota="El dinero de tus pedidos, según en qué etapa está.">
+            <Panel ancho="5" titulo="Lo que falta por recibir" nota="El dinero de tus pedidos, según en qué etapa está. Cada cifra es lo que recibes.">
               <Liquidacion liquidacion={datos.liquidacion} />
             </Panel>
           </div>

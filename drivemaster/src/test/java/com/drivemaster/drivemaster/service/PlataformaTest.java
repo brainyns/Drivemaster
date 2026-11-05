@@ -192,13 +192,40 @@ class PlataformaTest {
 
         LiquidacionService servicio = new LiquidacionService(repartos, mock(ReembolsoRepository.class),
                 mock(PagoRepository.class), mock(com.drivemaster.drivemaster.service.dispersion.DispersionService.class),
-                mock(AvisosSolicitudServicio.class));
+                mock(AvisosSolicitudServicio.class), mock(com.drivemaster.drivemaster.repository.mysql.ResolucionRepartoRepository.class));
 
         assertEquals(List.of(tienda), servicio.repartos(null));
         assertTrue(servicio.repartos("informativa").isEmpty());
     }
 
     // ─── Cifras del panel ────────────────────────────────────────────────────
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void lasTiendasArchivadasNoSalenEnLosRankingsDeVentas() {
+        MongoTemplate mongo = mock(MongoTemplate.class);
+        Tienda driveMaster = new Tienda();
+        driveMaster.setId("tienda-drivemaster");
+        when(mongo.find(any(Query.class), eq(Tienda.class))).thenReturn(List.of(driveMaster));
+        AggregationResults<Document> vacio = mock(AggregationResults.class);
+        when(vacio.getMappedResults()).thenReturn(List.of());
+        List<String> consultas = new java.util.ArrayList<>();
+        when(mongo.aggregate(any(Aggregation.class), anyString(), eq(Document.class))).thenAnswer(i -> {
+            if ("pedidos_tienda".equals(i.getArgument(1))) consultas.add(((Aggregation) i.getArgument(0)).toString());
+            return vacio;
+        });
+        ParametrosMarketplace parametros = mock(ParametrosMarketplace.class);
+        when(parametros.comisionPct()).thenReturn(10.0);
+
+        new PlataformaDashboardService(mongo, mock(PagoRepository.class), mock(RepartoPagoRepository.class),
+                mock(ReembolsoRepository.class), mock(SuscripcionRepository.class), parametros)
+                .dashboard(LocalDateTime.of(2026, 11, 2, 12, 0));
+
+        // Productos más vendidos y tiendas más vendedoras: las dos consultas dejan fuera a la tienda archivada
+        List<String> rankings = consultas.stream().filter(c -> c.contains("NO_DESPACHADO")).toList();
+        assertEquals(2, rankings.size(), String.valueOf(consultas));
+        rankings.forEach(c -> assertTrue(c.contains("tiendaId") && c.contains("$nin") && c.contains("tienda-drivemaster"), c));
+    }
 
     @Test
     @SuppressWarnings("unchecked")
@@ -222,10 +249,13 @@ class PlataformaTest {
         when(pagos.sumaMovidaMarketplace()).thenReturn(1_000_000.0);
         RepartoPagoRepository repartos = mock(RepartoPagoRepository.class);
         when(repartos.sumaComisionRegistrada()).thenReturn(80_000.0);
+        when(repartos.comisionRetenidaPorEstado()).thenReturn(java.util.Arrays.asList(
+                new Object[]{"LIQUIDADO", "WOMPI", "ID", 30_000.0}, new Object[]{"POR_LIQUIDAR", "", "", 9_000.0}));
         when(repartos.countByEstado(RepartoPago.POR_LIQUIDAR)).thenReturn(5L);
         ReembolsoRepository reembolsos = mock(ReembolsoRepository.class);
         when(reembolsos.countByEstado("PENDIENTE")).thenReturn(2L);
         when(reembolsos.sumaPendiente()).thenReturn(120_000.0);
+        when(reembolsos.sumaSaldosAFavorPendientes()).thenReturn(218_000.0);
         SuscripcionRepository suscripciones = mock(SuscripcionRepository.class);
         ParametrosMarketplace parametros = mock(ParametrosMarketplace.class);
         when(parametros.comisionPct()).thenReturn(10.0);
@@ -243,6 +273,10 @@ class PlataformaTest {
         assertEquals(3L, d.ordenesPorEstado().get("EN_REVISION"));
         assertEquals(1_000_000.0, d.dinero().movido());
         assertEquals(80_000.0, d.dinero().comisionRegistrada());
+        assertEquals(30_000.0, d.dinero().comisionRetenida().cobrada());
+        assertEquals(9_000.0, d.dinero().comisionRetenida().porCobrar());
+        assertFalse(d.dinero().comisionSeDescuenta());
+        assertEquals(218_000.0, d.dinero().saldosAFavorPendientes());
         assertEquals(10.0, d.dinero().comisionPct());
         assertEquals(5, d.alertas().liquidacionesPendientes());
         assertEquals(2, d.alertas().reembolsosPendientes());

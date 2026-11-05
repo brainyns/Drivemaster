@@ -3,14 +3,21 @@ import {
   reporteVentasPlataforma, reporteProductosPlataforma, reporteClientesPlataforma,
   reporteServiciosPlataforma, reporteComisionPlataforma,
 } from "../services/plataformaService";
+import { marcarSaldoCobrado } from "../services/liquidacionService";
+import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Indicador from "../components/ui/Indicador";
+import Glosario from "../components/ui/Glosario";
+import EsteMes from "../components/ui/EsteMes";
+import Grafico from "../components/ui/Grafico";
+import { gananciaDelMes } from "../utils/bandaDinero";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/reportes-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
@@ -34,8 +41,8 @@ const PESTANAS = [
   { id: "servicios", titulo: "Servicios por taller", periodo: false,
     nota: "Órdenes de servicio por taller y lo repartido a cada uno por sus pagos. No es ingreso de DriveMaster.",
     cargar: (token) => reporteServiciosPlataforma(token) },
-  { id: "comision", titulo: "Comisión registrada", periodo: true,
-    nota: "Informativa, calculada en cada pago aprobado con el porcentaje vigente y menos lo anulado por reembolsos. No es dinero cobrado.",
+  { id: "comision", titulo: "Comisión", periodo: true,
+    nota: "La cobrada es dinero retenido en pagos ya transferidos. La informativa solo deja constancia de lo que correspondía y no es dinero cobrado.",
     cargar: (token, meses) => reporteComisionPlataforma(token, { meses }) },
 ];
 
@@ -78,7 +85,51 @@ function Tabla({ titulo, columnas, filas, vacio, pie }) {
 
 const sinNombre = (v) => v || <span className="pp-tenue">Sin nombre</span>;
 
-function Contenido({ id, titulo, datos }) {
+/** Reembolsos de líneas ya pagadas: se le cobra al negocio por fuera y aquí se anota. */
+function SaldosAFavor({ saldos, token, onCambio }) {
+  const [marcando, setMarcando] = useState(null);
+  const [procesando, setProcesando] = useState(false);
+  const [error, setError] = useState(null);
+  if (!saldos || saldos.items.length === 0) return null;
+
+  const confirmar = async () => {
+    setProcesando(true);
+    setError(null);
+    try {
+      await marcarSaldoCobrado(token, marcando.id);
+      setMarcando(null);
+      onCambio();
+    } catch (e) {
+      setError(textoError(e));
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  return (
+    <section className="pp-seccion" aria-labelledby="rep-saldos">
+      <h2 id="rep-saldos" className="pp-titulo">Saldos a favor pendientes</h2>
+      <Tabla titulo="Saldos a favor pendientes" vacio="No hay saldos por cobrar." filas={saldos.items}
+        columnas={[
+          { t: "Pago", f: (s) => <>{s.referenciaPago}<span className="pp-sub">{s.motivo}</span></> },
+          { t: "Lo debe", f: (s) => s.deudor || <span className="pp-sub">El negocio que recibió la transferencia</span> },
+          { t: "Saldo", der: true, f: (s) => <strong>{cop(s.monto)}</strong> },
+          { t: "Acción", der: true, f: (s) => (
+            <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => { setError(null); setMarcando(s); }}>Marcar cobrado</button>
+          ) },
+        ]} />
+      {marcando && (
+        <ConfirmacionAdmin titulo={`Marcar cobrado · ${cop(marcando.monto)}`}
+          texto={`Confirma que el negocio ya devolvió este dinero (pago ${marcando.referenciaPago}). Aquí no se mueve dinero, solo se anota.`}
+          confirmar="Marcar cobrado" cargando={procesando} onConfirmar={confirmar} onCancelar={() => setMarcando(null)}>
+          {error && <Alerta>{error}</Alerta>}
+        </ConfirmacionAdmin>
+      )}
+    </section>
+  );
+}
+
+function Contenido({ id, titulo, datos, token, onCambio }) {
   if (id === "ventas") {
     const filas = datos.tiendas.map((t) => ({ ...t, id: t.tiendaId }));
     return (
@@ -127,17 +178,63 @@ function Contenido({ id, titulo, datos }) {
           { t: "Canceladas", der: true, f: (t) => num(t.canceladas) }, { t: "Repartido al taller", der: true, f: (t) => cop(t.movidoAlTaller) }]} />
     );
   }
+  const ganancia = (datos.meses || []).reduce((s, m) => s + (Number(m.cobrada) || 0), 0);
   return (
     <>
-      <div className="ui-indicadores pp-seccion">
-        <Indicador titulo="Registrada" valor={cop(datos.registrada)} pie="En los pagos aprobados del período." />
-        <Indicador titulo="Anulada por reembolsos" valor={cop(datos.anulada)} pie="Se descuenta cuando se reembolsa un pago." />
-        <Indicador titulo="Comisión neta" valor={cop(datos.neta)} tono="ok" pie="Registrada menos anulada. No es dinero cobrado." />
-      </div>
+      <section className="pp-seccion" aria-labelledby="rep-tu-dinero">
+        <h2 id="rep-tu-dinero" className="pp-titulo">Tu dinero en el período</h2>
+        <div className="ui-indicadores pp-indicadores-dinero">
+          <Indicador titulo="Tu ganancia" valor={cop(ganancia)} tono="ok" ayuda="La comisión que DriveMaster ya cobró en pagos transferidos."
+            pie="Comisión cobrada en los meses elegidos." />
+          <Indicador titulo="Por cobrar" valor={cop(datos.retenida?.porCobrar)} ayuda="Comisión de pagos que todavía no se transfieren al negocio."
+            pie="Se cobra al transferir cada pago." />
+          <Indicador titulo="Dinero que pasó por la plataforma" valor={cop(datos.movido)}
+            ayuda="Todo lo que pagaron los clientes con Wompi. La mayor parte es de los talleres y las tiendas."
+            pie="Pagos de clientes en los meses elegidos. No es tu ingreso." />
+        </div>
+        {(datos.meses || []).length > 1 && ganancia > 0 && (
+          <div className="rep-grafico">
+            <h3 className="rep-grafico__titulo">Tu ganancia por mes</h3>
+            <Grafico titulo="Tu ganancia por mes" etiquetas={datos.meses.map((m) => mesLargo(m.mes))}
+              series={[{ nombre: "Comisión cobrada", valores: datos.meses.map((m) => Number(m.cobrada) || 0) }]}
+              formato={cop} />
+          </div>
+        )}
+      </section>
+      <section className="pp-seccion" aria-labelledby="rep-cobrada">
+        <h2 id="rep-cobrada" className="pp-titulo">Comisión cobrada</h2>
+        <div className="ui-indicadores pp-indicadores-dinero">
+          <Indicador titulo="Cobrada" valor={cop(datos.retenida?.cobrada)} tono="ok"
+            pie={datos.comisionSeDescuenta ? "Retenida en pagos hechos con su id de Wompi. Total acumulado." : "El cobro está apagado: la comisión no se descuenta todavía."} />
+          <Indicador titulo="Por cobrar" valor={cop(datos.retenida?.porCobrar)} pie="Retenida en pagos que aún no se transfieren." />
+          <Indicador titulo="Cancelada" valor={cop(datos.retenida?.anulada)} pie="Era de pagos cancelados por reembolso: no se cobró." />
+          {datos.retenida?.sinIdWompi > 0 && (
+            <Indicador titulo="Sin id de Wompi" valor={cop(datos.retenida.sinIdWompi)} tono="accion"
+              pie="Pagada sin id del pago: no cuenta como cobrada hasta que llegue el evento de Wompi." />
+          )}
+          {datos.retenida?.cobradaSimulada > 0 && (
+            <Indicador titulo="Simulada" valor={cop(datos.retenida.cobradaSimulada)} pie="De líneas SIM-: no movió dinero ni cuenta como cobrada." />
+          )}
+          <Indicador titulo="Saldos a favor pendientes" valor={cop(datos.saldosAFavor?.total ?? 0)}
+            tono={datos.saldosAFavor?.total > 0 ? "accion" : undefined}
+            pie="Reembolsos de pagos ya transferidos al negocio: se le cobran a mano." />
+        </div>
+        <Glosario claves={["Tu ganancia", "Por cobrar", "Cancelados", "Saldo a favor"]} />
+      </section>
+      <SaldosAFavor saldos={datos.saldosAFavor} token={token} onCambio={onCambio} />
+      <section className="pp-seccion" aria-labelledby="rep-informativa">
+        <h2 id="rep-informativa" className="pp-titulo">Comisión informativa</h2>
+        <div className="ui-indicadores">
+          <Indicador titulo="Registrada" valor={cop(datos.registrada)} pie="En los pagos aprobados del período sin descuento." />
+          <Indicador titulo="Cancelada por reembolsos" valor={cop(datos.anulada)} pie="Se descuenta cuando se reembolsa un pago." />
+          <Indicador titulo="Comisión neta" valor={cop(datos.neta)} pie="Registrada menos cancelada. No es dinero cobrado." />
+        </div>
+      </section>
       <Tabla titulo={titulo} vacio="Todavía no hay comisión registrada."
         filas={datos.meses.map((m) => ({ ...m, id: m.mes }))}
-        columnas={[{ t: "Mes", f: (m) => mesLargo(m.mes) }, { t: "Registrada", der: true, f: (m) => cop(m.registrada) },
-          { t: "Anulada", der: true, f: (m) => cop(m.anulada) }, { t: "Neta", der: true, f: (m) => <strong>{cop(m.neta)}</strong> }]} />
+        columnas={[{ t: "Mes", f: (m) => mesLargo(m.mes) }, { t: "Cobrada", der: true, f: (m) => <strong>{cop(m.cobrada)}</strong> },
+          { t: "Registrada", der: true, f: (m) => cop(m.registrada) }, { t: "Cancelada", der: true, f: (m) => cop(m.anulada) },
+          { t: "Neta informativa", der: true, f: (m) => cop(m.neta) }]} />
     </>
   );
 }
@@ -160,7 +257,7 @@ export default function ReportesPlataforma({ token, filtroInicial }) {
     let vivo = true;
     def.cargar(token, meses)
       .then((datos) => { if (vivo) setEstado({ clave, datos, error: null }); })
-      .catch((e) => { if (vivo) setEstado({ clave, datos: null, error: e.message }); });
+      .catch((e) => { if (vivo) setEstado({ clave, datos: null, error: textoError(e) }); });
     return () => { vivo = false; };
   }, [token, def, meses, clave]);
 
@@ -176,6 +273,11 @@ export default function ReportesPlataforma({ token, filtroInicial }) {
           <button key={p.id} type="button" className="ui-chip" aria-pressed={pestana === p.id} onClick={() => setPestana(p.id)}>{p.titulo}</button>
         ))}
       </div>
+
+      {pestana === "comision" && (
+        <EsteMes version={version} detalle="Tu ganancia: la comisión que ya cobraste"
+          cargar={() => reporteComisionPlataforma(token, { meses: 1 }).then(gananciaDelMes)} />
+      )}
 
       <div className="rep-cabecera pp-bloque-sep">
         <p className="rep-nota">{def.nota}</p>
@@ -196,7 +298,7 @@ export default function ReportesPlataforma({ token, filtroInicial }) {
       <div aria-busy={cargando}>
         {cargando ? (
           <Esqueleto variante="lista" cantidad={5} texto="Calculando el reporte…" />
-        ) : estado.datos ? <Contenido id={pestana} titulo={def.titulo} datos={estado.datos} /> : null}
+        ) : estado.datos ? <Contenido id={pestana} titulo={def.titulo} datos={estado.datos} token={token} onCambio={() => setVersion((v) => v + 1)} /> : null}
       </div>
     </div>
   );

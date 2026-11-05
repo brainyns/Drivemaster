@@ -14,13 +14,17 @@ export const plazoVencido = (p, ahora = Date.now()) =>
 /** Pide algo a la tienda: prepararlo, despacharlo o entregarlo con el código. */
 export const pideAccion = (p) => porDespachar(p) || p.estado === "LISTO_PARA_RETIRAR";
 
-/** Pestañas en este orden; "Por atender" junta todo lo que pide acción y abre la página. */
+/**
+ * Pestañas en este orden. Las principales son el trabajo del día ("Por atender" junta todo lo que pide acción y abre
+ * la página); las secundarias (principal: false) son consultas e historial y van como filtros aparte.
+ */
 export const FILTROS = [
-  { key: "ATENDER", label: "Por atender", filtro: pideAccion },
+  { key: "ATENDER", label: "Por atender", principal: true, filtro: pideAccion,
+    ayuda: "Por atender incluye los pedidos nuevos, los que están en preparación y los listos para entregar." },
+  { key: "PREPARACION", label: "En preparación", principal: true, filtro: (p) => p.estado === "EN_PREPARACION" },
+  { key: "LISTOS", label: "Listos para entregar", principal: true, filtro: (p) => p.estado === "LISTO_PARA_RETIRAR" },
+  { key: "EN_CAMINO", label: "En camino", principal: true, filtro: (p) => p.estado === "DESPACHADO" },
   { key: "NUEVOS", label: "Nuevos", filtro: (p) => p.estado === "PENDIENTE" },
-  { key: "PREPARACION", label: "En preparación", filtro: (p) => p.estado === "EN_PREPARACION" },
-  { key: "LISTOS", label: "Listos para retirar", filtro: (p) => p.estado === "LISTO_PARA_RETIRAR" },
-  { key: "EN_CAMINO", label: "En camino", filtro: (p) => p.estado === "DESPACHADO" },
   { key: "ENTREGADOS", label: "Entregados", filtro: (p) => ["RECIBIDO", "RETIRADO", "ENTREGADO"].includes(p.estado) },
   { key: "CANCELADOS", label: "Cancelados", filtro: (p) => ["NO_DESPACHADO", "NO_ENTREGADO"].includes(p.estado) },
   { key: "TODOS", label: "Todos", filtro: () => true },
@@ -30,7 +34,7 @@ export const VACIOS = {
   ATENDER: ["Estás al día", "No tienes pedidos por preparar, despachar ni entregar. Te avisamos por correo cuando llegue uno."],
   NUEVOS: ["Sin pedidos nuevos", "Los pedidos pagados llegan aquí y te avisamos por correo."],
   PREPARACION: ["Nada en preparación", "Aquí quedan los pedidos por encargo mientras consigues el repuesto."],
-  LISTOS: ["Nada listo para retirar", "Cuando marques un pedido de retiro como listo, espera aquí al cliente y su código."],
+  LISTOS: ["Nada listo para entregar", "Cuando marques un pedido de retiro como listo, espera aquí al cliente y su código."],
   EN_CAMINO: ["Nada en camino", "Los envíos despachados esperan aquí la confirmación del cliente."],
   ENTREGADOS: ["Aún sin entregas", "Los pedidos entregados, retirados o recibidos quedan aquí como historial."],
   CANCELADOS: ["Ningún pedido cancelado", "Aquí quedan los que no se pudieron despachar o entregar."],
@@ -54,10 +58,14 @@ export function ordenarPorUrgencia(pedidos, ahora = Date.now()) {
   });
 }
 
-/** Para quién es el pedido. Del cliente que compra solo se ve lo necesario: en un retiro, nada. */
+/**
+ * Para quién es el pedido. Del cliente que compra solo se ve lo necesario: en un envío, quien recibe; en un retiro,
+ * el nombre y la inicial del apellido que manda el backend ("Laura M."). El texto genérico es solo el respaldo de
+ * pedidos sin nombre.
+ */
 export function destinatario(p) {
   if (esEnvio(p)) return p.envioReceptor || "Cliente";
-  if (esRetiro(p)) return "Cliente que retira en tu tienda";
+  if (esRetiro(p)) return p.clienteNombre || "Cliente que retira en tu tienda";
   return p.tallerNombre || "Taller";
 }
 
@@ -71,7 +79,7 @@ export const cantidadProductos = (p) => (p.items || []).reduce((s, i) => s + (Nu
 export function coincide(p, termino) {
   const q = (termino || "").trim().toLowerCase().replace(/^#/, "");
   if (!q) return true;
-  return [refSolicitud(p.id), p.id, p.envioReceptor, p.tallerNombre, p.vehiculoDescripcion,
+  return [refSolicitud(p.id), p.id, p.envioReceptor, p.clienteNombre, p.tallerNombre, p.vehiculoDescripcion,
     ...(p.items || []).map((i) => i.productoNombre)]
     .some((x) => x && String(x).toLowerCase().includes(q));
 }
@@ -95,7 +103,7 @@ export function historialPedido(p) {
     [p.fechaRecibido, "Recibido en el taller", null],
     [p.fechaRecibidoCliente, "Entregado", p.recepcionAutomatica ? "Confirmado solo al vencer el plazo" : "Confirmado por el cliente"],
     [p.fechaProblema, "El cliente reportó un problema", p.problemaDetalle || null, "error"],
-    [p.fechaResolucionProblema, "DriveMaster resolvió el problema", p.motivoResolucion || null],
+    [p.fechaResolucionProblema, "DriveMaster resolvió el problema", resolucionPublica(p.resolucionProblema)],
     [p.fechaNoDespacho, "No se pudo despachar", p.motivoNoDespacho || null, "error"],
   ];
   return pasos
@@ -104,21 +112,74 @@ export function historialPedido(p) {
     .sort((a, b) => t(b.fecha) - t(a.fecha));
 }
 
+/** Cómo sale el pedido de la tienda: un retiro se marca listo (nunca va "en camino"); un envío o un taller, se despacha. */
+export const accionEntrega = (p) => (esRetiro(p)
+  ? { tipo: "LISTO", texto: "Marcar como listo" }
+  : { tipo: "DESPACHAR", texto: "Despachar" });
+
 /**
- * La acción del estado actual (la que va destacada y en la barra del celular):
- * VALIDAR (código de retiro), LISTO (retiro), DESPACHAR (abre el formulario) o null si no hay nada que hacer.
+ * La acción del estado actual (la que va destacada, en la fila y en la barra del celular), según el flujo del
+ * backend: un pedido nuevo con repuestos por encargo empieza la preparación; uno en stock (o ya preparado) se marca
+ * listo o se despacha; uno listo para retirar se entrega validando el código. null si la tienda no tiene nada que hacer.
  */
 export function accionPrincipal(p) {
   if (p.estado === "LISTO_PARA_RETIRAR") return { tipo: "VALIDAR", texto: "Validar código y entregar" };
   if (!porDespachar(p)) return null;
-  return esRetiro(p)
-    ? { tipo: "LISTO", texto: "Marcar como listo para retirar" }
-    : { tipo: "DESPACHAR", texto: "Marcar despachado" };
+  if (p.estado === "PENDIENTE" && tieneEncargo(p)) return { tipo: "PREPARAR", texto: "Empezar preparación" };
+  return accionEntrega(p);
 }
+
+/**
+ * Lo que muestra cada fila de la lista en lugar de la flecha: el botón de la siguiente acción o, si la tienda no tiene
+ * nada que hacer, en qué va (En camino) o cómo ver el detalle (Entregado) o el motivo (Cancelado).
+ */
+export function accionFila(p) {
+  const accion = accionPrincipal(p);
+  if (accion) return accion;
+  if (p.estado === "DESPACHADO") {
+    return { tipo: "ESPERA", texto: esCatalogo(p) ? "Esperando confirmación del cliente" : "Esperando que el taller lo reciba" };
+  }
+  if (["NO_DESPACHADO", "NO_ENTREGADO"].includes(p.estado)) return { tipo: "VER", texto: "Ver motivo" };
+  return { tipo: "VER", texto: "Ver detalle" };
+}
+
+/** Días completos desde que el pedido quedó listo para retirar (0 si no está esperando al cliente). */
+export function diasSinRetirar(p, ahora = Date.now()) {
+  if (p.estado !== "LISTO_PARA_RETIRAR" || !p.fechaListoRetiro) return 0;
+  return Math.max(0, Math.floor((ahora - new Date(p.fechaListoRetiro).getTime()) / 86400000));
+}
+
+/** Desde los 3 días se marca "Sin retirar hace N días" (ese día DriveMaster le recuerda al cliente). */
+export const DIAS_SIN_RETIRAR = 3;
+export const sinRetirar = (p, ahora = Date.now()) => diasSinRetirar(p, ahora) >= DIAS_SIN_RETIRAR;
 
 /** Texto del plazo para despachar o dejar listo, o null si no aplica. */
 export function textoPlazo(p, ahora = Date.now()) {
   if (!porDespachar(p) || !p.plazoDespachoHasta) return null;
   if (plazoVencido(p, ahora)) return `Plazo vencido el ${formatFechaHora(p.plazoDespachoHasta)}`;
   return `${esRetiro(p) ? "Déjalo listo" : "Despáchalo"} antes del ${formatFechaHora(p.plazoDespachoHasta)}`;
+}
+
+/**
+ * Lo canceló DriveMaster (la orden se canceló o el pago no se aplicó): para la tienda es "Cancelado", no "No se despachó",
+ * que es cuando la tienda misma no pudo despacharlo.
+ */
+export const canceladoPorDriveMaster = (p) => p.estado === "NO_DESPACHADO"
+  && ["ORDEN_CANCELADA", "PAGO_NO_APLICADO"].includes(p.tipoMotivoNoDespacho);
+
+/** El motivo de "No puedo despachar" tal como lo guarda el backend (PedidoTiendaService.noPuedoDespachar). */
+export function textoMotivoNoDespacho(tipoMotivo, detalle) {
+  const nota = String(detalle ?? "").trim();
+  if (tipoMotivo === "SIN_REPUESTO") return `No tengo el repuesto${nota ? `: ${nota}` : ""}`;
+  return nota;
+}
+
+/**
+ * Lo que la tienda ve de la decisión de DriveMaster sobre un reclamo: un texto fijo según la decisión. La nota interna
+ * del administrador no le llega (PedidoTiendaService.paraTienda).
+ */
+export function resolucionPublica(resolucion) {
+  if (resolucion === "REEMBOLSO") return "Se reembolsó al cliente; este pedido no se paga.";
+  if (resolucion === "ENTREGA_CONFIRMADA_POR_ADMIN") return "Se confirmó la entrega; el pago sigue su curso.";
+  return null;
 }

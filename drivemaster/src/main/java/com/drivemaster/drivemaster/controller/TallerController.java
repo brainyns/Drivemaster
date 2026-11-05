@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.dto.AprobacionRequest;
+import com.drivemaster.drivemaster.dto.CuentaBancariaDTO;
 import com.drivemaster.drivemaster.dto.CrearTallerRequest;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
 import com.drivemaster.drivemaster.dto.TallerDTO;
@@ -52,6 +53,11 @@ public class TallerController {
     @GetMapping("/mi-taller")
     public ResponseEntity<TallerDTO> miTaller(Authentication auth) {
         return ResponseEntity.ok(tallerService.miTaller(auth.getName()));
+    }
+
+    @PutMapping("/mi-taller/cuenta-bancaria")
+    public ResponseEntity<TallerDTO> guardarCuentaBancaria(@RequestBody CuentaBancariaDTO dto, Authentication auth) {
+        return ResponseEntity.ok(tallerService.guardarCuentaBancaria(auth.getName(), dto));
     }
 
     @GetMapping("/mi-taller/mecanicos")

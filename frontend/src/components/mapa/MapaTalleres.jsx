@@ -15,6 +15,7 @@ import { formatoDuracion } from "../../utils/geo";
 import DatosTallerCliente from "./DatosTallerCliente";
 import LogoNegocio from "../ui/LogoNegocio";
 import "../../css/mapa.css";
+import { textoError } from "../../utils/errores";
 
 // Espera tras el último cambio de la ubicación antes de pedir los tiempos en carro (el pin se puede seguir moviendo)
 const ESPERA_CERCANOS_MS = 800;
@@ -199,7 +200,7 @@ export default function MapaTalleres({ id = "mapa-diagnostico", token, ciudad, u
     let vivo = true;
     talleresMapa(token)
       .then((l) => { if (vivo) { setTalleres(l || []); setError(null); setEstadoLista("listo"); } })
-      .catch((e) => { if (vivo) { setError(e.message); setEstadoLista("error"); } });
+      .catch((e) => { if (vivo) { setError(textoError(e)); setEstadoLista("error"); } });
     return () => { vivo = false; };
   }, [token, intento]);
 

@@ -23,6 +23,8 @@ import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/marketplace.css";
 import "../css/solicitar-diagnostico.css";
+import { textoError } from "../utils/errores";
+import { kilometros } from "../utils/formato";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -67,7 +69,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
         setVehiculos(v.value || []);
         if (!vehiculoIdInicial && v.value?.length === 1) setVehiculoId(v.value[0].id);
       } else {
-        setError(v.reason.message);
+        setError(textoError(v.reason));
       }
       if (p.status === "fulfilled") {
         setCiudad((c) => c || p.value?.ciudad || "");
@@ -131,7 +133,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
       });
       setResultado(creada);
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
     } finally {
       setEnviando(false);
     }
@@ -139,7 +141,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
 
   if (cargando) {
     return (
-      <div className="sv-root sd-pagina">
+      <div className="sv-root sv-root--ancha sd-pagina">
         <Esqueleto variante="formulario" cantidad={4} texto="Cargando el formulario…" />
       </div>
     );
@@ -157,7 +159,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
                 {resultado.tallerElegidoId && resultado.tallerElegidoId === resultado.tallerId
                   ? "La enviamos al taller que elegiste, " : "La asignamos a "}
                 <strong>{resultado.tallerNombre}</strong>
-                {resultado.distanciaTallerKm != null && ` (a ${resultado.distanciaTallerKm.toFixed(1)} km)`}.
+                {resultado.distanciaTallerKm != null && ` (a ${kilometros(resultado.distanciaTallerKm)})`}.
                 El taller te propondrá una fecha para revisar tu vehículo; te avisaremos por correo.
               </p>
               <RutaTaller
@@ -208,7 +210,7 @@ export default function SolicitarDiagnostico({ vehiculoIdInicial, onVolver, onVe
   );
 
   return (
-    <div className="sv-root sd-pagina">
+    <div className="sv-root sv-root--ancha sd-pagina">
       <EncabezadoPagina
         titulo="Solicitar diagnóstico"
         descripcion="Cuéntanos qué le pasa a tu vehículo. Un taller cercano lo revisa y te envía una cotización."

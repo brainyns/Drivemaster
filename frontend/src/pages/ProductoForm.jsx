@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, listarProductosMiTienda, subirImagenProducto, generarImagenIa } from "../services/productoService";
 import { sugerirProducto } from "../services/informesTiendaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
@@ -9,19 +9,38 @@ import Alerta from "../components/ui/Alerta";
 import Esqueleto from "../components/ui/Esqueleto";
 import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
+import { avisar } from "../components/ui/avisar";
 import {
   ANO_ACTUAL, CATEGORIAS, COMPAT_VACIA, MARCAS_REPUESTO, MARCAS_VEHICULO, MARCAS_VEHICULO_LISTA, TIPOS_IMAGEN,
-  campoVacio, compatDeLista, errorImagen, margen as calcularMargen, mismaCompat, validarFormulario,
+  campoVacio, compatDeLista, errorImagen, erroresDelServidor, margen as calcularMargen, margenPesos, mismaCompat,
+  perdidaPorUnidad, precioConIva, validarFormulario,
 } from "./tienda/reglasProducto";
+
+/** Une los errores del navegador con los del servidor; en los vehículos, campo por campo. */
+function unirErrores(servidor, cliente) {
+  const unidos = { ...servidor, ...cliente };
+  const n = Math.max(servidor.compatibilidad?.length || 0, cliente.compatibilidad?.length || 0);
+  if (n > 0) {
+    unidos.compatibilidad = Array.from({ length: n }, (_, i) => {
+      const e = { ...servidor.compatibilidad?.[i], ...cliente.compatibilidad?.[i] };
+      return Object.keys(e).length ? e : undefined;
+    });
+  }
+  return unidos;
+}
 import "../css/producto-form.css";
 import { etiquetaCategoria } from "../utils/categorias";
+import { formatoCop } from "../utils/formato";
+import { textoError } from "../utils/errores";
 
 /**
  * Sugerencias de la IA para el producto (solo TIENDA): categoría de la lista y compatibilidades "por confirmar".
- * Nada se guarda ni se cambia en el formulario hasta que la tienda pulsa "Aplicar" o "Agregar".
+ * Nada se guarda ni se cambia en el formulario hasta que la tienda pulsa "Aplicar" o "Agregar". El botón va en la
+ * cabecera de Información general (BotonSugerirIA) y lo que propone, debajo del nombre (ResultadosIA).
  */
-function SugerenciasIA({ form, setForm, token }) {
+function useSugerenciasIA(form, token) {
   const [estado, setEstado] = useState({ cargando: false, error: null, datos: null });
   const puedePedir = form.nombre.trim().length >= 3;
 
@@ -31,10 +50,33 @@ function SugerenciasIA({ form, setForm, token }) {
       const datos = await sugerirProducto(token, form, CATEGORIAS);
       setEstado({ cargando: false, error: null, datos });
     } catch (e) {
-      setEstado({ cargando: false, error: e.message, datos: null });
+      setEstado({ cargando: false, error: textoError(e), datos: null });
     }
   };
 
+  const limpiar = () => setEstado({ cargando: false, error: null, datos: null });
+  return { ...estado, puedePedir, pedir, limpiar };
+}
+
+/** Acción pequeña de la cabecera, con la explicación en una nota al pasar el mouse o al enfocarla. */
+function BotonSugerirIA({ ia }) {
+  const idNota = useId();
+  return (
+    <span className="ui-ayuda ui-ayuda--derecha">
+      <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={ia.pedir}
+        disabled={!ia.puedePedir || ia.cargando} aria-busy={ia.cargando} aria-describedby={idNota}>
+        {!ia.cargando && <Icon name="bolt" size={14} />}
+        {ia.cargando ? "Pensando…" : ia.datos ? "Sugerir de nuevo" : "Sugerir con IA"}
+      </button>
+      <span id={idNota} role="tooltip" className="ui-ayuda__nota">
+        {ia.puedePedir ? "Propone la categoría y los vehículos compatibles. Nada se guarda sin que lo apliques."
+          : "Escribe el nombre del producto (y si quieres la marca y la referencia) para pedir sugerencias."}
+      </span>
+    </span>
+  );
+}
+
+function ResultadosIA({ ia, form, setForm }) {
   const agregar = (compats) => setForm((prev) => {
     // Las filas vacías del formulario se reemplazan; las que ya están no se repiten.
     const llenas = prev.modelosCompatibles.filter((c) => !campoVacio(c.marca));
@@ -42,24 +84,19 @@ function SugerenciasIA({ form, setForm, token }) {
     return { ...prev, compatibilidadUniversal: false, modelosCompatibles: [...llenas, ...nuevas] };
   });
 
-  const { cargando, error, datos } = estado;
+  const { error, datos } = ia;
+  if (!error && !datos) return null;
   const sugeridas = (datos?.compatibilidades || []).map((c) => ({ original: c, deLista: compatDeLista(c) }));
   const agregables = sugeridas.map((s) => s.deLista).filter(Boolean)
     .filter((c) => !form.modelosCompatibles.some((x) => mismaCompat(x, c)));
 
   return (
-    <SeccionEditable id="pfm-ia" icono="bolt" titulo="Sugerencias de la IA"
-      descripcion={puedePedir ? "Propone la categoría y los vehículos compatibles. Nada se guarda sin que lo apliques."
-        : "Escribe el nombre del producto (y si quieres la marca y la referencia) para pedir sugerencias."}>
-      <div aria-live="polite" className="pfm-ia">
-        <button type="button" className="ui-btn ui-btn--secundario pfm-ia__pedir" onClick={pedir} disabled={!puedePedir || cargando} aria-busy={cargando}>
-          {!cargando && <Icon name="bolt" size={16} />}
-          {cargando ? "Pensando…" : datos ? "Sugerir de nuevo" : "Sugerir"}
-        </button>
-        {error && <Alerta onCerrar={() => setEstado({ cargando: false, error: null, datos: null })}>{error}</Alerta>}
+    <div aria-live="polite" className="pfm-ia">
+        {error && <Alerta onCerrar={ia.limpiar}>{error}</Alerta>}
 
         {datos && (
           <>
+            <p className="pfm-ia__cabecera"><Icon name="bolt" size={14} /> Sugerencias de la IA</p>
             <div className="pfm-ia__bloque">
               <p className="pfm-ia__titulo"><ChipEstado tono="aviso">Por confirmar</ChipEstado> Categoría</p>
               {datos.categoria ? (
@@ -105,8 +142,7 @@ function SugerenciasIA({ form, setForm, token }) {
             {datos.nota && <p className="pfm-ia__nota">{datos.nota}</p>}
           </>
         )}
-      </div>
-    </SeccionEditable>
+    </div>
   );
 }
 
@@ -120,7 +156,7 @@ function Dinero(props) {
   );
 }
 
-function ProductoForm({ id, onVolver, token, esTienda = false }) {
+function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null }) {
   const esEdicion = Boolean(id);
 
   const [form, setForm] = useState({
@@ -143,6 +179,11 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
   const [errorFoto, setErrorFoto] = useState(null);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
   const [generandoIa, setGenerandoIa] = useState(false);
+  const [arrastrando, setArrastrando] = useState(false);
+  // Errores por campo que respondió el backend; se borran al editar el campo
+  const [erroresServidor, setErroresServidor] = useState({});
+  const ia = useSugerenciasIA(form, token);
+  const [confirmarPerdida, setConfirmarPerdida] = useState(false);
   const fileInputRef = useRef(null);
   const resumenRef = useRef(null);
 
@@ -169,27 +210,35 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
         });
         if (data.imagenUrl) setImagenPreview(data.imagenUrl);
       })
-      .catch((e) => setServerError(e.message))
+      .catch((e) => setServerError(textoError(e)))
       .finally(() => setCargandoProducto(false));
   }, [id, token, esEdicion]);
 
   // Después del primer intento de guardar, los errores se recalculan en cada cambio (la validación es pura)
-  const errores = submitted ? validarFormulario(form, productosExistentes, esEdicion, id) : {};
+  const errores = unirErrores(erroresServidor, submitted ? validarFormulario(form, productosExistentes, esEdicion, id) : {});
   const actualizar = (cambio) => setForm((prev) => (typeof cambio === "function" ? cambio(prev) : { ...prev, ...cambio }));
+  const olvidarErrorServidor = (campo) => setErroresServidor((prev) => {
+    if (!(campo in prev)) return prev;
+    const resto = { ...prev };
+    delete resto[campo];
+    return resto;
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     actualizar({ [name]: value });
+    olvidarErrorServidor(name);
   };
 
-  const handleImagenChange = (e) => {
-    const file = e.target.files[0];
+  // La foto llega del selector de archivos o arrastrada a la zona de la foto; las reglas son las mismas
+  const elegirImagen = (file) => {
     if (!file) return;
     const err = errorImagen(file);
     setErrorFoto(err);
-    if (err) { e.target.value = ""; return; }
+    if (err) { if (fileInputRef.current) fileInputRef.current.value = ""; return; }
     setImagenFile(file);
     setImagenPreview(URL.createObjectURL(file));
+    actualizar({ imagenIa: false });
   };
 
   // La foto generada ya está en Cloudinary: se guarda con el producto (imagenUrl + imagenIa), sin subir archivo.
@@ -208,6 +257,15 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
     }
   };
 
+  const handleImagenChange = (e) => elegirImagen(e.target.files[0]);
+
+  const soltarImagen = (e) => {
+    e.preventDefault();
+    setArrastrando(false);
+    elegirImagen(e.dataTransfer.files?.[0]);
+  };
+
+  // Quitar también borra la foto ya guardada (imagenUrl vacía al guardar), no solo la recién elegida
   const eliminarImagenSeleccionada = () => {
     setImagenFile(null);
     setImagenPreview(null);
@@ -218,6 +276,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
 
   const handleCompatibilidadChange = (index, e) => {
     const { name, value } = e.target;
+    olvidarErrorServidor("compatibilidad");
     actualizar((prev) => ({
       ...prev,
       modelosCompatibles: prev.modelosCompatibles.map((c, i) =>
@@ -230,18 +289,31 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
     ...prev, modelosCompatibles: prev.modelosCompatibles.filter((_, i) => i !== index),
   }));
 
-  const handleSubmit = async (e) => {
+  const enfocarPrimerError = () => requestAnimationFrame(() => document.querySelector(".pfm-root [aria-invalid='true']")?.focus());
+
+  const handleSubmit = (e) => {
     e.preventDefault();
+    if (guardando) return;
     setSubmitted(true);
     const e2 = validarFormulario(form, productosExistentes, esEdicion, id);
     if (Object.keys(e2).length > 0) {
       // El resumen se anuncia y el foco va al primer campo con error
-      requestAnimationFrame(() => document.querySelector(".pfm-root [aria-invalid='true']")?.focus());
+      enfocarPrimerError();
       return;
     }
+    // Vender por debajo del costo se permite, pero la tienda lo confirma antes de guardar
+    if (perdidaPorUnidad(form.precioCompra, form.precioVenta) > 0) {
+      setConfirmarPerdida(true);
+      return;
+    }
+    guardar();
+  };
 
+  const guardar = async () => {
     setGuardando(true);
     setServerError(null);
+    setErroresServidor({});
+    let productoId = id;
     try {
       const payload = {
         ...form,
@@ -266,29 +338,48 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
           motor: c.motor?.trim() || null,
         })),
       };
-      let productoId = id;
       if (esEdicion) {
         await actualizarProducto(id, payload, token);
       } else {
         const mov = await crearProducto(payload, token);
         productoId = mov.productoId;
       }
-      if (imagenFile) {
-        setSubiendoImagen(true);
-        await subirImagenProducto(productoId, imagenFile, token);
-      }
-      onVolver();
     } catch (err) {
-      setServerError(err.message);
-      resumenRef.current?.scrollIntoView({ block: "center" });
-    } finally {
-      setSubiendoImagen(false);
+      // Los datos del formulario se conservan; el error va bajo cada campo o, si no es de un campo, arriba
+      if (err.campos) {
+        setErroresServidor(erroresDelServidor(err.campos));
+        enfocarPrimerError();
+      } else {
+        setServerError(textoError(err));
+        resumenRef.current?.scrollIntoView({ block: "center" });
+      }
       setGuardando(false);
+      return;
     }
+
+    const nombre = form.nombre.trim();
+    if (imagenFile) {
+      setSubiendoImagen(true);
+      try {
+        await subirImagenProducto(productoId, imagenFile, token);
+      } catch (err) {
+        // El producto ya quedó guardado: se avisa y se vuelve a la lista (repetir el guardado lo duplicaría)
+        avisar(`Guardamos “${nombre}”, pero la foto no se subió. ${textoError(err, "")} Vuelve a intentarlo desde Editar.`, "aviso");
+        onVolver();
+        return;
+      }
+    }
+    avisar(esEdicion ? `Guardamos los cambios de “${nombre}”.` : `Creamos “${nombre}”: ya está en tu catálogo.`);
+    onVolver();
   };
 
   const margen = calcularMargen(form.precioCompra, form.precioVenta);
+  const ganancia = margenPesos(form.precioCompra, form.precioVenta);
+  const perdida = perdidaPorUnidad(form.precioCompra, form.precioVenta);
+  const paraCliente = precioConIva(form.precioVenta, ivaRate);
   const compatErrores = errores.compatibilidad || [];
+  // Vehículos con algún dato escrito: se descartan si el producto queda universal
+  const vehiculosCargados = form.modelosCompatibles.filter((c) => !mismaCompat(c, COMPAT_VACIA) || !campoVacio(c.motor)).length;
   const cantidadErrores = Object.keys(errores).filter((k) => k !== "compatibilidad").length
     + compatErrores.filter(Boolean).reduce((s, e) => s + Object.keys(e).length, 0);
   const textoGuardar = guardando ? (subiendoImagen ? "Subiendo la foto…" : "Guardando…") : esEdicion ? "Guardar cambios" : "Guardar producto";
@@ -322,12 +413,14 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
       <form id="pfm-form" onSubmit={handleSubmit} noValidate className="pfm-layout">
         <div className="pfm-columna">
           <SeccionEditable id="pfm-general" icono="box" titulo="Información general"
-            descripcion="Cómo se identifica el repuesto en tu inventario y en el catálogo.">
+            descripcion="Cómo se identifica el repuesto en tu inventario y en el catálogo."
+            acciones={esTienda && <BotonSugerirIA ia={ia} />}>
             <div className="ui-form">
               <Campo id="pfm-nombre" label="Nombre del producto" error={errores.nombre}>
                 <input className="ui-field__input" name="nombre" value={form.nombre} onChange={handleChange}
                   placeholder="Ej. Pastillas de freno cerámicas Brembo" />
               </Campo>
+              {esTienda && <ResultadosIA ia={ia} form={form} setForm={setForm} />}
               <div className="ui-form__campos ui-form__campos--2">
                 <Campo id="pfm-categoria" label="Categoría" error={errores.categoria}>
                   <select className="ui-field__input" name="categoria" value={form.categoria} onChange={handleChange}>
@@ -348,14 +441,9 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 <Campo id="pfm-referencia" label="Referencia del fabricante" opcional>
                   <input className="ui-field__input" name="referencia" value={form.referencia} onChange={handleChange} placeholder="Ej. P 85 020" />
                 </Campo>
-                <Campo id="pfm-ubicacion" label="Ubicación en bodega" opcional>
-                  <input className="ui-field__input" name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="Ej. Estante B-3" />
-                </Campo>
               </div>
             </div>
           </SeccionEditable>
-
-          {esTienda && <SugerenciasIA form={form} setForm={setForm} token={token} />}
 
           <SeccionEditable id="pfm-tipo" icono="clock" titulo="Disponibilidad"
             descripcion="Si lo tienes en bodega o lo consigues cuando te lo piden.">
@@ -390,6 +478,13 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                   <span>Aceites, líquidos e insumos que sirven a cualquier vehículo. Los talleres lo verán como compatible.</span>
                 </span>
               </label>
+
+              {form.compatibilidadUniversal && vehiculosCargados > 0 && (
+                <Alerta tono="aviso">
+                  Al guardar se quitan {vehiculosCargados === 1 ? "el vehículo que habías cargado" : `los ${vehiculosCargados} vehículos que habías cargado`}:
+                  un producto universal sirve a cualquier vehículo. Desmarca la casilla si quieres conservarlos.
+                </Alerta>
+              )}
 
               {!form.compatibilidadUniversal && (
                 <>
@@ -452,14 +547,23 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                 <Campo id="pfm-compra" label="Precio de compra" error={errores.precioCompra}>
                   <Dinero name="precioCompra" value={form.precioCompra} onChange={handleChange} />
                 </Campo>
-                <Campo id="pfm-venta" label="Precio de venta" error={errores.precioVenta}>
+                <Campo id="pfm-venta" label="Precio de venta" error={errores.precioVenta}
+                  ayuda={paraCliente != null
+                    ? `Sin IVA. DriveMaster le suma el IVA al cobrar: el cliente verá ${formatoCop(paraCliente)} (IVA ${Math.round(ivaRate * 100)} %).`
+                    : "Sin IVA. DriveMaster le suma el IVA al cobrar."}>
                   <Dinero name="precioVenta" value={form.precioVenta} onChange={handleChange} />
                 </Campo>
               </div>
               {margen !== null && (
                 <p className={`pfm-margen${margen < 0 ? " pfm-margen--negativo" : ""}`} role="status">
-                  Margen de ganancia <strong>{margen.toLocaleString("es-CO")} %</strong>
+                  {margen < 0 ? "Pérdida por unidad" : "Margen de ganancia"}
+                  <strong>{formatoCop(Math.abs(ganancia))} · {margen.toLocaleString("es-CO")} %</strong>
                 </p>
+              )}
+              {perdida > 0 && (
+                <Alerta tono="aviso">
+                  El precio de venta es menor que el de compra: pierdes {formatoCop(perdida)} por unidad. Puedes guardarlo igual.
+                </Alerta>
               )}
               <div className="ui-form__campos ui-form__campos--2">
                 <Campo id="pfm-stock" label="Stock actual" error={errores.stockActual} ayuda="Unidades en bodega.">
@@ -469,29 +573,42 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
                   <input className="ui-field__input" name="stockMinimo" type="text" inputMode="numeric" value={form.stockMinimo} onChange={handleChange} placeholder="0" />
                 </Campo>
               </div>
+              <Campo id="pfm-ubicacion" label="Ubicación en bodega" opcional>
+                <input className="ui-field__input" name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="Ej. Estante B-3" />
+              </Campo>
             </div>
           </SeccionEditable>
 
           <SeccionEditable id="pfm-foto" icono="camera" titulo="Foto del producto"
             descripcion="Una foto clara sobre fondo liso ayuda a vender. JPG, PNG, WEBP o GIF, hasta 5 MB.">
-            <div className="pfm-foto">
-              <ImagenProducto src={imagenPreview} alt={imagenPreview ? "Foto del producto" : ""} className="pfm-foto__imagen" tamanioIcono={36} />
-              <div className="pfm-foto__acciones">
-                <button type="button" className="ui-btn ui-btn--secundario" onClick={() => fileInputRef.current?.click()}
-                  aria-describedby={errorFoto ? "pfm-foto-error" : undefined}>
-                  <Icon name="camera" size={16} /> {imagenPreview ? "Cambiar foto" : "Elegir foto"}
-                </button>
-                {(!imagenPreview || form.imagenIa) && (
-                  <button type="button" className="ui-btn ui-btn--secundario" onClick={generarConIa}
-                    disabled={generandoIa || form.nombre.trim().length < 3} aria-busy={generandoIa}
-                    title={form.nombre.trim().length < 3 ? "Escribe primero el nombre del producto" : undefined}>
-                    {!generandoIa && <Icon name="bolt" size={16} />}
-                    {generandoIa ? "Generando imagen…" : form.imagenIa ? "Generar otra" : "Generar con IA"}
+            <div className={`pfm-foto${arrastrando ? " pfm-foto--arrastrando" : ""}`}
+              onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setArrastrando(false); }}
+              onDrop={soltarImagen}>
+              <ImagenProducto src={imagenPreview} alt={imagenPreview ? "Foto del producto" : ""} className="pfm-foto__imagen" tamanioIcono={28} />
+              <div className="pfm-foto__texto">
+                <p className="pfm-foto__ayuda">
+                  {arrastrando ? "Suelta la foto aquí." : imagenPreview ? "Arrastra otra foto aquí para cambiarla." : "Arrastra la foto aquí o elígela de tu equipo."}
+                </p>
+                <div className="pfm-foto__acciones">
+                  <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={() => fileInputRef.current?.click()}
+                    aria-describedby={errorFoto ? "pfm-foto-error" : undefined}>
+                    <Icon name="camera" size={16} /> {imagenPreview ? "Cambiar" : "Elegir foto"}
                   </button>
-                )}
-                {imagenPreview && (
-                  <button type="button" className="ui-btn ui-btn--texto" onClick={eliminarImagenSeleccionada}>Quitar foto</button>
-                )}
+                  {(!imagenPreview || form.imagenIa) && (
+                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={generarConIa}
+                      disabled={generandoIa || form.nombre.trim().length < 3} aria-busy={generandoIa}
+                      title={form.nombre.trim().length < 3 ? "Escribe primero el nombre del producto" : undefined}>
+                      {!generandoIa && <Icon name="bolt" size={16} />}
+                      {generandoIa ? "Generando imagen…" : form.imagenIa ? "Generar otra" : "Generar con IA"}
+                    </button>
+                  )}
+                  {imagenPreview && (
+                    <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={eliminarImagenSeleccionada}>
+                      <Icon name="trash" size={14} /> Quitar
+                    </button>
+                  )}
+                </div>
               </div>
               {form.imagenIa && imagenPreview && (
                 <p className="pfm-ia__nota"><ChipEstado tono="aviso">Imagen ilustrativa</ChipEstado> Generada con IA a partir del nombre, la marca y la categoría. Sube una foto real cuando la tengas.</p>
@@ -511,6 +628,12 @@ function ProductoForm({ id, onVolver, token, esTienda = false }) {
           </div>
         </div>
       </form>
+
+      {confirmarPerdida && (
+        <ConfirmarAccion titulo="¿Vender por debajo del costo?" textoConfirmar="Guardar igual"
+          mensaje={`Vas a vender por debajo del costo (pérdida de ${formatoCop(perdida)} por unidad). ¿Guardar igual?`}
+          onConfirmar={() => { setConfirmarPerdida(false); guardar(); }} onCancelar={() => setConfirmarPerdida(false)} />
+      )}
 
       <BarraAccionMovil etiqueta={esEdicion ? "Editando" : "Producto nuevo"} nota={form.nombre || undefined}>
         <button type="submit" form="pfm-form" className="ui-btn ui-btn--primario" disabled={guardando} aria-busy={guardando}>

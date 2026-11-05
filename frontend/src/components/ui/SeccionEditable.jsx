@@ -6,9 +6,10 @@ import Icon from "../public/Icon";
  * editando es true, children es el formulario (con su Guardar y Cancelar); si no, la vista de los datos. aviso va
  * bajo la cabecera (p. ej. "Cambios guardados"). Sin onEditar la sección es solo lectura; nota explica por qué.
  * Al cerrar la edición (guardar o cancelar) el foco vuelve a "Editar" para no perder el lugar con el teclado.
+ * acciones va en la cabecera, a la derecha del título (p. ej. una acción pequeña como "Sugerir con IA").
  */
 export default function SeccionEditable({
-  id, titulo, descripcion, icono, onEditar, editando = false, textoEditar = "Editar", nota, aviso, children,
+  id, titulo, descripcion, icono, onEditar, editando = false, textoEditar = "Editar", nota, aviso, acciones, children,
 }) {
   const idTitulo = `${id}-titulo`;
   const boton = useRef(null);
@@ -27,6 +28,7 @@ export default function SeccionEditable({
           <h2 id={idTitulo} className="ui-seccion__titulo">{titulo}</h2>
           {descripcion && <p className="ui-seccion__desc">{descripcion}</p>}
         </div>
+        {acciones && <div className="ui-seccion__acciones">{acciones}</div>}
         {onEditar && !editando && (
           <button ref={boton} type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={onEditar}
             aria-describedby={idTitulo}>

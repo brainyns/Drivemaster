@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { redondear } from "../../utils/mapa";
 import { direccionDePunto, esCancelacion, obtenerMiUbicacion } from "../../services/geoService";
+import { textoError } from "../../utils/errores.js";
 
 // Espera tras el último movimiento del pin antes de pedir su dirección (el teclado mueve el pin a saltos)
 const ESPERA_DIRECCION_MS = 700;
@@ -37,7 +38,7 @@ export default function useUbicacionPin({ value, onChange, onDireccion, direccio
         if (d) onDireccionRef.current?.(d);
       } catch (e) {
         // pedirJson siempre termina (tiempo límite): el estado nunca se queda en "buscando"
-        if (!esCancelacion(e)) setDireccion({ estado: "error", motivo: e.message });
+        if (!esCancelacion(e)) setDireccion({ estado: "error", motivo: textoError(e) });
       }
     }, ESPERA_DIRECCION_MS);
     return () => {
@@ -81,7 +82,7 @@ export default function useUbicacionPin({ value, onChange, onDireccion, direccio
         setAviso({ tipo: "info", texto: `Tu ubicación es aproximada (unos ${Math.round(p.precision)} m). Arrastra el pin al sitio exacto.` });
       }
     } catch (e) {
-      setAviso({ tipo: "error", texto: e.message });
+      setAviso({ tipo: "error", texto: textoError(e) });
     } finally {
       setUbicando(false);
     }

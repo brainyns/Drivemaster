@@ -16,6 +16,8 @@ import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
 import com.drivemaster.drivemaster.util.PatronBusqueda;
+import com.drivemaster.drivemaster.util.ValidacionProducto;
+import com.drivemaster.drivemaster.exception.DatosInvalidosException;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -54,12 +56,12 @@ public class ProductoServiceImpl implements ProductoService {
 
         producto.setFechaCreacion(java.time.LocalDateTime.now());
 
-        if (productoRepository.existsByTiendaIdAndCodigo(producto.getTiendaId(), producto.getCodigo())) {
-            throw new RuntimeException("Ya existe un producto con ese código");
-        }
+        ValidacionProducto.validar(producto);
+        exigirSkuLibre(producto.getTiendaId(), producto.getCodigo(), null);
 
         producto.setStockActual(
                 producto.getStockActual() != null ? producto.getStockActual() : 0);
+        if (Boolean.TRUE.equals(producto.getCompatibilidadUniversal())) producto.setModelosCompatibles(new java.util.ArrayList<>());
 
         return productoRepository.save(producto);
     }
@@ -68,7 +70,11 @@ public class ProductoServiceImpl implements ProductoService {
     public Producto actualizarProducto(String id, Producto producto) {
 
         Producto existente = obtenerPorId(id);
+        ValidacionProducto.validar(producto);
+        // El SKU se puede corregir al editar, pero sigue siendo único dentro de la tienda
+        exigirSkuLibre(existente.getTiendaId(), producto.getCodigo(), existente.getId());
 
+        existente.setCodigo(producto.getCodigo());
         existente.setNombre(producto.getNombre());
         existente.setCategoria(producto.getCategoria());
         existente.setMarca(producto.getMarca());
@@ -76,16 +82,33 @@ public class ProductoServiceImpl implements ProductoService {
         existente.setPrecioCompra(producto.getPrecioCompra());
         existente.setPrecioVenta(producto.getPrecioVenta());
         existente.setStockMinimo(producto.getStockMinimo());
+        // Stock o encargo también se cambia al editar (antes se perdía sin aviso); el stock en sí solo lo mueven los movimientos
+        if (producto.getTipo() != null) existente.setTipo(producto.getTipo()); // ValidacionProducto: solo STOCK o ENCARGO
         existente.setImagenUrl(producto.getImagenUrl());
         existente.setImagenIa(producto.getImagenIa());
         // La tienda dueña no se cambia al editar.
         existente.setReferencia(producto.getReferencia());
         existente.setUbicacion(producto.getUbicacion());
         existente.setProveedorId(producto.getProveedorId());
-        existente.setDiasEntregaEncargo(producto.getDiasEntregaEncargo());
+        existente.setDiasEntregaEncargo("ENCARGO".equals(existente.getTipo()) ? producto.getDiasEntregaEncargo() : null);
         existente.setCompatibilidadUniversal(producto.getCompatibilidadUniversal());
+        // Universal sirve a cualquier vehículo: no se guardan modelos que lo contradigan
+        if (Boolean.TRUE.equals(producto.getCompatibilidadUniversal())) existente.setModelosCompatibles(new java.util.ArrayList<>());
 
         return productoRepository.save(existente);
+    }
+
+    /**
+     * El código SKU es único dentro de cada tienda sin importar mayúsculas ("knt-1" y "KNT-1" son el mismo). Al editar
+     * se excluye el propio producto. Si ya está en uso, error en el campo codigo (400) para mostrarlo en el formulario.
+     */
+    private void exigirSkuLibre(String tiendaId, String codigo, String excluirId) {
+        Criteria criterio = Criteria.where("tiendaId").is(tiendaId)
+                .and("codigo").regex("^" + java.util.regex.Pattern.quote(codigo) + "$", "i");
+        if (excluirId != null) criterio = criterio.and("_id").ne(excluirId);
+        if (mongoTemplate.exists(Query.query(criterio), Producto.class)) {
+            throw new DatosInvalidosException(Map.of("codigo", "Ya tienes un producto con este código SKU."));
+        }
     }
 
     @Override

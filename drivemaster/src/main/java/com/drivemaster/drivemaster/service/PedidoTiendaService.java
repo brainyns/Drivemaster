@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.util.Motivos;
 import com.drivemaster.drivemaster.model.EstadoOrden;
 import com.drivemaster.drivemaster.model.OrdenServicio;
 import com.drivemaster.drivemaster.model.PedidoTienda;
@@ -24,9 +25,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Pedidos de repuestos a las tiendas (uno por tienda y cotización pagada).
@@ -91,13 +92,22 @@ public class PedidoTiendaService {
 
     /**
      * Lo que la tienda puede ver de un pedido. De la persona que compró solo lo necesario para despachar:
-     * nunca sus identificadores internos (cliente, compra, pago) ni su nombre de cuenta; y la dirección,
+     * nunca sus identificadores internos (cliente, compra, pago) ni su nombre completo (en un retiro, solo nombre e
+     * inicial del apellido, para reconocerlo en el mostrador); y la dirección,
      * el teléfono y quien recibe solo si el pedido es con envío (en retiro esos datos ni se guardan).
      * Los pedidos de talleres conservan los datos del taller, que la tienda necesita para entregar.
      */
     public static PedidoTienda paraTienda(PedidoTienda p) {
         if (p == null) return null;
-        PedidoTienda vista = p.toBuilder().clienteId(null).clienteNombre(null).compraId(null).pagoId(null).build();
+        // En un retiro la tienda ve solo el nombre y la inicial del apellido ("Laura M."), para reconocer a quien llega
+        String nombreRetiro = PedidoTienda.RETIRO.equals(p.getEntrega()) ? nombreEInicial(p.getClienteNombre()) : null;
+        // Las notas internas del administrador (por qué decidió un retiro o un reclamo, cómo confirmó un despacho) y quién
+        // lo hizo no son para la tienda: ve solo qué se decidió, con un texto fijo (pedidosTienda.js)
+        PedidoTienda vista = p.toBuilder().clienteId(null).clienteNombre(nombreRetiro).compraId(null).pagoId(null)
+                .motivoResolucionRetiro(null).retiroResueltoPor(null)
+                .motivoResolucion(null).resueltoPor(null)
+                .motivoDespachoConfirmado(null).despachoConfirmadoPor(null)
+                .build();
         if (!PedidoTienda.ENVIO.equals(p.getEntrega())) {
             vista.setEnvioReceptor(null);
             vista.setEnvioTelefono(null);
@@ -106,6 +116,19 @@ public class PedidoTiendaService {
             vista.setEnvioIndicaciones(null);
         }
         return vista;
+    }
+
+    /**
+     * "Laura Gómez" → "Laura G.". El usuario guarda el nombre en un solo campo: con hasta tres palabras el apellido es
+     * la segunda ("Laura Gómez Pérez" → "Laura G."); con cuatro o más, la penúltima ("Laura María Gómez Pérez" →
+     * "Laura G."). Una sola palabra queda tal cual; vacío → null.
+     */
+    static String nombreEInicial(String nombre) {
+        if (nombre == null || nombre.isBlank()) return null;
+        String[] partes = nombre.trim().split("\\s+");
+        if (partes.length == 1) return partes[0];
+        String apellido = partes[partes.length >= 4 ? partes.length - 2 : 1];
+        return partes[0] + " " + apellido.substring(0, apellido.offsetByCodePoints(0, 1)).toUpperCase() + ".";
     }
 
     /** ADMIN: pedidos con un problema reportado, abiertos y resueltos. */
@@ -186,9 +209,7 @@ public class PedidoTiendaService {
     public PedidoTienda noPuedoDespachar(String correoTienda, String pedidoId, String tipoMotivo, String detalle) {
         String tipo = tipoMotivo != null ? tipoMotivo.trim().toUpperCase() : "";
         String nota = recortar(detalle);
-        if (PedidoTienda.MOTIVO_OTRO.equals(tipo) && nota == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cuéntanos por qué no puedes despachar");
-        }
+        if (PedidoTienda.MOTIVO_OTRO.equals(tipo)) nota = Motivos.obligatorio(nota, "no puedes despachar", 500);
         if (!PedidoTienda.MOTIVO_SIN_REPUESTO.equals(tipo) && !PedidoTienda.MOTIVO_OTRO.equals(tipo)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Elige el motivo: no tengo el repuesto u otro motivo");
         }
@@ -226,7 +247,52 @@ public class PedidoTiendaService {
                 // Solo informativo
             }
             avisos.pedidoNoDespachado(orden, pedido);
+            if (ReglasTrabajoTaller.ningunoLlego(pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId()))) {
+                avisos.alertaAdmin("Solicitud sin repuestos", "Ninguna tienda pudo despachar los repuestos de la solicitud "
+                        + orden.getId() + ": el taller no puede iniciar la instalación. Revísala con el taller y el cliente.");
+            }
         }
+        return pedido;
+    }
+
+    // ─── Despacho confirmado por el SUPERADMIN ───────────────────────────────
+
+    static final int MINIMO_MOTIVO_DESPACHO = 10;
+
+    /** Lo que permite marcar el despacho a mano: un pedido de taller sin despachar cuya orden sigue esperando repuestos. */
+    public static boolean sePuedeMarcarDespachado(PedidoTienda p, OrdenServicio orden) {
+        return p != null && !p.esCatalogo() && sinDespachar(p) && orden != null && EstadoOrden.REPUESTOS_PEDIDOS.equals(orden.getEstado());
+    }
+
+    /**
+     * Salida para la tienda que despachó y no lo marcó: un SUPERADMIN lo confirma con ella y el pedido pasa a DESPACHADO.
+     * No mueve dinero: el pago de la tienda sigue esperando a que el taller confirme la recepción, como siempre. La
+     * compra del catálogo no pasa por aquí: su despacho programa una autoconfirmación que libera el pago.
+     */
+    public PedidoTienda marcarDespachadoPorAdmin(String correoAdmin, String pedidoId, String motivo) {
+        String razon = recortar(motivo);
+        if (razon == null || razon.length() < MINIMO_MOTIVO_DESPACHO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Explica en al menos " + MINIMO_MOTIVO_DESPACHO + " caracteres cómo se confirmó el despacho con la tienda");
+        }
+        PedidoTienda actual = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+        OrdenServicio orden = ordenDe(actual).orElse(null);
+        if (!sePuedeMarcarDespachado(actual, orden)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se marca un pedido de taller sin despachar cuya solicitud espera repuestos");
+        }
+        PedidoTienda pedido = mongoTemplate.findAndModify(
+                Query.query(Criteria.where("id").is(pedidoId).and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)),
+                new Update().set("estado", PedidoTienda.DESPACHADO).set("fechaDespacho", LocalDateTime.now())
+                        .set("despachoConfirmadoPor", correoAdmin).set("motivoDespachoConfirmado", razon),
+                FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
+        if (pedido == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El pedido cambió: revisa su estado");
+        }
+        // La línea de tiempo la ve el cliente: va sin el motivo ni el correo, que quedan en el pedido
+        TrasGuardar.hacer(avisos, "El pedido " + pedido.getId() + " quedó despachado, pero no se pudo anotar en su solicitud.",
+                () -> transiciones.registrar(orden, new Actor(EstadoOrden.ADMIN, null, "DriveMaster"),
+                        "DriveMaster confirmó con " + pedido.getTiendaNombre() + " el despacho de los repuestos", null, null));
         return pedido;
     }
 
@@ -370,11 +436,21 @@ public class PedidoTiendaService {
     // ─── Taller ──────────────────────────────────────────────────────────────
 
     /**
-     * El taller confirma que recibió los repuestos. Vale aunque la tienda no haya
-     * marcado el despacho (el taller los tiene en la mano); los no despachados no
-     * cambian.
+     * El taller confirma los repuestos que tiene en la mano, pedido por pedido. Solo vale un pedido que la tienda marcó
+     * DESPACHADO: es el único que pasa a RECIBIDO y habilita el pago de su tienda. pedidoIds null confirma todos los
+     * despachados. La orden avanza cuando ningún pedido sigue por despachar o por confirmar; si alguna tienda no pudo
+     * despachar, además debe confirmar que sigue sin esas piezas (confirmarFaltantes). Los pedidos se cierran antes de
+     * mover la orden: si algo falla a mitad, repetir la confirmación termina lo que faltó.
      */
     public List<PedidoTienda> repuestosRecibidos(String correoTaller, String ordenId) {
+        return repuestosRecibidos(correoTaller, ordenId, false);
+    }
+
+    public List<PedidoTienda> repuestosRecibidos(String correoTaller, String ordenId, boolean confirmarFaltantes) {
+        return repuestosRecibidos(correoTaller, ordenId, null, confirmarFaltantes);
+    }
+
+    public List<PedidoTienda> repuestosRecibidos(String correoTaller, String ordenId, List<String> pedidoIds, boolean confirmarFaltantes) {
         Taller taller = tallerService.obtenerPorUsuario(correoTaller);
         OrdenServicio orden = ordenMarketplace(ordenId);
         if (!taller.getId().equals(orden.getTallerId())) {
@@ -383,27 +459,93 @@ public class PedidoTiendaService {
         if (!EstadoOrden.REPUESTOS_PEDIDOS.equals(orden.getEstado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La solicitud no está esperando repuestos");
         }
-        transiciones.transicionar(orden, EstadoOrden.REPUESTOS_RECIBIDOS,
-                new Actor(EstadoOrden.TALLER, taller.getId(), taller.getNombre()), "Repuestos recibidos en el taller",
-                Criteria.where("tallerId").is(taller.getId()), null);
-        Map<String, String> estadoPrevio = new HashMap<>();
-        for (PedidoTienda p : pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId())) {
-            estadoPrevio.put(p.getId(), p.getEstado());
+        List<PedidoTienda> previos = pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
+        if (ReglasTrabajoTaller.ningunoLlego(previos)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ninguna tienda despachó los repuestos de esta solicitud: "
+                    + "no se puede confirmar su recepción. DriveMaster la revisará.");
         }
-        mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())
-                        .and("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION, PedidoTienda.DESPACHADO)),
-                new Update().set("estado", PedidoTienda.RECIBIDO).set("fechaRecibido", LocalDateTime.now()),
-                PedidoTienda.class);
-        List<PedidoTienda> pedidos = pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
-        // Recepción confirmada: la línea de cada tienda queda lista para liquidar (también si no marcó despacho)
-        for (PedidoTienda p : pedidos) {
-            if (!PedidoTienda.RECIBIDO.equals(p.getEstado())) continue;
-            String previo = estadoPrevio.get(p.getId());
-            String evento = "RECEPCION_CONFIRMADA_TALLER" + (PedidoTienda.PENDIENTE.equals(previo)
-                    ? " (la tienda no había marcado el despacho)" : "");
-            liquidacion.pedidoRecibido(p.getId(), evento);
+        List<PedidoTienda> elegidos = porConfirmar(previos, pedidoIds);
+        List<PedidoTienda> sinDespacho = previos.stream().filter(PedidoTiendaService::sinDespachar).toList();
+        boolean quedaUnoDespachado = previos.stream().filter(PedidoTiendaService::despachado).count() > elegidos.size();
+        boolean avanza = sinDespacho.isEmpty() && !quedaUnoDespachado;
+        if (elegidos.isEmpty() && !avanza) {
+            // Un segundo clic sobre lo que ya quedó confirmado no es un error
+            if (pedidoIds != null && !pedidoIds.isEmpty()) return previos;
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    sinDespacho.isEmpty() ? "Elige los pedidos que ya tienes en el taller" : aunNoDespacha(sinDespacho));
         }
-        return pedidos;
+        List<PedidoTienda> noDespachados = noDespachados(previos);
+        if (avanza && !noDespachados.isEmpty() && !confirmarFaltantes) {
+            String detalle = noDespachados.stream()
+                    .map(p -> p.getTiendaNombre() + (p.getMotivoNoDespacho() != null ? " (motivo: " + p.getMotivoNoDespacho() + ")" : ""))
+                    .collect(java.util.stream.Collectors.joining(", "));
+            throw new ResponseStatusException(HttpStatus.CONFLICT, (noDespachados.size() == 1
+                    ? "La tienda " + detalle + " no despachó sus repuestos."
+                    : "Las tiendas " + detalle + " no despacharon sus repuestos.")
+                    + " Si recibiste lo demás y sigues sin esas piezas, confírmalo para continuar.");
+        }
+
+        List<String> recibidos = new ArrayList<>();
+        for (PedidoTienda p : elegidos) {
+            // Condicional: solo un pedido que sigue despachado se recibe y se le habilita el pago a su tienda
+            PedidoTienda recibido = mongoTemplate.findAndModify(
+                    Query.query(Criteria.where("id").is(p.getId()).and("ordenId").is(orden.getId()).and("estado").is(PedidoTienda.DESPACHADO)),
+                    new Update().set("estado", PedidoTienda.RECIBIDO).set("fechaRecibido", LocalDateTime.now()),
+                    FindAndModifyOptions.options().returnNew(true), PedidoTienda.class);
+            if (recibido == null) continue;
+            recibidos.add(recibido.getTiendaNombre());
+            TrasGuardar.hacer(avisos, "El pedido " + recibido.getId() + " quedó recibido, pero no se pudo habilitar el pago de "
+                    + recibido.getTiendaNombre() + ".", () -> liquidacion.pedidoRecibido(recibido.getId(), "RECEPCION_CONFIRMADA_TALLER"));
+        }
+
+        Actor actor = new Actor(EstadoOrden.TALLER, taller.getId(), taller.getNombre());
+        List<PedidoTienda> actuales = pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
+        List<PedidoTienda> faltantes = noDespachados(actuales);
+        boolean completos = actuales.stream().noneMatch(p -> sinDespachar(p) || despachado(p));
+        if (completos && (faltantes.isEmpty() || confirmarFaltantes)) {
+            String nota = faltantes.isEmpty() ? "Repuestos recibidos en el taller"
+                    : "Repuestos recibidos en el taller; el taller confirmó que sigue sin los de "
+                            + faltantes.stream().map(PedidoTienda::getTiendaNombre).collect(java.util.stream.Collectors.joining(", "));
+            transiciones.transicionar(orden, EstadoOrden.REPUESTOS_RECIBIDOS, actor, nota,
+                    Criteria.where("tallerId").is(taller.getId()), null);
+        } else if (!recibidos.isEmpty()) {
+            TrasGuardar.hacer(avisos, "No se pudo anotar en la solicitud " + orden.getId() + " la recepción parcial de repuestos.",
+                    () -> transiciones.registrar(orden, actor, "Repuestos recibidos de " + String.join(", ", recibidos), null, null));
+        }
+        return pedidoRepository.findByOrdenIdOrderByFechaCreacionAsc(orden.getId());
+    }
+
+    /** Lo que se confirma de verdad: lo ya recibido no se repite, y un pedido sin despachar corta todo antes de cambiar nada. */
+    private static List<PedidoTienda> porConfirmar(List<PedidoTienda> pedidos, List<String> pedidoIds) {
+        if (pedidoIds == null) return pedidos.stream().filter(PedidoTiendaService::despachado).toList();
+        List<PedidoTienda> elegidos = new ArrayList<>();
+        for (String id : new LinkedHashSet<>(pedidoIds)) {
+            PedidoTienda p = pedidos.stream().filter(x -> id.equals(x.getId())).findFirst()
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido no encontrado"));
+            if (sinDespachar(p)) throw new ResponseStatusException(HttpStatus.CONFLICT, aunNoDespacha(List.of(p)));
+            if (PedidoTienda.NO_DESPACHADO.equals(p.getEstado())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "La tienda " + p.getTiendaNombre() + " no despachó este pedido");
+            }
+            if (despachado(p)) elegidos.add(p);
+        }
+        return elegidos;
+    }
+
+    private static boolean sinDespachar(PedidoTienda p) {
+        return PedidoTienda.PENDIENTE.equals(p.getEstado()) || PedidoTienda.EN_PREPARACION.equals(p.getEstado());
+    }
+
+    private static boolean despachado(PedidoTienda p) {
+        return PedidoTienda.DESPACHADO.equals(p.getEstado());
+    }
+
+    private static List<PedidoTienda> noDespachados(List<PedidoTienda> pedidos) {
+        return pedidos.stream().filter(p -> PedidoTienda.NO_DESPACHADO.equals(p.getEstado())).toList();
+    }
+
+    private static String aunNoDespacha(List<PedidoTienda> pedidos) {
+        String nombres = pedidos.stream().map(PedidoTienda::getTiendaNombre).collect(java.util.stream.Collectors.joining(", "));
+        return (pedidos.size() == 1 ? "La tienda aún no despacha: " : "Las tiendas aún no despachan: ") + nombres;
     }
 
     // ─── Consulta por orden ──────────────────────────────────────────────────

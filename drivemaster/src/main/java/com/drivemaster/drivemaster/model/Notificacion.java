@@ -30,17 +30,22 @@ public class Notificacion {
     public static final String COTIZACION_EMITIDA = "COTIZACION_EMITIDA";
     public static final String COTIZACION_RESPONDIDA = "COTIZACION_RESPONDIDA";
     public static final String COTIZACION_VENCIDA = "COTIZACION_VENCIDA";
+    public static final String COTIZACION_TIENDA_NO_DISPONIBLE = "COTIZACION_TIENDA_NO_DISPONIBLE";
     public static final String PAGO_APROBADO = "PAGO_APROBADO";
     public static final String PAGO_NO_APLICADO = "PAGO_NO_APLICADO";
     public static final String PEDIDO_NUEVO = "PEDIDO_NUEVO";
     public static final String PEDIDO_NO_DESPACHADO = "PEDIDO_NO_DESPACHADO";
     public static final String PEDIDO_ENVIADO = "PEDIDO_ENVIADO";
     public static final String PEDIDO_LISTO_RETIRO = "PEDIDO_LISTO_RETIRO";
+    public static final String RECORDATORIO_RETIRO = "RECORDATORIO_RETIRO";
+    public static final String RETIRO_CANCELADO = "RETIRO_CANCELADO";
     public static final String CODIGO_RETIRO = "CODIGO_RETIRO";
     public static final String PROBLEMA_ENVIO = "PROBLEMA_ENVIO";
     public static final String PROBLEMA_ENVIO_RESUELTO = "PROBLEMA_ENVIO_RESUELTO";
     public static final String VEHICULO_LISTO = "VEHICULO_LISTO";
+    public static final String VEHICULO_ENTREGADO = "VEHICULO_ENTREGADO";
     public static final String ALERTA_ADMIN = "ALERTA_ADMIN";
+    public static final String STOCK_BAJO = "STOCK_BAJO";
 
     @Id
     private String id;

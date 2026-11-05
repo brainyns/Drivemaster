@@ -1,12 +1,10 @@
 package com.drivemaster.drivemaster.util;
 
-import com.drivemaster.drivemaster.config.BrandConfig;
 import com.drivemaster.drivemaster.model.Cotizacion;
 import com.drivemaster.drivemaster.model.CotizacionItem;
 import com.drivemaster.drivemaster.model.PedidoTienda;
 import org.springframework.web.util.HtmlUtils;
 
-import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -79,26 +77,34 @@ public final class EmailServicioBuilder {
      * al servidor: no queda en logs de Vercel ni de Render.
      */
     public static String clienteCotizacion(String cliente, Cotizacion c, String enlaceBase) {
+        return clienteCotizacion(cliente, c, enlaceBase, null);
+    }
+
+    /** Cotización para el cliente; diagnosticoPagado es la tarifa original del diagnóstico (null si no se conoce). */
+    public static String clienteCotizacion(String cliente, Cotizacion c, String enlaceBase, Double diagnosticoPagado) {
         StringBuilder filas = new StringBuilder();
         for (CotizacionItem i : c.getItems()) {
             String detalle = CotizacionItem.REPUESTO.equals(i.getTipo())
-                    ? e(i.getProductoNombre()) + " · " + e(i.getTiendaNombre())
+                    ? e(i.getProductoNombre()) + (i.esDelTaller() ? " · Disponible en el taller" : " · " + e(i.getTiendaNombre()) + " · Se pide a tienda")
                         + ("ENCARGO".equals(i.getDisponibilidad()) && i.getDiasEntrega() != null
                             ? " · encargo " + i.getDiasEntrega() + " días" : "")
                     : (CotizacionItem.POR_HORAS.equals(i.getModalidad()) ? i.getHoras() + " h × " + moneda(i.getPrecioUnitario()) : "Mano de obra");
             String cantidad = CotizacionItem.REPUESTO.equals(i.getTipo()) ? i.getCantidad() + " × " : "";
-            filas.append("<tr><td style=\"padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;\">")
-                    .append(cantidad).append(e(i.getDescripcion()))
-                    .append("<br/><span style=\"color:#9ca3af;font-size:12px;\">").append(detalle).append("</span></td>")
-                    .append("<td align=\"right\" style=\"padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;white-space:nowrap;\">")
-                    .append(moneda(i.getSubtotal())).append("</td></tr>");
+            // Cada línea muestra el valor con IVA (los precios del catálogo son sin IVA; el taller fija los suyos)
+            double conIva = CalculadoraCotizacion.lineaConIva(c, i);
+            filas.append(PlantillaCorreo.filaDetalle(cantidad + e(i.getDescripcion()) + "<br/>" + PlantillaCorreo.nota(detalle),
+                    moneda(conIva)));
         }
-        String totales = linea("Subtotal", c.getSubtotal())
-                + linea("IVA (" + formatoPct(c.getIvaPct()) + ")", c.getIva())
-                + linea("Total", c.getTotal())
-                + (c.getAnticipoDiagnostico() != null && c.getAnticipoDiagnostico() > 0
-                    ? linea("Diagnóstico ya pagado", -c.getAnticipoDiagnostico()) : "")
+        // El IVA no se suma aparte: va incluido; se informa cuánto lleva
+        int anticipo = c.getAnticipoDiagnostico() != null ? c.getAnticipoDiagnostico().intValue() : 0;
+        String totales = linea("Total", c.getTotal())
+                + linea("Incluye IVA de", c.getIva())
+                + (anticipo > 0 ? linea("Adelanto del diagnóstico", -(double) anticipo) : "")
                 + filaTotal("Total a pagar", moneda(c.getTotalAPagar()));
+        String explicacionAdelanto = anticipo > 0
+                ? parrafo(PlantillaCorreo.nota(e(CalculadoraCotizacion.explicacionAdelanto(
+                        anticipo, diagnosticoPagado, CalculadoraCotizacion.manoObraConIva(c), v -> moneda(v)))))
+                : "";
 
         String extras = (c.getTiempoEstimadoHoras() != null ? "Tiempo estimado del trabajo: " + c.getTiempoEstimadoHoras() + " h<br/>" : "")
                 + (c.getDiasEntregaRepuestos() != null ? "Entrega de repuestos por encargo: hasta " + c.getDiasEntregaRepuestos() + " días<br/>" : "")
@@ -109,16 +115,16 @@ public final class EmailServicioBuilder {
                 saludo(cliente)
                 + parrafo("<strong>" + e(c.getTallerNombre()) + "</strong> preparó la cotización para tu <strong>"
                         + e(c.getVehiculoDescripcion()) + "</strong>. Revísala y decide.")
-                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 16px;\">" + filas
-                + totales + "</table>"
+                + PlantillaCorreo.tabla(filas + totales)
+                + explicacionAdelanto
                 + recuadro(extras)
                 + "<p style=\"margin:20px 0 8px;\">"
                 + PlantillaCorreo.boton("Revisar y aprobar", enlaceBase + "&accion=aprobar")
                 + PlantillaCorreo.botonContorno("Pedir cambios", enlaceBase + "&accion=cambios")
                 + PlantillaCorreo.botonContorno("Rechazar", enlaceBase + "&accion=rechazar")
                 + "</p>"
-                + parrafo("<span style=\"font-size:12px;color:#9ca3af;\">El enlace es personal y sirve una sola vez. "
-                        + "Para pagar te pediremos iniciar sesión.</span>"));
+                + parrafo(PlantillaCorreo.nota("El enlace es personal y sirve una sola vez. "
+                        + "Para pagar te pediremos iniciar sesión.")));
     }
 
     /**
@@ -133,16 +139,13 @@ public final class EmailServicioBuilder {
         return plantilla("Comprobante de pago", "Comprobante de pago",
                 saludo(cliente)
                 + parrafo("Recibimos tu pago de <strong>" + e(concepto) + "</strong> para tu <strong>" + e(vehiculo) + "</strong>.")
-                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 16px;\">"
-                + detalle
-                + filaTotal("Total pagado", moneda(monto))
-                + "</table>"
+                + PlantillaCorreo.tabla(detalle + filaTotal("Total pagado", moneda(monto)))
                 + recuadro("Referencia: <strong>" + e(referencia) + "</strong><br/>"
                         + (transaccion != null ? "Transacción Wompi: " + e(transaccion) + "<br/>" : "")
                         + "Fecha: " + e(formatoFecha(fecha)))
                 + (siguientePaso != null ? parrafo(e(siguientePaso)) : "")
-                + parrafo("<span style=\"font-size:12px;color:#9ca3af;\">Este comprobante no es una factura. "
-                        + "El taller y las tiendas expiden la suya por sus productos y servicios.</span>"));
+                + parrafo(PlantillaCorreo.nota("Este comprobante no es una factura. "
+                        + "El taller y las tiendas expiden la suya por sus productos y servicios.")));
     }
 
     /** El pago llegó pero no se pudo aplicar: se devolverá el dinero. */
@@ -165,6 +168,14 @@ public final class EmailServicioBuilder {
                 + parrafo("Puedes ver el avance en tu panel."));
     }
 
+    public static String clienteVehiculoEntregado(String cliente, String vehiculo, String taller, int dias) {
+        return plantilla("Vehículo entregado", "Confirma que recibiste tu vehículo",
+                saludo(cliente)
+                + parrafo("<strong>" + e(taller) + "</strong> marcó la entrega de tu <strong>" + e(vehiculo) + "</strong>.")
+                + parrafo("Confírmalo en \"Mis servicios\" y, si quieres, califica al taller. Si no respondes en " + dias
+                        + " días hábiles, se confirma automáticamente. Si no lo has recibido, comunícate con el taller."));
+    }
+
     public static String clienteVehiculoListo(String cliente, String vehiculo, String taller, String direccion) {
         return plantilla("Vehículo listo", "Tu vehículo está listo",
                 saludo(cliente)
@@ -177,20 +188,10 @@ public final class EmailServicioBuilder {
     // ─── Tienda ──────────────────────────────────────────────────────────────
 
     public static String tiendaNuevoPedido(String tienda, PedidoTienda p) {
-        StringBuilder filas = new StringBuilder();
-        for (CotizacionItem i : p.getItems()) {
-            filas.append("<tr><td style=\"padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;\">")
-                    .append(i.getCantidad()).append(" × ").append(e(i.getProductoNombre()))
-                    .append(i.getReferencia() != null ? " <span style=\"color:#9ca3af;\">(" + e(i.getReferencia()) + ")</span>" : "")
-                    .append("ENCARGO".equals(i.getDisponibilidad()) ? " · encargo" : "")
-                    .append("</td><td align=\"right\" style=\"padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;\">")
-                    .append(moneda(i.getSubtotal())).append("</td></tr>");
-        }
         return plantilla("Nuevo pedido", "Tienes un pedido pagado",
                 saludo(tienda)
                 + parrafo("El cliente ya pagó. Lleva estos repuestos al taller:")
-                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 16px;\">" + filas
-                + linea("IVA", p.getIva()) + linea("Total del pedido", p.getTotal()) + "</table>"
+                + PlantillaCorreo.tabla(filasPedido(p) + linea("IVA", p.getIva()) + linea("Total del pedido", p.getTotal()))
                 + recuadro("Entregar en: <strong>" + e(p.getTallerNombre()) + "</strong><br/>"
                         + e(unir(p.getTallerDireccion(), p.getTallerCiudad()))
                         + (p.getTallerTelefono() != null ? "<br/>Tel. " + e(p.getTallerTelefono()) : "")
@@ -213,7 +214,7 @@ public final class EmailServicioBuilder {
                                              String referencia, String transaccion, LocalDateTime fecha) {
         StringBuilder detalle = new StringBuilder();
         for (PedidoTienda p : pedidos) {
-            detalle.append("<p style=\"margin:14px 0 4px;font-size:14px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">")
+            detalle.append("<p style=\"margin:14px 0 4px;font-size:14px;font-weight:700;color:" + PlantillaCorreo.COLOR_TITULO + ";\">")
                     .append(e(p.getTiendaNombre())).append(" · ").append(moneda(p.getTotal())).append("</p>");
             if (p.getItems() != null) {
                 for (CotizacionItem i : p.getItems()) {
@@ -238,39 +239,27 @@ public final class EmailServicioBuilder {
                 saludo(cliente)
                 + parrafo("Recibimos tu pago y avisamos a cada tienda. Esto es lo que compraste:")
                 + detalle
-                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:8px 0 16px;\">"
-                + linea("Repuestos", compra.getSubtotal()) + linea("IVA", compra.getIva())
-                + linea("Envío", compra.getCostoEnvio())
-                + filaTotal("Total pagado", moneda(compra.getTotal()))
-                + "</table>"
+                + PlantillaCorreo.tabla(linea("Repuestos", compra.getSubtotal()) + linea("IVA", compra.getIva())
+                        + linea("Envío", compra.getCostoEnvio())
+                        + filaTotal("Total pagado", moneda(compra.getTotal())))
                 + recuadro("Referencia: <strong>" + e(referencia) + "</strong><br/>"
                         + (transaccion != null ? "Transacción Wompi: " + e(transaccion) + "<br/>" : "")
                         + "Fecha: " + e(formatoFecha(fecha)))
                 + parrafo("Guarda el código de retiro: la tienda lo pedirá al entregarte el pedido. "
                         + "Si lo pierdes, puedes generar uno nuevo desde Mis compras.")
-                + parrafo("<span style=\"font-size:12px;color:#9ca3af;\">Este comprobante no es una factura. "
-                        + "Cada tienda expide la suya por sus productos.</span>"));
+                + parrafo(PlantillaCorreo.nota("Este comprobante no es una factura. "
+                        + "Cada tienda expide la suya por sus productos.")));
     }
 
     /** Pedido nuevo de una compra directa: la tienda ve QUÉ entregar y CÓMO (retiro o envío), no el código. */
     public static String tiendaNuevaCompra(String tienda, PedidoTienda p) {
-        StringBuilder filas = new StringBuilder();
-        for (CotizacionItem i : p.getItems()) {
-            filas.append("<tr><td style=\"padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;\">")
-                    .append(i.getCantidad()).append(" × ").append(e(i.getProductoNombre()))
-                    .append(i.getReferencia() != null ? " <span style=\"color:#9ca3af;\">(" + e(i.getReferencia()) + ")</span>" : "")
-                    .append("ENCARGO".equals(i.getDisponibilidad()) ? " · encargo" : "")
-                    .append("</td><td align=\"right\" style=\"padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;\">")
-                    .append(moneda(i.getSubtotal())).append("</td></tr>");
-        }
         boolean envio = PedidoTienda.ENVIO.equals(p.getEntrega());
         return plantilla("Nuevo pedido", "Tienes una compra pagada",
                 saludo(tienda)
                 + parrafo("Un cliente compró en tu tienda y ya pagó:")
-                + "<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 16px;\">" + filas
-                + linea("IVA", p.getIva())
-                + (envio ? linea("Envío", p.getCostoEnvio()) : "")
-                + linea("Total del pedido", p.getTotal()) + "</table>"
+                + PlantillaCorreo.tabla(filasPedido(p) + linea("IVA", p.getIva())
+                        + (envio ? linea("Envío", p.getCostoEnvio()) : "")
+                        + linea("Total del pedido", p.getTotal()))
                 + recuadro(envio
                         ? "<strong>Enviar a</strong> " + e(p.getEnvioReceptor()) + "<br/>"
                           + e(unir(p.getEnvioDireccion(), p.getEnvioCiudad()))
@@ -302,6 +291,27 @@ public final class EmailServicioBuilder {
                         + "Horario: " + e(p.getTiendaHorario()))
                 + parrafo("Lleva tu <strong>código de retiro</strong> (el del correo de tu compra o uno nuevo desde Mis compras): "
                         + "la tienda lo pedirá al entregarte el pedido y solo sirve una vez."));
+    }
+
+    /** Recordatorio de un pedido listo que el cliente aún no retira (a los 3 y a los 7 días). */
+    public static String clienteRecordatorioRetiro(String cliente, PedidoTienda p, long dias) {
+        return plantilla("Retiro", "Tu pedido te sigue esperando",
+                saludo(cliente)
+                + parrafo("<strong>" + e(p.getTiendaNombre()) + "</strong> tiene listo tu pedido desde hace " + dias
+                        + (dias == 1 ? " día" : " días") + " y aún no lo has retirado.")
+                + recuadro("Retíralo en: <strong>" + e(unir(p.getTiendaDireccion(), p.getTiendaCiudad())) + "</strong><br/>"
+                        + "Horario: " + e(p.getTiendaHorario()))
+                + parrafo("Lleva tu <strong>código de retiro</strong> (el del correo de tu compra o uno nuevo desde Mis compras). "
+                        + "Si no puedes pasar, escríbenos: si pasan 15 días sin retirarlo, DriveMaster revisa el pedido."));
+    }
+
+    /** El ADMIN canceló un retiro que nadie recogió: se le devuelve el dinero al cliente. */
+    public static String clienteRetiroCancelado(String cliente, PedidoTienda p, double monto) {
+        return plantilla("Retiro", "Cancelamos tu pedido sin retirar",
+                saludo(cliente)
+                + parrafo("Tu pedido en <strong>" + e(p.getTiendaNombre()) + "</strong> estuvo listo varios días y no se retiró, "
+                        + "así que lo cancelamos.")
+                + recuadro("Te devolvemos <strong>" + moneda(monto) + "</strong> al medio de pago que usaste."));
     }
 
     public static String clienteEnvioEnCamino(String cliente, PedidoTienda p, int diasAutoconfirmacion) {
@@ -415,6 +425,17 @@ public final class EmailServicioBuilder {
 
     // ─── Plantilla ───────────────────────────────────────────────────────────
 
+    /** Repuestos de un pedido a tienda: cantidad, nombre, referencia y subtotal. */
+    private static String filasPedido(PedidoTienda p) {
+        StringBuilder filas = new StringBuilder();
+        for (CotizacionItem i : p.getItems()) {
+            filas.append(PlantillaCorreo.filaDetalle(i.getCantidad() + " × " + e(i.getProductoNombre())
+                    + (i.getReferencia() != null ? " " + PlantillaCorreo.nota("(" + e(i.getReferencia()) + ")") : "")
+                    + ("ENCARGO".equals(i.getDisponibilidad()) ? " · encargo" : ""), moneda(i.getSubtotal())));
+        }
+        return filas.toString();
+    }
+
     private static String plantilla(String etiqueta, String titulo, String cuerpo) {
         return PlantillaCorreo.documento(etiqueta, titulo, cuerpo, PlantillaCorreo.PIE_POR_DEFECTO);
     }
@@ -432,21 +453,11 @@ public final class EmailServicioBuilder {
     }
 
     private static String linea(String concepto, Double valor) {
-        return "<tr><td style=\"padding:4px 0;font-size:13px;color:#6b7280;\">" + e(concepto) + "</td>"
-                + "<td align=\"right\" style=\"padding:4px 0;font-size:13px;color:#374151;\">" + moneda(valor) + "</td></tr>";
+        return PlantillaCorreo.filaDato(concepto, moneda(valor));
     }
 
-    /** Fila del total: línea del color principal encima y el monto en naranja de texto. */
     private static String filaTotal(String concepto, String monto) {
-        String borde = "border-top:2px solid " + BrandConfig.colorPrimario() + ";";
-        return "<tr><td style=\"padding:10px 0 0;" + borde + "font-size:15px;font-weight:700;color:" + BrandConfig.colorPrimario() + ";\">" + e(concepto) + "</td>"
-                + "<td align=\"right\" style=\"padding:10px 0 0;" + borde + "font-size:15px;font-weight:700;color:"
-                + BrandConfig.colorPrimario() + ";\">" + monto + "</td></tr>";
-    }
-
-    private static String formatoPct(Double pct) {
-        if (pct == null) return "";
-        return (pct == Math.floor(pct) ? String.valueOf(pct.intValue()) : String.valueOf(pct)) + " %";
+        return PlantillaCorreo.filaTotal(concepto, monto);
     }
 
     private static String e(String texto) {
@@ -460,13 +471,7 @@ public final class EmailServicioBuilder {
     }
 
     private static String moneda(Double valor) {
-        return moneda(valor != null ? valor.doubleValue() : 0);
-    }
-
-    private static String moneda(double valor) {
-        NumberFormat fmt = NumberFormat.getCurrencyInstance(LOCALE_CO);
-        fmt.setMaximumFractionDigits(0);
-        return fmt.format(valor);
+        return PlantillaCorreo.moneda(valor);
     }
 
     private static String formatoFecha(LocalDateTime fecha) {

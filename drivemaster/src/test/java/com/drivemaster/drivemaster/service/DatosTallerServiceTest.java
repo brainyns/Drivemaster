@@ -114,6 +114,32 @@ class DatosTallerServiceTest {
     }
 
     @Test
+    void elTallerSeMarcaNoResponsableDeIvaYQuedaRegistrado() {
+        ActualizarDatosTallerRequest r = new ActualizarDatosTallerRequest();
+        r.setResponsableIva(false);
+
+        servicio.actualizar("a@demo.com", r);
+
+        assertEquals(Boolean.FALSE, a.getResponsableIva());
+        verify(tallerRepository).save(a);
+        ArgumentCaptor<CambioTaller> registro = ArgumentCaptor.forClass(CambioTaller.class);
+        verify(cambios).save(registro.capture());
+        assertEquals(CambioTaller.RESPONSABLE_IVA, registro.getValue().getCampo());
+        assertEquals("true", registro.getValue().getValorAnterior(), "sin el dato contaba como responsable");
+        assertEquals("false", registro.getValue().getValorNuevo());
+    }
+
+    @Test
+    void marcarResponsableAUnTallerQueYaLoEraNoRegistraNada() {
+        ActualizarDatosTallerRequest r = new ActualizarDatosTallerRequest();
+        r.setResponsableIva(true);
+
+        servicio.actualizar("a@demo.com", r);
+
+        verify(cambios, never()).save(any());
+    }
+
+    @Test
     void sinNingunValorEsUnaPeticionInvalida() {
         assertEquals(400, estado(assertThrows(ResponseStatusException.class, () -> servicio.actualizar("a@demo.com", pide(null, null)))));
         assertEquals(400, estado(assertThrows(ResponseStatusException.class, () -> servicio.actualizar("a@demo.com", null))));
@@ -138,7 +164,7 @@ class DatosTallerServiceTest {
     void elRequestNoTieneCamposQueElTallerNoDeberiaCambiar() {
         var campos = java.util.Arrays.stream(ActualizarDatosTallerRequest.class.getDeclaredFields())
                 .map(java.lang.reflect.Field::getName).sorted().toList();
-        assertEquals(java.util.List.of("horario", "latitud", "longitud", "tarifaHora"), campos);
+        assertEquals(java.util.List.of("horario", "latitud", "longitud", "responsableIva", "tarifaHora"), campos);
     }
 
     private static ActualizarDatosTallerRequest ubicacion(Double lat, Double lng) {

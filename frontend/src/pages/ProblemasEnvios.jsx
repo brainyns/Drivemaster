@@ -4,17 +4,21 @@ import { problemasDeEnvio, resolverProblemaEnvio } from "../services/pedidoTiend
 import { formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Campo from "../components/ui/Campo";
+import RetirosSinRecoger from "./admin/RetirosSinRecoger";
 import { capitalizar, unir } from "../utils/formato";
 // El diálogo de confirmación (ConfirmacionAdmin) trae su estilo de admin-base.css
 import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/problemas-envio.css";
+import { textoError } from "../utils/errores";
 
 const abierto = (p) => p.estado === "DESPACHADO" && !p.resolucionProblema;
 const RESOLUCION = {
@@ -44,7 +48,7 @@ export default function ProblemasEnvios() {
       setProblemas(await problemasDeEnvio(token));
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     }
   }, [token]);
 
@@ -52,7 +56,7 @@ export default function ProblemasEnvios() {
     let vivo = true;
     problemasDeEnvio(token)
       .then((lista) => { if (vivo) setProblemas(lista); })
-      .catch((e) => { if (vivo) setError(e.message); });
+      .catch((e) => { if (vivo) setError(textoError(e)); });
     return () => { vivo = false; };
   }, [token]);
 
@@ -61,6 +65,8 @@ export default function ProblemasEnvios() {
   const abiertos = useMemo(() => (problemas || []).filter(abierto), [problemas]);
   const resueltos = useMemo(() => (problemas || []).filter((p) => !abierto(p)), [problemas]);
   const visibles = ver === "ABIERTOS" ? abiertos : resueltos;
+  const pag = usePaginacion(visibles.length, ver);
+  const enPagina = paginar(visibles, pag.pagina);
 
   const pedir = (pedido, resolucion) => {
     setMotivo("");
@@ -75,7 +81,7 @@ export default function ProblemasEnvios() {
     try {
       await resolverProblemaEnvio(token, pedido.id, resolucion, motivo.trim());
     } catch (e) {
-      setErrorDecision(e.message);
+      setErrorDecision(textoError(e));
       setResolviendo(false);
       await cargar(); // si otra persona ya lo resolvió, la lista lo refleja
       return;
@@ -83,7 +89,7 @@ export default function ProblemasEnvios() {
     setResolviendo(false);
     setDecision(null);
     setAviso(resolucion === "REEMBOLSAR"
-      ? `Registramos el reembolso de ${formatPrecio(pedido.total)}. Recuerda hacerlo en el panel de Wompi y marcarlo en Liquidaciones y reembolsos.`
+      ? `Registramos el reembolso de ${formatPrecio(pedido.total)}. Recuerda hacerlo en el panel de Wompi y marcarlo en Pagos y reembolsos.`
       : `Entrega confirmada: el pago de ${formatPrecio(pedido.total)} a ${pedido.tiendaNombre} quedó habilitado.`);
     await cargar();
   };
@@ -106,7 +112,7 @@ export default function ProblemasEnvios() {
   return (
     <div className="ss-panel--plataforma pp-root pre-root">
       <EncabezadoPagina titulo="Problemas de envío"
-        descripcion="Envíos del catálogo en los que el cliente dijo que algo salió mal. Mientras no los resuelvas, la tienda no cobra ese pedido." />
+        descripcion="Envíos del catálogo en los que el cliente dijo que algo salió mal y retiros que nadie recoge. Mientras no los resuelvas, la tienda no cobra ese pedido." />
 
       {aviso && <Alerta tono="ok" className="pp-bloque-sep" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
       {error && (
@@ -151,7 +157,7 @@ export default function ProblemasEnvios() {
                 </tr>
               </thead>
               <tbody>
-                {visibles.map((p) => {
+                {enPagina.map((p) => {
                   const res = RESOLUCION[p.resolucionProblema];
                   return (
                     <tr key={p.id}>
@@ -197,6 +203,9 @@ export default function ProblemasEnvios() {
           </div>
         </div>
       )}
+      {visibles.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de problemas de envío" />
+      )}
 
       {decision && (
         <ConfirmacionAdmin titulo={textos.titulo} texto={textos.mensaje} confirmar={textos.textoConfirmar} variante={textos.variante}
@@ -207,6 +216,8 @@ export default function ProblemasEnvios() {
           {errorDecision && <Alerta>{errorDecision}</Alerta>}
         </ConfirmacionAdmin>
       )}
+
+      <RetirosSinRecoger token={token} />
     </div>
   );
 }

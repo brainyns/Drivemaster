@@ -18,6 +18,9 @@ import com.drivemaster.drivemaster.repository.CotizacionRepository;
 import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
 import com.drivemaster.drivemaster.util.CalculadoraCotizacion;
+import com.drivemaster.drivemaster.util.Dinero;
+import com.drivemaster.drivemaster.util.IvaTaller;
+import com.drivemaster.drivemaster.util.PdfCotizacionBuilder;
 import com.drivemaster.drivemaster.util.TokenSeguro;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +58,7 @@ public class CotizacionService {
     static final String ENLACE_INVALIDO = "Enlace no válido o vencido";
     private static final int MAX_ITEMS_MANO_OBRA = 20;
     private static final int MAX_TEXTO = 1000;
+    private static final int MIN_TEXTO_TRABAJO = 3;
     private static final double MAX_VALOR = 100_000_000;
     private static final double MAX_HORAS = 200;
 
@@ -107,7 +111,7 @@ public class CotizacionService {
         Taller taller = tallerOperativo(correoTaller);
         OrdenServicio orden = ordenCotizable(taller, ordenId);
         Cotizacion cotizacion = armar(taller, orden, r);
-        CotizacionDTO dto = CotizacionDTO.completa(cotizacion);
+        CotizacionDTO dto = paraTaller(cotizacion);
         dto.setPrediccionAprobacion(calcularPrediccion(taller, orden, cotizacion));
         return dto;
     }
@@ -117,7 +121,8 @@ public class CotizacionService {
             Vehiculo vehiculo = orden.getVehiculoId() != null ? vehiculoService.obtenerEntidad(orden.getVehiculoId()) : null;
 
             java.util.Map<String, Object> p = new java.util.HashMap<>();
-            p.put("monto_repuestos", cot.getSubtotalRepuestos() != null ? cot.getSubtotalRepuestos() : 0.0);
+            p.put("monto_repuestos", (cot.getSubtotalRepuestos() != null ? cot.getSubtotalRepuestos() : 0.0)
+                    + (cot.getSubtotalRepuestosTaller() != null ? cot.getSubtotalRepuestosTaller() : 0.0));
             p.put("monto_mano_obra", cot.getSubtotalManoObra() != null ? cot.getSubtotalManoObra() : 0.0);
             p.put("total_con_iva", cot.getTotal() != null ? cot.getTotal() : 0.0);
 
@@ -150,7 +155,8 @@ public class CotizacionService {
     public CotizacionDTO emitir(String correoTaller, String ordenId, CrearCotizacionRequest r) {
         Taller taller = tallerOperativo(correoTaller);
         OrdenServicio orden = ordenCotizable(taller, ordenId);
-        Cotizacion cotizacion = armar(taller, orden, r);
+        List<String> topadas = new ArrayList<>();
+        Cotizacion cotizacion = armar(taller, orden, r, topadas);
 
         Cotizacion anterior = cotizacionRepository.findFirstByOrdenIdOrderByVersionDesc(orden.getId()).orElse(null);
         TokenSeguro.Generado token = TokenSeguro.generar();
@@ -162,22 +168,62 @@ public class CotizacionService {
         cotizacion.setEmitidaPor(taller.getNombre());
         cotizacion = cotizacionRepository.save(cotizacion);
 
-        OrdenServicio cotizada;
+        OrdenServicio guardada;
         try {
-            cotizada = transiciones.transicionar(orden, EstadoOrden.COTIZADA, actorTaller(taller),
+            guardada = transiciones.transicionar(orden, EstadoOrden.COTIZADA, actorTaller(taller),
                     "Cotización v" + cotizacion.getVersion() + " emitida", Criteria.where("tallerId").is(taller.getId()),
                     new Update().set("cotizacionId", cotizacion.getId()));
         } catch (RuntimeException e) {
             cotizacionRepository.delete(cotizacion);
             throw e;
         }
-        // Las versiones anteriores que siguieran abiertas dejan de valer
-        mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())
-                        .and("estado").is(Cotizacion.EMITIDA).and("id").ne(cotizacion.getId())),
-                new Update().set("estado", Cotizacion.REEMPLAZADA).set("tokenUsado", true), Cotizacion.class);
+        OrdenServicio cotizada = guardada;
+        Cotizacion emitida = cotizacion;
+        TrasGuardar.hacer(avisos, "La cotización v" + emitida.getVersion() + " de la solicitud " + orden.getId()
+                + " se emitió, pero no se pudo cerrar la anterior ni avisar al cliente.", () -> {
+            // Las versiones anteriores que siguieran abiertas dejan de valer
+            mongoTemplate.updateMulti(Query.query(Criteria.where("ordenId").is(orden.getId())
+                            .and("estado").is(Cotizacion.EMITIDA).and("id").ne(emitida.getId())),
+                    new Update().set("estado", Cotizacion.REEMPLAZADA).set("tokenUsado", true), Cotizacion.class);
+            avisos.cotizacionEmitida(cotizada, emitida, token.token());
+            if (!topadas.isEmpty()) avisos.precioTallerTopado(taller, emitida, topadas);
+        });
+        return paraTaller(cotizacion);
+    }
 
-        avisos.cotizacionEmitida(cotizada, cotizacion, token.token());
-        return CotizacionDTO.completa(cotizacion);
+    /**
+     * La tarifa original del diagnóstico cuando el cliente la pagó (la cotización solo guarda la parte aplicada);
+     * null si no está disponible o no se pagó. Es dato que ya vio el cliente en su orden y el taller en la suya.
+     */
+    private Double tarifaDiagnosticoDe(Cotizacion c) {
+        if (c.getAnticipoDiagnostico() == null || c.getAnticipoDiagnostico() <= 0) return null;
+        return ordenRepository.findById(c.getOrdenId())
+                .filter(o -> EstadoOrden.PAGO_PAGADO.equals(o.getPagoDiagnosticoEstado()) && o.getTarifaDiagnostico() != null)
+                .map(OrdenServicio::getTarifaDiagnostico)
+                .orElse(null);
+    }
+
+    /** La misma vista completa, con la tarifa del diagnóstico cuando la hay (para explicar el adelanto). */
+    private CotizacionDTO conTarifa(CotizacionDTO dto, Cotizacion c) {
+        dto.setDiagnosticoPagado(tarifaDiagnosticoDe(c));
+        return dto;
+    }
+
+    /** La vista completa más lo que recibirá el taller. El cliente nunca ve estos campos. */
+    private CotizacionDTO paraTaller(Cotizacion c) {
+        CotizacionDTO dto = CotizacionDTO.completa(c);
+        dto.setDiagnosticoPagado(tarifaDiagnosticoDe(c));
+        double manoObra = c.getSubtotalManoObra() != null ? c.getSubtotalManoObra() : 0;
+        double ivaManoObra = c.getIvaManoObra() != null ? c.getIvaManoObra() : Math.round(manoObra * c.pctManoObra() / 100.0);
+        // Sus repuestos son una venta suya: pagan comisión sobre el precio sin IVA y le llegan con su IVA
+        double piezas = c.getSubtotalRepuestosTaller() != null ? c.getSubtotalRepuestosTaller() : 0;
+        double ivaPiezas = c.getIvaRepuestosTaller() != null ? c.getIvaRepuestosTaller() : 0;
+        boolean seDescuenta = parametros.comisionRetenida();
+        double comision = Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(manoObra + piezas), parametros.comisionPct()));
+        dto.setComisionTaller(comision);
+        dto.setComisionSeDescuenta(seDescuenta);
+        dto.setRecibeTaller(manoObra + ivaManoObra + piezas + ivaPiezas - (seDescuenta ? comision : 0));
+        return dto;
     }
 
     // ─── Consulta con sesión ─────────────────────────────────────────────────
@@ -196,15 +242,50 @@ public class CotizacionService {
         }
         return cotizacionRepository.findByOrdenIdOrderByVersionDesc(orden.getId()).stream()
                 .filter(c -> !EstadoOrden.TALLER.equals(actor) || orden.getTallerId().equals(c.getTallerId()))
-                .map(CotizacionDTO::completa)
+                .map(c -> EstadoOrden.TALLER.equals(actor) ? paraTaller(c) : conTarifa(CotizacionDTO.completa(c), c))
                 .toList();
+    }
+
+    /**
+     * PDF de una cotización. Solo el cliente dueño de la cotización o el taller que la emitió; nadie más, ni otro
+     * taller ni el ADMIN. Cualquier otro recibe 404, para no revelar que la cotización existe.
+     */
+    public byte[] pdf(String correo, String cotizacionId) {
+        Cotizacion cotizacion = cotizacionRepository.findById(cotizacionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cotización no encontrada"));
+        Usuario usuario = usuarioService.obtenerPorCorreo(correo);
+        String actor = EstadoOrden.actorDeRol(usuario.getRol());
+        Taller taller = null;
+        boolean acceso;
+        if (EstadoOrden.CLIENTE.equals(actor)) {
+            acceso = usuario.getId().equals(cotizacion.getUsuarioId());
+        } else if (EstadoOrden.TALLER.equals(actor)) {
+            taller = tallerService.obtenerPorUsuario(correo);
+            acceso = taller.getId().equals(cotizacion.getTallerId());
+        } else {
+            acceso = false;
+        }
+        if (!acceso) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cotización no encontrada");
+        }
+        if (taller == null) taller = tallerDe(cotizacion);
+        return PdfCotizacionBuilder.construir(cotizacion, taller, tarifaDiagnosticoDe(cotizacion));
+    }
+
+    /** Taller de la cotización para los datos del PDF; si ya no existe, el PDF usa el nombre guardado en la cotización. */
+    private Taller tallerDe(Cotizacion cotizacion) {
+        try {
+            return cotizacion.getTallerId() != null ? tallerService.obtenerEntidad(cotizacion.getTallerId()) : null;
+        } catch (ResponseStatusException e) {
+            return null;
+        }
     }
 
     /** Todas las cotizaciones del taller de la sesión, la más reciente primero. El taller sale de la sesión, nunca de un parámetro. */
     public List<CotizacionDTO> delTaller(String correoTaller) {
         String tallerId = tallerService.obtenerPorUsuario(correoTaller).getId();
         return cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc(tallerId).stream()
-                .map(CotizacionDTO::completa)
+                .map(this::paraTaller)
                 .toList();
     }
 
@@ -219,14 +300,15 @@ public class CotizacionService {
         if (!CotizacionDTO.respondible(cotizacion)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta cotización ya no se puede responder");
         }
-        return CotizacionDTO.completa(aplicarRespuesta(cotizacion, r, false));
+        return conTarifa(CotizacionDTO.completa(aplicarRespuesta(cotizacion, r, false)), cotizacion);
     }
 
     // ─── Enlace del correo (sin sesión) ──────────────────────────────────────
 
     /** Detalle de la cotización del enlace. Error genérico si el token no sirve. */
     public CotizacionDTO consultarPublica(String token) {
-        return CotizacionDTO.publica(porToken(token));
+        Cotizacion cotizacion = porToken(token);
+        return conTarifa(CotizacionDTO.publica(cotizacion), cotizacion);
     }
 
     public CotizacionDTO responderPublica(RespuestaCotizacionRequest r) {
@@ -234,7 +316,7 @@ public class CotizacionService {
         if (!CotizacionDTO.respondible(cotizacion)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ENLACE_INVALIDO);
         }
-        return CotizacionDTO.publica(aplicarRespuesta(cotizacion, r, true));
+        return conTarifa(CotizacionDTO.publica(aplicarRespuesta(cotizacion, r, true)), cotizacion);
     }
 
     // ─── Vencimientos ────────────────────────────────────────────────────────
@@ -344,6 +426,7 @@ public class CotizacionService {
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Acción no válida");
         }
 
+        OrdenServicio movida;
         LocalDateTime ahora = LocalDateTime.now();
         Cotizacion marcada = mongoTemplate.findAndModify(
                 Query.query(Criteria.where("id").is(cotizacion.getId())
@@ -368,7 +451,7 @@ public class CotizacionService {
                     + (motivo.isBlank() ? "" : ": " + motivo);
             Update cambios = EstadoOrden.CANCELADA.equals(estadoOrden)
                     ? new Update().set("motivoCierre", "El cliente rechazó la cotización") : null;
-            transiciones.transicionar(orden, estadoOrden, actor, nota,
+            movida = transiciones.transicionar(orden, estadoOrden, actor, nota,
                     Criteria.where("cotizacionId").is(cotizacion.getId()), cambios);
         } catch (RuntimeException e) {
             mongoTemplate.updateFirst(Query.query(Criteria.where("id").is(cotizacion.getId()).and("estado").is(estadoCotizacion)),
@@ -382,8 +465,30 @@ public class CotizacionService {
         if (RespuestaCotizacionRequest.RECHAZAR.equals(accion)) {
             liquidacion.ordenCanceladaPorRechazoDeCotizacion(cotizacion.getOrdenId());
         }
-        avisos.cotizacionRespondida(marcada, respuesta, motivo);
+        // Sin saldo no hay pago que mueva la orden: la aprobación misma la lleva al taller
+        if (RespuestaCotizacionRequest.APROBAR.equals(accion) && sinSaldo(marcada)) {
+            OrdenServicio aprobada = movida;
+            TrasGuardar.hacer(avisos, "La cotización " + marcada.getId() + " no tiene saldo, pero la solicitud " + aprobada.getId()
+                    + " no pudo pasar al taller.", () -> pasarSinPago(aprobada, marcada));
+        }
+        String motivoAviso = motivo;
+        TrasGuardar.hacer(avisos, "La cotización " + marcada.getId() + " quedó " + respuesta + ", pero no se pudo avisar al taller.",
+                () -> avisos.cotizacionRespondida(marcada, respuesta, motivoAviso));
         return marcada;
+    }
+
+    /** El diagnóstico cubrió todo. El anticipo solo descuenta mano de obra: con saldo 0 no puede haber repuestos por pedir. */
+    static boolean sinSaldo(Cotizacion c) {
+        return c.getTotalAPagar() != null && c.getTotalAPagar() <= 0
+                && (c.getItems() == null || c.getItems().stream().noneMatch(i -> CotizacionItem.REPUESTO.equals(i.getTipo())));
+    }
+
+    /** Lo que haría el pago, sin pago: la orden queda lista para trabajar y el taller cobra el diagnóstico al entregar. */
+    public void pasarSinPago(OrdenServicio orden, Cotizacion c) {
+        OrdenServicio pagada = transiciones.transicionar(orden, EstadoOrden.PAGADA, Actor.SISTEMA,
+                "Sin saldo por pagar: el diagnóstico cubrió la cotización v" + c.getVersion(),
+                Criteria.where("cotizacionId").is(c.getId()), null);
+        transiciones.transicionar(pagada, EstadoOrden.REPUESTOS_RECIBIDOS, Actor.SISTEMA, "Cotización solo de mano de obra", null, null);
     }
 
     private Cotizacion porToken(String token) {
@@ -401,6 +506,11 @@ public class CotizacionService {
      * el buscador y con el precio actual de la tienda) y la mano de obra del pedido.
      */
     private Cotizacion armar(Taller taller, OrdenServicio orden, CrearCotizacionRequest r) {
+        return armar(taller, orden, r, new ArrayList<>());
+    }
+
+    /** topadas: los nombres de las piezas del inventario que se cotizaron al tope del precio público. */
+    private Cotizacion armar(Taller taller, OrdenServicio orden, CrearCotizacionRequest r, List<String> topadas) {
         List<CotizacionItem> items = new ArrayList<>();
         int diasEntrega = 0;
 
@@ -408,6 +518,10 @@ public class CotizacionService {
         if (!repuestos.isEmpty()) {
             Vehiculo vehiculo = vehiculoService.obtenerEntidad(orden.getVehiculoId());
             for (RepuestoSeleccionado rep : repuestos) {
+                if (rep.esDelTaller()) {
+                    items.add(itemDelTaller(rep, taller, vehiculo, topadas));
+                    continue;
+                }
                 Producto producto;
                 try {
                     producto = productoService.obtenerPorId(rep.getProductoId());
@@ -451,8 +565,8 @@ public class CotizacionService {
         Double tarifaHora = taller.getTarifaHora();
         for (CrearCotizacionRequest.ManoObra m : manoObra) {
             String descripcion = m.getDescripcion() != null ? m.getDescripcion().trim() : "";
-            if (descripcion.isBlank() || descripcion.length() > 200) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Describe cada trabajo de mano de obra (máx. 200 caracteres)");
+            if (descripcion.length() < MIN_TEXTO_TRABAJO || descripcion.length() > 200) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Describe cada trabajo de mano de obra (de 3 a 200 caracteres)");
             }
             if (CotizacionItem.POR_HORAS.equalsIgnoreCase(m.getModalidad())) {
                 double horas = m.getHoras() != null ? m.getHoras() : 0;
@@ -490,9 +604,11 @@ public class CotizacionService {
         // El anticipo solo existe si el cliente pagó el diagnóstico
         double anticipo = EstadoOrden.PAGO_PAGADO.equals(orden.getPagoDiagnosticoEstado()) && orden.getTarifaDiagnostico() != null
                 ? orden.getTarifaDiagnostico() : 0;
-        double ivaPct = parametros.ivaPct();
+        // Repuestos con el IVA global; mano de obra con el del taller (0 % si no es responsable de IVA)
+        double ivaRepuestosPct = parametros.ivaPct();
+        double ivaManoObraPct = IvaTaller.pct(taller, ivaRepuestosPct);
         double comisionPct = parametros.comisionPct();
-        CalculadoraCotizacion.Totales t = CalculadoraCotizacion.calcular(items, ivaPct, anticipo, comisionPct);
+        CalculadoraCotizacion.Totales t = CalculadoraCotizacion.calcular(items, ivaRepuestosPct, ivaManoObraPct, anticipo, comisionPct);
 
         return Cotizacion.builder()
                 .ordenId(orden.getId())
@@ -502,10 +618,15 @@ public class CotizacionService {
                 .vehiculoDescripcion(orden.getVehiculoDescripcion())
                 .items(items)
                 .subtotalRepuestos(t.subtotalRepuestos())
+                .subtotalRepuestosTaller(t.subtotalRepuestosTaller())
                 .subtotalManoObra(t.subtotalManoObra())
                 .subtotal(t.subtotal())
-                .ivaPct(ivaPct)
+                // El porcentaje único solo si los dos coinciden: así nadie lo lee como el IVA de toda la cotización
+                .ivaPct(ivaRepuestosPct == ivaManoObraPct ? ivaRepuestosPct : null)
+                .ivaRepuestosPct(ivaRepuestosPct)
+                .ivaManoObraPct(ivaManoObraPct)
                 .ivaRepuestos(t.ivaRepuestos())
+                .ivaRepuestosTaller(t.ivaRepuestosTaller())
                 .ivaManoObra(t.ivaManoObra())
                 .iva(t.iva())
                 .total(t.total())
@@ -517,6 +638,32 @@ public class CotizacionService {
                 .tiempoEstimadoHoras(tiempo)
                 .diasEntregaRepuestos(diasEntrega > 0 ? diasEntrega : null)
                 .observaciones(observaciones != null && !observaciones.isBlank() ? observaciones : null)
+                .build();
+    }
+
+    /** Línea de una pieza del inventario: vuelve a validarla y congela el precio de hoy, sin tienda ni producto. */
+    private CotizacionItem itemDelTaller(RepuestoSeleccionado rep, Taller taller, Vehiculo vehiculo, List<String> topadas) {
+        int cantidad = rep.getCantidad() != null ? rep.getCantidad() : 1;
+        OfertaRepuestoDTO oferta = buscador.ofertaDePieza(rep.getPiezaTallerId(), cantidad, taller, vehiculo);
+        if (oferta.isPrecioTopado()) topadas.add(oferta.getNombre());
+        if (oferta.isRequiereConfirmacion() && !Boolean.TRUE.equals(rep.getCompatibilidadConfirmada())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Falta confirmar la compatibilidad de \"" + oferta.getNombre() + "\": vuelve a elegir los repuestos");
+        }
+        if (oferta.getPrecio() == null || oferta.getPrecio() <= 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "\"" + oferta.getNombre() + "\" no tiene precio de venta en tu inventario");
+        }
+        return CotizacionItem.builder()
+                .tipo(CotizacionItem.REPUESTO)
+                .origen(CotizacionItem.ORIGEN_TALLER)
+                .piezaTallerId(rep.getPiezaTallerId())
+                .descripcion(rep.getDescripcion() != null ? rep.getDescripcion() : oferta.getNombre())
+                .productoNombre(oferta.getNombre())
+                .marca(oferta.getMarca())
+                .referencia(oferta.getReferencia())
+                .disponibilidad(OfertaRepuestoDTO.DISPONIBLE)
+                .cantidad(cantidad)
+                .precioUnitario(oferta.getPrecio())
                 .build();
     }
 

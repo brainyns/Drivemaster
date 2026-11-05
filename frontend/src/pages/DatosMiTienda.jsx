@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { actualizarMiTienda, guardarTelefonoTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
+import { actualizarMiTienda, guardarCuentaBancariaTienda, guardarHorarioTienda, guardarTelefonoTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
+import HorarioSemanal, { HorarioResumen } from "../components/servicio/HorarioSemanal";
+import { copiarLunesAHabiles, errorDia, franjasDesdeSemana, semanaDesdeFranjas, semanaPorDefecto } from "./taller/horarioTaller";
 import LogoEditable from "../components/ui/LogoEditable";
 import { cambiarResumenSemanal, probarResumenSemanal, resumenSemanal } from "../services/informesTiendaService";
 import { formatFecha, formatPrecio } from "../components/servicio/estadosServicio";
@@ -8,18 +10,23 @@ import TiendaVendedor from "../components/marketplace/TiendaVendedor";
 import CabeceraNegocio from "../components/ui/CabeceraNegocio";
 import VistaPrevia from "../components/ui/VistaPrevia";
 import SeccionEditable from "../components/ui/SeccionEditable";
+import FormCuentaBancaria from "../components/ui/FormCuentaBancaria";
 import SeccionContacto from "../components/ui/SeccionContacto";
 import ChipEstado from "../components/ui/ChipEstado";
 import Campo from "../components/ui/Campo";
 import Dato from "../components/ui/Dato";
+import ValorSensible from "../components/ui/ValorSensible";
 import PieFormulario from "../components/ui/PieFormulario";
 import Alerta from "../components/ui/Alerta";
+import { avisar } from "../components/ui/avisar";
 import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
 import {
   COSTO_ENVIO_MAX, comoLaVeElCliente, completitudTienda, errorCostoEnvio, errorHorarioTienda, erroresUbicacion,
+  horarioSoloTexto,
 } from "./tienda/perfilTienda";
 import "../css/mi-tienda.css";
+import { textoError } from "../utils/errores";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
 const ESTADO = {
@@ -43,7 +50,7 @@ function useGuardar(token, onGuardado) {
     try {
       onGuardado(await actualizarMiTienda(token, datos));
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
       setGuardando(false);
     }
   };
@@ -108,26 +115,44 @@ function FormUbicacion({ tienda, token, onGuardado, onCancelar }) {
   );
 }
 
+/**
+ * Horario por días con el mismo editor y las mismas reglas que el del taller (HorarioSemanal): abierto o cerrado y sus
+ * franjas. Se guarda la semana completa; el backend regenera el texto que ven el catálogo y los pedidos con retiro.
+ */
 function FormHorario({ tienda, token, onGuardado, onCancelar }) {
-  const [horario, setHorario] = useState(tienda.horario || "");
-  const [errorCampo, setErrorCampo] = useState(null);
-  const { guardar, guardando, error } = useGuardar(token, onGuardado);
+  const [semana, setSemana] = useState(() => semanaDesdeFranjas(tienda.horarioSemanal) || semanaPorDefecto());
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
 
-  const enviar = (e) => {
+  const enviar = async (e) => {
     e.preventDefault();
-    const err = errorHorarioTienda(horario);
-    setErrorCampo(err);
-    if (!err) guardar({ horario: horario.trim() });
+    if (guardando) return;
+    const err = errorHorarioTienda(semana, errorDia);
+    if (err) { setError(err); return; }
+    setGuardando(true);
+    setError(null);
+    try {
+      onGuardado(await guardarHorarioTienda(token, franjasDesdeSemana(semana)));
+    } catch (er) {
+      setError(textoError(er)); // la semana editada se conserva
+      setGuardando(false);
+    }
   };
 
   return (
     <form className="ui-form" onSubmit={enviar} noValidate>
-      <Campo id="mtd-horario-texto" label="Horario de atención" error={errorCampo}
-        ayuda="El cliente lo ve en cada producto tuyo y lo necesita para pasar a retirar.">
-        <textarea className="ui-field__input" rows={3} autoFocus value={horario}
-          placeholder={"Lunes a viernes: 8:00 a. m. – 6:00 p. m.\nSábados: 8:00 a. m. – 1:00 p. m."}
-          onChange={(e) => { setHorario(e.target.value); if (errorCampo) setErrorCampo(null); }} />
-      </Campo>
+      {horarioSoloTexto(tienda) && (
+        <Alerta tono="info">
+          Antes escribiste: <q>{tienda.horario}</q>. Te proponemos un horario por días; ajústalo para que coincida.
+        </Alerta>
+      )}
+      <div className="mt-horario__barra">
+        <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico"
+          onClick={() => { setSemana(copiarLunesAHabiles(semana)); setError(null); }}>
+          Copiar lunes a todos los días hábiles
+        </button>
+      </div>
+      <HorarioSemanal semana={semana} onCambiar={(sem) => { setSemana(sem); setError(null); }} />
       <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar horario" />
     </form>
   );
@@ -167,6 +192,32 @@ function FormEntrega({ tienda, token, onGuardado, onCancelar }) {
   );
 }
 
+/** Descuento sobre el precio público para talleres aprobados que compran en el catálogo. Los clientes no lo ven. */
+function FormDescuentoTalleres({ tienda, token, onGuardado, onCancelar }) {
+  const [pct, setPct] = useState(String(tienda.descuentoTalleresPct ?? 20));
+  const [errorCampo, setErrorCampo] = useState(null);
+  const { guardar, guardando, error } = useGuardar(token, onGuardado);
+
+  const enviar = (e) => {
+    e.preventDefault();
+    const n = Number(String(pct).replace(",", "."));
+    const err = pct === "" || !Number.isFinite(n) || n < 0 || n > 50 ? "Escribe un descuento de 0 a 50 %." : null;
+    setErrorCampo(err);
+    if (!err) guardar({ descuentoTalleresPct: n });
+  };
+
+  return (
+    <form className="ui-form" onSubmit={enviar} noValidate>
+      <Campo id="mtd-descuento" label="Descuento para talleres (%)" error={errorCampo}
+        ayuda="De 0 a 50 %. Los talleres aprobados ven y pagan tu precio con este descuento; tu comisión es sobre lo que pagan. Con 0 % pagan el precio público.">
+        <input className="ui-field__input ui-form__corto" type="number" inputMode="decimal" min="0" max="50" step="0.5" autoFocus
+          value={pct} onChange={(e) => { setPct(e.target.value); if (errorCampo) setErrorCampo(null); }} />
+      </Campo>
+      <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar descuento" />
+    </form>
+  );
+}
+
 /** Interruptor del resumen semanal por correo (lunes 7:00) y envío de prueba al correo del dueño. */
 function ResumenSemanal({ token }) {
   const [activo, setActivo] = useState(null);
@@ -177,14 +228,14 @@ function ResumenSemanal({ token }) {
     let vivo = true;
     resumenSemanal(token)
       .then((r) => { if (vivo) setActivo(r.activo); })
-      .catch((e) => { if (vivo) setAviso({ error: true, texto: e.message }); });
+      .catch((e) => { if (vivo) setAviso({ error: true, texto: textoError(e) }); });
     return () => { vivo = false; };
   }, [token]);
 
   const ejecutar = async (accion) => {
     setOcupado(true);
     setAviso(null);
-    try { await accion(); } catch (e) { setAviso({ error: true, texto: e.message }); } finally { setOcupado(false); }
+    try { await accion(); } catch (e) { setAviso({ error: true, texto: textoError(e) }); } finally { setOcupado(false); }
   };
 
   const cambiar = (e) => ejecutar(async () => {
@@ -214,14 +265,13 @@ function ResumenSemanal({ token }) {
 
 /**
  * Mi tienda: identidad, qué tan completo está el perfil y cada sección editable por separado. Sin ciudad, dirección
- * y horario los productos no aparecen en el catálogo. Lo administrativo (nombre, NIT, plan) se ve pero no se edita.
+ * y horario los productos no aparecen en el catálogo. Lo administrativo (nombre, NIT) se ve pero no se edita.
  */
 export default function DatosMiTienda({ token, onGuardado }) {
   const [tienda, setTienda] = useState(null);
   const [error, setError] = useState(null);
   const [reintentando, setReintentando] = useState(false);
-  const [editando, setEditando] = useState(null); // "ubicacion" | "horario" | "entrega" | "contacto"
-  const [aviso, setAviso] = useState(null); // { seccion, texto }
+  const [editando, setEditando] = useState(null); // "ubicacion" | "horario" | "entrega" | "talleres" | "contacto"
   const [avisoLogo, setAvisoLogo] = useState(null); // { tono, texto }
 
   const cargar = useCallback(async () => {
@@ -229,7 +279,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
       setTienda(await miTienda(token));
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     }
   }, [token]);
 
@@ -254,17 +304,14 @@ export default function DatosMiTienda({ token, onGuardado }) {
   const estado = ESTADO[t.estadoAprobacion] || ESTADO.APROBADO;
   const activa = t.activo !== false;
 
-  const abrir = (seccion) => { setAviso(null); setEditando(seccion); };
+  const abrir = (seccion) => setEditando(seccion);
   const cerrar = () => setEditando(null);
   const guardado = (seccion, texto) => (actualizada) => {
     setTienda(actualizada);
     onGuardado?.(actualizada);
     setEditando(null);
-    setAviso({ seccion, texto });
+    avisar(texto);
   };
-  const avisoDe = (seccion) => aviso?.seccion === seccion && (
-    <Alerta tono="ok" onCerrar={() => setAviso(null)}>{aviso.texto}</Alerta>
-  );
   // Desde "lo que falta": lleva a la sección y abre su edición
   const resolver = (item) => {
     document.getElementById(item.seccion)?.scrollIntoView({
@@ -291,11 +338,6 @@ export default function DatosMiTienda({ token, onGuardado }) {
             <ChipEstado tono={estado.tono}>{estado.texto}</ChipEstado>
             <ChipEstado tono={activa ? "ok" : "apagado"}>{activa ? "Activa" : "Inactiva"}</ChipEstado>
             <ChipEstado tono={t.datosCompletos ? "ok" : "aviso"}>{t.datosCompletos ? "Visible en el catálogo" : "Oculta del catálogo"}</ChipEstado>
-            {t.planActual && (
-              <ChipEstado tono="acento">
-                Plan {t.planActual.toLowerCase()}{t.planVence ? ` hasta ${formatFecha(t.planVence)}` : ""}
-              </ChipEstado>
-            )}
           </>
         )}
         meta={(
@@ -321,13 +363,44 @@ export default function DatosMiTienda({ token, onGuardado }) {
               <Dato etiqueta="Nombre de la tienda">{t.nombre}</Dato>
               <Dato etiqueta="NIT">{t.nit}</Dato>
               <Dato etiqueta="Fecha de registro">{t.fechaRegistro && formatFecha(t.fechaRegistro)}</Dato>
-              <Dato etiqueta="Plan">{t.planActual && `${t.planActual.toLowerCase()}${t.planVence ? `, vence el ${formatFecha(t.planVence)}` : ""}`}</Dato>
             </dl>
+          </SeccionEditable>
+
+          <SeccionEditable id="mtd-cuenta" icono="card" titulo="Cuenta bancaria para transferencias"
+            descripcion="Cuenta donde recibirás el pago de tus ventas de repuestos."
+            onEditar={() => abrir("cuenta")}
+            textoEditar={t.cuentaBancaria ? "Editar cuenta" : "Registrar cuenta"}
+            editando={editando === "cuenta"}>
+            {editando === "cuenta" ? (
+              <FormCuentaBancaria
+                cuenta={t.cuentaBancaria}
+                onCancelar={cerrar}
+                onGuardar={async (datos) => {
+                  const res = await guardarCuentaBancariaTienda(token, datos);
+                  guardado("cuenta", "Cuenta bancaria guardada. Las transferencias se realizarán a esta cuenta.")(res);
+                }}
+              />
+            ) : t.cuentaBancaria ? (
+              <dl className="ui-datos">
+                <Dato etiqueta="Entidad bancaria">{t.cuentaBancaria.banco}</Dato>
+                <Dato etiqueta="Tipo de cuenta">{t.cuentaBancaria.tipoCuenta === "CORRIENTE" ? "Cuenta Corriente" : "Cuenta de Ahorros"}</Dato>
+                <Dato etiqueta="Número de cuenta"><ValorSensible valor={t.cuentaBancaria.numeroCuenta} etiqueta="el número de cuenta" /></Dato>
+                <Dato etiqueta="Titular">{t.cuentaBancaria.titularNombre}</Dato>
+                <Dato etiqueta="Documento"><ValorSensible valor={t.cuentaBancaria.titularDocumentoNumero} prefijo={t.cuentaBancaria.titularDocumentoTipo} etiqueta="el documento" /></Dato>
+                {t.cuentaBancaria.fechaActualizacion && (
+                  <Dato etiqueta="Última actualización">{formatFecha(t.cuentaBancaria.fechaActualizacion)}</Dato>
+                )}
+              </dl>
+            ) : (
+              <Alerta tono="aviso">
+                Aún no has registrado tu cuenta bancaria. Es indispensable para recibir tus pagos.
+              </Alerta>
+            )}
           </SeccionEditable>
 
           <SeccionEditable id="mtd-ubicacion" icono="pin" titulo="Ubicación"
             descripcion="Donde retiran los clientes. Ciudad y dirección son obligatorias para vender en el catálogo."
-            onEditar={() => abrir("ubicacion")} editando={editando === "ubicacion"} aviso={avisoDe("ubicacion")}>
+            onEditar={() => abrir("ubicacion")} editando={editando === "ubicacion"}>
             {editando === "ubicacion" ? (
               <FormUbicacion tienda={t} token={token} onCancelar={cerrar}
                 onGuardado={guardado("ubicacion", "Ubicación guardada.")} />
@@ -347,20 +420,28 @@ export default function DatosMiTienda({ token, onGuardado }) {
 
           <SeccionEditable id="mtd-horario" icono="clock" titulo="Horario de atención"
             descripcion="Obligatorio para vender: el cliente lo ve en cada producto."
-            onEditar={() => abrir("horario")} textoEditar={t.horario ? "Editar" : "Agregar horario"}
-            editando={editando === "horario"} aviso={avisoDe("horario")}>
+            onEditar={() => abrir("horario")} textoEditar={horarioSoloTexto(t) ? "Configurar por días" : t.horario ? "Editar" : "Agregar horario"}
+            editando={editando === "horario"}>
             {editando === "horario" ? (
               <FormHorario tienda={t} token={token} onCancelar={cerrar} onGuardado={guardado("horario", "Horario guardado.")} />
+            ) : semanaDesdeFranjas(t.horarioSemanal) ? (
+              <HorarioResumen semana={semanaDesdeFranjas(t.horarioSemanal)} />
             ) : t.horario ? (
-              <p className="ui-texto-pre">{t.horario}</p>
+              <>
+                <p className="ui-texto-pre">{t.horario}</p>
+                <Alerta tono="aviso">
+                  Tu horario está en texto libre. Configúralo por días: así el cliente ve exactamente cuándo abres, y el horario
+                  sigue siendo obligatorio para vender.
+                </Alerta>
+              </>
             ) : (
-              <p className="ui-datos__falta">Aún no escribes tu horario.</p>
+              <p className="ui-datos__falta">Aún no configuras tu horario.</p>
             )}
           </SeccionEditable>
 
           <SeccionEditable id="mtd-entrega" icono="box" titulo="Entrega y retiro"
             descripcion="Cómo reciben los clientes lo que compran en el catálogo."
-            onEditar={() => abrir("entrega")} editando={editando === "entrega"} aviso={avisoDe("entrega")}>
+            onEditar={() => abrir("entrega")} editando={editando === "entrega"}>
             {editando === "entrega" ? (
               <FormEntrega tienda={t} token={token} onCancelar={cerrar} onGuardado={guardado("entrega", "Entrega guardada.")} />
             ) : (
@@ -375,6 +456,22 @@ export default function DatosMiTienda({ token, onGuardado }) {
             )}
           </SeccionEditable>
 
+          <SeccionEditable id="mtd-talleres" icono="tool" titulo="Precio para talleres"
+            descripcion="Los talleres aprobados compran tus repuestos para su inventario con este descuento."
+            onEditar={() => abrir("talleres")} editando={editando === "talleres"}>
+            {editando === "talleres" ? (
+              <FormDescuentoTalleres tienda={t} token={token} onCancelar={cerrar} onGuardado={guardado("talleres", "Descuento para talleres guardado.")} />
+            ) : (
+              <dl className="ui-datos">
+                <Dato etiqueta="Descuento">
+                  {(t.descuentoTalleresPct ?? 20) > 0
+                    ? <>{String(t.descuentoTalleresPct ?? 20).replace(".", ",")} % <span className="mtd-detalle">· los clientes siguen viendo tu precio público</span></>
+                    : <ChipEstado tono="apagado">Sin descuento: pagan el precio público</ChipEstado>}
+                </Dato>
+              </dl>
+            )}
+          </SeccionEditable>
+
           <SeccionContacto id="mtd-contacto"
             descripcion="Por aquí te escriben DriveMaster y los talleres que te compran."
             telefono={t.telefono} correo={t.correoUsuario || t.correoContacto}
@@ -382,7 +479,7 @@ export default function DatosMiTienda({ token, onGuardado }) {
             guardarTelefono={(numero) => guardarTelefonoTienda(token, numero)}
             onTelefonoGuardado={guardado("contacto", "Teléfono guardado.")}
             editandoTelefono={editando === "contacto"} onEditarTelefono={() => abrir("contacto")} onCerrarTelefono={cerrar}
-            aviso={avisoDe("contacto")}
+           
             onCorreoCambiado={(nuevo) => {
               // El backend también mueve el correo de contacto si era el de la cuenta
               const contacto = !t.correoContacto || t.correoContacto.toLowerCase() === (t.correoUsuario || "").toLowerCase()

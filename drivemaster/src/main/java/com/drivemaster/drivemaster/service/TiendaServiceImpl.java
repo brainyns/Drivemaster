@@ -1,7 +1,10 @@
 package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.AprobacionRequest;
+import com.drivemaster.drivemaster.dto.CuentaBancariaDTO;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
+import com.drivemaster.drivemaster.model.CuentaBancaria;
+import com.drivemaster.drivemaster.util.ValidacionCuentaBancaria;
 import com.drivemaster.drivemaster.dto.TiendaDTO;
 import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.Tienda;
@@ -40,6 +43,7 @@ public class TiendaServiceImpl implements TiendaService {
     @Override
     public TiendaDTO registrar(RegistroNegocioRequest r) {
         cuentaNegocioService.validarRegistro(r);
+        cuentaNegocioService.validarSinDuplicados(CuentaNegocioService.TIENDA, r);
         // Una tienda vende al público (retiro en su local): el horario es tan obligatorio como la dirección
         if (r.getHorario() == null || r.getHorario().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El horario de atención de la tienda es obligatorio");
@@ -92,9 +96,10 @@ public class TiendaServiceImpl implements TiendaService {
         boolean aprobado = request.getAprobado();
 
         if (aprobado) {
-            // Primero la suscripción: si el plan no es válido, la tienda no queda aprobada a medias.
-            suscripcionService.activar(SuscripcionService.ACTOR_TIENDA, tienda.getId(),
-                    request.getPlanCodigo(), correoAdmin);
+            // Primero la suscripción (si están en uso): si el plan no es válido, no queda aprobada a medias
+            if (suscripcionService.habilitadas()) {
+                suscripcionService.activar(SuscripcionService.ACTOR_TIENDA, tienda.getId(), request.getPlanCodigo(), correoAdmin);
+            }
             tienda.setEstadoAprobacion(EstadoAprobacion.APROBADO);
             tienda.setMotivoRechazo(null);
             tienda.setActivo(true);
@@ -125,6 +130,15 @@ public class TiendaServiceImpl implements TiendaService {
         return toDTO(obtenerPorUsuario(correoUsuario));
     }
 
+    @Override
+    public TiendaDTO guardarCuentaBancaria(String correoUsuario, CuentaBancariaDTO dto) {
+        Tienda tienda = obtenerPorUsuario(correoUsuario);
+        CuentaBancaria cb = ValidacionCuentaBancaria.validarYConvertir(dto);
+        tienda.setCuentaBancaria(cb);
+        tienda = tiendaRepository.save(tienda);
+        return toDTO(tienda);
+    }
+
     /** El dueño actualiza los datos de contacto y ubicación. Nombre y NIT los cambia el ADMIN. */
     @Override
     public TiendaDTO actualizarMiTienda(String correoUsuario, RegistroNegocioRequest r) {
@@ -135,6 +149,20 @@ public class TiendaServiceImpl implements TiendaService {
     public TiendaDTO actualizarTelefono(String correoUsuario, String telefono) {
         Tienda tienda = obtenerPorUsuario(correoUsuario);
         tienda.setTelefono(TelefonoColombia.validar(telefono));
+        return toDTO(tiendaRepository.save(tienda));
+    }
+
+    @Override
+    public TiendaDTO guardarHorario(String correoUsuario, java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> franjas) {
+        Tienda tienda = obtenerPorUsuario(correoUsuario);
+        var porDia = com.drivemaster.drivemaster.util.HorarioSemanal.validar(franjas);
+        if (porDia.values().stream().allMatch(java.util.List::isEmpty)) {
+            // El horario es obligatorio para vender: una semana toda cerrada es como no tenerlo
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Abre al menos un día: el cliente necesita saber cuándo pasar a retirar");
+        }
+        tienda.setHorarioSemanal(com.drivemaster.drivemaster.util.HorarioSemanal.semanaCompleta(porDia));
+        // El texto sigue llenándose: lo leen el catálogo, los pedidos con retiro (tiendaHorario) y tieneDatosCompletos
+        tienda.setHorario(com.drivemaster.drivemaster.util.HorarioSemanal.resumen(porDia));
         return toDTO(tiendaRepository.save(tienda));
     }
 
@@ -155,6 +183,7 @@ public class TiendaServiceImpl implements TiendaService {
             validarCostoEnvio(r);
             tienda.setCostoEnvio(costoEnvioDe(r));
         }
+        if (r.getDescuentoTalleresPct() != null) tienda.setDescuentoTalleresPct(com.drivemaster.drivemaster.util.DescuentoTaller.validar(r.getDescuentoTalleresPct()));
         return tienda;
     }
 
@@ -227,13 +256,16 @@ public class TiendaServiceImpl implements TiendaService {
                 .motivoRechazo(t.getMotivoRechazo())
                 .activo(t.getActivo())
                 .horario(t.getHorario())
+                .horarioSemanal(t.getHorarioSemanal())
                 .costoEnvio(t.getCostoEnvio())
+                .descuentoTalleresPct(com.drivemaster.drivemaster.util.DescuentoTaller.pct(t))
                 .datosCompletos(t.tieneDatosCompletos())
                 .fechaRegistro(t.getFechaRegistro())
                 .fechaAprobacion(t.getFechaAprobacion())
                 .planActual(plan != null ? plan.getPlanCodigo() : null)
                 .planVence(plan != null ? plan.getFechaFin() : null)
                 .logoUrl(t.getLogoUrl())
+                .cuentaBancaria(ValidacionCuentaBancaria.toDTO(t.getCuentaBancaria()))
                 .build();
     }
 }

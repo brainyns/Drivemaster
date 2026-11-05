@@ -30,7 +30,7 @@ const ESTADOS_COMPRA = {
   COMPLETADA: { label: "Completada", tono: "ok" },
   ENTREGADO: { label: "Entregado", tono: "ok" },
   EN_CAMINO: { label: "En camino", tono: "aviso" },
-  ANULADA: { label: "Anulada", tono: "neutro" },
+  ANULADA: { label: "Cancelada", tono: "neutro" },
   CANCELADA: { label: "Cancelada", tono: "error" },
   PENDIENTE_PAGO: { label: "Pendiente de pago", tono: "aviso" },
 };
@@ -104,13 +104,6 @@ function CitasAgendadas({ ordenes, ahora }) {
               <span>{o.tallerNombre} · {o.productoNombre}</span>
               <Pildora catalogo={ESTADOS_ORDEN} estado={o.estado} className="mis-citas-estado" />
             </div>
-            <button
-              className="mis-citas-cancelar"
-              disabled={!["SOLICITADA", "COTIZADA", "PAGADA"].includes(o.estado)}
-              onClick={() => window.alert("La cancelación de citas aún no está habilitada. Contacta al taller.")}
-            >
-              ¿Necesitas cambiarla?
-            </button>
           </div>
         ))}
       </div>
@@ -147,7 +140,7 @@ export default function MisPedidos({ onVolver }) {
         setCargando(false);
       }
     })();
-  }, []);
+  }, [token]);
 
   // Las ventas de taller se muestran en su propia sección usando el estado real
   // de la orden, así que se excluyen del historial de compras de producto.
@@ -162,7 +155,7 @@ export default function MisPedidos({ onVolver }) {
     <div className="mis-pedidos-page">
       <div className="mis-pedidos-header">
         <h1>Historial de compras</h1>
-        <button className="mis-pedidos-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver al catálogo</button>
+        <button className="mis-pedidos-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver a mi perfil</button>
       </div>
 
       {cargando ? (

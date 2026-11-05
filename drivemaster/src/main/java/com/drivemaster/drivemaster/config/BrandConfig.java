@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
  *
  * Los constructores de correos y PDF son estáticos, por eso los valores se publican en campos
  * estáticos al arrancar. Sin Spring (tests) quedan los valores por defecto, que son los mismos
- * de application.properties.
+ * de application.properties, salvo el logo: sin Spring no hay logo y los tests no salen a internet.
  */
 @Component
 public class BrandConfig {
@@ -34,38 +34,49 @@ public class BrandConfig {
     private static final int MAX_LOGO_BYTES = 2 * 1024 * 1024;
     /** Si el logo no se pudo descargar para el PDF, se vuelve a intentar pasado este tiempo. */
     private static final long REINTENTO_LOGO_MS = 5 * 60 * 1000L;
+    /** Logo recortado, el que se usa si BRAND_LOGO_URL no está o viene vacía (docker-compose la pasa vacía). */
+    static final String LOGO_POR_DEFECTO = "https://drivemaster-orcin.vercel.app/images/Drivemaster_logo_correo.png";
+    /** Se usa mientras el logo recortado no esté publicado: un correo no puede cambiar de imagen si la suya falla. */
+    static final String LOGO_RESPALDO = "https://drivemaster-orcin.vercel.app/images/Drivemaster_logo.png";
 
     private static volatile String nombre = "DriveMaster";
     private static volatile String colorPrimario = "#F28C28";
-    private static volatile String colorSobrePrimario = "#FFFFFF";
+    private static volatile String colorSobrePrimario = "#17191C";
     private static volatile String colorTexto = "#17191C";
     private static volatile String logoUrl = "";
-    private static volatile int logoAncho = 160;
+    private static volatile int logoAncho = 80;
 
     private static volatile byte[] logoBytes;
     private static volatile long ultimoFalloLogo;
+    /** true mientras se usa el respaldo y falta confirmar que el logo recortado ya está publicado. */
+    private static volatile boolean confirmarLogoNuevo;
+    private static volatile long ultimaRevisionLogo;
 
     public BrandConfig(@Value("${brand.name:DriveMaster}") String nombre,
                        @Value("${brand.color.primary:#F28C28}") String colorPrimario,
-                       @Value("${brand.color.on-primary:#FFFFFF}") String colorSobrePrimario,
+                       @Value("${brand.color.on-primary:#17191C}") String colorSobrePrimario,
                        @Value("${brand.color.text:#17191C}") String colorTexto,
                        @Value("${brand.logo-url:}") String logoUrl,
-                       @Value("${brand.logo-width:160}") String logoAncho) {
+                       @Value("${brand.logo-width:80}") String logoAncho) {
         BrandConfig.logoAncho = anchoValido(logoAncho);
         if (nombre != null && !nombre.isBlank()) BrandConfig.nombre = nombre.trim();
         BrandConfig.colorPrimario = hexValido(colorPrimario, BrandConfig.colorPrimario);
         BrandConfig.colorSobrePrimario = hexValido(colorSobrePrimario, BrandConfig.colorSobrePrimario);
         BrandConfig.colorTexto = hexValido(colorTexto, BrandConfig.colorTexto);
-        String url = logoUrl != null ? logoUrl.trim() : "";
+        boolean porDefecto = logoUrl == null || logoUrl.isBlank();
+        String url = porDefecto ? LOGO_RESPALDO : logoUrl.trim();
         if (!url.isEmpty() && !url.startsWith("https://") && !url.startsWith("http://")) {
             log.warn("BRAND_LOGO_URL no es una URL http(s); los correos mostrarán el nombre en texto.");
             url = "";
         }
         BrandConfig.logoUrl = url;
         BrandConfig.logoBytes = null;
+        BrandConfig.confirmarLogoNuevo = porDefecto;
+        BrandConfig.ultimaRevisionLogo = 0;
+        revisarLogoNuevo();
     }
 
-    /** Ancho del logo en el correo entre 40 y 300 px; vacío o inválido: 160. */
+    /** Ancho del logo en el correo entre 40 y 300 px; vacío o inválido: 80. */
     private static int anchoValido(String valor) {
         try {
             int ancho = Integer.parseInt(valor == null ? "" : valor.trim());
@@ -73,8 +84,8 @@ public class BrandConfig {
         } catch (NumberFormatException e) {
             // se usa el valor por defecto
         }
-        if (valor != null && !valor.isBlank()) log.warn("BRAND_LOGO_WIDTH inválido '{}'; se usa 160.", valor);
-        return 160;
+        if (valor != null && !valor.isBlank()) log.warn("BRAND_LOGO_WIDTH inválido '{}'; se usa 80.", valor);
+        return 80;
     }
 
     private static String hexValido(String valor, String porDefecto) {
@@ -88,7 +99,7 @@ public class BrandConfig {
     /** Color principal (--primary): encabezados, botones, franjas y líneas. */
     public static String colorPrimario() { return colorPrimario; }
 
-    /** Texto sobre el color principal: blanco. */
+    /** Texto sobre el color principal: oscuro, como --on-primary en la web. */
     public static String colorSobrePrimario() { return colorSobrePrimario; }
 
     /** Texto oscuro del nombre de la marca en los encabezados (como el texto de la página). */
@@ -108,8 +119,50 @@ public class BrandConfig {
 
     public static Color colorPrimarioAwt() { return Color.decode(colorPrimario); }
 
-    /** URL pública del logo; vacía si no está configurada. */
-    public static String logoUrl() { return logoUrl; }
+    /** URL pública del logo; vacía solo sin Spring (tests). */
+    public static String logoUrl() {
+        revisarLogoNuevo();
+        return logoUrl;
+    }
+
+    /**
+     * Mientras se use el respaldo, comprueba en segundo plano (como mucho cada 5 minutos) si el logo
+     * recortado ya está publicado y, en cuanto lo esté, pasa a usarlo. Nunca demora un correo.
+     */
+    private static void revisarLogoNuevo() {
+        long ahora = System.currentTimeMillis();
+        if (!confirmarLogoNuevo || ahora - ultimaRevisionLogo < REINTENTO_LOGO_MS) return;
+        ultimaRevisionLogo = ahora;
+        Thread.ofVirtual().start(() -> {
+            if (publicado(LOGO_POR_DEFECTO) && confirmarLogoNuevo) {
+                logoUrl = LOGO_POR_DEFECTO;
+                logoBytes = null;
+                confirmarLogoNuevo = false;
+                log.info("Logo recortado publicado: los correos y PDF pasan a usarlo.");
+            }
+        });
+    }
+
+    /**
+     * true si la URL entrega una imagen. No basta el 200: Vercel responde con index.html (text/html)
+     * cualquier ruta que no exista, y en el correo eso sería una imagen rota.
+     */
+    static boolean publicado(String url) {
+        try {
+            HttpClient cliente = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3))
+                    .followRedirects(HttpClient.Redirect.NORMAL).build();
+            HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(5))
+                    .method("HEAD", HttpRequest.BodyPublishers.noBody()).build();
+            HttpResponse<Void> resp = cliente.send(req, HttpResponse.BodyHandlers.discarding());
+            return resp.statusCode() == 200
+                    && resp.headers().firstValue("Content-Type").orElse("").toLowerCase().startsWith("image/");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     /** Ancho del logo en el correo (px). */
     public static int logoAncho() { return logoAncho; }

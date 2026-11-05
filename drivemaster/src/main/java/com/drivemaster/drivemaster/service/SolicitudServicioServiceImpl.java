@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.util.Motivos;
 import com.drivemaster.drivemaster.dto.AceptarSolicitudRequest;
 import com.drivemaster.drivemaster.dto.CrearSolicitudServicioRequest;
 import com.drivemaster.drivemaster.dto.DiagnosticoRequest;
@@ -21,6 +22,8 @@ import com.drivemaster.drivemaster.repository.OrdenServicioRepository;
 import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.service.TransicionOrdenService.Actor;
 import com.drivemaster.drivemaster.util.Coordenadas;
+import com.drivemaster.drivemaster.util.IvaTaller;
+import com.drivemaster.drivemaster.util.PlazoHabil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -50,6 +53,9 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private static final int MAX_SINTOMAS = 1500;
     private static final int MAX_TEXTO_DIAGNOSTICO = 3000;
     private static final int MAX_FALLAS = 20;
+    private static final int MAX_TEXTO_FALLA = 200;
+    private static final int MAX_OBSERVACIONES = 1000;
+    private static final int MAX_DESCRIPCION_REPUESTO = 120;
     private static final int MAX_FOTOS_DIAGNOSTICO = 8;
     private static final int MAX_REPUESTOS = 30;
     private static final int MAX_CANTIDAD = 99;
@@ -71,6 +77,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private final LiquidacionService liquidacion;
     private final CalificacionTallerService calificaciones;
     private final HorarioTallerService horarios;
+    private final ReglasTrabajoTaller reglas;
 
     public SolicitudServicioServiceImpl(OrdenServicioRepository ordenRepository,
                                         TallerRepository tallerRepository,
@@ -86,8 +93,10 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                                         BuscadorRepuestosService buscador,
                                         LiquidacionService liquidacion,
                                         CalificacionTallerService calificaciones,
-                                        HorarioTallerService horarios) {
+                                        HorarioTallerService horarios,
+                                        ReglasTrabajoTaller reglas) {
         this.horarios = horarios;
+        this.reglas = reglas;
         this.calificaciones = calificaciones;
         this.liquidacion = liquidacion;
         this.productoService = productoService;
@@ -225,14 +234,15 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         }
         if (!CANCELABLES_POR_CLIENTE.contains(orden.getEstado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "La solicitud ya no se puede cancelar desde la app (estado " + orden.getEstado() + ")");
+                    "La solicitud ya no se puede cancelar desde la app (estado: " + EstadoOrden.nombre(orden.getEstado()) + ")");
         }
-        String texto = motivo != null && !motivo.isBlank() ? motivo.trim() : "Cancelada por el cliente";
+        String texto = Motivos.obligatorio(motivo, "cancelas la solicitud", 500);
         String tallerAnterior = orden.getTallerId();
         OrdenServicio cancelada = transiciones.transicionar(orden, EstadoOrden.CANCELADA,
                 new Actor(EstadoOrden.CLIENTE, cliente.getId(), cliente.getNombre()), texto, null,
                 new Update().set("motivoCierre", texto));
-        avisos.solicitudRetirada(tallerAnterior, cancelada, "El cliente canceló la solicitud");
+        TrasGuardar.hacer(avisos, "La solicitud " + id + " se canceló, pero no se pudo avisar al taller.",
+                () -> avisos.solicitudRetirada(tallerAnterior, cancelada, "El cliente canceló la solicitud"));
         return toDTO(cancelada, Vista.CLIENTE);
     }
 
@@ -293,11 +303,16 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         Mecanico mecanico = mecanicoActivo(taller, r.getMecanicoId());
 
         boolean pagoRequerido = parametros.pagoDiagnosticoRequerido();
+        // Mismo precio base para todos; el IVA se suma solo si el taller es responsable (IvaTaller)
+        double tarifaBase = parametros.tarifaDiagnostico();
+        double ivaDiagnosticoPct = IvaTaller.pct(taller, parametros.ivaPct());
         Update cambios = new Update()
                 .set("aceptadaPorTaller", true)
                 .set("fechaAceptacion", ahora)
                 .set("fechaProgramada", r.getFechaRevision())
-                .set("tarifaDiagnostico", parametros.tarifaDiagnostico())
+                .set("tarifaDiagnosticoBase", tarifaBase)
+                .set("ivaDiagnosticoPct", ivaDiagnosticoPct)
+                .set("tarifaDiagnostico", IvaTaller.conIva(tarifaBase, ivaDiagnosticoPct))
                 .unset("fechaLimiteRespuesta");
         if (mecanico != null) {
             cambios.set("mecanicoId", mecanico.getId()).set("mecanicoNombre", mecanico.getNombre());
@@ -321,7 +336,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             actualizada = transiciones.transicionar(orden, EstadoOrden.EN_REVISION, actor,
                     "Cita de revisión agendada para " + fechaTexto, condicion, cambios);
         }
-        avisos.citaRevision(actualizada, pagoRequerido);
+        TrasGuardar.hacer(avisos, "La solicitud " + id + " se aceptó, pero no se pudo avisar al cliente de su cita.",
+                () -> avisos.citaRevision(actualizada, pagoRequerido));
         return toDTO(actualizada, Vista.TALLER);
     }
 
@@ -364,7 +380,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         boolean primeraVez = EstadoOrden.EN_REVISION.equals(orden.getEstado());
         if (!primeraVez && !EstadoOrden.DIAGNOSTICADA.equals(orden.getEstado())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "El diagnóstico se registra con el vehículo en revisión (estado actual: " + orden.getEstado() + ")");
+                    "El diagnóstico se registra con el vehículo en revisión (estado actual: " + EstadoOrden.nombre(orden.getEstado()) + ")");
         }
         if (r == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completa el diagnóstico");
@@ -385,6 +401,12 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 : List.of();
         if (fallas.size() > MAX_FALLAS) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Máximo " + MAX_FALLAS + " fallas");
+        }
+        if (fallas.stream().anyMatch(f -> f.length() > MAX_TEXTO_FALLA)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cada falla admite hasta " + MAX_TEXTO_FALLA + " caracteres");
+        }
+        if (r.getObservaciones() != null && r.getObservaciones().trim().length() > MAX_OBSERVACIONES) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Las observaciones admiten hasta " + MAX_OBSERVACIONES + " caracteres");
         }
         List<String> fotos = r.getFotos() != null
                 ? r.getFotos().stream().filter(f -> f != null && f.startsWith("http")).toList()
@@ -474,17 +496,19 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         Vehiculo vehiculo = vehiculoService.obtenerEntidad(orden.getVehiculoId());
         Map<String, RepuestoSeleccionado> confirmadosAntes = (orden.getRepuestos() != null ? orden.getRepuestos() : List.<RepuestoSeleccionado>of())
                 .stream()
-                .filter(rep -> Boolean.TRUE.equals(rep.getCompatibilidadConfirmada()) && rep.getProductoId() != null)
-                .collect(Collectors.toMap(RepuestoSeleccionado::getProductoId, rep -> rep, (a, b) -> a));
+                .filter(rep -> Boolean.TRUE.equals(rep.getCompatibilidadConfirmada()) && claveRepuesto(rep) != null)
+                .collect(Collectors.toMap(SolicitudServicioServiceImpl::claveRepuesto, rep -> rep, (a, b) -> a));
 
         List<RepuestoSeleccionado> seleccion = new ArrayList<>();
         List<String> confirmaciones = new ArrayList<>();
         Set<String> productosVistos = new HashSet<>();
         for (SeleccionRepuestosRequest.Item item : items) {
-            if (item.getProductoId() == null || item.getProductoId().isBlank()) {
+            boolean delTaller = item.getPiezaTallerId() != null && !item.getPiezaTallerId().isBlank();
+            String clave = delTaller ? item.getPiezaTallerId() : item.getProductoId();
+            if (clave == null || clave.isBlank()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cada repuesto debe tener un producto elegido");
             }
-            if (!productosVistos.add(item.getProductoId())) {
+            if (!productosVistos.add(clave)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Un mismo producto aparece dos veces: ajusta la cantidad en una sola línea");
             }
@@ -492,23 +516,39 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             if (cantidad < 1 || cantidad > MAX_CANTIDAD) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La cantidad debe estar entre 1 y " + MAX_CANTIDAD);
             }
-            Producto producto;
-            try {
-                producto = productoService.obtenerPorId(item.getProductoId());
-            } catch (RuntimeException e) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Uno de los productos elegidos ya no existe");
+            // La misma pieza puede venir del inventario y de una tienda: son dos líneas con claves distintas
+            OfertaRepuestoDTO oferta;
+            if (delTaller) {
+                oferta = buscador.ofertaDePieza(item.getPiezaTallerId(), cantidad, taller, vehiculo);
+            } else {
+                Producto producto;
+                try {
+                    producto = productoService.obtenerPorId(item.getProductoId());
+                } catch (RuntimeException e) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Uno de los productos elegidos ya no existe");
+                }
+                oferta = buscador.ofertaParaSeleccion(producto, cantidad, taller, vehiculo);
+                oferta.setProductoId(producto.getId());
+                oferta.setNombre(producto.getNombre());
+                oferta.setMarca(producto.getMarca());
+                oferta.setReferencia(producto.getReferencia());
             }
-            OfertaRepuestoDTO oferta = buscador.ofertaParaSeleccion(producto, cantidad, taller, vehiculo);
 
             String descripcion = item.getDescripcion() != null && !item.getDescripcion().isBlank()
-                    ? item.getDescripcion().trim() : producto.getNombre();
+                    ? item.getDescripcion().trim() : oferta.getNombre();
+            if (descripcion.length() > MAX_DESCRIPCION_REPUESTO) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "La descripción de cada repuesto admite hasta " + MAX_DESCRIPCION_REPUESTO + " caracteres");
+            }
             RepuestoSeleccionado.RepuestoSeleccionadoBuilder repuesto = RepuestoSeleccionado.builder()
                     .descripcion(descripcion)
                     .cantidad(cantidad)
-                    .productoId(producto.getId())
-                    .productoNombre(producto.getNombre())
-                    .marca(producto.getMarca())
-                    .referencia(producto.getReferencia())
+                    .productoId(oferta.getProductoId())
+                    .origen(oferta.getOrigen())
+                    .piezaTallerId(oferta.getPiezaTallerId())
+                    .productoNombre(oferta.getNombre())
+                    .marca(oferta.getMarca())
+                    .referencia(oferta.getReferencia())
                     .tiendaId(oferta.getTiendaId())
                     .tiendaNombre(oferta.getTiendaNombre())
                     .precioReferencia(oferta.getPrecio())
@@ -520,13 +560,13 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
             if (oferta.isRequiereConfirmacion()) {
                 if (!Boolean.TRUE.equals(item.getConfirmoCompatibilidad())) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "Confirma que \"" + producto.getNombre() + "\" es compatible con el vehículo: no tiene datos de compatibilidad");
+                            "Confirma que \"" + oferta.getNombre() + "\" es compatible con el vehículo: no tiene datos de compatibilidad");
                 }
                 if (mecanicoId == null) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                             "Asigna el mecánico responsable antes de confirmar compatibilidades");
                 }
-                RepuestoSeleccionado anterior = confirmadosAntes.get(producto.getId());
+                RepuestoSeleccionado anterior = confirmadosAntes.get(clave);
                 if (anterior != null) {
                     repuesto.compatibilidadConfirmada(true)
                             .confirmadoPorMecanicoId(anterior.getConfirmadoPorMecanicoId())
@@ -538,7 +578,7 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                             .confirmadoPorMecanicoNombre(mecanicoNombre)
                             .fechaConfirmacion(LocalDateTime.now());
                     confirmaciones.add("Compatibilidad confirmada por " + mecanicoNombre + ": "
-                            + producto.getNombre() + " (" + oferta.getTiendaNombre() + ")");
+                            + oferta.getNombre() + " (" + (delTaller ? "inventario del taller" : oferta.getTiendaNombre()) + ")");
                 }
             }
             seleccion.add(repuesto.build());
@@ -548,8 +588,16 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
 
     private static String notaSeleccion(List<RepuestoSeleccionado> seleccion) {
         if (seleccion.isEmpty()) return "Sin repuestos (solo mano de obra)";
-        long tiendas = seleccion.stream().map(RepuestoSeleccionado::getTiendaId).distinct().count();
-        return seleccion.size() + " repuesto(s) elegidos en " + tiendas + " tienda(s)";
+        long delTaller = seleccion.stream().filter(RepuestoSeleccionado::esDelTaller).count();
+        long tiendas = seleccion.stream().filter(r -> !r.esDelTaller()).map(RepuestoSeleccionado::getTiendaId).distinct().count();
+        if (delTaller == 0) return seleccion.size() + " repuesto(s) elegidos en " + tiendas + " tienda(s)";
+        return seleccion.size() + " repuesto(s) elegidos: " + delTaller + " del inventario del taller y "
+                + (seleccion.size() - delTaller) + " en " + tiendas + " tienda(s)";
+    }
+
+    /** Lo que identifica una línea: la pieza del inventario o el producto de la tienda. */
+    private static String claveRepuesto(RepuestoSeleccionado r) {
+        return r.esDelTaller() ? r.getPiezaTallerId() : r.getProductoId();
     }
 
     // ─── Etapas finales ──────────────────────────────────────────────────────
@@ -578,17 +626,48 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     public SolicitudServicioDTO marcarLista(String correoTaller, String id) {
         SolicitudServicioDTO lista = avanzar(correoTaller, id, EstadoOrden.LISTA, "Vehículo listo para entregar",
                 new Update().set("fechaLista", LocalDateTime.now()).unset("subestado"));
-        ordenRepository.findById(id).ifPresent(avisos::vehiculoListo);
+        TrasGuardar.hacer(avisos, "La solicitud " + id + " quedó lista, pero no se pudo avisar al cliente.",
+                () -> ordenRepository.findById(id).ifPresent(avisos::vehiculoListo));
         return lista;
     }
 
     @Override
     public SolicitudServicioDTO marcarEntregada(String correoTaller, String id) {
+        LocalDateTime ahora = LocalDateTime.now();
+        int dias = parametros.plazoRecepcionServicioDiasHabiles();
+        // El pago del taller espera al cliente: el taller no se lo habilita a sí mismo
         SolicitudServicioDTO entregada = avanzar(correoTaller, id, EstadoOrden.ENTREGADA, "Vehículo entregado al cliente",
-                new Update().set("fechaEntrega", LocalDateTime.now()));
-        // La línea del taller queda lista para liquidar (SIMULADO: se paga sola; MANUAL: la paga el ADMIN)
-        liquidacion.ordenEntregada(id);
+                new Update().set("fechaEntrega", ahora).set("autoconfirmaDespuesDe", PlazoHabil.sumarDiasHabiles(ahora, dias)));
+        TrasGuardar.hacer(avisos, "La solicitud " + id + " quedó entregada, pero no se pudo avisar al cliente para que la confirme.",
+                () -> ordenRepository.findById(id).ifPresent(o -> avisos.vehiculoEntregado(o, dias)));
         return entregada;
+    }
+
+    @Override
+    public int autoconfirmarEntregas(LocalDateTime ahora) {
+        int habilitados = 0;
+        for (OrdenServicio orden : ordenRepository.entregasPorLiberar(EstadoOrden.FLUJO_MARKETPLACE, EstadoOrden.ENTREGADA, ahora)) {
+            try {
+                if (!Boolean.TRUE.equals(orden.getRecepcionConfirmada())) {
+                    transiciones.registrar(orden, Actor.SISTEMA, "Recepción confirmada automáticamente: venció el plazo sin respuesta del cliente",
+                            Criteria.where("recepcionConfirmada").ne(true),
+                            new Update().set("recepcionConfirmada", true).set("recepcionAutomatica", true).set("fechaRecepcionCliente", ahora));
+                }
+                liberarPago(orden.getId());
+                habilitados++;
+            } catch (ResponseStatusException e) {
+                log.debug("Orden {}: el cliente confirmó justo ahora; se habilita con su confirmación", orden.getId());
+            } catch (RuntimeException e) {
+                log.error("No se pudo habilitar el pago de la orden {}: se reintenta en el próximo ciclo", orden.getId(), e);
+            }
+        }
+        return habilitados;
+    }
+
+    /** La línea del taller queda lista para liquidar (SIMULADO: se paga sola; MANUAL y WOMPI: la paga el ADMIN). Repetirlo no paga dos veces. */
+    private void liberarPago(String id) {
+        liquidacion.ordenEntregada(id);
+        transiciones.anotar(id, new Update().set("liquidacionLiberada", true));
     }
 
     /**
@@ -599,6 +678,11 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
     private SolicitudServicioDTO avanzar(String correoTaller, String id, String hacia, String nota, Update cambios) {
         Taller taller = tallerOperativo(correoTaller);
         OrdenServicio orden = solicitudDelTaller(taller, id);
+        // Si el estado no permite el paso, transicionar lo rechaza con su mensaje
+        if (EstadoOrden.permitida(orden.getEstado(), hacia, EstadoOrden.TALLER)) {
+            reglas.exigirPago(orden);
+            if (EstadoOrden.EN_INSTALACION.equals(hacia)) reglas.exigirRepuestos(orden);
+        }
         OrdenServicio actualizada = transiciones.transicionar(orden, hacia, actorTaller(taller), conMecanico(nota, orden),
                 Criteria.where("tallerId").is(taller.getId()), cambios);
         return toDTO(actualizada, Vista.TALLER);
@@ -637,6 +721,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
         OrdenServicio actualizada = transiciones.registrar(orden,
                 new Actor(EstadoOrden.CLIENTE, cliente.getId(), cliente.getNombre()), nota,
                 Criteria.where("usuarioId").is(cliente.getId()).and("recepcionConfirmada").ne(true), cambios);
+        TrasGuardar.hacer(avisos, "El cliente confirmó la recepción de la solicitud " + id + ", pero el pago del taller aún no se pudo "
+                + "habilitar. Se reintenta solo cada 15 minutos.", () -> liberarPago(id));
         // La nota ya quedó en la orden; si el recálculo falla, lo corrige la siguiente calificación o el de arranque
         if (calificacion != null) {
             try {
@@ -800,6 +886,8 @@ public class SolicitudServicioServiceImpl implements SolicitudServicioService {
                 .fechaEntrega(o.getFechaEntrega())
                 .recepcionConfirmada(o.getRecepcionConfirmada())
                 .fechaRecepcionCliente(o.getFechaRecepcionCliente())
+                .autoconfirmaDespuesDe(o.getAutoconfirmaDespuesDe())
+                .recepcionAutomatica(o.getRecepcionAutomatica())
                 .calificacionTaller(o.getCalificacionTaller())
                 .comentarioCalificacion(o.getComentarioCalificacion())
                 .eventos(o.getEventos());

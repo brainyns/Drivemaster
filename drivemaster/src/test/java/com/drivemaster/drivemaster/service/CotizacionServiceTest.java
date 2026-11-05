@@ -55,6 +55,7 @@ class CotizacionServiceTest {
     private LiquidacionService liquidacion;
     private CotizacionService service;
     private TallerService tallerService;
+    private UsuarioService usuarioService;
 
     private Taller taller;
     private OrdenServicio orden;
@@ -70,7 +71,7 @@ class CotizacionServiceTest {
         avisos = mock(AvisosSolicitudServicio.class);
         liquidacion = mock(LiquidacionService.class);
         tallerService = mock(TallerService.class);
-        UsuarioService usuarioService = mock(UsuarioService.class);
+        usuarioService = mock(UsuarioService.class);
         VehiculoService vehiculoService = mock(VehiculoService.class);
         ProductoService productoService = mock(ProductoService.class);
         BuscadorRepuestosService buscador = mock(BuscadorRepuestosService.class);
@@ -124,6 +125,26 @@ class CotizacionServiceTest {
     // ─── Emisión ─────────────────────────────────────────────────────────────
 
     @Test
+    void unTrabajoConDescripcionDeMenosDeTresCaracteresSeRechaza() {
+        CrearCotizacionRequest corto = new CrearCotizacionRequest(List.of(
+                new CrearCotizacionRequest.ManoObra("ab", "ITEM", 10_000.0, null)), null, null);
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.emitir(CORREO_TALLER, "o1", corto));
+
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatusCode());
+    }
+
+    @Test
+    void siElCorreoFallaLaCotizacionIgualQuedaEmitidaYAlertaAlAdmin() {
+        doThrow(new IllegalStateException("sin correo")).when(avisos).cotizacionEmitida(any(), any(), anyString());
+
+        assertNotNull(service.emitir(CORREO_TALLER, "o1", pedido()));
+
+        verify(cotizacionRepository, never()).delete(any());
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("se emitió"));
+    }
+
+    @Test
     void emitirCongelaPreciosCalculaTotalesYEnviaElToken() {
         when(cotizacionRepository.findFirstByOrdenIdOrderByVersionDesc("o1"))
                 .thenReturn(Optional.of(Cotizacion.builder().id("c1").version(1).build()));
@@ -154,6 +175,79 @@ class CotizacionServiceTest {
         assertEquals(TokenSeguro.hash(token.getValue()), c.getTokenHash());
         assertNotEquals(token.getValue(), c.getTokenHash());
         assertEquals(2, dto.getVersion());
+    }
+
+    @Test
+    void unTallerNoResponsableDeIvaCotizaLaManoDeObraAlCero() {
+        taller.setResponsableIva(false);
+        when(cotizacionRepository.findFirstByOrdenIdOrderByVersionDesc("o1")).thenReturn(Optional.empty());
+
+        CotizacionDTO dto = service.emitir(CORREO_TALLER, "o1", pedido());
+
+        ArgumentCaptor<Cotizacion> guardada = ArgumentCaptor.forClass(Cotizacion.class);
+        verify(cotizacionRepository).save(guardada.capture());
+        Cotizacion c = guardada.getValue();
+        assertEquals(19.0, c.getIvaRepuestosPct());
+        assertEquals(0.0, c.getIvaManoObraPct());
+        assertNull(c.getIvaPct(), "con dos porcentajes no hay uno único");
+        assertEquals(17_100, c.getIvaRepuestos());
+        assertEquals(0, c.getIvaManoObra());
+        assertEquals(197_100, c.getTotal());
+        assertEquals(19.0, dto.getIvaRepuestosPct());
+        assertEquals(0.0, dto.getIvaManoObraPct());
+    }
+
+    @Test
+    void unTallerResponsableGuardaLosDosPorcentajesYElUnico() {
+        when(cotizacionRepository.findFirstByOrdenIdOrderByVersionDesc("o1")).thenReturn(Optional.empty());
+
+        service.emitir(CORREO_TALLER, "o1", pedido());
+
+        ArgumentCaptor<Cotizacion> guardada = ArgumentCaptor.forClass(Cotizacion.class);
+        verify(cotizacionRepository).save(guardada.capture());
+        assertEquals(19.0, guardada.getValue().getIvaPct());
+        assertEquals(19.0, guardada.getValue().getIvaRepuestosPct());
+        assertEquals(19.0, guardada.getValue().getIvaManoObraPct());
+    }
+
+    private Cotizacion cotizacionDelTaller() {
+        return Cotizacion.builder().id("c9").tallerId(taller.getId()).items(List.of()).ivaPct(19.0).ivaRepuestosPct(19.0).ivaManoObraPct(19.0)
+                .subtotalRepuestos(200_000.0).subtotalManoObra(100_000.0).ivaManoObra(19_000.0).build();
+    }
+
+    @Test
+    void conLaBanderaApagadaElTallerRecibeTodoYVeLaComisionAparte() {
+        when(tallerService.obtenerPorUsuario(CORREO_TALLER)).thenReturn(taller);
+        when(parametros.comisionPct()).thenReturn(10.0);
+        when(cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc(taller.getId())).thenReturn(List.of(cotizacionDelTaller()));
+
+        CotizacionDTO dto = service.delTaller(CORREO_TALLER).get(0);
+
+        assertEquals(10_000, dto.getComisionTaller(), "solo sobre su mano de obra sin IVA, no sobre los repuestos de la tienda");
+        assertEquals(119_000, dto.getRecibeTaller());
+        assertFalse(dto.getComisionSeDescuenta());
+    }
+
+    @Test
+    void conLaBanderaEncendidaLaCotizacionMuestraLoQueRecibeNeto() {
+        when(tallerService.obtenerPorUsuario(CORREO_TALLER)).thenReturn(taller);
+        when(parametros.comisionPct()).thenReturn(10.0);
+        when(parametros.comisionRetenida()).thenReturn(true);
+        when(cotizacionRepository.findByTallerIdOrderByFechaEmisionDesc(taller.getId())).thenReturn(List.of(cotizacionDelTaller()));
+
+        CotizacionDTO dto = service.delTaller(CORREO_TALLER).get(0);
+
+        assertEquals(109_000, dto.getRecibeTaller());
+        assertTrue(dto.getComisionSeDescuenta());
+    }
+
+    @Test
+    void elClienteNoRecibeLoQueCobraElTaller() {
+        CotizacionDTO dto = CotizacionDTO.completa(cotizacionDelTaller());
+
+        assertNull(dto.getComisionTaller());
+        assertNull(dto.getRecibeTaller());
+        assertNull(dto.getComisionSeDescuenta());
     }
 
     @Test
@@ -243,6 +337,55 @@ class CotizacionServiceTest {
                 new RespuestaCotizacionRequest(RespuestaCotizacionRequest.APROBAR, null, token)));
         assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
         verify(transiciones, never()).transicionar(any(), anyString(), any(), anyString(), any(), any());
+    }
+
+    private Cotizacion soloManoObraSinSaldo(String token) {
+        Cotizacion c = emitida(token, LocalDateTime.now().plusDays(3));
+        c.setItems(List.of(CotizacionItem.builder().tipo(CotizacionItem.MANO_OBRA).precioUnitario(40_000.0).build()));
+        c.setTotalAPagar(0.0);
+        marcaAplicada(c, Cotizacion.APROBADA);
+        return c;
+    }
+
+    @Test
+    void aprobarUnaCotizacionSinSaldoLaLlevaAlTallerSinPago() {
+        String token = TokenSeguro.generar().token();
+        soloManoObraSinSaldo(token);
+
+        service.responderPublica(new RespuestaCotizacionRequest(RespuestaCotizacionRequest.APROBAR, null, token));
+
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.APROBADA), any(), anyString(), any(), any());
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.PAGADA), eq(TransicionOrdenService.Actor.SISTEMA), contains("Sin saldo"), any(), any());
+        verify(transiciones).transicionar(eq(orden), eq(EstadoOrden.REPUESTOS_RECIBIDOS), eq(TransicionOrdenService.Actor.SISTEMA), anyString(), any(), any());
+    }
+
+    @Test
+    void siPasarSinPagoFallaLaAprobacionIgualQuedaYAlertaAlAdmin() {
+        String token = TokenSeguro.generar().token();
+        soloManoObraSinSaldo(token);
+        when(transiciones.transicionar(any(), eq(EstadoOrden.PAGADA), any(), anyString(), any(), any()))
+                .thenThrow(new IllegalStateException("mongo caído"));
+
+        assertEquals(Cotizacion.APROBADA, service.responderPublica(
+                new RespuestaCotizacionRequest(RespuestaCotizacionRequest.APROBAR, null, token)).getEstado());
+
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("no pudo pasar al taller"));
+    }
+
+    @Test
+    void conSaldoORepuestosLaAprobacionSigueEsperandoElPago() {
+        assertFalse(CotizacionService.sinSaldo(Cotizacion.builder().totalAPagar(1.0).items(List.of()).build()));
+        assertFalse(CotizacionService.sinSaldo(Cotizacion.builder().items(List.of()).build()), "sin el dato no se salta el pago");
+        assertFalse(CotizacionService.sinSaldo(Cotizacion.builder().totalAPagar(0.0)
+                .items(List.of(CotizacionItem.builder().tipo(CotizacionItem.REPUESTO).build())).build()), "hay repuestos por pedir");
+        assertTrue(CotizacionService.sinSaldo(Cotizacion.builder().totalAPagar(0.0).items(List.of()).build()));
+
+        String token = TokenSeguro.generar().token();
+        Cotizacion c = emitida(token, LocalDateTime.now().plusDays(3));
+        c.setTotalAPagar(164_200.0);
+        marcaAplicada(c, Cotizacion.APROBADA);
+        service.responderPublica(new RespuestaCotizacionRequest(RespuestaCotizacionRequest.APROBAR, null, token));
+        verify(transiciones, never()).transicionar(any(), eq(EstadoOrden.PAGADA), any(), anyString(), any(), any());
     }
 
     @Test
@@ -393,5 +536,57 @@ class CotizacionServiceTest {
         assertEquals(respondida, dto.getFechaRespuesta());
         assertEquals("Encontré un mejor precio", dto.getMotivoRespuesta());
         assertFalse(dto.isPuedeResponder());
+    }
+
+    // ─── PDF: solo el cliente dueño y el taller que la emitió ────────────────
+
+    private Cotizacion cotizacionParaPdf() {
+        Cotizacion c = Cotizacion.builder().id("c9").ordenId("o1").version(1).estado(Cotizacion.APROBADA)
+                .tallerId("t1").tallerNombre("AutoMax").usuarioId("u1").vehiculoDescripcion("Chevrolet Spark")
+                .items(new ArrayList<>(List.of(CotizacionItem.builder().tipo(CotizacionItem.MANO_OBRA).descripcion("Revisión")
+                        .modalidad(CotizacionItem.POR_ITEM).cantidad(1).precioUnitario(100_000.0).subtotal(100_000.0).build())))
+                .subtotal(100_000.0).ivaPct(19.0).iva(19_000.0).total(119_000.0).anticipoDiagnostico(0.0).totalAPagar(119_000.0)
+                .build();
+        when(cotizacionRepository.findById("c9")).thenReturn(Optional.of(c));
+        when(tallerService.obtenerEntidad("t1")).thenReturn(taller);
+        return c;
+    }
+
+    @Test
+    void elClienteDuenoYElTallerQueLaEmitioDescarganElPdf() {
+        cotizacionParaPdf();
+        when(usuarioService.obtenerPorCorreo(CORREO_TALLER))
+                .thenReturn(Usuario.builder().id("ut").correo(CORREO_TALLER).rol("TALLER").build());
+
+        byte[] delCliente = service.pdf(CORREO_CLIENTE, "c9");
+        byte[] delTaller = service.pdf(CORREO_TALLER, "c9");
+
+        assertEquals("%PDF", new String(delCliente, 0, 4));
+        assertEquals("%PDF", new String(delTaller, 0, 4));
+    }
+
+    @Test
+    void otroClienteOtroTallerYElAdminNoDescarganElPdf() {
+        cotizacionParaPdf();
+        when(usuarioService.obtenerPorCorreo("otro@demo.com"))
+                .thenReturn(Usuario.builder().id("u2").correo("otro@demo.com").rol("CLIENTE").build());
+        when(usuarioService.obtenerPorCorreo("otro-taller@demo.com"))
+                .thenReturn(Usuario.builder().id("ut2").correo("otro-taller@demo.com").rol("TALLER").build());
+        when(tallerService.obtenerPorUsuario("otro-taller@demo.com")).thenReturn(Taller.builder().id("t2").build());
+        when(usuarioService.obtenerPorCorreo("admin@demo.com"))
+                .thenReturn(Usuario.builder().id("ua").correo("admin@demo.com").rol("ADMIN").build());
+
+        for (String correo : List.of("otro@demo.com", "otro-taller@demo.com", "admin@demo.com")) {
+            ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.pdf(correo, "c9"), correo);
+            assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode(), "no revela que la cotización existe: " + correo);
+        }
+    }
+
+    @Test
+    void elPdfDeUnaCotizacionQueNoExisteEs404() {
+        when(cotizacionRepository.findById("nada")).thenReturn(Optional.empty());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.pdf(CORREO_CLIENTE, "nada"));
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatusCode());
     }
 }

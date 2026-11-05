@@ -14,6 +14,7 @@ import Icon from "../components/public/Icon";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/perfil-admin.css";
+import { textoError } from "../utils/errores";
 
 const ROL_LABELS = {
   SUPERADMIN: "Superadmin",
@@ -87,7 +88,7 @@ export default function PerfilAdmin() {
       setPassActual(""); setPassNueva(""); setPassConfirm("");
       setTimeout(() => setPassMsg(null), 3000);
     } catch (err) {
-      setPassError(err.message);
+      setPassError(textoError(err));
     } finally {
       setGuardando(false);
     }

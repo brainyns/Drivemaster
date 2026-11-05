@@ -17,4 +17,6 @@ public class AuthResponse {
     private Boolean datosCompletos;
     // Permite renovar el token de acceso sin volver a iniciar sesión.
     private String refreshToken;
+    // Cliente sin ciudad (o con una fuera de la lista): la app se la pide en una ventana antes de seguir.
+    private Boolean ciudadPendiente;
 }

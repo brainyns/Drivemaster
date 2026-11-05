@@ -16,14 +16,14 @@ import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/aprobaciones-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const clave = (n) => `${n.tipo}-${n.id}`;
 const nombreTipo = (n) => (n.tipo === "TIENDA" ? "Tienda" : "Taller");
 
 /**
- * Aprobaciones del ADMIN: solo los negocios pendientes y dos decisiones, aprobar o rechazar (con motivo). El plan,
- * la calificación y la actividad de los negocios, y pausarlos o cambiarles el plan, son del SUPERADMIN. Un negocio
- * aprobado aquí arranca con el plan de prueba.
+ * Aprobaciones del ADMIN: solo los negocios pendientes y dos decisiones, aprobar o rechazar (con motivo). La
+ * calificación y la actividad de los negocios, y pausarlos, son del SUPERADMIN.
  */
 export default function AprobacionesAdmin({ token }) {
   const [estado, setEstado] = useState({ lista: null, error: null });
@@ -38,7 +38,7 @@ export default function AprobacionesAdmin({ token }) {
   const cargar = useCallback(() => (
     negociosPendientes(token)
       .then((lista) => setEstado({ lista, error: null }))
-      .catch((e) => setEstado((p) => ({ ...p, error: e.message })))
+      .catch((e) => setEstado((p) => ({ ...p, error: textoError(e) })))
   ), [token]);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function AprobacionesAdmin({ token }) {
       setMotivo("");
       cargar();
     } catch (e) {
-      setErrorAccion(e.message);
+      setErrorAccion(textoError(e));
     } finally {
       setProcesando(null);
     }
@@ -83,7 +83,7 @@ export default function AprobacionesAdmin({ token }) {
   return (
     <div className="ss-panel--plataforma pp-root apr-root">
       <EncabezadoPagina titulo="Aprobaciones"
-        descripcion="Negocios que esperan tu revisión. Aprobarlos los activa con el plan de prueba; al rechazarlos se les envía el motivo." />
+        descripcion="Negocios que esperan tu revisión. Aprobarlos los activa en el marketplace; al rechazarlos se les envía el motivo." />
 
       {aviso && <Alerta tono="ok" className="pp-bloque-sep" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
       {errorAccion && !confirmacion && <Alerta className="pp-bloque-sep" onCerrar={() => setErrorAccion(null)}>{errorAccion}</Alerta>}
@@ -155,7 +155,7 @@ export default function AprobacionesAdmin({ token }) {
         <ConfirmacionAdmin
           titulo={`${confirmacion.accion === "aprobar" ? "Aprobar" : "Rechazar"} ${confirmacion.negocio.nombre}`}
           texto={confirmacion.accion === "aprobar"
-            ? "La cuenta quedará activa con el plan de prueba y podrá operar en el marketplace."
+            ? "La cuenta quedará activa y podrá operar en el marketplace."
             : "El negocio recibirá el motivo por correo y no podrá operar."}
           confirmar={confirmacion.accion === "aprobar" ? "Aprobar" : "Rechazar"}
           variante={confirmacion.accion === "aprobar" ? "primario" : "peligro"}

@@ -43,6 +43,19 @@ export async function cotizacionesDeOrden(token, ordenId) {
   return handle(res, "No se pudieron cargar las cotizaciones");
 }
 
+/** Descarga el PDF de la cotización (solo el cliente dueño y el taller que la emitió). */
+export async function descargarPdfCotizacion(token, cotizacionId) {
+  const res = await apiFetch(`${BASE}/${cotizacionId}/pdf`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(res.status === 404 ? "No encontramos esta cotización" : "No se pudo generar el PDF. Intenta de nuevo.");
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Cotizacion-${cotizacionId.slice(-6).toUpperCase()}.pdf`;
+  a.click();
+  // Se libera después del clic: algunos navegadores aún no empezaron la descarga en este punto
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 /** accion: APROBAR | RECHAZAR | CAMBIOS (motivo obligatorio en CAMBIOS) */
 export function responderCotizacion(token, cotizacionId, accion, motivo) {
   return post(token, `${BASE}/${cotizacionId}/responder`, { accion, motivo }, "No se pudo enviar tu respuesta");

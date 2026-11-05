@@ -48,6 +48,10 @@ public class PedidoTienda {
     // Motivo de "No puedo despachar"
     public static final String MOTIVO_SIN_REPUESTO = "SIN_REPUESTO";
     public static final String MOTIVO_OTRO = "OTRO";
+    // Lo cancela el sistema: el pago falló al aplicarse y se reembolsa. Queda NO_DESPACHADO, con los demás cancelados
+    public static final String MOTIVO_PAGO_NO_APLICADO = "PAGO_NO_APLICADO";
+    // Lo cancela el SUPERADMIN junto con la orden pagada, antes de la instalación
+    public static final String MOTIVO_ORDEN_CANCELADA = "ORDEN_CANCELADA";
 
     @Id
     private String id;
@@ -78,6 +82,11 @@ public class PedidoTienda {
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaDespacho;
     private String notaDespacho;
+    // Despacho que marcó un SUPERADMIN tras confirmarlo con la tienda: quién y por qué. Es interno: no va en el JSON
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String despachoConfirmadoPor;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String motivoDespachoConfirmado;
     private LocalDateTime fechaNoDespacho;
     // SIN_REPUESTO (no tengo el repuesto) u OTRO (con detalle obligatorio)
     private String tipoMotivoNoDespacho;
@@ -92,6 +101,10 @@ public class PedidoTienda {
     // ─── Compra directa del catálogo (origen CATALOGO) ───
     private String origen;
     private String compraId;
+    // Compra de un taller para su inventario. No es tallerId: ese es el destino de los pedidos de una cotización
+    private String compradorTallerId;
+    // Cuándo confirmó el taller que le llegó. Mientras sea null las piezas están "En camino" y no se pueden cotizar
+    private LocalDateTime fechaEntradaInventario;
     private String clienteId;
     private String clienteNombre;
     // ENVIO o RETIRO
@@ -117,6 +130,14 @@ public class PedidoTienda {
     private LocalDateTime codigoRetiroBloqueadoHasta;
     private LocalDateTime fechaListoRetiro;
     private LocalDateTime fechaRetirado;
+    // Retiro que nadie recoge (RetiroPendienteService): recordatorios al cliente enviados (1 a los 3 días, 2 a los 7)
+    // y, a los 15 días, desde cuándo lo revisa el ADMIN. La decisión es suya: SEGUIR_ESPERANDO o REEMBOLSO.
+    private Integer recordatoriosRetiro;
+    private LocalDateTime revisionRetiroDesde;
+    private String resolucionRetiro;
+    private LocalDateTime fechaResolucionRetiro;
+    private String motivoResolucionRetiro;
+    private String retiroResueltoPor;
 
     // Envío: confirmación de recepción por el cliente
     private LocalDateTime fechaRecibidoCliente;

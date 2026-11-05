@@ -3,12 +3,12 @@ import Sidebar               from "./components/Sidebar";
 import TopBar                from "./components/TopBar";
 import Productos             from "./pages/Productos";
 import ProductoForm          from "./pages/ProductoForm";
-import AjusteInventarioForm  from "./pages/AjusteInventarioForm";
 import Compras               from "./pages/Compras";
 import CompraForm            from "./pages/CompraForm";
 import CompraDetalle         from "./pages/CompraDetalle";
 import Proveedores           from "./pages/Proveedores";
 import ProveedorForm         from "./pages/ProveedorForm";
+import ProveedorDetalle      from "./pages/ProveedorDetalle";
 import Movimientos           from "./pages/Movimientos";
 import Login                 from "./pages/Login";
 import AdminLogin            from "./pages/AdminLogin";
@@ -20,7 +20,6 @@ import ReportesServicios     from "./pages/ReportesServicios";
 import MisPedidos            from "./pages/MisPedidos";
 import MisSolicitudes        from "./pages/MisSolicitudes";
 import PagoResultado         from "./pages/PagoResultado";
-import CheckoutPage          from "./pages/CheckoutPage";
 import DashboardPlataforma   from "./pages/DashboardPlataforma";
 import DashboardOperacion    from "./pages/DashboardOperacion";
 import ProductosPlataforma   from "./pages/ProductosPlataforma";
@@ -45,7 +44,7 @@ import PedidosTienda         from "./pages/PedidosTienda";
 import Liquidaciones         from "./pages/Liquidaciones";
 import ChatWidget            from "./components/chat/ChatWidget";
 import { reiniciarChat }     from "./components/chat/chatSesion";
-import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion } from "./services/authService";
+import { getUser, getToken, clearSession, refreshToken, logout, getTokenExpiracion, setSession } from "./services/authService";
 import { useCarrito } from "./hooks/useCarrito";
 import { connectNotifications, disconnectNotifications } from "./services/websocketService";
 import { tieneCampanita } from "./services/notificacionesUtil";
@@ -58,7 +57,10 @@ import PerfilCliente from "./pages/PerfilCliente";
 import ProblemasEnvios from "./pages/ProblemasEnvios";
 import DatosMiTienda from "./pages/DatosMiTienda";
 import Alerta from "./components/ui/Alerta";
+import Avisos from "./components/ui/Avisos";
+import PedirCiudad from "./components/cliente/PedirCiudad";
 import { miTienda } from "./services/tiendaService";
+import { setIvaPct } from "./components/marketplace/iva";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
 
@@ -86,6 +88,7 @@ const TITULOS = {
   "proveedores":     "Proveedores",
   "proveedorNuevo":  "Nuevo proveedor",
   "proveedorEditar": "Editar proveedor",
+  "proveedorDetalle": "Proveedor",
   "movimientos":     "Inventario",
   "usuarios":        "Usuarios",
   "rep-servicios":   "Reporte de Servicios",
@@ -93,7 +96,6 @@ const TITULOS = {
   "mis-solicitudes": "Mis solicitudes",
   "pago-resultado":  "Resultado del pago",
   "mis-pedidos":     "Historial de compras",
-  "checkout":        "Enviar solicitud",
   "mi-perfil":       "Mi perfil",
   "solicitar-diagnostico": "Solicitar diagnóstico",
   "mis-servicios":   "Mis servicios",
@@ -115,7 +117,7 @@ const TITULOS = {
   "informes-tienda": "Informes",
   "asistente-tienda": "Asistente",
   "pedidos-tienda":  "Pedidos",
-  "liquidaciones":   "Liquidaciones y reembolsos",
+  "liquidaciones":   "Pagos y reembolsos",
   "problemas-envios": "Problemas de envío",
   "pedidos-envios":  "Pedidos y envíos",
   "mi-tienda":       "Mi tienda",
@@ -123,7 +125,7 @@ const TITULOS = {
 
 // Páginas del cliente que se muestran sin el panel lateral.
 const PAGINAS_CLIENTE = [
-  "checkout", "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo",
+  "mis-pedidos", "mis-solicitudes", "mis-vehiculos", "servicio-vehiculo",
   "solicitar-diagnostico", "mis-servicios", "checkout-marketplace", "mis-compras", "perfil-cliente",
 ];
 
@@ -142,6 +144,8 @@ const SECCION_TALLER = {
   "taller-cotizaciones": "cotizaciones",
   "taller-mitaller":    "mitaller",
   "taller-informes":    "informes",
+  "taller-inventario":  "inventario",
+  "taller-movimientos": "movimientos",
   "taller-anteriores":  "anteriores",
   "taller-agenda":      "agenda",
 };
@@ -161,17 +165,6 @@ const DEFAULT_IVA = 0.19;
 const MARGEN_RENOVACION_MS = 60 * 1000;
 const ESPERA_MINIMA_MS = 5 * 1000;
 
-function calcularSubtotal(items) {
-  return items.reduce((s, i) => s + (i.precioUnitario * i.cantidad), 0);
-}
-
-function loadSolicitud() {
-  try {
-    const saved = localStorage.getItem("solicitudItems");
-    return saved ? JSON.parse(saved) : [];
-  } catch { return []; }
-}
-
 function App() {
   const [pagina,         setPagina]         = useState(initialPage);
   const [user,           setUser]           = useState(storedUser);
@@ -180,7 +173,6 @@ function App() {
   // Lo que el panel del taller le avisa al menú (solicitudes por responder, órdenes anteriores)
   const [resumenTaller, setResumenTaller] = useState({ anteriores: 0, porResponder: 0 });
   const [sessionExpired, setSessionExpired] = useState(false);
-  const [solicitudItems, setSolicitudItems] = useState(loadSolicitud);
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   // true cuando el cliente llegó a "Mis servicios" iniciando sesión desde el enlace de la cotización
   const [vieneDeCotizacion, setVieneDeCotizacion] = useState(false);
@@ -191,7 +183,12 @@ function App() {
   // true si la tienda (rol TIENDA) aún no completó ciudad, dirección y horario: no se muestra en el catálogo
   const [tiendaIncompleta, setTiendaIncompleta] = useState(false);
 
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
+  // El diseño base es claro; solo se recuerda lo que el usuario elige con el toggle. La clave vieja "theme"
+  // se guardaba en cada carga (no distingue una elección real), por eso se descarta.
+  const [theme, setTheme] = useState(() => {
+    localStorage.removeItem("theme");
+    return localStorage.getItem("temaElegido") || "light";
+  });
 
   const [ivaRate, setIvaRate] = useState(DEFAULT_IVA);
 
@@ -202,7 +199,7 @@ function App() {
         if (res.ok) {
           const p = await res.json();
           const v = parseFloat(p.valor);
-          if (!isNaN(v)) setIvaRate(v / 100);
+          if (!isNaN(v)) { setIvaRate(v / 100); setIvaPct(v); }
         }
       } catch { /* fallback 19% */ }
     };
@@ -211,14 +208,13 @@ function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme(prev => prev === "dark" ? "light" : "dark");
-
-  useEffect(() => {
-    localStorage.setItem("solicitudItems", JSON.stringify(solicitudItems));
-  }, [solicitudItems]);
+  const toggleTheme = () => {
+    const nuevo = theme === "dark" ? "light" : "dark";
+    localStorage.setItem("temaElegido", nuevo);
+    setTheme(nuevo);
+  };
 
   // El registro de negocios es solo para visitantes: con sesión se va al inicio del rol, como tras el login.
   // Se ajusta durante el render (patrón de React para corregir estado) para que no alcance a pintarse.
@@ -232,7 +228,6 @@ function App() {
     clearSession();
     setUser(null);
     setToken(null);
-    setSolicitudItems([]);
     setPagina("catalogo");
     setSessionExpired(true);
   }, []);
@@ -282,7 +277,8 @@ function App() {
       correo: auth.correo,
       rol: auth.rol,
       proveedor: auth.proveedor,
-      datosCompletos: auth.datosCompletos
+      datosCompletos: auth.datosCompletos,
+      ciudadPendiente: auth.ciudadPendiente === true
     };
     setUser(newUser);
     setToken(auth.token);
@@ -316,22 +312,8 @@ function App() {
     setVieneDeCotizacion(false);
     setUser(null); setToken(null);
     setPagina("catalogo");
-    setSolicitudItems([]);
     setSessionExpired(false);
   };
-
-  const handleCompraExitosa = () => {
-    setSolicitudItems([]);
-    setPagina("catalogo");
-  };
-
-  const removeProductList = useCallback((productIds) => {
-    setSolicitudItems(prev => prev.filter(i => !productIds.includes(i.productoId)));
-  }, []);
-
-  const solicitudSubtotal = calcularSubtotal(solicitudItems);
-  const solicitudIva = solicitudSubtotal * ivaRate;
-  const solicitudTotal = solicitudSubtotal + solicitudIva;
 
   const allowedPages = {
     // VENDEDOR es un rol retirado: solo ve un aviso en su inicio (los clientes son del SUPERADMIN)
@@ -360,7 +342,7 @@ function App() {
     TALLER: ["taller-panel", ...Object.keys(SECCION_TALLER)],
     // Compras, proveedores e inventario son de cada tienda (el backend filtra por dueño)
     TIENDA: ["productos", "productoNuevo", "productoEditar", "movimientos", "pedidos-tienda", "mi-tienda", "informes-tienda", "asistente-tienda",
-      "compras", "compraNueva", "compraDetalle", "proveedores", "proveedorNuevo", "proveedorEditar"],
+      "compras", "compraNueva", "compraDetalle", "proveedores", "proveedorNuevo", "proveedorEditar", "proveedorDetalle"],
   };
   const esTienda = user?.rol === "TIENDA";
 
@@ -441,7 +423,9 @@ function App() {
         return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")}
           onVolver={() => { limpiarDestinoPostLogin(); setPagina("carrito-marketplace"); }} />;
       }
-      if (user.rol !== "CLIENTE") return <div style={{ padding: "40px" }}>Esta sección es para clientes.</div>;
+      // El taller también compra (para su inventario), pero sus compras se ven en Mi inventario
+      const esTallerComprador = user.rol === "TALLER" && pagina === "checkout-marketplace";
+      if (user.rol !== "CLIENTE" && !esTallerComprador) return <div style={{ padding: "40px" }}>Esta sección es para clientes.</div>;
       if (pagina === "mis-compras") return (
         <MisCompras
           key={idSeleccionado || "mis-compras"}
@@ -449,8 +433,6 @@ function App() {
           header={cabeceraMarketplace("compras")}
           onVolver={() => setPagina("catalogo")}
           onIrCatalogo={() => irAlCatalogoGlobal()}
-          onIrSolicitudes={() => setPagina("mis-solicitudes")}
-          onIrHistorial={() => setPagina("mis-pedidos")}
         />
       );
       return (
@@ -458,7 +440,7 @@ function App() {
           header={cabeceraMarketplace("carrito")}
           carrito={carrito}
           onVolverCarrito={() => setPagina("carrito-marketplace")}
-          onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); irA("mis-compras"); }}
+          onPagada={(pagada) => { if (pagada) vaciarCarritoPagado(); irA(user.rol === "TALLER" ? "taller-inventario" : "mis-compras"); }}
         />
       );
     }
@@ -485,7 +467,7 @@ function App() {
         onVistaConsumida={() => setVistaCatalogo("inicio")}
         onIrLogin={() => setPagina("login")}
         onIrAdmin={() => setPagina(INICIO_POR_ROL[user?.rol] && user.rol !== "CLIENTE" ? INICIO_POR_ROL[user.rol] : "dashboard-main")}
-        onIrSolicitud={(p) => setPagina(p || "checkout")}
+        onIrSolicitud={(p) => setPagina(p || "catalogo")}
         onSolicitarDiagnostico={() => irA("solicitar-diagnostico")}
         onRegistroNegocio={irARegistroNegocio}
         onIrMisCompras={() => { if (!user) guardarDestinoPostLogin("checkout-marketplace"); irA("mis-compras"); }}
@@ -498,51 +480,14 @@ function App() {
       />
     );
 
-    if (pagina === "checkout") {
-      if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      if (user.rol === "CLIENTE") {
-        return <CheckoutPage
-          onCompraExitosa={handleCompraExitosa}
-          onVolver={() => setPagina("catalogo")}
-          solicitudItems={solicitudItems}
-          solicitudSubtotal={solicitudSubtotal}
-          solicitudIva={solicitudIva}
-          solicitudTotal={solicitudTotal}
-          onClearSolicitud={() => setSolicitudItems([])}
-          onRemoveProductList={removeProductList}
-        />;
-      }
-      return (
-        <div className="app-layout">
-          <Sidebar paginaActual={pagina} irA={irA} userRole={user.rol}
-            abierto={sidebarAbierto} onCerrar={() => setSidebarAbierto(false)} />
-          <main className="app-content">
-            <TopBar titulo="Enviar solicitud" user={user} onLogout={handleLogout}
-              theme={theme} onToggleTheme={toggleTheme}
-              onMenuClick={() => setSidebarAbierto(true)} />
-            <CheckoutPage
-              onCompraExitosa={handleCompraExitosa}
-              solicitudItems={solicitudItems}
-              solicitudSubtotal={solicitudSubtotal}
-              solicitudIva={solicitudIva}
-              solicitudTotal={solicitudTotal}
-              onClearSolicitud={() => setSolicitudItems([])}
-              onRemoveProductList={removeProductList}
-            />
-          </main>
-        </div>
-      );
-    }
-
-    if (pagina === "mis-solicitudes") return conCabecera(<MisSolicitudes onVolver={() => setPagina("catalogo")} />);
+    if (pagina === "mis-solicitudes") return conCabecera(<MisSolicitudes onVolver={() => setPagina("perfil-cliente")} />);
 
     if (pagina === "pago-resultado") return conCabecera(
       <PagoResultado
-        onPagoExitoso={() => setSolicitudItems([])}
         onIrSolicitudes={() => setPagina("mis-solicitudes")}
         onIrServicios={() => irA("mis-servicios")}
         onCompraCatalogoPagada={vaciarCarritoPagado}
-        onIrMisCompras={() => irA("mis-compras")}
+        onIrMisCompras={() => irA(user?.rol === "TALLER" ? "taller-inventario" : "mis-compras")}
       />
     );
 
@@ -561,7 +506,7 @@ function App() {
 
     if (pagina === "mis-pedidos") {
       if (!user) return <Login onLogin={handleLogin} onGoRegister={() => setPagina("register")} onVolver={() => setPagina("catalogo")} />;
-      return conCabecera(<MisPedidos onVolver={() => setPagina("catalogo")} />);
+      return conCabecera(<MisPedidos onVolver={() => setPagina("perfil-cliente")} />);
     }
 
     if (pagina === "mis-vehiculos") {
@@ -601,7 +546,6 @@ function App() {
           onSolicitar={() => irA("solicitar-diagnostico")}
           avisoCotizacion={vieneDeCotizacion ? user.correo : null}
           onCerrarAviso={() => setVieneDeCotizacion(false)}
-          onIrHistorial={() => setPagina("mis-pedidos")}
         />,
         "servicios"
       );
@@ -661,24 +605,25 @@ function App() {
     // SUPERADMIN: catálogo global de solo lectura; la TIENDA y el VENDEDOR siguen con su gestión de productos
     if (pagina === "productos" && user?.rol === "SUPERADMIN") return <ProductosPlataforma token={token} />;
     if (pagina === "productos")        return <Productos            onNuevo={() => irA("productoNuevo")} onEditar={id => irA("productoEditar", id)} token={token} esTienda={esTienda} />;
-    if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
-    if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} esTienda={esTienda} />;
-    if (pagina === "inventarioAjuste") return <AjusteInventarioForm productoId={idSeleccionado} onVolver={() => irA("productos")} token={token} />;
+    if (pagina === "productoNuevo")    return <ProductoForm         onVolver={() => irA("productos")} token={token} esTienda={esTienda} ivaRate={ivaRate} />;
+    if (pagina === "productoEditar")   return <ProductoForm         id={idSeleccionado} onVolver={() => irA("productos")} token={token} esTienda={esTienda} ivaRate={ivaRate} />;
 
     if (pagina === "clientes" && user?.rol === "SUPERADMIN") return <ClientesPlataforma token={token} />;
     if (pagina === "compras")          return <Compras              onNueva={() => irA("compraNueva")} onDetalle={id => irA("compraDetalle", id)} token={token} />;
     if (pagina === "compraNueva")      return <CompraForm           onVolver={() => irA("compras")} token={token} />;
     if (pagina === "compraDetalle")    return <CompraDetalle        id={idSeleccionado} onVolver={() => irA("compras")} token={token} />;
 
-    if (pagina === "proveedores")      return <Proveedores          onNuevo={() => irA("proveedorNuevo")} onEditar={id => irA("proveedorEditar", id)} token={token} />;
+    if (pagina === "proveedores")      return <Proveedores          onNuevo={() => irA("proveedorNuevo")} onEditar={id => irA("proveedorEditar", id)} onDetalle={id => irA("proveedorDetalle", id)} token={token} />;
+    if (pagina === "proveedorDetalle") return <ProveedorDetalle     id={idSeleccionado} onVolver={() => irA("proveedores")} onEditar={id => irA("proveedorEditar", id)} onCompra={id => irA("compraDetalle", id)} token={token} />;
     if (pagina === "proveedorNuevo")   return <ProveedorForm        onVolver={() => irA("proveedores")} token={token} />;
     if (pagina === "proveedorEditar")  return <ProveedorForm        id={idSeleccionado} onVolver={() => irA("proveedores")} token={token} />;
 
-    if (pagina === "movimientos")      return <Movimientos          token={token} esTienda={esTienda} />;
+    if (pagina === "movimientos")      return <Movimientos          token={token} esTienda={esTienda} irA={irA} />;
     if (pagina === "usuarios")         return <Usuarios             token={token} />;
     if (pagina === "mi-perfil")        return <PerfilAdmin          />;
     if (pagina === "taller-panel" || SECCION_TALLER[pagina]) {
-      return <PanelTaller seccion={SECCION_TALLER[pagina] || "inicio"} param={idSeleccionado} irA={irA} onResumen={setResumenTaller} />;
+      return <PanelTaller seccion={SECCION_TALLER[pagina] || "inicio"} param={idSeleccionado} irA={irA} onResumen={setResumenTaller}
+        onComprarInventario={irAlCatalogoGlobal} />;
     }
     if (pagina === "admin-talleres")   return <AdminTalleres        />;
     // ADMIN: solo aprueba o rechaza; SUPERADMIN: gestión completa (y la lista unificada "Tiendas y talleres")
@@ -687,11 +632,12 @@ function App() {
     if (pagina === "negocios")         return <NegociosPlataforma key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado} />;
     if (pagina === "informes-tienda")  return <InformesTienda       token={token} onIr={(p) => irA(p)} />;
     if (pagina === "asistente-tienda") return <AsistenteTienda      token={token} />;
-    if (pagina === "liquidaciones")    return <Liquidaciones        />;
+    if (pagina === "liquidaciones")    return <Liquidaciones key={idSeleccionado || "liquidaciones"} vistaInicial={idSeleccionado} />;
     // Un aviso de la campanita abre un pedido con irA("pedidos-tienda", { abrir }); otro aviso la vuelve a montar
     if (pagina === "pedidos-tienda")   return <PedidosTienda key={idSeleccionado?.abrir || "pedidos"} param={idSeleccionado} irA={irA} />;
     if (pagina === "problemas-envios") return <ProblemasEnvios      />;
-    if (pagina === "pedidos-envios")   return <PedidosEnvios key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado} />;
+    if (pagina === "pedidos-envios")   return <PedidosEnvios key={idSeleccionado || "todos"} token={token} filtroInicial={idSeleccionado}
+      puedeVerDetalle={user?.rol === "SUPERADMIN"} />;
     if (pagina === "mi-tienda")        return <DatosMiTienda        token={token} onGuardado={(t) => setTiendaIncompleta(!t.datosCompletos)} />;
 
     if (pagina === "reportes-plataforma") return <ReportesPlataforma key={idSeleccionado || "ventas"} token={token} filtroInicial={idSeleccionado} />;
@@ -703,7 +649,9 @@ function App() {
   const esCliente = user?.rol === "CLIENTE";
   // El registro de negocios es público: nunca va dentro del panel, aunque haya sesión.
   const usarPanel = pagina === "catalogo" || pagina === "registro-negocio" || PAGINAS_MARKETPLACE.includes(pagina)
-    || PAGINAS_SIEMPRE_PUBLICAS.includes(pagina) || (esCliente && PAGINAS_CLIENTE.includes(pagina)) ? false
+    || PAGINAS_SIEMPRE_PUBLICAS.includes(pagina) || (esCliente && PAGINAS_CLIENTE.includes(pagina))
+    // El taller paga su compra con la misma pantalla del catálogo, sin el menú del panel
+    || (user?.rol === "TALLER" && pagina === "checkout-marketplace") ? false
     : !!user && pagina !== "catalogo";
 
   return (
@@ -743,6 +691,15 @@ function App() {
       </main>
 
       <ChatWidget onVerProducto={(id) => irA("producto-marketplace", id)} />
+      <Avisos />
+      {/* Cliente sin ciudad: la escoge antes de seguir (no se puede cerrar sin guardarla) */}
+      {user?.rol === "CLIENTE" && user.ciudadPendiente && token && (
+        <PedirCiudad token={token} onGuardada={() => {
+          const actualizado = { ...user, ciudadPendiente: false };
+          setUser(actualizado);
+          setSession(token, actualizado);
+        }} />
+      )}
     </div>
   );
 }

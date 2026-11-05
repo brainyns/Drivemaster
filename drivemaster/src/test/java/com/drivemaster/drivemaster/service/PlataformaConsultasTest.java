@@ -110,7 +110,8 @@ class PlataformaConsultasTest {
         when(mongo.find(any(Query.class), eq(Producto.class))).thenReturn(List.of());
         when(mongo.findAll(Tienda.class)).thenReturn(List.of());
 
-        assertEquals(50, servicio.productos(null, null, null, null, 0, 5000).productos().tamano());
+        // El mismo tope de todas las tablas paginadas (PeticionTabla): 100
+        assertEquals(100, servicio.productos(null, null, null, null, 0, 5000).productos().tamano());
         assertEquals(20, servicio.productos(null, null, null, null, 0, 0).productos().tamano());
         assertEquals(0, servicio.productos(null, null, null, null, -3, 10).productos().pagina());
     }

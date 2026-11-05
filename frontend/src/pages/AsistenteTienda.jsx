@@ -5,6 +5,8 @@ import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import ChipEstado from "../components/ui/ChipEstado";
 import Icon from "../components/public/Icon";
 import "../css/asistente-tienda.css";
+import { textoError } from "../utils/errores";
+import { decimal } from "../utils/formato";
 
 const SUGERENCIAS = [
   "¿Cómo van mis ventas frente al mes pasado?",
@@ -64,7 +66,7 @@ function DetrasDeEscena({ detras }) {
             <div><dt>Modelo</dt><dd>{detras.modelo || "Sin respuesta del modelo"}</dd></div>
             <div><dt>Tokens enviados</dt><dd>{detras.tokensEntrada != null ? num(detras.tokensEntrada) : "—"}</dd></div>
             <div><dt>Tokens de la respuesta</dt><dd>{detras.tokensSalida != null ? num(detras.tokensSalida) : "—"}</dd></div>
-            <div><dt>Tiempo</dt><dd>{(detras.ms / 1000).toFixed(1)} s</dd></div>
+            <div><dt>Tiempo</dt><dd>{decimal(detras.ms / 1000)} s</dd></div>
           </dl>
         ) : (
           <>
@@ -110,7 +112,7 @@ export default function AsistenteTienda({ token }) {
       setMensajes((m) => [...m, { rol: "asistente", texto: r.respuesta, error: r.error }]);
       setDetras(r.detras);
     } catch (e) {
-      setMensajes((m) => [...m, { rol: "asistente", texto: e.message, error: true }]);
+      setMensajes((m) => [...m, { rol: "asistente", texto: textoError(e), error: true }]);
     } finally {
       setPensando(false);
       campo.current?.focus();

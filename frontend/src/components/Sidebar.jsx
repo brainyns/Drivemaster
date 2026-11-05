@@ -51,7 +51,7 @@ const menu = [
   {
     key: "finanzas", label: "Finanzas", icon: "reportes",
     subItems: [
-      { key: "liquidaciones",    label: "Liquidaciones",      icon: "reportes" },
+      { key: "liquidaciones",    label: "Pagos",              icon: "reportes" },
       { key: "problemas-envios", label: "Problemas de envío", icon: "aprobaciones" },
     ],
   },
@@ -59,16 +59,17 @@ const menu = [
   { key: "pedidos-tienda", label: "Pedidos", icon: "proveedores" },
 ];
 
-// Taller: del primer aviso a la entrega. "Órdenes anteriores" solo aparece mientras quede alguna por atender.
+// Taller: del primer aviso a la entrega. Las órdenes de la versión anterior están en Mi taller, no en el menú.
 const MENU_TALLER = [
   { key: "taller-inicio",      label: "Inicio",      icon: "dashboard" },
   { key: "taller-solicitudes", label: "Solicitudes", icon: "bandeja" },
   { key: "taller-agenda",      label: "Agenda",      icon: "agenda" },
   { key: "taller-trabajos",    label: "Trabajos",    icon: "taller" },
   { key: "taller-cotizaciones", label: "Cotizaciones", icon: "compras" },
+  { key: "taller-inventario",  label: "Mi inventario", icon: "invProductos" },
+  { key: "taller-movimientos", label: "Movimientos", icon: "movimientos" },
   { key: "taller-mitaller",    label: "Mi taller",   icon: "garaje" },
   { key: "taller-informes",     label: "Informes",    icon: "reportes" },
-  { key: "taller-anteriores",  label: "Órdenes anteriores", icon: "ventas" },
 ];
 
 // Tienda del marketplace: sus pedidos, su catálogo y los movimientos de su inventario.
@@ -98,7 +99,7 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar, resumenTaller
   const contador = (key) => (userRole === "TALLER" && key === "taller-solicitudes" ? resumenTaller?.porResponder : 0) || 0;
 
   const visibleMenu = (userRole === "TALLER" ? MENU_TALLER : menu).filter(item => {
-    if (userRole === "TALLER") return item.key !== "taller-anteriores" || (resumenTaller?.anteriores || 0) > 0;
+    if (userRole === "TALLER") return true;
     if (userRole === "TIENDA") return MENU_TIENDA.includes(item.key);
     if (item.key === "pedidos-tienda" || item.key === "mi-tienda") return false;
     // ADMIN: solo la operación diaria; el resto del panel es del SUPERADMIN

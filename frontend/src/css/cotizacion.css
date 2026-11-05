@@ -91,6 +91,20 @@
   font-style: italic;
 }
 
+/* Lo que le queda al taller (solo en su vista): en verde, con una línea que dice de dónde sale */
+.ct-totales__fila--recibe {
+  align-items: baseline;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: var(--ui-r-md);
+  background: var(--ui-ok-bg);
+  color: var(--ui-ok);
+  font-weight: 700;
+}
+
+.ct-totales__fila--recibe dt { display: grid; gap: 2px; }
+.ct-totales__fila--recibe .ss-meta { font-size: 0.75rem; font-weight: 400; color: var(--text-muted); }
+
 /* ── Formulario del taller ── */
 .ct-form {
   display: flex;
@@ -309,4 +323,89 @@
 .apc__sugerencias { padding-top: 10px; border-top: 1px dashed var(--ui-line); }
 .apc__sugerencias-titulo { font-size: 0.8rem; font-weight: 600; color: var(--ui-text); }
 .apc__sugerencias ul { margin: 6px 0 0 16px; padding: 0; font-size: 0.8rem; line-height: 1.5; color: var(--ui-muted); }
+/* Explicabilidad Matematica (XAI) */
+.apc__xai {
+  display: grid;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--ui-line);
+}
+.apc__xai-titulo {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ui-text);
+  letter-spacing: 0.02em;
+}
+.apc__factores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+.apc__columna-factores {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.apc__columna-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.apc__columna-header--favor { color: var(--ui-ok, #10b981); }
+.apc__columna-header--riesgo { color: var(--ui-error, #ef4444); }
+.apc__factor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 12px;
+  border-radius: var(--ui-r-md, 8px);
+  background: color-mix(in srgb, var(--ui-surface) 80%, transparent);
+  border: 1px solid var(--ui-line);
+}
+.apc__factor-card--favor { border-left: 3px solid var(--ui-ok, #10b981); }
+.apc__factor-card--riesgo { border-left: 3px solid var(--ui-error, #ef4444); }
+.apc__factor-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.apc__factor-titulo {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ui-text);
+}
+.apc__factor-desc {
+  font-size: 0.75rem;
+  color: var(--ui-muted);
+  line-height: 1.35;
+}
+.apc__factor-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.apc__factor-tag--favor { background: var(--ui-ok-bg, #ecfdf5); color: var(--ui-ok, #059669); }
+.apc__factor-tag--riesgo { background: var(--ui-error-bg, #fef2f2); color: var(--ui-error, #dc2626); }
+
 .apc__motor { text-align: right; font-size: 0.75rem; color: var(--ui-muted); }
+
+/* De dónde sale cada repuesto: el cliente lo lee sin buscarlo. Texto siempre; el color solo acompaña */
+.ct-origen {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ui-muted);
+}
+.ct-origen::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.ct-origen--taller { color: var(--ui-ok); }

@@ -34,10 +34,61 @@ export async function operacionPlataforma(token) {
   return leer(await apiFetch(`${BASE}/operacion`, { headers: headers(token) }), "No se pudo cargar tu resumen.");
 }
 
-/** Monitor de pedidos y envíos (ADMIN y SUPERADMIN). Filtros: estado, tiendaId, entrega, atrasados, pagina, tamano. */
+/**
+ * Monitor de pedidos y envíos (ADMIN y SUPERADMIN). Filtros: estado, tiendaId, entrega, alerta (POR_VENCER, ATRASADO
+ * o SIN_RETIRAR), pagina, tamano.
+ */
 export async function pedidosPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/pedidos${consulta(filtros)}`, { headers: headers(token) }),
     "No se pudieron cargar los pedidos.");
+}
+
+// ─── Vistas de detalle (solo SUPERADMIN) ───────────────────────────────────
+
+async function leerDetalle(res, fallo) {
+  if (res.status === 404) throw new Error("Ya no existe: puede que se haya eliminado.");
+  return leer(res, fallo);
+}
+
+/** Solicitud: el total del taller, lo que pagó el cliente y lo que fue a las tiendas. */
+export async function resumenOrden(token, id) {
+  return leerDetalle(await apiFetch(`${BASE}/ordenes/${encodeURIComponent(id)}/resumen`, { headers: headers(token) }),
+    "No se pudo cargar el total de la solicitud.");
+}
+
+/** Pasa a DESPACHADO un pedido que la tienda confirmó por fuera. No mueve dinero. */
+export async function marcarPedidoDespachado(token, id, motivo) {
+  const res = await apiFetch(`${BASE}/pedidos/${encodeURIComponent(id)}/despachado`, {
+    method: "PATCH", headers: headers(token), body: JSON.stringify({ motivo }),
+  });
+  if (res.ok) return;
+  let mensaje = "No se pudo marcar el despacho.";
+  try { const data = await res.json(); mensaje = data.error || data.message || mensaje; } catch { /* sin cuerpo */ }
+  throw new Error(mensaje);
+}
+
+/** Pedido: productos, tienda, cliente, taller, línea de tiempo, pago Wompi, reparto y entrega. */
+export async function detallePedido(token, id) {
+  return leerDetalle(await apiFetch(`${BASE}/pedidos/${encodeURIComponent(id)}`, { headers: headers(token) }),
+    "No se pudo cargar el pedido.");
+}
+
+/** Solicitud: partes, línea de tiempo, pagos, reparto, reembolsos y pedidos a las tiendas. */
+export async function detalleOrden(token, id) {
+  return leerDetalle(await apiFetch(`${BASE}/ordenes/${encodeURIComponent(id)}`, { headers: headers(token) }),
+    "No se pudo cargar la solicitud.");
+}
+
+/** Cliente: datos, ciudad, vehículos, pedidos y solicitudes de diagnóstico. */
+export async function detalleCliente(token, id) {
+  return leerDetalle(await apiFetch(`${BASE}/clientes/${encodeURIComponent(id)}`, { headers: headers(token) }),
+    "No se pudo cargar el cliente.");
+}
+
+/** Negocio (tipo TIENDA o TALLER): datos, ubicación, estado, productos o servicios, pedidos y totales. */
+export async function detalleNegocio(token, tipo, id) {
+  return leerDetalle(await apiFetch(`${BASE}/negocios/${encodeURIComponent(tipo)}/${encodeURIComponent(id)}`, { headers: headers(token) }),
+    "No se pudo cargar el negocio.");
 }
 
 // ─── Reportes de la plataforma (solo SUPERADMIN) ───────────────────────────
@@ -60,6 +111,11 @@ export async function reporteServiciosPlataforma(token) {
 
 export async function reporteComisionPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/reportes/comision${consulta(filtros)}`, { headers: headers(token) }), "No se pudo cargar el reporte de comisión.");
+}
+
+/** Pedidos de la tienda o solicitudes del taller que siguen en curso de un usuario (para avisar antes de desactivarlo). */
+export async function enCursoUsuario(token, id) {
+  return leer(await apiFetch(`${BASE}/usuarios/${encodeURIComponent(id)}/en-curso`, { headers: headers(token) }), "No se pudo revisar lo que tiene en curso.");
 }
 
 /** Usuarios del sistema (correo enmascarado). Filtros: q, rol, estado, pagina, tamano. */
@@ -87,4 +143,18 @@ export async function productosPlataforma(token, filtros) {
 export async function clientesPlataforma(token, filtros) {
   return leer(await apiFetch(`${BASE}/clientes${consulta(filtros)}`, { headers: headers(token) }),
     "No se pudieron cargar los clientes.");
+}
+
+/**
+ * SUPERADMIN: cancela una solicitud pagada antes de la instalación. Deja el reembolso pendiente, cancela los pedidos
+ * sin despachar y devuelve las piezas del taller a su lote. Devuelve { reembolso, pedidosCancelados, pedidosYaDespachados }.
+ */
+export async function cancelarOrdenPagada(token, id, motivo) {
+  const res = await apiFetch(`${BASE}/ordenes/${encodeURIComponent(id)}/cancelar`, {
+    method: "POST", headers: headers(token), body: JSON.stringify({ motivo }),
+  });
+  if (res.ok) return res.json();
+  let mensaje = "No se pudo cancelar la solicitud.";
+  try { const data = await res.json(); mensaje = data.error || data.message || mensaje; } catch { /* sin cuerpo */ }
+  throw new Error(mensaje);
 }

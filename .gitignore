@@ -26,3 +26,9 @@ drivemaster/cp_new.txt
 .agents/
 .gemini/
 skills-lock.json
+
+# Modelos y reportes generados
+*.docx
+ml/__pycache__/
+__pycache__/
+

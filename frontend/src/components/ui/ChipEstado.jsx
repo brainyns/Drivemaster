@@ -1,5 +1,10 @@
 // Tonos de los catálogos de estados (estadosServicio, estadosCompra…) → variante de .ui-badge
-const VARIANTE = { ok: "ok", aviso: "aviso", error: "error", info: "info", proceso: "info", apagado: "neutro", acento: "acento" };
+const VARIANTE = {
+  ok: "ok", aviso: "aviso", error: "error", info: "info", proceso: "info", apagado: "neutro", acento: "acento",
+  // Fases del panel del taller (estadosTaller.js)
+  nueva: "fase-nueva", cotizacion: "fase-cotizacion", curso: "fase-curso",
+  lista: "fase-lista", entregada: "fase-entregada", cancelada: "fase-cancelada",
+};
 
 /**
  * Estado con texto y un punto de color: el color acompaña, nunca es lo único que informa. Con catalogo y estado

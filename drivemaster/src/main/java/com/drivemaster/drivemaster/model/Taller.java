@@ -22,6 +22,8 @@ public class Taller {
     private String usuarioId;
 
     private String nombre;
+    // NIT del registro (desde que se valida que no se repita); los talleres anteriores no lo tienen
+    private String nit;
     private String ciudad;
     private String direccion;
     private Double latitud;
@@ -43,6 +45,10 @@ public class Taller {
 
     // Valor de la hora de mano de obra, para cotizar por horas además de por ítem.
     private Double tarifaHora;
+
+    // Responsable de IVA: su mano de obra y su diagnóstico llevan el parámetro IVA; false = 0 %. null (talleres
+    // anteriores al campo) cuenta como responsable. Los repuestos siempre llevan el IVA global. Ver IvaTaller.
+    private Boolean responsableIva;
 
     /**
      * Horario de atención en texto (ej. "Lun a Vie 8:00 a. m.–6:00 p. m.; Sáb 8:00 a. m.–1:00 p. m.").
@@ -66,4 +72,7 @@ public class Taller {
 
     @Builder.Default
     private List<Mecanico> mecanicos = new ArrayList<>();
+
+    // Cuenta bancaria para dispersiones automáticas (Wompi) y transferencias
+    private CuentaBancaria cuentaBancaria;
 }

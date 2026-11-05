@@ -7,6 +7,8 @@ import { guardarPagoPendiente } from "../components/marketplace/pagoPendiente";
 import "../css/marketplace.css";
 import "../css/cotizacion.css";
 import Icon from "../components/public/Icon";
+import { textoError, textoErrorPago } from "../utils/errores";
+import Alerta from "../components/ui/Alerta";
 
 const CLAVE_VEHICULO = "marketplaceVehiculoId";
 
@@ -31,6 +33,7 @@ function porTienda(items) {
 export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, onPagada }) {
   const token = getToken();
   const user = getUser();
+  const esTaller = user?.rol === "TALLER";
   const grupos = useMemo(() => porTienda(carrito.catalogo), [carrito.catalogo]);
 
   const [entregas, setEntregas] = useState({});
@@ -52,7 +55,8 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
   const solicitud = useMemo(() => {
     const conEnvio = grupos.some((g) => (entregas[g.tienda.id] || "RETIRO") === "ENVIO");
     let vehiculoId = "";
-    try { vehiculoId = localStorage.getItem(CLAVE_VEHICULO) || ""; } catch { /* sin almacenamiento */ }
+    // El vehículo guardado es del cliente: un taller compra para su inventario, no para un vehículo
+    try { vehiculoId = esTaller ? "" : localStorage.getItem(CLAVE_VEHICULO) || ""; } catch { /* sin almacenamiento */ }
     return {
       items: carrito.catalogo.map((x) => ({ productoId: x.producto.id, cantidad: x.cantidad })),
       entregas: grupos.map((g) => ({ tiendaId: g.tienda.id, tipo: entregas[g.tienda.id] || "RETIRO" })),
@@ -64,7 +68,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
       } : {}),
       ...(vehiculoId ? { vehiculoId } : {}),
     };
-  }, [carrito.catalogo, grupos, entregas, envio]);
+  }, [carrito.catalogo, grupos, entregas, envio, esTaller]);
 
   const puedeCotizar = grupos.length > 0 && (!hayEnvio || (envioCompleto && ciudadesNoCoinciden.length === 0));
   const clave = JSON.stringify(solicitud);
@@ -76,7 +80,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
     const t = setTimeout(() => {
       cotizarCompra(token, solicitud)
         .then((datos) => { if (vivo) setRespuesta({ clave, datos, error: null }); })
-        .catch((e) => { if (vivo) setRespuesta({ clave, datos: null, error: e.message }); });
+        .catch((e) => { if (vivo) setRespuesta({ clave, datos: null, error: textoError(e) }); });
     }, 400);
     return () => { vivo = false; clearTimeout(t); };
   }, [clave, puedeCotizar, solicitud, token]);
@@ -115,7 +119,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
         window.location.href = data.checkoutUrl;
       }
     } catch (e) {
-      setErrorPago(e.message);
+      setErrorPago(textoErrorPago(e));
       setPagando(false);
     }
   };
@@ -180,8 +184,8 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
 
               {detalle && (
                 <dl className="mk-totales">
-                  <div><dt>Productos</dt><dd>{formatPrecio(detalle.subtotal)}</dd></div>
-                  <div><dt>IVA</dt><dd>{formatPrecio(detalle.iva)}</dd></div>
+                  <div><dt>Productos (IVA incluido)</dt><dd>{formatPrecio(detalle.subtotal + detalle.iva)}</dd></div>
+                  <div><dt>Incluye IVA de</dt><dd>{formatPrecio(detalle.iva)}</dd></div>
                   <div><dt>Envío</dt><dd>{detalle.tipo === "ENVIO" ? formatPrecio(detalle.costoEnvio) : "Sin costo"}</dd></div>
                   <div className="mk-totales__final"><dt>Total de {t.nombre}</dt><dd>{formatPrecio(detalle.total)}</dd></div>
                 </dl>
@@ -222,7 +226,7 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
           </div>
         )}
         {errorCotizacion && <p className="mk-aviso mk-aviso--error" role="alert">{errorCotizacion} Revisa tu carrito y vuelve a intentar.</p>}
-        {errorPago && <p className="mk-aviso mk-aviso--error" role="alert">{errorPago}</p>}
+        {errorPago && <Alerta onCerrar={() => setErrorPago(null)}>{errorPago}</Alerta>}
 
         <section className="mk-pago" aria-live="polite">
           <div>
@@ -230,13 +234,13 @@ export default function CheckoutMarketplace({ header, carrito, onVolverCarrito, 
             <strong className="mk-pago__total">
               {calculando ? "Calculando..." : cotizacion ? formatPrecio(cotizacion.total) : "—"}
             </strong>
-            {cotizacion && <span className="mk-tarjeta__meta">Productos {formatPrecio(cotizacion.subtotal)} · IVA {formatPrecio(cotizacion.iva)} · Envío {formatPrecio(cotizacion.costoEnvio)}</span>}
+            {cotizacion && <span className="mk-tarjeta__meta">Productos (IVA incluido) {formatPrecio(cotizacion.subtotal + cotizacion.iva)} · Envío {formatPrecio(cotizacion.costoEnvio)} · Incluye IVA de {formatPrecio(cotizacion.iva)}</span>}
           </div>
           <button className="dm-btn dm-btn--primary" onClick={pagar} disabled={bloqueado}>
             {pagando ? "Preparando el pago..." : "Pagar con Wompi"}
           </button>
         </section>
-        <p className="mk-nota">El valor lo calcula DriveMaster al pagar. Antes de cobrar revisamos que haya stock en todas las tiendas; si algo se agota después, te devolvemos todo el pago.</p>
+        <p className="mk-nota">Los precios ya incluyen IVA (se informa cuánto lleva). El valor lo calcula DriveMaster al pagar; antes de cobrar revisamos que haya stock en todas las tiendas, y si algo se agota después, te devolvemos todo el pago.</p>
 
         {pagoLocal && (
           <PagoLocal token={token} pago={pagoLocal} onCerrar={() => setPagoLocal(null)} onVerificado={alVerificar} />

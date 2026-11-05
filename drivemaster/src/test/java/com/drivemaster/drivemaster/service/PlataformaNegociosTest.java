@@ -87,6 +87,7 @@ class PlataformaNegociosTest {
 
     @Test
     void unaSolaListaTrae_estado_plan_calificacion_actividad_y_datos_por_completar() {
+        conSuscripciones();
         datos();
 
         NegociosRespuesta r = servicio.negocios(null, null, null, 0, 20);
@@ -179,6 +180,7 @@ class PlataformaNegociosTest {
 
     @Test
     void cadaFilaTraeElLogoDelNegocioYSeFiltraPorPlan() {
+        conSuscripciones();
         datos();
         Tienda conLogo = Tienda.builder().id("t1").nombre("Repuestos Norte").logoUrl("https://res.cloudinary.com/x/logo.png")
                 .estadoAprobacion("APROBADO").build();
@@ -228,5 +230,19 @@ class PlataformaNegociosTest {
         ArgumentCaptor<Query> q = ArgumentCaptor.forClass(Query.class);
         verify(mongo).find(q.capture(), eq(Taller.class));
         assertTrue(q.getValue().getQueryObject().toJson().contains("PENDIENTE"));
+    }
+
+    /** Las pruebas del plan corren con las suscripciones encendidas (hoy están apagadas: solo comisión). */
+    private void conSuscripciones() {
+        org.springframework.test.util.ReflectionTestUtils.setField(servicio, "suscripcionesHabilitadas", true);
+    }
+
+    @Test
+    void conLasSuscripcionesApagadasNingunNegocioTraePlanNiSeFiltraPorEl() {
+        datos();
+        // Con el filtro "sin plan": si aplicara, con planes activos en los datos dejaría fuera a algunos
+        var filas = servicio.negocios("", "", null, "SIN_PLAN", 0, 50).negocios().items();
+        assertFalse(filas.isEmpty());
+        assertTrue(filas.stream().allMatch(f -> f.plan() == null), "sin suscripciones no se muestra plan ni se filtra por él");
     }
 }

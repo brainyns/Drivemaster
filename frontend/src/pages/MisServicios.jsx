@@ -9,8 +9,10 @@ import { misOrdenes } from "../services/ordenServicioService";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
 import RespuestaCotizacion from "../components/servicio/RespuestaCotizacion";
+import BotonPdfCotizacion from "../components/servicio/BotonPdfCotizacion";
 import PagoLocal from "../components/servicio/PagoLocal";
 import ConfirmarRecepcion from "../components/servicio/ConfirmarRecepcion";
+import { PagosCliente } from "../components/servicio/ResumenServicio";
 import {
   ESTADOS, ESTADOS_CANCELABLES_CLIENTE, ESTADOS_PEDIDO, URGENCIAS, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
@@ -21,12 +23,17 @@ import ChipEstado from "../components/ui/ChipEstado";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Alerta from "../components/ui/Alerta";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
+import { MINIMO_MOTIVO } from "../utils/motivo";
 import Icon from "../components/public/Icon";
 import { FILTROS_SERVICIOS, MINIMO_PARA_FILTRAR, contarServicios, filtrarServicios } from "../components/servicio/filtrosServicios";
+import { conPrefijo } from "../utils/negocio";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
 import "../css/mis-servicios.css";
+import { claveOferta, esDelTaller, etiquetaOrigen } from "../components/servicio/reglasRepuestos";
+import { textoError, textoErrorPago } from "../utils/errores";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 
@@ -46,6 +53,8 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
   const [pedidos, setPedidos] = useState([]);
   const [error, setError] = useState(null);
   const [pagando, setPagando] = useState(false);
+  // Candado inmediato: dos clics seguidos no piden dos links aunque el botón aún no se haya desactivado
+  const pidiendoPago = useRef(false);
   const [pagoLocal, setPagoLocal] = useState(null);
 
   // Se recarga cada vez que cambia el estado de la solicitud
@@ -57,7 +66,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
         setCotizaciones(c || []);
         setPedidos(p || []);
       })
-      .catch((e) => { if (!cancelado) setError(e.message); });
+      .catch((e) => { if (!cancelado) setError(textoError(e)); });
     return () => { cancelado = true; };
   }, [token, solicitud.id, solicitud.estado]);
 
@@ -70,6 +79,8 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
   };
 
   const pagar = async () => {
+    if (pidiendoPago.current) return;
+    pidiendoPago.current = true;
     setPagando(true);
     setError(null);
     try {
@@ -77,10 +88,13 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
       if (local) {
         setPagoLocal(local);
         setPagando(false);
+        pidiendoPago.current = false;
       }
+      // Sin "local" el navegador ya va hacia Wompi: el botón sigue desactivado
     } catch (e) {
-      setError(e.message);
+      setError(textoErrorPago(e));
       setPagando(false);
+      pidiendoPago.current = false;
       await onCambio();
     }
   };
@@ -92,7 +106,10 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
           <h2 className="ss-bloque__titulo">Cotización</h2>
           {error && <p className="ss-alerta" role="alert">{error}</p>}
           <CotizacionDetalle cotizacion={vigente} />
-          {vigente.puedeResponder && solicitud.estado === "COTIZADA" && <RespuestaCotizacion onResponder={responder} />}
+          <div className="ss-acciones">
+            <BotonPdfCotizacion cotizacionId={vigente.id} />
+          </div>
+          {vigente.puedeResponder && solicitud.estado === "COTIZADA" && <RespuestaCotizacion onResponder={responder} sinSaldo={vigente.totalAPagar <= 0} />}
           {solicitud.estado === "APROBADA" && pagoLocal && (
             <PagoLocal token={token} pago={pagoLocal} onCerrar={() => setPagoLocal(null)}
               onVerificado={async () => { setPagoLocal(null); await onCambio(); }} />
@@ -100,7 +117,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
           {solicitud.estado === "APROBADA" && vigente.estado === "APROBADA" && !pagoLocal && (
             <div className="ss-acciones">
               <button className="sv-btn" onClick={pagar} disabled={pagando}>
-                {pagando ? "Abriendo el pago..." : `Pagar ${formatPrecio(vigente.totalAPagar)}`}
+                {pagando ? "Abriendo el pago..." : vigente.totalAPagar > 0 ? `Pagar ${formatPrecio(vigente.totalAPagar)}` : "Continuar sin pago"}
               </button>
               <span className="ss-ayuda">Pago seguro con Wompi. Recibirás un comprobante de pago por correo.</span>
             </div>
@@ -138,7 +155,7 @@ function CotizacionCliente({ token, solicitud, onCambio }) {
  * Órdenes de taller del flujo anterior, solo consulta (lo que el Historial de compras mostraba
  * como "Servicios de taller" y "Citas agendadas"). Las que siguen en curso van primero, con su estado.
  */
-function ServiciosAnteriores({ ordenes, ahora, onIrHistorial }) {
+function ServiciosAnteriores({ ordenes, ahora }) {
   if (ordenes.length === 0) return null;
   return (
     <section className="sv-anteriores" aria-labelledby="sv-anteriores-titulo">
@@ -167,18 +184,13 @@ function ServiciosAnteriores({ ordenes, ahora, onIrHistorial }) {
           </article>
         ))}
       </div>
-      {onIrHistorial && (
-        <p className="ss-meta">
-          <button className="sv-anteriores__enlace" onClick={onIrHistorial}>Ver el historial anterior completo</button>
-        </p>
-      )}
     </section>
   );
 }
 
 /** Solicitudes de diagnóstico del cliente y el avance de cada una. */
 export default function MisServicios({
-  onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso, onIrHistorial,
+  onVolver, onSolicitar, avisoCotizacion = null, onCerrarAviso,
   solicitudInicial = null,
 }) {
   const token = getToken();
@@ -189,8 +201,6 @@ export default function MisServicios({
   const [seleccionadaId, setSeleccionadaId] = useState(solicitudInicial);
   const avisoVisto = useRef(false);
   const [cancelando, setCancelando] = useState(false);
-  const [motivo, setMotivo] = useState("");
-  const [procesando, setProcesando] = useState(false);
   const [pagandoDiagnostico, setPagandoDiagnostico] = useState(false);
   const [pagoDiagnosticoLocal, setPagoDiagnosticoLocal] = useState(null);
   const [filtro, setFiltro] = useState("todas");
@@ -202,7 +212,7 @@ export default function MisServicios({
       setSolicitudes(data || []);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }
@@ -246,19 +256,11 @@ export default function MisServicios({
     return () => clearInterval(buscar);
   }, [abiertaDesdeAviso]);
 
-  const cancelar = async () => {
-    setProcesando(true);
-    setError(null);
-    try {
-      await cancelarSolicitudServicio(token, seleccionada.id, motivo.trim() || null);
-      setCancelando(false);
-      setMotivo("");
-      await cargar();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setProcesando(false);
-    }
+  // El diálogo muestra el error si falla (y queda abierto para corregir el motivo)
+  const cancelar = async (motivo) => {
+    await cancelarSolicitudServicio(token, seleccionada.id, motivo);
+    setCancelando(false);
+    await cargar();
   };
 
   // Solo pide el link y redirige a Wompi; la confirmación la hace el backend.
@@ -272,7 +274,7 @@ export default function MisServicios({
         setPagandoDiagnostico(false);
       }
     } catch (e) {
-      setError(e.message);
+      setError(textoErrorPago(e));
       setPagandoDiagnostico(false);
     }
   };
@@ -285,7 +287,7 @@ export default function MisServicios({
 
   if (cargando) {
     return (
-      <div className="sv-root">
+      <div className="sv-root sv-root--ancha">
         <EncabezadoPagina titulo="Mis servicios" descripcion="Tus solicitudes de diagnóstico y el avance de cada una." />
         <Esqueleto variante="lista" cantidad={3} texto="Cargando tus servicios…" />
       </div>
@@ -295,8 +297,9 @@ export default function MisServicios({
   if (seleccionada) {
     const s = seleccionada;
     const cancelable = ESTADOS_CANCELABLES_CLIENTE.includes(s.estado);
+    const tallerConMapa = s.tallerLatitud != null && s.tallerLongitud != null;
     return (
-      <div className="sv-root">
+      <div className="sv-root sv-root--ancha">
         <EncabezadoPagina
           titulo={s.vehiculoDescripcion}
           onVolver={() => { setSeleccionadaId(null); setCancelando(false); }}
@@ -312,7 +315,7 @@ export default function MisServicios({
 
         {error && <Alerta className="ms-alerta" onCerrar={() => setError(null)}>{error}</Alerta>}
 
-        <div className="ss-detalle">
+        <div className="ss-detalle ms-detalle">
           <div className="ss-detalle__principal">
             <section className="ss-bloque">
               <h2 className="ss-bloque__titulo">Lo que reportaste</h2>
@@ -335,16 +338,18 @@ export default function MisServicios({
             )}
 
             {s.tallerNombre && (
-              <section className="ss-bloque">
-                <h2 className="ss-bloque__titulo">Taller</h2>
-                <p className="ss-texto"><strong>{s.tallerNombre}</strong></p>
-                {s.tallerElegidoId && s.tallerElegidoId === s.tallerId && <p className="ss-meta">Lo elegiste en el mapa.</p>}
-                {s.tallerDireccion && <p className="ss-meta">{s.tallerDireccion}</p>}
-                {s.aceptadaPorTaller && s.tallerTelefono && <p className="ss-meta">Teléfono: {s.tallerTelefono}</p>}
-                {!s.aceptadaPorTaller && s.estado === "ASIGNADA_A_TALLER" && (
-                  <p className="ss-meta">Esperando que el taller confirme y te proponga una fecha.</p>
-                )}
-                {s.tallerLatitud != null && s.tallerLongitud != null && (
+              <section className={`ss-bloque ms-taller${tallerConMapa ? " ms-taller--con-mapa" : ""}`}>
+                <div className="ms-taller__datos">
+                  <h2 className="ss-bloque__titulo">Taller</h2>
+                  <p className="ss-texto"><strong>{s.tallerNombre}</strong></p>
+                  {s.tallerElegidoId && s.tallerElegidoId === s.tallerId && <p className="ss-meta">Lo elegiste en el mapa.</p>}
+                  {s.tallerDireccion && <p className="ss-meta">{s.tallerDireccion}</p>}
+                  {s.aceptadaPorTaller && s.tallerTelefono && <p className="ss-meta">Teléfono: {s.tallerTelefono}</p>}
+                  {!s.aceptadaPorTaller && s.estado === "ASIGNADA_A_TALLER" && (
+                    <p className="ss-meta">Esperando que el taller confirme y te proponga una fecha.</p>
+                  )}
+                </div>
+                {tallerConMapa && (
                   <RutaTaller
                     origen={s.latitud != null && s.longitud != null ? { latitud: s.latitud, longitud: s.longitud } : null}
                     taller={{ nombre: s.tallerNombre, latitud: s.tallerLatitud, longitud: s.tallerLongitud }}
@@ -412,8 +417,8 @@ export default function MisServicios({
                 <h2 className="ss-bloque__titulo">Repuestos propuestos</h2>
                 <ul className="ss-lista">
                   {s.repuestos.map((r) => (
-                    <li key={r.productoId}>
-                      {r.cantidad} × {r.descripcion} <span className="ss-meta">({r.marca} · {r.tiendaNombre})</span>
+                    <li key={claveOferta(r)}>
+                      {r.cantidad} × {r.descripcion} <span className="ss-meta">({[r.marca, !esDelTaller(r) && r.tiendaNombre, etiquetaOrigen(r)].filter(Boolean).join(" · ")})</span>
                     </li>
                   ))}
                 </ul>
@@ -431,26 +436,29 @@ export default function MisServicios({
 
             {s.cotizacionId && <CotizacionCliente token={token} solicitud={s} onCambio={cargar} />}
 
+            {/* Fuera de la cotización: una solicitud con solo el diagnóstico también tiene un pago */}
+            <PagosCliente token={token} ordenId={s.id} estado={s.estado}>
+              {(contenido) => (
+                <section className="ss-bloque" aria-labelledby={`sv-pagos-${s.id}`}>
+                  <h2 id={`sv-pagos-${s.id}`} className="ss-bloque__titulo">Lo que has pagado</h2>
+                  {contenido}
+                </section>
+              )}
+            </PagosCliente>
+
             {s.motivoCierre && ["CANCELADA", "RECHAZADA"].includes(s.estado) && (
               <p className="ss-aviso">{s.motivoCierre}</p>
             )}
 
             {cancelable && (
               <section className="ss-bloque">
-                {cancelando ? (
-                  <>
-                    <label className="ss-bloque__titulo" htmlFor="ss-motivo">¿Por qué cancelas? (opcional)</label>
-                    <textarea id="ss-motivo" className="ss-textarea" rows={3} maxLength={300}
-                      value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-                    <div className="ss-acciones">
-                      <button className="sv-btn ss-btn-peligro" onClick={cancelar} disabled={procesando}>
-                        {procesando ? "Cancelando..." : "Confirmar cancelación"}
-                      </button>
-                      <button className="sv-btn-outline" onClick={() => setCancelando(false)} disabled={procesando}>Volver</button>
-                    </div>
-                  </>
-                ) : (
-                  <button className="sv-btn-outline" onClick={() => setCancelando(true)}>Cancelar solicitud</button>
+                <button className="sv-btn-outline" onClick={() => setCancelando(true)}>Cancelar solicitud</button>
+                {cancelando && (
+                  <ConfirmarAccion titulo="¿Cancelar esta solicitud?" peligro textoConfirmar="Cancelar solicitud"
+                    mensaje={s.tallerNombre ? `Le avisamos a ${s.tallerNombre} que ya no la necesitas.` : "Dejamos de buscarte un taller."}
+                    pedirMotivo etiquetaMotivo="Por qué la cancelas" minimoMotivo={MINIMO_MOTIVO}
+                    ayudaMotivo="Lo verá el taller y queda en el historial."
+                    onConfirmar={cancelar} onCancelar={() => setCancelando(false)} />
                 )}
               </section>
             )}
@@ -466,7 +474,7 @@ export default function MisServicios({
   }
 
   return (
-    <div className="sv-root">
+    <div className="sv-root sv-root--ancha">
       <EncabezadoPagina
         titulo="Mis servicios"
         descripcion="Tus solicitudes de diagnóstico y el avance de cada una."
@@ -501,6 +509,19 @@ export default function MisServicios({
         </EstadoVacio>
       )}
 
+      {solicitudes.length > 0 && (
+        <dl className="ms-resumen" aria-label="Resumen de tus servicios">
+          <div className="ms-resumen__dato ms-resumen__dato--activo">
+            <dt>En curso</dt>
+            <dd>{conteo.enCurso}</dd>
+          </div>
+          <div className="ms-resumen__dato">
+            <dt>Finalizadas</dt>
+            <dd>{conteo.finalizadas}</dd>
+          </div>
+        </dl>
+      )}
+
       {solicitudes.length > MINIMO_PARA_FILTRAR && (
         <div className="ms-filtros" role="group" aria-label="Filtrar servicios">
           {FILTROS_SERVICIOS.map((f) => (
@@ -524,13 +545,14 @@ export default function MisServicios({
               <button className="ss-tarjeta ms-tarjeta" onClick={() => setSeleccionadaId(s.id)}>
                 <span className="ss-tarjeta__cabecera">
                   <strong className="ss-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
-                  <ChipServicio estado={s.estado} />
+                  {s.vehiculoPlaca && <span className="ui-placa ui-placa--chica">{s.vehiculoPlaca}</span>}
+                  <span className="ss-meta">#{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
+                  <span className="ms-tarjeta__estado"><ChipServicio estado={s.estado} /></span>
                 </span>
-                <span className="ss-meta">Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
                 <span className="ss-meta ss-tarjeta__sintomas">{s.sintomas}</span>
                 <span className="ms-tarjeta__pie">
                   <span className="ss-meta">
-                    {s.tallerNombre ? `Taller: ${s.tallerNombre}` : "Buscando taller"}
+                    {s.tallerNombre ? conPrefijo("Taller", s.tallerNombre) : "Buscando taller"}
                     {s.tallerElegidoNoAcepto ? " · Reasignada: tu taller elegido no aceptó" : ""}
                     {s.fechaRevision ? ` · Revisión: ${formatFechaHora(s.fechaRevision)}` : ""}
                   </span>
@@ -542,7 +564,7 @@ export default function MisServicios({
         </ul>
       )}
 
-      <ServiciosAnteriores ordenes={ordenesAnteriores} ahora={ahora} onIrHistorial={onIrHistorial} />
+      <ServiciosAnteriores ordenes={ordenesAnteriores} ahora={ahora} />
     </div>
   );
 }

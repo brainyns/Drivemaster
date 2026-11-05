@@ -31,6 +31,11 @@ public class RepartoPago {
 
     // Línea de la comisión de la plataforma: solo deja constancia, no se liquida (ver ComisionPlataforma)
     public static final String INFORMATIVA = "INFORMATIVA";
+    // Línea de la comisión que sí se descontó a los beneficiarios del pago. Tampoco se liquida
+    public static final String RETENIDA = "RETENIDA";
+
+    // Modo de una línea cuyo neto es 0: no hay nada que transferir
+    public static final String SIN_TRANSFERENCIA = "SIN_PAGO";
 
     public static final String PLATAFORMA = "PLATAFORMA";
     public static final String TALLER = "TALLER";
@@ -60,8 +65,23 @@ public class RepartoPago {
     private String beneficiarioId;
     private String beneficiarioNombre;
 
+    // Lo que se transfiere al beneficiario: el neto si la comisión se retuvo
     @Column(nullable = false)
     private Double monto;
+
+    // Desglose congelado al aprobar el pago. Nulos en las líneas anteriores al cobro de la comisión; comisionCalculada es
+    // lo que corresponde y comisionRetenida lo que de verdad se descontó (0 con la bandera apagada)
+    private Double montoBruto;
+    private Double comisionBase;
+    private Double comisionPct;
+    private Double comisionCalculada;
+    private Double comisionRetenida;
+
+    // Parte de esta línea que son repuestos del inventario del taller (nulos si no los hay): su valor con IVA, su base sin
+    // IVA y lo que le queda tras la comisión. Va en la misma línea para hacer una sola transferencia por orden
+    private Double piezasBruto;
+    private Double piezasBase;
+    private Double piezasNeto;
 
     @Column(length = 12, nullable = false)
     private String estado;
@@ -71,7 +91,7 @@ public class RepartoPago {
     @Column(length = 500)
     private String nota;
 
-    // true: la línea nació con la regla por evento (Fase 4-B). Las anteriores (null) se liquidan a mano como antes.
+    // true: la línea nació con la regla por evento (Fase 4-B) y el evento la habilita. Las anteriores (null) no se pueden pagar desde PENDIENTE.
     private Boolean liquidacionPorEvento;
     private LocalDateTime fechaListo;
     @Column(length = 200)
@@ -87,4 +107,6 @@ public class RepartoPago {
     @Column(length = 300)
     private String motivoFallo;
     private Integer intentosLiquidacion;
+    // Cuándo se tomó para pagarla: distingue un pago en curso de uno que quedó colgado
+    private LocalDateTime fechaProcesando;
 }

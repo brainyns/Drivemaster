@@ -22,6 +22,7 @@ Proyecto de aula de Tecnología en Desarrollo de Software.
 - [Cómo levantarlo](#cómo-levantarlo)
 - [Datos de demostración](#datos-de-demostración)
 - [Pruebas](#pruebas)
+- [Tablas paginadas](#tablas-paginadas)
 - [Despliegue](#despliegue)
 - [Limitaciones de esta versión](#limitaciones-de-esta-versión)
 
@@ -287,13 +288,19 @@ Son contraseñas conocidas: no actives `DEMO_SEED_ENABLED` en un despliegue púb
 
 ## Pruebas
 
-**Backend** (JUnit 5 y Mockito; no necesitan bases de datos salvo `DrivemasterApplicationTests`, que levanta el
-contexto completo):
+**Backend** (JUnit 5 y Mockito; no necesitan bases de datos):
 
 ```bash
 cd drivemaster
-./mvnw test                                        # todas (necesita las variables de las bases de datos)
-./mvnw test -Dtest='!DrivemasterApplicationTests'  # todas menos la que levanta el contexto completo
+./mvnw test   # todas; DrivemasterApplicationTests queda omitida
+```
+
+`DrivemasterApplicationTests` levanta el contexto completo: se conecta a las bases, corre las migraciones del
+arranque y deja activas las tareas programadas (que mandan correos). Solo corre con `DRIVEMASTER_IT=true` y las
+variables de unas bases **de prueba**, nunca las de producción:
+
+```bash
+DRIVEMASTER_IT=true SPRING_DATA_MONGODB_URI=... DB_URL=jdbc:postgresql://... DB_USERNAME=... DB_PASSWORD=... \n  ./mvnw test -Dtest=DrivemasterApplicationTests
 ```
 
 Incluyen reglas de negocio (cotizaciones, liquidación, horario, historial), permisos por rol con la configuración
@@ -306,6 +313,31 @@ cd frontend
 npm test        # lógica de las pantallas (node --test)
 npm run lint
 ```
+
+## Tablas paginadas
+
+Las tablas grandes se paginan, filtran y ordenan en el servidor, con un formato común
+(`dto.comun.Pagina`: `items`, `total`, `pagina` desde 0, `tamano` y `totalPaginas`).
+
+- **Parámetros:** `page` (desde 0), `size` (20 por defecto, máximo 100), `sort=campo,asc|desc` (cada tabla tiene su
+  lista blanca: otro campo responde 400) y, donde hay fecha, `desde` y `hasta` (AAAA-MM-DD, hora de Colombia;
+  `hasta` incluye todo ese día).
+- **Tienda** (endpoints aparte; las listas completas siguen para selectores y formularios):
+  `/api/productos/mi-tienda/tabla`, `/api/pedidos-tienda/mios/tabla` y `/api/movimientos/tabla`.
+- **SUPERADMIN:** `/api/plataforma/pedidos`, `/productos`, `/clientes`, `/usuarios` y `/api/liquidaciones/repartos/tabla`.
+
+### Alias por quitar después de la feria
+
+Nombres de parámetros de antes que se siguen aceptando mientras se termina la migración. Para quitarlos, borra el
+parámetro y pasa `null` en su lugar a `PeticionTabla.de(...)` o `RangoFechas.de(...)`:
+
+| Alias | Reemplazo | Dónde |
+|---|---|---|
+| `pagina`, `tamano` | `page`, `size` | `PlataformaController`: `/pedidos`, `/productos`, `/clientes` y `/usuarios` |
+| `fechaInicio`, `fechaFin` | `desde`, `hasta` | `TablasTiendaController`: `/api/movimientos/tabla` |
+| `atrasados=true` | `alerta=ATRASADO` | `PlataformaController`: `/pedidos` |
+
+`/api/movimientos` (la lista completa, sin paginar) sigue con `fechaInicio`/`fechaFin` porque no cambió.
 
 ## Despliegue
 
@@ -322,8 +354,9 @@ npm run lint
   entrenó con un dataset generado por nosotros (`ml/generar_dataset.py`), no con cotizaciones reales. Sirve para
   demostrar la integración; sus cifras no deben tomarse como referencia de mercado. El backend usa los pesos del
   modelo (`modelo_pesos.json`) directamente en Java; el servicio en Python de `ml/` es opcional.
-- **Dispersión de pagos simulada.** La liquidación calcula lo que le corresponde a cada taller y tienda, pero en
-  esta versión el envío del dinero es simulado o se marca a mano (`DISPERSION_MODO`); no hay transferencias reales.
+- **Dispersión de pagos en sandbox.** La liquidación calcula lo que le corresponde a cada taller y tienda y lo envía
+  según `DISPERSION_MODO`: `WOMPI` usa Pagos a terceros (hoy en sandbox), `MANUAL` deja anotar la transferencia del
+  banco y `SIMULADO` solo genera una referencia `SIM-`.
 - **Pagos en sandbox.** Wompi está configurado con llaves de prueba.
 - **Dos flujos de servicio.** Conviven el flujo actual (marketplace) y las órdenes del flujo anterior, que solo se
   consultan y se cierran ("Órdenes anteriores").

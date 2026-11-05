@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { crearCompra } from "../services/compraService";
 import { listarProveedores } from "../services/proveedorService";
 import { listarProductosMiTienda } from "../services/productoService";
@@ -11,25 +11,33 @@ import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
+import BuscadorProducto from "../components/ui/BuscadorProducto";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
-import { agregarLinea, erroresCompra, erroresLinea } from "./tienda/comprasTienda";
+import { METODOS_PAGO, agregarLinea, erroresCompra, erroresLinea } from "./tienda/comprasTienda";
+import { recibePdf } from "./tienda/proveedoresTienda";
+import { avisar } from "../components/ui/avisar";
+import { plural } from "../utils/formato";
 import "../css/compras-tienda.css";
 
-const MAX_RESULTADOS = 6;
 const LINEA_VACIA = { producto: null, cantidad: "1", costo: "" };
 
-/** Registrar lo que llegó de un proveedor: al confirmar se suma el stock y, si tiene correo, se le envía el PDF. */
+/**
+ * Registrar una compra a un proveedor: recibida (llegó con la compra: se suma el stock al confirmar) o pendiente (se suma
+ * al marcarla recibida desde su detalle). Si el proveedor tiene correo y no apagó el envío, le llega el PDF.
+ */
 function CompraForm({ onVolver, token }) {
   const [proveedores, setProveedores] = useState(null);
   const [productos, setProductos] = useState([]);
   const [proveedorId, setProveedorId] = useState("");
-  const [buscar, setBuscar] = useState("");
   const [linea, setLinea] = useState(LINEA_VACIA);
   const [tocadaLinea, setTocadaLinea] = useState(false);
   const [items, setItems] = useState([]);
   const [tocadaCompra, setTocadaCompra] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
+  // RECIBIDA (por defecto, como antes de los estados) o PENDIENTE; pago y factura son opcionales
+  const [datos, setDatos] = useState({ estado: "RECIBIDA", metodoPago: "", numeroFactura: "" });
+  const [erroresServidor, setErroresServidor] = useState({});
 
   useEffect(() => {
     let vivo = true;
@@ -40,19 +48,22 @@ function CompraForm({ onVolver, token }) {
   }, [token]);
 
   const proveedor = proveedores?.find((p) => p.id === proveedorId);
-  const resultados = useMemo(() => {
-    const q = buscar.trim().toLowerCase();
-    if (!q || linea.producto) return [];
-    return productos.filter((p) => [p.nombre, p.codigo, p.marca].some((x) => x && x.toLowerCase().includes(q))).slice(0, MAX_RESULTADOS);
-  }, [buscar, productos, linea.producto]);
   const erroresL = tocadaLinea ? erroresLinea(linea) : {};
   const erroresC = tocadaCompra ? erroresCompra({ proveedorId, items }) : {};
   const total = items.reduce((s, i) => s + i.subtotal, 0);
   const unidades = items.reduce((s, i) => s + i.cantidad, 0);
+  const recibida = datos.estado === "RECIBIDA";
+  const efectoStock = recibida
+    ? `Se suman ${plural(unidades, "unidad", "unidades")} al stock`
+    : `Queda pendiente: el stock se suma cuando la marques como recibida`;
+  const cambiarDato = (campo, valor) => {
+    setDatos((d) => ({ ...d, [campo]: valor }));
+    setErroresServidor((prev) => ({ ...prev, [campo]: undefined }));
+  };
 
   const elegir = (p) => {
+    // El costo se propone con el precio de compra del producto; la tienda lo puede cambiar
     setLinea({ producto: p, cantidad: "1", costo: p.precioCompra != null ? String(p.precioCompra) : "" });
-    setBuscar(p.nombre);
     setTocadaLinea(false);
     requestAnimationFrame(() => document.getElementById("cmp-cantidad")?.focus());
   };
@@ -63,9 +74,8 @@ function CompraForm({ onVolver, token }) {
     if (Object.keys(erroresLinea(linea)).length) return;
     setItems((prev) => agregarLinea(prev, linea));
     setLinea(LINEA_VACIA);
-    setBuscar("");
     setTocadaLinea(false);
-    document.getElementById("cmp-buscar")?.focus();
+    requestAnimationFrame(() => document.getElementById("cmp-buscar")?.focus());
   };
 
   const pedirConfirmacion = () => {
@@ -75,10 +85,23 @@ function CompraForm({ onVolver, token }) {
   };
 
   const registrar = async () => {
-    await crearCompra({
-      proveedorId,
-      productos: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad, costo: i.costo })),
-    }, token);
+    try {
+      await crearCompra({
+        proveedorId,
+        estado: datos.estado,
+        metodoPago: datos.metodoPago || null,
+        numeroFactura: datos.numeroFactura.trim() || null,
+        productos: items.map((i) => ({ productoId: i.productoId, cantidad: i.cantidad, costo: i.costo })),
+      }, token);
+    } catch (e) {
+      // Un error de un campo (pago o factura) va bajo ese campo; los ítems y los datos se conservan
+      if (e.campos) { setErroresServidor(e.campos); setConfirmando(false); return; }
+      throw e; // ConfirmarAccion lo muestra en el diálogo
+    }
+    const pdf = recibePdf(proveedor) ? ` y enviamos el PDF a ${proveedor.correo}` : "";
+    avisar(recibida
+      ? `Compra registrada: se sumaron ${plural(unidades, "unidad", "unidades")} al stock${pdf}.`
+      : `Compra registrada como pendiente${pdf}. Cuando llegue la mercancía, márcala como recibida.`);
     onVolver();
   };
 
@@ -91,7 +114,7 @@ function CompraForm({ onVolver, token }) {
   return (
     <div className="ss-panel--tienda cmp-root">
       <EncabezadoPagina titulo="Nueva compra" onVolver={onVolver} textoVolver="Compras"
-        descripcion="Elige el proveedor y agrega lo que llegó. Al registrarla se suma el stock de cada producto." />
+        descripcion="Elige el proveedor y agrega los productos. Si ya llegó, el stock se suma al registrarla; si no, regístrala como pendiente." />
 
       <div className="cmp-form">
         <div className="cmp-form__principal">
@@ -101,7 +124,11 @@ function CompraForm({ onVolver, token }) {
             ) : (
               <div className="ui-form">
                 <Campo id="cmp-proveedor-select" label="¿A quién le compraste?" error={erroresC.proveedor}>
-                  <select className="ui-field__input" value={proveedorId} onChange={(e) => setProveedorId(e.target.value)} disabled={!proveedores}>
+                  <select className="ui-field__input" value={proveedorId} disabled={!proveedores} onChange={(e) => {
+                    const elegido = (proveedores || []).find((p) => p.id === e.target.value);
+                    setProveedorId(e.target.value);
+                    if (elegido?.condicionPago === "CREDITO" && !datos.metodoPago) cambiarDato("metodoPago", "CREDITO");
+                  }}>
                     <option value="">{proveedores ? "Elegir proveedor" : "Cargando proveedores…"}</option>
                     {(proveedores || []).map((p) => <option key={p.id} value={p.id}>{p.nombre}{p.nit ? ` · NIT ${p.nit}` : ""}</option>)}
                   </select>
@@ -113,8 +140,12 @@ function CompraForm({ onVolver, token }) {
                       <Dato etiqueta="Teléfono">{proveedor.telefono}</Dato>
                       <Dato etiqueta="Correo">{proveedor.correo}</Dato>
                     </dl>
-                    {!proveedor.correo && (
-                      <Alerta tono="info">Este proveedor no tiene correo: la compra se registra igual, pero no le enviaremos el PDF.</Alerta>
+                    {!recibePdf(proveedor) && (
+                      <Alerta tono="info">
+                        {proveedor.correo
+                          ? "Apagaste el envío del PDF a este proveedor: la compra se registra igual, pero no le enviaremos el PDF."
+                          : "Este proveedor no tiene correo: la compra se registra igual, pero no le enviaremos el PDF."}
+                      </Alerta>
                     )}
                   </>
                 )}
@@ -122,33 +153,43 @@ function CompraForm({ onVolver, token }) {
             )}
           </SeccionEditable>
 
+          <SeccionEditable id="cmp-estado" icono="clock" titulo="Estado y pago"
+            descripcion="Si la mercancía aún no llega, regístrala como pendiente: el stock se suma cuando la recibas.">
+            <div className="ui-form">
+              <fieldset className="cmp-estados">
+                <legend className="ui-sr">Estado de la compra</legend>
+                {[["RECIBIDA", "Recibida", "La mercancía llegó: se suma al stock al registrarla."],
+                  ["PENDIENTE", "Pendiente", "Aún no llega: el stock se suma al marcarla recibida."]].map(([valor, texto, ayuda]) => (
+                  <label key={valor} className={`ui-opcion cmp-estado${datos.estado === valor ? " ui-opcion--elegida" : ""}`}>
+                    <input type="radio" className="ui-sr" name="estado" value={valor} checked={datos.estado === valor}
+                      onChange={() => cambiarDato("estado", valor)} />
+                    <span><strong>{texto}</strong><span>{ayuda}</span></span>
+                  </label>
+                ))}
+              </fieldset>
+              {erroresServidor.estado && <p className="ui-field__error" role="alert"><Icon name="alert" size={14} />{erroresServidor.estado}</p>}
+              <div className="ui-form__campos ui-form__campos--2">
+                <Campo id="cmp-metodo" label="Método de pago" opcional error={erroresServidor.metodoPago}>
+                  <select className="ui-field__input" value={datos.metodoPago} onChange={(e) => cambiarDato("metodoPago", e.target.value)}>
+                    <option value="">Sin indicar</option>
+                    {METODOS_PAGO.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+                  </select>
+                </Campo>
+                <Campo id="cmp-factura" label="Factura del proveedor" opcional error={erroresServidor.numeroFactura}
+                  ayuda="El número que trae su factura, para encontrarla después.">
+                  <input className="ui-field__input" value={datos.numeroFactura} maxLength={40} placeholder="Ej. FV-10234"
+                    onChange={(e) => cambiarDato("numeroFactura", e.target.value)} />
+                </Campo>
+              </div>
+            </div>
+          </SeccionEditable>
+
           <SeccionEditable id="cmp-productos" icono="box" titulo="Productos"
             descripcion="Busca en tu catálogo, elige el producto, la cantidad y el costo por unidad.">
             <form className="ui-form" onSubmit={agregar} noValidate>
-              <Campo id="cmp-buscar" label="Producto" error={erroresL.producto}
-                ayuda={linea.producto ? `Stock actual: ${linea.producto.stockActual ?? 0}` : "Por nombre, código o marca."}>
-                <input className="ui-field__input" type="search" value={buscar} autoComplete="off" placeholder="Ej. filtro de aceite"
-                  onChange={(e) => { setBuscar(e.target.value); if (linea.producto) setLinea(LINEA_VACIA); }} />
-              </Campo>
-              {resultados.length > 0 && (
-                <ul className="cmp-resultados" aria-label="Productos que coinciden">
-                  {resultados.map((p) => (
-                    <li key={p.id}>
-                      <button type="button" className="cmp-resultado" onClick={() => elegir(p)}>
-                        <ImagenProducto src={p.imagenUrl} className="cmp-resultado__imagen" tamanioIcono={16} />
-                        <span className="cmp-resultado__texto">
-                          <strong>{p.nombre}</strong>
-                          <span>{[p.codigo, `stock ${p.stockActual ?? 0}`].filter(Boolean).join(" · ")}</span>
-                        </span>
-                        <span className="cmp-tenue">{p.precioCompra != null ? formatPrecio(p.precioCompra) : ""}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {buscar.trim() && !linea.producto && resultados.length === 0 && (
-                <p className="cmp-tenue cmp-sin-resultados">Ningún producto de tu catálogo coincide con “{buscar.trim()}”.</p>
-              )}
+              {/* El mismo buscador que Inventario: nombre, SKU o referencia, con foto y stock */}
+              <BuscadorProducto id="cmp-buscar" productos={productos} elegido={linea.producto} error={erroresL.producto}
+                onElegir={(p) => (p ? elegir(p) : setLinea(LINEA_VACIA))} />
               <div className="ui-form__campos ui-form__campos--2">
                 <Campo id="cmp-cantidad" label="Cantidad" error={erroresL.cantidad}>
                   <input className="ui-field__input" type="number" min="1" inputMode="numeric" value={linea.cantidad}
@@ -196,7 +237,7 @@ function CompraForm({ onVolver, token }) {
               <div className="cmp-total"><span>Total</span><strong className="ui-precio">{formatPrecio(total)}</strong></div>
               {botonRegistrar("ui-btn--grande ui-btn--bloque cmp-registrar")}
               <p className="cmp-nota">
-                <Icon name="check" size={14} /> Al registrarla se suma el stock de cada producto{proveedor?.correo ? ` y enviamos el PDF a ${proveedor.correo}` : ""}.
+                <Icon name="check" size={14} /> {recibida ? "Al registrarla se suma el stock de cada producto" : "Queda pendiente: el stock se suma al recibirla"}{recibePdf(proveedor) ? ` y enviamos el PDF a ${proveedor.correo}` : ""}.
               </p>
             </div>
           </section>
@@ -210,7 +251,7 @@ function CompraForm({ onVolver, token }) {
 
       {confirmando && (
         <ConfirmarAccion titulo={`¿Registrar la compra a ${proveedor?.nombre || "este proveedor"}?`} textoConfirmar="Registrar compra"
-          mensaje={`Se suman ${unidades} ${unidades === 1 ? "unidad" : "unidades"} al stock por ${formatPrecio(total)}${proveedor?.correo ? ` y enviamos el PDF a ${proveedor.correo}` : ""}. Una compra registrada no se puede editar.`}
+          mensaje={`${efectoStock} (total ${formatPrecio(total)})${recibePdf(proveedor) ? ` y enviamos el PDF a ${proveedor.correo}` : ""}. Una compra registrada no se puede editar.`}
           onConfirmar={registrar} onCancelar={() => setConfirmando(false)} />
       )}
     </div>

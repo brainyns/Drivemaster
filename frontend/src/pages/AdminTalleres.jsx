@@ -5,9 +5,11 @@ import { ordenesPorTallerAdmin } from "../services/ordenServicioService";
 import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
 import DrawerAdmin from "../components/admin/DrawerAdmin";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
-import { capitalizar } from "../utils/formato";
+import { capitalizar, decimal } from "../utils/formato";
 import Calificacion from "../components/ui/Calificacion";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import Indicador from "../components/ui/Indicador";
 import ChipEstado from "../components/ui/ChipEstado";
 import LogoNegocio from "../components/ui/LogoNegocio";
@@ -23,6 +25,7 @@ import "../css/admin-base.css";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/servicios-plataforma.css";
+import { textoError } from "../utils/errores";
 
 // Estado de cada orden con el formato de catálogo de ChipEstado
 const ESTADO_ORDEN = {
@@ -79,7 +82,7 @@ export default function AdminTalleres() {
       setTalleres(await listarTalleres(token));
       setCargado(true);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }
@@ -142,7 +145,7 @@ export default function AdminTalleres() {
       setFormAbierto(false);
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setGuardando(false);
     }
@@ -155,7 +158,7 @@ export default function AdminTalleres() {
     try {
       setPedidos(await ordenesPorTallerAdmin(token, t.id));
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargandoPedidos(false);
     }
@@ -166,7 +169,7 @@ export default function AdminTalleres() {
       await activarDesactivarTaller(token, t.id, !t.activo);
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     }
   };
 
@@ -189,6 +192,9 @@ export default function AdminTalleres() {
   }, [talleres, busqueda, filtro]);
 
   const conteoFiltro = { todos: resumen.total, activos: resumen.activos, inactivos: resumen.inactivos };
+  // 20 por página; vuelve a la primera al cambiar de filtro o de búsqueda
+  const pag = usePaginacion(visibles.length, filtro + "|" + busqueda);
+  const enPagina = paginar(visibles, pag.pagina);
 
   // Pausar un taller pide confirmación; activarlo no
   const [pausando, setPausando] = useState(null);
@@ -227,7 +233,7 @@ export default function AdminTalleres() {
           <Indicador titulo="Recibiendo servicios" valor={resumen.activos} tono={resumen.activos > 0 ? "ok" : undefined} />
           <Indicador titulo="Pausados" valor={resumen.inactivos} />
           <Indicador icono="star" titulo="Calificación promedio"
-            valor={resumen.promedio != null ? resumen.promedio.toFixed(1) : "Sin datos"}
+            valor={resumen.promedio != null ? decimal(resumen.promedio, { fijo: 1 }) : "Sin datos"}
             pie={resumen.promedio != null ? "De los talleres que ya tienen calificaciones" : "Ningún taller tiene calificaciones aún"} />
         </section>
       )}
@@ -283,7 +289,7 @@ export default function AdminTalleres() {
                 </tr>
               </thead>
               <tbody>
-                {visibles.map(t => {
+                {enPagina.map(t => {
                   const esp = t.especialidades || [];
                   return (
                     <tr key={t.id}>
@@ -334,6 +340,9 @@ export default function AdminTalleres() {
             </table>
           </div>
         </div>
+      )}
+      {visibles.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar} etiqueta="Páginas de talleres" />
       )}
 
       {pedidosDe && (

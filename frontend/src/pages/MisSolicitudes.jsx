@@ -1,9 +1,11 @@
 import { apiFetch } from "../services/http";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getToken } from "../services/authService";
 import { crearPago, verificarPago, getWompiRedirectUrl } from "../services/solicitudService";
 import "../css/solicitudes.css";
 import Icon from "../components/public/Icon";
+import { textoErrorPago } from "../utils/errores";
+import Alerta from "../components/ui/Alerta";
 
 const ESTADOS = {
   PENDIENTE: "Pendiente",
@@ -35,7 +37,7 @@ export default function MisSolicitudes({ onVolver }) {
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  const cargar = async () => {
+  const cargar = useCallback(async () => {
     setCargando(true);
     try {
       const res = await apiFetch(`${BASE}/mis-solicitudes`, {
@@ -47,7 +49,7 @@ export default function MisSolicitudes({ onVolver }) {
     } finally {
       setCargando(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     cargar();
@@ -63,20 +65,21 @@ export default function MisSolicitudes({ onVolver }) {
           }
         });
     }
-  }, []);
+  }, [cargar, token]);
 
   const [pagando, setPagando] = useState(null);
+  const [errorPago, setErrorPago] = useState(null);
 
   const handlePagar = async (solicitudId) => {
     setPagando(solicitudId);
+    setErrorPago(null);
     try {
       const redirectUrl = getWompiRedirectUrl();
       const data = await crearPago(token, solicitudId, redirectUrl);
-      console.log("checkoutUrl:", data.checkoutUrl);
       window.location.href = data.checkoutUrl;
     } catch (e) {
       console.error(e);
-      alert("Error al iniciar pago: " + e.message);
+      setErrorPago(textoErrorPago(e));
       setPagando(null);
     }
   };
@@ -92,10 +95,12 @@ export default function MisSolicitudes({ onVolver }) {
             <p className="sq-subtitle">Consulta el estado de tus solicitudes de compra.</p>
           </div>
           {onVolver && (
-            <button className="sq-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver al catálogo</button>
+            <button className="sq-volver" onClick={onVolver}><Icon name="arrow" size={16} className="ui-volver__icono ui-icono-linea" />Volver a mi perfil</button>
           )}
         </div>
       </div>
+
+      {errorPago && <Alerta className="sq-alerta" onCerrar={() => setErrorPago(null)}>{errorPago}</Alerta>}
 
       <div className="sq-table-wrap">
         <div className="sq-table">
@@ -138,7 +143,7 @@ export default function MisSolicitudes({ onVolver }) {
                     </button>
                   )}
                   {(s.estado === "PENDIENTE" || (s.estado === "APROBADO" && s.metodoPago !== "WOMPI")) && (
-                    <span className="sq-badge sq-pending">En espera</span>
+                    <span className="sq-badge sq-pending">Pendiente</span>
                   )}
                   {s.estado === "PAGADO" && (
                     <span className="sq-badge sq-badge-venta">Pagado</span>

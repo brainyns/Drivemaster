@@ -5,6 +5,7 @@ import Alerta from "../components/ui/Alerta";
 import { MENSAJE_SIN_CONEXION } from "../services/conexion";
 import "../css/Login.css";
 import Icon from "../components/public/Icon";
+import { textoError } from "../utils/errores";
 
 export default function AdminLogin({ onLogin, onVolver }) {
   const [correo, setCorreo] = useState("");
@@ -20,7 +21,7 @@ export default function AdminLogin({ onLogin, onVolver }) {
       const response = await loginInterno(correo, password);
       onLogin(response);
     } catch (err) {
-      setError(err.message || "Credenciales inválidas");
+      setError(textoError(err, "Credenciales inválidas"));
     } finally {
       setLoading(false);
     }

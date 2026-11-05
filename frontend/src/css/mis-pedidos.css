@@ -155,19 +155,6 @@
     font-size: 11px;
     }
 
-.mis-citas-cancelar {
-    background: none;
-    border: 1px solid var(--border2);
-    border-radius: var(--ui-r-md);
-    color: var(--muted);
-    padding: 6px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    }
-
-.mis-citas-cancelar:hover:not(:disabled) { color: var(--primary-text); border-color: var(--primary); }
-.mis-citas-cancelar:disabled { opacity: 0.4; cursor: not-allowed; }
-
 @media (max-width: 640px) {
     .mis-citas-card { flex-direction: column; align-items: flex-start; }
     }

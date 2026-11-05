@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { dashboardPlataforma } from "../services/plataformaService";
+import { listarReembolsos } from "../services/liquidacionService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Indicador from "../components/ui/Indicador";
 import ChipEstado from "../components/ui/ChipEstado";
@@ -7,12 +8,20 @@ import Alerta from "../components/ui/Alerta";
 import Esqueleto from "../components/ui/Esqueleto";
 import BarraProgreso from "../components/ui/BarraProgreso";
 import Icon from "../components/public/Icon";
-import { barras, urgentesDashboard } from "./admin/plataformaAdmin";
+import { barras, resumenReembolsos, urgentesDashboard } from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
+import { textoError } from "../utils/errores";
+import { porcentaje } from "../utils/formato";
 
 const REFRESCO_MS = 60000;
 
+/** "8 de oct" */
+const diaMes = (f) => {
+  if (!f) return null;
+  const d = new Date(f);
+  return `${d.getDate()} de ${d.toLocaleDateString("es-CO", { month: "short" }).replace(".", "")}`;
+};
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 const hora = (iso) => new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
@@ -85,11 +94,15 @@ export default function DashboardPlataforma({ token, onIr }) {
   const [estado, setEstado] = useState({ datos: null, error: null });
   const [cargando, setCargando] = useState(true);
 
+  const [reembolsos, setReembolsos] = useState(null); // { cantidad, total } o null
+
   const cargar = useCallback(() => {
     setCargando(true);
+    // El aviso de reembolsos es aparte: si falla, el panel sigue igual
+    listarReembolsos(token, "PENDIENTE").then((l) => setReembolsos(resumenReembolsos(l))).catch(() => {});
     return dashboardPlataforma(token)
       .then((datos) => setEstado({ datos, error: null }))
-      .catch((e) => setEstado((previo) => ({ datos: previo.datos, error: e.message })))
+      .catch((e) => setEstado((previo) => ({ datos: previo.datos, error: textoError(e) })))
       .finally(() => setCargando(false));
   }, [token]);
 
@@ -104,7 +117,7 @@ export default function DashboardPlataforma({ token, onIr }) {
 
   const encabezado = (
     <EncabezadoPagina titulo="Panel de la plataforma"
-      descripcion="DriveMaster administra el marketplace, no vende: sus ingresos son la comisión y las suscripciones."
+      descripcion="DriveMaster administra el marketplace, no vende: su ingreso es la comisión del 10 % sobre cada pago."
       acciones={(
         <>
           {d && <span className="pp-actualizado">Actualizado a las {hora(d.generadoEn)}</span>}
@@ -135,11 +148,18 @@ export default function DashboardPlataforma({ token, onIr }) {
 
   const urgentes = urgentesDashboard(d.alertas);
   const ordenes = barras(d.ordenesPorEstado, ESTADOS_ORDEN, Object.keys(ESTADOS_ORDEN));
-  const planes = barras(d.suscripcionesPorPlan);
 
   return (
     <div className="ss-panel--plataforma pp-root">
       {encabezado}
+
+      {reembolsos && (
+        <Alerta tono="aviso" className="pp-bloque-sep pp-reembolsos">
+          Tienes {reembolsos.cantidad} {reembolsos.cantidad === 1 ? "reembolso pendiente" : "reembolsos pendientes"} por{" "}
+          <strong>{cop(reembolsos.total)}</strong>. Hazlos en Wompi y márcalos con el número de la transacción.{" "}
+          <button type="button" className="pp-enlace" onClick={() => ir("liquidaciones", "reembolsos")}>Ver los reembolsos</button>
+        </Alerta>
+      )}
 
       {error && (
         <Alerta tono="aviso" className="pp-bloque-sep" onReintentar={cargar} reintentando={cargando}>
@@ -198,14 +218,39 @@ export default function DashboardPlataforma({ token, onIr }) {
 
       <section className="pp-seccion" aria-labelledby="pp-dinero">
         <h2 id="pp-dinero" className="pp-titulo">Dinero</h2>
-        <div className="ui-indicadores">
+        <div className="ui-indicadores pp-indicadores-dinero">
           <Indicador titulo="Total movido" valor={cop(d.dinero.movido)}
-            pie="Pagos aprobados que pasaron por la plataforma. No es ingreso de DriveMaster." />
-          <Indicador titulo="Comisión registrada" valor={cop(d.dinero.comisionRegistrada)} tono="ok"
-            pie={`Informativa, al ${d.dinero.comisionPct}% vigente en cada pago. No es dinero cobrado.`}
+            pie="Pagos aprobados que pasaron por la plataforma, con IVA y envío. No es ingreso de DriveMaster." />
+          {/* La base y la comisión salen de lo mismo: comisión = 10 % de la base (mismo período, sin reembolsos) */}
+          <Indicador titulo="Base de la comisión" valor={cop(d.dinero.baseComision)}
+            pie={`Valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}, sin reembolsos.`} />
+          <Indicador titulo="Comisión cobrada" valor={cop(d.dinero.comisionRetenida?.cobrada)} tono="ok"
+            pie={d.dinero.comisionSeDescuenta ? "Retenida en pagos ya transferidos a los negocios." : "El cobro está apagado: la comisión no se descuenta todavía."}
             onClick={() => ir("reportes-plataforma", "comision")} />
-          <Indicador titulo="Por liquidar a negocios" valor={cop(d.dinero.porLiquidar)}
-            pie="Ya habilitado para pagar a talleres y tiendas." onClick={() => ir("liquidaciones")} />
+          {d.dinero.comisionRetenida?.porCobrar > 0 && (
+            <Indicador titulo="Comisión por cobrar" valor={cop(d.dinero.comisionRetenida.porCobrar)}
+              pie="Retenida en pagos que aún no se transfieren a los negocios."
+              onClick={() => ir("reportes-plataforma", "comision")} />
+          )}
+          {d.dinero.saldosAFavorPendientes > 0 && (
+            <Indicador titulo="Saldos a favor pendientes" valor={cop(d.dinero.saldosAFavorPendientes)} tono="accion"
+              pie="Reembolsos de pagos ya transferidos: se les cobran a los negocios a mano."
+              onClick={() => ir("reportes-plataforma", "comision")} />
+          )}
+          <Indicador titulo="Comisión informativa" valor={cop(d.dinero.comisionRegistrada)}
+            pie={`${porcentaje(d.dinero.comisionPct)} sobre el valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}. Informativa: no es dinero cobrado.`}
+            onClick={() => ir("reportes-plataforma", "comision")} />
+          {d.dinero.liquidacionAutomatica && !d.dinero.porLiquidar ? (
+            <Indicador titulo="Pagado automáticamente (simulado)" valor={cop(d.dinero.liquidadoSimulado)}
+              pie={`El pago simulado le paga a cada negocio al entregarse el pedido. Pagado en total: ${cop(d.dinero.liquidado)}.`}
+              onClick={() => ir("liquidaciones")} />
+          ) : (
+            <Indicador titulo="Por pagar a negocios" valor={cop(d.dinero.porLiquidar)}
+              pie={`Ya habilitado para pagar a talleres y tiendas. Pagado en total: ${cop(d.dinero.liquidado)}.`}
+              onClick={() => ir("liquidaciones")} />
+          )}
+          <Indicador titulo="Falta que se entregue" valor={cop(d.dinero.enEspera)}
+            pie="De los negocios: se habilita para pagar cuando el pedido se entrega o se recibe." />
         </div>
       </section>
 
@@ -228,10 +273,7 @@ export default function DashboardPlataforma({ token, onIr }) {
           ]} />
       </div>
 
-      <div className="pp-columnas">
-        <Barras id="pp-ordenes" titulo="Órdenes de servicio por estado" vacio="Todavía no hay órdenes de servicio." filas={ordenes} />
-        <Barras id="pp-planes" titulo="Suscripciones activas por plan" vacio="Todavía no hay suscripciones activas." filas={planes} />
-      </div>
+      <Barras id="pp-ordenes" titulo="Órdenes de servicio por estado" vacio="Todavía no hay órdenes de servicio." filas={ordenes} />
     </div>
   );
 }

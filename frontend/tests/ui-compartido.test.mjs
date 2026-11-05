@@ -1,6 +1,6 @@
 // Pruebas del sistema compartido (components/ui + css/ui.css): que las piezas existan con su accesibilidad
 // y que las pantallas del cliente las usen en vez de reimplementarlas.
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { datosVehiculo, formatoKm } from "../src/utils/vehiculo.js";
@@ -12,6 +12,15 @@ test("los datos del vehículo salen con su etiqueta y en orden", () => {
     ["Motor 1.6 L", "Gasolina", "82.000 km"]);
   assert.deepEqual(datosVehiculo({ motor: "", combustible: null, kilometraje: null }), []);
   assert.equal(formatoKm(""), null);
+});
+
+test("el traductor del navegador no puede romper Informes", () => {
+  const html = leer("../index.html");
+  assert.match(html, /<html lang="es" translate="no"/);
+  assert.match(html, /<meta name="google" content="notranslate" \/>/);
+  // Un nodo que aparece junto a texto suelto es lo que hace fallar insertBefore cuando el traductor cambia ese texto.
+  assert.match(leer("../src/pages/InformesTienda.jsx"), /<span>\{cargando \? "Actualizando…" : "Actualizar"\}<\/span>/);
+  assert.match(leer("../src/components/ui/Alerta.jsx"), /<span>\{reintentando \? "Reintentando…" : "Reintentar"\}<\/span>/);
 });
 
 test("Campo asocia la etiqueta y pone aria-invalid y aria-describedby al control", () => {
@@ -208,4 +217,48 @@ test("Recuperar contraseña: enlace en el login, sin sesión y sin revelar cuent
   const auth = src("services/authService.js");
   assert.match(auth, /solicitarRecuperacion[\s\S]*?fetchConLimite\(`\$\{API_BASE\}\/auth\/recuperar\/solicitar`/, "no usa apiFetch: no hay sesión");
   assert.match(auth, /confirmarRecuperacion[\s\S]*?\/auth\/recuperar\/confirmar/);
+});
+
+test("plural: singular con 1 y plural con el resto, con separador de miles", async () => {
+  const { plural } = await import("../src/utils/formato.js");
+  assert.equal(plural(1, "unidad", "unidades"), "1 unidad");
+  assert.equal(plural(0, "unidad", "unidades"), "0 unidades");
+  assert.equal(plural(1200, "unidad", "unidades"), "1.200 unidades");
+  assert.equal(plural(1, "producto"), "1 producto");
+  assert.equal(plural(3, "día"), "3 días");
+});
+
+test("Paginación: 20 por página, el rango que se muestra y los números con huecos", async () => {
+  const { POR_PAGINA, paginar, paginasVisibles, rangoMostrado, totalPaginas } = await import("../src/components/ui/reglasPaginacion.js");
+  assert.equal(POR_PAGINA, 20);
+  const lista = Array.from({ length: 135 }, (_, i) => i + 1);
+  assert.equal(totalPaginas(135), 7);
+  assert.equal(totalPaginas(0), 1, "una lista vacía tiene una página");
+  assert.deepEqual(paginar(lista, 1).slice(0, 2), [1, 2]);
+  assert.deepEqual(paginar(lista, 7), lista.slice(120), "la última trae lo que sobra");
+  assert.deepEqual(rangoMostrado(1, 135), { desde: 1, hasta: 20 }, "Mostrando 1–20 de 135");
+  assert.deepEqual(rangoMostrado(7, 135), { desde: 121, hasta: 135 });
+  assert.deepEqual(rangoMostrado(1, 0), { desde: 0, hasta: 0 });
+  assert.deepEqual(paginasVisibles(1, 1), [1]);
+  assert.deepEqual(paginasVisibles(1, 7), [1, 2, 3, "…", 7]);
+  assert.deepEqual(paginasVisibles(6, 12), [1, "…", 4, 5, 6, 7, 8, "…", 12]);
+  assert.deepEqual(paginasVisibles(4, 7), [1, 2, 3, 4, 5, 6, 7], "sin huecos de un solo número");
+});
+
+test("Paginación: todas las listas del panel usan el mismo componente", () => {
+  const paginas = ["Productos", "Compras", "Proveedores", "Movimientos", "PedidosTienda", "ProveedorDetalle", "TallerSolicitudes",
+    "taller/TallerCotizaciones", "taller/OrdenesAnteriores", "Aprobaciones", "AdminTalleres", "Liquidaciones", "ProblemasEnvios",
+    "admin/RetirosSinRecoger", "Usuarios", "ClientesPlataforma", "NegociosPlataforma", "ProductosPlataforma", "PedidosEnvios"];
+  for (const p of paginas) assert.ok(leer(`../src/pages/${p}.jsx`).includes("<Paginacion "), `${p} usa <Paginacion>`);
+});
+
+test("el asistente se oculta con cualquier diálogo abierto, y todos los diálogos se dejan reconocer", () => {
+  assert.ok(leer("../src/components/chat/chat.css").includes('body:has([aria-modal="true"]) .chat-widget-container { display: none; }'));
+  // El desplegable de notificaciones no bloquea la pantalla: no es modal y por eso no oculta al asistente
+  const dialogos = readdirSync(new URL("../src/", import.meta.url), { recursive: true })
+    .map((a) => a.replaceAll("\\", "/"))
+    .filter((a) => a.endsWith(".jsx") && !a.includes("__preview") && !a.endsWith("NotificationDropdown.jsx"))
+    .filter((a) => /role="(alert)?dialog"/.test(leer(`../src/${a}`)));
+  assert.ok(dialogos.length >= 6, dialogos.join());
+  for (const a of dialogos) assert.ok(leer(`../src/${a}`).includes('aria-modal="true"'), a);
 });

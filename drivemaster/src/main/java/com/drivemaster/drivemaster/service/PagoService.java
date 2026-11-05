@@ -11,6 +11,7 @@ import com.drivemaster.drivemaster.repository.mysql.PagoRepository;
 import com.drivemaster.drivemaster.util.EmailSolicitudBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Lazy;
@@ -50,6 +51,7 @@ public class PagoService {
     private final RestTemplate restTemplate;
     // @Lazy: PagoMarketplaceService también usa este servicio para crear el link
     private final PagoMarketplaceService pagoMarketplace;
+    private final LiquidacionService liquidacionService;
 
     @Value("${wompi.public_key}")
     private String publicKey;
@@ -81,7 +83,21 @@ public class PagoService {
                        EmailsService emailsService,
                        RestTemplate restTemplate,
                        @Lazy PagoMarketplaceService pagoMarketplace) {
+        this(solicitudRepository, pagoRepository, ventaService, usuarioRepository,
+                emailsService, restTemplate, pagoMarketplace, null);
+    }
+
+    @Autowired
+    public PagoService(SolicitudRepository solicitudRepository,
+                       PagoRepository pagoRepository,
+                       VentaService ventaService,
+                       UsuarioRepository usuarioRepository,
+                       EmailsService emailsService,
+                       RestTemplate restTemplate,
+                       @Lazy PagoMarketplaceService pagoMarketplace,
+                       @Lazy LiquidacionService liquidacionService) {
         this.pagoMarketplace = pagoMarketplace;
+        this.liquidacionService = liquidacionService;
         this.solicitudRepository = solicitudRepository;
         this.pagoRepository = pagoRepository;
         this.ventaService = ventaService;
@@ -208,6 +224,21 @@ public class PagoService {
         pagoRepository.save(pago);
 
         log.info("Link de pago {} generado para {} (ref {})", concepto, compraId != null ? "la compra " + compraId : "la orden " + ordenId, referencia);
+        return respuestaLink(checkoutUrlFinal, referencia, montoCentavos);
+    }
+
+    /**
+     * Link de un pago del marketplace que sigue PENDIENTE, sin crear otro registro: misma referencia y mismo monto,
+     * así que la firma de integridad es la misma y Wompi lo trata como el mismo pago.
+     */
+    public Map<String, Object> reusarPagoMarketplace(PagoEntity pago) {
+        long montoCentavos = Math.round(pago.getMonto() * 100);
+        log.info("Link de pago {} reutilizado para la orden {} (ref {})", pago.getConcepto(), pago.getOrdenServicioId(), pago.getReferencia());
+        return respuestaLink(construirUrlCheckout(pago.getUsuarioId(), pago.getReferencia(), montoCentavos, null, false),
+                pago.getReferencia(), montoCentavos);
+    }
+
+    private Map<String, Object> respuestaLink(String checkoutUrlFinal, String referencia, long montoCentavos) {
         return Map.of(
                 "checkoutUrl", checkoutUrlFinal,
                 "referencia", referencia,
@@ -406,7 +437,14 @@ public class PagoService {
      * falsificado con status APPROVED ya no puede marcar un pago como pagado.
      */
     public void procesarWebhook(Map<String, Object> body) {
-        log.info("Webhook Wompi recibido: {}", body != null ? body.get("event") : "null");
+        String event = body != null ? str(body.get("event")) : null;
+        log.info("Webhook Wompi recibido: {}", event != null ? event : "null");
+        if (event != null && (event.startsWith("payout.") || event.startsWith("transfer."))) {
+            if (liquidacionService != null) {
+                liquidacionService.procesarWebhookPayout(body);
+            }
+            return;
+        }
         try {
             if (body == null || !(body.get("data") instanceof Map<?, ?> data)) return;
             if (!(data.get("transaction") instanceof Map<?, ?> transaction)) return;
@@ -461,9 +499,12 @@ public class PagoService {
         if (recibidoCentavos == null || recibidoCentavos != esperadoCentavos || !"COP".equals(moneda)) {
             log.error("Pago {} rechazado: Wompi reporta {} {} y se esperaban {} COP (txn {})",
                     referencia, recibidoCentavos, moneda, esperadoCentavos, transactionId);
-            pagoEntity.setEstado("MONTO_INVALIDO");
-            pagoEntity.setTransactionId(transactionId);
-            pagoRepository.save(pagoEntity);
+            // El dinero sí entró: reembolso pendiente por lo que verificó Wompi y alerta al ADMIN (una sola vez)
+            if (pagoRepository.marcarMontoInvalido(pagoEntity.getId(), transactionId) == 1) {
+                pagoEntity.setEstado("MONTO_INVALIDO");
+                pagoEntity.setTransactionId(transactionId);
+                pagoMarketplace.montoInvalido(pagoEntity, recibidoCentavos, moneda);
+            }
             return null;
         }
 

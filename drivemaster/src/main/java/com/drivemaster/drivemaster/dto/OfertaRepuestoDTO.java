@@ -25,7 +25,10 @@ public class OfertaRepuestoDTO {
     public static final String PARCIAL = "PARCIAL";
     public static final String AGOTADO = "AGOTADO";
 
+    // Oferta de una tienda. La del inventario del taller trae piezaTallerId y origen TALLER, sin productoId ni tienda
     private String productoId;
+    private String piezaTallerId;
+    private String origen;
     private String codigo;
     private String nombre;
     private String marca;
@@ -38,7 +41,13 @@ public class OfertaRepuestoDTO {
     private String tiendaBarrio;
     private Double distanciaKm;
 
+    // Antes de IVA, como entra en la cotización
     private Double precio;
+    // IVA de quien vende la pieza: el general si es de una tienda, el del taller (0 % si no es responsable) si es suya
+    private Double ivaPct;
+    private Double ivaMonto;
+    // Lo que paga el cliente por unidad: así se comparan el taller y las tiendas
+    private Double precioFinal;
     private Integer stock;
 
     // DISPONIBLE (alcanza la cantidad), ENCARGO, PARCIAL (hay menos de lo pedido) o AGOTADO
@@ -65,4 +74,7 @@ public class OfertaRepuestoDTO {
 
     // La tienda ya surte otros repuestos de esta orden (se intenta primero una sola tienda)
     private boolean mismaTiendaQueSeleccion;
+
+    // Solo ofertas del inventario del taller: su precio quedó sobre el público y se cotiza al tope
+    private boolean precioTopado;
 }

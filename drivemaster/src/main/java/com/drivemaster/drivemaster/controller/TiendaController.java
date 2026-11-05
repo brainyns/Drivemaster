@@ -1,8 +1,10 @@
 package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.dto.AprobacionRequest;
+import com.drivemaster.drivemaster.dto.CuentaBancariaDTO;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
 import com.drivemaster.drivemaster.dto.TiendaDTO;
+import com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO;
 import com.drivemaster.drivemaster.service.TiendaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,9 +42,20 @@ public class TiendaController {
         return ResponseEntity.ok(tiendaService.actualizarMiTienda(auth.getName(), request));
     }
 
+    @PutMapping("/mi-tienda/cuenta-bancaria")
+    public ResponseEntity<TiendaDTO> guardarCuentaBancaria(@RequestBody CuentaBancariaDTO dto, Authentication auth) {
+        return ResponseEntity.ok(tiendaService.guardarCuentaBancaria(auth.getName(), dto));
+    }
+
     @PutMapping("/mi-tienda/telefono")
     public ResponseEntity<TiendaDTO> telefono(@RequestBody Map<String, String> body, Authentication auth) {
         return ResponseEntity.ok(tiendaService.actualizarTelefono(auth.getName(), body == null ? null : body.get("telefono")));
+    }
+
+    /** Horario por días (el mismo formato que /api/talleres/{id}/horario): reemplaza el de la semana completa. */
+    @PutMapping("/mi-tienda/horario")
+    public ResponseEntity<TiendaDTO> horario(@RequestBody List<FranjaHorarioDTO> franjas, Authentication auth) {
+        return ResponseEntity.ok(tiendaService.guardarHorario(auth.getName(), franjas));
     }
 
     // ─── Administración (rol ADMIN/SUPERADMIN) ───────────────

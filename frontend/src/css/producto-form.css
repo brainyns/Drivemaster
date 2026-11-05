@@ -7,10 +7,21 @@
 
 .pfm-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr) 420px;
   gap: 16px;
   align-items: start;
 }
+
+/* Pares de campos en dos columnas: etiqueta, control y mensajes comparten filas (subgrid), así los dos controles
+   quedan a la misma altura aunque una etiqueta o una ayuda ocupe más líneas que la otra */
+.pfm-root .ui-form__campos--2 > .ui-field {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 6px;
+  align-content: start;
+}
+.pfm-root .ui-form__campos--2 > .ui-field > .ui-field__label { align-self: end; }
 
 .pfm-columna { display: grid; gap: 16px; min-width: 0; }
 .pfm-columna--lateral { position: sticky; top: 88px; }
@@ -75,17 +86,40 @@
 .pfm-vehiculo__quitar.ui-btn { position: absolute; top: 6px; right: 8px; color: var(--ui-error); }
 .pfm-agregar.ui-btn { justify-self: start; }
 
-/* Foto */
-.pfm-foto { display: grid; gap: 12px; }
-.pfm-foto__imagen.mk-imagen { max-width: 220px; border-radius: var(--ui-r-xl); }
+/* Foto: miniatura y zona para soltar la imagen, con Cambiar y Quitar */
+.pfm-foto {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1.5px dashed var(--ui-line);
+  border-radius: var(--ui-r-xl);
+  transition: border-color var(--ui-dur) ease, background-color var(--ui-dur) ease;
+}
+.pfm-foto--arrastrando { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.pfm-foto__imagen.mk-imagen { width: 112px; border-radius: var(--ui-r-lg); }
+.pfm-foto__texto { display: grid; gap: 8px; min-width: 0; }
+.pfm-root .pfm-foto__ayuda { margin: 0; font-size: 0.85rem; line-height: 1.45; color: var(--ui-muted); }
 .pfm-foto__acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.pfm-foto .ui-field__error { grid-column: 1 / -1; }
 
 .pfm-guardar { display: grid; gap: 8px; }
 
-/* Sugerencias de la IA */
-.pfm-ia { display: grid; gap: 14px; }
-.pfm-ia__pedir.ui-btn { justify-self: start; }
-.pfm-ia__bloque { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--ui-line-soft); }
+/* Sugerencias de la IA: el botón va en la cabecera de Información general y lo propuesto, debajo del nombre */
+.pfm-ia {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  background: color-mix(in srgb, var(--primary) 4%, var(--ui-surface));
+}
+.pfm-root .pfm-ia__cabecera {
+  display: flex; align-items: center; gap: 6px; margin: 0;
+  font-size: 0.8125rem; font-weight: 700; color: var(--ui-muted);
+}
+.pfm-ia__bloque { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid var(--ui-line-soft); }
 .pfm-root .pfm-ia__titulo { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 0.9rem; font-weight: 700; }
 .pfm-root .pfm-ia__nota { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--ui-muted); }
 .pfm-ia__lista { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
@@ -113,5 +147,6 @@
 
 @media (max-width: 600px) {
   .pfm-opciones { grid-template-columns: minmax(0, 1fr); }
-  .pfm-foto__imagen.mk-imagen { max-width: none; }
+  .pfm-foto { grid-template-columns: 88px minmax(0, 1fr); }
+  .pfm-foto__imagen.mk-imagen { width: 88px; }
 }

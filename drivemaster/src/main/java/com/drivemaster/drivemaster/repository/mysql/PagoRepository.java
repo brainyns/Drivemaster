@@ -7,15 +7,26 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PagoRepository extends JpaRepository<PagoEntity, Long> {
     Optional<PagoEntity> findByReferencia(String referencia);
+    List<PagoEntity> findByOrdenServicioIdOrderByIdAsc(String ordenServicioId);
+
+    /** Último pago aún PENDIENTE de una orden, cotización, cliente y concepto (para reutilizar su link). */
+    Optional<PagoEntity> findFirstByOrdenServicioIdAndCotizacionIdAndUsuarioIdAndConceptoAndEstadoOrderByIdDesc(
+            String ordenServicioId, String cotizacionId, String usuarioId, String concepto, String estado);
 
     /** Dinero que pasó por la plataforma: pagos aprobados del marketplace (no es ingreso de DriveMaster). */
     @Query("select coalesce(sum(p.monto), 0) from PagoEntity p where p.estado = 'PAGADO' "
             + "and p.concepto in ('DIAGNOSTICO', 'COTIZACION', 'CATALOGO')")
     double sumaMovidaMarketplace();
+
+    /** Lo mismo desde una fecha (la del pago, o la de creación en los pagos que no la guardaron). */
+    @Query("select coalesce(sum(p.monto), 0) from PagoEntity p where p.estado = 'PAGADO' "
+            + "and p.concepto in ('DIAGNOSTICO', 'COTIZACION', 'CATALOGO') and coalesce(p.fechaPago, p.fechaCreacion) >= :desde")
+    double sumaMovidaMarketplaceDesde(@org.springframework.data.repository.query.Param("desde") java.time.LocalDateTime desde);
 
     /**
      * Toma un pago para procesarlo (→ PROCESANDO) en una sola sentencia: si el
@@ -29,6 +40,16 @@ public interface PagoRepository extends JpaRepository<PagoEntity, Long> {
     @Query("update PagoEntity p set p.estado = 'PROCESANDO', p.transactionId = :txn "
             + "where p.id = :id and p.estado in ('PENDIENTE', 'RECHAZADO')")
     int reclamar(@Param("id") Long id, @Param("txn") String transactionId);
+
+    /**
+     * Marca como MONTO_INVALIDO un pago aún sin aplicar (Wompi reportó otro monto o moneda). Condicional: si el
+     * webhook y la redirección llegan a la vez, solo uno lo marca (y registra el reembolso). Devuelve 1 si lo marcó.
+     */
+    @Modifying
+    @Transactional
+    @Query("update PagoEntity p set p.estado = 'MONTO_INVALIDO', p.transactionId = :txn "
+            + "where p.id = :id and p.estado in ('PENDIENTE', 'RECHAZADO')")
+    int marcarMontoInvalido(@Param("id") Long id, @Param("txn") String transactionId);
 
     /** Marca como RECHAZADO un pago aún PENDIENTE (Wompi lo declinó). */
     @Modifying

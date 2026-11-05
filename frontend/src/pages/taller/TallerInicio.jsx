@@ -11,7 +11,9 @@ import EstadoVacio from "../../components/ui/EstadoVacio";
 import Esqueleto from "../../components/ui/Esqueleto";
 import BarraAccionMovil from "../../components/ui/BarraAccionMovil";
 import Icon from "../../components/public/Icon";
-import { citasDeHoy, enTaller, esperaRepuestos, porResponder, proximaRevision, tiempoRelativo, urgentes } from "./resumenTaller";
+import Grafico from "../../components/ui/Grafico";
+import { etiquetaSemana, pesosCorto } from "../../components/ui/escalaGrafico";
+import { citasDeHoy, enTaller, esperaRepuestos, porResponder, proximasCitas, tiempoRelativo, urgentes } from "./resumenTaller";
 import { datosCalificacion } from "../../utils/calificacion";
 import "../../css/inicio-taller.css";
 
@@ -30,17 +32,19 @@ function saludo(ahora) {
 export default function TallerInicio({ taller, solicitudes, anteriores, cargando, error, onRecargar, irA }) {
   const [ahora] = useState(() => Date.now());
   const [ingresos, setIngresos] = useState(null);
+  // Lo liquidado en las últimas semanas (serieSemanal de los informes)
+  const [semanas, setSemanas] = useState(null);
   const [reintentando, setReintentando] = useState(false);
   // null hasta saberlo; true si el taller aún no guarda su horario por días
   const [sinHorario, setSinHorario] = useState(null);
   const tallerId = taller?.id;
   const aprobado = taller?.estadoAprobacion === "APROBADO";
 
-  // Mano de obra liquidada y por cobrar (el backend la da acumulada, no por periodo)
+  // Mano de obra liquidada y por cobrar del mes en curso (informes de 1 mes: desde el día 1)
   useEffect(() => {
     let vivo = true;
     informesTaller(getToken(), 1)
-      .then((d) => { if (vivo) setIngresos(d.ingresos.manoDeObra); })
+      .then((d) => { if (vivo) { setIngresos(d.ingresos.manoDeObra); setSemanas(d.serieSemanal || []); } })
       .catch(() => {});
     return () => { vivo = false; };
   }, []);
@@ -63,9 +67,11 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
       hoy: citasDeHoy(solicitudes, ahora),
       porCotizar: solicitudes.filter((s) => s.estado === "DIAGNOSTICADA"),
       esperandoCliente: solicitudes.filter((s) => s.estado === "COTIZADA" || s.estado === "APROBADA"),
-      enCurso: solicitudes.filter((s) => enTaller(s) || esperaRepuestos(s)),
+      // Lo listo para entregar tiene su propia tarjeta: en curso es lo que todavía se trabaja
+      enCurso: solicitudes.filter((s) => (enTaller(s) || esperaRepuestos(s)) && s.estado !== "LISTA"),
+      listos: solicitudes.filter((s) => s.estado === "LISTA"),
       urgentes: urgentes(solicitudes, ahora),
-      proxima: proximaRevision(solicitudes, ahora),
+      proximas: proximasCitas(solicitudes, ahora),
     };
   }, [solicitudes, ahora]);
 
@@ -78,6 +84,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
   const sinActividad = solicitudes.length === 0;
   const calificacion = datosCalificacion(taller?.rating, taller?.calificaciones);
   const primera = datos.responder[0];
+  const mesActual = new Date(ahora).toLocaleDateString("es-CO", { month: "long" });
 
   return (
     <div className="ini-root">
@@ -91,9 +98,10 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                 Responder solicitudes <span className="ini-contador">{datos.responder.length}</span>
               </button>
             )}
+            {/* Una cotización siempre nace de una solicitud diagnosticada: el botón lleva a las que esperan la suya */}
             {datos.porCotizar.length > 0 && (
               <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-solicitudes", "diagnosticadas")}>
-                <Icon name="file" size={16} /> Crear cotización
+                <Icon name="file" size={16} /> Por cotizar <span className="ini-contador">{datos.porCotizar.length}</span>
               </button>
             )}
             <button type="button" className="ui-btn ui-btn--secundario" onClick={() => irA("taller-agenda")}>
@@ -123,8 +131,8 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
 
       {anteriores.length > 0 && (
         <Alerta tono="aviso" className="ini-alerta">
-          Tienes {anteriores.length} {anteriores.length === 1 ? "orden" : "órdenes"} del flujo anterior por atender.{" "}
-          <button type="button" className="ini-enlace" onClick={() => irA("taller-anteriores")}>Ver órdenes anteriores</button>
+          Tienes {anteriores.length} {anteriores.length === 1 ? "orden" : "órdenes"} de la versión anterior por atender.{" "}
+          <button type="button" className="ini-enlace" onClick={() => irA("taller-mitaller", "anterior")}>Verlas en Mi taller</button>
         </Alerta>
       )}
 
@@ -145,26 +153,39 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
           <section aria-labelledby="ini-dia">
             <h2 id="ini-dia" className="ui-sr">Resumen del día</h2>
             <div className="ui-indicadores ini-indicadores">
-              <Indicador icono="message" titulo="Solicitudes nuevas" valor={datos.responder.length}
+              <Indicador icono="message" titulo="Solicitudes nuevas" valor={datos.responder.length} fase="nueva"
                 tono={datos.responder.length > 0 ? "accion" : undefined}
                 pie={primera?.fechaLimiteRespuesta ? `La más urgente vence ${tiempoRelativo(primera.fechaLimiteRespuesta, ahora)}` : "Estás al día"}
                 onClick={() => irA("taller-solicitudes", "responder")} />
-              <Indicador icono="calendar" titulo="Citas de hoy" valor={datos.hoy.length}
+              <Indicador icono="calendar" titulo="Citas de hoy" valor={datos.hoy.length} fase="nueva"
                 pie={datos.hoy.length > 0 ? `La primera a las ${hora(datos.hoy[0].fechaRevision)}` : "Sin revisiones agendadas hoy"}
                 onClick={() => irA("taller-agenda")} />
               <Indicador icono="file" titulo="Cotizaciones pendientes" valor={datos.porCotizar.length + datos.esperandoCliente.length}
-                tono={datos.porCotizar.length > 0 ? "accion" : undefined}
+                fase="cotizacion" tono={datos.porCotizar.length > 0 ? "accion" : undefined}
                 pie={`${datos.porCotizar.length} por cotizar · ${datos.esperandoCliente.length} esperando al cliente`}
                 onClick={() => irA(datos.porCotizar.length > 0 ? "taller-solicitudes" : "taller-cotizaciones",
                   datos.porCotizar.length > 0 ? "diagnosticadas" : undefined)} />
-              <Indicador icono="tool" titulo="Servicios en curso" valor={datos.enCurso.length}
+              <Indicador icono="tool" titulo="Servicios en curso" valor={datos.enCurso.length} fase="curso"
                 pie={datos.enCurso.length > 0 ? "Esperando repuestos o en el taller" : "Ningún vehículo en curso"}
                 onClick={() => irA("taller-trabajos", datos.enCurso.some(enTaller) ? "entaller" : "repuestos")} />
+              <Indicador icono="check" titulo="Listos para entregar" valor={datos.listos.length} fase="lista"
+                pie={datos.listos.length > 0 ? "El cliente ya fue avisado por correo" : "Ningún vehículo esperando entrega"}
+                onClick={() => irA("taller-trabajos", "entaller")} />
               {ingresos && (
-                <Indicador titulo="Mano de obra por cobrar" valor={formatPrecio(ingresos.pendiente)}
-                  tono={ingresos.pendiente > 0 ? "ok" : undefined}
-                  pie={`${formatPrecio(ingresos.liquidado)} ya liquidados en total`}
-                  onClick={() => irA("taller-informes")} />
+                <Indicador titulo={`Mano de obra · ${mesActual}`} pie="Del mes en curso; los meses anteriores están en Informes"
+                  onClick={() => irA("taller-informes")}>
+                  {/* Dentro de un botón solo cabe contenido en línea: spans en vez de dl */}
+                  <span className="ini-dinero">
+                    <span className="ini-dinero__fila ini-dinero__pendiente">
+                      <span className="ini-dinero__etiqueta">Pendiente de cobro</span>
+                      <span className="ini-dinero__valor">{formatPrecio(ingresos.pendiente)}</span>
+                    </span>
+                    <span className="ini-dinero__fila ini-dinero__recibido">
+                      <span className="ini-dinero__etiqueta">Recibido este mes</span>
+                      <span className="ini-dinero__valor">{formatPrecio(ingresos.liquidado)}</span>
+                    </span>
+                  </span>
+                </Indicador>
               )}
               {taller && (
                 <Indicador icono="star" titulo="Calificación" valor={calificacion.nuevo ? "Nuevo" : calificacion.promedio}
@@ -174,41 +195,61 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
           </section>
 
           <div className="ini-columnas">
-            <section className="ini-bloque" aria-labelledby="ini-urgente">
-              <div className="ini-bloque__cabecera">
-                <h2 id="ini-urgente" className="ini-bloque__titulo">Lo urgente primero</h2>
-                {datos.urgentes.length > MAX_URGENTES && (
-                  <span className="ini-bloque__total">{MAX_URGENTES} de {datos.urgentes.length}</span>
+            {/* Columna izquierda: lo urgente y, debajo, los ingresos de las últimas semanas (llena el espacio junto a la agenda) */}
+            <div className="ini-columna">
+              <section className="ini-bloque" aria-labelledby="ini-urgente">
+                <div className="ini-bloque__cabecera">
+                  <h2 id="ini-urgente" className="ini-bloque__titulo">Lo urgente primero</h2>
+                  {datos.urgentes.length > MAX_URGENTES && (
+                    <span className="ini-bloque__total">{MAX_URGENTES} de {datos.urgentes.length}</span>
+                  )}
+                </div>
+                {datos.urgentes.length === 0 ? (
+                  <p className="ini-bloque__vacio">
+                    <Icon name="check" size={18} /> Nada pide tu atención ahora. Las solicitudes nuevas aparecerán aquí.
+                  </p>
+                ) : (
+                  <ul className="ini-urgentes">
+                    {datos.urgentes.slice(0, MAX_URGENTES).map((u) => (
+                      <li key={`${u.s.id}-${u.orden}`} className="ini-urgente">
+                        <div className="ini-urgente__texto">
+                          <strong className="ini-urgente__vehiculo">{u.s.vehiculoDescripcion || "Vehículo"}</strong>
+                          <span className="ini-urgente__meta">
+                            #{refSolicitud(u.s.id)}
+                            {[u.s.barrio, u.s.ciudad].some(Boolean) && ` · ${[u.s.barrio, u.s.ciudad].filter(Boolean).join(", ")}`}
+                            {u.orden === 1 && ` · ${hora(u.s.fechaRevision)}`}
+                            {u.s.mecanicoNombre && ` · ${u.s.mecanicoNombre}`}
+                          </span>
+                        </div>
+                        <ChipEstado tono={u.tono}>{u.estado}</ChipEstado>
+                        <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico ini-urgente__accion"
+                          onClick={() => irA(u.pagina, { filtro: u.filtro, abrir: u.s.id, volverA: "taller-inicio" })}
+                          aria-label={`${u.accion}: ${u.s.vehiculoDescripcion || "vehículo"} #${refSolicitud(u.s.id)}`}>
+                          {u.accion}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              </div>
-              {datos.urgentes.length === 0 ? (
-                <p className="ini-bloque__vacio">
-                  <Icon name="check" size={18} /> Nada pide tu atención ahora. Las solicitudes nuevas aparecerán aquí.
-                </p>
-              ) : (
-                <ul className="ini-urgentes">
-                  {datos.urgentes.slice(0, MAX_URGENTES).map((u) => (
-                    <li key={`${u.s.id}-${u.orden}`} className="ini-urgente">
-                      <div className="ini-urgente__texto">
-                        <strong className="ini-urgente__vehiculo">{u.s.vehiculoDescripcion || "Vehículo"}</strong>
-                        <span className="ini-urgente__meta">
-                          #{refSolicitud(u.s.id)}
-                          {[u.s.barrio, u.s.ciudad].some(Boolean) && ` · ${[u.s.barrio, u.s.ciudad].filter(Boolean).join(", ")}`}
-                          {u.orden === 1 && ` · ${hora(u.s.fechaRevision)}`}
-                          {u.s.mecanicoNombre && ` · ${u.s.mecanicoNombre}`}
-                        </span>
-                      </div>
-                      <ChipEstado tono={u.tono}>{u.estado}</ChipEstado>
-                      <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico ini-urgente__accion"
-                        onClick={() => irA(u.pagina, { filtro: u.filtro, abrir: u.s.id, volverA: "taller-inicio" })}
-                        aria-label={`${u.accion}: ${u.s.vehiculoDescripcion || "vehículo"} #${refSolicitud(u.s.id)}`}>
-                        {u.accion}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              </section>
+
+              {semanas?.length > 0 && (
+                <section className="ini-bloque" aria-labelledby="ini-semanas">
+                  <div className="ini-bloque__cabecera">
+                    <h2 id="ini-semanas" className="ini-bloque__titulo">Ingresos de las últimas {semanas.length} semanas</h2>
+                    <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("taller-informes")}>
+                      Ver informes
+                    </button>
+                  </div>
+                  <Grafico titulo={`Ingresos ya pagados por semana, últimas ${semanas.length} semanas`}
+                    etiquetas={semanas.map((s) => etiquetaSemana(s.inicio))}
+                    detalles={semanas.map((s) => `Semana del ${etiquetaSemana(s.inicio)}`)}
+                    series={[{ nombre: "Ingresos ya pagados", valores: semanas.map((s) => s.ingresosLiquidados) }]}
+                    formato={formatPrecio} formatoEje={pesosCorto} alto={120} />
+                  <p className="ini-bloque__nota">Mano de obra y diagnóstico ya pagados, por la semana en que se te pagaron.</p>
+                </section>
               )}
-            </section>
+            </div>
 
             <section className="ini-bloque" aria-labelledby="ini-agenda">
               <div className="ini-bloque__cabecera">
@@ -217,6 +258,7 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                   Ver agenda
                 </button>
               </div>
+              <h3 className="ini-agenda__grupo">Citas de hoy</h3>
               {datos.hoy.length > 0 ? (
                 <ol className="ini-agenda">
                   {datos.hoy.map((s) => (
@@ -229,13 +271,25 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
                     </li>
                   ))}
                 </ol>
-              ) : datos.proxima ? (
-                <p className="ini-bloque__vacio">
-                  Hoy no tienes citas. La próxima es el <strong>{formatFechaHora(datos.proxima.fechaRevision)}</strong>
-                  {" "}({datos.proxima.vehiculoDescripcion}).
-                </p>
               ) : (
-                <p className="ini-bloque__vacio">No tienes revisiones agendadas. Al aceptar una solicitud eliges la fecha.</p>
+                <p className="ini-bloque__vacio">Hoy no tienes revisiones agendadas.</p>
+              )}
+
+              <h3 className="ini-agenda__grupo">Próximas citas</h3>
+              {datos.proximas.length > 0 ? (
+                <ol className="ini-agenda">
+                  {datos.proximas.map((s) => (
+                    <li key={s.id} className="ini-agenda__cita ini-agenda__cita--proxima">
+                      <time className="ini-agenda__hora" dateTime={s.fechaRevision}>{formatFechaHora(s.fechaRevision)}</time>
+                      <span className="ini-agenda__texto">
+                        <strong>{s.vehiculoDescripcion}</strong>
+                        <span>{s.mecanicoNombre ? `Mecánico: ${s.mecanicoNombre}` : "Sin mecánico asignado"}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="ini-bloque__vacio">Nada agendado para los próximos días. Al aceptar una solicitud eliges la fecha.</p>
               )}
             </section>
           </div>

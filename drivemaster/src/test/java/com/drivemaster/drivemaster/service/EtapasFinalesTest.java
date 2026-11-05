@@ -18,7 +18,9 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,6 +42,9 @@ class EtapasFinalesTest {
     private LiquidacionService liquidacion;
     private CalificacionTallerService calificaciones;
     private SolicitudServicioServiceImpl service;
+    private OrdenServicioRepository ordenRepository;
+    private ParametrosMarketplace parametros;
+    private ReglasTrabajoTaller reglas;
     private OrdenServicio orden;
 
     @BeforeEach
@@ -49,15 +54,17 @@ class EtapasFinalesTest {
         avisos = mock(AvisosSolicitudServicio.class);
         liquidacion = mock(LiquidacionService.class);
         calificaciones = mock(CalificacionTallerService.class);
-        OrdenServicioRepository ordenRepository = mock(OrdenServicioRepository.class);
+        ordenRepository = mock(OrdenServicioRepository.class);
+        parametros = mock(ParametrosMarketplace.class);
+        reglas = mock(ReglasTrabajoTaller.class);
         UsuarioService usuarioService = mock(UsuarioService.class);
         VehiculoService vehiculoService = mock(VehiculoService.class);
 
         service = new SolicitudServicioServiceImpl(ordenRepository, mock(TallerRepository.class), vehiculoService,
                 usuarioService, tallerService, mock(CloudinaryService.class), new TransicionOrdenService(mongoTemplate),
-                mock(AsignacionTallerService.class), mock(ParametrosMarketplace.class), avisos,
+                mock(AsignacionTallerService.class), parametros, avisos,
                 mock(ProductoService.class), mock(BuscadorRepuestosService.class), liquidacion, calificaciones,
-                mock(HorarioTallerService.class));
+                mock(HorarioTallerService.class), reglas);
 
         orden = OrdenServicio.builder().id("o1").flujo(EstadoOrden.FLUJO_MARKETPLACE).tallerId("t1").usuarioId("u1")
                 .vehiculoId("v1").mecanicoNombre("Carlos").eventos(new ArrayList<>()).build();
@@ -94,10 +101,106 @@ class EtapasFinalesTest {
 
         assertEquals(EstadoOrden.LISTA, service.marcarLista(CORREO_TALLER, "o1").getEstado());
         verify(avisos).vehiculoListo(orden);
-        verify(liquidacion, never()).ordenEntregada(anyString());
+        when(parametros.plazoRecepcionServicioDiasHabiles()).thenReturn(3);
         assertEquals(EstadoOrden.ENTREGADA, service.marcarEntregada(CORREO_TALLER, "o1").getEstado());
-        // Al quedar ENTREGADA, la línea del taller queda lista para liquidar
+        Document set = (Document) ultimaEscritura().getUpdateObject().get("$set");
+        assertNotNull(set.get("autoconfirmaDespuesDe"), "corre el plazo del cliente");
+        verify(avisos).vehiculoEntregado(orden, 3);
+        // El taller no se habilita su propio pago: espera al cliente
+        verify(liquidacion, never()).ordenEntregada(anyString());
+    }
+
+    @Test
+    void siElAvisoDeEntregaFallaLaEntregaIgualQuedaYAlertaAlAdmin() {
+        orden.setEstado(EstadoOrden.LISTA);
+        doThrow(new IllegalStateException("sin aviso")).when(avisos).vehiculoEntregado(any(), anyInt());
+
+        assertEquals(EstadoOrden.ENTREGADA, service.marcarEntregada(CORREO_TALLER, "o1").getEstado());
+
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("no se pudo avisar al cliente"));
+    }
+
+    @Test
+    void laConfirmacionDelClienteHabilitaElPagoDelTaller() {
+        orden.setEstado(EstadoOrden.ENTREGADA);
+
+        service.confirmarRecepcion(CORREO_CLIENTE, "o1", null, null);
+
         verify(liquidacion).ordenEntregada("o1");
+        ArgumentCaptor<Update> marca = ArgumentCaptor.forClass(Update.class);
+        verify(mongoTemplate).updateFirst(any(Query.class), marca.capture(), eq(OrdenServicio.class));
+        assertEquals(true, ((Document) marca.getValue().getUpdateObject().get("$set")).get("liquidacionLiberada"));
+    }
+
+    @Test
+    void siHabilitarElPagoFallaLaConfirmacionIgualQuedaYSinMarcaParaReintentar() {
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        doThrow(new IllegalStateException("postgres caído")).when(liquidacion).ordenEntregada("o1");
+
+        assertDoesNotThrow(() -> service.confirmarRecepcion(CORREO_CLIENTE, "o1", null, null));
+
+        verify(avisos).alertaAdmin(eq("Paso sin completar"), contains("Se reintenta solo"));
+        verify(mongoTemplate, never()).updateFirst(any(Query.class), any(Update.class), eq(OrdenServicio.class));
+    }
+
+    @Test
+    void alVencerElPlazoSeConfirmaSolaYHabilitaElPago() {
+        LocalDateTime ahora = LocalDateTime.of(2026, 11, 10, 9, 0);
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        when(ordenRepository.entregasPorLiberar(EstadoOrden.FLUJO_MARKETPLACE, EstadoOrden.ENTREGADA, ahora)).thenReturn(List.of(orden));
+
+        assertEquals(1, service.autoconfirmarEntregas(ahora));
+
+        Document set = (Document) ultimaEscritura().getUpdateObject().get("$set");
+        assertEquals(true, set.get("recepcionConfirmada"));
+        assertEquals(true, set.get("recepcionAutomatica"));
+        verify(liquidacion).ordenEntregada("o1");
+    }
+
+    @Test
+    void unaRecepcionYaConfirmadaSoloReintentaElPago() {
+        LocalDateTime ahora = LocalDateTime.of(2026, 11, 10, 9, 0);
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        orden.setRecepcionConfirmada(true);
+        when(ordenRepository.entregasPorLiberar(any(), any(), any())).thenReturn(List.of(orden));
+
+        assertEquals(1, service.autoconfirmarEntregas(ahora));
+
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class));
+        verify(liquidacion).ordenEntregada("o1");
+    }
+
+    @Test
+    void siElClienteConfirmaAlMismoTiempoElJobNoLoPisaYUnFalloNoFrenaLasDemas() {
+        LocalDateTime ahora = LocalDateTime.of(2026, 11, 10, 9, 0);
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        OrdenServicio otra = OrdenServicio.builder().id("o2").estado(EstadoOrden.ENTREGADA).recepcionConfirmada(true).build();
+        when(ordenRepository.entregasPorLiberar(any(), any(), any())).thenReturn(List.of(orden, otra));
+        when(mongoTemplate.findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class))).thenReturn(null);
+        doThrow(new IllegalStateException("postgres caído")).when(liquidacion).ordenEntregada("o2");
+
+        assertEquals(0, assertDoesNotThrow(() -> service.autoconfirmarEntregas(ahora)));
+
+        verify(liquidacion, never()).ordenEntregada("o1");
+        verify(liquidacion).ordenEntregada("o2");
+    }
+
+    @Test
+    void laConsultaSoloTomaLoConfirmadoOVencidoYSinHabilitar() throws Exception {
+        String consulta = OrdenServicioRepository.class.getMethod("entregasPorLiberar", String.class, String.class, LocalDateTime.class)
+                .getAnnotation(org.springframework.data.mongodb.repository.Query.class).value();
+        Document d = Document.parse(consulta.replace("?0", "'F'").replace("?1", "'E'").replace("?2", "'A'"));
+        assertEquals(new Document("$ne", true), d.get("liquidacionLiberada"));
+        assertEquals(2, ((java.util.List<?>) d.get("$or")).size());
+    }
+
+    @Test
+    void siElAvisoFallaLaOrdenIgualQuedaLista() {
+        orden.setEstado(EstadoOrden.EN_INSTALACION);
+        doThrow(new IllegalStateException("sin aviso")).when(avisos).vehiculoListo(any());
+        doThrow(new IllegalStateException("tampoco alerta")).when(avisos).alertaAdmin(anyString(), anyString());
+
+        assertEquals(EstadoOrden.LISTA, service.marcarLista(CORREO_TALLER, "o1").getEstado());
     }
 
     @Test
@@ -112,6 +215,81 @@ class EtapasFinalesTest {
         // Una entrega rechazada no habilita ninguna liquidación
         verifyNoInteractions(liquidacion);
         verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class));
+    }
+
+    @Test
+    void elRechazoDeUnCambioDeEstadoSeLeeEnEspanol() {
+        orden.setEstado(EstadoOrden.ENTREGADA);
+        ResponseStatusException repetido = assertThrows(ResponseStatusException.class, () -> service.marcarEntregada(CORREO_TALLER, "o1"));
+        assertEquals("Esta solicitud ya está en \"Entregada\".", repetido.getReason());
+
+        orden.setEstado(EstadoOrden.LISTA);
+        ResponseStatusException saltado = assertThrows(ResponseStatusException.class, () -> service.iniciarInstalacion(CORREO_TALLER, "o1"));
+        assertEquals(HttpStatus.CONFLICT, saltado.getStatusCode());
+        assertTrue(saltado.getReason().contains("Lista para entregar") && saltado.getReason().contains("En instalación"), saltado.getReason());
+        assertFalse(saltado.getReason().contains("EN_INSTALACION"));
+    }
+
+    @Test
+    void sinPagoNiRepuestosNoAvanzaYNoSeEscribeNada() {
+        ResponseStatusException sinPago = new ResponseStatusException(HttpStatus.CONFLICT, "La cotización de esta solicitud no está pagada");
+        doThrow(sinPago).when(reglas).exigirPago(any());
+        for (String estado : java.util.List.of(EstadoOrden.REPUESTOS_RECIBIDOS, EstadoOrden.EN_INSTALACION, EstadoOrden.LISTA)) {
+            orden.setEstado(estado);
+            Runnable accion = EstadoOrden.REPUESTOS_RECIBIDOS.equals(estado) ? () -> service.iniciarInstalacion(CORREO_TALLER, "o1")
+                    : EstadoOrden.EN_INSTALACION.equals(estado) ? () -> service.marcarLista(CORREO_TALLER, "o1")
+                    : () -> service.marcarEntregada(CORREO_TALLER, "o1");
+            assertSame(sinPago, assertThrows(ResponseStatusException.class, accion::run), estado);
+        }
+
+        doNothing().when(reglas).exigirPago(any());
+        orden.setEstado(EstadoOrden.REPUESTOS_RECIBIDOS);
+        ResponseStatusException sinRepuestos = new ResponseStatusException(HttpStatus.CONFLICT, ReglasTrabajoTaller.SIN_REPUESTOS);
+        doThrow(sinRepuestos).when(reglas).exigirRepuestos(any());
+        assertSame(sinRepuestos, assertThrows(ResponseStatusException.class, () -> service.iniciarInstalacion(CORREO_TALLER, "o1")));
+
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class));
+    }
+
+    @Test
+    void unEstadoEquivocadoNoLlegaALasReglas() {
+        orden.setEstado(EstadoOrden.PAGADA);
+        assertThrows(ResponseStatusException.class, () -> service.iniciarInstalacion(CORREO_TALLER, "o1"));
+        verifyNoInteractions(reglas);
+    }
+
+    @Test
+    void ningunaAccionTocaLaOrdenDeOtroTaller() {
+        when(tallerService.obtenerPorUsuario("otro@demo.com")).thenReturn(Taller.builder().id("t9")
+                .activo(true).estadoAprobacion(EstadoAprobacion.APROBADO).build());
+        java.util.Map<String, Runnable> acciones = new java.util.LinkedHashMap<>();
+        acciones.put("aceptar", () -> service.aceptar("otro@demo.com", "o1", null));
+        acciones.put("rechazar", () -> service.rechazarPorTaller("otro@demo.com", "o1", null));
+        acciones.put("mecánico", () -> service.asignarMecanico("otro@demo.com", "o1", "m1"));
+        acciones.put("diagnóstico", () -> service.registrarDiagnostico("otro@demo.com", "o1", null));
+        acciones.put("repuestos", () -> service.seleccionarRepuestos("otro@demo.com", "o1", null));
+        acciones.put("instalación", () -> service.iniciarInstalacion("otro@demo.com", "o1"));
+        acciones.put("pruebas", () -> service.marcarEnPruebas("otro@demo.com", "o1"));
+        acciones.put("lista", () -> service.marcarLista("otro@demo.com", "o1"));
+        acciones.put("entregada", () -> service.marcarEntregada("otro@demo.com", "o1"));
+
+        for (var accion : acciones.entrySet()) {
+            ResponseStatusException e = assertThrows(ResponseStatusException.class, accion.getValue()::run, accion.getKey());
+            assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode(), accion.getKey());
+        }
+        verify(mongoTemplate, never()).findAndModify(any(Query.class), any(Update.class), any(FindAndModifyOptions.class), eq(OrdenServicio.class));
+    }
+
+    @Test
+    void unTallerSuspendidoNoMueveSusOrdenes() {
+        orden.setEstado(EstadoOrden.LISTA);
+        when(tallerService.obtenerPorUsuario(CORREO_TALLER)).thenReturn(Taller.builder().id("t1")
+                .activo(false).estadoAprobacion(EstadoAprobacion.APROBADO).build());
+
+        ResponseStatusException e = assertThrows(ResponseStatusException.class, () -> service.marcarEntregada(CORREO_TALLER, "o1"));
+
+        assertEquals(HttpStatus.FORBIDDEN, e.getStatusCode());
+        assertEquals("Tu taller no está habilitado para operar", e.getReason());
     }
 
     @Test

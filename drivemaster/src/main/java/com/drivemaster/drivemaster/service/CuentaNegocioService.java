@@ -1,12 +1,16 @@
 package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
+import com.drivemaster.drivemaster.model.EstadoAprobacion;
+import com.drivemaster.drivemaster.model.Taller;
+import com.drivemaster.drivemaster.model.Tienda;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.repository.TallerRepository;
 import com.drivemaster.drivemaster.repository.TiendaRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.util.Correos;
+import com.drivemaster.drivemaster.util.PatronBusqueda;
 import com.drivemaster.drivemaster.util.PlantillaCorreo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,6 +104,60 @@ public class CuentaNegocioService {
         if (vacio(r.getCorreo()) || vacio(r.getPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo y contraseña son obligatorios");
         }
+    }
+
+    public static final String TIENDA = "TIENDA";
+    public static final String TALLER = "TALLER";
+
+    /**
+     * Antes de crear una tienda o un taller: que no haya otro del mismo tipo con el mismo nombre o NIT, ni una tienda
+     * con el mismo correo de contacto. Se compara sin mayúsculas, tildes ni espacios ("Taller  Central" = "taller
+     * central"), y el NIT solo por sus dígitos ("900.123.456-7" = "9001234567"). Bloquean los aprobados, los
+     * pendientes de aprobación y los archivados; los rechazados no, para que puedan volver a registrarse con sus datos
+     * corregidos. (El correo de la cuenta ya es único para todos: lo revisa crearUsuario.)
+     */
+    public void validarSinDuplicados(String tipo, RegistroNegocioRequest r) {
+        String nombre = clave(r.getNombreNegocio());
+        String nit = soloDigitos(r.getNit());
+        String correo = clave(r.getCorreo());
+        String etiqueta = TALLER.equals(tipo) ? "un taller registrado" : "una tienda registrada";
+        if (TALLER.equals(tipo)) {
+            for (Taller t : tallerRepository.findAll()) {
+                if (!bloquea(t.getEstadoAprobacion())) continue;
+                if (nombre != null && nombre.equals(clave(t.getNombre()))) throw duplicado(etiqueta, "ese nombre");
+                if (nit != null && nit.equals(soloDigitos(t.getNit()))) throw duplicado(etiqueta, "ese NIT");
+            }
+        } else {
+            for (Tienda t : tiendaRepository.findAll()) {
+                if (!bloquea(t.getEstadoAprobacion())) continue;
+                if (nombre != null && nombre.equals(clave(t.getNombre()))) throw duplicado(etiqueta, "ese nombre");
+                if (nit != null && nit.equals(soloDigitos(t.getNit()))) throw duplicado(etiqueta, "ese NIT");
+                if (correo != null && correo.equals(clave(t.getCorreoContacto()))) throw duplicado(etiqueta, "ese correo");
+            }
+        }
+    }
+
+    /** Los rechazados no bloquean un registro nuevo; los demás (aprobados, pendientes, archivados o sin estado) sí. */
+    static boolean bloquea(String estadoAprobacion) {
+        return !EstadoAprobacion.RECHAZADO.equals(estadoAprobacion);
+    }
+
+    /** Minúsculas, sin tildes y sin espacios; null si queda vacío. */
+    static String clave(String texto) {
+        if (texto == null) return null;
+        String c = PatronBusqueda.normalizar(texto).replaceAll("\\s+", "");
+        return c.isEmpty() ? null : c;
+    }
+
+    /** Solo los dígitos del NIT; null si no tiene ninguno. */
+    static String soloDigitos(String nit) {
+        if (nit == null) return null;
+        String d = nit.replaceAll("\\D", "");
+        return d.isEmpty() ? null : d;
+    }
+
+    private static ResponseStatusException duplicado(String etiqueta, String dato) {
+        return new ResponseStatusException(HttpStatus.CONFLICT, "Ya hay " + etiqueta + " con " + dato + ".");
     }
 
     /** Crea el usuario que inicia sesión en nombre del negocio. */

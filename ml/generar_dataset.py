@@ -11,7 +11,7 @@ import random
 
 random.seed(42)
 
-NUM_REGISTROS = 1600
+NUM_REGISTROS = 2500
 
 MARCAS_MODELOS = {
     "Chevrolet": ["Spark GT", "Sail", "Onix", "Tracker"],
@@ -76,14 +76,15 @@ for i in range(NUM_REGISTROS):
     marca = random.choice(list(MARCAS_MODELOS.keys()))
     modelo = random.choice(MARCAS_MODELOS[marca])
     anio = random.randint(2008, 2024)
+    antiguedad = 2026 - anio
     ciudad = random.choices(CIUDADES, weights=CIUDADES_PESOS)[0]
     
     if ciudad == "Barranquilla":
         distancia_km = round(random.uniform(0.8, 12.0), 1)
     elif ciudad in ["Soledad", "Puerto Colombia"]:
-        distancia_km = round(random.uniform(8.0, 25.0), 1)
+        distancia_km = round(random.uniform(8.0, 22.0), 1)
     else:
-        distancia_km = round(random.uniform(20.0, 70.0), 1)
+        distancia_km = round(random.uniform(18.0, 50.0), 1)
         
     tipo_servicio = random.choice(TIPOS_SERVICIO)
     
@@ -98,7 +99,7 @@ for i in range(NUM_REGISTROS):
     
     factor_gama = 1.35 if marca in ["Toyota", "Mazda", "Ford"] else 1.0
     if cantidad_repuestos > 0:
-        costo_base_repuesto = random.uniform(45000, 220000) * factor_gama
+        costo_base_repuesto = random.uniform(45000, 200000) * factor_gama
         monto_repuestos = round(cantidad_repuestos * costo_base_repuesto, -3)
     else:
         monto_repuestos = 0.0
@@ -114,48 +115,34 @@ for i in range(NUM_REGISTROS):
     
     # Tiempo de respuesta con distribución exponencial
     u = random.random()
-    tiempo_respuesta_horas = round(-14.0 * math.log(1.0 - u) + 0.5, 1)
-    tiempo_respuesta_horas = min(tiempo_respuesta_horas, 96.0)
+    tiempo_respuesta_horas = round(-10.0 * math.log(1.0 - u) + 0.5, 1)
+    tiempo_respuesta_horas = min(tiempo_respuesta_horas, 72.0)
     
-    calificacion_taller = round(random.uniform(3.5, 5.0), 1)
+    calificacion_taller = round(random.uniform(3.7, 5.0), 1)
     
-    # Modelo probabilístico de negocio
-    score = 1.2
-    if total_con_iva > 1500000:
-        score -= 1.6
-    elif total_con_iva > 800000:
-        score -= 0.8
-    elif total_con_iva < 300000:
-        score += 0.5
-        
-    if tiempo_respuesta_horas > 48.0:
-        score -= 1.8
-    elif tiempo_respuesta_horas > 24.0:
-        score -= 1.0
-    elif tiempo_respuesta_horas <= 3.0:
-        score += 0.9
-        
-    if distancia_km > 25.0:
-        score -= 1.1
-    elif distancia_km <= 5.0:
-        score += 0.6
-        
-    if calificacion_taller >= 4.7:
-        score += 0.7
-    elif calificacion_taller < 4.0:
-        score -= 0.6
-        
-    antiguedad = 2026 - anio
-    if antiguedad > 10 and total_con_iva > 600000:
-        score -= 0.7
-        
+    # Modelo Econométrico de Utilidad del Consumidor (Random Utility Model - McFadden)
+    # V: componente sistemático de valor
+    V = 2.85
+    # Elasticidad al precio total
+    V -= 1.65 * (total_con_iva / 1200000.0)
+    # Sensibilidad a la demora en respuesta (efecto logarítmico cóncavo)
+    V -= 1.35 * (math.log(tiempo_respuesta_horas + 1.0) / math.log(18.0 + 1.0))
+    # Prestigio y reputación del taller
+    V += 1.40 * ((calificacion_taller - 4.1) / 0.9)
+    # Fricción por distancia geográfica
+    V -= 1.05 * (math.log(distancia_km + 1.0) / math.log(25.0 + 1.0))
+    # Interacción: vehículo de mayor antigüedad con presupuesto alto
+    antig_factor = (antiguedad / 10.0) * (total_con_iva / 900000.0)
+    V -= 0.65 * antig_factor
+    # Fricción logística si requiere repuestos de múltiples tiendas
     if num_tiendas >= 3:
-        score -= 0.4
+        V -= 0.35
         
-    score += random.gauss(0, 0.35)
-    probabilidad = 1.0 / (1.0 + math.exp(-score))
+    # Preferencia individual no observable (término de error estocástico gaussiano)
+    epsilon = random.gauss(0, 0.40)
+    utilidad_neta = V + epsilon
     
-    aprobacion = 1 if random.random() < probabilidad else 0
+    aprobacion = 1 if utilidad_neta >= 0.0 else 0
     if aprobacion == 1:
         aprobadas += 1
         

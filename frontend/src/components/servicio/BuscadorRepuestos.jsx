@@ -4,6 +4,10 @@ import { buscarRepuestos } from "../../services/repuestoService";
 import { ESTADO_OFERTA, formatPrecio } from "./estadosServicio";
 import Icon from "../public/Icon";
 import { etiquetaCategoria } from "../../utils/categorias";
+import { formatoDistancia } from "../../utils/distancia";
+import { claveOferta } from "./reglasRepuestos";
+import { textoIvaOferta } from "./desgloseIva";
+import { textoError } from "../../utils/errores";
 
 /**
  * Ventana del buscador de repuestos en todas las tiendas (aprobadas y activas).
@@ -36,7 +40,7 @@ function VentanaBuscador({ token, solicitud, elegidos, onElegir, onCerrar }) {
       }));
       setBuscado(true);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setBuscando(false);
     }
@@ -70,6 +74,17 @@ function VentanaBuscador({ token, solicitud, elegidos, onElegir, onCerrar }) {
     buscar({ q: texto.trim(), cant: cantidad, solo });
   };
 
+
+  // Del inventario se toma lo que hay: la búsqueda sigue con lo que falta, para pedirlo a una tienda
+  const elegirOferta = (grupo, oferta) => {
+    const usa = oferta.origen === "TALLER" ? Math.min(cantidad, oferta.stock || 0) : cantidad;
+    onElegir(grupo, oferta, usa);
+    const falta = cantidad - usa;
+    if (falta > 0) {
+      setCantidad(falta);
+      buscar({ q: texto.trim(), cant: falta, solo: soloCompatibles });
+    }
+  };
   const otraReferencia = () => {
     setTexto("");
     inputRef.current?.focus();
@@ -84,7 +99,7 @@ function VentanaBuscador({ token, solicitud, elegidos, onElegir, onCerrar }) {
           <div>
             <h2 id="ss-modal-titulo" className="ss-modal__titulo">Buscar repuestos</h2>
             <span className="ss-meta">
-              Para {solicitud.vehiculoDescripcion} · inventario de todas las tiendas aprobadas
+              Para {solicitud.vehiculoDescripcion} · tu inventario y el de todas las tiendas aprobadas
             </span>
           </div>
           <button type="button" className="ss-btn-icono" onClick={onCerrar} aria-label="Cerrar buscador"><Icon name="close" size={16} /></button>
@@ -132,20 +147,35 @@ function VentanaBuscador({ token, solicitud, elegidos, onElegir, onCerrar }) {
             </div>
           )}
 
-          {resultados.length > 0 && (
-            <>
-              <p className="ss-ofertas__resumen">
-                {resultados.length} {resultados.length === 1 ? "repuesto" : "repuestos"} ·{" "}
-                {resultados.reduce((n, g) => n + g.ofertas.length, 0)} ofertas de tiendas
-              </p>
-              <div className="ss-ofertas">
-                {resultados.flatMap((g) => g.ofertas.map((o) => (
-                  <TarjetaOferta key={o.productoId} oferta={o} categoria={g.categoria} elegido={elegidos.has(o.productoId)}
-                    onElegir={() => onElegir(g, o, cantidad)} />
-                )))}
-              </div>
-            </>
-          )}
+          {resultados.length > 0 && (() => {
+            const ofertas = resultados.flatMap((g) => g.ofertas.map((o) => ({ g, o })));
+            const propias = ofertas.filter(({ o }) => o.origen === "TALLER");
+            const deTiendas = ofertas.filter(({ o }) => o.origen !== "TALLER");
+            const tarjeta = ({ g, o }) => (
+              <TarjetaOferta key={claveOferta(o)} oferta={o} categoria={g.categoria} elegido={elegidos.has(claveOferta(o))}
+                onElegir={() => elegirOferta(g, o)} />
+            );
+            return (
+              <>
+                {propias.length > 0 && (
+                  <section className="ss-ofertas__grupo" aria-labelledby="ss-tu-inventario">
+                    <h3 id="ss-tu-inventario" className="ss-ofertas__titulo">Tu inventario</h3>
+                    <p className="ss-meta">Ya están en tu taller: úsalas primero. Si no alcanza, pide el resto a una tienda.</p>
+                    <div className="ss-ofertas">{propias.map(tarjeta)}</div>
+                  </section>
+                )}
+                {deTiendas.length > 0 && (
+                  <section className="ss-ofertas__grupo" aria-labelledby="ss-de-tiendas">
+                    {propias.length > 0 && <h3 id="ss-de-tiendas" className="ss-ofertas__titulo">Tiendas</h3>}
+                    <p className="ss-ofertas__resumen">
+                      {resultados.length} {resultados.length === 1 ? "repuesto" : "repuestos"} · {deTiendas.length} ofertas de tiendas
+                    </p>
+                    <div className="ss-ofertas">{deTiendas.map(tarjeta)}</div>
+                  </section>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         <footer className="ss-modal__pie">
@@ -162,45 +192,51 @@ function VentanaBuscador({ token, solicitud, elegidos, onElegir, onCerrar }) {
 
 function TarjetaOferta({ oferta: o, categoria, elegido, onElegir }) {
   const estado = ESTADO_OFERTA[o.estado] || { label: o.estado, tono: "info" };
+  const propia = o.origen === "TALLER";
   const ubicacion = [o.tiendaBarrio, o.tiendaCiudad].filter(Boolean).join(", ");
+  const id = claveOferta(o).replace(/[^a-zA-Z0-9_-]/g, "-");
   const encargo = o.disponibilidad === "ENCARGO";
+  const referencia = [o.referencia && `Ref. ${o.referencia}`, o.marca, etiquetaCategoria(categoria)].filter(Boolean).join(" · ");
 
   return (
-    <article className={`ss-oferta${o.seleccionable ? "" : " ss-oferta--bloqueada"}${elegido ? " ss-oferta--elegida" : ""}`}>
+    <article className={`ss-oferta${propia ? " ss-oferta--propia" : ""}${o.seleccionable ? "" : " ss-oferta--bloqueada"}${elegido ? " ss-oferta--elegida" : ""}`}>
+      {/* El estado no va sobre la foto: el repuesto debe verse completo */}
       <div className="ss-oferta__foto">
-        {o.imagenUrl ? <img src={o.imagenUrl} alt="" loading="lazy" /> : <Icon name="tool" size={20} />}
-        <span className={`ss-estado ss-estado--${estado.tono} ss-oferta__compat`}><span className="ss-estado__punto" />{estado.label}</span>
+        {o.imagenUrl ? <img src={o.imagenUrl} alt="" loading="lazy" /> : <Icon name="tool" size={24} />}
       </div>
       <div className="ss-oferta__cuerpo">
-        <strong className="ss-oferta__nombre">{o.nombre}</strong>
-        <span className="ss-oferta__ref">
-          {[o.referencia && `Ref. ${o.referencia}`, o.marca, etiquetaCategoria(categoria)].filter(Boolean).join(" · ")}
-        </span>
-        <span className="ss-oferta__tienda">{o.tiendaNombre}</span>
-        <span className="ss-oferta__dato">
-          {ubicacion || "Ubicación no registrada"}
-          {o.distanciaKm != null && ` · a ${o.distanciaKm} km`}
-        </span>
+        <strong className="ss-oferta__nombre" title={o.nombre}>{o.nombre}</strong>
+        <span className="ss-oferta__ref" title={referencia}>{referencia}</span>
+        <span className="ss-oferta__tienda" title={propia ? "Tu inventario" : o.tiendaNombre}>{propia ? "Tu inventario" : o.tiendaNombre}</span>
+        {!propia && <span className="ss-oferta__lugar">
+          <span className="ss-oferta__ubicacion" title={ubicacion || undefined}>{ubicacion || "Ubicación no registrada"}</span>
+          {o.distanciaKm != null && <span className="ss-oferta__distancia">{formatoDistancia(o.distanciaKm)}</span>}
+        </span>}
         <span className="ss-oferta__etiquetas">
+          <span className={`ss-estado ss-estado--${estado.tono}`}><span className="ss-estado__punto" />{estado.label}</span>
           <span className={`ss-oferta__stock${!encargo && !o.stock ? " ss-oferta__stock--agotado" : ""}`}>
             {encargo
               ? `Por encargo · ${o.diasEntrega ? `${o.diasEntrega} día(s)` : "tiempo por confirmar"}`
-              : `Stock: ${o.stock}`}
+              : propia ? `En tu taller: ${o.stock}` : `Stock: ${o.stock}`}
           </span>
           {o.mismaTiendaQueSeleccion && <span className="ss-chip">Ya surte otros repuestos</span>}
         </span>
         {/* El motivo va en el cuerpo para que precio y botón queden alineados entre tarjetas */}
         {o.motivo && (
-          <span id={`motivo-${o.productoId}`}
+          <span id={`motivo-${id}`}
             className={`ss-oferta__motivo${o.seleccionable ? " ss-oferta__motivo--aviso" : ""}`}>
             {o.motivo}
           </span>
         )}
       </div>
       <div className="ss-oferta__pie">
-        <strong className="ss-oferta__precio">{formatPrecio(o.precio)}</strong>
+        {/* El número grande es lo que paga el cliente: así taller y tiendas se comparan igual */}
+        <span className="ss-oferta__monto">
+          <strong className="ss-oferta__precio">{formatPrecio(o.precioFinal ?? o.precio)}</strong>
+          {textoIvaOferta(o, formatPrecio) && <span className="ss-oferta__iva">{textoIvaOferta(o, formatPrecio)}</span>}
+        </span>
         <button type="button" className="sv-btn ss-btn-elegir" disabled={!o.seleccionable || elegido}
-          onClick={onElegir} aria-describedby={o.motivo ? `motivo-${o.productoId}` : undefined}>
+          onClick={onElegir} aria-describedby={o.motivo ? `motivo-${id}` : undefined}>
           {elegido ? "Elegido" : "Elegir"}
         </button>
       </div>

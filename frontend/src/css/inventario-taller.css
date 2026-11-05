@@ -1,0 +1,235 @@
+/* ── Mi inventario del taller ──────────────────────────────────────────────
+   Prefijo iv-, BEM. Cabecera, cifras (ui-indicador), tarjetas (ui-card), botones, avisos, vacío y carga son de ui.css;
+   aquí los pedidos en camino, las piezas desplegables y el editor de precio. Un solo naranja (--primary) y solo para la
+   acción; las cifras van en números tabulares para leer columnas. Tokens --ui-*, los dos temas. */
+
+.iv-root { display: grid; gap: var(--ui-sp-5); }
+.iv-root > .ui-page-header { margin-bottom: 0; }
+.iv-seccion .ui-card__header { flex-wrap: wrap; align-items: baseline; }
+.iv-seccion > .ui-alerta { margin: 0 18px 12px; }
+
+.iv-meta { font-size: 0.8125rem; line-height: 1.45; color: var(--ui-muted); }
+.iv-pie { margin: 0; }
+.iv-etiqueta { display: block; margin: 0 0 4px; font-size: 0.75rem; font-weight: 600; color: var(--ui-muted); letter-spacing: 0.01em; }
+.iv-cifra { font-variant-numeric: tabular-nums; }
+.iv-der { text-align: right; }
+.iv-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.iv-acciones:empty { display: none; }
+
+/* ── En camino ── */
+.iv-pedidos,
+.iv-piezas { display: grid; margin: 0; padding: 0; list-style: none; }
+
+.iv-pedido {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
+.iv-pedido__cabecera { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 6px 12px; }
+.iv-pedido__tienda { margin: 0 0 2px; font-size: 0.975rem; font-weight: 650; color: var(--ui-text); }
+.iv-pedido__lineas { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 0.9rem; color: var(--ui-text); }
+.iv-pedido__detalle { margin: 0; max-width: 68ch; font-size: 0.8125rem; line-height: 1.5; color: var(--ui-muted); text-wrap: pretty; }
+
+/* El estado siempre lleva texto: el color solo acompaña */
+.iv-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--ui-r-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ui-muted);
+  background: var(--ui-surface-2);
+}
+.iv-estado::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.iv-estado--ok { color: var(--ui-ok); background: var(--ui-ok-bg); }
+.iv-estado--info { color: var(--ui-info); background: var(--ui-info-bg); }
+.iv-estado--aviso { color: var(--ui-aviso); background: var(--ui-aviso-bg); }
+
+.iv-problema { display: grid; gap: 8px; max-width: 560px; }
+
+/* ── Piezas ── */
+.iv-pieza { border-top: 1px solid var(--ui-line-soft); }
+.iv-pieza--agotada .iv-pieza__nombre h3 { color: var(--ui-muted); }
+
+.iv-pieza__principal {
+  display: grid;
+  /* La última columna tiene ancho fijo: "Precio y lotes" y "Cerrar" no deben correr las cifras al abrir */
+  grid-template-columns: minmax(180px, 1.1fr) minmax(0, 2.4fr) 9.5rem;
+  align-items: center;
+  gap: 12px 20px;
+  padding: 14px 18px;
+}
+
+.iv-pieza__nombre { display: grid; gap: 2px; min-width: 0; }
+.iv-pieza__nombre h3 { margin: 0; overflow: hidden; font-size: 0.95rem; font-weight: 650; color: var(--ui-text); text-overflow: ellipsis; white-space: nowrap; }
+
+.iv-compat {
+  overflow: hidden;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--ui-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.iv-compat--confirmar { color: var(--ui-aviso); }
+
+.iv-pieza__numeros,
+.iv-cifras {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px 14px;
+  margin: 0;
+}
+.iv-pieza__numeros div,
+.iv-cifras div { min-width: 0; }
+.iv-pieza__numeros dt,
+.iv-cifras dt { font-size: 0.7rem; color: var(--ui-muted); white-space: nowrap; }
+.iv-pieza__numeros dd,
+.iv-cifras dd { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--ui-text); white-space: nowrap; }
+.iv-cifra--grande { font-size: 1.05rem; }
+
+/* La pérdida se dice con texto además del color */
+.iv-cifras__perdida dd { color: var(--ui-error); }
+
+.iv-pieza__abrir { justify-self: end; }
+.iv-pieza__abrir .iv-girado { transform: rotate(180deg); }
+.iv-pieza__abrir svg { transition: transform var(--ui-dur) var(--ui-ease); }
+
+.iv-aviso {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0 18px 12px;
+  font-size: 0.8125rem;
+  color: var(--ui-aviso);
+}
+.iv-precio .iv-aviso { padding: 0; }
+
+.iv-pieza__detalle {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.1fr);
+  gap: 20px 28px;
+  padding: 16px 18px 18px;
+  background: var(--ui-surface-2);
+  border-top: 1px solid var(--ui-line-soft);
+  animation: iv-abre 0.22s var(--ui-ease) both;
+}
+
+@keyframes iv-abre {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ── Editor de precio ── */
+.iv-precio { display: grid; gap: 12px; align-content: start; }
+.iv-precio__campos { display: flex; flex-wrap: wrap; gap: 12px; }
+.iv-campo { display: grid; }
+
+.iv-moneda {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-r-lg);
+  color: var(--ui-muted);
+  transition: border-color var(--ui-dur) ease, box-shadow var(--ui-dur) ease;
+}
+.iv-moneda:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
+.iv-moneda input {
+  width: 9ch;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--ui-text);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.iv-campo--recargo .iv-moneda input { width: 5ch; text-align: right; }
+.iv-cifras { grid-template-columns: repeat(2, max-content); gap: 4px 24px; }
+.iv-error { margin: 0; font-size: 0.8125rem; color: var(--ui-error); }
+
+/* ── Lotes ── */
+.iv-lotes { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.iv-lotes .iv-meta { margin: 4px 0 0; }
+.iv-tabla { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.iv-tabla th { padding: 6px 8px; font-size: 0.7rem; font-weight: 600; color: var(--ui-muted); text-align: left; border-bottom: 1px solid var(--ui-line); }
+.iv-tabla td { padding: 8px; color: var(--ui-text); border-bottom: 1px solid var(--ui-line-soft); }
+.iv-tabla th.iv-der { text-align: right; }
+.iv-tabla__vacio td { color: var(--ui-muted); }
+
+@media (max-width: 1100px) {
+  .iv-pieza__principal { grid-template-columns: minmax(0, 1fr) 9.5rem; }
+  .iv-pieza__numeros { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .iv-pieza__detalle { grid-template-columns: 1fr; }
+  .iv-pieza__numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .iv-pedido, .iv-pieza__principal, .iv-pieza__detalle { padding-inline: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-pieza__detalle { animation: none; }
+  .iv-pieza__abrir svg { transition: none; }
+}
+
+/* ── Lo que el taller debe ── */
+.iv-saldos { display: grid; margin: 0; padding: 0; list-style: none; }
+.iv-saldos li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--ui-line-soft);
+  font-size: 0.9rem;
+  color: var(--ui-text);
+}
+.iv-saldos__nota { margin: 0; padding: 0 18px 14px; }
+.iv-cifras__topado dd { color: var(--ui-aviso); }
+.iv-moneda--error { border-color: var(--ui-error); }
+.iv-precio .iv-meta, .iv-precio .iv-error { margin: 0; max-width: 46ch; }
+.iv-precio .iv-campo { justify-self: start; }
+
+/* ── Stock bajo y mínimo ── */
+.iv-bajo {
+  display: block;
+  margin-top: 1px;
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: var(--ui-aviso);
+}
+.iv-cifras__bajo dd { color: var(--ui-aviso); }
+
+.iv-pieza__ajustes { display: grid; gap: 18px; align-content: start; }
+.iv-pieza__mover { justify-self: start; }
+
+.iv-minimo { display: grid; gap: 8px; padding-top: 16px; border-top: 1px solid var(--ui-line-soft); }
+.iv-minimo .iv-campo { justify-self: start; }
+.iv-minimo__fila { display: flex; align-items: center; gap: 10px; }
+.iv-moneda--corta { width: 5.5rem; }
+.iv-moneda--corta input { width: 100%; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Lotes en celular: cada lote es una tarjeta corta, con la etiqueta delante de cada dato (como Movimientos) */
+@media (max-width: 600px) {
+  .iv-tabla--tarjetas thead { display: none; }
+  .iv-tabla--tarjetas, .iv-tabla--tarjetas tbody, .iv-tabla--tarjetas tr, .iv-tabla--tarjetas td { display: block; }
+  .iv-tabla--tarjetas tbody { display: grid; gap: 8px; }
+  .iv-tabla--tarjetas tr { padding: 8px 12px; border: 1px solid var(--ui-line); border-radius: var(--ui-r-md); background: var(--ui-surface); }
+  .iv-tabla--tarjetas td {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 4px 0; border: 0; text-align: right;
+  }
+  .iv-tabla--tarjetas td::before {
+    content: attr(data-label); flex-shrink: 0; font-size: 0.75rem; font-weight: 600; color: var(--ui-muted); text-align: left;
+  }
+}

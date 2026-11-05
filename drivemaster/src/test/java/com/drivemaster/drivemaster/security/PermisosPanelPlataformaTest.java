@@ -48,6 +48,8 @@ class PermisosPanelPlataformaTest {
     private static final List<Ruta> RUTAS = List.of(
             // Solo SUPERADMIN: usuarios, reportes, finanzas, proveedores y configuración
             ruta(HttpMethod.GET, "/api/cotizaciones/taller", "TALLER"),
+            // PDF de una cotización: además, el servicio solo deja al cliente dueño y al taller que la emitió
+            ruta(HttpMethod.GET, "/api/cotizaciones/c1/pdf", "CLIENTE", "TALLER"),
             ruta(HttpMethod.GET, "/api/talleres/mi-taller/informes", "TALLER"),
             ruta(HttpMethod.PATCH, "/api/talleres/mi-taller/datos", "TALLER"),
             ruta(HttpMethod.GET, "/api/usuarios", "SUPERADMIN"),
@@ -56,10 +58,12 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.GET, "/api/reportes/dashboard", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/reportes/servicios/reportes", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/liquidaciones", "SUPERADMIN"),
+            ruta(HttpMethod.PATCH, "/api/liquidaciones/reembolsos/7/saldo-cobrado", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/dashboard", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/productos", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/clientes", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/inexistente", "SUPERADMIN"),
+            ruta(HttpMethod.GET, "/api/plataforma/ordenes/o1", "SUPERADMIN"),
             ruta(HttpMethod.GET, "/api/plataforma/negocios", "SUPERADMIN"),
             // Tiendas, talleres y planes: el ADMIN solo aprueba o rechaza
             ruta(HttpMethod.GET, "/api/tiendas/t1", "SUPERADMIN"),
@@ -88,7 +92,6 @@ class PermisosPanelPlataformaTest {
             ruta(HttpMethod.GET, "/api/compras/c1/pdf", "TIENDA"),
             ruta(HttpMethod.POST, "/api/compras/guardar", "TIENDA"),
             ruta(HttpMethod.POST, "/api/movimientos/registrar", "TIENDA"),
-            ruta(HttpMethod.PUT, "/inventario/ajuste/p1/5", "TIENDA"),
             ruta(HttpMethod.PUT, "/api/suscripciones/planes/basico", "SUPERADMIN"),
             ruta(HttpMethod.PUT, "/api/config/parametros/COMISION_PCT", "SUPERADMIN"),
             ruta(HttpMethod.POST, "/api/config/metodos-pago", "SUPERADMIN"),

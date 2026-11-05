@@ -55,6 +55,12 @@ public class PlataformaDashboardService {
     private final RepartoPagoRepository repartoRepository;
     private final ReembolsoRepository reembolsoRepository;
     private final SuscripcionRepository suscripcionRepository;
+
+    @org.springframework.beans.factory.annotation.Value("${suscripciones.habilitadas:false}")
+    private boolean suscripcionesHabilitadas;
+
+    @org.springframework.beans.factory.annotation.Value("${dispersion.modo:SIMULADO}")
+    private String modoDispersion = "SIMULADO";
     private final ParametrosMarketplace parametros;
 
     public PlataformaDashboardService(MongoTemplate mongo, PagoRepository pagoRepository,
@@ -74,8 +80,10 @@ public class PlataformaDashboardService {
 
     /** Visible para pruebas: el panel a la hora dada. */
     public DashboardPlataformaDTO dashboard(LocalDateTime ahora) {
-        Negocios tiendas = negocios(Tienda.class, new Criteria());
-        Negocios talleres = negocios(Taller.class, new Criteria());
+        // Los archivados (la antigua tienda DriveMaster, duplicados) no cuentan en ningún indicador
+        Criteria sinArchivados = Criteria.where("estadoAprobacion").ne(EstadoAprobacion.ARCHIVADO);
+        Negocios tiendas = negocios(Tienda.class, sinArchivados);
+        Negocios talleres = negocios(Taller.class, sinArchivados);
 
         Instant hace7 = ahora.minusDays(7).atZone(ZoneId.systemDefault()).toInstant();
         Instant hace30 = ahora.minusDays(30).atZone(ZoneId.systemDefault()).toInstant();
@@ -98,12 +106,19 @@ public class PlataformaDashboardService {
         }
 
         Map<String, Long> planes = new LinkedHashMap<>();
-        for (Suscripcion s : suscripcionRepository.findByEstado(Suscripcion.ACTIVA)) {
+        if (suscripcionesHabilitadas) for (Suscripcion s : suscripcionRepository.findByEstado(Suscripcion.ACTIVA)) {
             planes.merge(s.getPlanCodigo(), 1L, Long::sum);
         }
 
-        Dinero dinero = new Dinero(pagoRepository.sumaMovidaMarketplace(), repartoRepository.sumaComisionRegistrada(),
-                parametros.comisionPct(), repartoRepository.sumaPorLiquidar());
+        double comision = repartoRepository.sumaComisionRegistrada();
+        double pct = parametros.comisionPct();
+        // Cada línea guarda la comisión, no su base: con el porcentaje vigente (10 % desde el inicio) la base es comisión / pct
+        double base = pct > 0 ? Math.round(comision * 100 / pct) : 0;
+        Dinero dinero = new Dinero(pagoRepository.sumaMovidaMarketplace(), comision, pct, repartoRepository.sumaPorLiquidar(),
+                base, repartoRepository.primeraComision(), repartoRepository.sumaEnEspera(), repartoRepository.sumaLiquidada(),
+                repartoRepository.sumaLiquidadaSimulada(), !"MANUAL".equalsIgnoreCase(modoDispersion),
+                DashboardPlataformaDTO.ComisionRetenida.de(repartoRepository.comisionRetenidaPorEstado()),
+                parametros.comisionRetenida(), reembolsoRepository.sumaSaldosAFavorPendientes());
 
         Alertas alertas = new Alertas(
                 despachosAtrasados(ahora),
@@ -112,10 +127,12 @@ public class PlataformaDashboardService {
                 repartoRepository.countByEstado(RepartoPago.FALLIDO),
                 reembolsoRepository.countByEstado(Reembolso.PENDIENTE),
                 reembolsoRepository.sumaPendiente(),
-                tiendas.pendientes() + talleres.pendientes());
+                tiendas.pendientes() + talleres.pendientes(),
+                despachosPorVencer(ahora), retirosSinRecoger(ahora));
 
-        return new DashboardPlataformaDTO(ahora, tiendas, talleres, clientes, productos, productosMasVendidos(),
-                tiendasMasVendedoras(), porEstado, dinero, planes, alertas);
+        List<String> archivadas = tiendasArchivadas();
+        return new DashboardPlataformaDTO(ahora, tiendas, talleres, clientes, productos, productosMasVendidos(archivadas),
+                tiendasMasVendedoras(archivadas), porEstado, dinero, planes, alertas);
     }
 
     /**
@@ -144,8 +161,15 @@ public class PlataformaDashboardService {
     }
 
     private long despachosAtrasados(LocalDateTime ahora) {
-        return mongo.count(Query.query(Criteria.where("estado").in(PedidoTienda.PENDIENTE, PedidoTienda.EN_PREPARACION)
-                .and("plazoDespachoHasta").lt(ahora)), PedidoTienda.class);
+        return mongo.count(Query.query(SemaforoPedido.despachoVencido(ahora)), PedidoTienda.class);
+    }
+
+    private long despachosPorVencer(LocalDateTime ahora) {
+        return mongo.count(Query.query(SemaforoPedido.despachoPorVencer(ahora)), PedidoTienda.class);
+    }
+
+    private long retirosSinRecoger(LocalDateTime ahora) {
+        return mongo.count(Query.query(SemaforoPedido.sinRetirar(ahora)), PedidoTienda.class);
     }
 
     // ─── Piezas ──────────────────────────────────────────────────────────────
@@ -169,9 +193,22 @@ public class PlataformaDashboardService {
         return mongo.count(Query.query(Criteria.where("_id").gte(new ObjectId(fecha))), Producto.class);
     }
 
-    private List<ProductoVendido> productosMasVendidos() {
+    /** Ids de las tiendas archivadas (la antigua tienda DriveMaster, duplicados): sus ventas no entran en los rankings. */
+    private List<String> tiendasArchivadas() {
+        Query q = Query.query(Criteria.where("estadoAprobacion").is(EstadoAprobacion.ARCHIVADO));
+        q.fields().include("_id");
+        return mongo.find(q, Tienda.class).stream().map(Tienda::getId).toList();
+    }
+
+    /** Pedidos que cuentan como venta: despachados o en curso, y de una tienda que no está archivada. */
+    private static Criteria ventasValidas(List<String> archivadas) {
+        Criteria c = Criteria.where("estado").nin(PedidoTienda.NO_DESPACHADO, PedidoTienda.NO_ENTREGADO);
+        return archivadas.isEmpty() ? c : c.and("tiendaId").nin(archivadas);
+    }
+
+    private List<ProductoVendido> productosMasVendidos(List<String> archivadas) {
         return agrupar("pedidos_tienda",
-                Aggregation.match(Criteria.where("estado").nin(PedidoTienda.NO_DESPACHADO, PedidoTienda.NO_ENTREGADO)),
+                Aggregation.match(ventasValidas(archivadas)),
                 Aggregation.unwind("items"),
                 Aggregation.match(Criteria.where("items.productoId").ne(null)),
                 Aggregation.group("items.productoId").first("items.productoNombre").as("nombre")
@@ -184,9 +221,9 @@ public class PlataformaDashboardService {
                 .toList();
     }
 
-    private List<TiendaVendedora> tiendasMasVendedoras() {
+    private List<TiendaVendedora> tiendasMasVendedoras(List<String> archivadas) {
         return agrupar("pedidos_tienda",
-                Aggregation.match(Criteria.where("estado").nin(PedidoTienda.NO_DESPACHADO, PedidoTienda.NO_ENTREGADO)),
+                Aggregation.match(ventasValidas(archivadas)),
                 Aggregation.group("tiendaId").first("tiendaNombre").as("nombre").count().as("pedidos")
                         .sum("total").as("ventas"),
                 Aggregation.sort(Sort.by(Sort.Direction.DESC, "ventas")),

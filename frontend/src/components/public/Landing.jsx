@@ -201,8 +201,8 @@ export function CotizacionEjemplo({ onSolicitarDiagnostico }) {
           Una cotización que <span>se entiende.</span>
         </h2>
         <p>
-          Cada repuesto con su tienda, la mano de obra por horas, el IVA y el diagnóstico que ya
-          pagaste descontado. Apruebas, pides cambios o la rechazas antes de pagar.
+          Cada repuesto con su tienda, la mano de obra por horas, el IVA incluido y el adelanto del
+          diagnóstico descontado. Apruebas, pides cambios o la rechazas antes de pagar.
         </p>
         <button className="dm-link" onClick={onSolicitarDiagnostico}>
           Solicitar diagnóstico <Icon name="arrow" size={18} />

@@ -49,6 +49,12 @@ export async function miTaller(token) {
   return handle(res, "Error al cargar los datos del taller");
 }
 
+/** El total de una orden suya: diagnóstico, cotización, comisión, lo que recibe el taller y su estado. */
+export async function resumenDeOrden(token, ordenId) {
+  const res = await apiFetch(`${BASE}/mi-taller/ordenes/${ordenId}/resumen`, { headers: headers(token) });
+  return handle(res, "No se pudo cargar el pago de esta solicitud");
+}
+
 // ─── Mecánicos del taller autenticado ───
 
 export async function listarMecanicos(token) {
@@ -132,11 +138,12 @@ export async function guardarTelefonoTaller(token, telefono) {
   return handle(res, "No se pudo guardar el teléfono");
 }
 
-export async function actualizarDatosTaller(token, { tarifaHora, horario }) {
+/** Solo viajan los campos indicados (los undefined no se mandan y el backend los deja como estaban). */
+export async function actualizarDatosTaller(token, { tarifaHora, horario, responsableIva }) {
   const res = await apiFetch(`${BASE}/mi-taller/datos`, {
     method: "PATCH",
     headers: headers(token),
-    body: JSON.stringify({ tarifaHora, horario }),
+    body: JSON.stringify({ tarifaHora, horario, responsableIva }),
   });
   if (res.status === 403) throw new Error("Tu taller aún no está aprobado, así que todavía no puedes editar estos datos.");
   return handle(res, "No se pudieron guardar los cambios");
@@ -179,4 +186,14 @@ export async function actualizarUbicacionTaller(token, { latitud, longitud }) {
   });
   if (res.status === 403) throw new Error("Tu taller aún no está aprobado, así que todavía no puedes cambiar su ubicación.");
   return handle(res, "No se pudo guardar la ubicación");
+}
+
+/** TALLER: guarda la información de la cuenta bancaria para transferencias de liquidaciones. */
+export async function guardarCuentaBancariaTaller(token, cuenta) {
+  const res = await apiFetch(`${BASE}/mi-taller/cuenta-bancaria`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(cuenta),
+  });
+  return handle(res, "No se pudieron guardar los datos bancarios del taller");
 }

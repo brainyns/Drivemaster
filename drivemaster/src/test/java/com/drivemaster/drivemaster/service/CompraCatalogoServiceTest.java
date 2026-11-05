@@ -59,9 +59,11 @@ class CompraCatalogoServiceTest {
 
     private final Map<String, Producto> productos = new HashMap<>();
     private final List<MovimientoInventario> movimientos = new ArrayList<>();
+    private UsuarioService usuarioService;
     private final Map<String, CompraCatalogo> compras = new LinkedHashMap<>();
     private final Map<String, PedidoTienda> pedidos = new LinkedHashMap<>();
     private final List<RepartoPago> repartos = new ArrayList<>();
+    private ParametrosMarketplace parametros;
     private final List<Reembolso> reembolsos = new ArrayList<>();
     private final Map<Long, PagoEntity> pagos = new HashMap<>();
     private final AtomicLong secuencia = new AtomicLong(100);
@@ -203,9 +205,9 @@ class CompraCatalogoServiceTest {
                     "monto", Math.round(p.getMonto() * 100), "verificacionManual", false, "pagoSimulado", false);
         });
 
-        UsuarioService usuarioService = mock(UsuarioService.class);
+        usuarioService = mock(UsuarioService.class);
         when(usuarioService.obtenerPorCorreo(CORREO)).thenReturn(Usuario.builder().id("u1").nombre("Ana").correo(CORREO).rol("CLIENTE").build());
-        ParametrosMarketplace parametros = mock(ParametrosMarketplace.class);
+        parametros = mock(ParametrosMarketplace.class);
         when(parametros.ivaPct()).thenReturn(19.0);
         when(parametros.comisionPct()).thenReturn(10.0);
         when(parametros.plazoDespachoDiasHabiles()).thenReturn(2);
@@ -251,6 +253,55 @@ class CompraCatalogoServiceTest {
 
     private List<RepartoPago> comisiones() {
         return repartos.stream().filter(r -> RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())).toList();
+    }
+
+    private RepartoPago lineaDe(String tienda) {
+        return repartosDeNegocio().stream().filter(r -> r.getBeneficiarioId().equals(tienda)).findFirst().orElseThrow();
+    }
+
+    @Test
+    void unAvisoQueFallaNoDeshaceLaCompraYAlertaAlAdmin() {
+        doThrow(new IllegalStateException("Sin plantilla")).when(avisos).compraPagada(any(), anyList(), anyMap(), any());
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+
+        service.aplicar(pago);
+
+        assertEquals(2, repartosDeNegocio().size(), "los repartos no se borran");
+        assertTrue(reembolsos.isEmpty(), "una compra aplicada no se reembolsa por un aviso");
+        verify(avisos).alertaAdmin(eq("Avisos sin enviar"), contains(pago.getReferencia()));
+    }
+
+    @Test
+    void conRetencionCadaTiendaPagaSobreSusProductosYConservaIvaYEnvio() {
+        when(parametros.comisionRetenida()).thenReturn(true);
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+
+        service.aplicar(pago);
+
+        // s1: 40.000 + IVA 7.600. s2: 30.000 + IVA 5.700 + envío 8.000
+        assertEquals(47_600.0, lineaDe("s1").getMontoBruto());
+        assertEquals(4_000.0, lineaDe("s1").getComisionRetenida());
+        assertEquals(43_600.0, lineaDe("s1").getMonto());
+        assertEquals(43_700.0, lineaDe("s2").getMontoBruto());
+        assertEquals(30_000.0, lineaDe("s2").getComisionBase(), "el envío no paga comisión");
+        assertEquals(3_000.0, lineaDe("s2").getComisionRetenida());
+        assertEquals(40_700.0, lineaDe("s2").getMonto());
+        assertEquals(1, comisiones().size());
+        assertEquals(RepartoPago.RETENIDA, comisiones().get(0).getEstado());
+        assertEquals(7_000.0, comisiones().get(0).getMonto());
+        assertEquals(91_300.0, lineaDe("s1").getMonto() + lineaDe("s2").getMonto() + comisiones().get(0).getMonto());
+    }
+
+    @Test
+    void conLaBanderaApagadaLaTiendaRecibeTodoYLaComisionSoloQuedaCalculada() {
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+
+        service.aplicar(pago);
+
+        assertEquals(47_600.0, lineaDe("s1").getMonto());
+        assertEquals(4_000.0, lineaDe("s1").getComisionCalculada());
+        assertEquals(0.0, lineaDe("s1").getComisionRetenida());
+        assertEquals(RepartoPago.INFORMATIVA, comisiones().get(0).getEstado());
     }
 
     private PagoEntity iniciarYObtenerPago(CompraRequest r) {
@@ -873,5 +924,94 @@ class CompraCatalogoServiceTest {
 
         assertTrue(e.getReason().contains("ya no está disponible"), e.getReason());
         assertTrue(compras.isEmpty());
+    }
+
+    // ─── Compra de un taller para su inventario ──────────────────────────────
+
+    private void compraUnTaller(com.drivemaster.drivemaster.model.Taller taller) {
+        when(usuarioService.obtenerPorCorreo(CORREO)).thenReturn(Usuario.builder().id("u1").nombre("AutoMax").correo(CORREO).rol("TALLER").build());
+        TallerService talleres = mock(TallerService.class);
+        when(talleres.obtenerPorUsuario(CORREO)).thenReturn(taller);
+        service.setTallerService(talleres);
+    }
+
+    private static com.drivemaster.drivemaster.model.Taller taller(String aprobacion, boolean activo) {
+        return com.drivemaster.drivemaster.model.Taller.builder().id("t1").estadoAprobacion(aprobacion).activo(activo).build();
+    }
+
+    @Test
+    void la_compra_de_un_cliente_no_lleva_comprador_taller_ni_sus_pedidos_tampoco() {
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+        service.aplicar(pago);
+
+        assertTrue(compras.values().stream().allMatch(c -> c.getCompradorTallerId() == null));
+        assertFalse(pedidos.isEmpty());
+        assertTrue(pedidos.values().stream().allMatch(p -> p.getCompradorTallerId() == null));
+    }
+
+    @Test
+    void la_compra_de_un_taller_aprobado_marca_la_compra_y_sus_pedidos() {
+        compraUnTaller(taller("APROBADO", true));
+        PagoEntity pago = pagado(iniciarYObtenerPago(carritoMixto()));
+        service.aplicar(pago);
+
+        assertTrue(compras.values().stream().allMatch(c -> "t1".equals(c.getCompradorTallerId())));
+        assertFalse(pedidos.isEmpty());
+        assertTrue(pedidos.values().stream().allMatch(p -> "t1".equals(p.getCompradorTallerId())));
+        // La tienda vende con su descuento para talleres (20 % inicial) y su comisión es sobre lo que pagó el taller
+        assertEquals(3_200.0, lineaDe("s1").getComisionCalculada());
+    }
+
+    @Test
+    void un_taller_sin_aprobar_o_en_pausa_no_compra() {
+        compraUnTaller(taller("PENDIENTE", true));
+        assertEstado(HttpStatus.FORBIDDEN, () -> service.iniciarPago(CORREO, carritoMixto()));
+        compraUnTaller(taller("APROBADO", false));
+        assertEstado(HttpStatus.FORBIDDEN, () -> service.iniciarPago(CORREO, carritoMixto()));
+        assertTrue(compras.isEmpty());
+    }
+
+    // ─── Descuento para talleres ─────────────────────────────────────────────
+
+    @Test
+    void el_taller_paga_con_el_descuento_de_cada_tienda_y_queda_congelado_el_precio_publico() {
+        tiendas.get(1).setDescuentoTalleresPct(30.0);   // s2 fija el suyo; s1 nunca lo tocó: 20 %
+        compraUnTaller(taller("APROBADO", true));
+
+        CompraCatalogoService.Calculo c = service.calcular(Usuario.builder().id("u1").rol("TALLER").build(), carritoMixto(), true);
+
+        CompraCatalogo.Linea filtro = c.lineas().stream().filter(l -> l.getProductoId().equals("filtro")).findFirst().orElseThrow();
+        CompraCatalogo.Linea pastilla = c.lineas().stream().filter(l -> l.getProductoId().equals("pastilla")).findFirst().orElseThrow();
+        assertEquals(16_000, filtro.getPrecioUnitario());
+        assertEquals(20_000, filtro.getPrecioPublico());
+        assertEquals(20.0, filtro.getDescuentoPct());
+        assertEquals(32_000, filtro.getSubtotal());
+        assertEquals(21_000, pastilla.getPrecioUnitario());
+        assertEquals(30.0, pastilla.getDescuentoPct());
+    }
+
+    @Test
+    void el_cliente_paga_el_precio_publico_y_no_se_le_guarda_descuento() {
+        CompraCatalogoService.Calculo c = service.calcular(Usuario.builder().id("u1").rol("CLIENTE").build(), carritoMixto());
+        CompraCatalogo.Linea filtro = c.lineas().stream().filter(l -> l.getProductoId().equals("filtro")).findFirst().orElseThrow();
+        assertEquals(20_000, filtro.getPrecioUnitario());
+        assertNull(filtro.getPrecioPublico());
+        assertNull(filtro.getDescuentoPct());
+    }
+
+    @Test
+    void un_descuento_de_cero_cobra_el_precio_publico_tambien_al_taller() {
+        tiendas.get(0).setDescuentoTalleresPct(0.0);
+        CompraCatalogoService.Calculo c = service.calcular(Usuario.builder().id("u1").rol("TALLER").build(), carritoMixto(), true);
+        assertEquals(20_000, c.lineas().stream().filter(l -> l.getProductoId().equals("filtro")).findFirst().orElseThrow().getPrecioUnitario());
+    }
+
+    @Test
+    void el_descuento_de_la_tienda_va_de_0_a_50() {
+        assertEquals(20, com.drivemaster.drivemaster.util.DescuentoTaller.pct(Tienda.builder().build()));
+        assertEquals(12.5, com.drivemaster.drivemaster.util.DescuentoTaller.validar(12.5));
+        for (Double malo : new Double[]{-1.0, 50.5, null, Double.NaN}) {
+            assertEstado(HttpStatus.BAD_REQUEST, () -> com.drivemaster.drivemaster.util.DescuentoTaller.validar(malo));
+        }
     }
 }

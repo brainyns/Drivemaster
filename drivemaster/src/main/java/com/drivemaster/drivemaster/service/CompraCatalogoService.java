@@ -23,6 +23,7 @@ import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import com.drivemaster.drivemaster.util.CodigoRetiro;
 import com.drivemaster.drivemaster.util.CompatibilidadVehiculo;
 import com.drivemaster.drivemaster.util.Dinero;
+import com.drivemaster.drivemaster.util.DescuentoTaller;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +56,7 @@ import java.util.Map;
  *  - Si una tienda se queda sin stock después de pagar: todo o nada. Se devuelve el stock ya
  *    descontado, la compra queda NO_APLICADA y se registra el reembolso completo.
  *  - El pago se reparte a la tienda dueña de cada producto (RepartoPago por pedido), con el IVA y
- *    el envío de su pedido; DriveMaster no retiene nada en v1 (la comisión es informativa).
+ *    el envío de su pedido. La comisión, si se retiene, sale de los productos sin IVA y sin el envío (ver ComisionPlataforma).
  *  - La liquidación sigue la misma regla por evento de la 4-B (ver LiquidacionService).
  *
  * La confirmación entra por PagoMarketplaceService.confirmar (ya verificada con Wompi y tomada
@@ -119,11 +120,34 @@ public class CompraCatalogoService {
         this.avisos = avisos;
     }
 
+    private TallerService tallerService;
+
+    // Por setter, como las demás dependencias que se agregaron después: el constructor ya es largo
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTallerService(TallerService tallerService) {
+        this.tallerService = tallerService;
+    }
+
+    /**
+     * El taller que compra para su inventario, o null si es un cliente: su compra nunca entra a un inventario.
+     * Un taller sin aprobar o en pausa no compra.
+     */
+    private String compradorTaller(Usuario comprador) {
+        if (!"TALLER".equals(comprador.getRol())) return null;
+        com.drivemaster.drivemaster.model.Taller taller = tallerService.obtenerPorUsuario(comprador.getCorreo());
+        if (!com.drivemaster.drivemaster.model.EstadoAprobacion.estaAprobado(taller.getEstadoAprobacion())
+                || !Boolean.TRUE.equals(taller.getActivo())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tu taller debe estar aprobado para comprar para tu inventario");
+        }
+        return taller.getId();
+    }
+
     // ─── Cotizar (sin efectos) ───────────────────────────────────────────────
 
     public CompraCotizadaDTO cotizar(String correoCliente, CompraRequest r) {
         Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);
-        Calculo c = calcular(cliente, r);
+        // El taller se reconoce antes de calcular: paga con el descuento de cada tienda
+        Calculo c = calcular(cliente, r, compradorTaller(cliente) != null);
         return new CompraCotizadaDTO(c.lineas, c.entregas, c.subtotal.doubleValue(), c.iva.doubleValue(),
                 c.envio.doubleValue(), c.total.doubleValue(), c.avisos);
     }
@@ -136,12 +160,14 @@ public class CompraCatalogoService {
      */
     public Map<String, Object> iniciarPago(String correoCliente, CompraRequest r) {
         Usuario cliente = usuarioService.obtenerPorCorreo(correoCliente);
-        Calculo c = calcular(cliente, r);
+        String compradorTallerId = compradorTaller(cliente);
+        Calculo c = calcular(cliente, r, compradorTallerId != null);
 
         CompraCatalogo compra = compraRepository.save(CompraCatalogo.builder()
                 .clienteId(cliente.getId())
                 .clienteNombre(cliente.getNombre())
                 .clienteCorreo(cliente.getCorreo())
+                .compradorTallerId(compradorTallerId)
                 .lineas(c.lineas)
                 .entregas(c.entregas)
                 .envioReceptor(hayEnvio(c.entregas) ? texto(r.envio().receptor()) : null)
@@ -206,6 +232,7 @@ public class CompraCatalogoService {
         List<CompraCatalogo.Linea> descontadas = new ArrayList<>();
         List<PedidoTienda> pedidos = new ArrayList<>();
         List<RepartoPago> repartos = new ArrayList<>();
+        Map<String, String> codigos = new HashMap<>();
         try {
             // 1. Stock de TODAS las tiendas (todo o nada)
             String faltante = descontarStock(pago, compra, refInventario, descontadas);
@@ -215,26 +242,37 @@ public class CompraCatalogoService {
                 return;
             }
             // 2. Un pedido por tienda, con su código de retiro y su reparto
-            Map<String, String> codigos = new HashMap<>();
+            double pct = parametros.comisionPct();
+            boolean retener = parametros.comisionRetenida();
             for (CompraCatalogo.EntregaTienda entrega : compra.getEntregas()) {
                 PedidoTienda pedido = crearPedido(pago, compra, entrega, codigos);
                 pedidos.add(pedido);
-                repartos.add(repartoRepository.save(reparto(pago, compra, pedido)));
+                RepartoPago linea = reparto(pago, compra, pedido);
+                ComisionPlataforma.aplicar(linea, Dinero.pesos(pedido.getSubtotal()), pct, retener);
+                repartoRepository.save(linea);
+                repartos.add(linea);
             }
             compra.setPedidoIds(pedidos.stream().map(PedidoTienda::getId).toList());
             compra.setEstado(CompraCatalogo.PAGADA);
             compra.setFechaPago(pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now());
             compra.setPagoId(pago.getId());
             compraRepository.save(compra);
-            // 3. Comisión informativa (sobre los productos, antes de IVA y sin el envío) y avisos
-            //    (un fallo de envío nunca deshace la compra)
-            ComisionPlataforma.registrar(repartoRepository, pago, Dinero.pesos(compra.getSubtotal()), parametros.comisionPct());
-            avisos.compraPagada(compra, pedidos, codigos, pago);
+            // 3. Comisión, sobre los productos, antes de IVA y sin el envío
+            ComisionPlataforma.registrar(repartoRepository, pago, Dinero.pesos(compra.getSubtotal()), pct, retener, repartos);
         } catch (RuntimeException e) {
             log.error("No se pudo aplicar el pago {} de la compra {}: se deshace todo", pago.getReferencia(), compra.getId(), e);
             deshacer(pedidos, repartos);
             reponerStock(descontadas, refInventario);
             noAplicada(pago, compra, "Error al completar la compra: se reembolsa el pago");
+            return;
+        }
+        // 4. La compra ya quedó aplicada: un aviso que falla no la deshace ni la reembolsa
+        try {
+            avisos.compraPagada(compra, pedidos, codigos, pago);
+        } catch (RuntimeException e) {
+            log.error("Pago {} aplicado, pero no se pudieron enviar los avisos de la compra {}", pago.getReferencia(), compra.getId(), e);
+            avisos.alertaAdmin("Avisos sin enviar", "La compra " + compra.getId() + " quedó aplicada (pago " + pago.getReferencia()
+                    + "), pero no se pudieron enviar sus avisos: confírmale al cliente y a las tiendas.");
         }
     }
 
@@ -288,7 +326,8 @@ public class CompraCatalogoService {
                 .tipo(CotizacionItem.REPUESTO).productoId(l.getProductoId()).productoNombre(l.getProductoNombre())
                 .marca(l.getMarca()).referencia(l.getReferencia()).tiendaId(l.getTiendaId()).tiendaNombre(l.getTiendaNombre())
                 .disponibilidad("ENCARGO".equals(l.getTipo()) ? "ENCARGO" : "DISPONIBLE").diasEntrega(l.getDiasEntrega())
-                .cantidad(l.getCantidad()).precioUnitario(l.getPrecioUnitario()).subtotal(l.getSubtotal()).build()).toList();
+                .cantidad(l.getCantidad()).precioUnitario(l.getPrecioUnitario()).subtotal(l.getSubtotal())
+                .precioPublico(l.getPrecioPublico()).descuentoPct(l.getDescuentoPct()).build()).toList();
         Integer dias = items.stream().filter(i -> "ENCARGO".equals(i.getDisponibilidad()) && i.getDiasEntrega() != null)
                 .map(CotizacionItem::getDiasEntrega).max(Integer::compare).orElse(null);
         LocalDateTime ahora = LocalDateTime.now();
@@ -299,6 +338,7 @@ public class CompraCatalogoService {
                 .id(id)
                 .origen(PedidoTienda.ORIGEN_CATALOGO)
                 .compraId(compra.getId())
+                .compradorTallerId(compra.getCompradorTallerId())
                 .pagoId(pago.getId())
                 .clienteId(compra.getClienteId())
                 .clienteNombre(compra.getClienteNombre())
@@ -438,6 +478,11 @@ public class CompraCatalogoService {
     }
 
     Calculo calcular(Usuario cliente, CompraRequest r) {
+        return calcular(cliente, r, false);
+    }
+
+    /** conDescuentoTaller: compra un taller aprobado; cada línea lleva el descuento de su tienda y el precio público congelado. */
+    Calculo calcular(Usuario cliente, CompraRequest r, boolean conDescuentoTaller) {
         if (r == null || r.items() == null || r.items().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El carrito está vacío");
         }
@@ -483,11 +528,14 @@ public class CompraCatalogoService {
                         : "De \"" + p.getNombre() + "\" (" + tienda.getNombre() + ") solo hay " + stock
                           + " disponible(s). No se hizo ningún cobro.");
             }
+            double pctTaller = DescuentoTaller.pct(tienda);
+            double precioPagado = conDescuentoTaller ? DescuentoTaller.precio(p.getPrecioVenta(), pctTaller) : p.getPrecioVenta();
             lineas.add(CompraCatalogo.Linea.builder()
                     .productoId(p.getId()).productoNombre(p.getNombre()).marca(p.getMarca()).referencia(p.getReferencia())
                     .imagenUrl(p.getImagenUrl()).tiendaId(tienda.getId()).tiendaNombre(tienda.getNombre())
-                    .cantidad(e.getValue()).precioUnitario(p.getPrecioVenta())
-                    .subtotal(Dinero.aDouble(Dinero.pesos(BigDecimal.valueOf(p.getPrecioVenta()).multiply(BigDecimal.valueOf(e.getValue())))))
+                    .cantidad(e.getValue()).precioUnitario(precioPagado)
+                    .precioPublico(conDescuentoTaller ? p.getPrecioVenta() : null).descuentoPct(conDescuentoTaller ? pctTaller : null)
+                    .subtotal(Dinero.aDouble(Dinero.pesos(BigDecimal.valueOf(precioPagado).multiply(BigDecimal.valueOf(e.getValue())))))
                     .tipo(encargo ? "ENCARGO" : "STOCK").diasEntrega(encargo ? p.getDiasEntregaEncargo() : null).build());
             if (vehiculo != null) {
                 String estado = CompatibilidadVehiculo.estado(p, vehiculo);

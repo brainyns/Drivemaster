@@ -35,17 +35,30 @@ public class CotizacionDTO {
     private List<CotizacionItem> items;
 
     private Double subtotalRepuestos;
+    private Double subtotalRepuestosTaller;
     private Double subtotalManoObra;
     private Double subtotal;
     private Double ivaPct;
+    // Siempre llenos: las cotizaciones anteriores al IVA por taller repiten su ivaPct único en los dos
+    private Double ivaRepuestosPct;
+    private Double ivaManoObraPct;
     private Double ivaRepuestos;
+    private Double ivaRepuestosTaller;
     private Double ivaManoObra;
     private Double iva;
     private Double total;
     private Double anticipoDiagnostico;
+    // Tarifa original del diagnóstico cuando el cliente lo pagó (la cotización solo guarda la parte aplicada);
+    // null si no está disponible o no se pagó. Para explicar el adelanto, ve CotizacionDetalle.
+    private Double diagnosticoPagado;
     private Double totalAPagar;
     // Solo en la vista completa
     private Double comisionInformativa;
+    // Solo para el taller: su comisión sobre la mano de obra sin IVA y lo que recibe en total, diagnóstico incluido.
+    // Es un estimado: lo real se fija al aprobarse el pago
+    private Double comisionTaller;
+    private Double recibeTaller;
+    private Boolean comisionSeDescuenta;
 
     private LocalDateTime vigenciaHasta;
     private Integer tiempoEstimadoHoras;
@@ -74,6 +87,7 @@ public class CotizacionDTO {
                 .referencia(i.getReferencia())
                 .tiendaNombre(i.getTiendaNombre())
                 .disponibilidad(i.getDisponibilidad())
+                .origen(i.getOrigen())
                 .diasEntrega(i.getDiasEntrega())
                 .modalidad(i.getModalidad())
                 .horas(i.getHoras())
@@ -100,10 +114,14 @@ public class CotizacionDTO {
                 .vehiculoDescripcion(c.getVehiculoDescripcion())
                 .items(items)
                 .subtotalRepuestos(c.getSubtotalRepuestos())
+                .subtotalRepuestosTaller(c.getSubtotalRepuestosTaller())
                 .subtotalManoObra(c.getSubtotalManoObra())
                 .subtotal(c.getSubtotal())
                 .ivaPct(c.getIvaPct())
+                .ivaRepuestosPct(c.pctRepuestos())
+                .ivaManoObraPct(c.pctManoObra())
                 .ivaRepuestos(c.getIvaRepuestos())
+                .ivaRepuestosTaller(c.getIvaRepuestosTaller())
                 .ivaManoObra(c.getIvaManoObra())
                 .iva(c.getIva())
                 .total(c.getTotal())

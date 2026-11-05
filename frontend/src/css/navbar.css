@@ -1,5 +1,8 @@
 /* ── Header del sitio público (adaptaciónón del mockup) ───────────────────── */
 
+/* Alto total de la cabecera, con su borde: de aquí sale su altura y el top de todo lo sticky de debajo */
+:root { --alto-header: 88px; }
+
 .dm-header {
   background: var(--dm-bg);
   backdrop-filter: blur(16px);
@@ -10,7 +13,7 @@
 }
 
 .dm-header__inner {
-  height: 87px;
+  height: calc(var(--alto-header) - 1px);
   width: calc(100% - 80px);
   max-width: 1440px;
   margin: auto;
@@ -311,14 +314,15 @@
 }
 
 @media (max-width: 1000px) {
-  .dm-header__inner { height: 75px; }
+  :root { --alto-header: 76px; }
   .dm-header__login { display: none; }
   .dm-header__vehicle { display: none; }
   .dm-mobile-nav { inset-block-start: 75px; }
 }
 
 @media (max-width: 760px) {
-  .dm-header__inner { height: 68px; width: calc(100% - 32px); gap: 8px; }
+  :root { --alto-header: 69px; }
+  .dm-header__inner { width: calc(100% - 32px); gap: 8px; }
   .dm-header__actions { gap: 2px; }
   /* No cabe junto al logo y los íconos: "Solicitar diagnóstico" sigue en el menú móvil */
   .dm-header__actions .dm-header__cta { display: none; }

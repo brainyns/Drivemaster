@@ -10,6 +10,7 @@ import Esqueleto from "../ui/Esqueleto";
 import EstadoVacio from "../ui/EstadoVacio";
 import Icon from "../public/Icon";
 import { iniciales } from "../../pages/taller/perfilTaller";
+import { textoError } from "../../utils/errores";
 
 const VACIO = { nombre: "", especialidad: "", telefono: "" };
 
@@ -36,7 +37,7 @@ export default function MecanicosTaller({ token, onCambio, onLista, id = "mt-equ
       onLista?.(data || []);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }
@@ -54,7 +55,7 @@ export default function MecanicosTaller({ token, onCambio, onLista, id = "mt-equ
       onCambio?.();
       setAviso(textoOk);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(false);
     }

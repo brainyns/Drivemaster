@@ -104,7 +104,7 @@ public class SecurityConfig {
                         // Herramientas del agente IA (n8n): público aquí, pero exige el token de
                         // servicio X-Service-Token en ProductoController.
                         .requestMatchers(HttpMethod.GET, "/api/productos/buscar").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/productos/mi-tienda").hasRole("TIENDA")
+                        .requestMatchers(HttpMethod.GET, "/api/productos/mi-tienda", "/api/productos/mi-tienda/tabla").hasRole("TIENDA")
                         // Publicar u ocultar: solo la TIENDA dueña (AlcanceTienda verifica que el producto sea suyo)
                         .requestMatchers(HttpMethod.PATCH, "/api/productos/*/publicado").hasRole("TIENDA")
                         // TIENDA solo gestiona sus productos: lo verifica AlcanceTienda en el controlador
@@ -125,7 +125,6 @@ public class SecurityConfig {
                         // Inventario: antes los movimientos eran públicos y cualquier usuario con
                         // sesión podía ajustar stock. TIENDA queda limitada a su inventario.
                         .requestMatchers("/api/movimientos", "/api/movimientos/**").hasRole("TIENDA")
-                        .requestMatchers("/inventario/**").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.POST, "/api/solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes/mis-solicitudes").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes").hasAnyRole("SUPERADMIN", "VENDEDOR")
@@ -158,7 +157,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/solicitudes-servicio/*/diagnostico",
                                 "/api/solicitudes-servicio/*/repuestos").hasRole("TALLER")
                         .requestMatchers(HttpMethod.GET, "/api/repuestos/buscar").hasRole("TALLER")
-                        .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/mias").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/mias", "/api/solicitudes-servicio/*/pagos").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/cancelar").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.GET, "/api/solicitudes-servicio/taller").hasRole("TALLER")
                         .requestMatchers(HttpMethod.PATCH, "/api/solicitudes-servicio/*/aceptar",
@@ -182,31 +181,37 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/cotizaciones/taller").hasRole("TALLER")
                         .requestMatchers(HttpMethod.POST, "/api/cotizaciones/*/responder").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.GET, "/api/cotizaciones/orden/*").authenticated()
+                        // PDF: el servicio deja pasar solo al cliente dueño y al taller que la emitió
+                        .requestMatchers(HttpMethod.GET, "/api/cotizaciones/*/pdf").hasAnyRole("CLIENTE", "TALLER")
                         .requestMatchers("/api/cotizaciones/**").denyAll()
 
-                        // Catálogo marketplace: la consulta es pública; la compra y sus códigos son del CLIENTE
+                        // Catálogo marketplace: la consulta es pública; la compra y sus códigos son del CLIENTE y del TALLER (para su inventario)
                         .requestMatchers(HttpMethod.GET, "/api/catalogo/productos", "/api/catalogo/productos/*",
                                 "/api/catalogo/filtros").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/catalogo/compras/cotizar", "/api/catalogo/compras",
                                 "/api/catalogo/pedidos/*/codigo-retiro", "/api/catalogo/pedidos/*/recibido",
-                                "/api/catalogo/pedidos/*/problema").hasRole("CLIENTE")
-                        .requestMatchers(HttpMethod.GET, "/api/catalogo/compras/mias").hasRole("CLIENTE")
+                                "/api/catalogo/pedidos/*/problema").hasAnyRole("CLIENTE", "TALLER")
+                        .requestMatchers(HttpMethod.GET, "/api/catalogo/compras/mias").hasAnyRole("CLIENTE", "TALLER")
+                        // Costo y margen: solo el taller dueño; el cliente nunca entra aquí
+                        .requestMatchers("/api/inventario-taller", "/api/inventario-taller/**").hasRole("TALLER")
                         .requestMatchers("/api/catalogo/**").denyAll()
 
                         // Marketplace: pagos (links), pedidos a tiendas y liquidaciones
                         .requestMatchers(HttpMethod.POST, "/api/pagos-marketplace/diagnostico/*",
                                 "/api/pagos-marketplace/cotizacion/*", "/api/pagos-marketplace/simular/*").hasRole("CLIENTE")
                         .requestMatchers("/api/pagos-marketplace/**").denyAll()
-                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/mios").hasRole("TIENDA")
-                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/problemas").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/mios", "/api/pedidos-tienda/mios/tabla").hasRole("TIENDA")
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/problemas", "/api/pedidos-tienda/retiros-sin-recoger").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/pedidos-tienda/*/preparar", "/api/pedidos-tienda/*/despachar",
                                 "/api/pedidos-tienda/*/no-despachar", "/api/pedidos-tienda/*/listo-retiro").hasRole("TIENDA")
                         .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/*/retiro/validar").hasRole("TIENDA")
-                        .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/*/problema/resolver").hasAnyRole("SUPERADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/*/problema/resolver", "/api/pedidos-tienda/*/retiro/resolver").hasAnyRole("SUPERADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/pedidos-tienda/orden/*/recibidos").hasRole("TALLER")
                         .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/orden/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/pedidos-tienda/*/liquidacion").hasRole("TIENDA")
                         .requestMatchers("/api/pedidos-tienda/**").denyAll()
                         // Finanzas: liquidaciones solo SUPERADMIN
+                        .requestMatchers(HttpMethod.POST, "/api/liquidaciones/webhook").permitAll()
                         .requestMatchers("/api/liquidaciones/**").hasRole("SUPERADMIN")
                         // Panel de la plataforma: solo SUPERADMIN, salvo el panel operativo mínimo del ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/plataforma/operacion", "/api/plataforma/pedidos",

@@ -116,7 +116,8 @@ class RespuestasSinDatosSensiblesTest {
 
         JsonNode nodo = json.valueToTree(com.drivemaster.drivemaster.service.CatalogoService.aTiendaDTO(tienda));
 
-        assertEquals(List.of("id", "nombre", "ciudad", "barrio", "direccion", "horario", "ofreceEnvio", "costoEnvio", "logoUrl"),
+        // horarioSemanal: el horario por días también es público (el cliente lo ve en el producto)
+        assertEquals(List.of("id", "nombre", "ciudad", "barrio", "direccion", "horario", "ofreceEnvio", "costoEnvio", "logoUrl", "horarioSemanal"),
                 iterar(nodo));
         assertFalse(nodo.toString().contains("900123") || nodo.toString().contains("3001112233") || nodo.toString().contains("u-duena"));
         assertEquals("https://img/sol.png", nodo.get("logoUrl").asText());

@@ -72,6 +72,8 @@ public final class EstadoOrden {
                     CANCELADA, Set.of(CLIENTE, ADMIN))),
             Map.entry(EN_REVISION, Map.of(
                     DIAGNOSTICADA, Set.of(TALLER, MECANICO),
+                    // El pago del diagnóstico falló al aplicarse: se reembolsa y vuelve a esperar el pago
+                    ASIGNADA_A_TALLER, Set.of(SISTEMA),
                     // Con el diagnóstico ya pagado, solo el ADMIN cancela (gestiona el reembolso)
                     CANCELADA, Set.of(ADMIN))),
             Map.entry(DIAGNOSTICADA, Map.of(
@@ -99,14 +101,30 @@ public final class EstadoOrden {
                     REPUESTOS_RECIBIDOS, Set.of(TALLER),
                     CANCELADA, Set.of(ADMIN))),
             Map.entry(REPUESTOS_RECIBIDOS, Map.of(
-                    EN_INSTALACION, Set.of(TALLER, MECANICO))),
+                    EN_INSTALACION, Set.of(TALLER, MECANICO),
+                    // Hasta antes de instalar, el SUPERADMIN puede cancelar y reembolsar
+                    CANCELADA, Set.of(ADMIN))),
             Map.entry(EN_INSTALACION, Map.of(
                     LISTA, Set.of(TALLER, MECANICO))),
             Map.entry(LISTA, Map.of(
                     ENTREGADA, Set.of(TALLER)))
     );
 
+    private static final Map<String, String> NOMBRES = Map.ofEntries(
+            Map.entry(ENVIADA, "Enviada"), Map.entry(ASIGNADA_A_TALLER, "Asignada a taller"),
+            Map.entry(REASIGNADA, "Buscando otro taller"), Map.entry(EN_REVISION, "En revisión"),
+            Map.entry(DIAGNOSTICADA, "Diagnosticada"), Map.entry(COTIZADA, "Cotizada"), Map.entry(APROBADA, "Aprobada"),
+            Map.entry(PAGADA, "Pagada"), Map.entry(REPUESTOS_PEDIDOS, "Repuestos pedidos"),
+            Map.entry(REPUESTOS_RECIBIDOS, "Repuestos recibidos"), Map.entry(EN_INSTALACION, "En instalación"),
+            Map.entry(LISTA, "Lista para entregar"), Map.entry(ENTREGADA, "Entregada"),
+            Map.entry(RECHAZADA, "Sin taller disponible"), Map.entry(CANCELADA, "Cancelada"));
+
     private EstadoOrden() {
+    }
+
+    /** El estado como se lee en pantalla: los mensajes de error no muestran nombres técnicos. */
+    public static String nombre(String estado) {
+        return NOMBRES.getOrDefault(estado, estado);
     }
 
     public static boolean permitida(String desde, String hacia, String actor) {

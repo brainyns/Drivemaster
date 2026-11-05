@@ -1,7 +1,10 @@
 package com.drivemaster.drivemaster.controller;
 
 import com.drivemaster.drivemaster.model.PedidoTienda;
+import com.drivemaster.drivemaster.dto.plataforma.RetiroSinRecogerDTO;
 import com.drivemaster.drivemaster.service.PedidoTiendaService;
+import com.drivemaster.drivemaster.service.RetiroPendienteService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -20,9 +24,25 @@ import java.util.Map;
 public class PedidoTiendaController {
 
     private final PedidoTiendaService service;
+    private final RetiroPendienteService retiros;
 
-    public PedidoTiendaController(PedidoTiendaService service) {
+    public PedidoTiendaController(PedidoTiendaService service, RetiroPendienteService retiros) {
         this.service = service;
+        this.retiros = retiros;
+    }
+
+    /** ADMIN: pedidos con retiro que llevan 15 días o más sin recogerse (abiertos y ya decididos). */
+    @GetMapping("/retiros-sin-recoger")
+    public ResponseEntity<List<RetiroSinRecogerDTO>> retirosSinRecoger() {
+        return ResponseEntity.ok(retiros.enRevision().stream().map(RetiroSinRecogerDTO::de).toList());
+    }
+
+    /** ADMIN: decide un retiro sin recoger (SEGUIR_ESPERANDO o REEMBOLSO), con motivo escrito. */
+    @PostMapping("/{id}/retiro/resolver")
+    public ResponseEntity<RetiroSinRecogerDTO> resolverRetiro(@PathVariable String id, @RequestBody Map<String, String> body,
+                                                              Authentication auth) {
+        return ResponseEntity.ok(RetiroSinRecogerDTO.de(retiros.resolver(auth.getName(), id,
+                body != null ? body.get("decision") : null, body != null ? body.get("motivo") : null)));
     }
 
     // ─── Tienda ──────────────────────────────────────────────────────────────
@@ -90,7 +110,21 @@ public class PedidoTiendaController {
     }
 
     @PostMapping("/orden/{ordenId}/recibidos")
-    public ResponseEntity<List<PedidoTienda>> recibidos(@PathVariable String ordenId, Authentication auth) {
-        return ResponseEntity.ok(service.repuestosRecibidos(auth.getName(), ordenId));
+    public ResponseEntity<List<PedidoTienda>> recibidos(@PathVariable String ordenId,
+                                                        @RequestBody(required = false) Map<String, Object> body,
+                                                        Authentication auth) {
+        // confirmarFaltantes: el taller sigue sin las piezas de una tienda que no despachó
+        boolean confirmarFaltantes = body != null && Boolean.TRUE.equals(body.get("confirmarFaltantes"));
+        return ResponseEntity.ok(service.repuestosRecibidos(auth.getName(), ordenId, pedidosElegidos(body), confirmarFaltantes));
+    }
+
+    /** Los pedidos que el taller tiene en la mano; sin la lista, todos los despachados. */
+    private static List<String> pedidosElegidos(Map<String, Object> body) {
+        Object pedidoIds = body != null ? body.get("pedidoIds") : null;
+        if (pedidoIds == null) return null;
+        if (!(pedidoIds instanceof List<?> lista)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "pedidoIds debe ser una lista");
+        }
+        return lista.stream().map(String::valueOf).toList();
     }
 }

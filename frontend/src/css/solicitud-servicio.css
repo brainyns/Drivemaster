@@ -589,6 +589,11 @@
 
 .ss-confirmar__check input { margin-top: 3px; accent-color: var(--primary); }
 
+/* Un pedido que se puede confirmar: toda la fila es el objetivo táctil */
+.ss-recibido { display: flex; flex: 1; align-items: flex-start; gap: 10px; min-width: 0; min-height: 44px; cursor: pointer; }
+.ss-recibido input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--primary); }
+.ss-recibido__espera { font-size: 0.8125rem; font-weight: 600; color: var(--ui-text); }
+
 /* ── Ventana del buscador ──
    Se dibuja en <body> (portal) y queda centrada con 32px de margen arriba y abajo.
    Cabecera y filtros fijos arriba, pie fijo abajo: solo hace scroll la zona de tarjetas. */
@@ -622,7 +627,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--ui-bg);
+  background: var(--ui-surface);
   color: var(--ui-text);
   border: 1px solid var(--ui-line);
   border-radius: var(--ui-r-lg);
@@ -697,7 +702,6 @@
   .ss-modal__cabecera { padding-top: 14px; padding-bottom: 8px; }
   .ss-modal__titulo { font-size: var(--fs-subtitulo); }
   .ss-modal__filtros { padding-bottom: 12px; }
-  .ss-oferta__foto { height: 96px; }
 }
 
 /* Interruptor "Solo compatibles" */
@@ -737,12 +741,12 @@
   transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast);
 }
 
-.ss-switch input:checked + .ss-switch__pista { background: var(--ui-info); border-color: var(--ui-info); }
+.ss-switch input:checked + .ss-switch__pista { background: var(--primary); border-color: var(--primary); }
 .ss-switch input:checked + .ss-switch__pista::after { transform: translateX(16px); background: #fff; }
 .ss-switch input:focus-visible + .ss-switch__pista { box-shadow: 0 0 0 3px var(--primary-glow); }
 
 /* Ofertas de las tiendas: una sola rejilla de tarjetas de altura uniforme.
-   Cada tarjeta: imagen con el estado de compatibilidad, datos, y abajo precio y botón. */
+   Cada tarjeta: imagen completa, datos, y abajo precio y botón. */
 .ss-ofertas__resumen {
   margin: 0;
   font-size: var(--fs-etiqueta);
@@ -770,64 +774,87 @@
 
 .ss-oferta:hover { border-color: var(--ui-muted); }
 .ss-oferta--elegida { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+
+/* "Tu inventario" va antes que las tiendas y se distingue sin gritar: un fondo apenas cálido y el nombre del grupo */
+.ss-ofertas__grupo { display: grid; gap: var(--ui-sp-2); }
+.ss-ofertas__grupo + .ss-ofertas__grupo { margin-top: var(--ui-sp-5); padding-top: var(--ui-sp-4); border-top: 1px solid var(--ui-line-soft); }
+.ss-ofertas__titulo { margin: 0; font-size: 0.875rem; font-weight: 650; color: var(--ui-text); }
+.ss-ofertas__grupo > .ss-meta { margin: 0 0 var(--ui-sp-2); }
+.ss-oferta--propia { background: color-mix(in srgb, var(--primary) 5%, var(--ui-surface)); }
+.ss-oferta--propia .ss-oferta__tienda { font-weight: 600; color: var(--ui-text); }
 .ss-oferta--bloqueada { opacity: 0.72; }
 
+/* Mismo recuadro en todas las tarjetas: blanco también en tema oscuro, porque las fotos de los repuestos
+   suelen venir sobre blanco y contain deja ver sus márgenes */
 .ss-oferta__foto {
   position: relative;
   flex-shrink: 0;
-  height: 128px;
+  aspect-ratio: 4 / 3;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--ui-surface-2);
+  background: #fff;
+  color: #6b7280;
   border-bottom: 1px solid var(--ui-line);
-  font-size: 2rem;
 }
 
-.ss-oferta__foto img { width: 100%; height: 100%; object-fit: cover; }
-
-/* Badge de compatibilidad sobre la imagen */
-.ss-oferta__compat {
+/* Absoluta: una foto muy alta no estira el recuadro, que siempre mide lo que dicta el aspect-ratio */
+.ss-oferta__foto img {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  max-width: calc(100% - 16px);
-  background: var(--ui-surface);
-  box-shadow: var(--ui-sombra-1);
+  inset: var(--ui-sp-2);
+  width: calc(100% - 2 * var(--ui-sp-2));
+  height: calc(100% - 2 * var(--ui-sp-2));
+  object-fit: contain;
 }
 
 .ss-oferta__cuerpo {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
-  padding: var(--ui-sp-3) var(--ui-sp-4);
+  padding: var(--ui-sp-3);
 }
 
+/* Siempre el alto de dos líneas: la tienda queda a la misma altura entre tarjetas */
 .ss-oferta__nombre {
+  min-height: 2.6em;
   font-size: var(--fs-texto);
   font-weight: 650;
   line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .ss-oferta__ref,
-.ss-oferta__dato {
+.ss-oferta__tienda,
+.ss-oferta__ubicacion {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ss-oferta__ref,
+.ss-oferta__lugar {
   font-size: var(--fs-etiqueta);
   line-height: 1.4;
   color: var(--ui-muted);
-  overflow-wrap: anywhere;
 }
 
 .ss-oferta__tienda {
   margin-top: var(--ui-sp-2);
-  font-size: var(--fs-texto);
+  font-size: var(--fs-etiqueta);
   font-weight: 600;
+  line-height: 1.4;
 }
+
+/* La distancia nunca se corta: si no cabe, se recorta la ubicación */
+.ss-oferta__lugar { display: flex; justify-content: space-between; gap: 8px; min-width: 0; }
+.ss-oferta__ubicacion { min-width: 0; }
+.ss-oferta__distancia { flex-shrink: 0; font-variant-numeric: tabular-nums; }
 
 .ss-oferta__etiquetas {
   display: flex;
@@ -851,11 +878,12 @@
 
 /* Precio y botón siempre al fondo y alineados entre tarjetas */
 .ss-oferta__pie {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 6px var(--ui-sp-2);
-  padding: var(--ui-sp-3) var(--ui-sp-4);
+  padding: 10px var(--ui-sp-3);
   border-top: 1px solid var(--ui-line);
   background: var(--ui-surface);
 }
@@ -869,6 +897,15 @@
 
 .ss-btn-elegir { padding: 7px 16px; white-space: nowrap; }
 
+.ss-oferta__monto { display: flex; flex-direction: column; min-width: 0; }
+
+.ss-oferta__iva {
+  font-size: var(--fs-etiqueta);
+  color: var(--ui-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .ss-oferta__motivo {
   margin-top: auto;
   padding-top: var(--ui-sp-2);
@@ -878,6 +915,11 @@
 }
 
 .ss-oferta__motivo--aviso { color: var(--ui-aviso); }
+
+/* Pantallas bajas: foto más apaisada para que entre más de una fila de tarjetas */
+@media (max-height: 760px) and (min-width: 561px) {
+  .ss-oferta__foto { aspect-ratio: 16 / 9; }
+}
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
@@ -897,6 +939,8 @@
   .ss-modal__pie { padding-left: var(--sp-md); padding-right: var(--sp-md); }
   .ss-modal__filtros { grid-template-columns: 1fr 1fr; }
   .ss-modal__texto { grid-column: 1 / -1; }
+  /* Dos tarjetas por fila en celular; solo una si la pantalla no da para 150px */
+  .ss-ofertas { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: var(--ui-sp-3); }
   .ss-repuesto__fila { grid-template-columns: minmax(0, 1fr) 64px 30px; }
   .ss-repuesto__precio { grid-column: 1 / 2; text-align: left; }
 }
@@ -905,3 +949,4 @@
   .ss-modal,
   .ss-modal__ventana { animation: none; }
 }
+.st-aviso-rechazo { margin-bottom: 12px; }

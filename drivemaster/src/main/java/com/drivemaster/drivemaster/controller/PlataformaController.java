@@ -4,7 +4,10 @@ import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Cliente
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.Operacion;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.PedidosRespuesta;
 import com.drivemaster.drivemaster.dto.plataforma.ConsultasPlataformaDTO.ProductosRespuesta;
+import com.drivemaster.drivemaster.dto.comun.PeticionTabla;
+import com.drivemaster.drivemaster.dto.comun.RangoFechas;
 import com.drivemaster.drivemaster.dto.plataforma.DashboardPlataformaDTO;
+import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ClientesConMasCompras;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ComisionNeta;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ProductosMasVendidos;
@@ -13,13 +16,20 @@ import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.Usuarios
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.VentasPorTienda;
 import com.drivemaster.drivemaster.dto.plataforma.NegociosPlataformaDTO.NegocioPendiente;
 import com.drivemaster.drivemaster.dto.plataforma.NegociosPlataformaDTO.NegociosRespuesta;
+import com.drivemaster.drivemaster.service.PedidoTiendaService;
 import com.drivemaster.drivemaster.service.PlataformaConsultasService;
 import com.drivemaster.drivemaster.service.PlataformaNegociosService;
 import com.drivemaster.drivemaster.service.PlataformaReportesService;
 import com.drivemaster.drivemaster.service.PlataformaDashboardService;
+import com.drivemaster.drivemaster.service.PlataformaDetalleService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,13 +46,18 @@ public class PlataformaController {
     private final PlataformaConsultasService consultas;
     private final PlataformaReportesService reportes;
     private final PlataformaNegociosService negocios;
+    private final PlataformaDetalleService detalle;
+    private final PedidoTiendaService pedidos;
 
     public PlataformaController(PlataformaDashboardService dashboardService, PlataformaConsultasService consultas,
-                                PlataformaReportesService reportes, PlataformaNegociosService negocios) {
+                                PlataformaReportesService reportes, PlataformaNegociosService negocios,
+                                PlataformaDetalleService detalle, PedidoTiendaService pedidos) {
         this.dashboardService = dashboardService;
         this.consultas = consultas;
         this.reportes = reportes;
         this.negocios = negocios;
+        this.detalle = detalle;
+        this.pedidos = pedidos;
     }
 
     @GetMapping("/dashboard")
@@ -56,6 +71,38 @@ public class PlataformaController {
         return ResponseEntity.ok(dashboardService.operacion());
     }
 
+    /** SUPERADMIN: detalle de un pedido (productos, partes, línea de tiempo, pago Wompi, reparto y entrega). */
+    @GetMapping("/pedidos/{id}")
+    public ResponseEntity<DetallePlataformaDTO.Pedido> detallePedido(@PathVariable String id) {
+        return ResponseEntity.ok(detalle.pedido(id));
+    }
+
+    /** SUPERADMIN: la tienda confirmó que despachó y no lo marcó. Solo pasa el pedido a DESPACHADO: no mueve dinero. */
+    @PatchMapping("/pedidos/{id}/despachado")
+    public ResponseEntity<Void> marcarDespachado(@PathVariable String id, @RequestBody(required = false) Map<String, String> body,
+                                                 Authentication auth) {
+        pedidos.marcarDespachadoPorAdmin(auth.getName(), id, body != null ? body.get("motivo") : null);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** SUPERADMIN: detalle de una solicitud (partes, línea de tiempo, pagos, reparto, reembolsos y pedidos). */
+    @GetMapping("/ordenes/{id}")
+    public ResponseEntity<DetallePlataformaDTO.Orden> detalleOrden(@PathVariable String id) {
+        return ResponseEntity.ok(detalle.orden(id));
+    }
+
+    /** SUPERADMIN: detalle de un cliente (datos, ciudad, vehículos, pedidos y solicitudes de diagnóstico). */
+    @GetMapping("/clientes/{id}")
+    public ResponseEntity<DetallePlataformaDTO.Cliente> detalleCliente(@PathVariable String id) {
+        return ResponseEntity.ok(detalle.cliente(id));
+    }
+
+    /** SUPERADMIN: detalle de una tienda o un taller (datos, ubicación, productos o servicios, pedidos y totales). */
+    @GetMapping("/negocios/{tipo}/{id}")
+    public ResponseEntity<DetallePlataformaDTO.Negocio> detalleNegocio(@PathVariable String tipo, @PathVariable String id) {
+        return ResponseEntity.ok(detalle.negocio(tipo, id));
+    }
+
     /** ADMIN y SUPERADMIN: monitor de pedidos y envíos de las tiendas (sin datos del cliente). */
     @GetMapping("/pedidos")
     public ResponseEntity<PedidosRespuesta> pedidos(
@@ -63,9 +110,18 @@ public class PlataformaController {
             @RequestParam(required = false) String tiendaId,
             @RequestParam(required = false) String entrega,
             @RequestParam(defaultValue = "false") boolean atrasados,
-            @RequestParam(defaultValue = "0") int pagina,
-            @RequestParam(defaultValue = "20") int tamano) {
-        return ResponseEntity.ok(consultas.pedidos(estado, tiendaId, entrega, atrasados, pagina, tamano));
+            @RequestParam(required = false) String alerta,
+            @RequestParam(required = false) String desde,
+            @RequestParam(required = false) String hasta,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sort,
+            // Alias de antes de page/size: se quitan después de la feria (README, «Alias por quitar»)
+            @RequestParam(required = false) Integer pagina,
+            @RequestParam(required = false) Integer tamano) {
+        return ResponseEntity.ok(consultas.pedidos(estado, tiendaId, entrega, atrasados ? "ATRASADO" : alerta,
+                RangoFechas.de(desde, hasta),
+                PeticionTabla.de(page, size, pagina, tamano, sort, PlataformaConsultasService.ORDEN_PEDIDOS)));
     }
 
     /** SUPERADMIN: tiendas y talleres en una lista, con estado, plan, calificación, productos u órdenes y datos por completar. */
@@ -121,9 +177,20 @@ public class PlataformaController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String rol,
             @RequestParam(required = false) String estado,
-            @RequestParam(defaultValue = "0") int pagina,
-            @RequestParam(defaultValue = "20") int tamano) {
-        return ResponseEntity.ok(consultas.usuarios(q, rol, estado, pagina, tamano));
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sort,
+            // Alias de antes de page/size: se quitan después de la feria (README, «Alias por quitar»)
+            @RequestParam(required = false) Integer pagina,
+            @RequestParam(required = false) Integer tamano) {
+        return ResponseEntity.ok(consultas.usuarios(q, rol, estado,
+                PeticionTabla.de(page, size, pagina, tamano, sort, PlataformaConsultasService.ORDEN_USUARIOS)));
+    }
+
+    /** Pedidos o solicitudes en curso del negocio de un usuario: lo avisa el modal antes de desactivarlo. */
+    @GetMapping("/usuarios/{id}/en-curso")
+    public ResponseEntity<com.drivemaster.drivemaster.service.PlataformaConsultasService.EnCurso> enCurso(@PathVariable String id) {
+        return ResponseEntity.ok(consultas.enCurso(id));
     }
 
     /** Catálogo global de solo lectura, con filtros por tienda, nuevos, estado y búsqueda. */
@@ -133,9 +200,14 @@ public class PlataformaController {
             @RequestParam(required = false) String tiendaId,
             @RequestParam(required = false) Integer nuevosDias,
             @RequestParam(required = false) String estado,
-            @RequestParam(defaultValue = "0") int pagina,
-            @RequestParam(defaultValue = "20") int tamano) {
-        return ResponseEntity.ok(consultas.productos(q, tiendaId, nuevosDias, estado, pagina, tamano));
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sort,
+            // Alias de antes de page/size: se quitan después de la feria (README, «Alias por quitar»)
+            @RequestParam(required = false) Integer pagina,
+            @RequestParam(required = false) Integer tamano) {
+        return ResponseEntity.ok(consultas.productos(q, tiendaId, nuevosDias, estado,
+                PeticionTabla.de(page, size, pagina, tamano, sort, PlataformaConsultasService.ORDEN_PRODUCTOS)));
     }
 
     /** Clientes registrados para monitoreo (sin teléfono, dirección ni documento). */
@@ -144,8 +216,13 @@ public class PlataformaController {
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String ciudad,
             @RequestParam(required = false) String estado,
-            @RequestParam(defaultValue = "0") int pagina,
-            @RequestParam(defaultValue = "20") int tamano) {
-        return ResponseEntity.ok(consultas.clientes(q, ciudad, estado, pagina, tamano));
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String sort,
+            // Alias de antes de page/size: se quitan después de la feria (README, «Alias por quitar»)
+            @RequestParam(required = false) Integer pagina,
+            @RequestParam(required = false) Integer tamano) {
+        return ResponseEntity.ok(consultas.clientes(q, ciudad, estado,
+                PeticionTabla.de(page, size, pagina, tamano, sort, PlataformaConsultasService.ORDEN_CLIENTES)));
     }
 }

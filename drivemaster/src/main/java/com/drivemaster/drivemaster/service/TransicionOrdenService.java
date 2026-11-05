@@ -57,8 +57,10 @@ public class TransicionOrdenService {
                                       Criteria condicion, Update cambios, List<String> notasAdicionales) {
         String desde = orden.getEstado();
         if (!EstadoOrden.permitida(desde, hacia, actor.rol())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "No se puede pasar la solicitud de " + desde + " a " + hacia);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, desde != null && desde.equals(hacia)
+                    ? "Esta solicitud ya está en \"" + EstadoOrden.nombre(desde) + "\"."
+                    : "Esta solicitud está en \"" + EstadoOrden.nombre(desde) + "\" y no puede pasar a \""
+                            + EstadoOrden.nombre(hacia) + "\". Recarga para ver su estado.");
         }
         return aplicar(orden, desde, hacia, actor, nota, condicion, cambios, notasAdicionales);
     }
@@ -72,6 +74,11 @@ public class TransicionOrdenService {
     public OrdenServicio registrar(OrdenServicio orden, Actor actor, String nota,
                                    Criteria condicion, Update cambios, List<String> notasAdicionales) {
         return aplicar(orden, orden.getEstado(), orden.getEstado(), actor, nota, condicion, cambios, notasAdicionales);
+    }
+
+    /** Un dato interno de la orden, sin evento: el cliente no debe verlo en su línea de tiempo. */
+    public void anotar(String ordenId, Update cambios) {
+        mongoTemplate.updateFirst(Query.query(Criteria.where("id").is(ordenId)), cambios, OrdenServicio.class);
     }
 
     private OrdenServicio aplicar(OrdenServicio orden, String desde, String hacia, Actor actor, String nota,

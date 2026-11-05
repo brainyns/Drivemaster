@@ -76,18 +76,17 @@ class LimpiezaUsuariosYRespuestasAdminTest {
     // ─── Crear usuarios: solo ADMIN y SUPERADMIN ─────────────────────────────
 
     @Test
-    void desdeLaGestionDeUsuariosSoloSeCreanAdminYSuperadmin() throws Exception {
-        assertEquals(201, crear("ADMIN"));
+    void desdeLaGestionDeUsuariosSoloSeCreanSuperadmins() throws Exception {
         assertEquals(201, crear("SUPERADMIN"));
-        assertEquals(201, crear("admin"), "sin importar mayúsculas");
+        assertEquals(201, crear("superadmin"), "sin importar mayúsculas");
 
-        for (String rol : new String[]{"VENDEDOR", "TIENDA", "TALLER", "CLIENTE", "MECANICO", "INVENTADO", "", null}) {
+        // ADMIN y VENDEDOR quedan en el enum por las cuentas anteriores, pero ya no se crean
+        for (String rol : new String[]{"ADMIN", "VENDEDOR", "TIENDA", "TALLER", "CLIENTE", "MECANICO", "INVENTADO", "", null}) {
             assertEquals(400, crear(rol), "el rol " + rol + " no se crea desde aquí");
         }
-        // Y nunca se llegó a guardar uno que no fuera ADMIN o SUPERADMIN
         org.mockito.ArgumentCaptor<Usuario> guardados = org.mockito.ArgumentCaptor.forClass(Usuario.class);
-        verify(usuarioService, times(3)).crearUsuario(guardados.capture());
-        assertTrue(guardados.getAllValues().stream().allMatch(u -> List.of("ADMIN", "SUPERADMIN").contains(u.getRol())));
+        verify(usuarioService, times(2)).crearUsuario(guardados.capture());
+        assertTrue(guardados.getAllValues().stream().allMatch(u -> "SUPERADMIN".equals(u.getRol())));
     }
 
     @Test
@@ -108,13 +107,44 @@ class LimpiezaUsuariosYRespuestasAdminTest {
     }
 
     @Test
-    void unVendedorExistenteSePuedeReasignarAAdminOSuperadminPeroNoAVendedor() throws Exception {
+    void unaCuentaAnteriorDelEquipoSoloPasaASuperadmin() throws Exception {
         Usuario vendedor = Usuario.builder().id("v1").nombre("Vera").rol("VENDEDOR").activo(true).build();
-
         assertEquals(400, cambiarRol(vendedor, "VENDEDOR"));
+        assertEquals(400, cambiarRol(vendedor, "ADMIN"));
         assertEquals(400, cambiarRol(vendedor, "TIENDA"));
-        assertEquals(200, cambiarRol(vendedor, "ADMIN"));
-        assertEquals("ADMIN", vendedor.getRol());
+        assertEquals(200, cambiarRol(vendedor, "SUPERADMIN"));
+        assertEquals("SUPERADMIN", vendedor.getRol());
+
+        Usuario admin = Usuario.builder().id("a1").nombre("Sebastián").rol("ADMIN").activo(true).build();
+        assertEquals(200, cambiarRol(admin, "SUPERADMIN"), "un ADMIN anterior pasa a SUPERADMIN");
+    }
+
+    @Test
+    void nadieSeDesactivaNiSeCambiaElRolASiMismo() throws Exception {
+        Usuario yo = Usuario.builder().id("u0").correo("jefe@demo.com").nombre("Jefe").rol("SUPERADMIN").activo(true).build();
+        when(usuarioService.obtenerPorId("u0")).thenReturn(yo);
+        when(usuarioRepository.findByRol("SUPERADMIN")).thenReturn(List.of(yo, Usuario.builder().id("u9").rol("SUPERADMIN").activo(true).build()));
+
+        mvc.perform(put("/api/usuarios/u0").contentType(MediaType.APPLICATION_JSON).content("{\"activo\":false}")
+                .with(user("jefe@demo.com").roles("SUPERADMIN"))).andExpect(status().isBadRequest());
+        mvc.perform(put("/api/usuarios/u0").contentType(MediaType.APPLICATION_JSON).content("{\"rol\":\"ADMIN\"}")
+                .with(user("jefe@demo.com").roles("SUPERADMIN"))).andExpect(status().isBadRequest());
+        mvc.perform(delete("/api/usuarios/u0").with(user("jefe@demo.com").roles("SUPERADMIN"))).andExpect(status().isBadRequest());
+        assertTrue(yo.getActivo());
+    }
+
+    @Test
+    void noSeDesactivaAlUltimoSuperadmin() throws Exception {
+        Usuario otro = Usuario.builder().id("s2").correo("otro@demo.com").nombre("Otro").rol("SUPERADMIN").activo(true).build();
+        when(usuarioService.obtenerPorId("s2")).thenReturn(otro);
+        // Solo queda él activo (el que pide el cambio figura inactivo en esta prueba)
+        when(usuarioRepository.findByRol("SUPERADMIN")).thenReturn(List.of(otro,
+                Usuario.builder().id("u0").rol("SUPERADMIN").activo(false).build()));
+
+        mvc.perform(put("/api/usuarios/s2").contentType(MediaType.APPLICATION_JSON).content("{\"activo\":false}")
+                .with(user("jefe@demo.com").roles("SUPERADMIN"))).andExpect(status().isConflict());
+        mvc.perform(delete("/api/usuarios/s2").with(user("jefe@demo.com").roles("SUPERADMIN"))).andExpect(status().isConflict());
+        assertTrue(otro.getActivo());
     }
 
     @Test

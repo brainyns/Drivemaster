@@ -35,9 +35,17 @@ public class Tienda {
     private Double longitud;
 
     // Horario de atención al público (retiro de compras del catálogo). Obligatorio junto con dirección y ciudad.
+    // Con horarioSemanal es el resumen que se genera de él (como Taller.horario); las tiendas que aún no lo configuran
+    // por días conservan aquí el texto libre que escribieron.
     private String horario;
+    // Horario por días, con las mismas reglas que el del taller (HorarioSemanal). null = aún en texto libre.
+    private java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> horarioSemanal;
     // Costo fijo de envío de la tienda, en pesos. null = la tienda no hace envíos (solo retiro).
     private Double costoEnvio;
+
+    // Descuento sobre el precio público para talleres aprobados que compran en el catálogo. Sin dato: el inicial, 20 %
+    // (ver DescuentoTaller). La tienda lo cambia en Mi tienda, de 0 a 50 %
+    private Double descuentoTalleresPct;
 
     // Logo o foto del local (URL de Cloudinary); lo sube la dueña desde Mi tienda o el administrador.
     private String logoUrl;
@@ -59,6 +67,9 @@ public class Tienda {
     private Boolean resumenSemanal;
     // Lunes de la semana del último envío: evita repetirlo si el job corre dos veces.
     private java.time.LocalDate resumenSemanalEnviado;
+
+    // Cuenta bancaria para dispersiones automáticas (Wompi) y transferencias
+    private CuentaBancaria cuentaBancaria;
 
     /**
      * Dirección, ciudad y horario son obligatorios para vender en el catálogo. Las tiendas

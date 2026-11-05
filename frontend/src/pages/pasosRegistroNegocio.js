@@ -61,6 +61,22 @@ export function primerPasoConErrores(tipo, form) {
   return pasosDe(tipo).find((p) => Object.keys(erroresDePasos(tipo, form, [p])).length > 0) || null;
 }
 
+/**
+ * El backend rechaza un negocio repetido (409) con un mensaje que dice qué dato ya existe ("Ya hay una tienda
+ * registrada con ese NIT."): el campo donde mostrarlo, o null si el error es de otra cosa.
+ */
+export function campoDelDuplicado(mensaje) {
+  const m = String(mensaje || "").toLowerCase();
+  if (!m.startsWith("ya hay") && !m.startsWith("ya existe")) return null;
+  if (m.includes("nit")) return "nit";
+  if (m.includes("nombre")) return "nombreNegocio";
+  if (m.includes("correo")) return "correo";
+  return null;
+}
+
+/** El paso del formulario donde está un campo. */
+export const pasoDelCampo = (tipo, campo) => pasosDe(tipo).find((p) => CAMPOS_PASO[p].includes(campo)) || null;
+
 /** Los datos que se envían al backend: los mismos de antes. */
 export function datosRegistro(tipo, form) {
   const numero = (v) => (vacio(v) ? null : Number(v));
@@ -74,7 +90,7 @@ export function datosRegistro(tipo, form) {
     latitud: numero(form.latitud),
     longitud: numero(form.longitud),
     nombreContacto: form.nombreContacto.trim() || null,
-    correo: form.correo.replace(/s+/g, "").toLowerCase(),
+    correo: form.correo.replace(/\s+/g, "").toLowerCase(),
     password: form.password,
   };
   if (tipo === "TALLER") {

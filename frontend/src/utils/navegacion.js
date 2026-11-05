@@ -12,3 +12,16 @@ export function destinoSeccion(param) {
   }
   return { filtro: param || undefined, abrir: null, volverA: null };
 }
+
+/**
+ * A dónde lleva la referencia corta de un movimiento de inventario ({ texto, destino, id } del backend,
+ * ReferenciasMovimiento): la página de App y su parámetro, o null si no tiene detalle. volverA: la página desde la que
+ * se abre, para que "Volver" regrese allí.
+ */
+export function destinoReferencia(ref, volverA) {
+  if (!ref?.destino || !ref.id) return null;
+  if (ref.destino === "ORDEN") return { pagina: "taller-trabajos", param: { abrir: ref.id, volverA } };
+  if (ref.destino === "PEDIDO") return { pagina: "pedidos-tienda", param: { abrir: ref.id, volverA } };
+  if (ref.destino === "COMPRA") return { pagina: "compraDetalle", param: ref.id };
+  return null;
+}

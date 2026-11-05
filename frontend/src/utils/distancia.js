@@ -1,3 +1,4 @@
+import { kilometros } from "./formato.js";
 const RADIO_TIERRA_KM = 6371.0088;
 
 const rad = (g) => (g * Math.PI) / 180;
@@ -11,8 +12,8 @@ export function distanciaKm(a, b) {
   return RADIO_TIERRA_KM * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-/** "a 850 m" o "a 3.4 km". */
+/** "a 850 m" o "a 3,4 km". */
 export function formatoDistancia(km) {
   if (km == null) return "";
-  return km < 1 ? `a ${Math.round(km * 1000)} m` : `a ${km.toFixed(1)} km`;
+  return km < 1 ? `a ${Math.round(km * 1000)} m` : `a ${kilometros(km)}`;
 }

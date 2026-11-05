@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "../services/http";
 import { crearUsuario, eliminarUsuario, getUser } from "../services/authService";
-import { usuariosPlataforma } from "../services/plataformaService";
-import { errorDeRespuesta } from "../utils/errores";
+import { enCursoUsuario, usuariosPlataforma } from "../services/plataformaService";
+import { errorDeRespuesta, textoError } from "../utils/errores";
 import { formatoFecha } from "../utils/formato";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import EncabezadoOrden from "../components/ui/EncabezadoOrden";
+import SelectorOrden from "../components/ui/SelectorOrden";
+import { propsPaginacion, textoOrden } from "../components/ui/reglasTabla";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -24,12 +28,20 @@ import "../css/usuarios-admin.css";
 
 const API_BASE = `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api`;
 const TAMANO = 20;
+
+/** Columnas que se pueden ordenar (lista blanca de PlataformaConsultasService.ORDEN_USUARIOS). */
+const ORDENES = [
+  { campo: "nombre", label: "Nombre", asc: "(A–Z)", desc: "(Z–A)" },
+  { campo: "rol", label: "Rol", asc: "(A–Z)", desc: "(Z–A)" },
+  { campo: "fecha", label: "Creada", asc: "(más antiguas primero)", desc: "(más nuevas primero)" },
+  { campo: "ultimoAcceso", label: "Último acceso", asc: "(más antiguo primero)", desc: "(más reciente primero)" },
+];
 const ESTADOS = [
   { valor: "", label: "Todas" },
   { valor: "activos", label: "Activas" },
   { valor: "inactivos", label: "Inactivas" },
 ];
-const NUEVO = { nombre: "", correo: "", password: "", rol: "ADMIN" };
+const NUEVO = { nombre: "", correo: "", password: "", rol: "SUPERADMIN" };
 
 async function actualizarUsuario(id, body) {
   const res = await apiFetch(`${API_BASE}/usuarios/${id}`, {
@@ -82,7 +94,7 @@ function FormNuevo({ onCreado, onCancelar }) {
       onCreado(creado?.nombre || form.nombre.trim());
     } catch (err) {
       const campos = erroresDelServidor(err.message);
-      if (campos) { setServidor(campos); enfocar(ref.current, true); } else setError(err.message);
+      if (campos) { setServidor(campos); enfocar(ref.current, true); } else setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -131,13 +143,14 @@ function FormNuevo({ onCreado, onCancelar }) {
 }
 
 /** Editar nombre, contraseña y, en cuentas del equipo, el rol. */
-function FormEditar({ usuario, onGuardado, onCancelar }) {
+function FormEditar({ usuario, soyYo = false, onGuardado, onCancelar }) {
   const ref = useRef(null);
   const [form, setForm] = useState({ nombre: usuario.nombre, password: "", rol: usuario.rol });
   const [tocados, setTocados] = useState({});
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const editableRol = rolEditable(usuario.rol);
+  // Nadie se cambia el rol a sí mismo (también lo rechaza el backend)
+  const editableRol = rolEditable(usuario.rol) && !soyYo;
 
   useEffect(() => { enfocar(ref.current); }, []);
 
@@ -158,7 +171,7 @@ function FormEditar({ usuario, onGuardado, onCancelar }) {
       await actualizarUsuario(usuario.id, cuerpoEdicion(form, usuario));
       onGuardado(form.nombre.trim());
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -183,7 +196,7 @@ function FormEditar({ usuario, onGuardado, onCancelar }) {
           </Campo>
           {editableRol ? (
             <Campo id="usr-editar-rol" label="Rol"
-              ayuda={usuario.rol === "VENDEDOR" ? "El rol de vendedor se retiró: reasígnala a administrador o super admin, o desactívala." : undefined}>
+              ayuda={["VENDEDOR", "ADMIN"].includes(usuario.rol) ? "Este rol se retiró: pásala a super admin o desactívala." : undefined}>
               <select className="ui-field__input" name="rol" value={form.rol} onChange={cambiar}>
                 {!ROLES_DEL_EQUIPO.includes(usuario.rol) && <option value={usuario.rol} disabled>{etiquetaRol(usuario.rol)}</option>}
                 {ROLES_DEL_EQUIPO.map((r) => <option key={r} value={r}>{etiquetaRol(r)}</option>)}
@@ -193,7 +206,7 @@ function FormEditar({ usuario, onGuardado, onCancelar }) {
             <div className="ui-field usr-rol-fijo">
               <span className="ui-field__label">Rol</span>
               <p className="usr-rol-fijo__valor">{etiquetaRol(usuario.rol)}</p>
-              <p className="ui-field__ayuda">El rol de un cliente, una tienda o un taller no se cambia: su perfil depende de él.</p>
+              <p className="ui-field__ayuda">{soyYo ? "No puedes cambiar tu propio rol." : "El rol de un cliente, una tienda o un taller no se cambia: su perfil depende de él."}</p>
             </div>
           )}
         </div>
@@ -219,6 +232,7 @@ export default function Usuarios({ token }) {
   const [rol, setRol] = useState("");
   const [estado, setEstado] = useState("");
   const [pagina, setPagina] = useState(0);
+  const [orden, setOrden] = useState(null); // null: los más nuevos primero
   const [version, setVersion] = useState(0);
   const [datos, setDatos] = useState(null); // { items, total, porRol }
   const [cargando, setCargando] = useState(true);
@@ -227,6 +241,13 @@ export default function Usuarios({ token }) {
 
   const [panel, setPanel] = useState(null); // "nuevo" | usuario en edición
   const [desactivando, setDesactivando] = useState(null);
+  // Pedidos o solicitudes en curso del negocio del usuario a desactivar (null mientras se consulta o si falla)
+  const [enCurso, setEnCurso] = useState(null);
+  const pedirDesactivar = (u) => {
+    setEnCurso(null);
+    setDesactivando(u);
+    if (u.rol === "TIENDA" || u.rol === "TALLER") enCursoUsuario(token, u.id).then(setEnCurso).catch(() => {});
+  };
   const [activando, setActivando] = useState(null);
   const [aviso, setAviso] = useState(null); // { tono, texto }
 
@@ -241,16 +262,17 @@ export default function Usuarios({ token }) {
   const cargar = useCallback(async (vivo = () => true) => {
     setCargando(true);
     try {
-      const r = await usuariosPlataforma(token, { q, rol, estado, pagina, tamano: TAMANO });
+      const r = await usuariosPlataforma(token, { q, rol, estado, page: pagina, size: TAMANO, sort: textoOrden(orden) });
       if (!vivo()) return;
-      setDatos({ items: (r.usuarios?.items || []).map(filaUsuario), total: r.usuarios?.total || 0, porRol: r.porRol || {} });
+      setDatos({ items: (r.usuarios?.items || []).map(filaUsuario), total: r.usuarios?.total || 0, porRol: r.porRol || {},
+        pagina: r.usuarios });
       setError(null);
     } catch (e) {
-      if (vivo()) setError(e.message);
+      if (vivo()) setError(textoError(e));
     } finally {
       if (vivo()) setCargando(false);
     }
-  }, [token, q, rol, estado, pagina]);
+  }, [token, q, rol, estado, pagina, orden]);
 
   useEffect(() => {
     let activo = true;
@@ -263,6 +285,7 @@ export default function Usuarios({ token }) {
 
   const elegirRol = (r) => { setRol(r); setPagina(0); };
   const elegirEstado = (e) => { setEstado(e); setPagina(0); };
+  const ordenar = (o) => { setOrden(o); setPagina(0); };
   const hayFiltros = q !== "" || rol !== "" || estado !== "";
   const limpiar = () => { setBusqueda(""); setQ(""); setRol(""); setEstado(""); setPagina(0); };
 
@@ -287,14 +310,12 @@ export default function Usuarios({ token }) {
       setAviso({ tono: "ok", texto: `${u.nombre} ya puede iniciar sesión de nuevo.` });
       recargar();
     } catch (e) {
-      setAviso({ tono: "error", texto: `No pudimos activar a ${u.nombre}. ${e.message}` });
+      setAviso({ tono: "error", texto: `No pudimos activar a ${u.nombre}. ${textoError(e, "Inténtalo de nuevo.")}` });
     } finally {
       setActivando(null);
     }
   };
 
-  const total = datos?.total || 0;
-  const paginas = Math.max(1, Math.ceil(total / TAMANO));
   const porRol = datos?.porRol || {};
   const totalCuentas = Object.values(porRol).reduce((s, n) => s + n, 0);
 
@@ -315,7 +336,7 @@ export default function Usuarios({ token }) {
           onCreado={(nombre) => { setPanel(null); setAviso({ tono: "ok", texto: `Creaste la cuenta de ${nombre}.` }); recargar(); }} />
       )}
       {panel && panel !== "nuevo" && (
-        <FormEditar key={panel.id} usuario={panel} onCancelar={() => setPanel(null)}
+        <FormEditar key={panel.id} usuario={panel} soyYo={Boolean(yo?.id && yo.id === panel.id)} onCancelar={() => setPanel(null)}
           onGuardado={(nombre) => { setPanel(null); setAviso({ tono: "ok", texto: `Guardaste los cambios de ${nombre}.` }); recargar(); }} />
       )}
 
@@ -369,17 +390,18 @@ export default function Usuarios({ token }) {
         )
       ) : (
         <>
+          <SelectorOrden id="usr-orden" opciones={ORDENES} orden={orden} onOrdenar={ordenar} porDefecto="Más nuevas primero" />
           <div className={`ui-card ui-table-card${cargando ? " usr-actualizando" : ""}`} aria-busy={cargando}>
             <div className="ui-table-wrap">
               <table className="ui-table ui-table--tarjetas">
                 <caption className="ui-sr">Usuarios, los más recientes primero</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Usuario</th>
-                    <th scope="col">Rol</th>
+                    <EncabezadoOrden campo="nombre" orden={orden} onOrdenar={ordenar}>Usuario</EncabezadoOrden>
+                    <EncabezadoOrden campo="rol" orden={orden} onOrdenar={ordenar}>Rol</EncabezadoOrden>
                     <th scope="col">Estado</th>
-                    <th scope="col">Creada</th>
-                    <th scope="col">Último acceso</th>
+                    <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Creada</EncabezadoOrden>
+                    <EncabezadoOrden campo="ultimoAcceso" orden={orden} onOrdenar={ordenar}>Último acceso</EncabezadoOrden>
                     {puedeGestionar && <th scope="col"><span className="ui-sr">Acciones</span></th>}
                   </tr>
                 </thead>
@@ -416,7 +438,7 @@ export default function Usuarios({ token }) {
                             {u.activo ? (
                               !soyYo && (
                                 <button type="button" className="ui-btn ui-btn--texto ui-btn--chico usr-desactivar"
-                                  onClick={() => setDesactivando(u)} aria-label={`Desactivar a ${u.nombre}`}>
+                                  onClick={() => pedirDesactivar(u)} aria-label={`Desactivar a ${u.nombre}`}>
                                   Desactivar
                                 </button>
                               )
@@ -435,24 +457,13 @@ export default function Usuarios({ token }) {
               </table>
             </div>
           </div>
-          <nav className="usr-paginas" aria-label="Páginas de usuarios">
-            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + datos.items.length} de {total}</span>
-            {paginas > 1 && (
-              <span className="usr-paginas__botones">
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
-                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
-                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
-                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-              </span>
-            )}
-          </nav>
+          <Paginacion {...propsPaginacion(datos?.pagina)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de usuarios" />
         </>
       )}
 
       {desactivando && (
-        <ConfirmarAccion titulo={`¿Desactivar la cuenta de ${desactivando.nombre}?`} peligro textoConfirmar="Desactivar cuenta"
-          mensaje={avisoDesactivar(desactivando)}
+        <ConfirmarAccion titulo={`¿Desactivar a ${desactivando.nombre}?`} peligro textoConfirmar="Desactivar"
+          mensaje={avisoDesactivar(desactivando, enCurso)}
           onConfirmar={confirmarDesactivar} onCancelar={() => setDesactivando(null)} />
       )}
     </div>

@@ -1,9 +1,29 @@
 // Panel de la plataforma (SUPERADMIN): lo que las pantallas calculan con las respuestas de /api/plataforma. Sin
 // componentes: lo prueban los tests con node --test. No agrega reglas de negocio: ordena y nombra lo que ya llega.
 
+import { esErrorConexion } from "../../services/conexion.js";
+import { textoError } from "../../utils/errores.js";
+import { MINIMO_MOTIVO } from "../../utils/motivo.js";
+
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 const plural = (n, uno, varios) => (n === 1 ? uno : varios);
+
+/**
+ * Bruto, comisión y neto de una línea de Liquidaciones. comision es null en las líneas anteriores al desglose: no se
+ * guardó por línea y no se estima. seDescuenta es la bandera, para la nota de lo que no se descontó.
+ */
+export function desgloseFila(f, seDescuenta) {
+  const bruto = f.montoBruto ?? f.monto;
+  if (f.comisionRetenida > 0) {
+    return { bruto, comision: `− ${cop(f.comisionRetenida)}`, nota: null };
+  }
+  return {
+    bruto,
+    comision: f.comisionCalculada != null ? cop(f.comisionCalculada) : "—",
+    nota: seDescuenta ? "No se descontó en este pago" : "No se descuenta todavía",
+  };
+}
 
 /**
  * Lo urgente del dashboard, en el orden en que conviene atenderlo: primero los negocios que esperan aprobación y los
@@ -20,20 +40,24 @@ export function urgentesDashboard(a = {}) {
     { clave: "atrasados", n: a.despachosAtrasados, tono: "error", estado: "Atrasado", pagina: "pedidos-envios", preset: "atrasados",
       titulo: (n) => `${num(n)} ${plural(n, "despacho atrasado", "despachos atrasados")}`,
       detalle: "Pedidos pendientes o en preparación que pasaron el plazo de despacho.", accion: "Ver pedidos" },
+    { clave: "por-vencer", n: a.despachosPorVencer, tono: "aviso", estado: "Por vencer", pagina: "pedidos-envios", preset: "por-vencer",
+      titulo: (n) => `${num(n)} ${plural(n, "despacho por vencer", "despachos por vencer")}`,
+      detalle: "Les queda menos del 25 % del plazo de despacho.", accion: "Ver pedidos" },
+    { clave: "sin-retirar", n: a.retirosSinRecoger, tono: "aviso", estado: "Sin retirar", pagina: "pedidos-envios", preset: "sin-retirar",
+      titulo: (n) => `${num(n)} ${plural(n, "pedido sin retirar", "pedidos sin retirar")}`,
+      detalle: "Listos en la tienda hace 3 días o más; a los 15 pasan a tu revisión.", accion: "Ver pedidos" },
     { clave: "fallidas", n: a.liquidacionesFallidas, tono: "error", estado: "Pago fallido", pagina: "liquidaciones",
-      titulo: (n) => `${num(n)} ${plural(n, "liquidación fallida", "liquidaciones fallidas")}`,
+      titulo: (n) => `${num(n)} ${plural(n, "pago fallido", "pagos fallidos")}`,
       detalle: "Pagos a talleres o tiendas que no se pudieron completar.", accion: "Revisar" },
-    { clave: "reembolsos", n: a.reembolsosPendientes, tono: "error", estado: "Reembolso", pagina: "liquidaciones",
-      titulo: (n) => `${num(n)} ${plural(n, "reembolso pendiente", "reembolsos pendientes")}`,
-      detalle: `${cop(a.montoReembolsosPendientes)} por devolver a clientes.`, accion: "Revisar" },
+    // Los reembolsos pendientes no van aquí: los avisa el banner de arriba del Inicio, que lleva directo a su lista
     { clave: "liquidar", n: a.liquidacionesPendientes, tono: "info", estado: "Por pagar", pagina: "liquidaciones",
-      titulo: (n) => `${num(n)} ${plural(n, "liquidación por pagar", "liquidaciones por pagar")}`,
-      detalle: "Dinero ya habilitado para pagar a talleres y tiendas.", accion: "Ver liquidaciones" },
+      titulo: (n) => `${num(n)} ${plural(n, "pago por hacer", "pagos por hacer")}`,
+      detalle: "Dinero ya habilitado para pagar a talleres y tiendas.", accion: "Ver pagos" },
   ];
   return items.filter((x) => (x.n || 0) > 0).map(({ titulo, ...x }) => ({ ...x, titulo: titulo(x.n) }));
 }
 
-/** Filas de una lista de barras (órdenes por estado, suscripciones por plan) con su parte del total. */
+/** Filas de una lista de barras (p. ej. órdenes por estado) con su parte del total. */
 export function barras(conteos = {}, etiquetas = {}, orden = []) {
   const claves = [
     ...orden.filter((k) => conteos[k]),
@@ -43,6 +67,130 @@ export function barras(conteos = {}, etiquetas = {}, orden = []) {
   return claves.map((k) => ({ clave: k, etiqueta: etiquetas[k] || k, n: conteos[k], pct: total ? (conteos[k] / total) * 100 : 0 }));
 }
 
+// ─── Liquidaciones ──────────────────────────────────────────────────────────
+
+/** Solo se paga lo que está listo o falló (reintento). PENDIENTE espera la recepción o la entrega; el backend lo exige igual. */
+export const sePuedePagar = (f = {}) => f.estado === "POR_LIQUIDAR" || f.estado === "FALLIDO";
+
+/**
+ * Lo que pasó con un pago que no volvió con éxito, cuando no es un error del pago: la línea ya estaba en pago o pagada
+ * (409 con su estado), o no llegó respuesta y no se sabe. null si es un error de verdad. estado es la lista que la muestra.
+ */
+export function avisoLiquidacion(e = {}) {
+  if (e.status === 409 && e.estado === "LIQUIDADO") {
+    return { tono: "ok", estado: "LIQUIDADO", accion: "Ver pagados",
+      texto: `Pagado: este pago ya había salido${e.referencia ? ` (${e.referencia})` : ""}. No se envió otro.` };
+  }
+  if (e.status === 409 && e.estado === "PROCESANDO") {
+    return e.sinConfirmar
+      ? { tono: "aviso", estado: "PROCESANDO", accion: "Revisar", texto: textoError(e) }
+      : { tono: "info", estado: "PROCESANDO", accion: "Ver estado", texto: "Ya se está pagando: no se envió otro pago." };
+  }
+  if (esErrorConexion(e)) {
+    return { tono: "aviso", estado: "PROCESANDO", accion: "Ver sin confirmar",
+      texto: "No llegó respuesta del servidor y el pago pudo haber salido. Revisa el estado de la línea antes de intentarlo otra vez." };
+  }
+  return null;
+}
+
+const CONCEPTOS_REPARTO = { DIAGNOSTICO: "Diagnóstico", COTIZACION: "Cotización", CATALOGO: "Venta de catálogo" };
+
+/** Qué se pagó, en palabras. */
+export const textoConcepto = (concepto) => CONCEPTOS_REPARTO[concepto] || concepto || "—";
+
+/**
+ * A qué pertenece una liquidación o un reembolso: el pedido si lo hay (las compras de catálogo no tienen solicitud), si
+ * no la solicitud. tipo es el de DetallePlataforma; una compra entera no tiene detalle propio: solo se muestra.
+ */
+/** Enlaza la línea con el total de su orden. Con una sola línea no aporta: ya es esa cifra. */
+export function textoTotalOrden(t) {
+  if (!t || t.lineas < 2) return null;
+  return `Total orden ${cop(t.totalGenerado)} · ${t.lineas} pagos`;
+}
+
+export function referenciaLinea(f = {}) {
+  if (f.pedidoTiendaId) return { tipo: "pedido", id: f.pedidoTiendaId, texto: refPedido(f.pedidoTiendaId) };
+  if (f.ordenServicioId) return { tipo: "orden", id: f.ordenServicioId, texto: refPedido(f.ordenServicioId) };
+  if (f.compraCatalogoId) return { tipo: null, id: f.compraCatalogoId, texto: refPedido(f.compraCatalogoId) };
+  return { tipo: null, id: null, texto: "—" };
+}
+
+/** Los estados a la vista y los que van dentro de "Más". "" es Todos. */
+export const ESTADOS_LIQUIDACION = [["POR_LIQUIDAR", "Por pagar"], ["PENDIENTE", "Falta que se entregue"], ["LIQUIDADO", "Pagados"]];
+export const MAS_ESTADOS_LIQUIDACION = [["FALLIDO", "Fallidos"], ["PROCESANDO", "Sin confirmar"], ["ANULADO", "Cancelados"], ["", "Todos"]];
+
+const TIPOS_CUENTA = { AHORROS: "Ahorros", CORRIENTE: "Corriente" };
+
+/** Cuenta destino en una línea: "Davivienda · Ahorros · ****3210". El número ya llega enmascarado del backend. */
+export function textoCuenta(c) {
+  if (!c) return "";
+  return [c.banco, TIPOS_CUENTA[c.tipoCuenta] || c.tipoCuenta, c.numero].filter(Boolean).join(" · ");
+}
+
+/** Fecha de la lista, corta para que la columna no le quite espacio al beneficiario: "28 oct 2026". */
+export const fechaLinea = (iso) => (iso
+  ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }).replace(/\./g, "").replace(/ de /g, " ")
+  : "—");
+
+const pagos = (n) => `${num(n)} ${plural(n, "pago", "pagos")}`;
+
+/** Lo que pide revisión y va dentro de "Más": fallidos primero, porque esos ya se sabe que no salieron. */
+export function porRevisar(resumen, estado) {
+  const fallidas = estado === "FALLIDO" ? 0 : resumen?.fallidas?.cantidad || 0;
+  const sinConfirmar = estado === "PROCESANDO" ? 0 : resumen?.enProceso?.cantidad || 0;
+  return [
+    fallidas > 0 && { estado: "FALLIDO", texto: fallidas === 1 ? "1 pago falló" : `${num(fallidas)} pagos fallaron`, accion: "Ver fallidos" },
+    sinConfirmar > 0 && { estado: "PROCESANDO", texto: sinConfirmar === 1 ? "1 pago sin confirmar" : `${num(sinConfirmar)} pagos sin confirmar`, accion: "Revisar" },
+  ].filter(Boolean);
+}
+
+/** Las tres cifras de arriba. estado es la lista a la que lleva cada una. */
+export function tarjetasLiquidaciones(r) {
+  if (!r) return [];
+  const simulado = r.pagadoMesSimulado > 0 ? ` · ${cop(r.pagadoMesSimulado)} simulados` : "";
+  return [
+    { titulo: "Por pagar", valor: cop(r.porPagar.monto), pie: `${pagos(r.porPagar.cantidad)} ${plural(r.porPagar.cantidad, "listo", "listos")}`,
+      estado: "POR_LIQUIDAR", tono: r.porPagar.cantidad > 0 ? "accion" : undefined },
+    { titulo: "Falta que se entregue", valor: cop(r.enEspera.monto), pie: pagos(r.enEspera.cantidad), estado: "PENDIENTE" },
+    { titulo: "Pagado este mes", valor: cop(r.pagadoMes.monto), pie: `${pagos(r.pagadoMes.cantidad)}${simulado}`, estado: "LIQUIDADO" },
+  ];
+}
+
+/** Con un rango puesto, cuántos de esta lista quedan fuera: lo viejo por pagar no se puede esconder. 0 si no aplica. */
+export function fueraDelRango(estado, resumen, totalLista = 0, fechas = {}) {
+  if (!resumen || (!fechas.desde && !fechas.hasta)) return 0;
+  const total = estado === "POR_LIQUIDAR" ? resumen.porPagar.cantidad : estado === "PENDIENTE" ? resumen.enEspera.cantidad : 0;
+  return Math.max(0, total - totalLista);
+}
+
+/**
+ * Cómo se avisa el modo: grande si no se mueve dinero (el aviso que no se puede pasar por alto) y una línea discreta
+ * con dinero real. Sin saber el modo no se afirma nada.
+ */
+export function avisoModo(m) {
+  if (!m) return null;
+  if (m.dineroReal === true) {
+    return { grande: false, texto: m.modo === "MANUAL"
+      ? "Dinero real · Tú pagas por el banco y anotas aquí el número de transferencia"
+      : "Dinero real · Wompi Payouts a la cuenta de cada taller y tienda; cada pago lo apruebas tú" };
+  }
+  if (m.dineroReal === false) {
+    return { grande: true, texto: m.modo === "WOMPI"
+      ? "Sandbox de Wompi: los pagos NO mueven dinero real. Cada pago lo apruebas tú."
+      : "Modo simulado: los pagos se hacen solos y NO mueven dinero real (referencias SIM-…)." };
+  }
+  return null;
+}
+
+/** Lo que falta para poder enviar la salida manual; el backend lo exige igual. */
+export const MINIMO_MOTIVO_RESOLVER = MINIMO_MOTIVO;
+export function faltaParaResolver({ resultado, motivo = "", referencia = "" } = {}) {
+  if (!resultado) return "Indica si el pago salió.";
+  if (motivo.trim().length < MINIMO_MOTIVO_RESOLVER) return `Explica el motivo en al menos ${MINIMO_MOTIVO_RESOLVER} caracteres.`;
+  if (resultado === "LIQUIDADO" && !referencia.trim()) return "Anota la referencia del pago en Wompi.";
+  return null;
+}
+
 // ─── Tiendas y talleres ─────────────────────────────────────────────────────
 
 /** Estado de aprobación con su texto y tono de ChipEstado. */
@@ -50,6 +198,8 @@ export const ESTADOS_NEGOCIO = {
   PENDIENTE: { label: "Pendiente", plural: "Pendientes", tono: "aviso" },
   APROBADO: { label: "Aprobado", plural: "Aprobados", tono: "ok" },
   RECHAZADO: { label: "Rechazado", plural: "Rechazados", tono: "error" },
+  // Fuera de servicio sin borrar nada (la antigua tienda DriveMaster, duplicados): no vende ni cuenta en los indicadores
+  ARCHIVADO: { label: "Archivado", plural: "Archivados", tono: "apagado" },
 };
 
 export const TIPOS_NEGOCIO = [
@@ -146,12 +296,87 @@ export const ESTADOS_PEDIDO = {
 export const refPedido = (id) => `#${String(id || "").slice(-6).toUpperCase()}`;
 
 /** Filtros al llegar desde el dashboard ("atrasados"); cualquier otro valor, sin filtro. */
+// Las alertas del monitor (las mismas reglas del backend, SemaforoPedido) y el atajo con que llegan del dashboard
+export const ALERTAS_PEDIDO = [
+  { valor: "", label: "Todas" },
+  { valor: "POR_VENCER", label: "Por vencer", preset: "por-vencer" },
+  { valor: "ATRASADO", label: "Atrasados", preset: "atrasados" },
+  { valor: "SIN_RETIRAR", label: "Sin retirar", preset: "sin-retirar" },
+];
+
+/** Filtros del monitor; preset es el atajo del dashboard ("atrasados", "por-vencer" o "sin-retirar"). */
 export function filtrosInicialesPedidos(preset) {
-  return { estado: "", tiendaId: "", entrega: "", atrasados: preset === "atrasados" };
+  const alerta = ALERTAS_PEDIDO.find((a) => a.preset && a.preset === preset)?.valor || "";
+  return { estado: "", tiendaId: "", entrega: "", alerta };
 }
+
+const TONO_SEMAFORO = { VERDE: "ok", AMARILLO: "aviso", ROJO: "error" };
+const diaMes = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }) : "");
+
+/**
+ * Los chips de la columna Alerta: el semáforo del despacho (verde a tiempo, amarillo con menos del 25 % del plazo,
+ * rojo vencido), el de "sin retirar" (desde los 3 días amarillo, a los 15 rojo y en revisión) y el problema de envío.
+ */
+export function chipsAlerta(p = {}) {
+  const chips = [];
+  const plazo = p.plazoDespacho ? ` · plazo ${diaMes(p.plazoDespacho)}` : "";
+  if (p.semaforoDespacho === "ROJO") chips.push({ tono: "error", texto: `Atrasado${plazo}` });
+  else if (p.semaforoDespacho === "AMARILLO") chips.push({ tono: "aviso", texto: `Por vencer${plazo}` });
+  else if (p.semaforoDespacho === "VERDE") chips.push({ tono: "ok", texto: `A tiempo${plazo}` });
+  if (p.semaforoRetiro) {
+    const dias = p.diasSinRetirar || 0;
+    const texto = p.semaforoRetiro === "VERDE" ? "Esperando que lo recojan"
+      : `Sin retirar hace ${dias} ${dias === 1 ? "día" : "días"}${p.semaforoRetiro === "ROJO" ? " · en revisión" : ""}`;
+    chips.push({ tono: TONO_SEMAFORO[p.semaforoRetiro], texto });
+  }
+  if (p.problemaAbierto) chips.push({ tono: "error", texto: "Problema de envío" });
+  return chips;
+}
+
+/** Una fila pide atención si algo está en amarillo o rojo, o tiene un problema de envío. */
+export const filaConAlerta = (p = {}) => chipsAlerta(p).some((c) => c.tono === "aviso" || c.tono === "error");
+
+/**
+ * Las pestañas de Pedidos y envíos: los 9 estados agrupados en 6 (los mismos grupos que acepta el backend en estado,
+ * PlataformaConsultasService.GRUPOS_PEDIDO). "Cancelados" no es "problema de envío abierto": ese es un aviso aparte.
+ */
+export const GRUPOS_PEDIDO = [
+  { valor: "", label: "Todos", estados: [] },
+  { valor: "POR_DESPACHAR", label: "Por despachar", estados: ["PENDIENTE", "EN_PREPARACION"] },
+  { valor: "EN_CAMINO", label: "En camino", estados: ["DESPACHADO"] },
+  { valor: "POR_RETIRAR", label: "Por retirar", estados: ["LISTO_PARA_RETIRAR"] },
+  { valor: "COMPLETADOS", label: "Completados", estados: ["RECIBIDO", "RETIRADO", "ENTREGADO"] },
+  { valor: "CANCELADOS", label: "Cancelados", estados: ["NO_DESPACHADO", "NO_ENTREGADO"] },
+];
+
+/** Pedidos por grupo, sumando el conteo por estado que manda el backend (Todos: la suma de todos). */
+export function conteoGrupos(porEstado = {}) {
+  const total = Object.values(porEstado).reduce((s, n) => s + (Number(n) || 0), 0);
+  return Object.fromEntries(GRUPOS_PEDIDO.map((g) => [g.valor,
+    g.estados.length ? g.estados.reduce((s, e) => s + (Number(porEstado[e]) || 0), 0) : total]));
+}
+
+/** Formas de entrega del monitor. */
+export const ENTREGAS_PEDIDO = [
+  { valor: "", label: "Envío y retiro" },
+  { valor: "ENVIO", label: "Envío a domicilio" },
+  { valor: "RETIRO", label: "Retiro en tienda" },
+];
+
+/** Hay algún filtro puesto (para mostrar "Limpiar filtros"). El orden no cuenta: no filtra. */
+export const hayFiltrosPedidos = (filtros = {}, fechas = {}) =>
+  ["estado", "tiendaId", "entrega", "alerta"].some((k) => (filtros[k] || "") !== "") || !!fechas.desde || !!fechas.hasta;
 
 /** Estados con pedidos, en el orden en que avanza un pedido (los desconocidos al final). */
 export function estadosConPedidos(porEstado = {}) {
   const orden = Object.keys(ESTADOS_PEDIDO);
   return [...orden.filter((e) => porEstado[e]), ...Object.keys(porEstado).filter((e) => !orden.includes(e) && porEstado[e])];
+}
+
+/** Aviso del Inicio: cuántos reembolsos esperan y por cuánto. null si no hay ninguno. */
+export function resumenReembolsos(lista) {
+  const pendientes = (Array.isArray(lista) ? lista : []).filter((r) => r.estado === "PENDIENTE");
+  if (pendientes.length === 0) return null;
+  const total = pendientes.reduce((s, r) => s + (Number(r.monto) || 0), 0);
+  return { cantidad: pendientes.length, total };
 }

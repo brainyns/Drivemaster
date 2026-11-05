@@ -16,7 +16,30 @@
 /* La fila con alerta se tiñe apenas: el chip de la columna Alerta dice qué pasa */
 .ped-fila--alerta > td { background: color-mix(in srgb, var(--ui-error) 5%, transparent); }
 
+/* Por vencer y sin retirar: en amarillo (aviso), los atrasados y los problemas siguen en rojo */
+.ped-alerta--aviso.ui-chip { color: var(--ui-aviso); border-color: color-mix(in srgb, var(--ui-aviso) 45%, var(--ui-line)); }
+.ped-alerta--aviso.ui-chip[aria-pressed="true"],
+.ped-alerta--aviso.ui-chip[aria-pressed="true"]:hover {
+  color: var(--ui-aviso);
+  background: color-mix(in srgb, var(--ui-aviso) 12%, transparent);
+  border-color: var(--ui-aviso);
+}
+
 .ped-ref { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+/* SUPERADMIN: la referencia abre el detalle del pedido */
+.ped-ref--boton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ui-info);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.ped-ref--boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
 .ped-destino { overflow-wrap: anywhere; }
 .ped-alertas { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 
@@ -24,4 +47,29 @@
   .ui-table--tarjetas .ped-fila--alerta { border-color: color-mix(in srgb, var(--ui-error) 45%, var(--ui-line)); }
   .ui-table--tarjetas .ped-fila--alerta > td { background: none; }
   .ui-table--tarjetas .ped-alertas { justify-content: flex-end; }
+}
+
+/* Fecha de pago y orden (en celular; en escritorio se ordena con el encabezado) */
+.ped-herramientas { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+.ped-herramientas .ui-fechas { flex: 1 1 420px; }
+
+/* ── Filtros simplificados: avisos y estados en chips; tienda, entrega y fecha en listas en una fila ── */
+.ped-selectores { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
+.ped-selector { display: grid; gap: 4px; flex: 0 1 220px; min-width: 180px; font-size: 0.8125rem; font-weight: 600; color: var(--ui-muted); }
+.ped-selector .ui-field__input { width: 100%; }
+.ped-selector--fecha { display: grid; gap: 8px; flex: 0 1 auto; }
+.ui-selector-fechas__lista { display: grid; gap: 4px; min-width: 180px; }
+.ped-limpiar { align-self: center; }
+
+/* En celular: avisos y estados en una sola línea que se desliza; las listas una debajo de otra */
+@media (max-width: 600px) {
+  .ped-deslizable {
+    flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+    margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px;
+  }
+  .ped-deslizable::-webkit-scrollbar { display: none; }
+  .ped-deslizable > .ui-chip { flex: 0 0 auto; white-space: nowrap; }
+  .ped-selectores { flex-direction: column; align-items: stretch; }
+  .ped-selector, .ped-selector--fecha, .ui-selector-fechas__lista { flex: 1 1 auto; min-width: 0; width: 100%; }
+  .ped-limpiar { align-self: flex-start; }
 }

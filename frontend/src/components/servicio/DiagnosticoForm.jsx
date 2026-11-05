@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { registrarDiagnostico } from "../../services/solicitudServicioService";
 import SubidaFotos from "./SubidaFotos";
 import BuscadorRepuestos from "./BuscadorRepuestos";
 import { ESTADO_OFERTA, TEXTO_CONFIRMACION, URGENCIAS, formatPrecio } from "./estadosServicio";
 import Icon from "../public/Icon";
+import { cantidadEntera, errorFallas, lineasFallas } from "./reglasFormulariosTaller";
+import { unaALaVez } from "../../utils/unaALaVez";
+import { claveOferta, vendedor } from "./reglasRepuestos";
+import { textoError } from "../../utils/errores";
 
 const MIN_HALLAZGOS = 10;
 
@@ -11,6 +15,8 @@ const MIN_HALLAZGOS = 10;
 function desdeOrden(repuestos = []) {
   return repuestos.map((r) => ({
     productoId: r.productoId,
+    piezaTallerId: r.piezaTallerId,
+    origen: r.origen,
     descripcion: r.descripcion,
     cantidad: r.cantidad,
     nombre: r.productoNombre,
@@ -42,16 +48,19 @@ export default function DiagnosticoForm({ token, solicitud, mecanicos, onGuardad
   const [buscadorAbierto, setBuscadorAbierto] = useState(false);
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const enviando = useRef(false);
 
   const activos = mecanicos.filter((m) => m.activo !== false || m.id === mecanicoId);
-  const elegidos = new Set(repuestos.map((r) => r.productoId));
+  const elegidos = new Set(repuestos.map(claveOferta));
   const total = repuestos.reduce((s, r) => s + (r.precio || 0) * (r.cantidad || 0), 0);
-  const tiendas = new Set(repuestos.map((r) => r.tiendaNombre)).size;
+  const tiendas = new Set(repuestos.filter((r) => r.origen !== "TALLER").map((r) => r.tiendaNombre)).size;
 
   const elegir = (grupo, oferta, cantidad) => {
-    if (elegidos.has(oferta.productoId)) return;
+    if (elegidos.has(claveOferta(oferta))) return;
     setRepuestos((prev) => [...prev, {
       productoId: oferta.productoId,
+      piezaTallerId: oferta.piezaTallerId,
+      origen: oferta.origen,
       descripcion: grupo.nombre,
       cantidad,
       nombre: oferta.nombre,
@@ -66,42 +75,47 @@ export default function DiagnosticoForm({ token, solicitud, mecanicos, onGuardad
     }]);
   };
 
-  const actualizar = (productoId, cambios) =>
-    setRepuestos((prev) => prev.map((r) => (r.productoId === productoId ? { ...r, ...cambios } : r)));
+  const actualizar = (clave, cambios) =>
+    setRepuestos((prev) => prev.map((r) => (claveOferta(r) === clave ? { ...r, ...cambios } : r)));
 
-  const quitar = (productoId) => setRepuestos((prev) => prev.filter((r) => r.productoId !== productoId));
+  const quitar = (clave) => setRepuestos((prev) => prev.filter((r) => claveOferta(r) !== clave));
 
-  const guardar = async (e) => {
+  const guardar = (e) => {
     e.preventDefault();
     if (hallazgos.trim().length < MIN_HALLAZGOS) return setError(`Describe los hallazgos (mínimo ${MIN_HALLAZGOS} caracteres).`);
     if (!urgencia) return setError("Indica la urgencia.");
     if (!mecanicoId) return setError("Elige el mecánico que hizo la revisión.");
+    const problemaFallas = errorFallas(fallas);
+    if (problemaFallas) return setError(problemaFallas);
     const sinConfirmar = repuestos.find((r) => r.requiereConfirmacion && !r.confirmado);
     if (sinConfirmar) return setError(`Confirma la compatibilidad de "${sinConfirmar.nombre}" o quítalo de la lista.`);
 
-    setGuardando(true);
-    setError(null);
-    try {
-      const actualizada = await registrarDiagnostico(token, solicitud.id, {
-        hallazgos: hallazgos.trim(),
-        fallas: fallas.split("\n").map((f) => f.trim()).filter(Boolean),
-        urgencia,
-        observaciones: observaciones.trim() || null,
-        fotos,
-        mecanicoId,
-        repuestos: repuestos.map((r) => ({
-          productoId: r.productoId,
-          descripcion: r.descripcion?.trim() || r.nombre,
-          cantidad: Number(r.cantidad),
-          confirmoCompatibilidad: r.requiereConfirmacion ? r.confirmado : null,
-        })),
-      });
-      onGuardado(actualizada);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setGuardando(false);
-    }
+    return unaALaVez(enviando, async () => {
+      setGuardando(true);
+      setError(null);
+      try {
+        const actualizada = await registrarDiagnostico(token, solicitud.id, {
+          hallazgos: hallazgos.trim(),
+          fallas: lineasFallas(fallas),
+          urgencia,
+          observaciones: observaciones.trim() || null,
+          fotos,
+          mecanicoId,
+          repuestos: repuestos.map((r) => ({
+            productoId: r.origen === "TALLER" ? null : r.productoId,
+            piezaTallerId: r.origen === "TALLER" ? r.piezaTallerId : null,
+            descripcion: r.descripcion?.trim() || r.nombre,
+            cantidad: Number(r.cantidad),
+            confirmoCompatibilidad: r.requiereConfirmacion ? r.confirmado : null,
+          })),
+        });
+        onGuardado(actualizada);
+      } catch (err) {
+        setError(textoError(err));
+      } finally {
+        setGuardando(false);
+      }
+    });
   };
 
   return (
@@ -170,22 +184,22 @@ export default function DiagnosticoForm({ token, solicitud, mecanicos, onGuardad
         {repuestos.length > 0 && (
           <ul className="ss-repuestos__lista">
             {repuestos.map((r) => (
-              <li key={r.productoId} className={`ss-repuesto${r.requiereConfirmacion && !r.confirmado ? " ss-repuesto--pendiente" : ""}`}>
+              <li key={claveOferta(r)} className={`ss-repuesto${r.requiereConfirmacion && !r.confirmado ? " ss-repuesto--pendiente" : ""}`}>
                 <div className="ss-repuesto__fila">
                   <div className="ss-repuesto__producto">
                     <input className="ss-input" value={r.descripcion || ""} maxLength={120}
                       aria-label={`Qué necesita el vehículo (${r.nombre})`}
-                      onChange={(e) => actualizar(r.productoId, { descripcion: e.target.value })} />
+                      onChange={(e) => actualizar(claveOferta(r), { descripcion: e.target.value })} />
                     <span className="ss-meta">
-                      {r.nombre}{r.referencia ? ` · Ref. ${r.referencia}` : ""} · {r.tiendaNombre}
+                      {r.nombre}{r.referencia ? ` · Ref. ${r.referencia}` : ""} · {vendedor(r)}
                       {r.disponibilidad === "ENCARGO" && ` · Encargo${r.diasEntrega ? ` (${r.diasEntrega} días)` : ""}`}
                     </span>
                   </div>
-                  <input className="ss-input ss-input--cantidad" type="number" min={1} max={99}
+                  <input className="ss-input ss-input--cantidad" type="number" min={1} max={99} step={1}
                     aria-label={`Cantidad de ${r.nombre}`} value={r.cantidad}
-                    onChange={(e) => actualizar(r.productoId, { cantidad: Math.max(1, Math.min(99, Number(e.target.value) || 1)) })} />
+                    onChange={(e) => actualizar(claveOferta(r), { cantidad: cantidadEntera(e.target.value) })} />
                   <span className="ss-repuesto__precio">{formatPrecio((r.precio || 0) * (r.cantidad || 0))}</span>
-                  <button type="button" className="ss-btn-icono" onClick={() => quitar(r.productoId)}
+                  <button type="button" className="ss-btn-icono" onClick={() => quitar(claveOferta(r))}
                     aria-label={`Quitar ${r.nombre}`}><Icon name="close" size={16} /></button>
                 </div>
                 {r.requiereConfirmacion && (
@@ -196,7 +210,7 @@ export default function DiagnosticoForm({ token, solicitud, mecanicos, onGuardad
                     <span className="ss-meta">Este producto no tiene datos de compatibilidad. Verifica que le sirve al vehículo.</span>
                     <label className="ss-confirmar__check">
                       <input type="checkbox" checked={r.confirmado}
-                        onChange={(e) => actualizar(r.productoId, { confirmado: e.target.checked })} />
+                        onChange={(e) => actualizar(claveOferta(r), { confirmado: e.target.checked })} />
                       {TEXTO_CONFIRMACION}
                     </label>
                   </div>

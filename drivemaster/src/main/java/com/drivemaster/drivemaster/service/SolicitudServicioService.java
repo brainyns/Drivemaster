@@ -13,6 +13,9 @@ import java.util.List;
 /** Solicitudes de diagnóstico del marketplace (OrdenServicio con flujo MARKETPLACE). */
 public interface SolicitudServicioService {
 
+    /** Confirma las entregas cuyo plazo venció y reintenta los pagos sin habilitar. Devuelve cuántos pagos habilitó. */
+    int autoconfirmarEntregas(java.time.LocalDateTime ahora);
+
     // ─── Cliente ───
     SolicitudServicioDTO crear(String correoCliente, CrearSolicitudServicioRequest request);
 

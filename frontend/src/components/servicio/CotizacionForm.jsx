@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { previsualizarCotizacion, emitirCotizacion } from "../../services/cotizacionService";
 import CotizacionDetalle from "./CotizacionDetalle";
 import AlertaPrediccionCotizacion from "./AlertaPrediccionCotizacion";
 import { formatPrecio } from "./estadosServicio";
 import "../../css/cotizacion.css";
 import Icon from "../public/Icon";
+import { MAX_TIEMPO_HORAS, errorCotizacion } from "./reglasFormulariosTaller";
+import { unaALaVez } from "../../utils/unaALaVez";
+import { textoError } from "../../utils/errores";
+import ConfirmarAccion from "../marketplace/ConfirmarAccion";
 
 const lineaVacia = () => ({ descripcion: "", modalidad: "ITEM", valor: "", horas: "" });
 
@@ -20,6 +24,8 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
   const [vista, setVista] = useState(null);
   const [error, setError] = useState(null);
   const [procesando, setProcesando] = useState(false);
+  const [confirmando, setConfirmando] = useState(false); // "¿Enviar la cotización a…?" antes de emitirla
+  const enviando = useRef(false);
 
   const cambiar = (n, campo, valor) => {
     setVista(null);
@@ -39,21 +45,23 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
     observaciones: observaciones.trim() || null,
   });
 
-  const ejecutar = async (accion) => {
+  const ejecutar = (accion) => unaALaVez(enviando, async () => {
     setProcesando(true);
     setError(null);
     try {
       await accion();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(false);
     }
-  };
+  });
 
   const previsualizar = (e) => {
     e.preventDefault();
-    ejecutar(async () => setVista(await previsualizarCotizacion(token, solicitud.id, datos())));
+    const problema = errorCotizacion(lineas, tiempo, { hayRepuestos: solicitud.repuestos?.length > 0, tarifaHora });
+    if (problema) return setError(problema);
+    return ejecutar(async () => setVista(await previsualizarCotizacion(token, solicitud.id, datos())));
   };
 
   const emitir = () => ejecutar(async () => {
@@ -70,9 +78,7 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
           : "Sin repuestos: la cotización es solo mano de obra."}
         {" "}El IVA y el descuento del diagnóstico los calcula DriveMaster.
       </p>
-      {error && <p className="ss-alerta" role="alert">{error}</p>}
-
-      <form className="ct-form" onSubmit={previsualizar}>
+      <form className="ct-form" onSubmit={previsualizar} noValidate>
         <h4 className="ct-detalle__grupo">Mano de obra</h4>
         {lineas.map((l, n) => (
           <div key={n} className="ct-linea">
@@ -106,7 +112,7 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
         <div className="sv-form">
           <div className="sv-field">
             <label htmlFor="ct-tiempo">Tiempo estimado (horas, opcional)</label>
-            <input id="ct-tiempo" type="number" min="1" max="2000" value={tiempo}
+            <input id="ct-tiempo" type="number" min="1" max={MAX_TIEMPO_HORAS} step="1" value={tiempo}
               onChange={(e) => { setVista(null); setTiempo(e.target.value); }} />
           </div>
           <div className="sv-field sv-form-full">
@@ -131,13 +137,22 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
           )}
           <CotizacionDetalle cotizacion={vista} mostrarComision sinEstado />
           <div className="ss-acciones">
-            <button className="sv-btn" onClick={emitir} disabled={procesando}>
+            <button className="sv-btn" onClick={() => setConfirmando(true)} disabled={procesando}>
               {procesando ? "Enviando..." : "Emitir y enviar al cliente"}
             </button>
           </div>
           <p className="ss-ayuda">El cliente recibe un correo para aprobar, pedir cambios o rechazar.</p>
         </div>
       )}
+      {confirmando && vista && (
+        <ConfirmarAccion titulo={`¿Enviar la cotización a ${solicitud.clienteNombre || "el cliente"}?`}
+          textoConfirmar="Sí, enviarla"
+          mensaje={`Total para el cliente: ${formatPrecio(vista.total)}. Le llega un correo para aprobarla, pedir cambios o rechazarla; después ya no la puedes editar, solo enviar una nueva versión.`}
+          onCancelar={() => setConfirmando(false)}
+          onConfirmar={async () => { setConfirmando(false); await emitir(); }} />
+      )}
+      {/* Debajo de los botones: "Calcular" y "Emitir" quedan al final de la sección */}
+      {error && <p className="ss-alerta" role="alert">{error}</p>}
     </section>
   );
 }

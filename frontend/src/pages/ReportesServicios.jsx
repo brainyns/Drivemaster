@@ -8,6 +8,8 @@ import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
+import { textoError } from "../utils/errores";
+import { porcentaje } from "../utils/formato";
 
 const PERIODOS = [
   { k: "dia", l: "Hoy" },
@@ -18,7 +20,7 @@ const PERIODOS = [
 const fmt = (n) =>
   new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 
-const pct = (n) => `${Math.round(n || 0)}%`;
+const pct = (n) => porcentaje(Math.round(n || 0));
 
 /** Ranking como barras: se lee el orden de un vistazo, sin tabular. La barra es relativa al primero. */
 function Ranking({ id, titulo, nota, filas }) {
@@ -56,7 +58,7 @@ export default function ReportesServicios({ token }) {
     let cancelado = false;
     getReportesServicios(token, periodo)
       .then((d) => { if (!cancelado) setData(d); })
-      .catch((e) => { if (!cancelado) setError(e.message); })
+      .catch((e) => { if (!cancelado) setError(textoError(e)); })
       .finally(() => { if (!cancelado) setCargando(false); });
     return () => { cancelado = true; };
   }, [periodo, token, version]);

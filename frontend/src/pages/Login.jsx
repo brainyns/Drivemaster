@@ -7,6 +7,7 @@ import Alerta from "../components/ui/Alerta";
 import RecuperarClave from "../components/auth/RecuperarClave";
 import { MENSAJE_SIN_CONEXION } from "../services/conexion";
 import "../css/Login.css";
+import { textoError } from "../utils/errores";
 
 const CORREO_VALIDO = /^\S+@\S+\.\S+$/;
 
@@ -55,6 +56,7 @@ export default function Login({
   const [recuperando, setRecuperando] = useState(false);
   const [avisoOk, setAvisoOk] = useState(null);
   const googleBtnRef = useRef(null);
+  const handleGoogleRef = useRef();
 
   const handleGoogleResponse = async (response) => {
     try {
@@ -63,18 +65,19 @@ export default function Login({
       const data = await googleLogin(response.credential);
       if (data && data.token) onLogin(data);
     } catch (err) {
-      setError(err.message || "Error al iniciar sesión con Google");
+      setError(textoError(err, "Error al iniciar sesión con Google"));
     } finally {
       setLoading(false);
     }
   };
+  handleGoogleRef.current = handleGoogleResponse;
 
   useEffect(() => {
     const pintarBoton = () => {
       if (!window.google?.accounts?.id || !googleBtnRef.current) return;
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
-        callback: handleGoogleResponse,
+        callback: (res) => handleGoogleRef.current?.(res),
       });
       window.google.accounts.id.renderButton(googleBtnRef.current, {
         theme: "outline",
@@ -125,7 +128,7 @@ export default function Login({
       const response = await login(correo, password);
       onLogin(response);
     } catch (err) {
-      setError(err.message || "Credenciales inválidas");
+      setError(textoError(err, "Credenciales inválidas"));
     } finally {
       setLoading(false);
     }

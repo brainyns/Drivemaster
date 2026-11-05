@@ -9,8 +9,9 @@ import java.util.regex.Pattern;
 
 /**
  * Reglas de un proveedor antes de guardarlo: nombre obligatorio (2 a 120 caracteres), correo con formato válido si
- * viene (ahí llega el PDF de cada compra) y NIT y teléfono de largo razonable. Limpia los espacios y deja en null lo
- * vacío. Si algo falla lanza DatosInvalidosException con el error de cada campo.
+ * viene (ahí llega el PDF de cada compra) y NIT y teléfono de largo razonable. Contacto, dirección y condiciones de
+ * pago son opcionales: de contado no lleva plazo y a crédito exige de 1 a {@value #DIAS_CREDITO_MAX} días. Limpia los
+ * espacios y deja en null lo vacío. Si algo falla lanza DatosInvalidosException con el error de cada campo.
  */
 public final class ValidacionProveedor {
 
@@ -19,6 +20,9 @@ public final class ValidacionProveedor {
     public static final int CORREO_MAX = 120;
     public static final int NIT_MAX = 20;
     public static final int TELEFONO_MAX = 20;
+    public static final int CONTACTO_MAX = 80;
+    public static final int DIRECCION_MAX = 160;
+    public static final int DIAS_CREDITO_MAX = 180;
 
     private static final Pattern CORREO = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private static final Pattern TELEFONO = Pattern.compile("^\\+?[\\d\\s()-]{7,20}$");
@@ -51,6 +55,24 @@ public final class ValidacionProveedor {
         }
         if (p.getTelefono() != null && (p.getTelefono().length() > TELEFONO_MAX || !TELEFONO.matcher(p.getTelefono()).matches())) {
             errores.put("telefono", "Escribe un teléfono válido: solo números, espacios y el signo +.");
+        }
+
+        // Opcionales: contacto comercial, dirección y condiciones de pago
+        p.setContacto(limpio(p.getContacto()));
+        p.setDireccion(limpio(p.getDireccion()));
+        p.setCondicionPago(limpio(p.getCondicionPago()));
+        if (p.getContacto() != null && p.getContacto().length() > CONTACTO_MAX) {
+            errores.put("contacto", "El contacto no puede pasar de " + CONTACTO_MAX + " caracteres.");
+        }
+        if (p.getDireccion() != null && p.getDireccion().length() > DIRECCION_MAX) {
+            errores.put("direccion", "La dirección no puede pasar de " + DIRECCION_MAX + " caracteres.");
+        }
+        if (p.getCondicionPago() == null || "CONTADO".equals(p.getCondicionPago())) {
+            p.setDiasCredito(null); // de contado (o sin dato) no hay plazo
+        } else if (!"CREDITO".equals(p.getCondicionPago())) {
+            errores.put("condicionPago", "Elige contado o crédito.");
+        } else if (p.getDiasCredito() == null || p.getDiasCredito() < 1 || p.getDiasCredito() > DIAS_CREDITO_MAX) {
+            errores.put("diasCredito", "Escribe el plazo del crédito: entre 1 y " + DIAS_CREDITO_MAX + " días.");
         }
         if (!errores.isEmpty()) throw new DatosInvalidosException(errores);
         return p;

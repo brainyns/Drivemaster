@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.Dinero;
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.Despacho;
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.Informes;
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.Liquidacion;
@@ -10,6 +11,7 @@ import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.StockBajo;
 import com.drivemaster.drivemaster.dto.tienda.InformesTiendaDTO.VentasPorMes;
 import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.model.Producto;
+import com.drivemaster.drivemaster.dto.comun.DesgloseLiquidacionDTO;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import org.bson.Document;
@@ -51,10 +53,12 @@ public class InformesTiendaService {
 
     private final MongoTemplate mongo;
     private final RepartoPagoRepository repartoRepository;
+    private final ParametrosMarketplace parametros;
 
-    public InformesTiendaService(MongoTemplate mongo, RepartoPagoRepository repartoRepository) {
+    public InformesTiendaService(MongoTemplate mongo, RepartoPagoRepository repartoRepository, ParametrosMarketplace parametros) {
         this.mongo = mongo;
         this.repartoRepository = repartoRepository;
+        this.parametros = parametros;
     }
 
     public Informes informes(String tiendaId, int meses) {
@@ -73,7 +77,28 @@ public class InformesTiendaService {
                 .withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
         return new Informes(ahora, m, ventasPorMes(tiendaId, m, hasta, desde), productosMasVendidos(tiendaId, desde),
                 stockBajo(tiendaId), pedidosPorEstado(tiendaId, desde), despacho(tiendaId, desdeLocal, ahora),
-                liquidacion(tiendaId));
+                liquidacion(tiendaId), dinero(tiendaId, desdeLocal));
+    }
+
+    // ─── El dinero del periodo: venta, IVA, comisión y lo que queda ─────────────
+
+    private Dinero dinero(String tiendaId, LocalDateTime desde) {
+        var desglose = DesgloseLiquidacionDTO.Resumen.de(
+                repartoRepository.desgloseDeNegocioDesde(RepartoPago.TIENDA, tiendaId, desde), parametros.comisionRetenida());
+        List<String> ids = repartoRepository.pedidosDeNegocioDesde(RepartoPago.TIENDA, tiendaId, desde);
+        return new Dinero(desglose, ivaDePedidos(ids));
+    }
+
+    /** Suma del IVA de los pedidos. null si alguno no guardó su IVA: no se inventa la cifra. */
+    private Double ivaDePedidos(List<String> ids) {
+        if (ids == null || ids.isEmpty()) return 0.0;
+        double iva = 0;
+        List<PedidoTienda> pedidos = mongo.find(Query.query(Criteria.where("_id").in(ids)), PedidoTienda.class);
+        for (PedidoTienda p : pedidos) {
+            if (p.getIva() == null) return null;
+            iva += p.getIva();
+        }
+        return (double) Math.round(iva);
     }
 
     // ─── Ventas por mes ──────────────────────────────────────────────────────
@@ -202,7 +227,8 @@ public class InformesTiendaService {
                 default -> { }
             }
         }
-        return new Liquidacion(espera, lEspera, listo, lListo, pagado, lPagado, anulado);
+        return new Liquidacion(espera, lEspera, listo, lListo, pagado, lPagado, anulado, DesgloseLiquidacionDTO.Resumen.de(
+                repartoRepository.desgloseDeNegocio(RepartoPago.TIENDA, tiendaId), parametros.comisionRetenida()));
     }
 
     // ─── Utilidades ──────────────────────────────────────────────────────────

@@ -27,7 +27,7 @@ public final class NegociosPlataformaDTO {
                               Long productos, Long productosActivos, Long ordenes, Long ordenesEntregadas,
                               List<String> datosPorCompletar, String logoUrl) {}
 
-    public record NegociosRespuesta(ConsultasPlataformaDTO.Pagina<NegocioFila> negocios, Map<String, Long> porEstado) {}
+    public record NegociosRespuesta(com.drivemaster.drivemaster.dto.comun.Pagina<NegocioFila> negocios, Map<String, Long> porEstado) {}
 
     /** Lo que el ADMIN necesita para decidir: quién es y qué datos faltan. */
     public record NegocioPendiente(String tipo, String id, String nombre, String ciudad, String direccion, String nit,

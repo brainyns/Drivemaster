@@ -10,6 +10,11 @@ import java.util.List;
 
 public interface OrdenServicioRepository extends MongoRepository<OrdenServicio, String> {
 
+    /** Entregadas con el pago sin habilitar: el cliente ya confirmó (falló al habilitarlo) o venció su plazo. */
+    @Query("{ 'flujo': ?0, 'estado': ?1, 'liquidacionLiberada': { $ne: true }, "
+            + "$or: [ { 'recepcionConfirmada': true }, { 'autoconfirmaDespuesDe': { $lt: ?2 } } ] }")
+    List<OrdenServicio> entregasPorLiberar(String flujo, String estado, LocalDateTime ahora);
+
     List<OrdenServicio> findByUsuarioIdOrderByFechaCreacionDesc(String usuarioId);
 
     List<OrdenServicio> findByTallerIdOrderByFechaCreacionDesc(String tallerId);

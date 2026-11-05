@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { productosPlataforma } from "../services/plataformaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import EncabezadoOrden from "../components/ui/EncabezadoOrden";
+import SelectorOrden from "../components/ui/SelectorOrden";
+import { propsPaginacion, textoOrden } from "../components/ui/reglasTabla";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -11,8 +15,17 @@ import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/listas-plataforma.css";
 import { etiquetaCategoria } from "../utils/categorias";
+import { textoError } from "../utils/errores";
 
 const TAMANO = 20;
+
+/** Columnas que se pueden ordenar (lista blanca de PlataformaConsultasService.ORDEN_PRODUCTOS). */
+const ORDENES = [
+  { campo: "nombre", label: "Producto", asc: "(A–Z)", desc: "(Z–A)" },
+  { campo: "precio", label: "Precio" },
+  { campo: "stock", label: "Stock" },
+  { campo: "fecha", label: "Ingreso", asc: "(más antiguos primero)", desc: "(más nuevos primero)" },
+];
 const cop = (n) => (n == null ? "—" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n));
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
@@ -48,6 +61,7 @@ export default function ProductosPlataforma({ token }) {
   const [q, setQ] = useState("");
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
   const [pagina, setPagina] = useState(0);
+  const [orden, setOrden] = useState(null); // null: los más nuevos primero
   const [datos, setDatos] = useState(null); // { productos: { items, total }, tiendas }
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -64,16 +78,16 @@ export default function ProductosPlataforma({ token }) {
   const cargar = useCallback(async (vivo = () => true) => {
     setCargando(true);
     try {
-      const r = await productosPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO });
+      const r = await productosPlataforma(token, { ...filtros, q, page: pagina, size: TAMANO, sort: textoOrden(orden) });
       if (!vivo()) return;
       setDatos(r);
       setError(null);
     } catch (e) {
-      if (vivo()) setError(e.message);
+      if (vivo()) setError(textoError(e));
     } finally {
       if (vivo()) setCargando(false);
     }
-  }, [token, filtros, q, pagina]);
+  }, [token, filtros, q, pagina, orden]);
 
   useEffect(() => {
     let activo = true;
@@ -83,13 +97,12 @@ export default function ProductosPlataforma({ token }) {
 
   const reintentar = async () => { setReintentando(true); await cargar(); setReintentando(false); };
   const poner = (cambio) => { setFiltros((f) => ({ ...f, ...cambio })); setPagina(0); };
+  const ordenar = (o) => { setOrden(o); setPagina(0); };
   const limpiar = () => { setBusqueda(""); setQ(""); setFiltros(FILTROS_INICIALES); setPagina(0); };
   const hayFiltros = q !== "" || Object.values(filtros).some((v) => v !== "");
 
   const lista = datos?.productos;
   const items = lista?.items || [];
-  const total = lista?.total || 0;
-  const paginas = Math.max(1, Math.ceil(total / TAMANO));
 
   return (
     <div className="ss-panel--plataforma pp-root lst-root">
@@ -140,19 +153,20 @@ export default function ProductosPlataforma({ token }) {
         )
       ) : (
         <>
+          <SelectorOrden id="prp-orden" opciones={ORDENES} orden={orden} onOrdenar={ordenar} porDefecto="Más nuevos primero" />
           <div className={`ui-card ui-table-card${cargando ? " pp-actualizando" : ""}`} aria-busy={cargando}>
             <div className="ui-table-wrap">
               <table className="ui-table ui-table--tarjetas">
                 <caption className="ui-sr">Productos de todas las tiendas</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Producto</th>
+                    <EncabezadoOrden campo="nombre" orden={orden} onOrdenar={ordenar}>Producto</EncabezadoOrden>
                     <th scope="col">Tienda</th>
                     <th scope="col">Categoría</th>
-                    <th scope="col" className="pp-num">Stock</th>
-                    <th scope="col" className="pp-num">Precio</th>
+                    <EncabezadoOrden campo="stock" orden={orden} onOrdenar={ordenar} className="pp-num">Stock</EncabezadoOrden>
+                    <EncabezadoOrden campo="precio" orden={orden} onOrdenar={ordenar} className="pp-num">Precio</EncabezadoOrden>
                     <th scope="col">Estado</th>
-                    <th scope="col">Ingreso</th>
+                    <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Ingreso</EncabezadoOrden>
                   </tr>
                 </thead>
                 <tbody>
@@ -169,7 +183,11 @@ export default function ProductosPlataforma({ token }) {
                             </span>
                           </span>
                         </td>
-                        <td data-label="Tienda">{p.tienda || <span className="pp-tenue">Sin tienda</span>}</td>
+                        <td data-label="Tienda">
+                          {p.tienda || <span className="pp-tenue">Sin tienda</span>}
+                          {/* Producto activo pero de una tienda en pausa o archivada: el cliente no lo ve */}
+                          {p.tienda && p.tiendaActiva === false && <span className="pp-sub">Tienda inactiva: no se ve en el catálogo</span>}
+                        </td>
                         <td data-label="Categoría">{etiquetaCategoria(p.categoria) || <span className="pp-tenue">Sin categoría</span>}</td>
                         <td data-label="Stock" className={`pp-num${sinStock ? " lst-agotado" : ""}`}>
                           {p.tipo === "ENCARGO" ? "Bajo pedido" : (p.stock ?? 0)}
@@ -184,18 +202,7 @@ export default function ProductosPlataforma({ token }) {
               </table>
             </div>
           </div>
-          <nav className="pp-paginas" aria-label="Páginas de productos">
-            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + items.length} de {total}</span>
-            {paginas > 1 && (
-              <span className="pp-paginas__botones">
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
-                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
-                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
-                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-              </span>
-            )}
-          </nav>
+          <Paginacion {...propsPaginacion(datos?.productos)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de productos" />
         </>
       )}
     </div>

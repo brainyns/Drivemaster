@@ -21,6 +21,16 @@ public class Proveedor {
     private String telefono;
     private String correo;
 
+    // Si al correo le llega el PDF de cada compra. null = sí (los proveedores anteriores al interruptor lo recibían).
+    // Sin correo no se envía nada, valga lo que valga.
+    private Boolean enviarPdfCompras;
+
+    // Opcionales: a quién se le habla, dónde queda y cómo se le paga (CONTADO o CREDITO a diasCredito días)
+    private String contacto;
+    private String direccion;
+    private String condicionPago;
+    private Integer diasCredito;
+
     // Tienda dueña del proveedor. null = registro anterior a que las tiendas llevaran sus propios proveedores.
     private String tiendaId;
 }

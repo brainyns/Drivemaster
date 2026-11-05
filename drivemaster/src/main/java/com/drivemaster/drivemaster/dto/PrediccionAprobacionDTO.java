@@ -16,7 +16,10 @@ public class PrediccionAprobacionDTO {
     private Double probabilidadRechazo;
     private String prediccion;
     private String nivelRiesgo; // BAJO, MEDIO, ALTO
+    private Double scoreLogit;
+    private Double umbralDecision;
+    private List<FactorExplicativoDTO> factoresFavor;
+    private List<FactorExplicativoDTO> factoresRiesgo;
     private List<String> recomendaciones;
     private String origen; // PYTHON_API o FALLBACK_JAVA
 }
-

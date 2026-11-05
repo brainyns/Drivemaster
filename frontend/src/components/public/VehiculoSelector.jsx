@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { misVehiculos } from "../../services/vehiculoService";
 import Icon from "./Icon";
 import "../../css/vehiculo-selector.css";
+import { textoError } from "../../utils/errores";
 
 /**
  * Panel "¿Qué vehículo tienes?" del mockup, conectado a la API real.
@@ -33,7 +34,7 @@ export default function VehiculoSelector({
         if (vivo) setRespuesta({ token, lista: Array.isArray(data) ? data : [], error: null });
       })
       .catch((e) => {
-        if (vivo) setRespuesta({ token, lista: [], error: e.message });
+        if (vivo) setRespuesta({ token, lista: [], error: textoError(e) });
       });
 
     return () => {

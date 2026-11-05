@@ -3,9 +3,14 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ESTADOS_PEDIDO, SIN_PLAN, actividadNegocio, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
-  perfilNegocio, urgentesDashboard,
+  ALERTAS_PEDIDO, ENTREGAS_PEDIDO, ESTADOS_NEGOCIO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, SIN_PLAN, chipsAlerta, conteoGrupos, filaConAlerta,
+  hayFiltrosPedidos, actividadNegocio, sePuedePagar, textoConcepto, referenciaLinea, textoCuenta, tarjetasLiquidaciones, fueraDelRango, avisoModo, faltaParaResolver, fechaLinea, porRevisar, barras, chipRevision, estadosConPedidos, filtrosInicialesPedidos, refPedido, conteoRevision, estadoNegocio, filtrarRevision, filtrosInicialesNegocios,
+  perfilNegocio, urgentesDashboard, desgloseFila, avisoLiquidacion,
 } from "../src/pages/admin/plataformaAdmin.js";
+import { unaALaVez } from "../src/utils/unaALaVez.js";
+import {
+  BENEFICIARIO, ESTADOS_REPARTO, notaReparto, textoEntrega, textoVehiculo, ubicacionNegocio,
+} from "../src/pages/admin/detalleAdmin.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
@@ -30,7 +35,14 @@ test("Dashboard: lo urgente va primero (aprobaciones y pedidos con problema) y s
   assert.equal(u[2].preset, "atrasados");
   assert.ok(u.every((x) => x.estado && x.accion && x.tono));
   assert.deepEqual(urgentesDashboard({}), []);
-  assert.match(urgentesDashboard({ reembolsosPendientes: 2, montoReembolsosPendientes: 150000 })[0].detalle, /150\.000/);
+  // Los contadores de despachos por vencer y de pedidos sin retirar llevan al monitor con su filtro
+  const semaforo = urgentesDashboard({ despachosAtrasados: 1, despachosPorVencer: 2, retirosSinRecoger: 1 });
+  assert.deepEqual(semaforo.map((x) => [x.clave, x.preset, x.tono]),
+    [["atrasados", "atrasados", "error"], ["por-vencer", "por-vencer", "aviso"], ["sin-retirar", "sin-retirar", "aviso"]]);
+  assert.equal(semaforo[1].titulo, "2 despachos por vencer");
+  assert.equal(semaforo[2].titulo, "1 pedido sin retirar");
+  // Los reembolsos los avisa solo el banner del Inicio: no se repiten en lo urgente
+  assert.deepEqual(urgentesDashboard({ reembolsosPendientes: 2, montoReembolsosPendientes: 150000 }), []);
 });
 
 test("Dashboard: las barras siguen el orden de los estados, dejan al final los desconocidos y suman 100%", () => {
@@ -71,15 +83,18 @@ test("Tiendas y talleres: estado con texto, la pausa de un aprobado, actividad y
   assert.equal(SIN_PLAN, "SIN_PLAN", "el mismo valor que entiende el backend");
 });
 
-test("Tiendas y talleres: sistema compartido, filtros por tipo, estado y plan, y carga, vacío y error con Reintentar", () => {
+test("Tiendas y talleres: sistema compartido, filtros por tipo y estado (sin planes), y carga, vacío y error con Reintentar", () => {
   const p = usaSistemaCompartido("NegociosPlataforma.jsx", ["EncabezadoPagina", "<LogoNegocio", "url={n.logoUrl}", "<Calificacion",
     "ChipEstado", "BarraProgreso", "<Alerta", "onReintentar", "<EstadoVacio", "<Esqueleto", "<Campo", "ui-buscador",
-    "ui-table--tarjetas", 'aria-label="Tipo de negocio"', 'aria-label="Estado de aprobación"', "SIN_PLAN", "Limpiar filtros"]);
+    "ui-table--tarjetas", 'aria-label="Tipo de negocio"', 'aria-label="Estado de aprobación"', "Limpiar filtros"]);
   // Las mismas llamadas de siempre
   for (const llamada of ["negociosPlataforma(", "resolverAprobacionTaller", "resolverAprobacionTienda", "activarDesactivarTaller",
-    "activarDesactivarTienda", "activarPlan(", "listarPlanes("]) {
+    "activarDesactivarTienda"]) {
     assert.ok(p.includes(llamada), `falta ${llamada}`);
   }
+  // Las suscripciones están apagadas (suscripciones.habilitadas=false): ni planes ni filtro por plan
+  for (const plan of ["activarPlan(", "listarPlanes(", "SIN_PLAN"]) assert.ok(!p.includes(plan), `sobra ${plan}`);
+  assert.equal(ESTADOS_NEGOCIO.ARCHIVADO.label, "Archivado");
   assert.ok(!p.includes("toFixed("), "la calificación la muestra Calificacion (con «Nuevo»)");
   assert.ok(leer("../src/App.jsx").includes("filtroInicial={idSeleccionado} />") && leer("../src/pages/DashboardPlataforma.jsx").includes('ir("negocios", "TALLER")'));
 });
@@ -106,10 +121,12 @@ test("Aprobaciones: sistema compartido, detalle con Dato y confirmación con Cam
   const p = usaSistemaCompartido("Aprobaciones.jsx", ["EncabezadoPagina", "ChipEstado", "<LogoNegocio", "<Alerta", "onReintentar",
     "<EstadoVacio", "<Esqueleto", "<Campo", "<Dato", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado de revisión"',
     'aria-label="Tipo de negocio"', "DrawerAdmin", "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
-  for (const llamada of ["listarTalleres(token)", "listarTiendas(token)", "listarPlanes(token)", "resolverAprobacionTaller",
-    "resolverAprobacionTienda", "activarDesactivarTaller", "activarDesactivarTienda", "activarPlan("]) {
+  for (const llamada of ["listarTalleres(token)", "listarTiendas(token)", "resolverAprobacionTaller",
+    "resolverAprobacionTienda", "activarDesactivarTaller", "activarDesactivarTienda"]) {
     assert.ok(p.includes(llamada), `falta ${llamada}`);
   }
+  // Se aprueba sin plan: DriveMaster cobra solo la comisión
+  assert.ok(p.includes("{ aprobado: true }") && !p.includes("listarPlanes(") && !p.includes("planCodigo"));
 });
 
 test("Pedidos y envíos: estados en el orden del pedido con tono, referencia corta y atrasados desde el dashboard", () => {
@@ -117,8 +134,99 @@ test("Pedidos y envíos: estados en el orden del pedido con tono, referencia cor
   assert.equal(ESTADOS_PEDIDO.PENDIENTE.label, "Por despachar");
   assert.equal(ESTADOS_PEDIDO.NO_ENTREGADO.tono, "error");
   assert.equal(refPedido("66f0a1b2c3d4e5f6a7b8c9d0"), "#B8C9D0");
-  assert.equal(filtrosInicialesPedidos("atrasados").atrasados, true);
-  assert.equal(filtrosInicialesPedidos({ abrir: "x" }).atrasados, false);
+  assert.equal(filtrosInicialesPedidos("atrasados").alerta, "ATRASADO");
+  assert.equal(filtrosInicialesPedidos("por-vencer").alerta, "POR_VENCER");
+  assert.equal(filtrosInicialesPedidos("sin-retirar").alerta, "SIN_RETIRAR");
+  assert.equal(filtrosInicialesPedidos({ abrir: "x" }).alerta, "");
+});
+
+test("Pedidos y envíos: los 9 estados en 6 grupos con contador, sin repetir ni dejar ninguno por fuera", () => {
+  assert.deepEqual(GRUPOS_PEDIDO.map((g) => g.label), ["Todos", "Por despachar", "En camino", "Por retirar", "Completados", "Cancelados"]);
+  const agrupados = GRUPOS_PEDIDO.flatMap((g) => g.estados);
+  assert.deepEqual([...agrupados].sort(), Object.keys(ESTADOS_PEDIDO).sort(), "cada estado en un grupo");
+  assert.equal(new Set(agrupados).size, agrupados.length, "ningún estado en dos grupos");
+
+  const c = conteoGrupos({ PENDIENTE: 2, EN_PREPARACION: 1, DESPACHADO: 4, LISTO_PARA_RETIRAR: 3, RETIRADO: 5, ENTREGADO: 6, NO_ENTREGADO: 1 });
+  assert.deepEqual(c, { "": 22, POR_DESPACHAR: 3, EN_CAMINO: 4, POR_RETIRAR: 3, COMPLETADOS: 11, CANCELADOS: 1 });
+  assert.equal(conteoGrupos({})[""], 0);
+  assert.deepEqual(ENTREGAS_PEDIDO.map((x) => x.label), ["Envío y retiro", "Envío a domicilio", "Retiro en tienda"]);
+});
+
+test("Pedidos y envíos: avisos que filtran, tres listas en una fila y Limpiar filtros solo si hay alguno", () => {
+  assert.equal(hayFiltrosPedidos({ estado: "", tiendaId: "", entrega: "", alerta: "" }, { desde: "", hasta: "" }), false);
+  assert.equal(hayFiltrosPedidos({ alerta: "POR_VENCER" }, {}), true);
+  assert.equal(hayFiltrosPedidos({}, { desde: "2026-10-01" }), true);
+  assert.equal(hayFiltrosPedidos({ estado: "CANCELADOS" }, {}), true);
+
+  const p = leer("../src/pages/PedidosEnvios.jsx");
+  // Avisos: clic para filtrar, otro para quitar; el de «por vencer» solo si hay (o si está puesto)
+  assert.ok(p.includes("alternarAlerta = (valor) => poner({ alerta: filtros.alerta === valor ? \"\" : valor })"));
+  assert.ok(p.includes('verAviso("POR_VENCER", datos.porVencer)') && p.includes("{datos.porVencer} por vencer"));
+  assert.ok(p.includes("ped-alerta--aviso"), "por vencer y sin retirar en amarillo");
+  assert.ok(p.includes("problemas de envío abiertos"), "se mantiene el aviso de problemas de envío");
+  // Estados agrupados, listas desplegables y Limpiar
+  assert.ok(p.includes("GRUPOS_PEDIDO.map") && !p.includes("estadosConPedidos("));
+  for (const id of ['id="ped-tienda"', 'id="ped-entrega"', 'id="ped-fecha"']) assert.ok(p.includes(id), `falta ${id}`);
+  assert.ok(p.includes("<SelectorFechas") && !p.includes("<FiltroFechas"), "la fecha es una lista desplegable");
+  assert.ok(p.includes("{hayFiltros && (") && p.includes("Limpiar filtros"));
+  // Igual que antes: página 1 al cambiar algo, refresco cada 30 s y el orden
+  assert.ok(p.includes("const poner = (cambio) => { setPagina(0);") && p.includes("REFRESCO_MS = 30000") && p.includes("<EncabezadoOrden"));
+
+  const s = leer("../src/components/ui/SelectorFechas.jsx");
+  for (const pieza of ['<option value="">Todas</option>', "RANGOS_RAPIDOS", '"personalizado"', 'type="date"', "errorRango"]) {
+    assert.ok(s.includes(pieza), `SelectorFechas: falta ${pieza}`);
+  }
+  // En 390 px: avisos y estados se deslizan en una línea; las listas una debajo de otra
+  const css = leer("../src/css/pedidos-plataforma.css");
+  assert.match(css, /@media \(max-width: 600px\) \{\s*\.ped-deslizable \{\s*flex-wrap: nowrap; overflow-x: auto;/);
+  assert.match(css, /\.ped-selectores \{ flex-direction: column;/);
+  assert.equal((p.match(/ped-deslizable/g) || []).length, 2, "los avisos y los estados");
+});
+
+test("Pedidos y envíos: semáforo de despacho y de retiro con los mismos colores (verde, amarillo, rojo)", () => {
+  const plazo = "2026-10-28T12:00:00";
+  assert.deepEqual(chipsAlerta({ semaforoDespacho: "VERDE", plazoDespacho: plazo }).map((c) => c.tono), ["ok"]);
+  assert.match(chipsAlerta({ semaforoDespacho: "AMARILLO", plazoDespacho: plazo })[0].texto, /^Por vencer · plazo/);
+  assert.deepEqual(chipsAlerta({ semaforoDespacho: "ROJO", plazoDespacho: plazo }).map((c) => c.tono), ["error"]);
+  // Sin retirar: el mismo texto que ve la tienda, y a los 15 días en revisión
+  assert.deepEqual(chipsAlerta({ semaforoRetiro: "VERDE", diasSinRetirar: 1 }), [{ tono: "ok", texto: "Esperando que lo recojan" }]);
+  assert.deepEqual(chipsAlerta({ semaforoRetiro: "AMARILLO", diasSinRetirar: 4 }), [{ tono: "aviso", texto: "Sin retirar hace 4 días" }]);
+  assert.deepEqual(chipsAlerta({ semaforoRetiro: "ROJO", diasSinRetirar: 16 }),
+    [{ tono: "error", texto: "Sin retirar hace 16 días · en revisión" }]);
+  assert.deepEqual(chipsAlerta({ problemaAbierto: true }), [{ tono: "error", texto: "Problema de envío" }]);
+  assert.deepEqual(chipsAlerta({}), []);
+  assert.equal(filaConAlerta({ semaforoDespacho: "VERDE" }), false);
+  assert.equal(filaConAlerta({ semaforoDespacho: "AMARILLO" }), true);
+  assert.deepEqual(ALERTAS_PEDIDO.map((a) => a.valor), ["", "POR_VENCER", "ATRASADO", "SIN_RETIRAR"]);
+
+  const p = leer("../src/pages/PedidosEnvios.jsx");
+  // La columna usa el semáforo; el filtro de alerta son los avisos de arriba (ya no hay una fila «Alerta» aparte)
+  assert.ok(p.includes("chipsAlerta(p)") && p.includes('alternarAlerta("POR_VENCER")') && !p.includes('aria-label="Alerta"'),
+    "la columna y los avisos usan el semáforo");
+  assert.ok(p.includes("puedeVerDetalle ?") && p.includes("<DetallePlataforma"), "solo el SUPERADMIN abre el detalle");
+  assert.ok(leer("../src/App.jsx").includes('puedeVerDetalle={user?.rol === "SUPERADMIN"}'));
+});
+
+test("Vistas de detalle: reparto, entrega y ubicación con nombres claros, y se abren desde las tablas", () => {
+  assert.equal(BENEFICIARIO.PLATAFORMA, "Comisión DriveMaster");
+  assert.equal(ESTADOS_REPARTO.PENDIENTE.label, "Falta que se entregue");
+  assert.equal(textoEntrega({ tipo: "RETIRO" }), "Retiro en la tienda");
+  assert.equal(textoEntrega(null), "Sin definir");
+  assert.match(notaReparto({ pedidosDelPago: 2 }, [{ delPago: true }]), /cubre 2 pedidos/);
+  assert.equal(notaReparto({ pedidosDelPago: 1 }, [{ delPago: true }]), null);
+  assert.equal(textoVehiculo({ descripcion: "Mazda 2 2018", placa: "ABC123", kilometraje: 45000 }), "Mazda 2 2018 · ABC123 · 45.000 km");
+  assert.deepEqual(ubicacionNegocio({ direccion: "Cra 7", ciudad: "Cartagena", latitud: 10.4, longitud: -75.5 }),
+    { texto: "Cra 7, Cartagena", mapa: "https://www.google.com/maps?q=10.4%2C-75.5" });
+  assert.equal(ubicacionNegocio({}).mapa, null);
+
+  for (const [archivo, objetivo] of [["ClientesPlataforma.jsx", 'tipo: "cliente"'], ["NegociosPlataforma.jsx", 'tipo: "negocio"']]) {
+    const p = leer(`../src/pages/${archivo}`);
+    assert.ok(p.includes("<DetallePlataforma") && p.includes(objetivo) && p.includes("pp-nombre-boton"), archivo);
+  }
+  const d = leer("../src/components/admin/DetallePlataforma.jsx");
+  for (const t of ["Línea de tiempo", "Pago en Wompi", "Reparto", "Vehículos", "Solicitudes de diagnóstico", "Ubicación", "Totales"]) {
+    assert.ok(d.includes(t), `falta ${t}`);
+  }
 });
 
 test("Pedidos y envíos: sistema compartido, alertas que filtran y carga, vacío y error con Reintentar", () => {
@@ -135,13 +243,171 @@ test("Problemas de envío: sistema compartido, decisión con motivo en Campo y l
   assert.ok(p.includes("deshabilitado={!motivo.trim()}"), "sin motivo no se puede decidir");
 });
 
+test("Liquidaciones: dos envíos seguidos hacen una sola petición, y el candado se suelta con la respuesta", async () => {
+  const candado = { current: false };
+  let peticiones = 0;
+  let responder;
+  const pago = () => { peticiones += 1; return new Promise((r) => { responder = r; }); };
+
+  const primero = unaALaVez(candado, pago);
+  await unaALaVez(candado, pago);
+  assert.equal(peticiones, 1, "antes de que React deshabilite el botón");
+  responder();
+  await primero;
+  assert.equal(candado.current, false);
+
+  await assert.rejects(unaALaVez(candado, async () => { throw new Error("409"); }));
+  assert.equal(candado.current, false, "un error también suelta el candado");
+});
+
+test("Liquidaciones: un 409 de una línea en pago o pagada muestra su estado, no un error", () => {
+  const pagada = avisoLiquidacion({ status: 409, estado: "LIQUIDADO", referencia: "WOMPI-86-AB" });
+  assert.equal(pagada.tono, "ok");
+  assert.match(pagada.texto, /^Pagado/);
+  assert.match(pagada.texto, /WOMPI-86-AB/);
+
+  const enCurso = avisoLiquidacion({ status: 409, estado: "PROCESANDO", message: "Este reparto se está liquidando" });
+  assert.equal(enCurso.tono, "info");
+  assert.match(enCurso.texto, /^Ya se está pagando/);
+
+  const sinConfirmar = avisoLiquidacion({ status: 409, estado: "PROCESANDO", sinConfirmar: true, message: "Wompi no confirmó el pago" });
+  assert.equal(sinConfirmar.tono, "aviso");
+  assert.equal(sinConfirmar.texto, "Wompi no confirmó el pago", "no se dice que se está pagando si Wompi no lo confirmó");
+});
+
+test("Liquidaciones: sin respuesta no se afirma nada y se pide revisar antes de reintentar", () => {
+  const a = avisoLiquidacion({ name: "ErrorConexion", message: "x" });
+  assert.equal(a.tono, "aviso");
+  assert.match(a.texto, /pudo haber salido/);
+});
+
+test("Liquidaciones: lo que sí es un error sigue siéndolo", () => {
+  assert.equal(avisoLiquidacion({ status: 409, message: "Este reparto está anulado" }), null);
+  assert.equal(avisoLiquidacion({ status: 409, estado: "ANULADO" }), null);
+  assert.equal(avisoLiquidacion({ status: 422, estado: "LIQUIDADO", message: "No se pudo liquidar: banco" }), null);
+  assert.equal(avisoLiquidacion({ status: 500, message: "Fallo" }), null);
+});
+
+test("Liquidaciones: el diálogo no sigue ofreciendo pagar una línea que ya no se puede pagar", () => {
+  const p = leer("../src/pages/Liquidaciones.jsx");
+  assert.ok(p.includes("(!esRepartos || sePuedePagar(f))"));
+  assert.ok(p.includes("const marcar = (id) => unaALaVez(enviando,") && p.includes("const resolver = (id) => unaALaVez(enviando,"));
+  assert.ok(leer("../src/services/liquidacionService.js").match(/LIMITE_LIQUIDAR_MS = (\d+)/)[1] > 75000, "más que el peor caso de Wompi");
+});
+
+test("Liquidaciones: solo se paga lo listo o fallido, nunca lo que espera la entrega, aunque sea una línea antigua", () => {
+  for (const estado of ["POR_LIQUIDAR", "FALLIDO"]) assert.equal(sePuedePagar({ estado }), true, estado);
+  for (const estado of ["PROCESANDO", "LIQUIDADO", "ANULADO"]) assert.equal(sePuedePagar({ estado }), false, estado);
+  for (const liquidacionPorEvento of [true, false, null, undefined]) {
+    assert.equal(sePuedePagar({ estado: "PENDIENTE", liquidacionPorEvento }), false, String(liquidacionPorEvento));
+  }
+  const p = leer("../src/pages/Liquidaciones.jsx");
+  assert.ok(p.includes("Esperando entrega"));
+  assert.ok(!p.includes("liquidacionPorEvento"), "la pantalla no decide por antigüedad");
+});
+
+test("Liquidaciones: el concepto de una compra de catálogo no es Cotización", () => {
+  assert.equal(textoConcepto("CATALOGO"), "Venta de catálogo");
+  assert.equal(textoConcepto("COTIZACION"), "Cotización");
+  assert.equal(textoConcepto("DIAGNOSTICO"), "Diagnóstico");
+  assert.equal(textoConcepto("OTRO"), "OTRO");
+  assert.equal(textoConcepto(null), "—");
+});
+
+test("Liquidaciones: la referencia es el pedido si lo hay; las compras de catálogo ya no salen en #—", () => {
+  assert.deepEqual(referenciaLinea({ pedidoTiendaId: "6ac6e641aabbcc" }), { tipo: "pedido", id: "6ac6e641aabbcc", texto: "#AABBCC" });
+  assert.deepEqual(referenciaLinea({ pedidoTiendaId: "pedido1a2b3c", ordenServicioId: "orden9" }).tipo, "pedido", "la línea de la tienda es de su pedido");
+  assert.deepEqual(referenciaLinea({ ordenServicioId: "orden9x8y7z" }), { tipo: "orden", id: "orden9x8y7z", texto: "#9X8Y7Z" });
+  assert.deepEqual(referenciaLinea({ compraCatalogoId: "compra112233" }), { tipo: null, id: "compra112233", texto: "#112233" }, "una compra entera no tiene detalle");
+  assert.deepEqual(referenciaLinea({}), { tipo: null, id: null, texto: "—" });
+});
+
+const resumenLiq = {
+  porPagar: { cantidad: 1, monto: 90000 }, enEspera: { cantidad: 18, monto: 1033620 }, fallidas: { cantidad: 0, monto: 0 },
+  enProceso: { cantidad: 0, monto: 0 }, pagadoMes: { cantidad: 20, monto: 1582325 }, pagadoMesSimulado: 1532325,
+};
+
+test("Liquidaciones: tres tarjetas; lo que espera la entrega no se presenta como por pagar y lo simulado va aparte", () => {
+  const [pagar, espera, pagado] = tarjetasLiquidaciones(resumenLiq);
+  assert.deepEqual([pagar.titulo, pagar.pie, pagar.estado, pagar.tono], ["Por pagar", "1 pago listo", "POR_LIQUIDAR", "accion"]);
+  assert.deepEqual([espera.titulo, espera.pie, espera.estado, espera.tono], ["Falta que se entregue", "18 pagos", "PENDIENTE", undefined]);
+  assert.equal(pagado.estado, "LIQUIDADO");
+  assert.ok(pagado.pie.startsWith("20 pagos · ") && pagado.pie.endsWith(" simulados"), pagado.pie);
+  assert.equal(tarjetasLiquidaciones({ ...resumenLiq, pagadoMesSimulado: 0 })[2].pie, "20 pagos");
+  assert.equal(tarjetasLiquidaciones({ ...resumenLiq, porPagar: { cantidad: 0, monto: 0 } })[0].tono, undefined);
+  assert.deepEqual(tarjetasLiquidaciones(null), []);
+});
+
+test("Liquidaciones: lo que falló o sigue sin confirmar se avisa aunque esté dentro de Más", () => {
+  const conProblemas = { ...resumenLiq, fallidas: { cantidad: 2, monto: 1 }, enProceso: { cantidad: 1, monto: 1 } };
+  assert.deepEqual(porRevisar(conProblemas, "POR_LIQUIDAR").map((r) => r.texto), ["2 pagos fallaron", "1 pago sin confirmar"]);
+  assert.deepEqual(porRevisar(conProblemas, "FALLIDO").map((r) => r.estado), ["PROCESANDO"], "en su propia lista no se repite");
+  assert.deepEqual(porRevisar(resumenLiq, "POR_LIQUIDAR"), []);
+  assert.deepEqual(porRevisar(null, "POR_LIQUIDAR"), []);
+});
+
+test("Liquidaciones: empieza en Este mes, sin nada guardado, y las tarjetas no cambian las fechas", () => {
+  const p = leer("../src/pages/Liquidaciones.jsx");
+  assert.ok(p.includes('useState(() => rangoRapido("mes"))'));
+  assert.ok(!/localStorage|sessionStorage/.test(p), "el rango no se guarda en el navegador");
+  assert.ok(p.includes('verPagadoDelMes() : elegirEstado(t.estado)'), "una tarjeta no deja la lista en Todo");
+  assert.ok(p.includes("fechasAntesDeVerTodo.current ??= fechas"), "Ver todo es de un momento: al volver a un estado sigue el rango");
+});
+
+test("Liquidaciones en celular: el chat no tapa la lista y la página no deja franja gris", () => {
+  const chat = leer("../src/components/chat/chat.css");
+  assert.match(chat, /@media \(max-width: 760px\) \{\s*body:has\(\.liq-root\) \.chat-widget-container:not\(\.abierto\) \{ display: none; \}/);
+  const css = leer("../src/css/liquidaciones-plataforma.css");
+  assert.ok(css.includes(".app-content:has(.liq-root) { background: var(--ui-surface); }"));
+  assert.ok(!css.includes("--alto-header"), "--alto-header es la cabecera pública, no la del panel");
+});
+
+test("Liquidaciones: la fecha de la lista es corta y sin hora", () => {
+  assert.equal(fechaLinea("2026-10-28T09:30:00"), "28 oct 2026");
+  assert.equal(fechaLinea(null), "—");
+});
+
+test("Liquidaciones: la cuenta sale como Banco · Tipo · número enmascarado", () => {
+  assert.equal(textoCuenta({ banco: "Davivienda", tipoCuenta: "AHORROS", numero: "****3210" }), "Davivienda · Ahorros · ****3210");
+  assert.equal(textoCuenta({ banco: "Nequi", numero: "****1111" }), "Nequi · ****1111");
+  assert.equal(textoCuenta(null), "");
+});
+
+test("Liquidaciones: lo pendiente de meses anteriores no queda escondido por el rango", () => {
+  const mes = { desde: "2026-11-01", hasta: "2026-11-30" };
+  assert.equal(fueraDelRango("PENDIENTE", resumenLiq, 0, mes), 18, "el primer día del mes no desaparecen las 18 en espera");
+  assert.equal(fueraDelRango("POR_LIQUIDAR", resumenLiq, 1, mes), 0);
+  assert.equal(fueraDelRango("POR_LIQUIDAR", resumenLiq, 0, { desde: "", hasta: "" }), 0, "sin rango no falta nada");
+  assert.equal(fueraDelRango("LIQUIDADO", resumenLiq, 0, mes), 0, "lo pagado se filtra por su fecha");
+  assert.equal(fueraDelRango("PENDIENTE", null, 0, mes), 0);
+});
+
+test("Liquidaciones: el aviso grande es para lo que no mueve dinero; con dinero real la línea discreta lo dice", () => {
+  assert.equal(avisoModo({ modo: "WOMPI", dineroReal: true }).grande, false);
+  assert.ok(avisoModo({ modo: "WOMPI", dineroReal: true }).texto.startsWith("Dinero real"));
+  assert.ok(avisoModo({ modo: "MANUAL", dineroReal: true }).texto.startsWith("Dinero real"));
+  assert.equal(avisoModo({ modo: "WOMPI", dineroReal: false }).grande, true);
+  assert.ok(avisoModo({ modo: "WOMPI", dineroReal: false }).texto.includes("Sandbox"));
+  assert.ok(avisoModo({ modo: "SIMULADO", dineroReal: false }).texto.includes("simulado"));
+  assert.equal(avisoModo(null), null);
+  assert.equal(avisoModo({ modo: "WOMPI" }), null, "sin saberlo no se afirma nada");
+});
+
+test("Liquidaciones: la salida manual exige decisión, motivo y, si salió, la referencia", () => {
+  assert.ok(faltaParaResolver({}));
+  assert.ok(faltaParaResolver({ resultado: "FALLIDO", motivo: "corto" }));
+  assert.equal(faltaParaResolver({ resultado: "FALLIDO", motivo: "Revisado en el panel" }), null);
+  assert.ok(faltaParaResolver({ resultado: "LIQUIDADO", motivo: "Revisado en el panel", referencia: "  " }));
+  assert.equal(faltaParaResolver({ resultado: "LIQUIDADO", motivo: "Revisado en el panel", referencia: "REF-1" }), null);
+});
+
 test("Liquidaciones: sistema compartido, estados con texto y el número de transferencia obligatorio en modo manual", () => {
   const p = usaSistemaCompartido("Liquidaciones.jsx", ["EncabezadoPagina", "ChipEstado", "<Indicador", "<Alerta", "onReintentar",
     "<EstadoVacio", "<Esqueleto", "<Campo", "ui-table--tarjetas", 'aria-label="Tipo"', 'aria-label="Estado"', "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
-  for (const llamada of ["listarRepartos(token, estado)", "listarReembolsos(token, estado)", "liquidarReparto(token, id,", "marcarReembolsado(token, id,", "obtenerModo(token)"]) {
+  for (const llamada of ["repartosTabla(token, { estado, ...fechas, page: pagina, size: 20, sort: textoOrden(orden) })", "listarReembolsos(token, estado)", "liquidarReparto(token, id,", "marcarReembolsado(token, id,", "obtenerModo(token)"]) {
     assert.ok(p.includes(llamada), `falta ${llamada}`);
   }
-  assert.ok(p.includes("deshabilitado={esRepartos && esManual && !numero.trim()}"));
+  assert.ok(p.includes("deshabilitado={(esRepartos ? esManual : true) && !numero.trim()}"), "manual y reembolsos exigen el número");
 });
 
 test("Servicios: sistema compartido, cifras con Indicador y el formulario con Campo, sin cambiar las llamadas", () => {
@@ -158,15 +424,43 @@ test("Servicios: sistema compartido, cifras con Indicador y el formulario con Ca
 test("Productos: catálogo de solo lectura con el sistema compartido, los mismos filtros y el mismo endpoint", () => {
   const p = usaSistemaCompartido("ProductosPlataforma.jsx", ["EncabezadoPagina", "ChipEstado", "<Alerta", "onReintentar", "<EstadoVacio",
     "<Esqueleto", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado del producto"', '"sin-stock"', "nuevosDias", "tiendaId"]);
-  assert.ok(p.includes("productosPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO })"));
+  // Página, tamaño y orden van al servidor (formato común: page, size, sort)
+  assert.ok(p.includes("productosPlataforma(token, { ...filtros, q, page: pagina, size: TAMANO, sort: textoOrden(orden) })"));
   for (const accion of ["Editar", "Eliminar", "Nuevo producto"]) assert.ok(!p.includes(accion), `solo lectura: sobra ${accion}`);
 });
 
 test("Clientes: lista de solo lectura con el sistema compartido y sin datos personales de más", () => {
   const p = usaSistemaCompartido("ClientesPlataforma.jsx", ["EncabezadoPagina", "ChipEstado", "<LogoNegocio", "<Alerta", "onReintentar",
     "<EstadoVacio", "<Esqueleto", "ui-buscador", "ui-table--tarjetas", 'aria-label="Estado de la cuenta"']);
-  assert.ok(p.includes("clientesPlataforma(token, { ...filtros, q, pagina, tamano: TAMANO })"));
+  assert.ok(p.includes("clientesPlataforma(token, { ...filtros, q, page: pagina, size: TAMANO, sort: textoOrden(orden) })"));
   for (const dato of ["telefono", "direccion", "documento"]) assert.ok(!p.includes(`c.${dato}`), `no muestra ${dato}`);
+});
+
+test("Liquidaciones: bruto, comisión y neto de cada fila", () => {
+  const retenida = desgloseFila({ monto: 218000, montoBruto: 238000, comisionRetenida: 20000, comisionCalculada: 20000 }, true);
+  assert.equal(retenida.bruto, 238000);
+  assert.ok(retenida.comision.startsWith("− "), "lo descontado va con signo");
+  assert.equal(retenida.nota, null);
+
+  const apagada = desgloseFila({ monto: 238000, montoBruto: 238000, comisionRetenida: 0, comisionCalculada: 20000 }, false);
+  assert.equal(apagada.nota, "No se descuenta todavía");
+  assert.ok(!apagada.comision.startsWith("− "));
+
+  const anterior = desgloseFila({ monto: 118400 }, true);
+  assert.equal(anterior.bruto, 118400, "una línea anterior: bruto y neto son lo mismo");
+  assert.equal(anterior.comision, "—", "no se inventa una comisión que no se guardó");
+  assert.equal(anterior.nota, "No se descontó en este pago");
+
+  const p = leer("../src/pages/Liquidaciones.jsx");
+  for (const texto of ['data-label="Bruto"', 'data-label="Comisión"', '>Se transfiere</EncabezadoOrden>', 'etiqueta="Se transfiere"']) assert.ok(p.includes(texto), texto);
+});
+
+test("Reportes y dashboard: la comisión cobrada va separada de la informativa", () => {
+  const p = leer("../src/pages/ReportesPlataforma.jsx");
+  for (const texto of ['titulo="Cobrada"', 'titulo="Por cobrar"', 'titulo="Sin id de Wompi"', "Comisión informativa", "marcarSaldoCobrado(token, marcando.id)"]) assert.ok(p.includes(texto), texto);
+  const d = leer("../src/pages/DashboardPlataforma.jsx");
+  assert.ok(d.includes('titulo="Comisión cobrada"') && d.includes('titulo="Comisión informativa"'));
+  assert.ok(d.includes("El cobro está apagado"), "con la bandera apagada no aparenta haber cobrado");
 });
 
 test("Reportes de plataforma: sistema compartido, comisión con Indicador y la comisión del dashboard abre su reporte", () => {
@@ -175,6 +469,7 @@ test("Reportes de plataforma: sistema compartido, comisión con Indicador y la c
   for (const llamada of ["reporteVentasPlataforma(", "reporteProductosPlataforma(", "reporteClientesPlataforma(",
     "reporteServiciosPlataforma(", "reporteComisionPlataforma("]) assert.ok(p.includes(llamada), `falta ${llamada}`);
   assert.ok(leer("../src/pages/DashboardPlataforma.jsx").includes('ir("reportes-plataforma", "comision")'));
+  assert.ok(p.includes('titulo="Saldos a favor pendientes"') && p.includes("datos.saldosAFavor?.total"), "el total de lo que hay que cobrarles a los negocios");
   assert.ok(leer("../src/App.jsx").includes("<ReportesPlataforma key={idSeleccionado || \"ventas\"} token={token} filtroInicial={idSeleccionado} />"));
 });
 

@@ -1,47 +1,56 @@
 import { useEffect, useState } from "react";
 import { getToken } from "../../services/authService";
 import { informesTaller } from "../../services/informesTallerService";
-import { ESTADOS, formatPrecio } from "../../components/servicio/estadosServicio";
+import { formatPrecio } from "../../components/servicio/estadosServicio";
+import { ESTADOS_TALLER, faseDe } from "../../components/servicio/estadosTaller";
+import { duracionMinutos, plural, textoPeriodo } from "../../utils/formato";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
+import InfoAyuda from "../../components/ui/InfoAyuda";
+import Glosario from "../../components/ui/Glosario";
+import BandaDinero from "../../components/ui/BandaDinero";
+import EsteMes from "../../components/ui/EsteMes";
+import { bandaDinero, loTuyoDelMes } from "../../utils/bandaDinero";
 import Indicador from "../../components/ui/Indicador";
 import Alerta from "../../components/ui/Alerta";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Estrellas from "../../components/ui/Estrellas";
 import BarraProgreso from "../../components/ui/BarraProgreso";
+import { ResumenDinero } from "../../components/servicio/DesgloseDinero";
+import { notaTotalPeriodo } from "../../components/servicio/reglasDesglose";
+import Grafico from "../../components/ui/Grafico";
+import { etiquetaMes, pesosCorto } from "../../components/ui/escalaGrafico";
 import "../../css/informes-taller.css";
+import { textoError } from "../../utils/errores";
 
 const PERIODOS = [3, 6, 12];
 // Menos calificaciones que esto: se muestran, pero se avisa que el promedio aún dice poco.
 const MINIMO_REPRESENTATIVO = 5;
 
-const horas = (h) => {
-  if (h == null) return "—";
-  if (h < 1) return `${Math.round(h * 60)} min`;
-  return h < 48 ? `${h.toLocaleString("es-CO", { maximumFractionDigits: 1 })} h` : `${Math.round(h / 24)} d`;
-};
-
 const decimal = (n) => n.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-/** Tarjeta de un informe: título y contenido (ui-card de ui.css). */
-function Tarjeta({ id, titulo, children }) {
+/** Tarjeta de un informe: título, la ayuda "?" de una línea (si la hay) y contenido (ui-card de ui.css). */
+function Tarjeta({ id, titulo, ayuda = null, children }) {
   return (
     <section className="ui-card ti-tarjeta" aria-labelledby={id}>
-      <div className="ui-card__header"><h2 id={id} className="ui-card__titulo">{titulo}</h2></div>
+      <div className="ui-card__header"><h2 id={id} className="ui-card__titulo">{titulo}{ayuda}</h2></div>
       <div className="ui-card__cuerpo ti-tarjeta__cuerpo">{children}</div>
     </section>
   );
 }
 
-/** Barras horizontales con el nombre y el valor en texto; la barra solo acompaña. */
+/**
+ * Barras horizontales con el nombre y el valor en texto; la barra solo acompaña. fase (opcional, tercer valor de
+ * cada fila) la pinta con el color de esa fase. Un valor 0 deja la pista vacía.
+ */
 function Barras({ filas }) {
   const tope = Math.max(1, ...filas.map(([, n]) => n));
   return (
     <ul className="ti-barras">
-      {filas.map(([nombre, n]) => (
-        <li key={nombre} className="ti-barras__fila">
+      {filas.map(([nombre, n, fase]) => (
+        <li key={nombre} className={`ti-barras__fila${fase ? ` ui-fase--${fase}` : ""}`}>
           <span className="ti-barras__nombre">{nombre}</span>
           <span className="ti-barras__pista" aria-hidden="true">
-            <span className="ti-barras__barra" style={{ width: `${(n * 100) / tope}%` }} />
+            {n > 0 && <span className="ti-barras__barra" style={{ width: `${(n * 100) / tope}%` }} />}
           </span>
           <span className="ti-barras__valor">{n}</span>
         </li>
@@ -52,7 +61,7 @@ function Barras({ filas }) {
 
 function ServiciosPorEstado({ servicios }) {
   const filas = Object.entries(servicios.porEstado).filter(([, n]) => n > 0)
-    .map(([estado, n]) => [ESTADOS[estado]?.label || estado, n]);
+    .map(([estado, n]) => [ESTADOS_TALLER[estado]?.label || estado, n, faseDe(estado)]);
   return (
     <Tarjeta id="ti-servicios" titulo="Servicios por estado">
       {filas.length === 0 ? (
@@ -72,45 +81,59 @@ function Dinero({ titulo, monto }) {
       <h3 className="ti-dinero__titulo">{titulo}</h3>
       <dl className="ti-dinero__cifras">
         <div>
-          <dt>Liquidado</dt>
+          <dt>Ya te pagaron</dt>
           <dd>
             <strong className="ui-precio">{formatPrecio(monto.liquidado)}</strong>
             <span>{monto.lineasLiquidadas} {monto.lineasLiquidadas === 1 ? "pago" : "pagos"}</span>
           </dd>
         </div>
         <div>
-          <dt>Pendiente</dt>
+          <dt>Falta que se entregue</dt>
           <dd>
             <strong className="ui-precio">{formatPrecio(monto.pendiente)}</strong>
             <span>{monto.lineasPendientes} {monto.lineasPendientes === 1 ? "pago" : "pagos"}</span>
           </dd>
         </div>
       </dl>
-      {total > 0 && <BarraProgreso valor={(monto.liquidado * 100) / total} etiqueta={`${titulo}: parte liquidada`} tono="ok" />}
+      {total > 0 && <BarraProgreso valor={(monto.liquidado * 100) / total} etiqueta={`${titulo}: parte pagada`} tono="ok" />}
     </div>
   );
 }
 
-function Ingresos({ ingresos }) {
-  const { manoDeObra, diagnostico, anulado, anteriores } = ingresos;
-  const hay = manoDeObra.liquidado + manoDeObra.pendiente + diagnostico.liquidado + diagnostico.pendiente > 0;
+function Ingresos({ ingresos, periodo }) {
+  const { manoDeObra, diagnostico, anulado, anteriores, desglose } = ingresos;
+  // Las cuentas anteriores al inventario del taller no traen esta cifra
+  const repuestos = ingresos.repuestosTaller || { liquidado: 0, pendiente: 0, lineasLiquidadas: 0, lineasPendientes: 0 };
+  const conRepuestos = repuestos.liquidado + repuestos.pendiente > 0;
+  const conDiagnostico = diagnostico.liquidado + diagnostico.pendiente > 0;
+  const hay = manoDeObra.liquidado + manoDeObra.pendiente > 0 || conDiagnostico || conRepuestos;
   return (
-    <Tarjeta id="ti-ingresos" titulo="Ingresos por mano de obra">
+    <Tarjeta id="ti-ingresos" titulo="Ingresos del taller"
+      ayuda={<InfoAyuda texto="Ya te pagaron: ya te llegó la transferencia. Falta que se entregue: el pago se habilita cuando el vehículo se entrega." />}>
+      {hay && <ResumenDinero resumen={desglose} etiquetaVenta="Total generado" notaVenta={notaTotalPeriodo(ingresos)} />}
       {hay ? (
         <div className="ti-dineros">
-          <Dinero titulo="Mano de obra" monto={manoDeObra} />
-          <Dinero titulo="Diagnóstico" monto={diagnostico} />
+          <Dinero titulo={conRepuestos ? "Mano de obra" : "Resta de la cotización"} monto={manoDeObra} />
+          {conRepuestos && <Dinero titulo="Repuestos del taller" monto={repuestos} />}
+          {/* Sin cobros de diagnóstico, dos $0 no dicen nada: se rotula sin costo */}
+          {conDiagnostico ? <Dinero titulo="Diagnóstico" monto={diagnostico} /> : (
+            <div className="ti-dinero">
+              <h3 className="ti-dinero__titulo">Diagnóstico</h3>
+              <p className="ti-nota">Sin costo: tus diagnósticos no han generado cobros.</p>
+            </div>
+          )}
         </div>
       ) : (
         <p className="ti-vacio">
-          Todavía no tienes pagos repartidos. La mano de obra queda pendiente cuando el cliente paga la cotización y se
-          habilita al entregar el vehículo.
+          No hay pagos en {periodo}. La mano de obra se habilita cuando el cliente paga la cotización y el vehículo se
+          entrega.
         </p>
       )}
       <p className="ti-nota">
-        Es el total de todos tus servicios, no solo del periodo. “Pendiente” es lo que aún no se te ha pagado.
-        {anulado > 0 && ` Hay ${formatPrecio(anulado)} anulados que no cuentan.`}
+        El total generado suma lo pagado por diagnóstico y cotización, con IVA.{conRepuestos ? " Tus repuestos van aparte de la mano de obra, aunque se paguen juntos." : ""} Las demás cifras {periodo} están en lo que recibes. “Ya te pagaron” cuenta por la fecha en que se te pagó y “Falta que se entregue” por la fecha en que pagó el cliente; cada pago está en uno solo de los dos.
+        {anulado > 0 && ` Hay ${formatPrecio(anulado)} cancelados que no cuentan.`}
       </p>
+      <Glosario claves={["Adelanto del diagnóstico", "Resta de la cotización", "Ya te pagaron", "Falta que se entregue", "Comisión"]} />
       {anteriores.ordenes > 0 && (
         <p className="ti-nota ti-nota--aparte">
           Aparte, del flujo anterior: {anteriores.ordenes} {anteriores.ordenes === 1 ? "orden finalizada" : "órdenes finalizadas"} por{" "}
@@ -126,16 +149,18 @@ function TiempoRespuesta({ tiempo }) {
     <Tarjeta id="ti-tiempo" titulo="Tiempo de respuesta">
       {tiempo.muestra === 0 ? (
         <p className="ti-vacio">
-          Aún no hay revisiones que medir. Se calcula desde que se te asigna una solicitud hasta que pasa a revisión.
+          Aún no hay respuestas que medir. Se calcula desde que se te asigna una solicitud hasta que la aceptas y
+          agendas la revisión, o la rechazas.
         </p>
       ) : (
         <>
           <dl className="ti-duo">
-            <div><dt>Promedio</dt><dd>{horas(tiempo.horasPromedio)}</dd></div>
-            <div><dt>Mediana</dt><dd>{horas(tiempo.horasMediana)}</dd></div>
+            <div><dt>Promedio</dt><dd>{duracionMinutos(tiempo.minutosPromedio)}</dd></div>
+            <div><dt>Mediana</dt><dd>{duracionMinutos(tiempo.minutosMediana)}</dd></div>
           </dl>
           <p className="ti-nota">
-            Basado en {tiempo.muestra} {tiempo.muestra === 1 ? "solicitud" : "solicitudes"} del periodo, desde la asignación hasta la revisión.
+            Basado en {tiempo.muestra} {tiempo.muestra === 1 ? "solicitud" : "solicitudes"} del periodo, desde la asignación
+            hasta que respondes (aceptas y agendas, o rechazas).
           </p>
         </>
       )}
@@ -143,15 +168,39 @@ function TiempoRespuesta({ tiempo }) {
   );
 }
 
-function Calificacion({ calificacion }) {
+/** Un mes por columna (los meses sin nada van en 0). Pesos y conteos en gráficos separados: cada uno con su eje. */
+function MesAMes({ serie }) {
+  const etiquetas = serie.map((m) => etiquetaMes(m.mes));
+  const detalles = serie.map((m) => etiquetaMes(m.mes, true));
+  return (
+    <Tarjeta id="ti-mesames" titulo="Mes a mes">
+      <h3 className="ti-dinero__titulo">Ingresos ya pagados</h3>
+      <Grafico titulo="Ingresos ya pagados por mes" etiquetas={etiquetas} detalles={detalles}
+        series={[{ nombre: "Ingresos ya pagados", valores: serie.map((m) => m.ingresosLiquidados) }]}
+        formato={formatPrecio} formatoEje={pesosCorto} />
+      <h3 className="ti-dinero__titulo">Solicitudes y servicios entregados</h3>
+      <Grafico titulo="Solicitudes y servicios entregados por mes" etiquetas={etiquetas} detalles={detalles}
+        series={[
+          { nombre: "Solicitudes", valores: serie.map((m) => m.solicitudes) },
+          { nombre: "Entregados", valores: serie.map((m) => m.entregados) },
+        ]} alto={120} />
+      <p className="ti-nota">
+        Ingresos: mano de obra, diagnóstico y repuestos de tu inventario, en el mes en que se te pagaron. Solicitudes, en el mes en que llegaron;
+        entregados, en el mes de la entrega.
+      </p>
+    </Tarjeta>
+  );
+}
+
+function Calificacion({ calificacion, periodo }) {
   const filas = Object.entries(calificacion.distribucion).sort(([a], [b]) => b - a)
     .map(([estrellas, n]) => [`${estrellas} ${estrellas === "1" ? "estrella" : "estrellas"}`, n]);
   return (
     <Tarjeta id="ti-calificacion" titulo="Calificación de los clientes">
       {calificacion.total === 0 ? (
         <p className="ti-vacio">
-          Todavía ningún cliente te ha calificado. El cliente califica al confirmar que recibió su vehículo, así que
-          aparecerá aquí después de tus primeras entregas. No mostramos un promedio hasta que exista.
+          Ningún cliente te calificó {periodo}. El cliente califica al confirmar que recibió su vehículo, así que
+          aparecerá aquí después de tus entregas. No mostramos un promedio hasta que exista.
         </p>
       ) : (
         <>
@@ -194,7 +243,7 @@ export default function TallerInformes() {
     const id = setTimeout(() => {
       informesTaller(token, meses)
         .then((datos) => { if (!cancelado) setEstado({ clave, datos, error: null }); })
-        .catch((e) => { if (!cancelado) setEstado({ clave, datos: null, error: e.message }); });
+        .catch((e) => { if (!cancelado) setEstado({ clave, datos: null, error: textoError(e) }); });
     }, 0);
     return () => { cancelado = true; clearTimeout(id); };
   }, [token, meses, clave]);
@@ -202,6 +251,7 @@ export default function TallerInformes() {
   const cargando = estado.clave !== clave;
   const d = !cargando ? estado.datos : null;
   const entregados = d?.servicios.porEstado.ENTREGADA ?? 0;
+  const periodo = d ? textoPeriodo(d.periodoDesde, d.mesesConsultados) : "";
 
   return (
     <div className="ti-root">
@@ -209,7 +259,7 @@ export default function TallerInformes() {
         titulo="Informes"
         descripcion="Qué hiciste, cuánto te corresponde y cómo te califican tus clientes."
         acciones={(
-          <div className="ui-filtros" role="group" aria-label="Periodo de los servicios y tiempos">
+          <div className="ui-filtros" role="group" aria-label="Periodo de los informes">
             {PERIODOS.map((m) => (
               <button key={m} type="button" className="ui-chip" aria-pressed={meses === m} onClick={() => setMeses(m)}>
                 {m} meses
@@ -218,6 +268,9 @@ export default function TallerInformes() {
           </div>
         )}
       />
+
+      <EsteMes version={intento} detalle="Lo tuyo, después de IVA y comisión"
+        cargar={() => informesTaller(token, 1).then((m) => loTuyoDelMes(m.ingresos?.desglose, m.ingresos?.iva))} />
 
       {!cargando && estado.error && (
         <Alerta onReintentar={() => setIntento((n) => n + 1)}>{estado.error}</Alerta>
@@ -236,24 +289,31 @@ export default function TallerInformes() {
         <>
           <section aria-labelledby="ti-resumen">
             <h2 id="ti-resumen" className="ui-sr">Resumen del periodo</h2>
+            <p className="ti-periodo">Todas las cifras {periodo}.</p>
+            <BandaDinero titulo={`Tu dinero ${periodo}`} banda={bandaDinero(d.ingresos.desglose, d.ingresos.iva)} />
             <div className="ui-indicadores ti-indicadores">
               <Indicador icono="tool" titulo="Servicios" valor={d.servicios.total}
                 pie={`${entregados} ${entregados === 1 ? "entregado" : "entregados"} en ${d.mesesConsultados} meses`} />
-              <Indicador titulo="Mano de obra liquidada" valor={formatPrecio(d.ingresos.manoDeObra.liquidado)} tono="ok"
-                pie={`${formatPrecio(d.ingresos.manoDeObra.pendiente)} pendiente`} />
-              <Indicador icono="clock" titulo="Respuesta promedio" valor={horas(d.tiempoRespuesta.horasPromedio)}
-                pie={d.tiempoRespuesta.muestra > 0 ? `${d.tiempoRespuesta.muestra} medidas` : "Sin revisiones aún"} />
+              {/* Mano de obra y repuestos por separado: cada uno con lo que ya te pagaron */}
+              <Indicador titulo="Mano de obra" valor={formatPrecio(d.ingresos.manoDeObra.liquidado + d.ingresos.manoDeObra.pendiente)} tono="ok"
+                pie={`Ya te pagaron ${formatPrecio(d.ingresos.manoDeObra.liquidado)}`} />
+              <Indicador titulo="Repuestos" valor={formatPrecio((d.ingresos.repuestosTaller?.liquidado || 0) + (d.ingresos.repuestosTaller?.pendiente || 0))}
+                pie={`Ya te pagaron ${formatPrecio(d.ingresos.repuestosTaller?.liquidado || 0)}`} />
               <Indicador icono="star" titulo="Calificación"
                 valor={d.calificacion.promedio == null ? "Nuevo" : decimal(d.calificacion.promedio)}
-                pie={d.calificacion.total > 0 ? `${d.calificacion.total} de clientes` : "Sin calificaciones aún"} />
+                pie={d.calificacion.total > 0 ? `${plural(d.calificacion.total, "calificación", "calificaciones")} de clientes en ${d.mesesConsultados} meses` : "Sin calificaciones en el periodo"} />
             </div>
           </section>
 
           <div className="ti-rejilla">
             <ServiciosPorEstado servicios={d.servicios} />
-            <Ingresos ingresos={d.ingresos} />
-            <TiempoRespuesta tiempo={d.tiempoRespuesta} />
-            <Calificacion calificacion={d.calificacion} />
+            <Ingresos ingresos={d.ingresos} periodo={periodo} />
+            {/* Columna izquierda: el tiempo de respuesta es corto y la serie llena el espacio junto a la calificación */}
+            <div className="ti-columna">
+              <TiempoRespuesta tiempo={d.tiempoRespuesta} />
+              <MesAMes serie={d.serieMensual} />
+            </div>
+            <Calificacion calificacion={d.calificacion} periodo={periodo} />
           </div>
         </>
       )}

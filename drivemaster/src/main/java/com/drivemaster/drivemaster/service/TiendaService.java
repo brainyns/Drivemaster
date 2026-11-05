@@ -1,6 +1,7 @@
 package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.AprobacionRequest;
+import com.drivemaster.drivemaster.dto.CuentaBancariaDTO;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
 import com.drivemaster.drivemaster.dto.TiendaDTO;
 import com.drivemaster.drivemaster.model.Tienda;
@@ -23,8 +24,14 @@ public interface TiendaService {
 
     TiendaDTO actualizarMiTienda(String correoUsuario, RegistroNegocioRequest request);
 
+    /** Guarda y valida los datos de la cuenta bancaria de la tienda para dispersión de pagos. */
+    TiendaDTO guardarCuentaBancaria(String correoUsuario, CuentaBancariaDTO dto);
+
     /** Solo el teléfono de la tienda de la sesión (celular o fijo colombiano, ver TelefonoColombia). */
     TiendaDTO actualizarTelefono(String correoUsuario, String telefono);
+
+    /** Reemplaza el horario por días de la tienda (mismas reglas que el del taller) y regenera el texto que ve el cliente. */
+    TiendaDTO guardarHorario(String correoUsuario, java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> franjas);
 
     /** Tienda del usuario, solo si ya fue aprobada y está activa (403 en otro caso). */
     Tienda obtenerOperativaPorUsuario(String correoUsuario);

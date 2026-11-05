@@ -1,4 +1,5 @@
 import { apiFetch } from "./http";
+import { consultaTabla } from "../components/ui/reglasTabla";
 const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/pedidos-tienda`;
 
 function headers(token) {
@@ -28,6 +29,15 @@ export async function misPedidosTienda(token) {
   return handle(res, "No se pudieron cargar los pedidos");
 }
 
+/**
+ * Pedidos de la tienda paginados en el servidor: { pedidos: Pagina, conteo }. Parámetros: pestana, q, desde, hasta
+ * (AAAA-MM-DD), page, size y sort ("fecha,desc"). misPedidosTienda sigue con la lista completa.
+ */
+export async function pedidosTiendaTabla(token, parametros) {
+  const res = await apiFetch(`${BASE}/mios/tabla${consultaTabla(parametros)}`, { headers: headers(token) });
+  return handle(res, "No se pudieron cargar los pedidos");
+}
+
 /** Solo encargos: la tienda ya está consiguiendo el repuesto (PENDIENTE → EN_PREPARACION). */
 export function prepararPedido(token, id) {
   return enviar(token, "PATCH", `${BASE}/${id}/preparar`, null, "No se pudo iniciar la preparación");
@@ -42,6 +52,12 @@ export function noPuedoDespachar(token, id, tipoMotivo, detalle) {
   return enviar(token, "PATCH", `${BASE}/${id}/no-despachar`, { tipoMotivo, detalle }, "No se pudo registrar");
 }
 
+/** Venta, comisión y lo que recibe la tienda por un pedido suyo. */
+export async function liquidacionDePedido(token, pedidoId) {
+  const res = await apiFetch(`${BASE}/${pedidoId}/liquidacion`, { headers: headers(token) });
+  return handle(res, "No se pudo cargar el pago de este pedido");
+}
+
 // ─── Por orden (cliente, taller, ADMIN) ────────────────────────────────────
 
 export async function pedidosDeOrden(token, ordenId) {
@@ -49,8 +65,10 @@ export async function pedidosDeOrden(token, ordenId) {
   return handle(res, "No se pudieron cargar los pedidos");
 }
 
-export function confirmarRepuestosRecibidos(token, ordenId) {
-  return enviar(token, "POST", `${BASE}/orden/${ordenId}/recibidos`, null, "No se pudo confirmar la recepción");
+/** confirmarFaltantes: el taller sigue sin las piezas de una tienda que no despachó (obligatorio si hay alguna). */
+export function confirmarRepuestosRecibidos(token, ordenId, pedidoIds, confirmarFaltantes = false) {
+  return enviar(token, "POST", `${BASE}/orden/${ordenId}/recibidos`, { pedidoIds, confirmarFaltantes },
+    "No se pudo confirmar la recepción");
 }
 
 // ─── Compras del catálogo (retiro con código) ──────────────────────────────
@@ -75,4 +93,16 @@ export async function problemasDeEnvio(token) {
 /** resolucion: "CONFIRMAR_ENTREGA" | "REEMBOLSAR"; el motivo escrito es obligatorio. */
 export function resolverProblemaEnvio(token, id, resolucion, motivo) {
   return enviar(token, "POST", `${BASE}/${id}/problema/resolver`, { resolucion, motivo }, "No se pudo resolver el problema");
+}
+
+// ─── ADMIN: retiros que nadie recoge (15 días o más) ──────────────────────
+
+export async function retirosSinRecoger(token) {
+  const res = await apiFetch(`${BASE}/retiros-sin-recoger`, { headers: headers(token) });
+  return handle(res, "No se pudieron cargar los retiros sin recoger");
+}
+
+/** decision: "SEGUIR_ESPERANDO" | "REEMBOLSO"; el motivo escrito es obligatorio. Nada se reembolsa solo. */
+export function resolverRetiroSinRecoger(token, id, decision, motivo) {
+  return enviar(token, "POST", `${BASE}/${id}/retiro/resolver`, { decision, motivo }, "No se pudo registrar la decisión");
 }

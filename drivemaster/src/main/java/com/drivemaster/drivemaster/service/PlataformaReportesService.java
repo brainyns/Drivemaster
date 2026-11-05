@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.dto.plataforma.DashboardPlataformaDTO;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ClienteCompras;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ClientesConMasCompras;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ComisionNeta;
@@ -7,6 +8,8 @@ import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.MesComis
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.MesVenta;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ProductoMasVendido;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ProductosMasVendidos;
+import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.SaldoAFavor;
+import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.SaldosAFavor;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ServiciosPorTaller;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.TallerServicios;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.TiendaVentas;
@@ -18,6 +21,7 @@ import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.model.Taller;
 import com.drivemaster.drivemaster.model.Usuario;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
+import com.drivemaster.drivemaster.repository.mysql.ReembolsoRepository;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
 import org.bson.Document;
 import org.springframework.data.domain.Sort;
@@ -57,10 +61,22 @@ public class PlataformaReportesService {
 
     private final MongoTemplate mongo;
     private final RepartoPagoRepository repartoRepository;
+    private final ReembolsoRepository reembolsoRepository;
+    private final ParametrosMarketplace parametros;
+    // Opcional para no cambiar el constructor que usan las pruebas: sin él, el dinero que pasó se muestra en 0
+    private com.drivemaster.drivemaster.repository.mysql.PagoRepository pagoRepository;
 
-    public PlataformaReportesService(MongoTemplate mongo, RepartoPagoRepository repartoRepository) {
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setPagoRepository(com.drivemaster.drivemaster.repository.mysql.PagoRepository pagoRepository) {
+        this.pagoRepository = pagoRepository;
+    }
+
+    public PlataformaReportesService(MongoTemplate mongo, RepartoPagoRepository repartoRepository,
+                                     ReembolsoRepository reembolsoRepository, ParametrosMarketplace parametros) {
         this.mongo = mongo;
         this.repartoRepository = repartoRepository;
+        this.reembolsoRepository = reembolsoRepository;
+        this.parametros = parametros;
     }
 
     // ─── Ventas por tienda y por mes ─────────────────────────────────────────
@@ -215,11 +231,12 @@ public class PlataformaReportesService {
         // Inicio del primer mes en hora de Colombia, expresado en la hora del servidor (así se guardan las fechas)
         LocalDateTime desde = hasta.minusMonths(m - 1L).atDay(1).atStartOfDay(ZONA)
                 .withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
-        Map<String, double[]> porMes = new TreeMap<>(); // [registrada, anulada]
-        lista.forEach(mes -> porMes.put(mes, new double[2]));
+        Map<String, double[]> porMes = new TreeMap<>(); // [registrada, anulada, cobrada]
+        lista.forEach(mes -> porMes.put(mes, new double[3]));
         Map<String, Double> porConcepto = new TreeMap<>();
         for (RepartoPago r : repartoRepository.comisionDesde(desde)) {
-            if (r.getFechaCreacion() == null || r.getMonto() == null) continue;
+            // La retenida no es informativa: su cifra sale de las líneas de los negocios
+            if (r.getFechaCreacion() == null || r.getMonto() == null || RepartoPago.RETENIDA.equals(r.getEstado())) continue;
             String mes = mesEnColombia(r.getFechaCreacion()).toString();
             double[] acumulado = porMes.get(mes);
             if (acumulado == null) continue;
@@ -227,12 +244,29 @@ public class PlataformaReportesService {
             else acumulado[1] += -r.getMonto();
             porConcepto.merge(r.getConcepto() != null ? r.getConcepto() : "OTRO", r.getMonto(), Double::sum);
         }
+        // La cobrada cuenta en el mes en que se pagó el neto
+        for (RepartoPago r : repartoRepository.comisionCobradaDesde(desde)) {
+            LocalDateTime pagada = r.getFechaLiquidacion() != null ? r.getFechaLiquidacion() : r.getFechaCreacion();
+            double[] acumulado = pagada == null ? null : porMes.get(mesEnColombia(pagada).toString());
+            if (acumulado != null) acumulado[2] += r.getComisionRetenida();
+        }
         List<MesComision> filas = porMes.entrySet().stream()
-                .map(e -> new MesComision(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[0] - e.getValue()[1]))
+                .map(e -> new MesComision(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[0] - e.getValue()[1], e.getValue()[2]))
                 .toList();
         double registrada = filas.stream().mapToDouble(MesComision::registrada).sum();
         double anulada = filas.stream().mapToDouble(MesComision::anulada).sum();
-        return new ComisionNeta(ahora, filas, registrada, anulada, registrada - anulada, porConcepto);
+        return new ComisionNeta(ahora, filas, registrada, anulada, registrada - anulada, porConcepto,
+                DashboardPlataformaDTO.ComisionRetenida.de(repartoRepository.comisionRetenidaPorEstado()),
+                parametros.comisionRetenida(), saldosAFavor(),
+                pagoRepository == null ? 0 : pagoRepository.sumaMovidaMarketplaceDesde(desde));
+    }
+
+    private SaldosAFavor saldosAFavor() {
+        List<SaldoAFavor> items = reembolsoRepository.saldosAFavorPendientes().stream()
+                .map(b -> new SaldoAFavor(b.getId(), b.getSaldoAFavor(), b.getMotivo(), b.getReferenciaPago(), b.getFechaCreacion(),
+                        b.getSaldoDeudorNombre()))
+                .toList();
+        return new SaldosAFavor(items.stream().mapToDouble(SaldoAFavor::monto).sum(), items.size(), items);
     }
 
     // ─── Utilidades ──────────────────────────────────────────────────────────

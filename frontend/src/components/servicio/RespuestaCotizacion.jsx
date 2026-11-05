@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { textoError } from "../../utils/errores";
 
 const OPCIONES = [
   { accion: "APROBAR",  label: "Aprobar" },
@@ -18,11 +19,14 @@ const AYUDA = {
   RECHAZAR: "La solicitud se cierra. El diagnóstico ya pagado no se reembolsa.",
 };
 
+const AYUDA_SIN_SALDO = "El diagnóstico ya cubre esta cotización: no tienes nada por pagar. Al aprobar, el taller empieza el trabajo.";
+
 /**
  * Aprobar, pedir cambios o rechazar una cotización. onResponder(accion, motivo)
  * hace la llamada; accionInicial preselecciona la opción (enlace del correo).
+ * sinSaldo: el diagnóstico cubrió todo y aprobar no lleva a ningún pago.
  */
-export default function RespuestaCotizacion({ onResponder, accionInicial = null }) {
+export default function RespuestaCotizacion({ onResponder, accionInicial = null, sinSaldo = false }) {
   const [accion, setAccion] = useState(accionInicial);
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState(null);
@@ -35,7 +39,7 @@ export default function RespuestaCotizacion({ onResponder, accionInicial = null 
     try {
       await onResponder(accion, motivo.trim() || null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
       setEnviando(false);
     }
   };
@@ -55,7 +59,7 @@ export default function RespuestaCotizacion({ onResponder, accionInicial = null 
 
       {accion && (
         <>
-          <p className="ss-meta">{AYUDA[accion]}</p>
+          <p className="ss-meta">{accion === "APROBAR" && sinSaldo ? AYUDA_SIN_SALDO : AYUDA[accion]}</p>
           {accion !== "APROBAR" && (
             <>
               <label className="ss-meta" htmlFor="ct-motivo">

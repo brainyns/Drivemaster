@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getToken } from "../services/authService";
 import { listarMecanicos } from "../services/tallerService";
 import { obtenerHorario } from "../services/horarioService";
@@ -6,30 +6,43 @@ import {
   aceptarSolicitudServicio, rechazarSolicitudServicio, asignarMecanicoSolicitud,
   iniciarInstalacion, marcarEnPruebas, marcarLista, marcarEntregada,
 } from "../services/solicitudServicioService";
-import { cotizacionesDeOrden } from "../services/cotizacionService";
-import { pedidosDeOrden, confirmarRepuestosRecibidos } from "../services/pedidoTiendaService";
+import { cotizacionesDeOrden, cotizacionesDelTaller } from "../services/cotizacionService";
+import { pedidosDeOrden } from "../services/pedidoTiendaService";
+import ConfirmarRecibidos from "../components/servicio/ConfirmarRecibidos";
+import { SIN_DESPACHO, TEXTO_SIN_DESPACHO, avisoRecibidos, hayQueConfirmar } from "../components/servicio/reglasRecibidos";
 import LineaTiempo from "../components/servicio/LineaTiempo";
 import DiagnosticoForm from "../components/servicio/DiagnosticoForm";
 import CotizacionForm from "../components/servicio/CotizacionForm";
 import CotizacionDetalle from "../components/servicio/CotizacionDetalle";
+import { ResumenOrdenTaller } from "../components/servicio/ResumenServicio";
 import {
-  ESTADOS, ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
+  ESTADOS_PEDIDO, URGENCIAS, ahoraParaInput, formatFecha, formatFechaHora, formatPrecio, refSolicitud,
 } from "../components/servicio/estadosServicio";
+import { ESTADOS_TALLER, estadoDeSolicitud, yaEstabaHecho } from "../components/servicio/estadosTaller";
+import { unaALaVez } from "../utils/unaALaVez";
 import { tiempoRelativo } from "./taller/resumenTaller";
 import { errorDiaCita, hora12, horasDeCita, semanaDesdeFranjas } from "./taller/horarioTaller";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../components/ui/reglasPaginacion";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
+import { avisar } from "../components/ui/avisar";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Pasos from "../components/ui/Pasos";
 import Campo from "../components/ui/Campo";
 import BarraAccionMovil from "../components/ui/BarraAccionMovil";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 import Icon from "../components/public/Icon";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/cotizacion.css";
 import "../css/solicitudes-taller.css";
+import "../css/marketplace.css"; // el diálogo de ConfirmarAccion
+import { claveOferta, vendedor } from "../components/servicio/reglasRepuestos";
+import { textoError } from "../utils/errores";
+import { kilometros } from "../utils/formato";
 
 const ETIQUETA_URGENCIA = Object.fromEntries(URGENCIAS.map((u) => [u.valor, u.label]));
 const TONO_URGENCIA = { BAJA: "ok", MEDIA: "info", ALTA: "aviso", CRITICA: "error" };
@@ -44,7 +57,7 @@ const enTaller = (s) => ["REPUESTOS_RECIBIDOS", "EN_INSTALACION", "LISTA"].inclu
 const FILTROS_SOLICITUDES = [
   { key: "responder", label: "Por responder", filtro: porResponder },
   { key: "agendadas", label: "Agendadas", filtro: agendada },
-  { key: "diagnosticadas", label: "Diagnosticadas", filtro: (s) => s.estado === "DIAGNOSTICADA" },
+  { key: "diagnosticadas", label: "Por cotizar", filtro: (s) => s.estado === "DIAGNOSTICADA" },
   { key: "cerradas", label: "Cerradas", filtro: (s) => ["CANCELADA", "RECHAZADA", "REASIGNADA"].includes(s.estado) },
 ];
 
@@ -81,6 +94,32 @@ const TEXTOS = {
   },
 };
 
+/** Chip de estado con el nombre y el color de fase del panel del taller (estadosTaller.js). */
+function ChipEstadoSolicitud({ s }) {
+  const { label, tono } = estadoDeSolicitud(s);
+  return <ChipEstado tono={tono}>{label}</ChipEstado>;
+}
+
+/**
+ * Montos de la cotización aprobada de un trabajo, en una línea: total, repuestos y mano de obra, cada uno con su IVA
+ * (así suman el total). Sin cotización (aún cargando o si falló la consulta) no muestra nada.
+ */
+function ResumenEconomico({ cotizacion: c }) {
+  if (!c) return null;
+  const repuestos = (c.subtotalRepuestos || 0) + (c.ivaRepuestos || 0);
+  const delTaller = (c.subtotalRepuestosTaller || 0) + (c.ivaRepuestosTaller || 0);
+  const manoObra = (c.subtotalManoObra || 0) + (c.ivaManoObra || 0);
+  return (
+    <span className="st-tarjeta__dinero">
+      <span>Total aprobado <strong className="ui-precio">{formatPrecio(c.total)}</strong></span>
+      {delTaller > 0 && <span>Tus repuestos <strong className="ui-precio">{formatPrecio(delTaller)}</strong></span>}
+      {repuestos > 0 && <span>{delTaller > 0 ? "De tiendas" : "Repuestos"} <strong className="ui-precio">{formatPrecio(repuestos)}</strong></span>}
+      <span>Mano de obra <strong className="ui-precio">{formatPrecio(manoObra)}</strong></span>
+      <span className="st-tarjeta__dinero-nota">IVA incluido</span>
+    </span>
+  );
+}
+
 const PASOS_TRABAJO = ["Repuestos", "Instalación", "Pruebas", "Lista", "Entregada"];
 
 /** Paso actual de un trabajo en el taller (0 = repuestos recibidos … 4 = entregada), o -1 si aún espera repuestos. */
@@ -103,13 +142,12 @@ function enEstadoDesde(s) {
 }
 
 /** Cotizaciones emitidas, pedidos a tiendas y recepción de repuestos. */
-function SeguimientoTaller({ token, solicitud, onCambio }) {
+function SeguimientoTaller({ token, solicitud, version, onConfirmarRecibidos }) {
   const [cotizaciones, setCotizaciones] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [error, setError] = useState(null);
-  const [procesando, setProcesando] = useState(false);
 
-  // Se recarga cada vez que cambia el estado de la solicitud
+  // Se recarga cada vez que cambia el estado de la solicitud, o al confirmar un pedido sin que la solicitud avance
   useEffect(() => {
     let cancelado = false;
     Promise.all([cotizacionesDeOrden(token, solicitud.id), pedidosDeOrden(token, solicitud.id)])
@@ -118,22 +156,9 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
         setCotizaciones(c || []);
         setPedidos(p || []);
       })
-      .catch((e) => { if (!cancelado) setError(e.message); });
+      .catch((e) => { if (!cancelado) setError(textoError(e)); });
     return () => { cancelado = true; };
-  }, [token, solicitud.id, solicitud.estado]);
-
-  const recibidos = async () => {
-    setProcesando(true);
-    setError(null);
-    try {
-      await confirmarRepuestosRecibidos(token, solicitud.id);
-      await onCambio();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setProcesando(false);
-    }
-  };
+  }, [token, solicitud.id, solicitud.estado, version]);
 
   const vigente = cotizaciones[0];
   return (
@@ -164,6 +189,9 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
                     {p.items.map((i) => `${i.cantidad} × ${i.productoNombre}`).join(", ")}
                     {p.diasEntrega ? ` · encargo hasta ${p.diasEntrega} días` : ""}
                   </span>
+                  {solicitud.estado === "REPUESTOS_PEDIDOS" && SIN_DESPACHO.includes(p.estado) && (
+                    <span className="ss-recibido__espera">{TEXTO_SIN_DESPACHO}</span>
+                  )}
                   {p.motivoNoDespacho && <span className="ss-meta">Motivo: {p.motivoNoDespacho}</span>}
                 </span>
                 <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />
@@ -172,10 +200,12 @@ function SeguimientoTaller({ token, solicitud, onCambio }) {
           </ul>
           {solicitud.estado === "REPUESTOS_PEDIDOS" && (
             <div className="ui-form-pie">
-              <button type="button" className="ui-btn ui-btn--primario" onClick={recibidos} disabled={procesando} aria-busy={procesando}>
-                {procesando ? "Confirmando…" : "Confirmar repuestos recibidos"}
+              <button type="button" className="ui-btn ui-btn--primario" onClick={onConfirmarRecibidos} disabled={!hayQueConfirmar(pedidos)}>
+                Confirmar repuestos recibidos
               </button>
-              <span className="ss-ayuda">Confírmalo cuando tengas los repuestos en el taller.</span>
+              <span className="ss-ayuda">
+                {hayQueConfirmar(pedidos) ? "Confírmalo cuando tengas los repuestos en el taller." : "Podrás confirmar cuando la tienda despache."}
+              </span>
             </div>
           )}
         </section>
@@ -200,6 +230,7 @@ export default function TallerSolicitudes({
   const FILTROS = modo === "trabajos" ? FILTROS_TRABAJOS : FILTROS_SOLICITUDES;
   const textos = TEXTOS[modo];
   const [mecanicos, setMecanicos] = useState([]);
+  const [cotizacionesPorId, setCotizacionesPorId] = useState({});
   const [extrasListos, setExtrasListos] = useState(false);
   const cargando = cargandoBandeja || !extrasListos;
   const [error, setError] = useState(null);
@@ -219,6 +250,15 @@ export default function TallerSolicitudes({
   const [motivo, setMotivo] = useState("");
   const [editandoDiagnostico, setEditandoDiagnostico] = useState(false);
   const [cotizando, setCotizando] = useState(false);
+  const [confirmandoSinPruebas, setConfirmandoSinPruebas] = useState(false);
+  // Solicitud cuyo "repuestos recibidos" se está confirmando (desde el detalle, la barra o la lista)
+  const [confirmandoRecibidos, setConfirmandoRecibidos] = useState(null);
+  const [versionPedidos, setVersionPedidos] = useState(0);
+  const [confirmandoEntrega, setConfirmandoEntrega] = useState(null);
+  // Resultado de una acción, arriba de la pantalla; aparece a la vista aunque el botón estuviera abajo
+  const [aviso, setAviso] = useState(null); // { tono, texto }
+  const refAvisos = useRef(null);
+  const enviando = useRef(false);
   const [procesando, setProcesando] = useState(false);
   const [reintentando, setReintentando] = useState(false);
   const [errorFecha, setErrorFecha] = useState(null);
@@ -229,18 +269,22 @@ export default function TallerSolicitudes({
 
   const cargarExtras = useCallback(async () => {
     try {
-      const [mecs, filas] = await Promise.all([
+      // En Trabajos, todas las cotizaciones del taller en una sola petición; cada trabajo toma la suya por id.
+      // Si falla, los trabajos se muestran sin el resumen de montos.
+      const [mecs, filas, cots] = await Promise.all([
         listarMecanicos(token), tallerId ? obtenerHorario(token, tallerId).catch(() => []) : [],
+        modo === "trabajos" ? cotizacionesDelTaller(token).catch(() => []) : [],
       ]);
       setMecanicos(mecs || []);
       setSemanaHorario(semanaDesdeFranjas(filas));
+      setCotizacionesPorId(Object.fromEntries((cots || []).map((c) => [c.id, c])));
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setExtrasListos(true);
     }
-  }, [token, tallerId]);
+  }, [token, tallerId, modo]);
 
   // Espera a que el panel tenga el taller: así los mecánicos y el horario se piden una sola vez
   useEffect(() => {
@@ -250,7 +294,11 @@ export default function TallerSolicitudes({
   }, [cargarExtras, cargandoBandeja]);
 
   /** Vuelve a pedir la bandeja (la tiene PanelTaller) tras una acción que cambia más de una solicitud. */
-  const cargar = async () => { await onRecargar?.(); };
+  const cargar = async () => onRecargar?.();
+
+  useEffect(() => {
+    if (error || aviso) refAvisos.current?.scrollIntoView({ block: "center" });
+  }, [error, aviso]);
 
   // Abierta desde Inicio: el detalle empieza arriba, no a la altura donde estaba la lista de urgentes
   useEffect(() => {
@@ -266,6 +314,9 @@ export default function TallerSolicitudes({
     .filter(FILTROS.find((f) => f.key === filtro).filtro)
     .filter((s) => !termino || [s.vehiculoDescripcion, s.vehiculoPlaca, s.clienteNombre, refSolicitud(s.id)]
       .some((t) => t && String(t).toLowerCase().includes(termino)));
+  // 20 por página; vuelve a la primera al cambiar de pestaña o de búsqueda (los contadores siguen contando todo)
+  const pag = usePaginacion(visibles.length, modo + "|" + filtro + "|" + busqueda);
+  const enPagina = paginar(visibles, pag.pagina);
   const seleccionada = solicitudes.find((s) => s.id === seleccionadaId) || null;
   const mecanicosActivos = mecanicos.filter((m) => m.activo !== false);
 
@@ -291,23 +342,75 @@ export default function TallerSolicitudes({
     setMotivo("");
     setEditandoDiagnostico(false);
     setCotizando(false);
+    setConfirmandoSinPruebas(false);
     setError(null);
+    setAviso(null);
   };
 
   /** Reemplaza la solicitud actualizada en la lista sin recargar todo. */
   const reemplazar = (actualizada) => onReemplazar?.(actualizada);
 
-  const ejecutar = async (accion) => {
+  /**
+   * Tras un fallo se recarga la bandeja: el cambio pudo guardarse aunque la respuesta se perdiera. Si la solicitud ya
+   * avanzó se dice en qué quedó; si no, lanza el error para quien lo muestre.
+   */
+  const trasFallo = async (s, e) => {
+    const lista = await cargar();
+    const texto = yaEstabaHecho(s, lista?.find((x) => x.id === s?.id));
+    if (!texto) throw e;
+    setAviso({ tono: "info", texto });
+  };
+
+  /** s: la solicitud sobre la que se actúa, si la acción la mueve de estado. */
+  const ejecutar = (accion, s = null) => unaALaVez(enviando, async () => {
     setProcesando(true);
     setError(null);
+    setAviso(null);
     try {
       await accion();
     } catch (e) {
-      setError(e.message);
+      try {
+        await trasFallo(s, e);
+      } catch (fallo) {
+        setError(textoError(fallo));
+      }
     } finally {
       setProcesando(false);
     }
+  });
+
+  const entregar = async (s) => {
+    try {
+      reemplazar(await marcarEntregada(token, s.id));
+      setAviso({ tono: "ok", texto: `Entregado: ${s.vehiculoDescripcion || "el vehículo"} pasó a Entregados. Avisamos al cliente para que confirme.` });
+    } catch (e) {
+      await trasFallo(s, e); // si sigue igual, el diálogo muestra el error y deja reintentar
+    }
+    setConfirmandoEntrega(null);
   };
+
+  const modalRecibidos = confirmandoRecibidos && (
+    <ConfirmarRecibidos token={token} solicitud={confirmandoRecibidos}
+      onCancelar={() => setConfirmandoRecibidos(null)}
+      onConfirmado={async (pedidos) => {
+        setConfirmandoRecibidos(null);
+        setVersionPedidos((v) => v + 1);
+        setAviso(avisoRecibidos(pedidos));
+        await cargar();
+      }} />
+  );
+
+  const modalEntrega = confirmandoEntrega && (
+    <ConfirmarAccion titulo={`¿Entregar ${confirmandoEntrega.vehiculoDescripcion || "el vehículo"}?`}
+      mensaje="Confírmalo solo cuando el cliente ya tenga el vehículo. Le avisamos para que confirme: tu pago se habilita cuando lo haga o, si no responde, a los 3 días hábiles. No se puede deshacer."
+      textoConfirmar="Sí, entregar"
+      onCancelar={() => setConfirmandoEntrega(null)}
+      onConfirmar={() => entregar(confirmandoEntrega)} />
+  );
+
+  const avisoAccion = aviso && (
+    <Alerta tono={aviso.tono} className="st-alerta" onCerrar={() => setAviso(null)}>{aviso.texto}</Alerta>
+  );
 
   const errorDia = errorDiaCita(semanaHorario, fechaCita);
   const horasCita = fechaCita && !errorDia ? horasDeCita(semanaHorario, fechaCita) : [];
@@ -328,6 +431,7 @@ export default function TallerSolicitudes({
 
   const rechazar = () => ejecutar(async () => {
     await rechazarSolicitudServicio(token, seleccionada.id, motivo.trim() || null);
+    avisar("Solicitud rechazada: pasó al siguiente taller cercano.");
     // Pasa al siguiente taller: sale de esta bandeja. Si se abrió desde Inicio, se vuelve allá.
     if (desdeAfuera) { onVolver(); return; }
     setSeleccionadaId(null);
@@ -353,15 +457,22 @@ export default function TallerSolicitudes({
     );
   }
 
-  /** Acción que corresponde a este trabajo, para resolverla sin abrir el detalle (o desde la barra del celular). */
+  /**
+   * Siguiente paso del trabajo según su etapa, para resolverlo sin abrir el detalle (o desde la barra del celular):
+   * repuestos recibidos → instalación → pruebas → lista → entrega. Pagada (el sistema pide los repuestos) y
+   * entregada no tienen paso del taller.
+   */
   const accionRapida = (s) => {
     if (s.estado === "REPUESTOS_PEDIDOS") return {
-      texto: "Confirmar repuestos recibidos",
-      ejecutar: async () => { await confirmarRepuestosRecibidos(token, s.id); await cargar(); },
+      texto: "Marcar repuestos recibidos",
+      ejecutar: async () => setConfirmandoRecibidos(s),
     };
     if (s.estado === "REPUESTOS_RECIBIDOS") return { texto: "Iniciar instalación", ejecutar: async () => reemplazar(await iniciarInstalacion(token, s.id)) };
-    if (s.estado === "EN_INSTALACION") return { texto: "Marcar lista", ejecutar: async () => reemplazar(await marcarLista(token, s.id)) };
-    if (s.estado === "LISTA") return { texto: "Marcar entregada", ejecutar: async () => reemplazar(await marcarEntregada(token, s.id)) };
+    if (s.estado === "EN_INSTALACION" && s.subestado !== "EN_PRUEBAS") {
+      return { texto: "Registrar pruebas", ejecutar: async () => reemplazar(await marcarEnPruebas(token, s.id)) };
+    }
+    if (s.estado === "EN_INSTALACION") return { texto: "Marcar como lista", ejecutar: async () => reemplazar(await marcarLista(token, s.id)) };
+    if (s.estado === "LISTA") return { texto: "Entregar", ejecutar: async () => setConfirmandoEntrega(s) };
     return null;
   };
 
@@ -377,7 +488,7 @@ export default function TallerSolicitudes({
       : s.estado === "DIAGNOSTICADA" && !cotizando && !editandoDiagnostico
         ? { etiqueta: "Diagnóstico listo", texto: "Cotizar", onClick: () => setCotizando(true) }
         : accion
-          ? { etiqueta: ESTADOS[s.estado]?.label, texto: accion.texto, onClick: () => ejecutar(accion.ejecutar) }
+          ? { etiqueta: ESTADOS_TALLER[s.estado]?.label, texto: accion.texto, onClick: () => ejecutar(accion.ejecutar, s) }
           : null;
 
     return (
@@ -385,14 +496,17 @@ export default function TallerSolicitudes({
         <EncabezadoPagina titulo={s.vehiculoDescripcion} onVolver={cerrarDetalle}
           textoVolver={desdeAfuera ? textoAfuera : textos.volver}>
           <p className="st-detalle__meta">
-            <ChipEstado estado={s.estado} catalogo={ESTADOS} />
+            <ChipEstadoSolicitud s={s} />
             {enPruebas && <ChipEstado tono="info">En pruebas</ChipEstado>}
             {s.vehiculoPlaca && <span className="ui-placa">{s.vehiculoPlaca}</span>}
             <span>Solicitud #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}</span>
           </p>
         </EncabezadoPagina>
 
-        {error && <Alerta className="st-alerta" onCerrar={() => setError(null)}>{error}</Alerta>}
+        <div ref={refAvisos}>
+          {error && <Alerta className="st-alerta" onCerrar={() => setError(null)}>{error}</Alerta>}
+          {avisoAccion}
+        </div>
 
         <div className="ss-detalle">
           <div className="ss-detalle__principal">
@@ -413,7 +527,7 @@ export default function TallerSolicitudes({
                   <dt>Ubicación</dt>
                   <dd>
                     {[s.barrio, s.ciudad].filter(Boolean).join(", ") || "Sin indicar"}
-                    {s.distanciaTallerKm != null && ` · a ${s.distanciaTallerKm.toFixed(1)} km`}
+                    {s.distanciaTallerKm != null && ` · a ${kilometros(s.distanciaTallerKm)}`}
                   </dd>
                 </div>
                 {s.preferenciaHorario && (
@@ -470,6 +584,9 @@ export default function TallerSolicitudes({
                   </>
                 ) : (
                   <>
+                    <Alerta tono="info" className="st-aviso-rechazo">
+                      Si la rechazas, la solicitud pasa al siguiente taller cercano y sale de tu bandeja (queda en Cerradas).
+                    </Alerta>
                     <Campo id="ss-motivo-rechazo" label="Motivo del rechazo" opcional ayuda="Se registra en el historial de la solicitud.">
                       <textarea className="ui-field__input" rows={3} maxLength={300} autoFocus
                         value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ej. Sin cupo esta semana" />
@@ -542,10 +659,10 @@ export default function TallerSolicitudes({
                   {s.repuestos?.length > 0 ? (
                     <ul className="ss-lista">
                       {s.repuestos.map((r) => (
-                        <li key={r.productoId}>
+                        <li key={claveOferta(r)}>
                           {r.cantidad} × {r.descripcion}{" "}
                           <span className="ss-meta">
-                            {r.productoNombre} · {r.tiendaNombre} · {formatPrecio((r.precioReferencia || 0) * r.cantidad)}
+                            {r.productoNombre} · {vendedor(r)} · {formatPrecio((r.precioReferencia || 0) * r.cantidad)}
                             {r.disponibilidad === "ENCARGO" && ` · Encargo${r.diasEntrega ? ` (${r.diasEntrega} días)` : ""}`}
                             {r.compatibilidadConfirmada && ` · Compatibilidad confirmada por ${r.confirmadoPorMecanicoNombre}`}
                           </span>
@@ -592,35 +709,60 @@ export default function TallerSolicitudes({
                   <p className="ss-meta">
                     Entregada el {formatFechaHora(s.fechaEntrega)}
                     {s.recepcionConfirmada
-                      ? ` · El cliente confirmó la recepción${s.calificacionTaller ? ` y calificó ${s.calificacionTaller}/5` : ""}`
-                      : " · Esperando la confirmación del cliente"}
+                      ? ` · ${s.recepcionAutomatica ? "Recepción confirmada automáticamente" : "El cliente confirmó la recepción"}${s.calificacionTaller ? ` y calificó ${s.calificacionTaller}/5` : ""}`
+                      : ` · Esperando la confirmación del cliente${s.autoconfirmaDespuesDe ? `; si no responde, se confirma sola el ${formatFecha(s.autoconfirmaDespuesDe)}` : ""}`}
                   </p>
                 )}
-                {(accion || (s.estado === "EN_INSTALACION" && !enPruebas)) && (
+                {accion && (
                   <div className="ui-form-pie">
+                    <button type="button" className="ui-btn ui-btn--primario" disabled={procesando} aria-busy={procesando}
+                      onClick={() => ejecutar(accion.ejecutar, s)}>
+                      {accion.texto}
+                    </button>
+                    {/* Las pruebas son opcionales en el backend: se puede pasar directo a lista */}
                     {s.estado === "EN_INSTALACION" && !enPruebas && (
                       <button type="button" className="ui-btn ui-btn--secundario" disabled={procesando}
-                        onClick={() => ejecutar(async () => reemplazar(await marcarEnPruebas(token, s.id)))}>
-                        Marcar en pruebas (opcional)
-                      </button>
-                    )}
-                    {accion && (
-                      <button type="button" className="ui-btn ui-btn--primario" disabled={procesando} aria-busy={procesando}
-                        onClick={() => ejecutar(accion.ejecutar)}>
-                        {accion.texto}
+                        onClick={() => setConfirmandoSinPruebas(true)}>
+                        Marcar como lista sin pruebas
                       </button>
                     )}
                   </div>
                 )}
+                {confirmandoSinPruebas && (
+                  <ConfirmarAccion titulo="¿Marcar como lista sin registrar pruebas?"
+                    mensaje="El vehículo pasa a lista para entregar y avisamos al cliente por correo. Las pruebas ya no se podrán registrar."
+                    textoConfirmar="Sí, marcar como lista"
+                    onCancelar={() => setConfirmandoSinPruebas(false)}
+                    onConfirmar={async () => {
+                      try {
+                        reemplazar(await marcarLista(token, s.id));
+                      } catch (e) {
+                        await trasFallo(s, e);
+                      }
+                      setConfirmandoSinPruebas(false);
+                    }} />
+                )}
               </section>
             )}
 
-            {s.cotizacionId && <SeguimientoTaller token={token} solicitud={s} onCambio={cargar} />}
+            {s.cotizacionId && (
+              <SeguimientoTaller token={token} solicitud={s} version={versionPedidos} onConfirmarRecibidos={() => setConfirmandoRecibidos(s)} />
+            )}
+
+            {/* Fuera del seguimiento: una orden con solo el diagnóstico pagado también tiene pago */}
+            <ResumenOrdenTaller token={token} ordenId={s.id} estado={s.estado}>
+              {(contenido) => (
+                <section className="ss-bloque" aria-labelledby="st-pago">
+                  <h2 id="st-pago" className="ss-bloque__titulo">Tu pago</h2>
+                  {contenido}
+                </section>
+              )}
+            </ResumenOrdenTaller>
           </div>
 
           <aside className="ss-detalle__lateral" aria-labelledby="st-avance">
             <h2 id="st-avance" className="ss-bloque__titulo">Avance</h2>
-            <LineaTiempo eventos={s.eventos} />
+            <LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} vistaTaller resumida />
           </aside>
         </div>
 
@@ -631,6 +773,8 @@ export default function TallerSolicitudes({
             </button>
           </BarraAccionMovil>
         )}
+        {modalRecibidos}
+        {modalEntrega}
       </div>
     );
   }
@@ -645,7 +789,7 @@ export default function TallerSolicitudes({
         <button type="button" className="st-tarjeta__abrir" onClick={() => abrir(s)}>
           <span className="st-tarjeta__cabecera">
             <strong className="st-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
-            <ChipEstado estado={s.estado} catalogo={ESTADOS} />
+            <ChipEstadoSolicitud s={s} />
           </span>
           <span className="st-tarjeta__meta">
             {s.vehiculoPlaca && <span className="ui-placa ui-placa--chica">{s.vehiculoPlaca}</span>}
@@ -654,6 +798,7 @@ export default function TallerSolicitudes({
             {` · ${s.mecanicoNombre ? `Mecánico: ${s.mecanicoNombre}` : "Sin mecánico asignado"}`}
             {enEstadoDesde(s) && ` · en este estado ${enEstadoDesde(s)}`}
           </span>
+          <ResumenEconomico cotizacion={cotizacionesPorId[s.cotizacionId]} />
         </button>
 
         {paso >= 0 ? (
@@ -667,14 +812,14 @@ export default function TallerSolicitudes({
         <div className="st-tarjeta__acciones">
           {accion && (
             <button type="button" className="ui-btn ui-btn--primario" disabled={procesando} aria-busy={procesando}
-              onClick={() => ejecutar(accion.ejecutar)}>{accion.texto}</button>
+              onClick={() => ejecutar(accion.ejecutar, s)}>{accion.texto}</button>
           )}
           <button type="button" className="ui-btn ui-btn--secundario" aria-expanded={abierta} aria-controls={`st-linea-${s.id}`}
             onClick={() => setLineaAbierta(abierta ? null : s.id)}>
-            {abierta ? "Ocultar avance" : "Ver avance"}
+            {abierta ? "Ocultar historial" : "Ver historial"}
           </button>
         </div>
-        {abierta && <div id={`st-linea-${s.id}`} className="st-tarjeta__linea"><LineaTiempo eventos={s.eventos} /></div>}
+        {abierta && <div id={`st-linea-${s.id}`} className="st-tarjeta__linea"><LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} vistaTaller /></div>}
       </li>
     );
   };
@@ -696,12 +841,15 @@ export default function TallerSolicitudes({
     <div className="ss-panel st-root">
       <EncabezadoPagina titulo={textos.titulo} descripcion={textos.descripcion} />
 
-      {(error || errorBandeja) && (
-        <Alerta className="st-alerta" onReintentar={reintentar} reintentando={reintentando}
-          onCerrar={error ? () => setError(null) : undefined}>
-          {error || errorBandeja}
-        </Alerta>
-      )}
+      <div ref={refAvisos}>
+        {(error || errorBandeja) && (
+          <Alerta className="st-alerta" onReintentar={reintentar} reintentando={reintentando}
+            onCerrar={error ? () => setError(null) : undefined}>
+            {error || errorBandeja}
+          </Alerta>
+        )}
+        {avisoAccion}
+      </div>
 
       <div className="st-barra">
         <div className="ui-filtros" role="group" aria-label={modo === "trabajos" ? "Trabajos por etapa" : "Solicitudes por estado"}>
@@ -744,37 +892,43 @@ export default function TallerSolicitudes({
           </EstadoVacio>
         )
       ) : modo === "trabajos" ? (
-        <ul className="st-lista">{visibles.map(tarjetaTrabajo)}</ul>
+        <ul className="st-lista">{enPagina.map(tarjetaTrabajo)}</ul>
       ) : (
         <ul className="st-lista">
-          {visibles.map((s) => (
+          {enPagina.map((s) => (
             <li key={s.id}>
               <button type="button" className="ss-tarjeta st-tarjeta st-tarjeta--boton" onClick={() => abrir(s)}>
                 <span className="st-tarjeta__cabecera">
                   <strong className="st-tarjeta__titulo">{s.vehiculoDescripcion}</strong>
                   <span className="st-tarjeta__chips">
-                    {chipPlazo(s) || <ChipEstado estado={s.estado} catalogo={ESTADOS} />}
+                    {chipPlazo(s) || <ChipEstadoSolicitud s={s} />}
                   </span>
                 </span>
                 <span className="st-tarjeta__sintomas">{s.sintomas}</span>
-                <span className="st-tarjeta__meta">
-                  #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}
-                  {[s.barrio, s.ciudad].some(Boolean) && ` · ${[s.barrio, s.ciudad].filter(Boolean).join(", ")}`}
-                  {s.distanciaTallerKm != null && ` · ${s.distanciaTallerKm.toFixed(1)} km`}
-                </span>
-                {(s.fechaRevision || s.mecanicoNombre || porResponder(s)) && (
+                <span className="st-tarjeta__pie">
                   <span className="st-tarjeta__meta">
-                    {porResponder(s) && `Responde antes del ${formatFechaHora(s.fechaLimiteRespuesta)}`}
-                    {s.fechaRevision && <><Icon name="calendar" size={14} /> Revisión: {formatFechaHora(s.fechaRevision)}</>}
+                    #{refSolicitud(s.id)} · {formatFecha(s.fechaCreacion)}
+                    {[s.barrio, s.ciudad].some(Boolean) && ` · ${[s.barrio, s.ciudad].filter(Boolean).join(", ")}`}
+                    {s.distanciaTallerKm != null && ` · ${kilometros(s.distanciaTallerKm)}`}
+                    {s.fechaRevision && <> · <Icon name="calendar" size={14} /> Revisión: {formatFechaHora(s.fechaRevision)}</>}
                     {s.mecanicoNombre && ` · ${s.mecanicoNombre}`}
                   </span>
-                )}
-                <Icon name="arrow" size={18} className="st-tarjeta__flecha" />
+                  {/* Toda la tarjeta abre el detalle; esto solo lo dice con texto */}
+                  <span className="st-tarjeta__ver" aria-hidden="true">
+                    Ver solicitud <Icon name="arrow" size={16} />
+                  </span>
+                </span>
               </button>
             </li>
           ))}
         </ul>
       )}
+      {visibles.length > 0 && (
+        <Paginacion pagina={pag.pagina} total={visibles.length} onCambiar={pag.cambiar}
+          etiqueta={modo === "trabajos" ? "Páginas de trabajos" : "Páginas de solicitudes"} />
+      )}
+      {modalRecibidos}
+      {modalEntrega}
     </div>
   );
 }

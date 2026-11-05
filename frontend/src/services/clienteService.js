@@ -1,4 +1,5 @@
 import { apiFetch } from "./http";
+import { errorDeRespuesta } from "../utils/errores";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/clientes`;
 
 const buildHeaders = (token) => {
@@ -33,6 +34,7 @@ export async function actualizarMiPerfil(token, datos) {
     headers: buildHeaders(token),
     body: JSON.stringify(datos),
   });
-  if (!res.ok) throw new Error("No se pudieron guardar tus datos");
+  // El mensaje del servidor dice qué falta (p. ej. "Escoge tu ciudad de la lista.")
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudieron guardar tus datos");
   return res.json();
 }

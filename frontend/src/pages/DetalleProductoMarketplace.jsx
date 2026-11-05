@@ -1,7 +1,9 @@
+import PrecioCatalogo from "../components/marketplace/PrecioCatalogo";
 import { useEffect, useState } from "react";
 import { getUser } from "../services/authService";
 import { detalleProducto } from "../services/catalogoService";
 import { formatPrecio } from "../components/servicio/estadosServicio";
+import { conIva } from "../components/marketplace/iva";
 import { AvisoCompatibilidad, EtiquetaCompatibilidad, EtiquetaVendedor } from "../components/marketplace/EtiquetasProducto";
 import { textoDisponibilidad } from "../components/marketplace/disponibilidad";
 import { limitarCantidad } from "../hooks/useCarrito";
@@ -10,6 +12,7 @@ import TiendaVendedor from "../components/marketplace/TiendaVendedor";
 import "../css/marketplace.css";
 import Icon from "../components/public/Icon";
 import { etiquetaCategoria } from "../utils/categorias";
+import { textoError } from "../utils/errores";
 
 const CLAVE_VEHICULO = "marketplaceVehiculoId";
 
@@ -31,7 +34,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
     try { vehiculoId = esCliente ? localStorage.getItem(CLAVE_VEHICULO) || "" : ""; } catch { /* sin almacenamiento */ }
     detalleProducto(productoId, vehiculoId)
       .then((p) => { if (vivo) setRespuesta({ producto: p, error: null }); })
-      .catch((e) => { if (vivo) setRespuesta({ producto: null, error: e.message }); });
+      .catch((e) => { if (vivo) setRespuesta({ producto: null, error: textoError(e) }); });
     return () => { vivo = false; };
   }, [productoId, esCliente]);
 
@@ -78,8 +81,8 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
             <p className="mk-tarjeta__meta">{[producto.marca, etiquetaCategoria(producto.categoria), producto.referencia && `Ref. ${producto.referencia}`].filter(Boolean).join(" · ")}</p>
             <AvisoCompatibilidad producto={producto} />
 
-            <p className="mk-detalle__precio">{formatPrecio(producto.precio)}</p>
-            <p className="mk-tarjeta__meta">{textoDisponibilidad(producto)} · el IVA y el envío se calculan al pagar</p>
+            <PrecioCatalogo producto={producto} etiqueta="p" className="mk-detalle__precio" />
+            <p className="mk-tarjeta__meta">{textoDisponibilidad(producto)} · IVA incluido; el envío se elige al pagar</p>
 
             <div className="mk-detalle__compra">
               <div className="mk-campo mk-campo--cantidad">
@@ -111,7 +114,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
               <div className="mk-tabla-scroll">
                 <table className="mk-tabla">
                   <thead>
-                    <tr><th>Tienda</th><th>Ciudad</th><th>Disponibilidad</th><th>Envío</th><th className="mk-tabla__num">Precio</th><th /></tr>
+                    <tr><th>Tienda</th><th>Ciudad</th><th>Disponibilidad</th><th>Envío</th><th className="mk-tabla__num">Precio (IVA incluido)</th><th /></tr>
                   </thead>
                   <tbody>
                     {[producto, ...producto.otrasTiendas].sort((a, b) => a.precio - b.precio).map((o) => (
@@ -121,10 +124,10 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
                         <td>{textoDisponibilidad(o)}</td>
                         <td>{o.tienda.ofreceEnvio ? formatPrecio(o.tienda.costoEnvio) : "Solo retiro"}</td>
                         <td className="mk-tabla__num">
-                          {formatPrecio(o.precio)}
+                          {formatPrecio(conIva(o.precio))}
                           {o.precio !== producto.precio && (
                             <span className={`mk-diferencia mk-diferencia--${o.precio < producto.precio ? "menor" : "mayor"}`}>
-                              {o.precio < producto.precio ? "−" : "+"}{formatPrecio(Math.abs(o.precio - producto.precio))}
+                              {o.precio < producto.precio ? "−" : "+"}{formatPrecio(Math.abs(conIva(o.precio) - conIva(producto.precio)))}
                             </span>
                           )}
                         </td>

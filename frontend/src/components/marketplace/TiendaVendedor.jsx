@@ -15,7 +15,15 @@ export default function TiendaVendedor({ tienda: t, idTitulo = "mk-tienda-titulo
       <dl className="mk-datos">
         <div><dt>Ciudad</dt><dd>{t.ciudad}{t.barrio ? ` · ${t.barrio}` : ""}</dd></div>
         <div><dt>Dirección (retiro)</dt><dd>{t.direccion}</dd></div>
-        <div><dt>Horario</dt><dd>{t.horario}</dd></div>
+        <div>
+          <dt>Horario</dt>
+          <dd>
+            {/* Con horario por días, el resumen del backend ("Lun a Vie …; Sáb …; Dom cerrado") va una línea por grupo */}
+            {t.horarioSemanal?.length && t.horario ? (
+              <ul className="mk-horario">{t.horario.split("; ").map((linea) => <li key={linea}>{linea}</li>)}</ul>
+            ) : t.horario}
+          </dd>
+        </div>
         <div><dt>Envío</dt><dd>{t.ofreceEnvio ? `${formatPrecio(t.costoEnvio)} · solo dentro de ${t.ciudad}` : "Solo retiro en la tienda"}</dd></div>
       </dl>
     </section>

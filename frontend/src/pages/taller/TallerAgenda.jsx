@@ -13,6 +13,7 @@ import {
   tituloDia, tituloMes, tituloSemana,
 } from "./calendario";
 import "../../css/agenda-taller.css";
+import { textoError } from "../../utils/errores";
 
 // Por debajo de este ancho se muestra la semana como lista en lugar del mes
 const CONSULTA_CELULAR = "(max-width: 767px)";
@@ -83,7 +84,7 @@ export default function TallerAgenda({ taller, irA }) {
       setCitas((await citasDelTaller(token, tallerId, desde, hasta)) || []);
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }

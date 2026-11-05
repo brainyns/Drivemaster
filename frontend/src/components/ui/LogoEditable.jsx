@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import LogoNegocio from "./LogoNegocio";
 import Icon from "../public/Icon";
 import { TIPOS_IMAGEN, errorImagen } from "../../utils/imagen";
+import { textoError } from "../../utils/errores";
 
 /**
  * Logo de un negocio con su botón para subirlo o cambiarlo (Mi taller, Mi tienda); sin logo, las iniciales. Valida
@@ -25,7 +26,7 @@ export default function LogoEditable({ url, nombre, subir, onSubido, onAviso, id
       onSubido(logoUrl);
       onAviso({ tono: "ok", texto: "Logo guardado. Así te verán los clientes." });
     } catch (err) {
-      onAviso({ tono: "error", texto: err.message });
+      onAviso({ tono: "error", texto: textoError(err) });
     } finally {
       setSubiendo(false);
     }

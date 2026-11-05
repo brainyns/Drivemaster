@@ -6,6 +6,7 @@ import com.drivemaster.drivemaster.controller.TiendaController;
 import com.drivemaster.drivemaster.service.CatalogoService;
 import com.drivemaster.drivemaster.service.CompraCatalogoService;
 import com.drivemaster.drivemaster.service.PedidoTiendaService;
+import com.drivemaster.drivemaster.service.RetiroPendienteService;
 import com.drivemaster.drivemaster.service.RecepcionEnvioService;
 import com.drivemaster.drivemaster.service.TiendaService;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ class PermisosEndpointsTest {
     private MockMvc mvc;
 
     @MockBean private PedidoTiendaService pedidoTiendaService;
+    @MockBean private RetiroPendienteService retiroPendienteService;
     @MockBean private CatalogoService catalogoService;
     @MockBean private CompraCatalogoService compraCatalogoService;
     @MockBean private RecepcionEnvioService recepcionEnvioService;
@@ -85,21 +87,23 @@ class PermisosEndpointsTest {
         verifyNoInteractions(pedidoTiendaService);
     }
 
-    // ─── Confirmar recepción y reportar problema: solo el CLIENTE ────────────
+    // ─── Confirmar recepción y reportar problema: el CLIENTE y el TALLER que compró ────
 
     @Test
-    void soloElClienteConfirmaLaRecepcionOReportaUnProblema() throws Exception {
+    void soloQuienCompraConfirmaLaRecepcionOReportaUnProblema() throws Exception {
         for (String ruta : new String[]{"/api/catalogo/pedidos/p1/recibido", "/api/catalogo/pedidos/p1/problema"}) {
             MockHttpServletRequestBuilder base = post(ruta).contentType(MediaType.APPLICATION_JSON).content("{\"detalle\":\"no llegó\"}");
             mvc.perform(base.with(user("ana@demo.com").roles("CLIENTE"))).andExpect(status().isOk());
-            for (String rol : new String[]{"ADMIN", "SUPERADMIN", "TIENDA", "TALLER"}) {
+            mvc.perform(post(ruta).contentType(MediaType.APPLICATION_JSON).content("{\"detalle\":\"no llegó\"}")
+                    .with(user("taller@demo.com").roles("TALLER"))).andExpect(status().isOk());
+            for (String rol : new String[]{"ADMIN", "SUPERADMIN", "TIENDA"}) {
                 mvc.perform(post(ruta).contentType(MediaType.APPLICATION_JSON).content("{\"detalle\":\"x\"}")
                         .with(user("otro@demo.com").roles(rol))).andExpect(status().isForbidden());
             }
             mvc.perform(post(ruta).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isUnauthorized());
         }
-        verify(recepcionEnvioService, times(1)).confirmarRecepcion(anyString(), anyString());
-        verify(recepcionEnvioService, times(1)).reportarProblema(anyString(), anyString(), anyString());
+        verify(recepcionEnvioService, times(2)).confirmarRecepcion(anyString(), anyString());
+        verify(recepcionEnvioService, times(2)).reportarProblema(anyString(), anyString(), anyString());
     }
 
     // ─── Retiro y despacho: solo la TIENDA ───────────────────────────────────
@@ -129,12 +133,13 @@ class PermisosEndpointsTest {
     }
 
     @Test
-    void soloElClienteCotizaPagaYVeSusCompras() throws Exception {
+    void soloElClienteYElTallerCotizanPaganYVenSusCompras() throws Exception {
         String[][] rutas = {{"POST", "/api/catalogo/compras/cotizar"}, {"POST", "/api/catalogo/compras"},
                 {"GET", "/api/catalogo/compras/mias"}, {"POST", "/api/catalogo/pedidos/p1/codigo-retiro"}};
         for (String[] r : rutas) {
             mvc.perform(pedido(r).with(user("ana@demo.com").roles("CLIENTE"))).andExpect(status().isOk());
-            for (String rol : new String[]{"TIENDA", "TALLER", "ADMIN"}) {
+            mvc.perform(pedido(r).with(user("taller@demo.com").roles("TALLER"))).andExpect(status().isOk());
+            for (String rol : new String[]{"TIENDA", "ADMIN"}) {
                 mvc.perform(pedido(r).with(user("otro@demo.com").roles(rol))).andExpect(status().isForbidden());
             }
             mvc.perform(pedido(r)).andExpect(status().isUnauthorized());
@@ -228,5 +233,25 @@ class PermisosEndpointsTest {
                     || json.contains("Ana Cuenta") || json.contains("c-secreta") || json.contains("99") && json.contains("\"pagoId\":99"), json);
             org.junit.jupiter.api.Assertions.assertTrue(json.contains("\"pagoId\":null") && json.contains("\"clienteId\":null"), json);
         }
+    }
+
+    // ─── Retiros sin recoger: los decide solo ADMIN / SUPERADMIN ─────────────
+
+    @Test
+    void soloAdminYSuperadminVenYDecidenLosRetirosSinRecoger() throws Exception {
+        for (String rol : new String[]{"ADMIN", "SUPERADMIN"}) {
+            mvc.perform(get("/api/pedidos-tienda/retiros-sin-recoger").with(user("jefe@demo.com").roles(rol))).andExpect(status().isOk());
+            mvc.perform(post("/api/pedidos-tienda/p1/retiro/resolver").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"decision\":\"SEGUIR_ESPERANDO\",\"motivo\":\"Pasa el sábado\"}")
+                    .with(user("jefe@demo.com").roles(rol))).andExpect(status().isOk());
+        }
+        for (String rol : new String[]{"CLIENTE", "TIENDA", "TALLER"}) {
+            mvc.perform(get("/api/pedidos-tienda/retiros-sin-recoger").with(user("intruso@demo.com").roles(rol))).andExpect(status().isForbidden());
+            mvc.perform(post("/api/pedidos-tienda/p1/retiro/resolver").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"decision\":\"REEMBOLSO\",\"motivo\":\"x\"}")
+                    .with(user("intruso@demo.com").roles(rol))).andExpect(status().isForbidden());
+        }
+        verify(retiroPendienteService, times(2)).resolver(anyString(), org.mockito.ArgumentMatchers.eq("p1"),
+                org.mockito.ArgumentMatchers.eq("SEGUIR_ESPERANDO"), org.mockito.ArgumentMatchers.eq("Pasa el sábado"));
     }
 }

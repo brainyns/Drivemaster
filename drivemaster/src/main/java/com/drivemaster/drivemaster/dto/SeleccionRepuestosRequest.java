@@ -25,5 +25,11 @@ public class SeleccionRepuestosRequest {
         private String productoId;
         // Obligatorio (true) si el producto es de compatibilidad POR_CONFIRMAR
         private Boolean confirmoCompatibilidad;
+        // Pieza de "Tu inventario": va en lugar de productoId
+        private String piezaTallerId;
+
+        public Item(String descripcion, Integer cantidad, String productoId, Boolean confirmoCompatibilidad) {
+            this(descripcion, cantidad, productoId, confirmoCompatibilidad, null);
+        }
     }
 }

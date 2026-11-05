@@ -19,8 +19,11 @@ async function handle(res, msgDefault) {
   return res.status === 204 ? null : res.json();
 }
 
+// Con Render dormido, 20 s dirían "sin conexión" con el cambio ya guardado
+const LIMITE_ACCION_MS = 60000;
+
 function patch(token, url, body, msg) {
-  return apiFetch(url, { method: "PATCH", headers: headers(token), body: JSON.stringify(body || {}) })
+  return apiFetch(url, { method: "PATCH", headers: headers(token), body: JSON.stringify(body || {}) }, LIMITE_ACCION_MS)
     .then(res => handle(res, msg));
 }
 
@@ -42,6 +45,13 @@ export async function subirFotoServicio(token, archivo) {
   });
   const data = await handle(res, "No se pudo subir la foto");
   return data.url;
+}
+
+/** Lo que el cliente pagó por su servicio y lo que se le devuelve. */
+export async function pagosDeServicio(token, id) {
+  const res = await apiFetch(`${BASE}/${id}/pagos`, { headers: headers(token) });
+  if (!res.ok) throw new Error("No se pudo cargar lo que has pagado.");
+  return res.json();
 }
 
 export async function misSolicitudesServicio(token) {

@@ -42,12 +42,15 @@ const PATHS = {
       <path d="M8 3v6m8 0v6m-6 0v6" />
     </>
   ),
-  message: (
+  // Logo de WhatsApp (globo con auricular): solo para el botón que abre WhatsApp; el color lo pone quien lo usa
+  whatsapp: (
     <>
       <path d="M21 11a9 9 0 0 1-13 8l-6 2 2-6A9 9 0 1 1 21 11Z" />
       <path d="M8 8c0 4 4 7 7 7l1-2-3-1-1 1-2-2 1-1-1-3Z" />
     </>
   ),
+  // Globo de chat simple (sin el auricular: con él se parecía al logo de WhatsApp)
+  message: <path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 21l1.9-5.6A8.5 8.5 0 1 1 21 11.5Z" />,
   bolt: <path d="m13 2-9 12h7l-1 8 10-13h-7z" />,
   target: (
     <>
@@ -73,6 +76,12 @@ const PATHS = {
       <path d="M9.9 5.2A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7-.4 1-1.6 2.6-3.2 3.9" />
       <path d="M6.2 6.6C3.9 8.2 2.2 10.4 2 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.7-1.3" />
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" />
+    </>
+  ),
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5.5M12 7.5v.1" />
     </>
   ),
   alert: (
@@ -133,6 +142,17 @@ const PATHS = {
     <>
       <path d="M14 3H6v18h12V7z" />
       <path d="M14 3v4h4M9 12h6M9 16h6" />
+    </>
+  ),
+  card: (
+    <>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M2 10h20M6 15h4" />
+    </>
+  ),
+  bank: (
+    <>
+      <path d="M3 21h18M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M12 3 2 8h20z" />
     </>
   ),
 };

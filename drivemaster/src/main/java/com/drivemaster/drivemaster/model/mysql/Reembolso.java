@@ -40,6 +40,19 @@ public class Reembolso {
     @Column(nullable = false)
     private Double monto;
 
+    // Lo que ya se le había transferido al negocio por este dinero: a favor de DriveMaster, se le cobra a mano
+    private Double saldoAFavor;
+    // Quién debe ese saldo, si se sabe. Lo usa la cancelación: los repuestos de tienda que ya llegaron se quedan en el
+    // taller y él los debe (TALLER + id + nombre). Nulos en los saldos anteriores, de líneas ya transferidas
+    @Column(length = 10)
+    private String saldoDeudorTipo;
+    private String saldoDeudorId;
+    private String saldoDeudorNombre;
+    // Cuándo se le cobró al negocio y quién lo anotó: sin esto el saldo sigue pendiente
+    private LocalDateTime saldoCobradoEn;
+    @Column(length = 120)
+    private String saldoCobradoPor;
+
     @Column(length = 500, nullable = false)
     private String motivo;
 
@@ -50,4 +63,7 @@ public class Reembolso {
     private LocalDateTime fechaRealizado;
     @Column(length = 500)
     private String nota;
+    /** N.º de la transacción del reembolso en Wompi: obligatorio al marcarlo REALIZADO (las filas anteriores no lo tienen). */
+    @Column(length = 80)
+    private String transaccionReembolso;
 }

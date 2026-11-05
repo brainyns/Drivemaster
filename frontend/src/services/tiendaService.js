@@ -87,3 +87,23 @@ export async function actualizarMiTienda(token, datos) {
   });
   return handle(res, "No se pudieron guardar los datos de la tienda");
 }
+
+/** Horario por días (el mismo formato del taller): reemplaza la semana completa y el backend regenera el texto. */
+export async function guardarHorarioTienda(token, franjas) {
+  const res = await apiFetch(`${BASE}/mi-tienda/horario`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(franjas),
+  });
+  return handle(res, "No se pudo guardar el horario");
+}
+
+/** TIENDA: guarda la información de la cuenta bancaria para transferencias de liquidaciones. */
+export async function guardarCuentaBancariaTienda(token, cuenta) {
+  const res = await apiFetch(`${BASE}/mi-tienda/cuenta-bancaria`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify(cuenta),
+  });
+  return handle(res, "No se pudieron guardar los datos bancarios de la tienda");
+}

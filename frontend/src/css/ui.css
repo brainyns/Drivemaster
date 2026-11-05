@@ -363,6 +363,20 @@
 .ui-badge--acento { color: var(--primary-text); background: var(--primary-soft); }
 .ui-badge--neutro { color: var(--ui-muted); background: var(--ui-hover); }
 
+/* Fases del panel del taller: --fase es el color de la fase, para chips, indicadores y barras */
+.ui-fase--nueva      { --fase: var(--fase-nueva);      --fase-bg: var(--fase-nueva-bg); }
+.ui-fase--cotizacion { --fase: var(--fase-cotizacion); --fase-bg: var(--fase-cotizacion-bg); }
+.ui-fase--curso      { --fase: var(--fase-curso);      --fase-bg: var(--fase-curso-bg); }
+.ui-fase--lista      { --fase: var(--fase-lista);      --fase-bg: var(--fase-lista-bg); }
+.ui-fase--entregada  { --fase: var(--fase-entregada);  --fase-bg: var(--fase-entregada-bg); }
+.ui-fase--cancelada  { --fase: var(--fase-cancelada);  --fase-bg: var(--fase-cancelada-bg); }
+.ui-badge--fase-nueva      { color: var(--fase-nueva);      background: var(--fase-nueva-bg); }
+.ui-badge--fase-cotizacion { color: var(--fase-cotizacion); background: var(--fase-cotizacion-bg); }
+.ui-badge--fase-curso      { color: var(--fase-curso);      background: var(--fase-curso-bg); }
+.ui-badge--fase-lista      { color: var(--fase-lista);      background: var(--fase-lista-bg); }
+.ui-badge--fase-entregada  { color: var(--fase-entregada);  background: var(--fase-entregada-bg); }
+.ui-badge--fase-cancelada  { color: var(--fase-cancelada);  background: var(--fase-cancelada-bg); }
+
 /* ── Chip seleccionable (filtros, sugerencias) ─────────────────────────── */
 .ui-chip {
   display: inline-flex;
@@ -524,6 +538,72 @@
 .ui-alerta--aviso { background: var(--ui-aviso-bg); border-color: color-mix(in srgb, var(--ui-aviso) 35%, transparent); }
 .ui-alerta--aviso > svg { color: var(--ui-aviso); }
 
+/* ── Avisos flotantes (Avisos + avisar()): abajo a la derecha, sobre la barra de acción del celular ── */
+.ui-avisos {
+  position: fixed; z-index: 1200; right: 20px; bottom: 20px;
+  display: grid; gap: 8px; width: min(380px, calc(100vw - 32px)); pointer-events: none;
+}
+.ui-aviso {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 12px 14px;
+  font-size: 0.9rem; line-height: 1.45; color: var(--ui-text);
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); box-shadow: var(--ui-sombra-2);
+  pointer-events: auto; animation: ui-aviso-entra 180ms var(--ui-ease);
+}
+.ui-aviso > svg { flex: none; margin-top: 1px; }
+.ui-aviso--ok > svg { color: var(--ui-ok); }
+.ui-aviso--error > svg { color: var(--ui-error); }
+.ui-aviso--aviso > svg { color: var(--ui-aviso); }
+.ui-aviso--info > svg { color: var(--ui-info); }
+.ui-aviso__texto { flex: 1; margin: 0; min-width: 0; }
+.ui-aviso__cerrar {
+  flex: none; display: grid; place-items: center; padding: 2px; border: 0; border-radius: var(--ui-r-md);
+  background: none; color: var(--ui-muted); cursor: pointer;
+}
+.ui-aviso__cerrar:hover { color: var(--ui-text); background: var(--ui-hover); }
+.ui-aviso__cerrar:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+@keyframes ui-aviso-entra { from { opacity: 0; transform: translateY(8px); } }
+@media (max-width: 1023px) {
+  .ui-avisos { right: 16px; left: 16px; bottom: 84px; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-aviso { animation: none; }
+}
+
+/* ── Buscador de producto con autocompletado (BuscadorProducto) ─────────── */
+.ui-combo { position: relative; min-width: 0; }
+.ui-combo__lista {
+  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% - 4px);
+  display: grid; max-height: 320px; overflow-y: auto; margin: 0; padding: 4px; list-style: none;
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); box-shadow: var(--ui-sombra-2);
+}
+.ui-combo__opcion {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  min-height: 48px; padding: 6px 8px; border-radius: var(--ui-r-md); cursor: pointer;
+}
+.ui-combo__opcion--activa { background: var(--ui-hover); }
+.ui-combo__imagen.mk-imagen { width: 36px; border-radius: var(--ui-r-md); }
+.ui-combo__texto { display: grid; gap: 1px; min-width: 0; }
+.ui-combo__texto strong { font-size: 0.875rem; overflow-wrap: anywhere; }
+.ui-combo__texto span, .ui-combo__stock { font-size: 0.75rem; color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+.ui-combo__vacio { padding: 10px 8px; font-size: 0.85rem; color: var(--ui-muted); }
+.ui-combo .ui-combo__nota { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 0.8rem; color: var(--ui-muted); }
+
+.ui-producto-elegido {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto auto; align-items: center; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); background: var(--ui-surface);
+}
+.ui-producto-elegido__imagen.mk-imagen { width: 56px; border-radius: var(--ui-r-md); }
+.ui-producto-elegido__texto { display: grid; gap: 2px; min-width: 0; }
+.ui-producto-elegido__texto strong { overflow-wrap: anywhere; }
+.ui-producto-elegido__texto span { font-size: 0.8rem; color: var(--ui-muted); }
+.ui-producto-elegido__stock { display: grid; justify-items: end; gap: 0; }
+.ui-producto-elegido__stock span { font-size: 0.72rem; color: var(--ui-muted); }
+.ui-producto-elegido__stock strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) {
+  .ui-producto-elegido { grid-template-columns: 48px minmax(0, 1fr) auto; }
+  .ui-producto-elegido .ui-btn { grid-column: 1 / -1; justify-self: start; }
+}
+
 /* ── Campo de formulario (Campo): etiqueta arriba, ayuda y error abajo ─── */
 .ui-field { display: grid; gap: 6px; min-width: 0; align-content: start; }
 .ui-field__label { font-size: 0.875rem; font-weight: 600; color: var(--ui-text); }
@@ -549,6 +629,14 @@
 }
 
 .ui-field__error svg { flex-shrink: 0; margin-top: 1px; }
+.ui-field__mensajes { display: grid; gap: 6px; min-width: 0; }
+
+/* Advertencia bajo un campo (Campo aviso): no impide guardar */
+.ui-field .ui-field__aviso {
+  display: flex; align-items: flex-start; gap: 6px; margin: 0;
+  font-size: 0.82rem; font-weight: 500; line-height: 1.45; color: var(--ui-aviso);
+}
+.ui-field__aviso svg { flex-shrink: 0; margin-top: 1px; }
 
 .ui-field__input {
   width: 100%;
@@ -851,6 +939,26 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   transition: transform var(--ui-dur) var(--ui-ease), color var(--ui-dur) ease;
 }
 
+/* Nota de ayuda junto a un título (Indicador ayuda): se abre al pasar el mouse o al enfocar el ícono */
+.ui-ayuda { position: relative; display: inline-flex; }
+.ui-ayuda__boton {
+  display: inline-grid; place-items: center; padding: 2px; border: 0; border-radius: 50%;
+  background: none; color: var(--ui-muted); cursor: help;
+}
+.ui-ayuda__boton:hover { color: var(--ui-text); }
+.ui-ayuda__boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+.ui-ayuda__nota {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: min(260px, 70vw); padding: 8px 10px;
+  font-size: 0.78rem; font-weight: 500; line-height: 1.45; color: var(--ui-text);
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg); box-shadow: var(--ui-sombra-2);
+  opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--ui-dur) ease;
+}
+.ui-ayuda:hover .ui-ayuda__nota, .ui-ayuda__boton:focus-visible + .ui-ayuda__nota,
+.ui-ayuda > .ui-btn:focus-visible + .ui-ayuda__nota { opacity: 1; visibility: visible; }
+/* Junto al borde derecho (p. ej. una acción en la cabecera de una sección): la nota se alinea a la derecha */
+.ui-ayuda--derecha .ui-ayuda__nota { left: auto; right: 0; transform: none; }
+
 .ui-indicador--enlace { cursor: pointer; transition: border-color var(--ui-dur) ease, transform var(--ui-dur) var(--ui-ease); }
 .ui-indicador--enlace:active { transform: scale(0.98); }
 .ui-indicador--enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
@@ -864,6 +972,17 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 .ui-indicador--accion { border-color: color-mix(in srgb, var(--primary) 55%, var(--ui-line)); }
 .ui-indicador--accion .ui-indicador__valor { color: var(--primary-text); }
 .ui-indicador--ok .ui-indicador__valor { color: var(--ui-ok); }
+
+/* Con fase (panel del taller): un punto junto al título y la cifra en el color de la fase (como ChipEstado) */
+.ui-indicador--fase .ui-indicador__titulo::before {
+  content: "";
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fase);
+}
+.ui-indicador--fase .ui-indicador__valor { color: var(--fase); }
 
 /* ── Sección editable por partes (SeccionEditable) ─────────────────────── */
 .ui-seccion {
@@ -896,6 +1015,7 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 }
 
 .ui-seccion__texto { flex: 1; min-width: 0; }
+.ui-seccion__acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: none; }
 
 .ui-seccion .ui-seccion__titulo {
   margin: 0;
@@ -1305,4 +1425,97 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   .ui-vehiculo__check { transition: opacity 0.2s; transform: none; }
   .ui-indicador--enlace, .ui-indicador__flecha, .ui-seccion, .ui-progreso__barra { transition: none; }
   .ui-indicador--enlace:active, .ui-indicador--enlace:hover .ui-indicador__flecha { transform: none; }
+}
+
+/* ── Paginación de las listas (Paginacion): "Mostrando 1–20 de 135", anterior, números y siguiente ── */
+.ui-paginacion {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px;
+  margin-top: 12px; font-size: 0.8125rem; color: var(--ui-muted);
+}
+.ui-paginacion__texto { font-variant-numeric: tabular-nums; }
+.ui-paginacion__botones { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ui-paginacion__numeros { display: flex; align-items: center; gap: 2px; }
+.ui-paginacion__numero {
+  min-width: 34px; height: 34px; padding: 0 8px; border: 1px solid transparent; border-radius: var(--ui-r-md);
+  background: none; color: var(--ui-text); font: inherit; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.ui-paginacion__numero:hover { background: var(--ui-hover); }
+.ui-paginacion__numero[aria-current="page"] { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-text); cursor: default; }
+.ui-paginacion__numero:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 1px; }
+.ui-paginacion__hueco { min-width: 20px; text-align: center; }
+@media (max-width: 600px) {
+  .ui-paginacion { justify-content: center; }
+  .ui-paginacion__texto { width: 100%; text-align: center; }
+  .ui-paginacion__numero { min-width: 32px; height: 32px; }
+}
+
+/* ── Tablas paginadas en el servidor: encabezado que ordena, selector de orden en celular y rango de fechas ── */
+.ui-orden {
+  display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: none;
+  font: inherit; font-weight: inherit; color: inherit; text-align: inherit; cursor: pointer;
+}
+.ui-orden:hover { color: var(--ui-text); }
+.ui-orden:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
+.ui-orden__flecha { font-size: 0.85em; opacity: 0.45; font-variant-numeric: tabular-nums; }
+.ui-orden--activo { color: var(--ui-text); }
+.ui-orden--activo .ui-orden__flecha { opacity: 1; color: var(--primary-text); }
+th.ui-table__num .ui-orden { flex-direction: row-reverse; }
+
+.ui-orden-movil { display: none; }
+@media (max-width: 760px) {
+  .ui-orden-movil { display: grid; gap: 4px; font-size: 0.8125rem; font-weight: 600; color: var(--ui-muted); }
+}
+
+.ui-fechas { display: grid; gap: 8px; }
+.ui-fechas__rango { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; }
+.ui-fechas__campo { display: grid; gap: 4px; font-size: 0.8125rem; font-weight: 600; color: var(--ui-muted); }
+.ui-fechas__campo .ui-field__input { min-width: 150px; }
+.ui-fechas__error { width: 100%; margin: 0; font-size: 0.8125rem; color: var(--ui-error); }
+@media (max-width: 600px) {
+  .ui-fechas__campo { flex: 1 1 140px; }
+  .ui-fechas__campo .ui-field__input { min-width: 0; width: 100%; }
+}
+/* Mientras llega otra página del servidor, la tabla se atenúa (la de antes queda visible hasta que llega la nueva) */
+.ui-table-card[aria-busy="true"] { opacity: 0.6; transition: opacity 0.2s var(--ui-ease, ease); }
+.ui-orden-movil--siempre { display: grid; gap: 4px; font-size: 0.8125rem; font-weight: 600; color: var(--ui-muted); max-width: 320px; }
+
+/* Motivo citado en un diálogo antes de confirmar: así queda escrito en el historial */
+.ui-motivo-cita { margin: 12px 0 0; padding: 10px 12px; border-radius: var(--ui-r-md); background: var(--ui-surface-2); box-shadow: inset 0 0 0 1px var(--ui-line); }
+.ui-motivo-cita figcaption { font-size: 0.75rem; font-weight: 600; color: var(--ui-muted); margin-bottom: 4px; }
+.ui-motivo-cita blockquote { margin: 0; color: var(--ui-text); font-size: 0.9375rem; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-line; }
+
+/* Dato sensible (cuenta, documento): enmascarado con un botón para verlo */
+.ui-sensible { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.ui-sensible__valor { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.ui-sensible__boton {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 2px 8px; border: 0; border-radius: var(--ui-r-sm);
+  background: none; color: var(--primary-text); font: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer;
+}
+.ui-sensible__boton:hover { background: var(--ui-surface-2); }
+.ui-sensible__boton:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; }
+
+/* ── Pantallas táctiles: toda acción de al menos 44 px de alto ─────────────────────────────────────────────────────
+   En celular y tableta un dedo no acierta un botón de 32 px; con mouse los tamaños de arriba se quedan como están.
+   Los enlaces dentro de un texto ganan área con relleno y margen negativo, sin mover las líneas. */
+@media (pointer: coarse) {
+  .ui-btn, .ui-btn--chico, .ui-chip, .dm-btn, .sv-btn, .sv-btn-outline, .ss-btn-peligro, .ss-btn-elegir,
+  .ui-sensible__boton, .ui-paginacion__numero, .ui-alerta__acciones button, .mapa-boton, .mapa-boton--chico,
+  .dtp-accion, .apr-peligro, .pre-peligro, .srv-peligro, .usr-desactivar, .ped-alerta,
+  .ui-volver, .mk-volver, .sq-volver, .sv-volver, .auth-back, .auth-enviar, .ui-pasos__ir, .sd-faltan__ir {
+    min-height: 44px;
+  }
+  .ui-btn--chico { padding-block: 8px; }
+  .ss-btn-icono, .header-icon-btn, .ui-aviso__cerrar, .ui-clave__ver, .ag-nav__flecha, .ss-fotos__quitar {
+    min-width: 44px; min-height: 44px;
+  }
+  .mk-enlace, .pp-enlace, .ini-enlace, .dtp-enlace, .mov-ref, .nt-link, .dm-link, .link-button, .ss-timeline__ver {
+    padding-block: 10px; margin-block: -10px;
+  }
+}
+
+/* Celular: el botón de editar de una sección baja bajo el título en vez de salirse de la tarjeta */
+@media (max-width: 480px) {
+  .ui-seccion__cabecera { flex-wrap: wrap; }
+  .ui-seccion__texto { flex-basis: calc(100% - 48px); }
+  .ui-seccion__cabecera > .ui-btn, .ui-seccion__cabecera > .ui-seccion__acciones { margin-left: 48px; }
 }

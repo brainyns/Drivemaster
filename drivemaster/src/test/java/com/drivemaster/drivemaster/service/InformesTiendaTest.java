@@ -49,7 +49,7 @@ class InformesTiendaTest {
             return RETURNS_DEFAULTS.answer(invocation);
         });
         repartos = mock(RepartoPagoRepository.class);
-        servicio = new InformesTiendaService(mongo, repartos);
+        servicio = new InformesTiendaService(mongo, repartos, mock(ParametrosMarketplace.class));
     }
 
     @SuppressWarnings("unchecked")
@@ -207,6 +207,30 @@ class InformesTiendaTest {
         assertEquals(0, d.despachados());
         assertNull(d.horasPromedio());
         assertNull(d.porcentajeATiempo());
+    }
+
+    @Test
+    void elDineroDelPeriodoTraeVentaComisionYElIvaDeSusPedidos() {
+        when(repartos.desgloseDeNegocioDesde(eq(RepartoPago.TIENDA), eq("A"), any()))
+                .thenReturn(List.<Object[]>of(new Object[]{595_000.0, 50_000.0, 50_000.0, 545_000.0}));
+        when(repartos.pedidosDeNegocioDesde(eq(RepartoPago.TIENDA), eq("A"), any())).thenReturn(List.of("p1", "p2"));
+        PedidoTienda p1 = PedidoTienda.builder().id("p1").iva(57_000.0).build();
+        PedidoTienda p2 = PedidoTienda.builder().id("p2").iva(38_000.4).build();
+        when(mongo.find(any(Query.class), eq(PedidoTienda.class))).thenReturn(List.of(p1, p2));
+
+        var d = servicio.informes("A", 1, OCT_2026, AHORA).dinero();
+
+        assertEquals(595_000.0, d.desglose().venta());
+        assertEquals(50_000.0, d.desglose().comisionDescontada());
+        assertEquals(545_000.0, d.desglose().recibes());
+        assertEquals(95_000.0, d.iva(), "suma el IVA de los pedidos del periodo, redondeado al peso");
+
+        // Si un pedido antiguo no guardó su IVA, no se inventa la cifra
+        p2.setIva(null);
+        assertNull(servicio.informes("A", 1, OCT_2026, AHORA).dinero().iva());
+        // Sin líneas en el periodo el IVA es 0 y no se consulta ningún pedido
+        when(repartos.pedidosDeNegocioDesde(eq(RepartoPago.TIENDA), eq("B"), any())).thenReturn(List.of());
+        assertEquals(0.0, servicio.informes("B", 1, OCT_2026, AHORA).dinero().iva());
     }
 
     @Test

@@ -15,6 +15,10 @@
   font-family: var(--dm-font);
 }
 
+/* Pantallas con grilla o columna lateral: aprovechan el ancho (las de una sola columna siguen en 1000px)
+   y sus tarjetas son blancas en el tema claro */
+.sv-root.sv-root--ancha { --dm-surface: var(--ui-surface); max-width: 1280px; }
+
 /* Las pantallas de servicios del cliente (solo usan .sv-root) toman el fondo del sitio público */
 body:has(.sv-root) { background: var(--dm-bg); }
 .sv-root .sv-btn, .sv-root .ss-filtro__conteo { color: var(--dm-on-accent); }

@@ -40,6 +40,8 @@ public class CompraCatalogo {
     private String clienteId;
     private String clienteNombre;
     private String clienteCorreo;
+    // Solo si compró un taller aprobado: sus piezas entran a su inventario. Una compra de cliente nunca lo lleva
+    private String compradorTallerId;
 
     @Builder.Default
     private List<Linea> lineas = new ArrayList<>();
@@ -83,7 +85,11 @@ public class CompraCatalogo {
         private String tiendaId;
         private String tiendaNombre;
         private int cantidad;
+        // Lo que se pagó por unidad (con el descuento si compró un taller). precioPublico y descuentoPct quedan congelados:
+        // si la tienda cambia después su precio o su descuento, lo ya comprado no cambia
         private Double precioUnitario;
+        private Double precioPublico;
+        private Double descuentoPct;
         private Double subtotal;
         // STOCK (se descuenta al pagar) o ENCARGO (la tienda lo consigue)
         private String tipo;

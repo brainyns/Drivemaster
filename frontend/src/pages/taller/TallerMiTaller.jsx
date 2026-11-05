@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import MecanicosTaller from "../../components/servicio/MecanicosTaller";
 import HorarioSemanal, { HorarioResumen } from "../../components/servicio/HorarioSemanal";
 import { formatFecha, formatPrecio } from "../../components/servicio/estadosServicio";
+import FormCuentaBancaria from "../../components/ui/FormCuentaBancaria";
 import {
-  actualizarDatosTaller, actualizarUbicacionTaller, guardarTelefonoTaller, miTaller, subirLogoTaller,
+  actualizarDatosTaller, actualizarUbicacionTaller, guardarCuentaBancariaTaller, guardarTelefonoTaller, miTaller, subirLogoTaller,
 } from "../../services/tallerService";
 import { guardarHorario, obtenerHorario } from "../../services/horarioService";
 import {
@@ -17,37 +18,53 @@ import SeccionContacto from "../../components/ui/SeccionContacto";
 import Campo from "../../components/ui/Campo";
 import ChipEstado from "../../components/ui/ChipEstado";
 import Alerta from "../../components/ui/Alerta";
+import { avisar } from "../../components/ui/avisar";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Calificacion from "../../components/ui/Calificacion";
 import CabeceraNegocio from "../../components/ui/CabeceraNegocio";
 import VistaPrevia from "../../components/ui/VistaPrevia";
 import Dato from "../../components/ui/Dato";
+import ValorSensible from "../../components/ui/ValorSensible";
 import PieFormulario from "../../components/ui/PieFormulario";
 import Icon from "../../components/public/Icon";
 import { comoLoVeElCliente, completitudPerfil, errorTarifa } from "./perfilTaller";
 import LogoEditable from "../../components/ui/LogoEditable";
 import "../../css/mi-taller.css";
+import { textoError } from "../../utils/errores";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
 
-/** Formulario de la tarifa por hora: solo viaja ese campo (el horario queda como estaba). */
+/** Régimen de IVA del taller: decide el IVA de su mano de obra y su diagnóstico (los repuestos llevan el IVA vigente). */
+const REGIMENES_IVA = [
+  { valor: true, titulo: "Cobra IVA", detalle: "Tu mano de obra y el diagnóstico llevan el IVA vigente." },
+  { valor: false, titulo: "No cobra IVA", detalle: "Tu mano de obra y el diagnóstico van al 0 %." },
+];
+
+const textoRegimenIva = (responsable) => (responsable === false ? "No cobra IVA (0 %)" : "Cobra IVA");
+
+/**
+ * Formulario de la tarifa por hora y el régimen de IVA: solo viajan esos dos campos (el horario queda como estaba).
+ * Sin tarifa todavía, se puede guardar solo el IVA.
+ */
 function FormTarifa({ taller, token, onGuardado, onCancelar }) {
   const [tarifa, setTarifa] = useState(taller?.tarifaHora != null ? String(taller.tarifaHora) : "");
+  const [responsableIva, setResponsableIva] = useState(taller?.responsableIva !== false);
   const [tocado, setTocado] = useState(false);
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const errorCampo = tocado ? errorTarifa(tarifa) : null;
+  const sinTarifa = taller?.tarifaHora == null && String(tarifa).trim() === "";
+  const errorCampo = tocado && !sinTarifa ? errorTarifa(tarifa) : null;
 
   const guardar = async (e) => {
     e.preventDefault();
     setTocado(true);
-    if (errorTarifa(tarifa)) return;
+    if (!sinTarifa && errorTarifa(tarifa)) return;
     setGuardando(true);
     setError(null);
     try {
-      onGuardado(await actualizarDatosTaller(token, { tarifaHora: Number(tarifa) }));
+      onGuardado(await actualizarDatosTaller(token, { tarifaHora: sinTarifa ? undefined : Number(tarifa), responsableIva }));
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -59,7 +76,17 @@ function FormTarifa({ taller, token, onGuardado, onCancelar }) {
         <input className="ui-field__input ui-form__corto" type="number" inputMode="numeric" min="1" step="any" autoFocus
           value={tarifa} onChange={(e) => setTarifa(e.target.value)} onBlur={() => setTocado(true)} />
       </Campo>
-      <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar tarifa" />
+      <fieldset className="mt-iva">
+        <legend className="ui-field__label">IVA de tu mano de obra</legend>
+        {REGIMENES_IVA.map((r) => (
+          <label key={String(r.valor)} className="mt-iva__opcion">
+            <input type="radio" name="mt-iva" checked={responsableIva === r.valor} onChange={() => setResponsableIva(r.valor)} />
+            <span><strong>{r.titulo}</strong><span className="mt-iva__detalle">{r.detalle}</span></span>
+          </label>
+        ))}
+        <p className="mt-iva__nota">Los repuestos siempre llevan el IVA vigente. Las cotizaciones que ya emitiste no cambian.</p>
+      </fieldset>
+      <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar" />
     </form>
   );
 }
@@ -83,7 +110,7 @@ function FormHorario({ taller, token, semanaInicial, onGuardado, onCancelar }) {
       const guardada = semanaDesdeFranjas(await guardarHorario(token, taller.id, franjasDesdeSemana(semana)));
       onGuardado(guardada, await miTaller(token).catch(() => taller));
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -125,7 +152,7 @@ function FormUbicacion({ taller, token, onGuardado, onCancelar }) {
     try {
       onGuardado(await actualizarUbicacionTaller(token, punto));
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
       setGuardando(false);
     }
   };
@@ -176,10 +203,10 @@ function VistaCliente({ taller: datos }) {
 }
 
 /** Mi taller: identidad, qué tan completo está el perfil y cada sección editable por separado. */
-export default function TallerMiTaller({ taller, token, cargando, error, onRecargar, onActualizado, abrirSeccion = null }) {
+export default function TallerMiTaller({ taller, token, cargando, error, onRecargar, onActualizado, abrirSeccion = null,
+  ordenesAnteriores = 0, onVerAnteriores }) {
   // Desde el aviso del Inicio llega abrirSeccion="horario": la sección se abre ya en edición
   const [editando, setEditando] = useState(abrirSeccion === "horario" ? "horario" : null); // "servicios" | "horario" | "ubicacion"
-  const [aviso, setAviso] = useState(null); // { seccion, texto }
   const [activos, setActivos] = useState(0);
   const [avisoLogo, setAvisoLogo] = useState(null); // { tono, texto }
   const onLista = useCallback((lista) => setActivos(lista.filter((m) => m.activo !== false).length), []);
@@ -198,7 +225,9 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
 
   useEffect(() => {
     if (abrirSeccion === "horario" && tallerId) document.getElementById("mt-horario")?.scrollIntoView({ block: "start" });
-  }, [abrirSeccion, tallerId]);
+    // Desde el aviso del Inicio: la sección de la versión anterior está al final
+    if (abrirSeccion === "anterior" && tallerId && ordenesAnteriores > 0) document.getElementById("mt-anterior")?.scrollIntoView({ block: "start" });
+  }, [abrirSeccion, tallerId, ordenesAnteriores]);
 
   if (!taller) {
     if (cargando) return <Esqueleto variante="formulario" cantidad={4} texto="Cargando los datos de tu taller…" />;
@@ -213,16 +242,13 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
   const aprobado = taller.estadoAprobacion === "APROBADO";
   const activo = taller.activo !== false;
 
-  const abrir = (seccion) => { setAviso(null); setEditando(seccion); };
+  const abrir = (seccion) => setEditando(seccion);
   const cerrar = () => setEditando(null);
   const guardado = (seccion, texto) => (t) => {
     onActualizado?.(t);
     setEditando(null);
-    setAviso({ seccion, texto });
+    avisar(texto);
   };
-  const avisoDe = (seccion) => aviso?.seccion === seccion && (
-    <Alerta tono="ok" onCerrar={() => setAviso(null)}>{aviso.texto}</Alerta>
-  );
   // Desde "lo que falta": lleva a la sección y abre su edición (el equipo tiene su propio botón)
   const resolver = (item) => {
     const destino = document.getElementById(item.seccion);
@@ -251,11 +277,6 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
           <>
               <ChipEstado tono={aprobado ? "ok" : "aviso"}>{aprobado ? "Aprobado" : "Pendiente de aprobación"}</ChipEstado>
               <ChipEstado tono={activo ? "ok" : "apagado"}>{activo ? "Activo" : "Inactivo"}</ChipEstado>
-              {taller.planActual && (
-                <ChipEstado tono="acento">
-                  Plan {taller.planActual.toLowerCase()}{taller.planVence ? ` hasta ${formatFecha(taller.planVence)}` : ""}
-                </ChipEstado>
-              )}
           </>
         )}
         meta={(
@@ -280,18 +301,17 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
               <Dato etiqueta="Nombre del taller">{taller.nombre}</Dato>
               <Dato etiqueta="Ciudad">{taller.ciudad}</Dato>
               <Dato etiqueta="Fecha de registro">{taller.fechaRegistro && formatFecha(taller.fechaRegistro)}</Dato>
-              <Dato etiqueta="Plan">{taller.planActual && `${taller.planActual.toLowerCase()}${taller.planVence ? `, vence el ${formatFecha(taller.planVence)}` : ""}`}</Dato>
             </dl>
           </SeccionEditable>
 
           <SeccionEditable id="mt-servicios" icono="tool" titulo="Servicios y precios"
             descripcion="Lo que ofreces y cuánto cobras por la mano de obra."
             onEditar={aprobado ? () => abrir("servicios") : undefined} textoEditar="Editar tarifa"
-            editando={editando === "servicios"} aviso={avisoDe("servicios")}
+            editando={editando === "servicios"}
             nota={editando !== "servicios" && "Los servicios que ofreces y el precio de mano de obra los cambia el administrador de DriveMaster."}>
             {editando === "servicios" ? (
               <FormTarifa taller={taller} token={token} onCancelar={cerrar}
-                onGuardado={guardado("servicios", "Tarifa guardada. Las cotizaciones nuevas usan este valor.")} />
+                onGuardado={guardado("servicios", "Cambios guardados. Las cotizaciones nuevas usan estos valores.")} />
             ) : (
               <dl className="ui-datos">
                 <div className="ui-datos__item ui-datos__item--ancho">
@@ -305,8 +325,41 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
                   </dd>
                 </div>
                 <Dato etiqueta="Tarifa por hora">{taller.tarifaHora > 0 && <span className="ui-precio">{formatPrecio(taller.tarifaHora)}</span>}</Dato>
+                <Dato etiqueta="IVA de tu mano de obra">{textoRegimenIva(taller.responsableIva)}</Dato>
                 <Dato etiqueta="Precio de mano de obra">{taller.precioManoObra != null && <span className="ui-precio">{formatPrecio(taller.precioManoObra)}</span>}</Dato>
               </dl>
+            )}
+          </SeccionEditable>
+
+          <SeccionEditable id="mt-cuenta" icono="card" titulo="Cuenta bancaria para transferencias"
+            descripcion="Cuenta donde recibirás el pago de tu mano de obra y tus repuestos."
+            onEditar={() => abrir("cuenta")}
+            textoEditar={taller.cuentaBancaria ? "Editar cuenta" : "Registrar cuenta"}
+            editando={editando === "cuenta"}>
+            {editando === "cuenta" ? (
+              <FormCuentaBancaria
+                cuenta={taller.cuentaBancaria}
+                onCancelar={cerrar}
+                onGuardar={async (datos) => {
+                  const res = await guardarCuentaBancariaTaller(token, datos);
+                  guardado("cuenta", "Cuenta bancaria guardada. Las transferencias se realizarán a esta cuenta.")(res);
+                }}
+              />
+            ) : taller.cuentaBancaria ? (
+              <dl className="ui-datos">
+                <Dato etiqueta="Entidad bancaria">{taller.cuentaBancaria.banco}</Dato>
+                <Dato etiqueta="Tipo de cuenta">{taller.cuentaBancaria.tipoCuenta === "CORRIENTE" ? "Cuenta Corriente" : "Cuenta de Ahorros"}</Dato>
+                <Dato etiqueta="Número de cuenta"><ValorSensible valor={taller.cuentaBancaria.numeroCuenta} etiqueta="el número de cuenta" /></Dato>
+                <Dato etiqueta="Titular">{taller.cuentaBancaria.titularNombre}</Dato>
+                <Dato etiqueta="Documento"><ValorSensible valor={taller.cuentaBancaria.titularDocumentoNumero} prefijo={taller.cuentaBancaria.titularDocumentoTipo} etiqueta="el documento" /></Dato>
+                {taller.cuentaBancaria.fechaActualizacion && (
+                  <Dato etiqueta="Última actualización">{formatFecha(taller.cuentaBancaria.fechaActualizacion)}</Dato>
+                )}
+              </dl>
+            ) : (
+              <Alerta tono="aviso">
+                Aún no has registrado tu cuenta bancaria. Es indispensable para recibir tus pagos.
+              </Alerta>
             )}
           </SeccionEditable>
 
@@ -314,7 +367,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             descripcion="Con este punto te asignamos las solicitudes cercanas y el cliente calcula cómo llegar."
             onEditar={aprobado ? () => abrir("ubicacion") : undefined}
             textoEditar={taller.latitud != null ? "Ajustar en el mapa" : "Marcar en el mapa"}
-            editando={editando === "ubicacion"} aviso={avisoDe("ubicacion")}
+            editando={editando === "ubicacion"}
             nota={editando !== "ubicacion" && "La dirección escrita y el barrio los cambia el administrador de DriveMaster."}>
             {editando === "ubicacion" ? (
               <FormUbicacion taller={taller} token={token} onCancelar={cerrar}
@@ -341,7 +394,7 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             descripcion="Ayuda a proponer citas que sí puedes cumplir."
             onEditar={aprobado ? () => abrir("horario") : undefined}
             textoEditar={semana || taller.horario ? "Editar" : "Agregar horario"}
-            editando={editando === "horario"} aviso={avisoDe("horario")}>
+            editando={editando === "horario"}>
             {editando === "horario" && semana === undefined ? (
               <Esqueleto variante="formulario" cantidad={2} texto="Cargando tu horario…" />
             ) : editando === "horario" ? (
@@ -373,8 +426,23 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             guardarTelefono={(numero) => guardarTelefonoTaller(token, numero)}
             onTelefonoGuardado={guardado("contacto", "Teléfono guardado.")}
             editandoTelefono={editando === "contacto"} onEditarTelefono={() => abrir("contacto")} onCerrarTelefono={cerrar}
-            aviso={avisoDe("contacto")}
+           
             onCorreoCambiado={(correoUsuario) => onActualizado?.({ ...taller, correoUsuario })} />
+
+          {ordenesAnteriores > 0 && onVerAnteriores && (
+            <SeccionEditable id="mt-anterior" icono="clock" titulo="Versión anterior"
+              descripcion="Órdenes que llegaron antes del sistema actual de solicitudes y cotizaciones.">
+              <div className="mt-anterior">
+                <p>
+                  Te {ordenesAnteriores === 1 ? "queda 1 orden" : `quedan ${ordenesAnteriores} órdenes`} por atender.
+                  Las nuevas llegan por Solicitudes.
+                </p>
+                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={onVerAnteriores}>
+                  Ver órdenes anteriores
+                </button>
+              </div>
+            </SeccionEditable>
+          )}
         </div>
 
         <aside className="ui-perfil__lateral">

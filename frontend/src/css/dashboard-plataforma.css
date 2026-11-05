@@ -26,3 +26,14 @@
 .ss-panel--tienda .sv-btn, .ss-panel--tienda .ss-filtro__conteo { color: var(--on-primary); }
 .ss-panel--plataforma .ss-estado--proceso,
 .ss-panel--tienda .ss-estado--proceso { background: var(--ui-info-bg); color: var(--ui-info); }
+
+/* Cifras de dinero: cada tarjeta deja espacio a un monto de nueve dígitos, que no se parte en dos líneas */
+.pp-indicadores-dinero { grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); }
+
+/* Aviso de reembolsos pendientes: enlace a la lista dentro del texto */
+.pp-enlace {
+  padding: 0; background: none; border: 0; color: var(--ui-text); font: inherit; font-weight: 700;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.pp-enlace:hover { color: var(--primary-text); }
+.pp-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }

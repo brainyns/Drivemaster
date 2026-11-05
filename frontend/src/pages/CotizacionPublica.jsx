@@ -14,6 +14,8 @@ const RESULTADO = {
   RECHAZAR: "Registramos que rechazaste la cotización. La solicitud quedó cerrada.",
 };
 
+const APROBADA_SIN_SALDO = "¡Cotización aprobada! El diagnóstico ya la cubre: no tienes nada por pagar y el taller empieza el trabajo.";
+
 /**
  * Lee el token del fragmento (#token=…&accion=…). El fragmento nunca llega a un
  * servidor; al cargar se borra de la barra de direcciones. El token solo vive en
@@ -55,6 +57,8 @@ export default function CotizacionPublica({ onIrServicios, onIrInicio }) {
     setEstado("RESPONDIDA");
   };
 
+  const sinSaldo = cotizacion?.totalAPagar <= 0;
+
   return (
     <div className="ct-publica">
       <div className="ct-publica__caja">
@@ -81,17 +85,17 @@ export default function CotizacionPublica({ onIrServicios, onIrInicio }) {
             <CotizacionDetalle cotizacion={cotizacion} />
 
             {estado === "LISTA" && (cotizacion.puedeResponder ? (
-              <RespuestaCotizacion onResponder={responder} accionInicial={accion} />
+              <RespuestaCotizacion onResponder={responder} accionInicial={accion} sinSaldo={sinSaldo} />
             ) : (
               <p className="ss-aviso">Esta cotización ya no se puede responder desde el correo.</p>
             ))}
 
             {estado === "RESPONDIDA" && (
               <>
-                <p className="ss-exito" role="status">{RESULTADO[respuesta]}</p>
+                <p className="ss-exito" role="status">{respuesta === "APROBAR" && sinSaldo ? APROBADA_SIN_SALDO : RESULTADO[respuesta]}</p>
                 {respuesta === "APROBAR" && (
                   <div className="ss-acciones">
-                    <button className="sv-btn" onClick={onIrServicios}>Iniciar sesión y pagar</button>
+                    <button className="sv-btn" onClick={onIrServicios}>{sinSaldo ? "Ir a mis servicios" : "Iniciar sesión y pagar"}</button>
                   </div>
                 )}
               </>

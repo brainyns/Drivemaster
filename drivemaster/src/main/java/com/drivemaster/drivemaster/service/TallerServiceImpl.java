@@ -3,7 +3,10 @@ package com.drivemaster.drivemaster.service;
 import com.drivemaster.drivemaster.dto.AprobacionRequest;
 import com.drivemaster.drivemaster.dto.CrearTallerRequest;
 import com.drivemaster.drivemaster.dto.RegistroNegocioRequest;
+import com.drivemaster.drivemaster.dto.CuentaBancariaDTO;
 import com.drivemaster.drivemaster.dto.TallerDTO;
+import com.drivemaster.drivemaster.model.CuentaBancaria;
+import com.drivemaster.drivemaster.util.ValidacionCuentaBancaria;
 import com.drivemaster.drivemaster.dto.TallerMapaDTO;
 import com.drivemaster.drivemaster.model.EstadoAprobacion;
 import com.drivemaster.drivemaster.model.Mecanico;
@@ -15,6 +18,7 @@ import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.util.Coordenadas;
 import com.drivemaster.drivemaster.util.HaversineUtil;
+import com.drivemaster.drivemaster.util.IvaTaller;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -197,6 +201,7 @@ public class TallerServiceImpl implements TallerService {
     @Override
     public TallerDTO registrar(RegistroNegocioRequest r) {
         cuentaNegocioService.validarRegistro(r);
+        cuentaNegocioService.validarSinDuplicados(CuentaNegocioService.TALLER, r);
         Coordenadas.validar(r.getLatitud(), r.getLongitud(), true);
 
         Usuario usuario = cuentaNegocioService.crearUsuario(
@@ -206,6 +211,7 @@ public class TallerServiceImpl implements TallerService {
         Taller taller = Taller.builder()
                 .usuarioId(usuario.getId())
                 .nombre(r.getNombreNegocio().trim())
+                .nit(r.getNit() == null || r.getNit().isBlank() ? null : r.getNit().trim())
                 .ciudad(r.getCiudad())
                 .barrio(r.getBarrio())
                 .direccion(r.getDireccion())
@@ -233,9 +239,10 @@ public class TallerServiceImpl implements TallerService {
         boolean aprobado = request.getAprobado();
 
         if (aprobado) {
-            // Primero la suscripción: si el plan no es válido, el taller no queda aprobado a medias.
-            suscripcionService.activar(SuscripcionService.ACTOR_TALLER, taller.getId(),
-                    request.getPlanCodigo(), correoAdmin);
+            // Primero la suscripción (si están en uso): si el plan no es válido, no queda aprobado a medias
+            if (suscripcionService.habilitadas()) {
+                suscripcionService.activar(SuscripcionService.ACTOR_TALLER, taller.getId(), request.getPlanCodigo(), correoAdmin);
+            }
             taller.setEstadoAprobacion(EstadoAprobacion.APROBADO);
             taller.setMotivoRechazo(null);
             taller.setActivo(true);
@@ -254,6 +261,15 @@ public class TallerServiceImpl implements TallerService {
     @Override
     public TallerDTO miTaller(String correoTaller) {
         return toDTOCompleto(obtenerPorUsuario(correoTaller));
+    }
+
+    @Override
+    public TallerDTO guardarCuentaBancaria(String correoTaller, CuentaBancariaDTO dto) {
+        Taller taller = obtenerPorUsuario(correoTaller);
+        CuentaBancaria cb = ValidacionCuentaBancaria.validarYConvertir(dto);
+        taller.setCuentaBancaria(cb);
+        taller = tallerRepository.save(taller);
+        return toDTOCompleto(taller);
     }
 
     // ─── Mecánicos ───────────────────────────────────────────
@@ -342,10 +358,12 @@ public class TallerServiceImpl implements TallerService {
                 .motivoRechazo(t.getMotivoRechazo())
                 .fechaRegistro(t.getFechaRegistro())
                 .fechaAprobacion(t.getFechaAprobacion())
+                .responsableIva(IvaTaller.esResponsable(t))
                 .correoUsuario(cuentaNegocioService.correoDe(t.getUsuarioId()))
                 .mecanicos(mecanicosDe(t))
                 .planActual(plan != null ? plan.getPlanCodigo() : null)
                 .planVence(plan != null ? plan.getFechaFin() : null)
+                .cuentaBancaria(ValidacionCuentaBancaria.toDTO(t.getCuentaBancaria()))
                 .build();
     }
 

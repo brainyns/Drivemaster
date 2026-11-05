@@ -6,6 +6,7 @@ import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const REFRESCO_MS = 60000;
 
@@ -23,7 +24,7 @@ export default function DashboardOperacion({ token, onIr }) {
     setCargando(true);
     return operacionPlataforma(token)
       .then((datos) => setEstado({ datos, error: null }))
-      .catch((e) => setEstado((previo) => ({ datos: previo.datos, error: e.message })))
+      .catch((e) => setEstado((previo) => ({ datos: previo.datos, error: textoError(e) })))
       .finally(() => setCargando(false));
   }, [token]);
 

@@ -18,8 +18,9 @@ test("Usuarios: crear exige nombre, correo válido, contraseña de 6 y un rol de
   assert.equal(erroresNuevoUsuario({ nombre: "Ana", correo: "ana@d.co", password: "123", rol: "ADMIN" }).password,
     "Usa al menos 6 caracteres.");
   assert.deepEqual(erroresNuevoUsuario({ nombre: "Ana", correo: "ana@d.co", password: "123456", rol: "SUPERADMIN" }), {});
-  // Las tiendas y los talleres no se crean desde aquí (lo rechaza también el backend)
+  // Las tiendas y los talleres no se crean desde aquí, y del equipo solo se crean super admin (lo rechaza también el backend)
   assert.ok(erroresNuevoUsuario({ nombre: "Ana", correo: "ana@d.co", password: "123456", rol: "TIENDA" }).rol);
+  assert.ok(erroresNuevoUsuario({ nombre: "Ana", correo: "ana@d.co", password: "123456", rol: "ADMIN" }).rol);
 });
 
 test("Usuarios: editar manda el nombre siempre y la contraseña y el rol solo si cambian", () => {
@@ -41,6 +42,10 @@ test("Usuarios: el correo repetido se muestra en su campo y desactivar dice qué
   assert.match(avisoDesactivar({ rol: "TIENDA" }), /tienda queda en pausa.*Aprobaciones/);
   assert.match(avisoDesactivar({ rol: "TALLER" }), /taller queda en pausa/);
   assert.doesNotMatch(avisoDesactivar({ rol: "ADMIN" }), /pausa/);
+  assert.match(avisoDesactivar({ rol: "SUPERADMIN" }), /Ya no podrá iniciar sesión/);
+  // Con lo que tiene en curso, el aviso trae la cifra
+  assert.match(avisoDesactivar({ rol: "TIENDA" }, { pedidos: 3 }), /3 pedidos en curso/);
+  assert.match(avisoDesactivar({ rol: "TALLER" }, { solicitudes: 1 }), /1 solicitud en curso/);
 });
 
 test("Usuarios: cada fila usa solo los campos de UsuarioAdminDTO", () => {
@@ -49,9 +54,10 @@ test("Usuarios: cada fila usa solo los campos de UsuarioAdminDTO", () => {
   assert.deepEqual(Object.keys(fila), ["id", "nombre", "correo", "rol", "activo", "fechaCreacion", "ultimoLogin"]);
   assert.equal(fila.fechaCreacion, "2026-10-01T10:00:00");
   assert.equal(filaUsuario({ id: "u2", activo: false }).activo, false);
-  // Los filtros por rol: los fijos siempre; mecánicos y vendedores solo si hay cuentas
-  assert.deepEqual(rolesParaFiltrar({}), ["CLIENTE", "TIENDA", "TALLER", "ADMIN", "SUPERADMIN"]);
-  assert.ok(rolesParaFiltrar({ VENDEDOR: 2 }).includes("VENDEDOR"));
+  // Los filtros por rol: los fijos siempre; los roles retirados (ADMIN, VENDEDOR) no tienen filtro aunque haya cuentas
+  assert.deepEqual(rolesParaFiltrar({}), ["CLIENTE", "TIENDA", "TALLER", "SUPERADMIN"]);
+  assert.ok(!rolesParaFiltrar({ VENDEDOR: 2, ADMIN: 3 }).includes("VENDEDOR"));
+  assert.ok(!rolesParaFiltrar({ ADMIN: 3 }).includes("ADMIN"));
   assert.equal(etiquetaRol("VENDEDOR"), ROLES.VENDEDOR.label);
 });
 

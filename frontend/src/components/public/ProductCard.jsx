@@ -1,3 +1,4 @@
+import PrecioCatalogo from "../marketplace/PrecioCatalogo";
 import Icon from "./Icon";
 import "../../css/product-card.css";
 import { etiquetaCategoria } from "../../utils/categorias";
@@ -111,7 +112,7 @@ export default function ProductCard({ producto, onClick }) {
 
         <div className="dm-card__bottom">
           <strong>
-            {formatPrecio(producto.precio)}
+            <PrecioCatalogo producto={producto} />
             <small>COP · {tienda?.ofreceEnvio ? `Envío ${formatPrecio(tienda.costoEnvio)}` : "Retiro en tienda"}</small>
           </strong>
           <EstadoStock producto={producto} />

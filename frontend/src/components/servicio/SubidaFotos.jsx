@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { subirFotoServicio } from "../../services/solicitudServicioService";
 import Icon from "../public/Icon";
+import { textoError } from "../../utils/errores";
 
 const MAX_MB = 5;
 
@@ -36,7 +37,7 @@ export default function SubidaFotos({ token, fotos, onChange, max = 5, deshabili
         actuales = [...actuales, url];
         onChange(actuales);
       } catch (err) {
-        setError(err.message);
+        setError(textoError(err));
       } finally {
         setSubiendo((n) => n - 1);
       }

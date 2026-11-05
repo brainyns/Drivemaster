@@ -22,3 +22,8 @@
   .ui-table--tarjetas .pre-resolucion .pp-sub { flex-basis: 100%; text-align: right; }
   .ui-table--tarjetas .pre-despacho { white-space: normal; }
 }
+
+/* Retiros sin recoger (RetirosSinRecoger): debajo de los problemas de envío, con su propio título */
+.pre-retiros { display: grid; gap: var(--ui-sp-3); margin-top: var(--ui-sp-6, 32px); }
+.pre-retiros__cabecera { display: grid; gap: 4px; }
+.pre-root .pre-retiros__titulo { margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--ui-text); }

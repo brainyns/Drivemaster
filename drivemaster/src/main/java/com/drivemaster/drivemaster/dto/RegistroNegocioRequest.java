@@ -28,6 +28,7 @@ public class RegistroNegocioRequest {
     // Solo tiendas: si hacen envíos y a qué costo fijo (null/false = solo retiro)
     private Boolean ofreceEnvio;
     private Double costoEnvio;
+    private Double descuentoTalleresPct;
 
     // Solo talleres
     private List<String> especialidades;

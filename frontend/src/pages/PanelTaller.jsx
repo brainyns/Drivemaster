@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getToken } from "../services/authService";
 import { miTaller } from "../services/tallerService";
 import { bandejaSolicitudesTaller } from "../services/solicitudServicioService";
@@ -9,19 +9,22 @@ import TallerInicio from "./taller/TallerInicio";
 import TallerMiTaller from "./taller/TallerMiTaller";
 import TallerCotizaciones from "./taller/TallerCotizaciones";
 import TallerInformes from "./taller/TallerInformes";
+import TallerInventario from "./taller/TallerInventario";
+import TallerMovimientos from "./taller/TallerMovimientos";
 import TallerAgenda from "./taller/TallerAgenda";
 import OrdenesAnteriores from "./taller/OrdenesAnteriores";
 import { destinoSeccion, ordenesPorAtender } from "./taller/resumenTaller";
 import "../css/servicios.css";
 import "../css/panel-taller.css";
 import "../css/taller-panel.css";
+import { textoError } from "../utils/errores";
 
 /**
  * Contenedor del panel del taller: carga lo común (datos del taller, solicitudes y órdenes del
  * flujo anterior) y muestra la sección que pide el menú lateral. También avisa al menú cuántas
  * solicitudes esperan respuesta y si quedan órdenes anteriores por atender.
  */
-export default function PanelTaller({ seccion = "inicio", param = null, irA, onResumen }) {
+export default function PanelTaller({ seccion = "inicio", param = null, irA, onResumen, onComprarInventario }) {
   const token = getToken();
   const [taller, setTaller] = useState(null);
   const [solicitudes, setSolicitudes] = useState([]);
@@ -29,34 +32,47 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [errorTaller, setErrorTaller] = useState(null);
+  // Una bandeja pedida antes de una acción ya no vale: pisaría el estado nuevo con el viejo
+  const versionBandeja = useRef(0);
 
   const cargar = useCallback(async () => {
     setError(null);
+    const version = ++versionBandeja.current;
     // Cada fuente falla por separado: una caída no deja el panel en blanco.
     const [t, s, o] = await Promise.allSettled([
       miTaller(token), bandejaSolicitudesTaller(token), ordenesDelTaller(token),
     ]);
     if (t.status === "fulfilled") setTaller(t.value);
-    setErrorTaller(t.status === "rejected" ? t.reason?.message || "No se pudieron cargar los datos del taller." : null);
-    if (s.status === "fulfilled") setSolicitudes(s.value || []);
-    else setError(s.reason?.message || "No se pudieron cargar las solicitudes.");
+    setErrorTaller(t.status === "rejected" ? textoError(t.reason, "No se pudieron cargar los datos del taller.") : null);
+    if (version === versionBandeja.current) {
+      if (s.status === "fulfilled") setSolicitudes(s.value || []);
+      else setError(textoError(s.reason, "No se pudieron cargar las solicitudes."));
+    }
     if (o.status === "fulfilled") setOrdenes(o.value || []);
     setCargando(false);
   }, [token]);
 
   // Solo la bandeja: tras una acción en Solicitudes o Trabajos no hace falta pedir de nuevo el taller ni las órdenes
+  // Devuelve la bandeja nueva, o null si no se pudo o ya no vale
   const recargarSolicitudes = useCallback(async () => {
+    const version = ++versionBandeja.current;
     try {
-      setSolicitudes((await bandejaSolicitudesTaller(token)) || []);
+      const lista = (await bandejaSolicitudesTaller(token)) || [];
+      if (version !== versionBandeja.current) return null;
+      setSolicitudes(lista);
       setError(null);
+      return lista;
     } catch (e) {
-      setError(e.message || "No se pudieron cargar las solicitudes.");
+      if (version === versionBandeja.current) setError(textoError(e, "No se pudieron cargar las solicitudes."));
+      return null;
     }
   }, [token]);
 
   /** Una solicitud actualizada por una acción reemplaza la suya en la bandeja, sin recargar. */
-  const reemplazarSolicitud = useCallback((actualizada) =>
-    setSolicitudes((prev) => prev.map((s) => (s.id === actualizada.id ? { ...s, ...actualizada } : s))), []);
+  const reemplazarSolicitud = useCallback((actualizada) => {
+    versionBandeja.current += 1;
+    setSolicitudes((prev) => prev.map((s) => (s.id === actualizada.id ? { ...s, ...actualizada } : s)));
+  }, []);
 
   // La bandeja y el taller se cargan aquí una vez y se pasan a cada sección (Solicitudes y Trabajos no los piden de nuevo)
   const bandeja = { solicitudes, taller, cargandoBandeja: cargando, errorBandeja: error,
@@ -100,14 +116,18 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         )}
         {seccion === "trabajos" && (
           <TallerSolicitudes key={`${destino.filtro || "repuestos"}-${destino.abrir || ""}`} modo="trabajos" filtroInicial={destino.filtro}
-            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined} {...bandeja} />
+            abrirInicial={destino.abrir} onVolver={destino.volverA ? () => irA(destino.volverA) : undefined}
+            textoAfuera={destino.volverA === "taller-cotizaciones" ? "Cotizaciones" : destino.volverA === "taller-movimientos" ? "Movimientos" : "Inicio"} {...bandeja} />
         )}
         {seccion === "agenda" && <TallerAgenda taller={taller} irA={irA} />}
         {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}
         {seccion === "informes" && <TallerInformes />}
+        {seccion === "inventario" && <TallerInventario onComprar={onComprarInventario} irA={irA} />}
+        {seccion === "movimientos" && <TallerMovimientos key={destino.abrir || "movimientos"} irA={irA} piezaInicial={destino.abrir} />}
         {seccion === "mitaller" && (
           <TallerMiTaller taller={taller} token={token} cargando={cargando} error={errorTaller} abrirSeccion={destino.filtro}
-            onRecargar={cargar} onActualizado={setTaller} />
+            onRecargar={cargar} onActualizado={setTaller}
+            ordenesAnteriores={anteriores.length} onVerAnteriores={() => irA("taller-anteriores")} />
         )}
         {seccion === "anteriores" && (
           <OrdenesAnteriores ordenes={ordenes} cargando={cargando} error={error} onRecargar={cargar} />

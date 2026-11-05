@@ -60,6 +60,33 @@ public class CatalogoService {
         this.vehiculoService = vehiculoService;
     }
 
+
+    private UsuarioService usuarioService;
+    private TallerService tallerService;
+
+    // Por setter: el catálogo es público y estas solo se usan para reconocer a un taller aprobado
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setCuentas(UsuarioService usuarioService, TallerService tallerService) {
+        this.usuarioService = usuarioService;
+        this.tallerService = tallerService;
+    }
+
+    /** Quien mira es un taller aprobado y activo: ve el precio con el descuento de cada tienda. */
+    boolean esTallerAprobado(String correo) {
+        if (correo == null || usuarioService == null || tallerService == null) return false;
+        try {
+            var usuario = usuarioService.obtenerPorCorreo(correo);
+            if (!"TALLER".equals(usuario.getRol())) return false;
+            var t = tallerService.obtenerPorUsuario(correo);
+            return com.drivemaster.drivemaster.model.EstadoAprobacion.estaAprobado(t.getEstadoAprobacion()) && Boolean.TRUE.equals(t.getActivo());
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private static ProductoCatalogoDTO conDescuento(ProductoCatalogoDTO dto, Tienda tienda, boolean taller) {
+        return taller ? dto.paraTaller(com.drivemaster.drivemaster.util.DescuentoTaller.pct(tienda)) : dto;
+    }
     // ─── Tiendas visibles ────────────────────────────────────────────────────
 
     /** Aprobada, activa y con dirección, ciudad y horario. */
@@ -92,6 +119,7 @@ public class CatalogoService {
         if (tiendas.isEmpty()) return new PaginaCatalogoDTO(List.of(), 0, pag, tam);
 
         Vehiculo vehiculo = resolverVehiculo(correo, vehiculoId);
+        boolean taller = esTallerAprobado(correo);
         List<Criteria> filtros = new ArrayList<>();
         filtros.add(Criteria.where("tiendaId").in(tiendas.keySet()));
         // Los productos creados desde el panel no guardan "activo": null cuenta como activo.
@@ -111,7 +139,7 @@ public class CatalogoService {
         Query query = Query.query(new Criteria().andOperator(filtros.toArray(new Criteria[0]))).limit(MAX_COINCIDENCIAS);
 
         List<ProductoCatalogoDTO> todos = mongoTemplate.find(query, Producto.class).stream()
-                .map(p -> aDTO(p, tiendas.get(p.getTiendaId()), vehiculo))
+                .map(p -> conDescuento(aDTO(p, tiendas.get(p.getTiendaId()), vehiculo), tiendas.get(p.getTiendaId()), taller))
                 .sorted(comparador(orden, vehiculo != null))
                 .toList();
         int desde = Math.min(pag * tam, todos.size());
@@ -126,12 +154,13 @@ public class CatalogoService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Producto no encontrado");
         }
         Vehiculo vehiculo = resolverVehiculo(correo, vehiculoId);
-        ProductoCatalogoDTO dto = aDTO(producto, tiendas.get(producto.getTiendaId()), vehiculo);
+        boolean taller = esTallerAprobado(correo);
+        ProductoCatalogoDTO dto = conDescuento(aDTO(producto, tiendas.get(producto.getTiendaId()), vehiculo), tiendas.get(producto.getTiendaId()), taller);
 
         List<ProductoCatalogoDTO> otras = candidatosComparables(producto, tiendas).stream()
                 .filter(o -> !o.getId().equals(producto.getId()))
                 .filter(o -> claveComparable(o).equals(claveComparable(producto)))
-                .map(o -> aDTO(o, tiendas.get(o.getTiendaId()), vehiculo))
+                .map(o -> conDescuento(aDTO(o, tiendas.get(o.getTiendaId()), vehiculo), tiendas.get(o.getTiendaId()), taller))
                 .sorted(Comparator.comparing(ProductoCatalogoDTO::precio, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
         return dto.conOtrasTiendas(otras);
@@ -192,12 +221,12 @@ public class CatalogoService {
         return new ProductoCatalogoDTO(p.getId(), p.getNombre(), p.getMarca(), p.getCategoria(), p.getReferencia(),
                 p.getImagenUrl(), Boolean.TRUE.equals(p.getImagenIa()), p.getPrecioVenta(), encargo ? "ENCARGO" : "STOCK", encargo || stock > 0,
                 encargo ? null : Math.min(stock, STOCK_VISIBLE_MAX), encargo ? p.getDiasEntregaEncargo() : null,
-                compatibilidad, aviso, aTiendaDTO(tienda), null);
+                compatibilidad, aviso, aTiendaDTO(tienda), null, null, null);
     }
 
     public static TiendaCatalogoDTO aTiendaDTO(Tienda t) {
         return new TiendaCatalogoDTO(t.getId(), t.getNombre(), t.getCiudad(), t.getBarrio(), t.getDireccion(),
-                t.getHorario(), t.getCostoEnvio() != null, t.getCostoEnvio(), t.getLogoUrl());
+                t.getHorario(), t.getCostoEnvio() != null, t.getCostoEnvio(), t.getLogoUrl(), t.getHorarioSemanal());
     }
 
     /** Mismo repuesto = misma referencia; sin referencia, mismo nombre. Sin distinguir mayúsculas ni tildes. */

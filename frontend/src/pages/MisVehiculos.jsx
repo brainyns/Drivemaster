@@ -11,6 +11,7 @@ import ChipEstado from "../components/ui/ChipEstado";
 import Icon from "../components/public/Icon";
 import "../css/servicios.css";
 import "../css/mis-vehiculos.css";
+import { textoError } from "../utils/errores";
 
 const VACIO = { marca: "", modelo: "", anio: "", motor: "", combustible: "Gasolina", placa: "", kilometraje: "" };
 const COMBUSTIBLES = ["Gasolina", "Diésel", "Híbrido", "Eléctrico", "Gas"];
@@ -46,7 +47,7 @@ function Mantenimiento({ vehiculo, alGuardar }) {
       setEditando(false);
       await alGuardar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setGuardando(false);
     }
@@ -137,7 +138,7 @@ function CambiarFoto({ vehiculo, alCambiar }) {
       await subirImagenVehiculo(getToken(), vehiculo.id, archivo);
       await alCambiar();
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
     } finally {
       setSubiendo(false);
     }
@@ -207,7 +208,7 @@ function FormularioVehiculo({ token, onGuardado, onCancelar }) {
       if (foto && creado?.id) await subirImagenVehiculo(token, creado.id, foto);
       await onGuardado();
     } catch (err) {
-      setError(err.message);
+      setError(textoError(err));
     } finally {
       setGuardando(false);
     }
@@ -281,7 +282,7 @@ export default function MisVehiculos({ onVolver, onVerServicio }) {
     setEstado("listo");
   }, []);
   const fallar = useCallback((e) => {
-    setError(e.message);
+    setError(textoError(e));
     setEstado("error");
   }, []);
 

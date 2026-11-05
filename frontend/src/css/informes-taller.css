@@ -9,9 +9,11 @@
 
 .ti-rejilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .ti-tarjeta__cuerpo { display: grid; gap: 14px; }
+.ti-columna { display: grid; gap: 16px; align-content: start; min-width: 0; }
 
 .ti-root .ti-vacio { margin: 0; max-width: 52ch; font-size: 0.9rem; line-height: 1.55; color: var(--ui-muted); text-wrap: pretty; }
 .ti-root .ti-nota { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: var(--ui-muted); text-wrap: pretty; }
+.ti-root .ti-periodo { margin: 0 0 12px; font-size: 0.8125rem; color: var(--ui-muted); }
 .ti-root .ti-nota--aparte { padding-top: 12px; border-top: 1px dashed var(--ui-line); }
 
 /* Barras: nombre, pista y valor en texto */
@@ -33,7 +35,7 @@
   height: 100%;
   min-width: 4px;
   border-radius: inherit;
-  background: var(--primary);
+  background: var(--fase, var(--primary));
   transform-origin: left;
   animation: ti-crece 0.5s var(--ui-ease) both;
 }

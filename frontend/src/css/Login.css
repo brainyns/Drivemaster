@@ -353,6 +353,25 @@
   padding-left: 39px;
 }
 
+/* La ciudad del registro: el mismo aspecto que los campos de texto, con la flecha del selector */
+.auth-card select.auth-select {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--dm-line);
+  border-radius: var(--ui-r-md);
+  color: var(--dm-text);
+  font-family: var(--dm-font);
+  font-size: 1rem;
+  padding: 13px 16px 13px 39px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-card select.auth-select:focus {
+  border-color: var(--dm-orange);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
 .auth-card input::placeholder {
   color: var(--dm-muted);
   opacity: 0.72;

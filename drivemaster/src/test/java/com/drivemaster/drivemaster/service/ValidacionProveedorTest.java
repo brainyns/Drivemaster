@@ -72,4 +72,28 @@ class ValidacionProveedorTest {
         verify(repo, never()).save(any());
         assertEquals("Viejo", existente.getNombre(), "el registro guardado no cambia");
     }
+
+    @Test
+    void lasCondicionesDePagoSonOpcionalesPeroElCreditoLlevaPlazo() {
+        Proveedor contado = proveedor("Alfa", null, null, null);
+        contado.setCondicionPago("CONTADO");
+        contado.setDiasCredito(30);
+        contado.setContacto("  Laura Gómez ");
+        assertNull(ValidacionProveedor.validar(contado).getDiasCredito(), "de contado no hay plazo");
+        assertEquals("Laura Gómez", contado.getContacto());
+
+        Proveedor sinPlazo = proveedor("Alfa", null, null, null);
+        sinPlazo.setCondicionPago("CREDITO");
+        assertEquals("Escribe el plazo del crédito: entre 1 y 180 días.",
+                assertThrows(DatosInvalidosException.class, () -> ValidacionProveedor.validar(sinPlazo)).getCampos().get("diasCredito"));
+
+        Proveedor credito = proveedor("Alfa", null, null, null);
+        credito.setCondicionPago("CREDITO");
+        credito.setDiasCredito(30);
+        assertEquals(30, ValidacionProveedor.validar(credito).getDiasCredito());
+
+        Proveedor otra = proveedor("Alfa", null, null, null);
+        otra.setCondicionPago("TRUEQUE");
+        assertThrows(DatosInvalidosException.class, () -> ValidacionProveedor.validar(otra));
+    }
 }

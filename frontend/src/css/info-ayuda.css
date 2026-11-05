@@ -1,0 +1,62 @@
+/* Glosario de una línea para pantallas de dinero. Blanco y naranja; el globo es blanco sobre cualquier fondo. */
+
+.ia-root {
+  position: relative;
+  display: inline-flex;
+  vertical-align: baseline;
+  margin-left: 6px;
+}
+
+.ia-boton {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border, #e5e7eb);
+  background: #fff;
+  color: var(--dm-orange-text, #a84a00);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ia-boton:hover { background: var(--primary-soft, rgba(242, 140, 40, 0.08)); border-color: var(--primary, #f28c28); }
+
+.ia-boton:focus-visible { outline: 2px solid var(--primary, #f28c28); outline-offset: 2px; }
+
+.ia-globo {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  display: block;
+  min-width: 200px;
+  max-width: 260px;
+  padding: 8px 12px;
+  background: #fff;
+  color: var(--text, #17191c);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(23, 25, 28, 0.18);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+@media (max-width: 480px) {
+  .ia-globo { min-width: 0; max-width: 220px; }
+}
+
+/* El "?" mide 20 px, pero el área que se toca llega a 44 px */
+.ia-boton { position: relative; }
+.ia-boton::after { content: ""; position: absolute; inset: -12px; }
+
+/* Fila de glosario bajo las cifras */
+.ia-glosario {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 12px 0 0;
+  font-size: 0.8125rem; color: var(--ui-muted, #62666a);
+}
+.ia-glosario__titulo { font-weight: 600; color: var(--ui-text, #17191c); }
+.ia-glosario__item { display: inline-flex; align-items: center; }

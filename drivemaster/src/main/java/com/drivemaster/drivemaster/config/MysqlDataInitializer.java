@@ -117,7 +117,7 @@ public class MysqlDataInitializer implements CommandLineRunner {
     new Object[]{"ESTADO_VENTA_DEFAULT", "PAGADA", "Estado por defecto al registrar venta"},
     // ─── Marketplace (valores iniciales; los ajusta el ADMIN) ───
     new Object[]{"TARIFA_DIAGNOSTICO",       "50000", "Tarifa fija de diagnóstico en COP (ingreso del taller, descontable de la reparación)"},
-    new Object[]{"COMISION_PCT",             "10",    "Comisión de la plataforma (%) sobre el subtotal antes de IVA; en v1 solo se registra"},
+    new Object[]{"COMISION_PCT",             "10",    "Comisión de la plataforma (%) sobre el valor antes de IVA, de 0 a 50; se descuenta solo con COMISION_RETENIDA_ENABLED"},
     new Object[]{"TIMEOUT_TALLER_MIN",       "120",   "Minutos que tiene un taller para aceptar una solicitud antes de reasignarla"},
     new Object[]{"VIGENCIA_COTIZACION_DIAS", "7",     "Días de vigencia de una cotización"},
     new Object[]{"PAGO_DIAGNOSTICO_REQUERIDO",   "false", "Si es true, la solicitud pasa a revisión solo cuando el cliente paga el diagnóstico (Fase 3)"},
@@ -127,7 +127,8 @@ public class MysqlDataInitializer implements CommandLineRunner {
     new Object[]{"HORA_FIN_ATENCION",            "19",    "Hora (Colombia) en que se detiene el plazo de respuesta del taller"},
     new Object[]{"PLAZO_DESPACHO_DIAS_HABILES",  "2",     "Días hábiles que tiene una tienda para despachar un pedido (desde el pago)"},
     new Object[]{"PLAZO_ENCARGO_DIAS_EXTRA",     "2",     "Días hábiles extra sobre los días estimados de un encargo antes de alertar al ADMIN"},
-    new Object[]{"PLAZO_AUTOCONFIRMACION_DIAS_HABILES", "5", "Días hábiles tras despachar un envío del catálogo para que el cliente confirme; si no responde se confirma sola"}
+    new Object[]{"PLAZO_AUTOCONFIRMACION_DIAS_HABILES", "5", "Días hábiles tras despachar un envío del catálogo para que el cliente confirme; si no responde se confirma sola"},
+    new Object[]{"PLAZO_RECEPCION_SERVICIO_DIAS_HABILES", "3", "Días hábiles tras entregar un vehículo para que el cliente confirme; si no responde se confirma sola y se habilita el pago del taller"}
 );
 
         for (Object[] p : params) {

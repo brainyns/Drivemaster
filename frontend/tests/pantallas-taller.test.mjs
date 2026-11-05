@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { completitudPerfil, errorHorario, errorTarifa, iniciales } from "../src/pages/taller/perfilTaller.js";
+import { yaEstabaHecho } from "../src/components/servicio/estadosTaller.js";
+import { cantidadEntera, errorCotizacion, errorFallas, lineasFallas } from "../src/components/servicio/reglasFormulariosTaller.js";
+import { avisoRecibidos, estadoRecibidos, hayQueConfirmar } from "../src/components/servicio/reglasRecibidos.js";
 
 const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
 
@@ -31,6 +34,52 @@ test("Mi taller: la tarifa y el horario se validan en línea con los límites de
   assert.match(errorHorario("x".repeat(201)), /200 caracteres/);
 });
 
+test("Repuestos: sin despacho no se puede confirmar nada", () => {
+  const pedidos = [{ id: "a", estado: "PENDIENTE" }, { id: "b", estado: "EN_PREPARACION" }];
+  const r = estadoRecibidos(pedidos, ["a", "b"]);
+  assert.deepEqual(r.validos, [], "un pedido sin despachar no cuenta aunque llegue marcado");
+  assert.equal(r.puedeConfirmar, false);
+  assert.equal(hayQueConfirmar(pedidos), false);
+});
+
+test("Repuestos: se confirma lo despachado y la orden espera lo demás", () => {
+  const pedidos = [{ id: "a", estado: "DESPACHADO" }, { id: "b", estado: "PENDIENTE", tiendaNombre: "Tienda Sur" }];
+  assert.equal(estadoRecibidos(pedidos, []).puedeConfirmar, false, "hay que marcar algo");
+  const r = estadoRecibidos(pedidos, ["a"]);
+  assert.equal(r.puedeConfirmar, true);
+  assert.equal(r.avanza, false);
+  assert.equal(hayQueConfirmar(pedidos), true);
+  assert.deepEqual(avisoRecibidos([{ estado: "RECIBIDO" }, pedidos[1]]),
+    { tono: "info", texto: "Pedido confirmado. La solicitud sigue esperando a Tienda Sur." });
+});
+
+test("Repuestos: con todo marcado la orden avanza", () => {
+  const pedidos = [{ id: "a", estado: "RECIBIDO" }, { id: "b", estado: "DESPACHADO" }];
+  assert.equal(estadoRecibidos(pedidos, ["b"]).avanza, true);
+  assert.equal(estadoRecibidos(pedidos, []).avanza, false, "un despachado sin marcar sigue pendiente");
+  assert.equal(avisoRecibidos([{ estado: "RECIBIDO" }, { estado: "RECIBIDO" }]).tono, "ok");
+});
+
+test("Repuestos: lo que una tienda no pudo despachar se acepta antes de avanzar", () => {
+  const pedidos = [{ id: "a", estado: "DESPACHADO" }, { id: "b", estado: "NO_DESPACHADO" }];
+  assert.equal(estadoRecibidos(pedidos, ["a"]).puedeConfirmar, false);
+  assert.equal(estadoRecibidos(pedidos, ["a"], true).puedeConfirmar, true);
+  // Mientras otra tienda no responde no se pide aceptar nada: la orden aún no avanza
+  const conEspera = [...pedidos, { id: "c", estado: "PENDIENTE" }];
+  assert.equal(estadoRecibidos(conEspera, ["a"]).pideFaltantes, false);
+  assert.equal(estadoRecibidos(conEspera, ["a"]).puedeConfirmar, true);
+});
+
+test("Repuestos: si ninguna tienda despachó no hay nada que confirmar", () => {
+  const pedidos = [{ id: "a", estado: "NO_DESPACHADO" }, { id: "b", estado: "NO_DESPACHADO" }];
+  assert.equal(estadoRecibidos(pedidos, [], true).puedeConfirmar, false);
+  assert.equal(hayQueConfirmar(pedidos), false);
+});
+
+test("Repuestos: un reintento termina la orden con todo ya recibido", () => {
+  assert.equal(estadoRecibidos([{ id: "a", estado: "RECIBIDO" }], []).puedeConfirmar, true);
+});
+
 test("Mi taller: iniciales del avatar sin palabras de relleno", () => {
   assert.equal(iniciales("Mecánica Rápida"), "MR");
   assert.equal(iniciales("Taller El Pistón"), "P");
@@ -42,7 +91,8 @@ test("Mi taller edita por sección y solo con los endpoints que ya existen", () 
   for (const seccion of ["mt-negocio", "mt-servicios", "mt-ubicacion", "mt-horario", "mt-contacto"]) {
     assert.ok(pagina.includes(`id="${seccion}"`), `existe la sección ${seccion}`);
   }
-  assert.ok(pagina.includes("actualizarDatosTaller(token, { tarifaHora: Number(tarifa) })"), "la tarifa viaja sola");
+  assert.ok(pagina.includes("actualizarDatosTaller(token, { tarifaHora: sinTarifa ? undefined : Number(tarifa), responsableIva })"),
+    "la tarifa viaja con el IVA del taller y nada más (el horario queda como estaba)");
   assert.ok(pagina.includes("guardarHorario(token, taller.id, franjasDesdeSemana(semana))"), "el horario viaja completo, por días");
   assert.ok(pagina.includes("<SelectorUbicacion"), "usa el selector de mapa existente");
   assert.ok(pagina.includes("<Calificacion rating={taller.rating} calificaciones={taller.calificaciones} />"),
@@ -299,4 +349,258 @@ test("Panel del taller: la bandeja y el taller se piden una vez en PanelTaller y
   assert.ok(solicitudes.includes("onReemplazar?.(actualizada)"));
   const panel = leer("../src/pages/PanelTaller.jsx");
   assert.equal((panel.match(/\{\.\.\.bandeja\}/g) || []).length, 2, "Solicitudes y Trabajos");
+});
+
+test("Solicitudes: el día de la semana sale de la fecha real, no de un texto fijo", async () => {
+  const { formatFechaHora } = await import("../src/components/servicio/estadosServicio.js");
+  const dia = (f) => new Date(f).toLocaleDateString("es-CO", { weekday: "short" });
+  for (const f of ["2026-10-19T09:00:00", "2026-10-22T15:30:00", "2026-10-25T18:00:00"]) {
+    assert.ok(formatFechaHora(f).startsWith(dia(f)), `${f} empieza por ${dia(f)}`);
+  }
+  assert.notEqual(dia("2026-10-19T09:00:00"), dia("2026-10-22T15:30:00"));
+});
+
+test("Solicitudes: toda la tarjeta abre el detalle y lo dice con \"Ver solicitud\"", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(pagina.includes('className="ss-tarjeta st-tarjeta st-tarjeta--boton" onClick={() => abrir(s)}'));
+  assert.ok(pagina.includes("Ver solicitud <Icon"));
+});
+
+test("Trabajos: el historial del taller va resumido, sin su propio nombre y con el mecánico solo cuando cambia", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(pagina.includes("<LineaTiempo eventos={s.eventos} catalogo={ESTADOS_TALLER} vistaTaller resumida />"));
+  const linea = leer("../src/components/servicio/LineaTiempo.jsx");
+  assert.ok(linea.includes('vistaTaller && e.actorRol === "TALLER" ? null'), "el taller no se ve a sí mismo en cada evento");
+  assert.ok(linea.includes("if (m[1] !== mecanicoAnterior) mecanico = m[1];"), "el mecánico solo si cambia");
+  assert.ok(linea.includes("Ver historial ("), "botón para el historial completo");
+});
+
+test("Informes: barras con el color de su fase, vacías en 0, sin respuesta repetida y diagnóstico sin costo", () => {
+  const pagina = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(pagina.includes("{n > 0 && <span className=\"ti-barras__barra\""), "una barra en 0 no pinta nada");
+  assert.ok(pagina.includes("faseDe(estado)]"), "cada estado con el color de su fase");
+  assert.ok(!pagina.includes('titulo="Respuesta promedio"'), "el promedio queda solo en Tiempo de respuesta");
+  assert.ok(pagina.includes("Sin costo:"));
+});
+
+test("Informes: el tiempo de respuesta llega en minutos y se muestra en min, h o d", async () => {
+  const { duracionMinutos } = await import("../src/utils/formato.js");
+  assert.equal(duracionMinutos(null), "—");
+  assert.equal(duracionMinutos(0.4), "< 1 min");
+  assert.equal(duracionMinutos(2.5), "3 min");
+  assert.equal(duracionMinutos(45), "45 min");
+  assert.equal(duracionMinutos(180), "3 h");
+  assert.equal(duracionMinutos(200), "3 h 20 min");
+  assert.equal(duracionMinutos(1680), "1 d 4 h");
+  assert.equal(duracionMinutos(2880), "2 d");
+  assert.equal(duracionMinutos(2870), "2 d");
+  const pagina = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(pagina.includes("duracionMinutos(tiempo.minutosPromedio)") && !pagina.includes("horasPromedio"));
+});
+
+test("Gráfico: tope redondo del eje, barras en % y etiquetas de mes y semana", async () => {
+  const { topeEje, altoBarra, marcasEje, etiquetaMes, etiquetaSemana, pesosCorto } = await import("../src/components/ui/escalaGrafico.js");
+  assert.equal(topeEje(0), 1, "sin datos no se divide por cero");
+  assert.equal(topeEje(3), 5);
+  assert.equal(topeEje(87_000), 100_000);
+  assert.equal(topeEje(210_000), 250_000);
+  assert.equal(topeEje(1_000_000), 1_000_000);
+  assert.deepEqual(marcasEje(100), [0, 50, 100]);
+  assert.equal(altoBarra(25, 100), 25);
+  assert.equal(altoBarra(0, 1), 0);
+  assert.equal(altoBarra(-5, 100), 0);
+  assert.equal(etiquetaMes("2026-08"), "ago");
+  assert.equal(etiquetaMes("2026-08", true), "ago 2026");
+  assert.equal(etiquetaSemana("2026-10-05"), "5 oct");
+  assert.equal(pesosCorto(50_000), "$50 mil");
+  assert.equal(pesosCorto(1_250_000), "$1,3 M");
+  const grafico = leer("../src/components/ui/Grafico.jsx");
+  assert.ok(grafico.includes('<table className="ui-sr">'), "los datos también van en una tabla para lectores de pantalla");
+  assert.ok(grafico.includes("ui-graf__serie--${i + 1}"), "el color sale del orden de la serie");
+});
+
+test("Informes e Inicio: la serie mensual en Informes y la semanal en Inicio, en los espacios vacíos", () => {
+  const informes = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(informes.includes("<MesAMes serie={d.serieMensual} />"));
+  assert.match(informes, /<div className="ti-columna">\s*<TiempoRespuesta[^>]*\/>\s*<MesAMes/, "debajo del tiempo de respuesta");
+  const inicio = leer("../src/pages/taller/TallerInicio.jsx");
+  assert.ok(inicio.includes("setSemanas(d.serieSemanal || [])"));
+  assert.ok(inicio.includes('aria-labelledby="ini-semanas"'));
+});
+
+test("Informes e Inicio: todas las cifras siguen el periodo y no queda ningún total histórico", async () => {
+  const { textoPeriodo } = await import("../src/utils/formato.js");
+  assert.equal(textoPeriodo("2026-08-01", 3), "desde el 1 de agosto de 2026");
+  assert.equal(textoPeriodo(null, 6), "de los últimos 6 meses");
+  const informes = leer("../src/pages/taller/TallerInformes.jsx");
+  assert.ok(!informes.includes("histórico"), "Informes no habla de total histórico");
+  assert.ok(informes.includes("textoPeriodo(d.periodoDesde, d.mesesConsultados)"), "el rótulo sale del periodo del backend");
+  const inicio = leer("../src/pages/taller/TallerInicio.jsx");
+  assert.ok(!inicio.includes("histórico"), "Inicio no habla de total histórico");
+  assert.ok(inicio.includes("informesTaller(getToken(), 1)"), "Inicio pide el mes en curso");
+  assert.ok(inicio.includes("titulo={`Mano de obra · ${mesActual}`}"), "la tarjeta dice de qué mes es");
+});
+
+test("Inicio: tarjetas de estado con el color de su fase y una propia para lo listo para entregar", () => {
+  const pagina = leer("../src/pages/taller/TallerInicio.jsx");
+  for (const fase of ["nueva", "cotizacion", "curso", "lista"]) assert.ok(pagina.includes(`fase="${fase}"`), fase);
+  assert.ok(pagina.includes('titulo="Listos para entregar" valor={datos.listos.length}'));
+  assert.ok(pagina.includes('s.estado !== "LISTA"'), "lo listo no se cuenta también como en curso");
+});
+
+test("Trabajos: un botón con el siguiente paso de cada etapa y los montos de una sola petición", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  for (const paso of ["Marcar repuestos recibidos", "Iniciar instalación", "Registrar pruebas", "Marcar como lista", "Entregar"]) {
+    assert.ok(pagina.includes(`texto: "${paso}"`), paso);
+  }
+  assert.ok(!pagina.includes('s.estado === "ENTREGADA") return {'), "entregados sin botón");
+  assert.equal((pagina.match(/cotizacionesDelTaller\(token\)/g) || []).length, 1, "una sola petición, no una por trabajo");
+  assert.ok(pagina.includes("cotizacionesPorId[s.cotizacionId]"), "cada trabajo toma su cotización por id");
+});
+
+test("Trabajos: pasar a lista sin pruebas pide confirmación", () => {
+  const pagina = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(pagina.includes("onClick={() => setConfirmandoSinPruebas(true)}"), "el botón abre la confirmación");
+  assert.match(pagina, /<ConfirmarAccion titulo="¿Marcar como lista sin registrar pruebas\?"/);
+});
+
+test("Cotización en PDF: el taller lo descarga junto a Imprimir y el cliente desde su servicio", () => {
+  const servicio = leer("../src/services/cotizacionService.js");
+  assert.ok(servicio.includes("`${BASE}/${cotizacionId}/pdf`"), "lo genera el backend");
+  const boton = leer("../src/components/servicio/BotonPdfCotizacion.jsx");
+  assert.ok(boton.includes("Descargar PDF") && boton.includes('role="alert"'), "botón con su error a la vista");
+  const taller = leer("../src/pages/taller/TallerCotizaciones.jsx");
+  assert.match(taller, /> Imprimir\s*<\/button>\s*<BotonPdfCotizacion cotizacionId=\{c\.id\} \/>/, "junto a Imprimir en las aprobadas");
+  const cliente = leer("../src/pages/MisServicios.jsx");
+  assert.ok(cliente.includes("<BotonPdfCotizacion cotizacionId={vigente.id} />"), "también en la vista del cliente");
+});
+
+test("IVA incluido: el detalle informa el IVA sin sumarlo y explica el adelanto", async () => {
+  const { totalesCotizacion, ivaDeLinea } = await import("../src/components/servicio/desgloseIva.js");
+  const base = { subtotalRepuestos: 100_000, subtotalManoObra: 50_000, ivaRepuestos: 19_000 };
+  assert.deepEqual(totalesCotizacion({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 19, ivaManoObra: 9_500, iva: 28_500, total: 178_500, totalAPagar: 178_500 }).map((f) => f.texto),
+    ["Total", "Incluye IVA de", "Total a pagar"]);
+  assert.equal(ivaDeLinea({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 19 }, { tipo: "REPUESTO", subtotal: 100_000 }), 19_000);
+  const conAnticipo = totalesCotizacion({ ...base, ivaRepuestosPct: 19, ivaManoObraPct: 19, ivaManoObra: 9_500, iva: 28_500, total: 178_500, anticipoDiagnostico: 50_000, totalAPagar: 128_500 });
+  assert.deepEqual(conAnticipo.map((f) => f.texto), ["Total", "Incluye IVA de", "Adelanto del diagnóstico", "Total a pagar"]);
+  assert.equal(conAnticipo[2].monto, -50_000);
+  const detalle = leer("../src/components/servicio/CotizacionDetalle.jsx");
+  assert.ok(detalle.includes("totalesCotizacion(c).map("), "el detalle (cliente, página pública e impresión) usa el resumen único");
+});
+
+test("IVA por taller: Mi taller elige si es responsable de IVA junto a la tarifa", () => {
+  const pagina = leer("../src/pages/taller/TallerMiTaller.jsx");
+  assert.ok(pagina.includes('name="mt-iva"'), "dos opciones: responsable o no");
+  assert.ok(pagina.includes("responsableIva }));"), "viaja al guardar");
+  assert.ok(pagina.includes("textoRegimenIva(taller.responsableIva)"), "se ve en los datos del taller");
+  const servicio = leer("../src/services/tallerService.js");
+  assert.ok(servicio.includes("JSON.stringify({ tarifaHora, horario, responsableIva })"));
+});
+
+test("Cotizar nace de una solicitud: Inicio lleva a Por cotizar (N) y Cotizaciones ya no crea", () => {
+  const inicio = leer("../src/pages/taller/TallerInicio.jsx");
+  assert.ok(!inicio.includes("Crear cotización"));
+  assert.match(inicio, /\{datos\.porCotizar\.length > 0 && \(\s*<button[^>]*onClick=\{\(\) => irA\("taller-solicitudes", "diagnosticadas"\)\}>\s*<Icon name="file" size=\{16\} \/> Por cotizar <span className="ini-contador">\{datos\.porCotizar\.length\}<\/span>/,
+    "solo con N > 0 y a las diagnosticadas sin cotizar");
+  const cotizaciones = leer("../src/pages/taller/TallerCotizaciones.jsx");
+  assert.ok(!cotizaciones.includes("Crear cotización"));
+});
+
+test("Buscar repuestos: la foto se ve completa en un recuadro uniforme y la tarjeta es compacta", () => {
+  const css = leer("../src/css/solicitud-servicio.css");
+  const foto = css.slice(css.indexOf(".ss-oferta__foto {"), css.indexOf(".ss-oferta__cuerpo {"));
+  assert.match(foto, /aspect-ratio: 4 \/ 3;/);
+  assert.match(foto, /background: #fff;/);
+  assert.match(foto, /object-fit: contain;/);
+  assert.doesNotMatch(foto, /object-fit: cover/);
+  // Absoluta: si no, una foto muy alta estira el recuadro y las tarjetas dejan de ser uniformes
+  assert.match(foto, /img \{\s*position: absolute;/);
+
+  const buscador = leer("../src/components/servicio/BuscadorRepuestos.jsx");
+  assert.doesNotMatch(buscador, /ss-oferta__compat/, "nada encima de la foto");
+  assert.match(buscador, /formatoDistancia\(o\.distanciaKm\)/);
+  assert.match(css, /\.ss-oferta__nombre \{[^}]*-webkit-line-clamp: 2;/);
+  assert.match(css, /\.ss-oferta__pie \{[^}]*flex-wrap: wrap;/, "un precio largo no se monta sobre el botón");
+});
+
+test("Entregar: pide confirmación, dice el resultado y no se pierde detrás del scroll", () => {
+  const p = leer("../src/pages/TallerSolicitudes.jsx");
+  assert.ok(p.includes('ejecutar: async () => setConfirmandoEntrega(s)'), "no entrega con un solo clic");
+  assert.ok(p.includes("Entregado: ") && p.includes("pasó a Entregados"), "el éxito se dice");
+  assert.ok(p.includes('scrollIntoView({ block: "center" })'), "el aviso aparece a la vista");
+  assert.ok(!p.includes("{ texto: \"Entregar\", ejecutar: async () => reemplazar"), "ya no marca sin confirmar");
+  assert.ok(p.includes("const ejecutar = (accion, s = null) => unaALaVez(enviando,"), "una acción a la vez");
+});
+
+test("Una acción que falló pero ya estaba hecha no se muestra como error", () => {
+  assert.match(yaEstabaHecho({ estado: "LISTA" }, { estado: "ENTREGADA" }), /ya está en "Entregada"/);
+  assert.equal(yaEstabaHecho({ estado: "LISTA" }, { estado: "LISTA" }), null, "sigue igual: el error es real");
+  assert.equal(yaEstabaHecho({ estado: "LISTA" }, undefined), null, "sin recargar no se afirma nada");
+  assert.equal(yaEstabaHecho(null, { estado: "LISTA" }), null);
+});
+
+test("Una bandeja pedida antes de una acción no pisa el estado nuevo", () => {
+  const p = leer("../src/pages/PanelTaller.jsx");
+  assert.ok(p.includes("versionBandeja.current += 1;"), "la acción invalida lo que estaba en camino");
+  assert.ok(p.includes("if (version !== versionBandeja.current) return null;"));
+});
+
+test("Una cotización sin saldo no le pide pagar al cliente", () => {
+  const cliente = leer("../src/pages/MisServicios.jsx");
+  const publica = leer("../src/pages/CotizacionPublica.jsx");
+  const respuesta = leer("../src/components/servicio/RespuestaCotizacion.jsx");
+  assert.ok(cliente.includes("sinSaldo={vigente.totalAPagar <= 0}") && cliente.includes('"Continuar sin pago"'));
+  assert.ok(publica.includes("sinSaldo={sinSaldo}") && publica.includes("Ir a mis servicios"));
+  assert.ok(respuesta.includes("no tienes nada por pagar"));
+});
+
+test("Diagnóstico: las cantidades son enteras de 1 a 99", () => {
+  assert.equal(cantidadEntera("1.5"), 1);
+  assert.equal(cantidadEntera("3"), 3);
+  assert.equal(cantidadEntera(""), 1);
+  assert.equal(cantidadEntera("0"), 1);
+  assert.equal(cantidadEntera("-4"), 1);
+  assert.equal(cantidadEntera("500"), 99);
+});
+
+test("Diagnóstico: las fallas respetan el máximo por línea y en total", () => {
+  assert.deepEqual(lineasFallas("  Uno \n\n Dos "), ["Uno", "Dos"]);
+  assert.equal(errorFallas("Pastillas gastadas\nDisco rayado"), null);
+  assert.match(errorFallas("x".repeat(201)), /hasta 200/);
+  assert.match(errorFallas(Array(21).fill("Falla").join("\n")), /Máximo 20/);
+});
+
+const trabajo = (cambios = {}) => ({ descripcion: "Cambio de pastillas", modalidad: "ITEM", valor: "50000", horas: "", ...cambios });
+
+test("Cotización: un trabajo a medias se avisa, no se pierde", () => {
+  assert.equal(errorCotizacion([trabajo()], ""), null);
+  assert.match(errorCotizacion([trabajo({ descripcion: "" })], ""), /trabajo 1 necesita una descripción/);
+  assert.match(errorCotizacion([trabajo({ descripcion: "ab" })], ""), /al menos 3/);
+  assert.match(errorCotizacion([trabajo(), trabajo({ valor: "0" })], ""), /trabajo 2 necesita un valor/);
+  assert.match(errorCotizacion([trabajo({ valor: "-5" })], ""), /valor mayor que 0/);
+  assert.match(errorCotizacion([trabajo({ valor: "" })], ""), /valor mayor que 0/);
+});
+
+test("Cotización: por horas pide horas válidas y tarifa", () => {
+  const porHoras = trabajo({ modalidad: "HORAS", valor: "", horas: "1.5" });
+  assert.equal(errorCotizacion([porHoras], "", { tarifaHora: 60000 }), null);
+  assert.match(errorCotizacion([porHoras], ""), /tarifa por hora/);
+  assert.match(errorCotizacion([{ ...porHoras, horas: "201" }], "", { tarifaHora: 60000 }), /hasta 200/);
+});
+
+test("Cotización: sin trabajos solo pasa si hay repuestos; el tiempo va en horas enteras", () => {
+  const vacia = { descripcion: "", modalidad: "ITEM", valor: "", horas: "" };
+  assert.match(errorCotizacion([vacia], ""), /al menos un trabajo/);
+  assert.equal(errorCotizacion([vacia], "", { hayRepuestos: true }), null);
+  assert.equal(errorCotizacion([trabajo()], "8"), null);
+  assert.match(errorCotizacion([trabajo()], "1.5"), /horas enteras/);
+  assert.match(errorCotizacion([trabajo()], "0"), /horas enteras/);
+});
+
+test("Los formularios del mecánico envían una sola vez y usan las reglas", () => {
+  const diagnostico = leer("../src/components/servicio/DiagnosticoForm.jsx");
+  const cotizacion = leer("../src/components/servicio/CotizacionForm.jsx");
+  assert.ok(diagnostico.includes("unaALaVez(enviando,") && cotizacion.includes("unaALaVez(enviando,"));
+  assert.ok(diagnostico.includes("cantidadEntera(e.target.value)") && diagnostico.includes("errorFallas(fallas)"));
+  assert.ok(cotizacion.includes("errorCotizacion(lineas, tiempo,"));
 });

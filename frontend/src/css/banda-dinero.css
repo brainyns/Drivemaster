@@ -1,0 +1,42 @@
+/* Informes claros: "Este mes" arriba y la banda Ventas → − IVA → − Comisión → = Lo tuyo. Blanco con el naranja solo
+   en lo que importa: el resultado. */
+
+.bd-mes {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+  margin: 0 0 16px; padding: 14px 18px;
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-left: 4px solid var(--primary);
+  border-radius: var(--ui-r-lg);
+}
+.bd-mes__etiqueta { font-size: 0.875rem; font-weight: 600; color: var(--ui-muted); }
+.bd-mes__valor { font-size: 1.75rem; font-weight: 800; line-height: 1.1; color: var(--ui-text); font-variant-numeric: tabular-nums; }
+.bd-mes__detalle { flex-basis: 100%; font-size: 0.8125rem; color: var(--ui-muted); }
+
+.bd-banda {
+  margin: 0 0 16px; padding: 16px 18px;
+  background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: var(--ui-r-lg);
+}
+.bd-banda__titulo { margin: 0 0 10px; font-size: 0.8125rem; font-weight: 600; color: var(--ui-muted); }
+.bd-banda__pasos {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+  margin: 0; padding: 0; list-style: none;
+}
+.bd-paso { display: flex; flex-direction: column; gap: 4px; padding: 4px 16px; border-left: 1px solid var(--ui-line-soft); min-width: 0; }
+.bd-paso:first-child { padding-left: 0; border-left: 0; }
+.bd-paso__nombre { display: inline-flex; align-items: center; font-size: 0.8125rem; color: var(--ui-muted); }
+.bd-paso__valor { font-size: 1.125rem; font-weight: 700; color: var(--ui-text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.bd-paso__nota { font-size: 0.75rem; color: var(--ui-muted); }
+.bd-paso--total .bd-paso__nombre { color: var(--ui-text); font-weight: 600; }
+.bd-paso--total .bd-paso__valor { font-size: 1.375rem; color: var(--primary-text); }
+
+/* Celular: un paso por línea, con el valor a la derecha, como una cuenta */
+@media (max-width: 640px) {
+  .bd-banda__pasos { grid-template-columns: 1fr; }
+  .bd-paso {
+    flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: baseline;
+    padding: 8px 0; border-left: 0; border-top: 1px solid var(--ui-line-soft);
+  }
+  .bd-paso:first-child { border-top: 0; }
+  .bd-paso__nota { flex-basis: 100%; }
+  .bd-paso--total { border-top: 2px solid var(--ui-text); }
+}
+.bd-paso__signo { margin-right: 4px; font-weight: 700; }

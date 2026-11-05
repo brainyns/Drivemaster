@@ -1,3 +1,4 @@
+import PrecioCatalogo from "../marketplace/PrecioCatalogo";
 import { useEffect, useState } from "react";
 import Modal from "./Modal";
 import Icon from "./Icon";
@@ -142,8 +143,8 @@ export default function ProductDetail({
               <dt>Disponibilidad</dt>
               <dd>
                 {encargo
-                  ? `Bajo pedido${producto.diasEntrega ? ` · ${producto.diasEntrega} días` : ""}`
-                  : sinStock ? "Sin stock" : `${producto.stock}${producto.stock >= 20 ? "+" : ""} unidades`}
+                  ? `Bajo pedido${producto.diasEntrega ? ` · ${producto.diasEntrega} ${producto.diasEntrega === 1 ? "día" : "días"}` : ""}`
+                  : sinStock ? "Sin stock" : `${producto.stock}${producto.stock >= 20 ? "+" : ""} ${producto.stock === 1 ? "unidad" : "unidades"}`}
               </dd>
             </div>
             {tienda && (
@@ -156,8 +157,8 @@ export default function ProductDetail({
           </dl>
 
           <div className="dm-detail__price">
-            <strong>{formatPrecio(producto.precio)}</strong>
-            <span>COP · el IVA y el envío se calculan al pagar</span>
+            <PrecioCatalogo producto={producto} etiqueta="strong" />
+            <span>COP · IVA incluido</span>
           </div>
 
           <div className="dm-detail__qty">
@@ -192,7 +193,7 @@ export default function ProductDetail({
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Icon name="message" size={19} /> Cotizar por WhatsApp
+            <Icon name="whatsapp" size={19} className="dm-btn__whatsapp" /> Cotizar por WhatsApp
           </a>
 
           {agregado && (

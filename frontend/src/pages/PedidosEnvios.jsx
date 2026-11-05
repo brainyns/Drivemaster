@@ -1,23 +1,34 @@
 import { useCallback, useEffect, useState } from "react";
 import { pedidosPlataforma } from "../services/plataformaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import EncabezadoOrden from "../components/ui/EncabezadoOrden";
+import SelectorOrden from "../components/ui/SelectorOrden";
+import { errorRango, propsPaginacion, textoOrden } from "../components/ui/reglasTabla";
+import SelectorFechas from "../components/ui/SelectorFechas";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
 import Icon from "../components/public/Icon";
-import { ESTADOS_PEDIDO, estadosConPedidos, filtrosInicialesPedidos, refPedido } from "./admin/plataformaAdmin";
+import DetallePlataforma from "../components/admin/DetallePlataforma";
+import {
+  ENTREGAS_PEDIDO, ESTADOS_PEDIDO, GRUPOS_PEDIDO, chipsAlerta, conteoGrupos, filaConAlerta, filtrosInicialesPedidos,
+  hayFiltrosPedidos, refPedido,
+} from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import "../css/pedidos-plataforma.css";
+import { textoError } from "../utils/errores";
 
 const TAMANO = 20;
 const REFRESCO_MS = 30000;
 
-const ENTREGAS = [
-  { valor: "", label: "Envío y retiro" },
-  { valor: "ENVIO", label: "Envío a domicilio" },
-  { valor: "RETIRO", label: "Retiro en tienda" },
+/** Columnas que se pueden ordenar (lista blanca de PlataformaConsultasService.ORDEN_PEDIDOS). */
+const ORDENES = [
+  { campo: "fecha", label: "Fecha de pago", asc: "(más antiguos primero)", desc: "(más recientes primero)" },
+  { campo: "tienda", label: "Tienda", asc: "(A–Z)", desc: "(Z–A)" },
+  { campo: "estado", label: "Estado", asc: "(A–Z)", desc: "(Z–A)" },
 ];
 
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short" }) : "—");
@@ -26,21 +37,27 @@ const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
 /**
  * Monitor de pedidos y envíos de todas las tiendas (ADMIN y SUPERADMIN). Solo lectura y sin datos del cliente:
- * estado, tienda, destino (ciudad), días desde el pago y alertas de atraso. Se actualiza solo cada 30 segundos.
+ * estado, tienda, destino (ciudad), días desde el pago y el semáforo de despacho y de retiro. Se actualiza solo cada
+ * 30 segundos. Con puedeVerDetalle (SUPERADMIN), la referencia abre el detalle del pedido.
  */
-export default function PedidosEnvios({ token, filtroInicial }) {
+export default function PedidosEnvios({ token, filtroInicial, puedeVerDetalle = false }) {
   const [filtros, setFiltros] = useState(() => filtrosInicialesPedidos(filtroInicial));
+  const [abierto, setAbierto] = useState(null);
   const [pagina, setPagina] = useState(0);
+  const [orden, setOrden] = useState(null); // null: del más reciente al más antiguo
+  const [fechas, setFechas] = useState({ desde: "", hasta: "" }); // fecha de pago, en hora de Colombia
   const [estado, setEstado] = useState({ datos: null, error: null, actualizado: null });
   const [cargando, setCargando] = useState(true);
+  const errorFechas = errorRango(fechas);
 
   const cargar = useCallback(() => {
+    if (errorFechas) return Promise.resolve(); // el selector de fechas ya lo avisa
     setCargando(true);
-    return pedidosPlataforma(token, { ...filtros, atrasados: filtros.atrasados ? "true" : "", pagina, tamano: TAMANO })
+    return pedidosPlataforma(token, { ...filtros, ...fechas, page: pagina, size: TAMANO, sort: textoOrden(orden) })
       .then((datos) => setEstado({ datos, error: null, actualizado: new Date() }))
-      .catch((e) => setEstado((previo) => ({ ...previo, error: e.message })))
+      .catch((e) => setEstado((previo) => ({ ...previo, error: textoError(e) })))
       .finally(() => setCargando(false));
-  }, [token, filtros, pagina]);
+  }, [token, filtros, fechas, pagina, orden, errorFechas]);
 
   useEffect(() => {
     const inicial = setTimeout(cargar, 0);
@@ -51,12 +68,17 @@ export default function PedidosEnvios({ token, filtroInicial }) {
   const { datos, error, actualizado } = estado;
   const lista = datos?.pedidos;
   const items = lista?.items || [];
-  const total = lista?.total || 0;
-  const paginas = lista ? Math.max(1, Math.ceil(total / (lista.tamano || TAMANO))) : 1;
-  const hayFiltros = filtros.estado !== "" || filtros.tiendaId !== "" || filtros.entrega !== "" || filtros.atrasados;
-  const totalPedidos = Object.values(datos?.porEstado || {}).reduce((s, n) => s + n, 0);
+  const hayFiltros = hayFiltrosPedidos(filtros, fechas);
+  // Los avisos son los filtros de alerta: clic para filtrar, otro clic para quitar
+  const alternarAlerta = (valor) => poner({ alerta: filtros.alerta === valor ? "" : valor });
+  const porGrupo = conteoGrupos(datos?.porEstado);
+  const verAviso = (alerta, n) => n > 0 || filtros.alerta === alerta;
 
+  // Cambiar filtro, fechas u orden vuelve a la primera página
   const poner = (cambio) => { setPagina(0); setFiltros((f) => ({ ...f, ...cambio })); };
+  const ponerFechas = (r) => { setPagina(0); setFechas(r); };
+  const ordenar = (o) => { setPagina(0); setOrden(o); };
+  const limpiar = () => { setPagina(0); setFiltros(filtrosInicialesPedidos()); setFechas({ desde: "", hasta: "" }); };
 
   return (
     <div className="ss-panel--plataforma pp-root ped-root">
@@ -71,16 +93,32 @@ export default function PedidosEnvios({ token, filtroInicial }) {
           </>
         )} />
 
-      {datos && (datos.atrasados > 0 || datos.problemasAbiertos > 0) && (
-        <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Pedidos que piden atención">
-          {datos.atrasados > 0 && (
-            <button type="button" className="ui-chip ped-alerta" aria-pressed={filtros.atrasados}
-              onClick={() => poner({ atrasados: !filtros.atrasados })}>
+      {/* Cada aviso aparece si hay casos o si es el filtro puesto (para poder quitarlo aunque llegue a 0) */}
+      {datos && (verAviso("ATRASADO", datos.atrasados) || verAviso("POR_VENCER", datos.porVencer)
+        || verAviso("SIN_RETIRAR", datos.sinRetirar) || datos.problemasAbiertos > 0 || filtros.estado === "PROBLEMA") && (
+        <div className="ui-filtros pp-bloque-sep ped-deslizable" role="group" aria-label="Pedidos que piden atención">
+          {verAviso("ATRASADO", datos.atrasados) && (
+            <button type="button" className="ui-chip ped-alerta" aria-pressed={filtros.alerta === "ATRASADO"}
+              onClick={() => alternarAlerta("ATRASADO")}>
               <Icon name="clock" size={15} />
               {plural(datos.atrasados, "pedido sin despachar", "pedidos sin despachar")} fuera del plazo
             </button>
           )}
-          {datos.problemasAbiertos > 0 && (
+          {verAviso("POR_VENCER", datos.porVencer) && (
+            <button type="button" className="ui-chip ped-alerta ped-alerta--aviso" aria-pressed={filtros.alerta === "POR_VENCER"}
+              onClick={() => alternarAlerta("POR_VENCER")}>
+              <Icon name="clock" size={15} />
+              {datos.porVencer} por vencer
+            </button>
+          )}
+          {verAviso("SIN_RETIRAR", datos.sinRetirar) && (
+            <button type="button" className="ui-chip ped-alerta ped-alerta--aviso" aria-pressed={filtros.alerta === "SIN_RETIRAR"}
+              onClick={() => alternarAlerta("SIN_RETIRAR")}>
+              <Icon name="box" size={15} />
+              {plural(datos.sinRetirar, "pedido sin retirar", "pedidos sin retirar")} en la tienda
+            </button>
+          )}
+          {(datos.problemasAbiertos > 0 || filtros.estado === "PROBLEMA") && (
             <button type="button" className="ui-chip ped-alerta" aria-pressed={filtros.estado === "PROBLEMA"}
               onClick={() => poner({ estado: filtros.estado === "PROBLEMA" ? "" : "PROBLEMA" })}>
               <Icon name="alert" size={15} />
@@ -91,39 +129,36 @@ export default function PedidosEnvios({ token, filtroInicial }) {
       )}
 
       {datos && (
-        <div className="ui-filtros pp-bloque-sep" role="group" aria-label="Estado del pedido">
-          <button type="button" className="ui-chip" aria-pressed={filtros.estado === ""} onClick={() => poner({ estado: "" })}>
-            Todos <span className="ui-chip__contador">{totalPedidos}</span>
-          </button>
-          {estadosConPedidos(datos.porEstado).map((e) => (
-            <button key={e} type="button" className="ui-chip" aria-pressed={filtros.estado === e} onClick={() => poner({ estado: e })}>
-              {ESTADOS_PEDIDO[e]?.label || e} <span className="ui-chip__contador">{datos.porEstado[e]}</span>
+        <div className="ui-filtros pp-bloque-sep ped-deslizable" role="group" aria-label="Estado del pedido">
+          {GRUPOS_PEDIDO.map((g) => (
+            <button key={g.valor || "todos"} type="button" className="ui-chip" aria-pressed={filtros.estado === g.valor}
+              onClick={() => poner({ estado: g.valor })}>
+              {g.label} <span className="ui-chip__contador">{porGrupo[g.valor] || 0}</span>
             </button>
           ))}
         </div>
       )}
 
-      <div className="pp-filtros">
-        <label className="pp-filtros__select">
+      <div className="ped-selectores pp-bloque-sep" role="group" aria-label="Filtrar pedidos">
+        <label htmlFor="ped-tienda" className="ped-selector">
           Tienda
-          <select className="ui-field__input" value={filtros.tiendaId} onChange={(e) => poner({ tiendaId: e.target.value })}>
+          <select id="ped-tienda" className="ui-field__input" value={filtros.tiendaId} onChange={(e) => poner({ tiendaId: e.target.value })}>
             <option value="">Todas</option>
             {(datos?.tiendas || []).map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
           </select>
         </label>
-        <div className="ui-filtros" role="group" aria-label="Entrega">
-          {ENTREGAS.map((x) => (
-            <button key={x.valor || "todas"} type="button" className="ui-chip" aria-pressed={filtros.entrega === x.valor}
-              onClick={() => poner({ entrega: x.valor })}>{x.label}</button>
-          ))}
-        </div>
-        <button type="button" className="ui-chip" aria-pressed={filtros.atrasados} onClick={() => poner({ atrasados: !filtros.atrasados })}>
-          Solo atrasados
-        </button>
+        <label htmlFor="ped-entrega" className="ped-selector">
+          Entrega
+          <select id="ped-entrega" className="ui-field__input" value={filtros.entrega} onChange={(e) => poner({ entrega: e.target.value })}>
+            {ENTREGAS_PEDIDO.map((x) => <option key={x.valor || "todas"} value={x.valor}>{x.label}</option>)}
+          </select>
+        </label>
+        <SelectorFechas id="ped-fecha" etiqueta="Fecha" valor={fechas} onCambiar={ponerFechas} className="ped-selector ped-selector--fecha" />
         {hayFiltros && (
-          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => poner(filtrosInicialesPedidos())}>Limpiar filtros</button>
+          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico ped-limpiar" onClick={limpiar}>Limpiar filtros</button>
         )}
       </div>
+      <SelectorOrden id="ped-orden" opciones={ORDENES} orden={orden} onOrdenar={ordenar} porDefecto="Más recientes primero" />
 
       {error && (
         <Alerta tono={datos ? "aviso" : "error"} className="pp-bloque-sep" onReintentar={cargar} reintentando={cargando}>
@@ -136,7 +171,7 @@ export default function PedidosEnvios({ token, filtroInicial }) {
       ) : items.length === 0 ? (
         hayFiltros ? (
           <EstadoVacio icono="search" titulo="Ningún pedido coincide" texto="Prueba con otra tienda, estado o forma de entrega.">
-            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => poner(filtrosInicialesPedidos())}>Limpiar filtros</button>
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={limpiar}>Limpiar filtros</button>
           </EstadoVacio>
         ) : (
           <EstadoVacio icono="box" titulo="Todavía no hay pedidos"
@@ -150,9 +185,9 @@ export default function PedidosEnvios({ token, filtroInicial }) {
                 <caption className="ui-sr">Pedidos de las tiendas con su estado, entrega y alertas</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Pedido</th>
-                    <th scope="col">Tienda</th>
-                    <th scope="col">Estado</th>
+                    <EncabezadoOrden campo="fecha" orden={orden} onOrdenar={ordenar}>Pedido</EncabezadoOrden>
+                    <EncabezadoOrden campo="tienda" orden={orden} onOrdenar={ordenar}>Tienda</EncabezadoOrden>
+                    <EncabezadoOrden campo="estado" orden={orden} onOrdenar={ordenar}>Estado</EncabezadoOrden>
                     <th scope="col">Entrega</th>
                     <th scope="col">Destino</th>
                     <th scope="col" className="pp-num">Artículos</th>
@@ -162,11 +197,16 @@ export default function PedidosEnvios({ token, filtroInicial }) {
                 </thead>
                 <tbody>
                   {items.map((p) => {
-                    const conAlerta = p.atrasado || p.problemaAbierto;
+                    const chips = chipsAlerta(p);
                     return (
-                      <tr key={p.id} className={conAlerta ? "ped-fila--alerta" : undefined}>
+                      <tr key={p.id} className={filaConAlerta(p) ? "ped-fila--alerta" : undefined}>
                         <td className="ui-table__titulo">
-                          <strong className="ped-ref">{refPedido(p.id)}</strong>
+                          {puedeVerDetalle ? (
+                            <button type="button" className="ped-ref ped-ref--boton" onClick={() => setAbierto(p.id)}
+                              aria-label={`Ver el detalle del pedido ${refPedido(p.id)}`}>{refPedido(p.id)}</button>
+                          ) : (
+                            <strong className="ped-ref">{refPedido(p.id)}</strong>
+                          )}
                           <span className="pp-sub">{p.origen === "TALLER" ? "Cotización de taller" : "Compra del catálogo"} · pagado {fecha(p.fechaPago)}</span>
                         </td>
                         <td data-label="Tienda">{p.tienda || <span className="pp-tenue">Sin tienda</span>}</td>
@@ -177,9 +217,8 @@ export default function PedidosEnvios({ token, filtroInicial }) {
                         <td data-label="Días desde el pago" className="pp-num">{p.diasDesdePago}</td>
                         <td data-label="Alerta">
                           <span className="ped-alertas">
-                            {p.atrasado && <ChipEstado tono="error">Atrasado · plazo {fecha(p.plazoDespacho)}</ChipEstado>}
-                            {p.problemaAbierto && <ChipEstado tono="error">Problema de envío</ChipEstado>}
-                            {!conAlerta && <span className="pp-tenue">Sin alertas</span>}
+                            {chips.map((c) => <ChipEstado key={c.texto} tono={c.tono}>{c.texto}</ChipEstado>)}
+                            {chips.length === 0 && <span className="pp-tenue">Sin alertas</span>}
                           </span>
                         </td>
                       </tr>
@@ -189,20 +228,11 @@ export default function PedidosEnvios({ token, filtroInicial }) {
               </table>
             </div>
           </div>
-          <nav className="pp-paginas" aria-label="Páginas de pedidos">
-            <span>Mostrando {pagina * TAMANO + 1}–{pagina * TAMANO + items.length} de {total}</span>
-            {paginas > 1 && (
-              <span className="pp-paginas__botones">
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina === 0}
-                  onClick={() => setPagina(pagina - 1)}>Anterior</button>
-                <span aria-current="page">Página {pagina + 1} de {paginas}</span>
-                <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" disabled={pagina + 1 >= paginas}
-                  onClick={() => setPagina(pagina + 1)}>Siguiente</button>
-              </span>
-            )}
-          </nav>
+          <Paginacion {...propsPaginacion(lista)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de pedidos" />
         </>
       )}
+
+      {abierto && <DetallePlataforma key={abierto} token={token} objetivo={{ tipo: "pedido", id: abierto }} onCerrar={() => setAbierto(null)} />}
     </div>
   );
 }

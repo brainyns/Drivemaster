@@ -46,3 +46,41 @@ test("la tarjeta rechazada muestra la fecha de rechazo y el motivo si existe", (
   assert.ok(pagina.includes("rechazada && c.motivoRespuesta &&"), "el motivo solo aparece si el cliente lo dejó");
   assert.ok(pagina.includes("formatPrecio(c.total)") && pagina.includes("<ChipEstado estado="), "valor y etiqueta de estado");
 });
+
+test("Vence pronto: emitida y vigente a 2 días o menos; ni vencida ni las de más plazo", async () => {
+  const { vencePronto } = await import("../src/pages/taller/filtrosCotizaciones.js");
+  assert.ok(vencePronto(cot("p", "EMITIDA", { vigenciaHasta: "2026-10-14T00:00:00Z" }), ahora));
+  assert.ok(!vencePronto(COTIZACIONES[0], ahora), "a 2,5 días todavía no");
+  assert.ok(!vencePronto(COTIZACIONES[1], ahora), "la vencida va en gris, no como vence pronto");
+  assert.ok(!vencePronto(cot("a", "APROBADA", { vigenciaHasta: "2026-10-13T00:00:00Z" }), ahora));
+  assert.ok(pagina.includes('<ChipEstado tono="aviso">Vence pronto</ChipEstado>'));
+});
+
+test("todas las pestañas muestran su contador, también en cero", () => {
+  assert.ok(pagina.includes('<span className="ui-chip__contador">{conteo[f.key]}</span>'));
+  assert.ok(!pagina.includes("conteo[f.key] > 0 &&"));
+});
+
+test("el resumen sigue el orden único: Total, Incluye IVA, Adelanto, Total a pagar", async () => {
+  const { totalesCotizacion } = await import("../src/components/servicio/desgloseIva.js");
+  const base = { total: 100, iva: 19, totalAPagar: 100, anticipoDiagnostico: 0 };
+  assert.deepEqual(totalesCotizacion(base).map((f) => f.texto), ["Total", "Incluye IVA de", "Total a pagar"]);
+  const conAdelanto = totalesCotizacion({ ...base, anticipoDiagnostico: 50, totalAPagar: 50 });
+  assert.deepEqual(conAdelanto.map((f) => f.texto), ["Total", "Incluye IVA de", "Adelanto del diagnóstico", "Total a pagar"]);
+  assert.equal(conAdelanto[2].monto, -50);
+  const detalle = readFileSync(new URL("../src/components/servicio/CotizacionDetalle.jsx", import.meta.url), "utf8");
+  assert.ok(detalle.includes("totalesCotizacion(c).map("), "el detalle (cliente, página pública e impresión) usa el resumen único");
+  assert.ok(!detalle.includes("<dt>Subtotal</dt>"), "el subtotal aparte ya no existe");
+  assert.ok(detalle.includes("c.recibeTaller"), "lo que recibe viene del backend, con o sin comisión");
+});
+
+test("aprobadas: ir al trabajo, imprimir solo esa cotización y sus versiones anteriores de la misma lista", async () => {
+  const { otrasVersiones } = await import("../src/pages/taller/filtrosCotizaciones.js");
+  const lista = [cot("v2", "APROBADA", { ordenId: "o1", version: 2 }), cot("v1", "REEMPLAZADA", { ordenId: "o1", version: 1 }),
+    cot("otra", "EMITIDA", { ordenId: "o2", version: 1 }), cot("v3", "RECHAZADA", { ordenId: "o1", version: 3 })];
+  assert.deepEqual(otrasVersiones(lista, lista[0]).map((c) => c.id), ["v3", "v1"]);
+  assert.ok(pagina.includes('irA("taller-trabajos", { abrir: c.ordenId, volverA: "taller-cotizaciones" })'));
+  assert.ok(pagina.includes("window.print()"));
+  const css = readFileSync(new URL("../src/css/cotizaciones-taller.css", import.meta.url), "utf8");
+  assert.match(css, /@media print/);
+});

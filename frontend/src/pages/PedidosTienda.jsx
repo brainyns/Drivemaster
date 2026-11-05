@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getToken } from "../services/authService";
 import {
-  misPedidosTienda, prepararPedido, despacharPedido, noPuedoDespachar, marcarListoParaRetirar, validarCodigoRetiro,
+  pedidosTiendaTabla, prepararPedido, despacharPedido, noPuedoDespachar, marcarListoParaRetirar, validarCodigoRetiro,
 } from "../services/pedidoTiendaService";
 import { listarProductosMiTienda } from "../services/productoService";
 import { ESTADOS_PEDIDO, MOTIVOS_NO_DESPACHO, formatFechaHora, formatPrecio, refSolicitud } from "../components/servicio/estadosServicio";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
+import Paginacion from "../components/ui/Paginacion";
+import { errorRango, propsPaginacion, textoOrden, useDiferido } from "../components/ui/reglasTabla";
+import FiltroFechas from "../components/ui/FiltroFechas";
+import SelectorOrden from "../components/ui/SelectorOrden";
 import ChipEstado from "../components/ui/ChipEstado";
+import DesgloseDinero from "../components/servicio/DesgloseDinero";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
@@ -16,16 +21,32 @@ import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
 import Icon from "../components/public/Icon";
 import {
-  FILTROS, VACIOS, accionPrincipal, cantidadProductos, coincide, contar, destinatario, esCatalogo, esEnvio, esRetiro,
-  historialPedido, metodoEntrega, ordenarPorUrgencia, plazoVencido, porDespachar, subtotal, textoPlazo, tieneEncargo,
+  FILTROS, VACIOS, accionEntrega, accionFila, accionPrincipal, cantidadProductos, destinatario, diasSinRetirar,
+  esCatalogo, esEnvio, esRetiro, historialPedido, metodoEntrega, plazoVencido, porDespachar, sinRetirar,
+  subtotal, textoPlazo,
+  canceladoPorDriveMaster, textoMotivoNoDespacho,
 } from "./tienda/pedidosTienda";
+import { avisar } from "../components/ui/avisar";
 import { destinoSeccion } from "../utils/navegacion";
+import { plural } from "../utils/formato";
 import "../css/servicios.css";
 import "../css/solicitud-servicio.css";
 import "../css/pedidos-tienda.css";
+import { textoError } from "../utils/errores";
+import { ayudaMotivo, errorMotivo } from "../utils/motivo";
+import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
 
-/** Chip del plazo de un pedido por despachar: vencido en rojo, si no en ámbar. */
+/**
+ * Chip del plazo de un pedido por despachar (vencido en rojo, si no en ámbar) o, en uno listo que el cliente no recoge,
+ * "Sin retirar hace N días" (desde los 3 días; a los 15 DriveMaster lo revisa).
+ */
 function ChipPlazo({ pedido, ahora }) {
+  if (sinRetirar(pedido, ahora)) {
+    const dias = diasSinRetirar(pedido, ahora);
+    return pedido.revisionRetiroDesde && !pedido.resolucionRetiro
+      ? <ChipEstado tono="error">Sin retirar hace {dias} días · en revisión</ChipEstado>
+      : <ChipEstado tono="aviso">Sin retirar hace {dias} días</ChipEstado>;
+  }
   if (!porDespachar(pedido) || !pedido.plazoDespachoHasta) return null;
   return plazoVencido(pedido, ahora)
     ? <ChipEstado tono="error">Plazo vencido</ChipEstado>
@@ -79,8 +100,16 @@ function textoEstado(p) {
     }
     return "Esperando que el taller confirme que recibió los repuestos.";
   }
-  if (p.estado === "RETIRADO") return "El cliente retiró el pedido. El pago quedó habilitado para liquidar.";
-  if (p.estado === "ENTREGADO" || p.estado === "RECIBIDO") return "Pedido entregado. El pago quedó habilitado para liquidar.";
+  if (p.estado === "LISTO_PARA_RETIRAR" && p.revisionRetiroDesde && !p.resolucionRetiro) {
+    return "Lleva 15 días o más sin retirarse y DriveMaster lo está revisando. Si el cliente llega, entrégaselo con su código.";
+  }
+  if (p.estado === "NO_ENTREGADO" && p.resolucionRetiro === "REEMBOLSO") {
+    return `DriveMaster lo canceló porque el cliente no pasó a retirarlo. Las unidades en stock volvieron a tu inventario y este pedido no se paga.`;
+  }
+  if (p.estado === "RETIRADO") return "El cliente retiró el pedido. Tu pago quedó habilitado: DriveMaster te lo transfiere.";
+  if (p.estado === "ENTREGADO" || p.estado === "RECIBIDO") return "Pedido entregado. Tu pago quedó habilitado: DriveMaster te lo transfiere.";
+  if (p.tipoMotivoNoDespacho === "PAGO_NO_APLICADO") return `${p.motivoNoDespacho}.`;
+  if (p.tipoMotivoNoDespacho === "ORDEN_CANCELADA") return `${p.motivoNoDespacho || "Cancelada por DriveMaster"}. No lo despaches: las unidades en stock volvieron a tu inventario y este pedido no se paga.`;
   if (p.estado === "NO_DESPACHADO") return `No se despachó: ${p.motivoNoDespacho || "sin motivo registrado"}. DriveMaster reembolsa al cliente.`;
   if (p.estado === "NO_ENTREGADO") return "DriveMaster resolvió el problema con reembolso al cliente: este pedido no se paga.";
   return null;
@@ -94,11 +123,26 @@ function textoEstado(p) {
  * dirección; en un retiro, nada (el cliente se identifica con su código, que se valida aquí).
  * "No puedo despachar" exige el motivo; el reembolso al cliente lo gestiona DriveMaster.
  */
+/** Orden de la lista (lista blanca de TablasTiendaService); sin orden, lo más urgente primero. */
+const ORDENES_PEDIDOS = [
+  { campo: "fecha", label: "Fecha de pago", asc: "(más antiguos primero)", desc: "(más recientes primero)" },
+  { campo: "total", label: "Total" },
+  { campo: "estado", label: "Estado", asc: "(A–Z)", desc: "(Z–A)" },
+];
+
+/**
+ * Pedidos de la tienda, paginados en el servidor (/api/pedidos-tienda/mios/tabla): pestaña, búsqueda, fechas de pago,
+ * orden y página se resuelven allá sobre todos sus pedidos; los contadores de las pestañas cuentan todos.
+ */
 export default function PedidosTienda({ param, irA }) {
   const token = getToken();
   // Desde un aviso (o desde otra sección) se abre directo un pedido: { abrir, volverA }
   const destino = destinoSeccion(param);
-  const [pedidos, setPedidos] = useState([]);
+  const [datos, setDatos] = useState(null); // { pedidos: Pagina, conteo }
+  const [suelto, setSuelto] = useState(null); // el pedido abierto cuando no está en la página (p. ej. desde un aviso)
+  const [orden, setOrden] = useState(null);
+  const [pagina, setPagina] = useState(0);
+  const [fechas, setFechas] = useState({ desde: "", hasta: "" });
   const [imagenes, setImagenes] = useState({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
@@ -109,6 +153,7 @@ export default function PedidosTienda({ param, irA }) {
   const [abiertoId, setAbiertoId] = useState(destino.abrir);
   const [modo, setModo] = useState(null); // null | DESPACHAR | NO_DESPACHAR
   const [nota, setNota] = useState("");
+  const [confirmaNoDespacho, setConfirmaNoDespacho] = useState(null); // pedido por cancelar, tras revisar el motivo
   const [tipoMotivo, setTipoMotivo] = useState("");
   const [errores, setErrores] = useState({}); // motivo, nota, codigo, accion
   const [procesando, setProcesando] = useState(false);
@@ -116,16 +161,22 @@ export default function PedidosTienda({ param, irA }) {
   const [ahora] = useState(() => Date.now());
   const campoCodigo = useRef(null);
 
+  const q = useDiferido(busqueda.trim());
+  const errorFechas = errorRango(fechas);
+
   const cargar = useCallback(async () => {
+    if (errorFechas) return; // el selector de fechas ya lo avisa
+    setCargando(true);
     try {
-      setPedidos((await misPedidosTienda(token)) || []);
+      setDatos(await pedidosTiendaTabla(token, { pestana: filtro, q, desde: fechas.desde, hasta: fechas.hasta,
+        page: pagina, size: 20, sort: textoOrden(orden) }));
       setError(null);
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setCargando(false);
     }
-  }, [token]);
+  }, [token, filtro, q, fechas.desde, fechas.hasta, pagina, orden, errorFechas]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -143,12 +194,35 @@ export default function PedidosTienda({ param, irA }) {
     return () => { vivo = false; };
   }, [token]);
 
-  const conteo = useMemo(() => contar(pedidos), [pedidos]);
-  const visibles = useMemo(() => {
-    const f = FILTROS.find((x) => x.key === filtro) || FILTROS[0];
-    return ordenarPorUrgencia(pedidos.filter(f.filtro).filter((p) => coincide(p, busqueda)), ahora);
-  }, [pedidos, filtro, busqueda, ahora]);
-  const abierto = pedidos.find((p) => p.id === abiertoId) || null;
+  const lista = datos?.pedidos;
+  const enPagina = useMemo(() => lista?.items || [], [lista]);
+  const conteo = datos?.conteo || {};
+  const enLaPagina = enPagina.find((p) => p.id === abiertoId) || null;
+  const abierto = enLaPagina || (suelto?.id === abiertoId ? suelto : null);
+
+  // El pedido abierto que no está en esta página se busca por su id (la búsqueda del servidor también mira el id),
+  // con la misma vista recortada que ve la tienda. Se vuelve a pedir cada vez que la lista se recarga.
+  const [buscado, setBuscado] = useState(null); // id ya buscado sin éxito
+  useEffect(() => {
+    if (!abiertoId || !datos || enLaPagina) return undefined;
+    let vivo = true;
+    pedidosTiendaTabla(token, { pestana: "TODOS", q: abiertoId, size: 1 })
+      .then((r) => {
+        if (!vivo) return;
+        const p = (r?.pedidos?.items || []).find((x) => x.id === abiertoId) || null;
+        setSuelto(p);
+        if (!p) setBuscado(abiertoId);
+      })
+      .catch(() => { if (vivo) setBuscado(abiertoId); });
+    return () => { vivo = false; };
+  }, [token, abiertoId, datos, enLaPagina]);
+  const noEncontrado = abiertoId && !abierto && buscado === abiertoId;
+
+  // Cambiar de pestaña, búsqueda, fechas u orden vuelve a la primera página
+  const ponerFiltro = (f) => { setFiltro(f); setPagina(0); };
+  const ponerBusqueda = (v) => { setBusqueda(v); setPagina(0); };
+  const ponerFechas = (r) => { setFechas(r); setPagina(0); };
+  const ponerOrden = (o) => { setOrden(o); setPagina(0); };
 
   const reiniciarFormularios = () => {
     setModo(null);
@@ -163,6 +237,27 @@ export default function PedidosTienda({ param, irA }) {
     setAviso(null);
     setAbiertoId(id);
     window.scrollTo({ top: 0 });
+  };
+
+  const [ocupadoFila, setOcupadoFila] = useState(null); // id del pedido cuya acción corre desde la lista
+
+  const accionarFila = async (p, accion) => {
+    if (accion.tipo === "DESPACHAR") { abrir(p.id); setModo("DESPACHAR"); return; }
+    if (accion.tipo === "VALIDAR") { abrir(p.id); requestAnimationFrame(() => campoCodigo.current?.focus()); return; }
+    if (accion.tipo !== "PREPARAR" && accion.tipo !== "LISTO") { abrir(p.id); return; }
+    setOcupadoFila(p.id);
+    try {
+      if (accion.tipo === "PREPARAR") await prepararPedido(token, p.id);
+      else await marcarListoParaRetirar(token, p.id);
+      avisar(accion.tipo === "PREPARAR"
+        ? `Pedido #${refSolicitud(p.id)} en preparación.`
+        : `Pedido #${refSolicitud(p.id)} listo para retirar: avisamos al cliente.`);
+      await cargar();
+    } catch (e) {
+      avisar(textoError(e), "error");
+    } finally {
+      setOcupadoFila(null);
+    }
   };
 
   const desdeAfuera = destino.abrir != null && abiertoId === destino.abrir;
@@ -191,7 +286,7 @@ export default function PedidosTienda({ param, irA }) {
       setAviso(mensajeOk);
       await cargar();
     } catch (e) {
-      setErrores({ accion: e.message });
+      setErrores({ accion: textoError(e) });
     } finally {
       setProcesando(false);
     }
@@ -201,10 +296,10 @@ export default function PedidosTienda({ param, irA }) {
     if (modo === "NO_DESPACHAR") {
       const faltan = {};
       if (!tipoMotivo) faltan.motivo = "Elige el motivo.";
-      if (tipoMotivo === "OTRO" && !nota.trim()) faltan.nota = "Cuéntanos por qué no puedes despachar.";
+      if (tipoMotivo === "OTRO") { const e = errorMotivo(nota); if (e) faltan.nota = e; }
       if (Object.keys(faltan).length) { setErrores(faltan); return; }
-      ejecutar(() => noPuedoDespachar(token, pedido.id, tipoMotivo, nota.trim() || null),
-        "Registramos que no puedes despachar este pedido. DriveMaster reembolsará al cliente.");
+      // Antes de cancelar se muestra el motivo tal como quedará en el historial
+      setConfirmaNoDespacho(pedido);
       return;
     }
     ejecutar(() => despacharPedido(token, pedido.id, nota.trim() || null), "Pedido despachado. Avisamos al cliente.");
@@ -223,18 +318,19 @@ export default function PedidosTienda({ param, irA }) {
     try {
       await validarCodigoRetiro(token, pedido.id, limpio);
       setCodigo("");
-      setAviso(`Entrega registrada: el pedido #${refSolicitud(pedido.id)} quedó como retirado y su pago quedó habilitado para liquidar.`);
+      setAviso(`Entrega registrada: el pedido #${refSolicitud(pedido.id)} quedó como retirado y tu pago quedó habilitado: DriveMaster te lo transfiere.`);
       await cargar();
     } catch (e) {
       const extra = /no es correcto/i.test(e.message) ? " Si el cliente te muestra un código de otra tienda o de otro pedido, no sirve aquí." : "";
-      setErrores({ codigo: `${e.message}${extra}` });
+      setErrores({ codigo: `${textoError(e)}${extra}` });
       campoCodigo.current?.focus();
     } finally {
       setProcesando(false);
     }
   };
 
-  if (cargando) {
+  // Solo la primera carga muestra el esqueleto; al cambiar de página la lista anterior queda visible mientras llega
+  if (!datos && !error) {
     return (
       <div className="ss-panel ss-panel--tienda pdt-root">
         <EncabezadoPagina titulo="Pedidos" descripcion="Pedidos de clientes y talleres a tu tienda." />
@@ -254,18 +350,20 @@ export default function PedidosTienda({ param, irA }) {
 
     // La acción del estado, también en la barra inferior del celular
     const irASigue = () => document.getElementById("pdt-sigue")?.scrollIntoView({ block: "start" });
+    const entrega = accionEntrega(p);
     const accionBarra = !accion || formularioAbierto ? null
       : accion.tipo === "VALIDAR" ? () => { irASigue(); campoCodigo.current?.focus({ preventScroll: true }); }
-        : accion.tipo === "LISTO"
-          ? () => ejecutar(() => marcarListoParaRetirar(token, p.id), "Marcado como listo para retirar: avisamos al cliente.")
-          : () => { setModo("DESPACHAR"); irASigue(); };
+        : accion.tipo === "PREPARAR" ? () => ejecutar(() => prepararPedido(token, p.id), "Pedido en preparación.")
+          : accion.tipo === "LISTO"
+            ? () => ejecutar(() => marcarListoParaRetirar(token, p.id), "Marcado como listo para retirar: avisamos al cliente.")
+            : () => { setModo("DESPACHAR"); irASigue(); };
 
     return (
       <div className="ss-panel ss-panel--tienda pdt-root">
         <EncabezadoPagina titulo={`Pedido #${refSolicitud(p.id)}`} onVolver={cerrar}
           textoVolver={desdeAfuera && destino.volverA ? "Volver" : "Pedidos"}>
           <p className="pdt-meta">
-            <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+            {canceladoPorDriveMaster(p) ? <ChipEstado tono="error">Cancelado</ChipEstado> : <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />}
             <ChipPlazo pedido={p} ahora={ahora} />
             <span>{formatFechaHora(p.fechaCreacion)}</span>
             <span>{metodoEntrega(p)}</span>
@@ -296,7 +394,7 @@ export default function PedidosTienda({ param, irA }) {
                         <span className="pdt-item__meta">
                           {i.cantidad} × {formatPrecio(i.precioUnitario)}
                           {i.disponibilidad === "ENCARGO" && (
-                            <ChipEstado tono="info">Encargo{i.diasEntrega ? ` · ${i.diasEntrega} días` : ""}</ChipEstado>
+                            <ChipEstado tono="info">Encargo{i.diasEntrega ? ` · ${plural(i.diasEntrega, "día")}` : ""}</ChipEstado>
                           )}
                         </span>
                       </span>
@@ -351,20 +449,23 @@ export default function PedidosTienda({ param, irA }) {
 
                 {porDespachar(p) && !formularioAbierto && (
                   <div className="pdt-botones">
-                    {accion.tipo === "LISTO" ? (
+                    {accion.tipo === "PREPARAR" && (
                       <button type="button" className="ui-btn ui-btn--primario ui-btn--bloque" disabled={procesando} aria-busy={procesando}
-                        onClick={() => ejecutar(() => marcarListoParaRetirar(token, p.id), "Marcado como listo para retirar: avisamos al cliente.")}>
+                        onClick={() => ejecutar(() => prepararPedido(token, p.id), "Pedido en preparación.")}>
                         {accion.texto}
                       </button>
-                    ) : (
-                      <button type="button" className="ui-btn ui-btn--primario ui-btn--bloque" onClick={() => setModo("DESPACHAR")}>
-                        <Icon name="box" size={16} /> {accion.texto}
-                      </button>
                     )}
-                    {p.estado === "PENDIENTE" && tieneEncargo(p) && (
-                      <button type="button" className="ui-btn ui-btn--secundario ui-btn--bloque" disabled={procesando}
-                        onClick={() => ejecutar(() => prepararPedido(token, p.id), "Pedido en preparación.")}>
-                        Iniciar preparación
+                    {/* Si ya consiguió el encargo, puede entregarlo sin pasar por preparación */}
+                    {entrega.tipo === "LISTO" ? (
+                      <button type="button" className={`ui-btn ${accion.tipo === "PREPARAR" ? "ui-btn--secundario" : "ui-btn--primario"} ui-btn--bloque`}
+                        disabled={procesando} aria-busy={procesando}
+                        onClick={() => ejecutar(() => marcarListoParaRetirar(token, p.id), "Marcado como listo para retirar: avisamos al cliente.")}>
+                        {entrega.texto}
+                      </button>
+                    ) : (
+                      <button type="button" className={`ui-btn ${accion.tipo === "PREPARAR" ? "ui-btn--secundario" : "ui-btn--primario"} ui-btn--bloque`}
+                        onClick={() => setModo("DESPACHAR")}>
+                        <Icon name="box" size={16} /> {entrega.texto}
                       </button>
                     )}
                     <button type="button" className="ui-btn ui-btn--texto pdt-peligro" onClick={() => setModo("NO_DESPACHAR")}>
@@ -393,7 +494,7 @@ export default function PedidosTienda({ param, irA }) {
                       label={modo === "DESPACHAR" ? (esEnvio(p) ? "Guía o datos del envío" : "Nota del despacho") : "Detalle"}
                       ayuda={modo === "DESPACHAR"
                         ? (esEnvio(p) ? "El cliente la ve en su compra." : "Por ejemplo, el mensajero o la guía.")
-                        : `Se cancela tu parte del pedido y DriveMaster reembolsa ${formatPrecio(p.total)} al cliente.`}>
+                        : `${tipoMotivo === "OTRO" ? `${ayudaMotivo(nota)} ` : ""}Se cancela tu parte del pedido y DriveMaster reembolsa ${formatPrecio(p.total)} al cliente.`}>
                       <textarea className="ui-field__input" rows={3} maxLength={500} autoFocus={modo === "DESPACHAR"}
                         value={nota} onChange={(e) => { setNota(e.target.value); if (errores.nota) setErrores({}); }} />
                     </Campo>
@@ -417,13 +518,40 @@ export default function PedidosTienda({ param, irA }) {
                 <div className="ui-card__cuerpo"><Historial pasos={historial} etiqueta={`Historial del pedido #${refSolicitud(p.id)}`} /></div>
               </section>
             )}
+            <DesgloseDinero token={token} pedidoId={p.id} estado={p.estado}>
+              {(contenido) => (
+                <section className="ui-card pdt-bloque" aria-labelledby="pdt-pago">
+                  <div className="ui-card__header"><h2 id="pdt-pago" className="ui-card__titulo">Tu pago</h2></div>
+                  <div className="ui-card__cuerpo">{contenido}</div>
+                </section>
+              )}
+            </DesgloseDinero>
           </aside>
         </div>
+
+        {confirmaNoDespacho && (
+          <ConfirmarAccion titulo={`¿No puedes despachar el pedido #${refSolicitud(confirmaNoDespacho.id)}?`} peligro
+            textoConfirmar="Sí, no puedo despacharlo"
+            mensaje={`Se cancela tu parte del pedido y DriveMaster reembolsa ${formatPrecio(confirmaNoDespacho.total)} al cliente. No se puede deshacer.`}
+            onCancelar={() => setConfirmaNoDespacho(null)}
+            onConfirmar={async () => {
+              const pedido = confirmaNoDespacho;
+              setConfirmaNoDespacho(null);
+              await ejecutar(() => noPuedoDespachar(token, pedido.id, tipoMotivo, nota.trim() || null),
+                "Registramos que no puedes despachar este pedido. DriveMaster reembolsará al cliente.");
+            }}>
+            <figure className="ui-motivo-cita">
+              <figcaption>Motivo que queda en el historial</figcaption>
+              <blockquote>{textoMotivoNoDespacho(tipoMotivo, nota)}</blockquote>
+            </figure>
+          </ConfirmarAccion>
+        )}
 
         {accionBarra && (
           <BarraAccionMovil etiqueta="Total del pedido" valor={formatPrecio(p.total)} nota={plazo || undefined}>
             <button type="button" className="ui-btn ui-btn--primario" onClick={accionBarra} disabled={procesando} aria-busy={procesando}>
-              {accion.tipo === "VALIDAR" ? "Validar código" : accion.tipo === "LISTO" ? "Listo para retirar" : "Despachar"}
+              {accion.tipo === "VALIDAR" ? "Validar código" : accion.tipo === "PREPARAR" ? "Empezar preparación"
+                : accion.tipo === "LISTO" ? "Marcar como listo" : "Despachar"}
             </button>
           </BarraAccionMovil>
         )}
@@ -445,7 +573,7 @@ export default function PedidosTienda({ param, irA }) {
           No pudimos cargar tus pedidos. {error}
         </Alerta>
       )}
-      {!error && abiertoId && !abierto && (
+      {!error && noEncontrado && (
         <Alerta tono="aviso" className="pdt-alerta" onCerrar={() => setAbiertoId(null)}>
           No encontramos el pedido del aviso entre los tuyos. Puede que ya no esté en tu lista.
         </Alerta>
@@ -453,37 +581,66 @@ export default function PedidosTienda({ param, irA }) {
       {aviso && <Alerta tono="ok" className="pdt-alerta" onCerrar={() => setAviso(null)}>{aviso}</Alerta>}
 
       <div className="pdt-barra">
-        <div className="ui-filtros" role="group" aria-label="Pedidos por estado">
-          {FILTROS.map((f) => (
-            <button key={f.key} type="button" className="ui-chip" aria-pressed={filtro === f.key} onClick={() => setFiltro(f.key)}>
-              {f.label}
-              {conteo[f.key] > 0 && <span className="ui-chip__contador">{conteo[f.key]}</span>}
-            </button>
-          ))}
+        <div className="pdt-pestanas">
+          {/* Principales: el trabajo del día, siempre con su cifra (0 si no hay) */}
+          <div className="ui-filtros" role="group" aria-label="Pedidos en curso">
+            {FILTROS.filter((f) => f.principal).map((f) => (
+              <button key={f.key} type="button" className="ui-chip pdt-pestana" aria-pressed={filtro === f.key} onClick={() => ponerFiltro(f.key)}>
+                {f.label}
+                <span className={`ui-chip__contador${conteo[f.key] ? "" : " pdt-pestana__cero"}`}>{conteo[f.key] || 0}</span>
+              </button>
+            ))}
+          </div>
+          <div className="ui-filtros pdt-secundarios" role="group" aria-label="Otros filtros de pedidos">
+            <span className="pdt-secundarios__titulo">Ver también:</span>
+            {FILTROS.filter((f) => !f.principal).map((f) => (
+              <button key={f.key} type="button" className="ui-btn ui-btn--texto ui-btn--chico pdt-secundario" aria-pressed={filtro === f.key}
+                onClick={() => ponerFiltro(f.key)}>
+                {f.label}{conteo[f.key] > 0 ? ` (${conteo[f.key]})` : ""}
+              </button>
+            ))}
+          </div>
+          {FILTROS.find((f) => f.key === filtro)?.ayuda && (
+            <p className="pdt-ayuda">{FILTROS.find((f) => f.key === filtro).ayuda}</p>
+          )}
         </div>
         <div className="ui-buscador pdt-buscador">
           <Icon name="search" size={18} />
           <label htmlFor="pdt-busqueda" className="ui-sr">Buscar por número de pedido, cliente, taller o producto</label>
           <input id="pdt-busqueda" className="ui-field__input" type="search" value={busqueda} autoComplete="off"
-            onChange={(e) => setBusqueda(e.target.value)} placeholder="Número, cliente, taller o producto" />
+            onChange={(e) => ponerBusqueda(e.target.value)} placeholder="Número, cliente, taller o producto" />
         </div>
       </div>
 
-      {visibles.length === 0 ? (
-        busqueda.trim() ? (
+      <div className="pdt-herramientas">
+        <FiltroFechas id="pdt-fechas" etiqueta="Fecha de pago" valor={fechas} onCambiar={ponerFechas} />
+        <SelectorOrden id="pdt-orden" opciones={ORDENES_PEDIDOS} orden={orden} onOrdenar={ponerOrden} siempre
+          porDefecto="Lo más urgente primero" />
+      </div>
+
+      {!datos && !error ? (
+        <Esqueleto variante="lista" cantidad={4} texto="Cargando pedidos…" />
+      ) : enPagina.length === 0 ? (
+        q || fechas.desde || fechas.hasta ? (
           <EstadoVacio icono="search" titulo="Nada coincide con tu búsqueda"
-            texto={`No encontramos “${busqueda.trim()}” en esta pestaña. Prueba con el número del pedido.`}>
-            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => setBusqueda("")}>Limpiar búsqueda</button>
+            texto={q ? `No encontramos “${q}” en esta pestaña. Prueba con el número del pedido.` : "No hay pedidos en esas fechas en esta pestaña."}>
+            <button type="button" className="ui-btn ui-btn--secundario" onClick={() => { ponerBusqueda(""); ponerFechas({ desde: "", hasta: "" }); }}>
+              Limpiar búsqueda y fechas
+            </button>
           </EstadoVacio>
         ) : !error && <EstadoVacio icono="box" titulo={tituloVacio} texto={textoVacio} />
       ) : (
-        <ul className="pdt-lista">
-          {visibles.map((p) => (
+        <ul className="pdt-lista" id="pdt-lista" aria-busy={cargando}>
+          {enPagina.map((p) => {
+            const accion = accionFila(p);
+            return (
             <li key={p.id}>
-              <button type="button" className={`pdt-fila${plazoVencido(p, ahora) ? " pdt-fila--vencido" : ""}`} onClick={() => abrir(p.id)}
-                aria-label={`Pedido #${refSolicitud(p.id)}, ${ESTADOS_PEDIDO[p.estado]?.label || p.estado}, ${formatPrecio(p.total)}`}>
+              <div className={`pdt-fila${plazoVencido(p, ahora) || (p.revisionRetiroDesde && !p.resolucionRetiro) ? " pdt-fila--vencido" : ""}`}>
                 <span className="pdt-fila__id">
-                  <strong className="pdt-fila__numero">#{refSolicitud(p.id)}</strong>
+                  <button type="button" className="pdt-fila__abrir" onClick={() => abrir(p.id)}
+                    aria-label={`Pedido #${refSolicitud(p.id)}, ${ESTADOS_PEDIDO[p.estado]?.label || p.estado}, ${formatPrecio(p.total)}`}>
+                    <strong className="pdt-fila__numero">#{refSolicitud(p.id)}</strong>
+                  </button>
                   <span className="pdt-fila__meta">{formatFechaHora(p.fechaCreacion)}</span>
                 </span>
                 <span className="pdt-fila__quien">
@@ -493,15 +650,29 @@ export default function PedidosTienda({ param, irA }) {
                   </span>
                 </span>
                 <span className="pdt-fila__estado">
-                  <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />
+                  {canceladoPorDriveMaster(p) ? <ChipEstado tono="error">Cancelado</ChipEstado> : <ChipEstado estado={p.estado} catalogo={ESTADOS_PEDIDO} />}
                   <ChipPlazo pedido={p} ahora={ahora} />
                 </span>
                 <strong className="pdt-fila__total ui-precio">{formatPrecio(p.total)}</strong>
-                <Icon name="arrow" size={18} className="pdt-fila__flecha" />
-              </button>
+                <span className="pdt-fila__accion">
+                  {accion.tipo === "ESPERA" ? (
+                    <span className="pdt-fila__espera">{accion.texto}</span>
+                  ) : (
+                    <button type="button" disabled={ocupadoFila === p.id} aria-busy={ocupadoFila === p.id}
+                      className={`ui-btn ui-btn--chico ${accion.tipo === "VER" ? "ui-btn--texto" : "ui-btn--primario"}`}
+                      onClick={() => accionarFila(p, accion)} aria-label={`${accion.texto}: pedido #${refSolicitud(p.id)}`}>
+                      {ocupadoFila === p.id ? "Guardando…" : accion.texto}
+                    </button>
+                  )}
+                </span>
+              </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
+      )}
+      {enPagina.length > 0 && (
+        <Paginacion {...propsPaginacion(lista)} onCambiar={(p) => setPagina(p - 1)} etiqueta="Páginas de pedidos" ancla="pdt-lista" />
       )}
     </div>
   );

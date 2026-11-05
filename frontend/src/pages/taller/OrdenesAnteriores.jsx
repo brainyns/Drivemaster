@@ -4,6 +4,8 @@ import { getToken } from "../../services/authService";
 import { formatFecha, formatFechaHora, formatPrecio, refSolicitud } from "../../components/servicio/estadosServicio";
 import { ESTADOS_ORDEN_ANTERIOR } from "../../components/servicio/ordenesAnteriores";
 import EncabezadoPagina from "../../components/ui/EncabezadoPagina";
+import Paginacion from "../../components/ui/Paginacion";
+import { paginar, usePaginacion } from "../../components/ui/reglasPaginacion";
 import Indicador from "../../components/ui/Indicador";
 import ChipEstado from "../../components/ui/ChipEstado";
 import Campo from "../../components/ui/Campo";
@@ -13,6 +15,7 @@ import Esqueleto from "../../components/ui/Esqueleto";
 import Icon from "../../components/public/Icon";
 import "../../css/servicios.css";
 import "../../css/panel-taller.css";
+import { textoError } from "../../utils/errores";
 
 /**
  * Órdenes del flujo anterior (cotizar → pagar → iniciar → finalizar). Se conservan solo
@@ -85,6 +88,9 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
   const enProceso   = useMemo(() => ordenes.filter(o => o.estado === "EN_PROCESO"), [ordenes]);
   const finalizadas = useMemo(() => ordenes.filter(o => o.estado === "FINALIZADA"), [ordenes]);
   const retrasadas  = useMemo(() => ordenes.filter(o => o.retrasada), [ordenes]);
+  // Las finalizadas son las que crecen: 20 por página
+  const pag = usePaginacion(finalizadas.length);
+  const finalizadasEnPagina = paginar(finalizadas, pag.pagina);
 
   const ingresosFinalizadas = useMemo(
     () => finalizadas.reduce((s, o) => s + (o.precioManoObra || 0), 0),
@@ -111,7 +117,7 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
       await confirmarPagoOrden(token, id);
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(null);
     }
@@ -124,7 +130,7 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
       await cargar();
       setTab("proceso");
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(null);
     }
@@ -137,7 +143,7 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
       await cargar();
       setTab("finalizadas");
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(null);
     }
@@ -151,7 +157,7 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
       setFechasCita(prev => ({ ...prev, [id]: "" }));
       await cargar();
     } catch (e) {
-      setError(e.message);
+      setError(textoError(e));
     } finally {
       setProcesando(null);
     }
@@ -352,8 +358,9 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
 
           {tab === "finalizadas" && (
             finalizadas.length === 0 ? vacio("finalizadas") : (
+              <>
               <div className="pt-list">
-                {finalizadas.map(o => (
+                {finalizadasEnPagina.map(o => (
                   <article className="pt-card" key={o.id}>
                     <div className="pt-card-media"><FotoVehiculo o={o} /></div>
                     <div className="pt-card-body">
@@ -370,6 +377,8 @@ export default function OrdenesAnteriores({ ordenes, cargando, error: errorCarga
                   </article>
                 ))}
               </div>
+              <Paginacion pagina={pag.pagina} total={finalizadas.length} onCambiar={pag.cambiar} etiqueta="Páginas de órdenes finalizadas" />
+              </>
             )
           )}
         </>

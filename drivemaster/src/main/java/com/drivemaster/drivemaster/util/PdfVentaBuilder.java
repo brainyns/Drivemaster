@@ -20,19 +20,17 @@ import java.util.Locale;
 public class PdfVentaBuilder {
 
     // ── Paleta blanca / profesional ───────────────────────────────────────────
-    // Blanco y naranja: el color principal de la marca en franjas, títulos, totales y montos (ver BrandConfig)
+    // Fondo blanco, texto gris oscuro y el naranja de la marca solo en las franjas (ver BrandConfig)
     private static final Color ORANGE      = BrandConfig.colorPrimarioAwt();
-    private static final Color ORANGE_TEXT = BrandConfig.colorPrimarioAwt();
-    private static final Color BG_PAGE     = new Color(243, 244, 246);  // gris claro de página
+    private static final Color BG_PAGE     = new Color(255, 255, 255);  // fondo de página
     private static final Color BG_WHITE    = new Color(255, 255, 255);  // fondo principal
-    private static final Color BG_SURFACE  = new Color(249, 250, 251);  // filas alternas / paneles
+    private static final Color BG_SURFACE  = new Color(255, 255, 255);  // filas alternas / paneles
     private static final Color BG_HEADER   = new Color(255, 255, 255);  // cabecera
     private static final Color TEXT_STRONG   = new Color(55,  65,  81);   // datos destacados: gris, sin negro
     private static final Color TEXT_BODY   = new Color(55,  65,  81);   // texto normal
     private static final Color TEXT_MUTED  = new Color(107, 114, 128);  // etiquetas / notas
     private static final Color TEXT_LIGHT  = new Color(156, 163, 175);  // placeholders
-    private static final Color GREEN_BG    = new Color(209, 250, 229);  // badge PAGADA fondo
-    private static final Color GREEN_TEXT  = new Color(6,   95,  70);   // badge PAGADA texto
+    private static final Color BADGE_BG    = Color.decode(BrandConfig.colorPrimarioSuave());  // badge del estado
     private static final Color BORDER      = new Color(229, 231, 235);  // bordes suaves
     private static final Color BORDER_ROW  = new Color(243, 244, 246);  // separador filas
 
@@ -79,16 +77,14 @@ public class PdfVentaBuilder {
                         "dd 'de' MMMM 'de' yyyy, HH:mm", Locale.forLanguageTag("es-CO")))
                     : "—";
 
-            double subtotalBruto = venta.getProductos() != null ? venta.getProductos().stream()
-                    .mapToDouble(d -> d.getSubtotal() != null ? d.getSubtotal() : 0).sum() : 0;
-            double ivaValor = subtotalBruto * iva;
-            int    ivaPct   = (int) Math.round(iva * 100);
+            double ivaValor = venta.getProductos() != null ? venta.getProductos().stream()
+                    .mapToDouble(d -> d.getSubtotal() != null ? d.getSubtotal() : 0).sum() * iva : 0;
 
             BaseFont bf     = BaseFont.createFont(BaseFont.HELVETICA,      BaseFont.CP1252, false);
             BaseFont bfBold = BaseFont.createFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, false);
             PdfContentByte cb = writer.getDirectContent();
 
-            // Fondo general de página (gris muy claro)
+            // Fondo general de página
             drawRect(cb, 0, 0, PW, pageH, BG_PAGE);
 
             // ── HEADER (fondo blanco + línea naranja arriba) ──
@@ -113,7 +109,7 @@ public class PdfVentaBuilder {
             float lwLabel = bfBold.getWidthPoint(labelFactura, 8);
             cb.beginText();
             cb.setFontAndSize(bfBold, 8);
-            cb.setColorFill(ORANGE_TEXT);
+            cb.setColorFill(TEXT_STRONG);
             cb.setTextMatrix(PW - PAD - lwLabel, headerY + 52);
             cb.showText(labelFactura);
             cb.endText();
@@ -122,7 +118,7 @@ public class PdfVentaBuilder {
             float lwId = bfBold.getWidthPoint(idText, 20);
             cb.beginText();
             cb.setFontAndSize(bfBold, 20);
-            cb.setColorFill(ORANGE_TEXT);
+            cb.setColorFill(TEXT_STRONG);
             cb.setTextMatrix(PW - PAD - lwId, headerY + 28);
             cb.showText(idText);
             cb.endText();
@@ -147,8 +143,8 @@ public class PdfVentaBuilder {
 
             String estado = venta.getEstado() != null ? venta.getEstado() : "PAGADA";
             float badgeW = bfBold.getWidthPoint(estado, 8) + 16;
-            drawRoundRect(cb, col2X, secY - 62, badgeW, 18, GREEN_BG);
-            drawText(cb, bfBold, 8, estado, col2X + 8, secY - 55, GREEN_TEXT);
+            drawRoundRect(cb, col2X, secY - 62, badgeW, 18, BADGE_BG);
+            drawText(cb, bfBold, 8, estado, col2X + 8, secY - 55, TEXT_STRONG);
 
             // ── TABLA PRODUCTOS ──
             float tblTopY = secY - secH - gap;
@@ -162,8 +158,8 @@ public class PdfVentaBuilder {
             drawLine(cb, 0, tblTopY - tblHdr, PW, BORDER);
             drawTableHeader(cb, bf, PAD,                               tblTopY - 13, "PRODUCTO",     TEXT_MUTED);
             drawTableHeaderCenter(cb, bf, PAD + wNom + wCant * 0.5f,  tblTopY - 13, "CANT.",        TEXT_MUTED);
-            drawTableHeaderRight(cb, bf,  PAD + wNom + wCant + wPU,   tblTopY - 13, "PRECIO UNIT.", TEXT_MUTED);
-            drawTableHeaderRight(cb, bf,  PW - PAD,                   tblTopY - 13, "SUBTOTAL",     TEXT_MUTED);
+            drawTableHeaderRight(cb, bf,  PAD + wNom + wCant + wPU,   tblTopY - 13, "PRECIO UNIT. (IVA INCL.)", TEXT_MUTED);
+            drawTableHeaderRight(cb, bf,  PW - PAD,                   tblTopY - 13, "SUBTOTAL (IVA INCL.)",     TEXT_MUTED);
 
             float rowY = tblTopY - tblHdr;
             boolean odd = true;
@@ -175,8 +171,8 @@ public class PdfVentaBuilder {
 
                     drawText(cb, bf,     9, safe(d.getNombre()),                      PAD,                          rowY - 15, TEXT_BODY);
                     drawTextCenter(cb, bf, 9, String.valueOf(d.getCantidad()),         PAD + wNom + wCant * 0.5f,   rowY - 15, TEXT_MUTED);
-                    drawTextRight(cb, bf,  9, fmt.format(d.getPrecioUnitario()),       PAD + wNom + wCant + wPU,    rowY - 15, TEXT_MUTED);
-                    drawTextRight(cb, bfBold, 9, fmt.format(d.getSubtotal()),          PW - PAD,                   rowY - 15, ORANGE_TEXT);
+                    drawTextRight(cb, bf,  9, fmt.format((d.getPrecioUnitario() != null ? d.getPrecioUnitario() : 0) * (1 + iva)), PAD + wNom + wCant + wPU,    rowY - 15, TEXT_MUTED);
+                    drawTextRight(cb, bfBold, 9, fmt.format((d.getSubtotal() != null ? d.getSubtotal() : 0) * (1 + iva)),  PW - PAD,                   rowY - 15, TEXT_STRONG);
 
                     rowY -= rowH;
                     odd = !odd;
@@ -203,24 +199,22 @@ public class PdfVentaBuilder {
                 }
             }
 
-            // Panel totales — derecha (fondo gris claro + borde naranja izquierdo)
+            // Panel totales — derecha (borde naranja izquierdo)
             float panX = PW - PAD - halfW;
             drawRect(cb, panX, botY - botH, halfW, botH, BG_SURFACE);
             drawBorder(cb, panX, botY - botH, halfW, botH, BORDER);
             drawRect(cb, panX, botY - botH, 3, botH, ORANGE);
 
             float totY2 = botY - 18;
-            drawText(cb, bf, 9, "Subtotal", panX + 12, totY2, TEXT_MUTED);
-            drawTextRight(cb, bf, 9, fmt.format(subtotalBruto), panX + halfW - 10, totY2, TEXT_BODY);
-            totY2 -= 18;
-            drawText(cb, bf, 9, "IVA (" + ivaPct + "%)", panX + 12, totY2, TEXT_MUTED);
+            // El IVA no se suma aparte: va incluido; se informa cuánto lleva
+            drawText(cb, bf, 9, "Incluye IVA de", panX + 12, totY2, TEXT_MUTED);
             drawTextRight(cb, bf, 9, fmt.format(ivaValor), panX + halfW - 10, totY2, TEXT_BODY);
             totY2 -= 8;
             drawLine(cb, panX + 10, totY2, halfW - 20, BORDER);
             totY2 -= 18;
-            drawText(cb, bfBold, 12, "Total", panX + 12, totY2, ORANGE_TEXT);
+            drawText(cb, bfBold, 12, "Total", panX + 12, totY2, TEXT_STRONG);
             drawTextRight(cb, bfBold, 14, fmt.format(venta.getTotal()),
-                    panX + halfW - 10, totY2, ORANGE_TEXT);
+                    panX + halfW - 10, totY2, TEXT_STRONG);
 
             // ── FOOTER ──
             float footY = botY - botH - gap;
