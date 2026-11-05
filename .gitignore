@@ -29,6 +29,13 @@ skills-lock.json
 
 # Modelos y reportes generados
 *.docx
+*.pdf
+TERCERA_ENTREGA_PA_*.pdf
 ml/__pycache__/
 __pycache__/
+ml/graficos_apa/
+ml/pdf_preview/
+ml/generar_pdf_apa.py
+ml/generar_graficos_apa.py
+
 
