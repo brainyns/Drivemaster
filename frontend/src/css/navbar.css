@@ -57,8 +57,9 @@
   font-weight: 600;
 }
 
-/* Línea naranja de todas las opciones (header público y del marketplace): crece desde el centro al
-   pasar el mouse o con el teclado, y queda fija en la opción de la vista actual (aria-current) */
+/* Línea naranja de las opciones (header público y del marketplace): solo la lleva la opción de la vista
+   actual (aria-current), así nunca hay dos subrayadas. Al pasar el mouse la opción solo cambia de color;
+   con el teclado, además, conserva su contorno de foco. */
 .dm-header__nav > button::after {
   content: "";
   position: absolute;
@@ -72,9 +73,9 @@
   transition: transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.dm-header__nav > button:hover::after,
-.dm-header__nav > button:focus-visible::after,
 .dm-header__nav > button[aria-current="page"]::after { transform: scaleX(1); }
+
+.dm-header__nav > button:focus-visible { color: var(--dm-text); }
 
 .dm-header__nav > button[aria-current="page"] { color: var(--dm-text); }
 
