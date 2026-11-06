@@ -258,4 +258,22 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
     @Query("update RepartoPago r set r.estado = 'FALLIDO', r.motivoFallo = :motivo "
             + "where r.id = :id and r.estado in ('PROCESANDO', 'LIQUIDADO')")
     int marcarFallidoAsincrono(@Param("id") Long id, @Param("motivo") String motivo);
+
+    // ─── Datos de demostración (DatosDemoService) ───────────────────────────
+
+    /** Líneas de los pagos de la demo (referencia DEMO-…) o liquidadas como demo (SIM-DEMO-…). */
+    @Query("select count(r) from RepartoPago r where r.pagoId in (select p.id from PagoEntity p where p.referencia like 'DEMO-%') "
+            + "or r.referenciaLiquidacion like 'SIM-DEMO-%'")
+    long contarRepartosDemo();
+
+    @Transactional
+    @Modifying
+    @Query("delete from RepartoPago r where r.pagoId in (select p.id from PagoEntity p where p.referencia like 'DEMO-%') "
+            + "or r.referenciaLiquidacion like 'SIM-DEMO-%'")
+    int borrarRepartosDemo();
+
+    /** Líneas reales (pago no demo) a favor de un negocio demo: si las hay, borrar no las toca y avisa. */
+    @Query("select count(r) from RepartoPago r where r.beneficiarioId like 'demo-%' and r.pagoId not in "
+            + "(select p.id from PagoEntity p where p.referencia like 'DEMO-%')")
+    long contarRepartosRealesDeNegociosDemo();
 }

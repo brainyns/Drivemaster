@@ -57,4 +57,15 @@ public interface PagoRepository extends JpaRepository<PagoEntity, Long> {
     @Query("update PagoEntity p set p.estado = 'RECHAZADO', p.transactionId = :txn "
             + "where p.id = :id and p.estado = 'PENDIENTE'")
     int marcarRechazado(@Param("id") Long id, @Param("txn") String transactionId);
+
+    // ─── Datos de demostración (DatosDemoService): solo referencias que empiezan por DEMO- ───
+
+    /** Pagos de la demo. Los reales se llaman DRV-…: nunca coinciden. */
+    @Query("select count(p) from PagoEntity p where p.referencia like 'DEMO-%'")
+    long contarPagosDemo();
+
+    @Transactional
+    @Modifying
+    @Query("delete from PagoEntity p where p.referencia like 'DEMO-%'")
+    int borrarPagosDemo();
 }

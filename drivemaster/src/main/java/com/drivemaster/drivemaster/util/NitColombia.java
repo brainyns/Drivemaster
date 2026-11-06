@@ -43,6 +43,22 @@ public final class NitColombia {
         return da.equals(db) || base(a).equals(base(b));
     }
 
+    private static final int[] PESOS_DIAN = {3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71};
+
+    /**
+     * Dígito de verificación de la DIAN para un número de NIT (solo dígitos): cada dígito, de derecha a izquierda, por
+     * 3, 7, 13, 17…; el residuo de la suma entre 11 da el dígito (0 y 1 quedan igual, si no 11 − residuo).
+     */
+    public static int digitoVerificacion(String numero) {
+        if (numero == null || !numero.matches("\\d{1,15}")) throw new IllegalArgumentException("NIT sin dígitos: " + numero);
+        int suma = 0;
+        for (int i = 0; i < numero.length(); i++) {
+            suma += (numero.charAt(numero.length() - 1 - i) - '0') * PESOS_DIAN[i];
+        }
+        int residuo = suma % 11;
+        return residuo > 1 ? 11 - residuo : residuo;
+    }
+
     private static String digitos(String nit) {
         if (nit == null) return null;
         String d = nit.replaceAll("\\D", "");
