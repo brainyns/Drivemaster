@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, listarProductosMiTienda, subirImagenProducto } from "../services/productoService";
+import { crearProducto, actualizarProducto, obtenerProducto, listarProductos, listarProductosMiTienda, subirImagenProducto, generarImagenIa } from "../services/productoService";
 import { sugerirProducto } from "../services/informesTiendaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import SeccionEditable from "../components/ui/SeccionEditable";
@@ -178,6 +178,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
   const [imagenPreview, setImagenPreview] = useState(null);
   const [errorFoto, setErrorFoto] = useState(null);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
+  const [generandoIa, setGenerandoIa] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
   // Errores por campo que respondió el backend; se borran al editar el campo
   const [erroresServidor, setErroresServidor] = useState({});
@@ -237,6 +238,23 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
     if (err) { if (fileInputRef.current) fileInputRef.current.value = ""; return; }
     setImagenFile(file);
     setImagenPreview(URL.createObjectURL(file));
+    actualizar({ imagenIa: false });
+  };
+
+  // La foto generada ya está en Cloudinary: se guarda con el producto (imagenUrl + imagenIa), sin subir archivo.
+  const generarConIa = async () => {
+    setGenerandoIa(true);
+    setErrorFoto(null);
+    try {
+      const { url } = await generarImagenIa(form, token);
+      setImagenFile(null);
+      setImagenPreview(url);
+      actualizar({ imagenUrl: url, imagenIa: true });
+    } catch (err) {
+      setErrorFoto(err.message);
+    } finally {
+      setGenerandoIa(false);
+    }
   };
 
   const handleImagenChange = (e) => elegirImagen(e.target.files[0]);
@@ -252,7 +270,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
     setImagenFile(null);
     setImagenPreview(null);
     setErrorFoto(null);
-    actualizar({ imagenUrl: null });
+    actualizar({ imagenUrl: null, imagenIa: false });
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -577,6 +595,14 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
                     aria-describedby={errorFoto ? "pfm-foto-error" : undefined}>
                     <Icon name="camera" size={16} /> {imagenPreview ? "Cambiar" : "Elegir foto"}
                   </button>
+                  {(!imagenPreview || form.imagenIa) && (
+                    <button type="button" className="ui-btn ui-btn--secundario ui-btn--chico" onClick={generarConIa}
+                      disabled={generandoIa || form.nombre.trim().length < 3} aria-busy={generandoIa}
+                      title={form.nombre.trim().length < 3 ? "Escribe primero el nombre del producto" : undefined}>
+                      {!generandoIa && <Icon name="bolt" size={16} />}
+                      {generandoIa ? "Generando imagen…" : form.imagenIa ? "Generar otra" : "Generar con IA"}
+                    </button>
+                  )}
                   {imagenPreview && (
                     <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={eliminarImagenSeleccionada}>
                       <Icon name="trash" size={14} /> Quitar
@@ -584,6 +610,9 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
                   )}
                 </div>
               </div>
+              {form.imagenIa && imagenPreview && (
+                <p className="pfm-ia__nota"><ChipEstado tono="aviso">Imagen ilustrativa</ChipEstado> Generada con IA a partir del nombre, la marca y la categoría. Sube una foto real cuando la tengas.</p>
+              )}
               {errorFoto && <p id="pfm-foto-error" className="ui-field__error" role="alert"><Icon name="alert" size={14} />{errorFoto}</p>}
               <input ref={fileInputRef} type="file" accept={TIPOS_IMAGEN.join(",")} onChange={handleImagenChange} hidden />
             </div>

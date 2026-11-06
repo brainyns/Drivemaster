@@ -109,7 +109,10 @@ export default function ProductDetail({
         <div className="dm-detail__visual">
           <span className="dm-eyebrow">{categoria}{marca ? ` / ${marca}` : ""}</span>
           {producto.imagenUrl ? (
-            <img className="dm-detail__image" src={producto.imagenUrl} alt={nombre} />
+            <>
+              <img className="dm-detail__image" src={producto.imagenUrl} alt={nombre} />
+              {producto.imagenIa && <span className="dm-detail__note">Imagen ilustrativa, generada con IA</span>}
+            </>
           ) : (
             <div className="dm-detail__placeholder">
               <Icon name="box" size={64} />

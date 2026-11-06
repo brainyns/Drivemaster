@@ -1,4 +1,4 @@
-/* Chat Widget - Drivemaster
+﻿/* Chat Widget - Drivemaster
    Todas las reglas van dentro de .chat-widget-container para no chocar con los estilos del resto
    de la app (clases cortas como .chip, .precio o .mini). Paleta y fuentes de css/global.css.
    Las animaciones son solo CSS (@keyframes y transition); los componentes cambian clases. */
@@ -427,6 +427,92 @@ html[data-theme="light"] .chat-widget-container {
 .chat-widget-container .send-button.ocupado .flecha { opacity: 0; transform: scale(0.4); }
 .chat-widget-container .send-button.ocupado .rueda { opacity: 1; }
 
+/* ── Cambio de pestaña: sin la animación de apertura, solo un fundido ── */
+.chat-widget-container .chat-window-container.cambia-vista { animation: chat-aparece 0.18s ease-out both; }
+
+/* ── Pestaña Inicio ── */
+.chat-widget-container .inicio-scroll {
+    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: var(--chat-line) transparent;
+}
+.chat-widget-container .inicio-hero {
+    position: relative; overflow: hidden; padding: 16px 14px 58px 18px;
+    background: linear-gradient(160deg, var(--chat-accent), var(--chat-accent-h)); color: var(--chat-on-accent);
+}
+/* El tacómetro del logo, grande y de marca de agua, asoma por la esquina */
+.chat-widget-container .hero-marca {
+    position: absolute; right: -58px; top: -34px; opacity: 0.13; pointer-events: none; transform: rotate(-12deg);
+}
+.chat-widget-container .hero-top { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.chat-widget-container .hero-sub { font-size: 12px; opacity: 0.8; }
+.chat-widget-container .hero-saludo {
+    position: relative; margin: 26px 0 0; max-width: 15ch;
+    font-family: inherit; color: inherit; font-size: 27px; line-height: 1.12; font-weight: 800; letter-spacing: -0.02em; text-wrap: balance;
+}
+.chat-widget-container .inicio-cuerpo { position: relative; display: grid; gap: 14px; padding: 0 14px 16px; margin-top: -38px; }
+
+.chat-widget-container .tarjeta-chat {
+    display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; text-align: left;
+    border: 1px solid var(--chat-line); border-radius: 16px; background: var(--chat-surface); color: var(--chat-text);
+    box-shadow: var(--chat-shadow-s); cursor: pointer; transition: border-color 0.2s, transform 0.25s var(--chat-resorte);
+}
+.chat-widget-container .tarjeta-chat:hover { border-color: var(--chat-accent); transform: translateY(-2px); }
+.chat-widget-container .tc-icono {
+    width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center;
+    background: var(--chat-accent); color: var(--chat-on-accent);
+}
+.chat-widget-container .tc-texto { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.chat-widget-container .tc-texto b { font-size: 15px; font-weight: 700; }
+.chat-widget-container .tc-texto span {
+    font-size: 12.5px; color: var(--chat-muted);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.chat-widget-container .tc-ir {
+    width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center;
+    background: var(--chat-surface-2); color: var(--chat-accent-text); transition: transform 0.25s var(--chat-resorte);
+}
+.chat-widget-container .tarjeta-chat:hover .tc-ir { transform: translate(2px, -2px); }
+
+.chat-widget-container .inicio-bloque h3 { margin: 0 0 8px 2px; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--chat-muted); }
+.chat-widget-container .inicio-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-widget-container .inicio-chips .sugerencia { animation: none; }
+.chat-widget-container .faq ul {
+    margin: 0; padding: 4px; list-style: none; border: 1px solid var(--chat-line); border-radius: 16px; background: var(--chat-surface);
+}
+.chat-widget-container .faq li + li { border-top: 1px solid var(--chat-line-soft); }
+.chat-widget-container .faq li button {
+    display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 10px; border: 0; border-radius: 12px;
+    background: transparent; color: var(--chat-text); text-align: left; font-size: 13.5px; cursor: pointer; transition: background 0.2s;
+}
+.chat-widget-container .faq li button:hover { background: var(--chat-accent-soft); }
+.chat-widget-container .faq li button > svg { flex: none; color: var(--chat-muted); transition: transform 0.25s var(--chat-resorte); }
+.chat-widget-container .faq li button:hover > svg { transform: translateX(3px); color: var(--chat-accent-text); }
+.chat-widget-container .faq-icono {
+    width: 28px; height: 28px; flex: none; border-radius: 9px; display: grid; place-items: center;
+    background: var(--chat-accent-soft); color: var(--chat-accent-text); font-weight: 800; font-size: 14px;
+}
+.chat-widget-container .faq-texto { flex: 1; min-width: 0; }
+.chat-widget-container .inicio-cuerpo button:disabled { opacity: 0.5; cursor: progress; transform: none; }
+
+/* ── Pestañas Inicio / Chat ── */
+.chat-widget-container .chat-pestanas {
+    flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0 12px 12px; padding: 4px;
+    border-radius: 14px; background: var(--chat-surface-2);
+}
+.chat-widget-container .chat-pestanas button {
+    position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px;
+    border: 0; border-radius: 10px; background: transparent; color: var(--chat-muted);
+    font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background 0.2s, color 0.2s;
+}
+.chat-widget-container .chat-pestanas button:hover { color: var(--chat-text); }
+.chat-widget-container .chat-pestanas button.on { background: var(--chat-win); color: var(--chat-accent-text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+.chat-widget-container .pestana-punto {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--chat-danger); animation: chat-pop 0.4s var(--chat-resorte) both;
+}
+/* En la pestaña Chat el campo de texto ya trae su margen inferior */
+.chat-widget-container .chat-input-container + .chat-pestanas { margin-top: -2px; }
+.chat-widget-container .chat-input-container:has(+ .chat-pestanas) { padding-bottom: 10px; border-bottom: 0; }
+
 /* ── Keyframes ── */
 @keyframes chat-aparece-boton { from { opacity: 0; transform: scale(0.4) rotate(-30deg); } }
 @keyframes chat-onda { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.75); opacity: 0; } }
@@ -478,7 +564,7 @@ html[data-theme="light"] .chat-widget-container {
     }
     .chat-widget-container .chat-header-actions { gap: 8px; }
     .chat-widget-container .header-icon-btn { width: 40px; height: 40px; }
-    .chat-widget-container .chat-input-container { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+    .chat-widget-container .chat-pestanas { margin-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ── Convivencia con el resto de la pantalla ───────────────────────────────

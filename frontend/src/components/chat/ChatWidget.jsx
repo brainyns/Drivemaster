@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ChatWindow from './ChatWindow';
+import ChatInicio, { PestanasChat } from './ChatInicio';
 import ChatLogo from './ChatLogo';
 import { useChat } from './useChat';
 import { chatVisto, marcarChatVisto } from './chatSesion';
@@ -22,6 +23,9 @@ const ChatWidget = ({ onVerProducto }) => {
     const [visto, setVisto] = useState(chatVisto);
     const [invitacion, setInvitacion] = useState(false);
     const [noLeidos, setNoLeidos] = useState(0);
+    // Pestaña visible con la ventana abierta. 'cambia-vista' evita repetir la animación de apertura al cambiar de pestaña.
+    const [vista, setVista] = useState('inicio'); // 'inicio' | 'chat'
+    const [entrada, setEntrada] = useState('');
     // Tras cerrar o minimizar, el foco del teclado vuelve al botón que reabre el chat.
     const devolverFoco = useRef(false);
     const recibirFoco = (el) => {
@@ -38,16 +42,19 @@ const ChatWidget = ({ onVerProducto }) => {
         return () => clearTimeout(t);
     }, [visto]);
 
-    // Respuestas que llegan con la ventana cerrada o minimizada: se cuentan como no leídas.
+    // Respuestas que llegan con la ventana cerrada, minimizada o en Inicio: se cuentan como no leídas.
     // Se ajusta al renderizar: el último mensaje cambió desde la vez anterior.
     const ultimo = chat.messages[chat.messages.length - 1];
     const [ultimoId, setUltimoId] = useState(ultimo?.id);
     if (ultimo && ultimo.id !== ultimoId) {
         setUltimoId(ultimo.id);
-        if (!ultimo.isUser && chatState !== 'open' && chat.messages.length > 1) setNoLeidos(n => n + 1);
+        if (!ultimo.isUser && (chatState !== 'open' || vista === 'inicio') && chat.messages.length > 1) setNoLeidos(n => n + 1);
     }
 
+    // Una respuesta sin leer abre directo el chat; si no, cerrado abre Inicio y minimizado vuelve a donde estaba.
     const abrir = () => {
+        setVista(v => (visto && noLeidos > 0 ? 'chat' : chatState === 'closed' ? 'inicio' : v));
+        setEntrada('');
         setChatState('open');
         setInvitacion(false);
         setNoLeidos(0);
@@ -113,10 +120,44 @@ const ChatWidget = ({ onVerProducto }) => {
         );
     }
 
+    const cambiarVista = (v) => {
+        setEntrada(' cambia-vista');
+        setVista(v);
+        if (v === 'chat') setNoLeidos(0);
+    };
+
+    // Se envía después de montar ChatWindow para que el mensaje entre con su animación y baje al final.
+    const preguntar = (texto) => {
+        cambiarVista('chat');
+        setTimeout(() => chat.enviar(texto), 0);
+    };
+
+    const pie = <PestanasChat vista={vista} onVista={cambiarVista} nuevo={vista === 'inicio' && noLeidos > 0} />;
+
     // Estado 'open' (puede estar en animación de cierre)
+    if (vista === 'inicio') {
+        return (
+            <div className="chat-widget-container abierto">
+                <ChatInicio
+                    messages={chat.messages}
+                    isTyping={chat.isTyping}
+                    onAbrirChat={() => cambiarVista('chat')}
+                    onPregunta={preguntar}
+                    onClose={() => ocultar('closed')}
+                    onMinimize={() => ocultar('minimized')}
+                    isClosing={isClosing}
+                    entrada={entrada}
+                    pie={pie}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="chat-widget-container abierto">
             <ChatWindow
+                entrada={entrada}
+                pie={pie}
                 messages={chat.messages}
                 isTyping={chat.isTyping}
                 onSend={chat.enviar}

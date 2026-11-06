@@ -69,6 +69,7 @@ export default function DetalleProductoMarketplace({ header, productoId, onVolve
         <section className="mk-detalle">
           <div className="mk-detalle__imagen">
             <ImagenProducto src={producto.imagenUrl} alt={producto.nombre} tamanioIcono={56} />
+            {producto.imagenIa && producto.imagenUrl && <p className="mk-detalle__nota-imagen">Imagen ilustrativa, generada con IA</p>}
           </div>
 
           <div className="mk-detalle__info">

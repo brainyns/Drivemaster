@@ -206,7 +206,7 @@ class PiezasTallerEnCotizacionTest {
 
     @Test
     void un_taller_aprobado_ve_el_precio_con_descuento_de_cada_tienda_y_el_cliente_no() {
-        var dto = new com.drivemaster.drivemaster.dto.catalogo.ProductoCatalogoDTO("p1", "Pastillas", null, null, null, null, 100_000.0,
+        var dto = new com.drivemaster.drivemaster.dto.catalogo.ProductoCatalogoDTO("p1", "Pastillas", null, null, null, null, false, 100_000.0,
                 "STOCK", true, 3, null, null, null, null, null, null, null);
         var paraTaller = dto.paraTaller(25);
         assertEquals(100_000, paraTaller.precio(), "El público sigue a la vista, tachado");

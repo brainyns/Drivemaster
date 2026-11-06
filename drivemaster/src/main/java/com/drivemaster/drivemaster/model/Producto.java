@@ -34,6 +34,8 @@ public class Producto {
     private java.time.LocalDateTime fechaCreacion;
     private Boolean activo;
     private String imagenUrl;
+    // La foto la generó la IA (ImagenIaService): se muestra como "Imagen ilustrativa".
+    private Boolean imagenIa;
 
     // ─── Marketplace ───
     // Tienda que vende el producto. Cada documento es la oferta de una tienda: el

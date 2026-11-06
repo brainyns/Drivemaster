@@ -6,6 +6,7 @@ import com.drivemaster.drivemaster.dto.ProductoDTO;
 import com.drivemaster.drivemaster.model.Producto;
 import com.drivemaster.drivemaster.repository.ProductoRepository;
 import com.drivemaster.drivemaster.security.ChatRateLimiter;
+import com.drivemaster.drivemaster.service.PedidosChatService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -48,6 +51,7 @@ public class ChatProxyController {
 
     private final ChatRateLimiter chatRateLimiter;
     private final ProductoRepository productoRepository;
+    private final PedidosChatService pedidosChat;
     private final ObjectMapper objectMapper;
     private final String n8nWebhookUrl;
     private final String n8nChatSecret;
@@ -64,12 +68,14 @@ public class ChatProxyController {
 
     public ChatProxyController(ChatRateLimiter chatRateLimiter,
                                ProductoRepository productoRepository,
+                               PedidosChatService pedidosChat,
                                ObjectMapper objectMapper,
                                @Value("${n8n.webhook.url:http://localhost:5678/webhook/chat-drivemaster}") String n8nWebhookUrl,
                                @Value("${n8n.chat.secret:}") String n8nChatSecret,
                                @Value("${n8n.chat.max-caracteres:500}") int maxCaracteres) {
         this.chatRateLimiter = chatRateLimiter;
         this.productoRepository = productoRepository;
+        this.pedidosChat = pedidosChat;
         this.objectMapper = objectMapper;
         this.n8nWebhookUrl = n8nWebhookUrl;
         this.n8nChatSecret = n8nChatSecret;
@@ -83,7 +89,7 @@ public class ChatProxyController {
     }
 
     @PostMapping
-    public ResponseEntity<ChatResponse> chat(@RequestBody ChatRequest request, HttpServletRequest http) {
+    public ResponseEntity<ChatResponse> chat(@RequestBody ChatRequest request, HttpServletRequest http, Authentication auth) {
         // No se lee X-Forwarded-For a mano: su primer valor lo escribe el cliente y bastaba con
         // cambiarlo para saltarse el límite. Con server.forward-headers-strategy=native, Tomcat
         // (RemoteIpValve) ya resuelve la IP real recorriendo la cabecera desde los proxies internos
@@ -108,10 +114,25 @@ public class ChatProxyController {
                 headers.set("X-Chat-Secret", n8nChatSecret);
             }
 
+            String sessionId = (request.getSessionId() == null || request.getSessionId().isBlank())
+                    ? "anon-" + ip : request.getSessionId();
+            String pedidos = PedidosChatService.SIN_SESION;
+            if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+                try {
+                    PedidosChatService.Contexto ctx = pedidosChat.contexto(auth.getName());
+                    pedidos = ctx.texto();
+                    // Memoria aparte por usuario: en un equipo compartido nadie hereda los pedidos de otro.
+                    sessionId = sessionId + ":" + ctx.usuarioId();
+                } catch (Exception e) {
+                    log.warn("No se pudieron leer los pedidos para el chat: {}", e.getMessage());
+                    pedidos = "Los pedidos del cliente no se pudieron consultar en este momento.";
+                }
+            }
+
             Map<String, Object> cuerpo = new HashMap<>();
             cuerpo.put("mensaje", request.getMensaje());
-            cuerpo.put("sessionId", (request.getSessionId() == null || request.getSessionId().isBlank())
-                    ? "anon-" + ip : request.getSessionId());
+            cuerpo.put("sessionId", sessionId);
+            cuerpo.put("pedidos", pedidos);
 
             ResponseEntity<Map<String, Object>> respuesta = chatRestTemplate.exchange(
                     n8nWebhookUrl,

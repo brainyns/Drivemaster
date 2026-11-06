@@ -96,6 +96,18 @@ export async function subirImagenProducto(id, archivo, token) {
   return res.json();
 }
 
+/** Genera con IA una foto ilustrativa a partir de los datos del formulario; devuelve { url } ya en Cloudinary. */
+export async function generarImagenIa({ nombre, categoria, marca, referencia }, token) {
+  const res = await apiFetch(`${BASE_URL}/imagen-ia`, {
+    method: "POST",
+    headers: buildHeaders(token),
+    body: JSON.stringify({ nombre, categoria, marca, referencia }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.message || "No se pudo generar la imagen");
+  return data;
+}
+
 export async function eliminarProducto(id, token) {
   const res = await apiFetch(`${BASE_URL}/${id}`, {
     method: "DELETE",

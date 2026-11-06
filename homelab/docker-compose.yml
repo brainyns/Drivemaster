@@ -55,6 +55,10 @@ services:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      # Imágenes de productos con IA: key de OpenRouter aparte de la del chat, con límite de crédito.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_IMAGE_MODEL: ${OPENROUTER_IMAGE_MODEL:-black-forest-labs/flux-3-image-klein}
+      OPENROUTER_IMAGE_MAX_DIA: ${OPENROUTER_IMAGE_MAX_DIA:-50}
       # Mismo valor que VITE_GOOGLE_CLIENT_ID del frontend (abajo se toma de aquí).
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       # Logo en el encabezado de los correos y del PDF (vacío = el nombre en texto).

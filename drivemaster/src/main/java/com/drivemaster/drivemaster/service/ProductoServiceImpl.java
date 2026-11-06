@@ -85,6 +85,7 @@ public class ProductoServiceImpl implements ProductoService {
         // Stock o encargo también se cambia al editar (antes se perdía sin aviso); el stock en sí solo lo mueven los movimientos
         if (producto.getTipo() != null) existente.setTipo(producto.getTipo()); // ValidacionProducto: solo STOCK o ENCARGO
         existente.setImagenUrl(producto.getImagenUrl());
+        existente.setImagenIa(producto.getImagenIa());
         // La tienda dueña no se cambia al editar.
         existente.setReferencia(producto.getReferencia());
         existente.setUbicacion(producto.getUbicacion());
@@ -160,6 +161,7 @@ public class ProductoServiceImpl implements ProductoService {
         c.setTipo(p.getTipo());
         c.setActivo(p.getActivo());
         c.setImagenUrl(p.getImagenUrl());
+        c.setImagenIa(p.getImagenIa());
         c.setTiendaId(p.getTiendaId());
         c.setReferencia(p.getReferencia());
         c.setDiasEntregaEncargo(p.getDiasEntregaEncargo());
@@ -324,6 +326,7 @@ public class ProductoServiceImpl implements ProductoService {
         Producto producto = obtenerPorId(id);
         String url = cloudinaryService.subirImagen(archivo);
         producto.setImagenUrl(url);
+        producto.setImagenIa(false);
         productoRepository.save(producto);
         return url;
     }

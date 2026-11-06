@@ -128,7 +128,7 @@ class BuscarParaAgenteTest {
 
     private static ProductoController controlador(ProductoService productoService, String secreto) {
         return new ProductoController(productoService, mock(MovimientoInventarioService.class),
-                mock(AlcanceTienda.class), secreto);
+                mock(AlcanceTienda.class), secreto, mock(ImagenIaService.class));
     }
 
     @Test

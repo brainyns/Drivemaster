@@ -34,6 +34,7 @@ class PublicarProductoWebTest {
 
     @MockBean private ProductoService productoService;
     @MockBean private MovimientoInventarioService movimientoInventarioService;
+    @MockBean private com.drivemaster.drivemaster.service.ImagenIaService imagenIaService;
     @MockBean private TiendaService tiendaService;
     @MockBean private JwtUtil jwtUtil;
     @MockBean private CustomUserDetailsService customUserDetailsService;

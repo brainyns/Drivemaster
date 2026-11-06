@@ -10,7 +10,7 @@ import java.util.List;
  * POR_CONFIRMAR. Solo avisa; nunca oculta el producto.
  */
 public record ProductoCatalogoDTO(String id, String nombre, String marca, String categoria, String referencia,
-                                  String imagenUrl, Double precio, String tipo, boolean disponible,
+                                  String imagenUrl, boolean imagenIa, Double precio, String tipo, boolean disponible,
                                   Integer stock, Integer diasEntrega,
                                   String compatibilidad, String avisoCompatibilidad,
                                   TiendaCatalogoDTO tienda,
@@ -20,14 +20,14 @@ public record ProductoCatalogoDTO(String id, String nombre, String marca, String
                                   Double precioTaller, Double descuentoTallerPct) {
 
     public ProductoCatalogoDTO conOtrasTiendas(List<ProductoCatalogoDTO> otras) {
-        return new ProductoCatalogoDTO(id, nombre, marca, categoria, referencia, imagenUrl, precio, tipo, disponible,
+        return new ProductoCatalogoDTO(id, nombre, marca, categoria, referencia, imagenUrl, imagenIa, precio, tipo, disponible,
                 stock, diasEntrega, compatibilidad, avisoCompatibilidad, tienda, otras, precioTaller, descuentoTallerPct);
     }
 
     /** El mismo producto visto por un taller aprobado: su precio con el descuento de SU tienda (cada tienda fija el suyo). */
     public ProductoCatalogoDTO paraTaller(double pct) {
         Double conDescuento = precio == null ? null : com.drivemaster.drivemaster.util.DescuentoTaller.precio(precio, pct);
-        return new ProductoCatalogoDTO(id, nombre, marca, categoria, referencia, imagenUrl, precio, tipo, disponible,
+        return new ProductoCatalogoDTO(id, nombre, marca, categoria, referencia, imagenUrl, imagenIa, precio, tipo, disponible,
                 stock, diasEntrega, compatibilidad, avisoCompatibilidad, tienda, otrasTiendas, conDescuento, pct);
     }
 }
