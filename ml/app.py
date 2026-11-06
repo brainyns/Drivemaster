@@ -1,7 +1,7 @@
 """
 Servidor HTTP de Inferencia y Explicabilidad (XAI) para DriveMaster ML
 Compatible con Python estándar sin dependencias externas.
-Proyecto de Aula: Brainy Blanco, Sebastian Ortega, Juan Cantillo, Elias Puello.
+Proyecto de Aula: Brainy Blanco Hernandez, Sebastian Ortega Zarza, Juan Andres Cantillo Leon, Elias Daniel Puello Florez.
 """
 
 import json
@@ -250,7 +250,7 @@ class MLRequestHandler(BaseHTTPRequestHandler):
                 "sistema": "DriveMaster ML API (XAI 2.0)",
                 "estado": "ACTIVO",
                 "proyecto_de_aula": "Modelo predictivo de probabilidad de aprobación de cotizaciones con explicabilidad",
-                "integrantes": ["Brainy Blanco", "Sebastian Ortega", "Juan Cantillo", "Elias Puello"],
+                "integrantes": ["Brainy Blanco Hernandez", "Sebastian Ortega Zarza", "Juan Andres Cantillo Leon", "Elias Daniel Puello Florez"],
                 "metricas": MODELO.get("metrics", {})
             }
             self.wfile.write(json.dumps(res, ensure_ascii=False).encode("utf-8"))

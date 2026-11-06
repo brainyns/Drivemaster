@@ -1,7 +1,7 @@
 ===========================================================================
 PROYECTO DE AULA: MODELO PREDICTIVO PARA ESTIMAR LA PROBABILIDAD DE APROBACIÓN
 DE UNA COTIZACIÓN DE SERVICIO EN LA PLATAFORMA DRIVEMASTER (VERSIÓN PULIDA)
-Integrantes: Brainy Blanco, Sebastian Ortega, Juan Cantillo, Elias Puello
+Integrantes: Brainy Blanco Hernandez, Sebastian Ortega Zarza, Juan Andres Cantillo Leon, Elias Daniel Puello Florez
 ===========================================================================
 
 1. RESUMEN DE DATOS:

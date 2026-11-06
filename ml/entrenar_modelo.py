@@ -1,7 +1,7 @@
 """
 Entrenamiento y Evaluación del Modelo Predictivo de Aprobación de Cotizaciones
 Proyecto de Aula - DriveMaster (Machine Learning con Optimización Adam y Feature Engineering)
-Autores: Brainy Blanco, Sebastian Ortega, Juan Cantillo, Elias Puello.
+Autores: Brainy Blanco Hernandez, Sebastian Ortega Zarza, Juan Andres Cantillo Leon, Elias Daniel Puello Florez.
 """
 
 import csv
@@ -276,7 +276,7 @@ with open(REPORTE_PATH, "w", encoding="utf-8") as f:
     f.write("=" * 75 + "\n")
     f.write("PROYECTO DE AULA: MODELO PREDICTIVO PARA ESTIMAR LA PROBABILIDAD DE APROBACIÓN\n")
     f.write("DE UNA COTIZACIÓN DE SERVICIO EN LA PLATAFORMA DRIVEMASTER (VERSIÓN PULIDA)\n")
-    f.write("Integrantes: Brainy Blanco, Sebastian Ortega, Juan Cantillo, Elias Puello\n")
+    f.write("Integrantes: Brainy Blanco Hernandez, Sebastian Ortega Zarza, Juan Andres Cantillo Leon, Elias Daniel Puello Florez\n")
     f.write("=" * 75 + "\n\n")
     f.write("1. RESUMEN DE DATOS:\n")
     f.write(f"   - Total de registros: {len(rows)}\n")

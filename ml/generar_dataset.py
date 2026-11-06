@@ -1,7 +1,7 @@
 """
 Generador de Dataset Sintético de Cotizaciones para DriveMaster (Python Pure Standard Library)
 Proyecto de Aula: Modelo predictivo para estimar la probabilidad de aprobación de una cotización.
-Integrantes: Brainy Blanco, Sebastian Ortega, Juan Cantillo, Elias Puello.
+Integrantes: Brainy Blanco Hernandez, Sebastian Ortega Zarza, Juan Andres Cantillo Leon, Elias Daniel Puello Florez.
 """
 
 import csv
