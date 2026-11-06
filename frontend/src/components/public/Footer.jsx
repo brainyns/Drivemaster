@@ -85,9 +85,10 @@ export default function Footer({
           </a>
         </span>
         <span>
-          Contacto:{" "}
-          <a href="mailto:contacto@drivemaster.co" className="dm-footer__link">
-            contacto@drivemaster.co
+          Instagram:{" "}
+          <a href="https://www.instagram.com/drivermaster044/" target="_blank" rel="noopener noreferrer"
+             className="dm-footer__link">
+            @drivermaster044
           </a>
         </span>
       </div>
