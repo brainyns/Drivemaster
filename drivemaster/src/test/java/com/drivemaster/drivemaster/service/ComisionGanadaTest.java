@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -194,5 +195,88 @@ class ComisionGanadaTest {
 
         assertEquals(23_800, reportes.comisionGanada(RangoFechas.de("2026-10-01", "2026-10-31"), HOY).ganada(), 0.001);
         assertEquals(0, reportes.comisionGanada(RangoFechas.de("2026-11-01", "2026-11-30"), HOY).ganada(), 0.001);
+    }
+
+    // ─── Las tarjetas de "Dinero" con el mismo periodo ───────────────────────
+
+    /** Las consultas que usan las tarjetas, sobre las mismas líneas en memoria. */
+    private void consultasDeDinero(com.drivemaster.drivemaster.repository.mysql.PagoRepository pagos, List<PagoEntity> todos) {
+        when(repartos.negocioEntre(any(), any())).thenAnswer(i -> lineas.stream()
+                .filter(r -> !RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo()) && entre(r.getFechaCreacion(), i.getArgument(0), i.getArgument(1)))
+                .toList());
+        when(repartos.resumenPagado(any(), any())).thenAnswer(i -> {
+            Map<String, Double> porModo = new java.util.LinkedHashMap<>();
+            lineas.stream().filter(r -> RepartoPago.LIQUIDADO.equals(r.getEstado()) && !RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())
+                            && entre(r.getFechaLiquidacion(), i.getArgument(0), i.getArgument(1)))
+                    .forEach(r -> porModo.merge(Objects.toString(r.getModoLiquidacion(), ""), r.getMonto(), Double::sum));
+            List<Object[]> filas = new ArrayList<>();
+            porModo.forEach((m, s) -> filas.add(new Object[]{m, 1L, s}));
+            return filas;
+        });
+        when(pagos.sumaMovidaMarketplaceEntre(any(), any())).thenAnswer(i -> todos.stream()
+                .filter(p -> entre(p.getFechaPago(), i.getArgument(0), i.getArgument(1))).mapToDouble(PagoEntity::getMonto).sum());
+        reportes.setPagoRepository(pagos);
+        when(parametros.comisionPct()).thenReturn(10.0);
+    }
+
+    @Test
+    void con_el_mismo_periodo_las_tarjetas_de_dinero_cuadran_con_la_comision_ganada() {
+        var pagosRepo = mock(com.drivemaster.drivemaster.repository.mysql.PagoRepository.class);
+        List<PagoEntity> todos = new ArrayList<>();
+        // Este mes: una compra liquidada (simulada), una en espera y una reembolsada; el mes pasado, otra que no cuenta
+        PagoEntity p1 = pago(1, 238_000 + 8_000);
+        p1.setFechaPago(EN_EL_MES);
+        RepartoPago l1 = negocio(p1, "pedA", 200_000, 38_000, true);
+        ComisionPlataforma.registrar(repartos, p1, BigDecimal.valueOf(238_000), 10, true, List.of(l1));
+        fechar(p1, EN_EL_MES);
+        l1.setEstado(RepartoPago.LIQUIDADO);
+        l1.setModoLiquidacion("SIMULADO");
+        l1.setFechaLiquidacion(EN_EL_MES.plusDays(1));
+
+        PagoEntity p2 = pago(2, 119_000);
+        p2.setFechaPago(EN_EL_MES);
+        RepartoPago l2 = negocio(p2, "pedB", 100_000, 19_000, true);
+        ComisionPlataforma.registrar(repartos, p2, BigDecimal.valueOf(119_000), 10, true, List.of(l2));
+        fechar(p2, EN_EL_MES);
+
+        PagoEntity p3 = pago(3, 119_000);
+        p3.setFechaPago(EN_EL_MES);
+        RepartoPago l3 = negocio(p3, "pedC", 100_000, 19_000, true);
+        ComisionPlataforma.registrar(repartos, p3, BigDecimal.valueOf(119_000), 10, true, List.of(l3));
+        l3.setEstado(RepartoPago.ANULADO);
+        ComisionPlataforma.anular(repartos, p3, 119_000, 9L, "pedC");
+        fechar(p3, EN_EL_MES);
+
+        PagoEntity p4 = pago(4, 595_000);
+        p4.setFechaPago(MES_ANTERIOR);
+        RepartoPago l4 = negocio(p4, "pedD", 500_000, 95_000, true);
+        ComisionPlataforma.registrar(repartos, p4, BigDecimal.valueOf(595_000), 10, true, List.of(l4));
+        fechar(p4, MES_ANTERIOR);
+        todos.addAll(List.of(p1, p2, p3, p4));
+        consultasDeDinero(pagosRepo, todos);
+
+        ComisionGanada c = reportes.comisionGanada(RangoFechas.SIN_RANGO, HOY);
+        var d = c.dinero();
+        assertEquals(238_000 + 119_000, d.baseComision(), 0.001, "productos con IVA de lo no reembolsado del mes");
+        assertEquals(d.baseComision() * d.comisionPct() / 100, c.ganada() + c.informativa(), 1.0,
+                "comisión ganada = porcentaje de la base, con el mismo periodo");
+        assertEquals(11_900, d.comisionPorCobrar(), 0.001, "la retenida que falta cobrar: la de la línea en espera");
+        assertEquals(l1.getMonto(), d.pagado(), 0.001);
+        assertEquals(d.pagado(), d.pagadoSimulado(), 0.001, "todo lo pagado este mes fue simulado");
+        assertEquals(246_000 + 119_000 + 119_000, d.movido(), 0.001, "lo pagado en el mes, con envío");
+
+        // El mes pasado: solo su compra, y sigue cuadrando
+        ComisionGanada octubre = reportes.comisionGanada(RangoFechas.de("2026-10-01", "2026-10-31"), HOY);
+        assertEquals(595_000, octubre.dinero().baseComision(), 0.001);
+        assertEquals(octubre.dinero().baseComision() * 0.10, octubre.ganada() + octubre.informativa(), 1.0);
+        assertEquals(595_000, octubre.dinero().movido(), 0.001);
+        assertEquals(59_500, octubre.dinero().comisionPorCobrar(), 0.001);
+    }
+
+    @Test
+    void sin_pagos_en_el_periodo_todo_da_cero() {
+        consultasDeDinero(mock(com.drivemaster.drivemaster.repository.mysql.PagoRepository.class), List.of());
+        var d = reportes.comisionGanada(RangoFechas.de("2026-09-01", "2026-09-30"), HOY).dinero();
+        assertEquals(0, d.baseComision() + d.comisionPorCobrar() + d.pagado() + d.movido(), 0.001);
     }
 }

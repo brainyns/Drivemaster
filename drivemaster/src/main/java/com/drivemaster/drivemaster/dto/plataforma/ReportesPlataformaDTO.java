@@ -67,7 +67,16 @@ public final class ReportesPlataformaDTO {
      * registró porque el cobro estaba apagado, neta de sus anulaciones. comisionSeDescuenta: la bandera vigente.
      */
     public record ComisionGanada(LocalDateTime desde, LocalDateTime antesDe, double ganada, double retenida, double anulada,
-                                 double liquidada, double informativa, boolean comisionSeDescuenta) {}
+                                 double liquidada, double informativa, boolean comisionSeDescuenta, DineroDelPeriodo dinero) {}
+
+    /**
+     * Las tarjetas de "Dinero" del dashboard, del mismo periodo que la comisión ganada. movido: pagos aprobados del
+     * marketplace (con IVA y envío; no es ingreso de DriveMaster). baseComision: la comisionBase de las líneas de
+     * talleres y tiendas del periodo sin las anuladas (comisión = porcentaje de esta base). comisionPorCobrar: la retenida
+     * en líneas del periodo que aún no se pagan al negocio. pagado y pagadoSimulado: lo liquidado a negocios en el periodo.
+     */
+    public record DineroDelPeriodo(double movido, double baseComision, double comisionPct, double comisionPorCobrar,
+                                   double pagado, double pagadoSimulado) {}
 
     // ─── Usuarios ────────────────────────────────────────────────────────────
 

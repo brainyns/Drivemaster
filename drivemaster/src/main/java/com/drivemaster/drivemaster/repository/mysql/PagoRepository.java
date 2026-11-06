@@ -28,6 +28,12 @@ public interface PagoRepository extends JpaRepository<PagoEntity, Long> {
             + "and p.concepto in ('DIAGNOSTICO', 'COTIZACION', 'CATALOGO') and coalesce(p.fechaPago, p.fechaCreacion) >= :desde")
     double sumaMovidaMarketplaceDesde(@org.springframework.data.repository.query.Param("desde") java.time.LocalDateTime desde);
 
+    /** Lo mismo en un periodo [desde, antesDe), el del selector del dashboard. */
+    @Query("select coalesce(sum(p.monto), 0) from PagoEntity p where p.estado = 'PAGADO' "
+            + "and p.concepto in ('DIAGNOSTICO', 'COTIZACION', 'CATALOGO') and coalesce(p.fechaPago, p.fechaCreacion) >= :desde "
+            + "and coalesce(p.fechaPago, p.fechaCreacion) < :antesDe")
+    double sumaMovidaMarketplaceEntre(@Param("desde") java.time.LocalDateTime desde, @Param("antesDe") java.time.LocalDateTime antesDe);
+
     /**
      * Toma un pago para procesarlo (→ PROCESANDO) en una sola sentencia: si el
      * webhook y la redirección llegan a la vez, solo uno gana. También toma uno

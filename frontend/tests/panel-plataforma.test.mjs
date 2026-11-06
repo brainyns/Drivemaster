@@ -510,3 +510,33 @@ test("ADMIN: Tu resumen y Aprobaciones usan el sistema compartido, con las misma
     "<EstadoVacio", "<Esqueleto", "<Campo", "ui-table--tarjetas", "ConfirmacionAdmin"], ["adm-", "db-kpi"]);
   assert.ok(a.includes("negociosPendientes(token)") && a.includes("!motivo.trim()"));
 });
+
+test("Dinero: todas las tarjetas usan el periodo de Comisión ganada y las de estado actual dicen ahora", async () => {
+  const { tarjetasDinero } = await import("../src/pages/admin/plataformaAdmin.js");
+  const cop = (n) => `COP ${n ?? 0}`;
+  const delPeriodo = { movido: 27000000, baseComision: 13800000, comisionPct: 10, comisionPorCobrar: 120000, pagado: 9000000, pagadoSimulado: 9000000 };
+  const ahora = { porLiquidar: 500000, enEspera: 2300000, saldosAFavorPendientes: 0, baseComision: 4185440 };
+  const t = tarjetasDinero(delPeriodo, ahora, "este mes", cop);
+  const titulo = (clave) => t.find((x) => x.clave === clave)?.titulo;
+  assert.equal(titulo("movido"), "Total movido este mes");
+  assert.equal(titulo("base"), "Base de la comisión este mes");
+  assert.equal(titulo("porCobrar"), "Comisión por cobrar este mes");
+  assert.equal(titulo("pagado"), "Pagado a negocios este mes");
+  assert.equal(titulo("porPagar"), "Por pagar a negocios ahora");
+  assert.equal(titulo("enEspera"), "Falta que se entregue ahora");
+  // La base es la del periodo (las mismas líneas que la comisión), no la histórica del dashboard
+  assert.equal(t.find((x) => x.clave === "base").valor, "COP 13800000");
+  assert.ok(t.find((x) => x.clave === "base").pie.includes("10 %"));
+  assert.equal(t.find((x) => x.clave === "porPagar").valor, "COP 500000");
+  assert.ok(!t.some((x) => x.clave === "saldos"), "sin saldos a favor no se muestra la tarjeta");
+  assert.ok(!tarjetasDinero({ ...delPeriodo, comisionPorCobrar: 0 }, ahora, "hoy", cop).some((x) => x.clave === "porCobrar"));
+  assert.equal(tarjetasDinero(delPeriodo, ahora, "en los últimos 7 días", cop)[0].titulo, "Total movido en los últimos 7 días");
+});
+
+test("Dinero: el dashboard pasa sus cifras de ahora a Comisión ganada y ya no pinta tarjetas sin periodo", () => {
+  const d = leer("../src/pages/DashboardPlataforma.jsx");
+  assert.ok(d.includes("ahora={d.dinero}"));
+  assert.ok(!d.includes('titulo="Total movido"') && !d.includes('titulo="Base de la comisión"'), "sin tarjetas sueltas del historial");
+  const c = leer("../src/components/admin/ComisionGanada.jsx");
+  assert.ok(c.includes("tarjetasDinero(") && c.includes("d?.dinero") && c.includes("textoPeriodoComision(periodo)"));
+});

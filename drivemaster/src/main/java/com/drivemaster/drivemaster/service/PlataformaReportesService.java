@@ -293,7 +293,26 @@ public class PlataformaReportesService {
         double liquidada = repartoRepository.comisionCobradaEntre(desde, antesDe).stream()
                 .mapToDouble(r -> r.getComisionRetenida() == null ? 0 : r.getComisionRetenida()).sum();
         return new ComisionGanada(desde, antesDe, retenida - anulada, retenida, anulada, liquidada,
-                Math.max(0, informativa), parametros.comisionRetenida());
+                Math.max(0, informativa), parametros.comisionRetenida(), dineroDelPeriodo(desde, antesDe));
+    }
+
+    /** Las demás tarjetas de "Dinero", del mismo periodo y de las mismas líneas de RepartoPago que la comisión ganada. */
+    com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.DineroDelPeriodo dineroDelPeriodo(LocalDateTime desde, LocalDateTime antesDe) {
+        double base = 0, porCobrar = 0;
+        for (RepartoPago r : repartoRepository.negocioEntre(desde, antesDe)) {
+            if (RepartoPago.ANULADO.equals(r.getEstado())) continue; // reembolsada: su comisión se anuló
+            if (r.getComisionBase() != null) base += r.getComisionBase();
+            if (!RepartoPago.LIQUIDADO.equals(r.getEstado()) && r.getComisionRetenida() != null) porCobrar += r.getComisionRetenida();
+        }
+        double pagado = 0, simulado = 0;
+        for (Object[] f : repartoRepository.resumenPagado(desde, antesDe)) {
+            double suma = f[2] instanceof Number n ? n.doubleValue() : 0;
+            pagado += suma;
+            if (com.drivemaster.drivemaster.service.dispersion.SimulatedDispersionService.MODO.equals(f[0])) simulado += suma;
+        }
+        double movido = pagoRepository == null ? 0 : pagoRepository.sumaMovidaMarketplaceEntre(desde, antesDe);
+        return new com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.DineroDelPeriodo(
+                movido, base, parametros.comisionPct(), porCobrar, pagado, simulado);
     }
 
     private SaldosAFavor saldosAFavor() {

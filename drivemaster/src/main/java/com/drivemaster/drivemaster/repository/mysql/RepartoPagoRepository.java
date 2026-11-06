@@ -131,6 +131,14 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
             + "and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde and coalesce(r.fechaLiquidacion, r.fechaCreacion) < :antesDe")
     List<RepartoPago> comisionCobradaEntre(@Param("desde") LocalDateTime desde, @Param("antesDe") LocalDateTime antesDe);
 
+    /**
+     * Líneas de talleres y tiendas creadas en [desde, antesDe): con ellas salen la base de la comisión y lo que falta
+     * cobrar del mismo periodo que "Comisión ganada" (las líneas PLATAFORMA se crean con el mismo pago, a la misma hora).
+     */
+    @Query("select r from RepartoPago r where r.beneficiarioTipo <> 'PLATAFORMA' and r.fechaCreacion >= :desde "
+            + "and r.fechaCreacion < :antesDe")
+    List<RepartoPago> negocioEntre(@Param("desde") LocalDateTime desde, @Param("antesDe") LocalDateTime antesDe);
+
     /** Líneas de comisión (registradas y anuladas) desde una fecha, para el reporte por mes. */
     @Query("select r from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA' and r.fechaCreacion >= :desde "
             + "order by r.fechaCreacion")

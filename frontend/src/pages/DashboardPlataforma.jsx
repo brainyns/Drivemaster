@@ -16,12 +16,6 @@ import { textoError } from "../utils/errores";
 
 const REFRESCO_MS = 60000;
 
-/** "8 de oct" */
-const diaMes = (f) => {
-  if (!f) return null;
-  const d = new Date(f);
-  return `${d.getDate()} de ${d.toLocaleDateString("es-CO", { month: "short" }).replace(".", "")}`;
-};
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 const hora = (iso) => new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
@@ -216,36 +210,10 @@ export default function DashboardPlataforma({ token, onIr }) {
 
       <section className="pp-seccion" aria-labelledby="pp-dinero">
         <h2 id="pp-dinero" className="pp-titulo">Dinero</h2>
-        {/* Un solo bloque de comisión, del periodo elegido: las cifras de todo el historial están en Reportes */}
-        <ComisionGanada token={token} onVerReporte={() => ir("reportes-plataforma", "comision")} />
-        <div className="ui-indicadores pp-indicadores-dinero">
-          <Indicador titulo="Total movido" valor={cop(d.dinero.movido)}
-            pie="Pagos aprobados que pasaron por la plataforma, con IVA y envío. No es ingreso de DriveMaster." />
-          {/* La base y la comisión salen de lo mismo: comisión = 10 % de la base (mismo período, sin reembolsos) */}
-          <Indicador titulo="Base de la comisión" valor={cop(d.dinero.baseComision)}
-            pie={`Precio con IVA, sin envío, de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}, sin reembolsos.`} />
-          {d.dinero.comisionRetenida?.porCobrar > 0 && (
-            <Indicador titulo="Comisión por cobrar" valor={cop(d.dinero.comisionRetenida.porCobrar)}
-              pie="Retenida en pagos que aún no se transfieren a los negocios."
-              onClick={() => ir("reportes-plataforma", "comision")} />
-          )}
-          {d.dinero.saldosAFavorPendientes > 0 && (
-            <Indicador titulo="Saldos a favor pendientes" valor={cop(d.dinero.saldosAFavorPendientes)} tono="accion"
-              pie="Reembolsos de pagos ya transferidos: se les cobran a los negocios a mano."
-              onClick={() => ir("reportes-plataforma", "comision")} />
-          )}
-          {d.dinero.liquidacionAutomatica && !d.dinero.porLiquidar ? (
-            <Indicador titulo="Pagado automáticamente (simulado)" valor={cop(d.dinero.liquidadoSimulado)}
-              pie={`El pago simulado le paga a cada negocio al entregarse el pedido. Pagado en total: ${cop(d.dinero.liquidado)}.`}
-              onClick={() => ir("liquidaciones")} />
-          ) : (
-            <Indicador titulo="Por pagar a negocios" valor={cop(d.dinero.porLiquidar)}
-              pie={`Ya habilitado para pagar a talleres y tiendas. Pagado en total: ${cop(d.dinero.liquidado)}.`}
-              onClick={() => ir("liquidaciones")} />
-          )}
-          <Indicador titulo="Falta que se entregue" valor={cop(d.dinero.enEspera)}
-            pie="De los negocios: se habilita para pagar cuando el pedido se entrega o se recibe." />
-        </div>
+        {/* Un solo selector para toda la sección: la comisión y las tarjetas del periodo salen de la misma respuesta y de
+            las mismas líneas; lo que falta pagar o entregar es de ahora y no depende de fechas */}
+        <ComisionGanada token={token} onVerReporte={() => ir("reportes-plataforma", "comision")} ahora={d.dinero}
+          onIr={(destino) => (destino === "liquidaciones" ? ir("liquidaciones") : ir("reportes-plataforma", "comision"))} />
       </section>
 
       <div className="pp-columnas pp-seccion">

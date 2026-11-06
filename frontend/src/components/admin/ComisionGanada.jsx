@@ -3,7 +3,8 @@ import { comisionGanadaPlataforma } from "../../services/plataformaService";
 import FiltroFechas from "../ui/FiltroFechas";
 import Esqueleto from "../ui/Esqueleto";
 import { rangoRapido } from "../ui/reglasTabla";
-import { textoPeriodoComision } from "../../pages/admin/plataformaAdmin";
+import { tarjetasDinero, textoPeriodoComision } from "../../pages/admin/plataformaAdmin";
+import Indicador from "../ui/Indicador";
 import { formatoCop } from "../../utils/formato";
 import { textoError } from "../../utils/errores";
 
@@ -14,8 +15,11 @@ const DESDE_SIEMPRE = "2020-01-01";
  * Comisión ganada por DriveMaster en el periodo (por defecto, este mes): la retenida en los pagos aprobados menos la
  * anulada por reembolsos. Debajo, en pequeño, la ya cobrada (pagos ya transferidos) y la informativa. Sale de
  * GET /api/plataforma/comision-ganada, con las mismas líneas que Liquidaciones.
+ *
+ * El mismo selector manda en todas las tarjetas de "Dinero": las del periodo vienen en la misma respuesta (dinero) y las
+ * de estado actual (ahora: lo que falta pagar o entregar, del dashboard) no dependen de fechas. onIr(destino) las abre.
  */
-export default function ComisionGanada({ token, onVerReporte }) {
+export default function ComisionGanada({ token, onVerReporte, ahora, onIr }) {
   const [periodo, setPeriodo] = useState(() => rangoRapido("mes"));
   const [estado, setEstado] = useState({ clave: null, datos: null, error: null });
   const clave = `${periodo.desde}|${periodo.hasta}`;
@@ -33,8 +37,10 @@ export default function ComisionGanada({ token, onVerReporte }) {
 
   const cargando = estado.clave !== clave;
   const d = estado.datos;
+  const tarjetas = tarjetasDinero(cargando || estado.error ? null : d?.dinero, ahora, textoPeriodoComision(periodo), formatoCop);
 
   return (
+    <>
     <section className="ui-card pp-comision" aria-labelledby="pp-comision-titulo" aria-busy={cargando}>
       <div className="pp-comision__cabecera">
         <h3 id="pp-comision-titulo" className="pp-comision__titulo">Comisión ganada {textoPeriodoComision(periodo)}</h3>
@@ -62,5 +68,14 @@ export default function ComisionGanada({ token, onVerReporte }) {
         </>
       )}
     </section>
+    {ahora && (
+      <div className="ui-indicadores pp-indicadores-dinero" aria-busy={cargando}>
+        {tarjetas.map((t) => (
+          <Indicador key={t.clave} titulo={t.titulo} valor={cargando ? "…" : t.valor} pie={t.pie} tono={t.tono}
+            onClick={t.destino && onIr ? () => onIr(t.destino) : undefined} />
+        ))}
+      </div>
+    )}
+    </>
   );
 }

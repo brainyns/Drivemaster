@@ -391,3 +391,36 @@ export function textoPeriodoComision(valor, ahora = new Date()) {
   if (!clave) return "desde el inicio";
   return "en el periodo elegido";
 }
+
+/**
+ * Las tarjetas de "Dinero" del dashboard. Las del periodo salen de la misma respuesta que "Comisión ganada" (mismas
+ * fechas y mismas líneas) y su título dice el periodo; las que son un estado de hoy (lo que falta pagar o entregar)
+ * no dependen de fechas y lo dicen con "ahora". cop: el formato de pesos. destino: a qué pantalla lleva (o null).
+ */
+export function tarjetasDinero(delPeriodo, ahora, textoPeriodo, cop) {
+  const p = delPeriodo || {};
+  const a = ahora || {};
+  const tarjetas = [
+    { clave: "movido", titulo: `Total movido ${textoPeriodo}`, valor: cop(p.movido),
+      pie: "Pagos aprobados que pasaron por la plataforma, con IVA y envío. No es ingreso de DriveMaster.", destino: null },
+    { clave: "base", titulo: `Base de la comisión ${textoPeriodo}`, valor: cop(p.baseComision),
+      pie: `Precio con IVA, sin envío, de los pagos del periodo, sin reembolsos. La comisión es el ${String(p.comisionPct ?? 10).replace(".", ",")} % de esta base.`,
+      destino: null },
+  ];
+  if (p.comisionPorCobrar > 0) {
+    tarjetas.push({ clave: "porCobrar", titulo: `Comisión por cobrar ${textoPeriodo}`, valor: cop(p.comisionPorCobrar),
+      pie: "Retenida en pagos del periodo que aún no se transfieren a los negocios.", destino: "reportes" });
+  }
+  tarjetas.push({ clave: "pagado", titulo: `Pagado a negocios ${textoPeriodo}`, valor: cop(p.pagado),
+    pie: p.pagadoSimulado > 0 ? `De eso, simulado (sin dinero real): ${cop(p.pagadoSimulado)}.` : "Transferido a talleres y tiendas en el periodo.",
+    destino: "liquidaciones" });
+  tarjetas.push({ clave: "porPagar", titulo: "Por pagar a negocios ahora", valor: cop(a.porLiquidar),
+    pie: "Ya habilitado para pagar a talleres y tiendas, de cualquier fecha.", destino: "liquidaciones" });
+  tarjetas.push({ clave: "enEspera", titulo: "Falta que se entregue ahora", valor: cop(a.enEspera),
+    pie: "De los negocios, de cualquier fecha: se habilita para pagar cuando el pedido se entrega o se recibe.", destino: null });
+  if (a.saldosAFavorPendientes > 0) {
+    tarjetas.push({ clave: "saldos", titulo: "Saldos a favor pendientes ahora", valor: cop(a.saldosAFavorPendientes), tono: "accion",
+      pie: "Reembolsos de pagos ya transferidos: se les cobran a los negocios a mano.", destino: "reportes" });
+  }
+  return tarjetas;
+}
