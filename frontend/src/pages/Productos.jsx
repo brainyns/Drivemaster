@@ -59,7 +59,7 @@ function FilaProducto({ p, cambiando, onPublicar, onEditar, onEliminar }) {
         </span>
       </td>
       <td data-label="Categoría">{etiquetaCategoria(p.categoria) || <span className="prt-tenue">Sin categoría</span>}</td>
-      <td data-label="Precio" className="ui-table__num"><span className="ui-precio">{formatPrecio(p.precioVenta)}</span></td>
+      <td data-label="Precio (sin IVA)" className="ui-table__num"><span className="ui-precio">{formatPrecio(p.precioVenta)}</span></td>
       <td data-label="Stock"><Stock p={p} /></td>
       <td data-label="Catálogo">
         <span className="prt-catalogo">
@@ -395,7 +395,7 @@ function ProductosGenerales({ onNuevo, onEditar, token }) {
                     <tr>
                       <th scope="col">Producto</th>
                       <th scope="col">Categoría</th>
-                      <th scope="col" className="ui-table__num">Precio</th>
+                      <th scope="col" className="ui-table__num">Precio (sin IVA)</th>
                       <th scope="col">Stock</th>
                       <th scope="col">Catálogo</th>
                       <th scope="col"><span className="ui-sr">Acciones</span></th>
