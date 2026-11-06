@@ -268,7 +268,7 @@ function Pieza({ pieza, datos, token, onGuardada, onInventario, irA }) {
         </div>
         <dl className="iv-pieza__numeros">
           <div className={pieza.stockBajo ? "iv-cifras__bajo" : ""}>
-            <dt>En stock</dt>
+            <dt>{agotada ? "Estado" : "En stock"}</dt>
             <dd className="iv-cifra iv-cifra--grande">{agotada ? "Agotada" : pieza.stock}{pieza.stockBajo && !agotada && <span className="iv-bajo">Stock bajo</span>}</dd>
           </div>
           <div><dt>Precio público</dt><dd className="iv-cifra">{pieza.precioPublico != null ? formatPrecio(pieza.precioPublico) : "—"}</dd></div>
