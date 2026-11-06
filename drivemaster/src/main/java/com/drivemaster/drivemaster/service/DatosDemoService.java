@@ -70,9 +70,11 @@ public class DatosDemoService {
      * medio. La demo crea los de piezas_taller y movimientos_pieza_taller; los demás solo existen si alguien usó una
      * cuenta demo durante la feria.
      */
-    static final Map<String, String> COLECCIONES_POR_DUENO = Map.ofEntries(
+    static final List<Map.Entry<String, String>> COLECCIONES_POR_DUENO = List.of(
             Map.entry("piezas_taller", "tallerId"),
             Map.entry("movimientos_pieza_taller", "tallerId"),
+            // Las entradas al inventario de un taller real por compras demo: su pedido es demo
+            Map.entry("movimientos_pieza_taller", "pedidoId"),
             Map.entry("horarios_taller", "tallerId"),
             Map.entry("cambios_taller", "tallerId"),
             Map.entry("productos", "tiendaId"),
@@ -132,10 +134,158 @@ public class DatosDemoService {
                 + (e.completa() ? "la siembra terminó" : "INCOMPLETO: corre borrar o vuelve a sembrar");
     }
 
-    DatosDemoArmado.Lote armar(boolean crearSuperadmin) {
+    DatosDemoArmado.Lote armar(boolean crearSuperadmin, DatosDemoArmado.Reales reales) {
         DatosDemoArmado.Parametros p = new DatosDemoArmado.Parametros(parametros.ivaPct(), parametros.comisionPct(),
                 parametros.tarifaDiagnostico(), parametros.plazoDespachoDiasHabiles(), parametros.plazoEncargoDiasExtra());
-        return new DatosDemoArmado(p, passwordEncoder::encode, CodigoRetiro::generar, CodigoRetiro::hash).armar(crearSuperadmin);
+        return new DatosDemoArmado(p, passwordEncoder::encode, CodigoRetiro::generar, CodigoRetiro::hash).armar(crearSuperadmin, reales);
+    }
+
+    // ─── Negocios reales que reciben ventas demo ─────────────────────────────
+
+    static final String VAQUITA = "AUTOPARTE LA VAQUITA";
+    static final String LOS_RIOS = "Tienda Los Rios";
+    static final String HERMANOS = "Taller los hermanos";
+    static final String ID_STOCK_REAL = PREFIJO + "stock-reales";
+    static final String ID_PIEZAS_REALES = PREFIJO + "piezas-reales";
+    static final String COLECCION_PIEZAS = "piezas_taller";
+
+    /** Busca las dos tiendas y el taller reales por su nombre. Si no existen o no están aprobados, avisa y no los usa. */
+    DatosDemoArmado.Reales reales(List<String> avisos) {
+        List<Tienda> tiendas = mongo.find(Query.query(Criteria.where("_id").not().regex(ES_DEMO)), Tienda.class);
+        Tienda vaquita = aprobado(tiendas, VAQUITA, Tienda::getNombre, Tienda::getEstadoAprobacion, avisos);
+        Tienda rios = aprobado(tiendas, LOS_RIOS, Tienda::getNombre, Tienda::getEstadoAprobacion, avisos);
+        List<Taller> talleres = mongo.find(Query.query(Criteria.where("_id").not().regex(ES_DEMO)), Taller.class);
+        Taller hermanos = aprobado(talleres, HERMANOS, Taller::getNombre, Taller::getEstadoAprobacion, avisos);
+        String correoHermanos = null;
+        if (hermanos != null && hermanos.getUsuarioId() != null) {
+            Usuario u = mongo.findById(hermanos.getUsuarioId(), Usuario.class);
+            correoHermanos = u != null ? u.getCorreo() : null;
+        }
+        return new DatosDemoArmado.Reales(vaquita, productosDe(vaquita), rios, productosDe(rios), hermanos, correoHermanos);
+    }
+
+    private static <T> T aprobado(List<T> lista, String nombre, Function<T, String> nombreDe, Function<T, String> estadoDe,
+                                  List<String> avisos) {
+        String clave = CuentaNegocioService.clave(nombre);
+        T x = lista.stream().filter(t -> clave.equals(CuentaNegocioService.clave(nombreDe.apply(t)))).findFirst().orElse(null);
+        if (x == null) {
+            avisos.add("No se encontró \"" + nombre + "\": no se le agregan datos demo.");
+            return null;
+        }
+        if (!com.drivemaster.drivemaster.model.EstadoAprobacion.APROBADO.equals(estadoDe.apply(x))) {
+            avisos.add("\"" + nombre + "\" no está APROBADO (" + estadoDe.apply(x) + "): no se usa.");
+            return null;
+        }
+        return x;
+    }
+
+    private List<Producto> productosDe(Tienda t) {
+        if (t == null) return List.of();
+        return mongo.find(Query.query(Criteria.where("tiendaId").is(t.getId())), Producto.class);
+    }
+
+    /** Pone el stock final de los productos reales, solo si nadie lo cambió desde que se leyó. Antes guarda el original. */
+    private void aplicarStockReales(List<DatosDemoArmado.AjusteStock> ajustes) {
+        if (ajustes.isEmpty()) return;
+        List<Document> filas = ajustes.stream().map(a -> new Document("productoId", a.productoId()).append("tiendaId", a.tiendaId())
+                .append("original", a.original()).append("fin", a.fin())).toList();
+        // "aplicados": cada producto se anota apenas recibe su stock, para saber al borrar si hay algo que deshacer
+        Document marca = new Document("_id", ID_STOCK_REAL).append("ajustes", filas).append("aplicados", new ArrayList<String>());
+        mongo.save(marca, COLECCION_MARCA);
+        for (DatosDemoArmado.AjusteStock a : ajustes) {
+            var r = mongo.updateFirst(Query.query(Criteria.where("_id").is(a.productoId()).and("stockActual").is(a.original())),
+                    new Update().set("stockActual", a.fin()), Producto.class);
+            if (r.getMatchedCount() == 0) {
+                throw new IllegalStateException("El stock del producto real " + a.productoId() + " cambió mientras se sembraba");
+            }
+            marca.getList("aplicados", String.class).add(a.productoId());
+            mongo.save(marca, COLECCION_MARCA);
+        }
+    }
+
+    /**
+     * Deja el stock de los productos reales como antes de sembrar. Si nadie lo movió, vuelve exacto al original; si
+     * hubo ventas reales entre medias, se le quita solo lo que puso la demo (para no borrar esas ventas) y se avisa.
+     */
+    private void restaurarStockReales(List<String> avisos) {
+        Document marca = mongo.findById(ID_STOCK_REAL, Document.class, COLECCION_MARCA);
+        if (marca == null) return;
+        List<String> aplicados = marca.getList("aplicados", String.class, List.of());
+        for (Document a : marca.getList("ajustes", Document.class)) {
+            String id = a.getString("productoId");
+            Integer original = a.getInteger("original");
+            int fin = a.getInteger("fin");
+            // Si quedó en el stock de la demo, vuelve al original (también si se aplicó sin alcanzar a anotarse)
+            var r = mongo.updateFirst(Query.query(Criteria.where("_id").is(id).and("stockActual").is(fin)),
+                    new Update().set("stockActual", original), Producto.class);
+            if (r.getMatchedCount() > 0 || !aplicados.contains(id)) continue;
+            Producto actual = mongo.findById(id, Producto.class);
+            if (actual == null) {
+                avisos.add("El producto real " + id + " ya no existe: no se restauró su stock.");
+                continue;
+            }
+            int delta = (original == null ? 0 : original) - fin;
+            mongo.updateFirst(Query.query(Criteria.where("_id").is(id)), new Update().inc("stockActual", delta), Producto.class);
+            avisos.add("El stock de " + actual.getNombre() + " cambió durante la feria: se le quitó solo lo de la demo ("
+                    + delta + "), no volvió a " + original + ".");
+        }
+    }
+
+    /** Las piezas del taller real, tal como están en la base (sin pasar por el modelo: se restauran byte a byte). */
+    private Map<String, Document> piezasCrudas(String tallerId) {
+        Map<String, Document> r = new java.util.LinkedHashMap<>();
+        for (Document d : mongo.find(Query.query(Criteria.where("tallerId").is(tallerId)), Document.class, COLECCION_PIEZAS)) {
+            r.put(String.valueOf(d.get("_id")), d);
+        }
+        return r;
+    }
+
+    /**
+     * Deja el inventario del taller real como estaba. Cada pieza que la siembra tocó vuelve a su copia de antes (o se
+     * borra si la creó la siembra). Si alguien la cambió durante la feria, solo se le quitan los lotes demo y se avisa.
+     */
+    private void restaurarPiezasReales(List<String> avisos) {
+        Document marca = mongo.findById(ID_PIEZAS_REALES, Document.class, COLECCION_MARCA);
+        if (marca == null) return;
+        String tallerId = marca.getString("tallerId");
+        Map<String, Document> antes = porId(marca.getList("antes", Document.class));
+        List<Document> listaDespues = marca.getList("despues", Document.class);
+        Map<String, Document> despues = listaDespues == null ? null : porId(listaDespues);
+        for (Map.Entry<String, Document> e : piezasCrudas(tallerId).entrySet()) {
+            String id = e.getKey();
+            Document actual = e.getValue();
+            Document previa = antes.get(id);
+            Document sembrada = despues == null ? null : despues.get(id);
+            boolean tocada = despues == null ? !actual.equals(previa) : sembrada != null && !sembrada.equals(previa);
+            if (!tocada) continue;
+            if (despues != null && !actual.equals(sembrada)) {
+                quitarLotesDemo(actual);
+                avisos.add("La pieza " + id + " de " + HERMANOS + " cambió durante la feria: se le quitaron solo los lotes demo.");
+                continue;
+            }
+            mongo.remove(Query.query(Criteria.where("_id").is(id)), COLECCION_PIEZAS);
+            if (previa != null) mongo.insert(previa, COLECCION_PIEZAS);
+        }
+    }
+
+    private void quitarLotesDemo(Document pieza) {
+        List<Document> lotes = pieza.getList("lotes", Document.class, new ArrayList<>());
+        int quitado = 0;
+        List<Document> quedan = new ArrayList<>();
+        for (Document l : lotes) {
+            String pedido = l.getString("pedidoId");
+            if (pedido != null && ES_DEMO.matcher(pedido).find()) quitado += l.getInteger("disponible", 0);
+            else quedan.add(l);
+        }
+        pieza.put("lotes", quedan);
+        pieza.put("stock", pieza.getInteger("stock", 0) - quitado);
+        mongo.save(pieza, COLECCION_PIEZAS);
+    }
+
+    private static Map<String, Document> porId(List<Document> docs) {
+        Map<String, Document> r = new java.util.LinkedHashMap<>();
+        for (Document d : docs) r.put(String.valueOf(d.get("_id")), d);
+        return r;
     }
 
     // ─── Sembrar ─────────────────────────────────────────────────────────────
@@ -146,22 +296,26 @@ public class DatosDemoService {
         if (antes.completa()) {
             return "Los datos demo ya estaban completos: no se escribió nada. Para regenerarlos, primero borra.";
         }
+        if (!antes.vacia()) {
+            // Primero: así el stock y el inventario de los negocios reales vuelven a como estaban antes de leerlos
+            log.warn("Había datos demo de una siembra que no terminó ({} documentos, {} pagos): se borran antes de sembrar",
+                    antes.documentosMongo(), antes.pagos());
+            borrar();
+        }
         boolean hayAdmin = mongo.exists(Query.query(Criteria.where("rol").is(RolPermisos.SUPERADMIN)
                 .and("_id").not().regex(ES_DEMO)), Usuario.class);
-        DatosDemoArmado.Lote lote = armar(!hayAdmin);
+        List<String> avisosReales = new ArrayList<>();
+        DatosDemoArmado.Reales reales = reales(avisosReales);
+        DatosDemoArmado.Lote lote = armar(!hayAdmin, reales);
+        lote.avisos.addAll(0, avisosReales);
         List<String> choques = choques(lote);
         if (!choques.isEmpty()) {
             throw new IllegalStateException("No se sembró nada: estos datos demo chocan con datos reales:\n - "
                     + String.join("\n - ", choques));
         }
-        if (!antes.vacia()) {
-            log.warn("Había datos demo de una siembra que no terminó ({} documentos, {} pagos): se borran antes de sembrar",
-                    antes.documentosMongo(), antes.pagos());
-            borrar();
-        }
         mongo.save(new Document("_id", ID_MARCA).append("completo", false).append("inicio", LocalDateTime.now()), COLECCION_MARCA);
         try {
-            escribir(lote);
+            escribir(lote, reales.hermanos());
         } catch (RuntimeException e) {
             log.error("La siembra de datos demo falló: se borra lo que alcanzó a escribir", e);
             try {
@@ -174,7 +328,9 @@ public class DatosDemoService {
         }
         mongo.save(new Document("_id", ID_MARCA).append("completo", true).append("fin", LocalDateTime.now())
                 .append("pagos", lote.ventas.size()).append("pedidos", lote.pedidos.size()), COLECCION_MARCA);
-        return DatosDemoArmado.resumen(lote);
+        StringBuilder r = new StringBuilder(DatosDemoArmado.resumen(lote));
+        lote.avisos.forEach(a -> r.append("AVISO: ").append(a).append('\n'));
+        return r.toString();
     }
 
     /** Correos, NIT o nombres demo que ya usa algo que no es demo. Si hay alguno, no se siembra nada. */
@@ -219,13 +375,14 @@ public class DatosDemoService {
         return s.append('$').toString();
     }
 
-    private void escribir(DatosDemoArmado.Lote lote) {
-        // 1. Cuentas, negocios y productos (con su stock final)
+    private void escribir(DatosDemoArmado.Lote lote, Taller tallerReal) {
+        // 1. Cuentas, negocios y productos (con su stock final). De los productos reales solo cambia el stock
         mongo.insert(lote.usuarios, Usuario.class);
         mongo.insert(lote.vehiculos, Vehiculo.class);
         mongo.insert(lote.tiendas, Tienda.class);
         mongo.insert(lote.talleres, Taller.class);
         mongo.insert(lote.productos, Producto.class);
+        aplicarStockReales(lote.ajustesStock);
 
         // 2. Los pagos primero: los pedidos, compras y órdenes guardan su id
         List<PagoEntity> guardados = pagos.saveAll(lote.ventas.stream().map(DatosDemoArmado.Venta::pago).toList());
@@ -263,11 +420,24 @@ public class DatosDemoService {
         }
 
         // 5. Lo que compraron los talleres entra a su inventario, con la fecha en que llegó
-        Map<String, Taller> talleres = lote.talleres.stream().collect(Collectors.toMap(Taller::getId, Function.identity()));
+        Map<String, Taller> talleres = lote.talleres.stream().collect(Collectors.toMap(Taller::getId, Function.identity(), (a, b) -> a,
+                java.util.LinkedHashMap::new));
+        boolean tocaTallerReal = tallerReal != null && lote.entradasTaller.stream().anyMatch(e -> e.tallerId().equals(tallerReal.getId()));
+        if (tocaTallerReal) {
+            // Copia de su inventario ANTES de tocarlo: con ella borrar lo deja exactamente igual
+            talleres.put(tallerReal.getId(), tallerReal);
+            mongo.save(new Document("_id", ID_PIEZAS_REALES).append("tallerId", tallerReal.getId())
+                    .append("antes", new ArrayList<>(piezasCrudas(tallerReal.getId()).values())), COLECCION_MARCA);
+        }
         for (DatosDemoArmado.EntradaTaller e : lote.entradasTaller) {
             Taller taller = talleres.get(e.tallerId());
             inventarioTaller.entrarPedido(taller, pedidos.get(e.pedidoId()), taller.getUsuarioId());
             fecharEntrada(e);
+        }
+        if (tocaTallerReal) {
+            Document marca = mongo.findById(ID_PIEZAS_REALES, Document.class, COLECCION_MARCA);
+            marca.append("despues", new ArrayList<>(piezasCrudas(tallerReal.getId()).values()));
+            mongo.save(marca, COLECCION_MARCA);
         }
         log.info(DatosDemoArmado.resumen(lote));
     }
@@ -309,11 +479,14 @@ public class DatosDemoService {
     /** Borra solo lo demo. Se puede correr las veces que haga falta: sin datos demo no hace nada. */
     public Borrado borrar() {
         List<String> avisos = avisosSinBorrar();
+        // Lo primero, mientras sus marcas existen: los negocios reales vuelven a como estaban
+        restaurarStockReales(avisos);
+        restaurarPiezasReales(avisos);
         // Postgres: primero las líneas (apuntan a los pagos), después los pagos
         long lineas = repartos.borrarRepartosDemo();
         long pagosBorrados = pagos.borrarPagosDemo();
         Map<String, Long> mongoBorrado = new java.util.LinkedHashMap<>();
-        for (Map.Entry<String, String> e : COLECCIONES_POR_DUENO.entrySet()) {
+        for (Map.Entry<String, String> e : COLECCIONES_POR_DUENO) {
             mongoBorrado.merge(e.getKey(), mongo.remove(demoPor(e.getValue()), e.getKey()).getDeletedCount(), Long::sum);
         }
         // La marca, al final: si algo falla antes, la siembra siguiente sabe que hay restos

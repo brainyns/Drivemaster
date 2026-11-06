@@ -33,6 +33,9 @@ public class DatosDemoRunner implements CommandLineRunner {
     private final String accion;
     private final String confirmarBase;
     private final String postgres;
+    /** Solo para el log: en la feria debe ser SIMULADO (las líneas demo que alguien cierre se "pagan" simulado). */
+    @Value("${dispersion.modo:SIMULADO}")
+    private String modoDispersion = "SIMULADO";
 
     public DatosDemoRunner(DatosDemoService demo, MongoTemplate mongo, ConfigurableApplicationContext contexto,
                            @Value("${drivemaster.demo.accion:}") String accion,
@@ -55,7 +58,11 @@ public class DatosDemoRunner implements CommandLineRunner {
     /** 0 si terminó bien; 2 si no se confirmó la base o la acción no existe; 1 si falló. */
     int ejecutar() {
         String base = mongo.getDb().getName();
-        log.info("Datos demo: acción '{}' sobre la base Mongo '{}' y Postgres {}", accion, base, sinCredenciales(postgres));
+        log.info("Datos demo: acción '{}' sobre la base Mongo '{}' y Postgres {}; dispersión {}", accion, base,
+                sinCredenciales(postgres), modoDispersion);
+        if (!"SIMULADO".equalsIgnoreCase(modoDispersion)) {
+            log.warn("Datos demo: DISPERSION_MODO es {}. Para la feria debe ser SIMULADO.", modoDispersion);
+        }
         if (!base.equals(confirmarBase)) {
             log.error("Datos demo: no se hizo nada. DEMO_CONFIRMAR_BASE debe ser exactamente '{}' (llegó '{}')", base, confirmarBase);
             return 2;

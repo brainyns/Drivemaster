@@ -151,13 +151,13 @@ class DatosDemoServiceTest {
         // Todas las colecciones de la lista, cada una con su criterio
         Set<String> borradas = new HashSet<>(colecciones.getAllValues());
         assertTrue(borradas.containsAll(DatosDemoService.COLECCIONES_POR_ID));
-        assertTrue(borradas.containsAll(DatosDemoService.COLECCIONES_POR_DUENO.keySet()));
+        assertTrue(borradas.containsAll(DatosDemoService.COLECCIONES_POR_DUENO.stream().map(java.util.Map.Entry::getKey).toList()));
     }
 
     @Test
     void borrar_cubre_cada_coleccion_que_la_siembra_escribe() {
         Set<String> limpiadas = new HashSet<>(DatosDemoService.COLECCIONES_POR_ID);
-        limpiadas.addAll(DatosDemoService.COLECCIONES_POR_DUENO.keySet());
+        DatosDemoService.COLECCIONES_POR_DUENO.forEach(e -> limpiadas.add(e.getKey()));
         for (Class<?> c : List.of(Usuario.class, Vehiculo.class, Tienda.class, Taller.class, Producto.class, CompraCatalogo.class,
                 PedidoTienda.class, MovimientoInventario.class, OrdenServicio.class, Cotizacion.class, PiezaTaller.class,
                 MovimientoPiezaTaller.class)) {
