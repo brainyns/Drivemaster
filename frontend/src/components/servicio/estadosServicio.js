@@ -76,8 +76,17 @@ export const ESTADOS_CANCELABLES_CLIENTE =["ENVIADA", "ASIGNADA_A_TALLER", "REAS
 export const formatPrecio = (v) =>
   v == null ? "—" : new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(v);
 
-export const formatFechaHora = (f) =>
-  f ? new Date(f).toLocaleString("es-CO", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "—";
+// Espacios que no parten: "3:45 p. m." nunca queda con el "p. m." en otra línea
+const sinPartir = (s) => s.replace(/\s/g, " ");
+
+/** "mié, 5 nov, 3:45 p. m.": la fecha y la hora no se parten por dentro; solo puede saltar de línea entre las dos. */
+export const formatFechaHora = (f) => {
+  if (!f) return "—";
+  const d = new Date(f);
+  const fecha = d.toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" });
+  const hora = d.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" });
+  return `${sinPartir(fecha)}, ${sinPartir(hora)}`;
+};
 
 export const formatFecha = (f) =>
   f ? new Date(f).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" }) : "—";
