@@ -18,10 +18,15 @@
   border-color: var(--dm-orange);
 }
 
+/* Área de la foto: todo el ancho de la tarjeta, alto fijo y fondo blanco parejo. Casi todas las fotos (.webp) traen
+   fondo blanco: sobre gris se veían como un cuadro más pequeño que la tarjeta. contain: ninguna se recorta ni se
+   deforma, sea del tamaño que sea. */
 .dm-card__picture {
   height: 183px;
+  width: 100%;
   position: relative;
-  background: var(--dm-surface);
+  background: #fff;
+  border-bottom: 1px solid var(--dm-line-soft);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -42,10 +47,12 @@
 }
 
 .dm-card__image {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 14px;
+  object-position: center;
+  padding: 8px;
   transition: transform 0.4s;
 }
 
@@ -190,12 +197,14 @@
   display: block;
 }
 
+/* "COP · Envío $ 10.000": a 9 px y con el espaciado apretado del precio, el punto de miles no se veía */
 .dm-card__bottom > strong small {
   display: block;
   margin-top: 5px;
   color: var(--dm-muted);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 400;
+  letter-spacing: normal;
 }
 
 .dm-stock {
@@ -276,7 +285,7 @@
   .dm-compat > svg { width: 12px; }
   .dm-card__bottom { margin-top: 13px; margin-bottom: 13px; flex-wrap: wrap; gap: 7px; }
   .dm-card__bottom > strong { font-size: 19px; }
-  .dm-card__bottom > strong small { font-size: 9px; }
+  .dm-card__bottom > strong small { font-size: 11px; }
   .dm-stock { font-size: 9px; }
   .dm-card__link { font-size: 10px; padding: 11px 0; }
   .dm-card__link svg { width: 14px; }

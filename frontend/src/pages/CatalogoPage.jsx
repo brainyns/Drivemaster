@@ -14,13 +14,13 @@ import ProductDetail from "../components/public/ProductDetail";
 import Footer from "../components/public/Footer";
 import Icon from "../components/public/Icon";
 import Esqueleto from "../components/ui/Esqueleto";
+import { formatPesos } from "../utils/formato";
 import "../css/catalog.css";
 import { textoError } from "../utils/errores";
 
 const TODAS = "Todas";
 
-const formatPrecio = (n) =>
-  new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 }).format(n ?? 0);
+const formatPrecio = (n) => formatPesos(n ?? 0, 0);
 
 export default function CatalogoPage({
   onIrLogin, onIrAdmin, onIrSolicitud, onLogout,

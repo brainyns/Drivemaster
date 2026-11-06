@@ -5,15 +5,10 @@ import Icon from "./Icon";
 import { detalleProducto } from "../../services/catalogoService";
 import "../../css/product-detail.css";
 import { etiquetaCategoria } from "../../utils/categorias";
+import { formatPesos } from "../../utils/formato";
 
-const formatPrecio = (precio) => {
-  if (!precio && precio !== 0) return "Consultar";
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    minimumFractionDigits: 0,
-  }).format(precio);
-};
+// "$ 10.000": siempre con el punto de miles (formatPesos), igual en todo el catálogo. El espacio no separa el $ del monto.
+const formatPrecio = (precio) => (!precio && precio !== 0 ? "Consultar" : `$ ${formatPesos(precio, 0)}`);
 
 const WHATSAPP = "573015335263";
 

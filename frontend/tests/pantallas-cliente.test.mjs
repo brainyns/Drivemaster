@@ -130,3 +130,17 @@ test("quienes leen GET /mi-perfil usan los campos del DTO y un 404 no rompe el f
   assert.match(leer("../src/pages/PerfilCliente.jsx"), /errorCarga\.estado === 404/);
   assert.match(leer("../src/services/clienteService.js"), /error\.estado = res\.status/);
 });
+
+test("Catálogo: tiendas aliadas, envío con punto de miles legible y fotos parejas", () => {
+  const leerSrc = (r) => readFileSync(new URL(`../src/${r}`, import.meta.url), "utf8");
+  const catalogo = leerSrc("pages/CatalogoPage.jsx");
+  assert.ok(catalogo.includes("Productos de las tiendas aliadas.") && !catalogo.includes("Productos de DriveMaster y de las tiendas"));
+  for (const r of ["components/public/ProductCard.jsx", "components/public/ProductDetail.jsx", "pages/CatalogoPage.jsx"]) {
+    assert.ok(leerSrc(r).includes("formatPesos("), `${r} usa formatPesos`);
+  }
+  const css = leerSrc("css/product-card.css");
+  // "COP · Envío $ 10.000" a 9 px y con letter-spacing negativo escondía el punto de miles
+  assert.match(css, /\.dm-card__bottom > strong small \{[^}]*font-size: 12px;[^}]*letter-spacing: normal;/);
+  assert.match(css, /\.dm-card__picture \{[^}]*width: 100%;[^}]*background: #fff;/);
+  assert.match(css, /\.dm-card__image \{[^}]*object-fit: contain;/);
+});
