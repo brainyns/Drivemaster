@@ -302,22 +302,36 @@ function Resumen({ datos, onIr }) {
   );
 }
 
-/** Resumen del día escrito por la IA con los datos de la tienda. Solo lee: nada cambia en la tienda. */
+/**
+ * Resumen del día escrito por la IA con los datos de la tienda. Solo lee: nada cambia en la tienda.
+ * Si la IA falla o responde vacío, un aviso corto en lugar del error técnico o de la carga sin fin.
+ */
 function ResumenIA({ token }) {
-  const [resumen, setResumen] = useState({ texto: null, error: null });
+  const [resumen, setResumen] = useState({ texto: null, noDisponible: false });
 
   useEffect(() => {
     let vivo = true;
     resumenAsistente(token)
-      .then((texto) => { if (vivo) setResumen({ texto, error: null }); })
-      .catch((e) => { if (vivo) setResumen({ texto: null, error: textoError(e) }); });
+      .then((texto) => {
+        if (!vivo) return;
+        const limpio = typeof texto === "string" ? texto.trim() : "";
+        setResumen(limpio ? { texto: limpio, noDisponible: false } : { texto: null, noDisponible: true });
+      })
+      .catch(() => { if (vivo) setResumen({ texto: null, noDisponible: true }); });
     return () => { vivo = false; };
   }, [token]);
 
+  if (resumen.noDisponible) {
+    return (
+      <div className="it-asistente__resumen" aria-live="polite">
+        <p className="it-nota">El resumen no está disponible ahora.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="it-asistente__resumen" aria-live="polite" aria-busy={!resumen.texto && !resumen.error}>
+    <div className="it-asistente__resumen" aria-live="polite" aria-busy={!resumen.texto}>
       {resumen.texto ? <p>{resumen.texto}</p>
-        : resumen.error ? <p className="it-nota">{resumen.error}</p>
         : <><Esqueleto alto={12} /><Esqueleto alto={12} ancho="80%" /><Esqueleto alto={12} ancho="60%" /></>}
       <p className="it-nota">Lo escribe una IA con los datos de estos informes: revisa las cifras antes de decidir.</p>
     </div>
