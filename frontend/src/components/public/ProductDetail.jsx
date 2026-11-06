@@ -8,7 +8,8 @@ import { etiquetaCategoria } from "../../utils/categorias";
 import { formatPesos } from "../../utils/formato";
 
 // "$ 10.000": siempre con el punto de miles (formatPesos), igual en todo el catálogo. El espacio no separa el $ del monto.
-const formatPrecio = (precio) => (!precio && precio !== 0 ? "Consultar" : `$ ${formatPesos(precio, 0)}`);
+const ESPACIO_DURO = String.fromCharCode(160);
+const formatPrecio = (precio) => (!precio && precio !== 0 ? "Consultar" : `$${ESPACIO_DURO}${formatPesos(precio, 0)}`);
 
 const WHATSAPP = "573015335263";
 

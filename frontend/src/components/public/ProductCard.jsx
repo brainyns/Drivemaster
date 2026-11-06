@@ -5,7 +5,8 @@ import "../../css/product-card.css";
 import { etiquetaCategoria } from "../../utils/categorias";
 
 // "$ 10.000": siempre con el punto de miles (formatPesos), igual en todo el catálogo. El espacio no separa el $ del monto.
-const formatPrecio = (precio) => (!precio && precio !== 0 ? "Consultar" : `$ ${formatPesos(precio, 0)}`);
+const ESPACIO_DURO = String.fromCharCode(160);
+const formatPrecio = (precio) => (!precio && precio !== 0 ? "Consultar" : `$${ESPACIO_DURO}${formatPesos(precio, 0)}`);
 
 /**
  * Etiqueta de compatibilidad. La calcula el backend con el vehículo elegido (solo avisa: un repuesto
