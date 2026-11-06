@@ -138,6 +138,16 @@ export async function guardarTelefonoTaller(token, telefono) {
   return handle(res, "No se pudo guardar el teléfono");
 }
 
+/** Un taller registrado sin NIT lo agrega una vez ("900123456-7"). Devuelve el taller actualizado. */
+export async function agregarNitTaller(token, nit) {
+  const res = await apiFetch(`${BASE}/mi-taller/nit`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify({ nit }),
+  });
+  return handle(res, "No se pudo guardar el NIT");
+}
+
 /** Solo viajan los campos indicados (los undefined no se mandan y el backend los deja como estaban). */
 export async function actualizarDatosTaller(token, { tarifaHora, horario, responsableIva }) {
   const res = await apiFetch(`${BASE}/mi-taller/datos`, {

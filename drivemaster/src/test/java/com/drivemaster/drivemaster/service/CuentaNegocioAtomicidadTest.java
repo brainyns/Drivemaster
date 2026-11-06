@@ -51,6 +51,7 @@ class CuentaNegocioAtomicidadTest {
     private static RegistroNegocioRequest registro() {
         RegistroNegocioRequest r = new RegistroNegocioRequest();
         r.setNombreNegocio("Negocio Demo");
+        r.setNit("900123456-7");
         r.setCiudad("Cartagena");
         r.setDireccion("Calle 30 # 17-25");
         r.setHorario("L-S 8:00-18:00");

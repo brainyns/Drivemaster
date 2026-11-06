@@ -38,6 +38,7 @@ public class TallerDTO {
     private String logoUrl;
 
     // Solo para el dueño del taller y el ADMIN (null en el listado público)
+    private String nit;
     private String estadoAprobacion;
     private String motivoRechazo;
     private LocalDateTime fechaRegistro;

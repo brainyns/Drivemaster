@@ -268,6 +268,7 @@ export default function NegociosPlataforma({ token, filtroInicial }) {
                                 <button type="button" className="pp-nombre-boton" onClick={() => setDetalle({ tipo: n.tipo, id: n.id })}
                                   aria-label={`Ver el detalle de ${n.nombre || "este negocio"}`}>{n.nombre || "Sin nombre"}</button>
                                 <span className="pp-sub">{unir([nombreTipo(n), capitalizar(n.ciudad) || "Sin ciudad"])}</span>
+                                <span className="pp-sub">{n.nit ? `NIT ${n.nit}` : <span className="pp-tenue">NIT sin registrar</span>}</span>
                               </span>
                             </span>
                           </td>

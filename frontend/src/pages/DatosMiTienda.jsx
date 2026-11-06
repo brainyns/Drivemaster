@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { actualizarMiTienda, guardarCuentaBancariaTienda, guardarHorarioTienda, guardarTelefonoTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
+import { actualizarMiTienda, agregarNitTienda, guardarCuentaBancariaTienda, guardarHorarioTienda, guardarTelefonoTienda, miTienda, subirLogoTienda } from "../services/tiendaService";
+import AgregarNit from "../components/ui/AgregarNit";
 import HorarioSemanal, { HorarioResumen } from "../components/servicio/HorarioSemanal";
 import { copiarLunesAHabiles, errorDia, franjasDesdeSemana, semanaDesdeFranjas, semanaPorDefecto } from "./taller/horarioTaller";
 import LogoEditable from "../components/ui/LogoEditable";
@@ -363,7 +364,10 @@ export default function DatosMiTienda({ token, onGuardado }) {
             descripcion="Con estos datos te identifican los clientes y DriveMaster." nota={ADMIN}>
             <dl className="ui-datos">
               <Dato etiqueta="Nombre de la tienda">{t.nombre}</Dato>
-              <Dato etiqueta="NIT">{t.nit}</Dato>
+              <Dato etiqueta="NIT">
+                <AgregarNit id="mtd" nit={t.nit} guardar={(nit) => agregarNitTienda(token, nit)}
+                  onGuardado={(nueva) => { setTienda(nueva); onGuardado?.(nueva); avisar("NIT guardado."); }} />
+              </Dato>
               <Dato etiqueta="Fecha de registro">{t.fechaRegistro && formatFecha(t.fechaRegistro)}</Dato>
             </dl>
           </SeccionEditable>

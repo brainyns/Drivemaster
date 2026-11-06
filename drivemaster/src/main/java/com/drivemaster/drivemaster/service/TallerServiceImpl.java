@@ -211,7 +211,7 @@ public class TallerServiceImpl implements TallerService {
         Taller taller = Taller.builder()
                 .usuarioId(usuario.getId())
                 .nombre(r.getNombreNegocio().trim())
-                .nit(r.getNit() == null || r.getNit().isBlank() ? null : r.getNit().trim())
+                .nit(r.getNit())
                 .ciudad(r.getCiudad())
                 .barrio(r.getBarrio())
                 .direccion(r.getDireccion())
@@ -270,6 +270,16 @@ public class TallerServiceImpl implements TallerService {
         taller.setCuentaBancaria(cb);
         taller = tallerRepository.save(taller);
         return toDTOCompleto(taller);
+    }
+
+    @Override
+    public TallerDTO agregarNit(String correoTaller, String nit) {
+        Taller taller = obtenerPorUsuario(correoTaller);
+        if (taller.getNit() != null && !taller.getNit().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tu taller ya tiene NIT. Para cambiarlo, escríbele al administrador de DriveMaster.");
+        }
+        taller.setNit(cuentaNegocioService.nitLibre(CuentaNegocioService.TALLER, taller.getId(), nit));
+        return toDTOCompleto(tallerRepository.save(taller));
     }
 
     // ─── Mecánicos ───────────────────────────────────────────
@@ -354,6 +364,7 @@ public class TallerServiceImpl implements TallerService {
     private TallerDTO toDTOCompleto(Taller t) {
         Suscripcion plan = suscripcionService.vigente(SuscripcionService.ACTOR_TALLER, t.getId()).orElse(null);
         return baseDTO(t)
+                .nit(t.getNit())
                 .estadoAprobacion(t.getEstadoAprobacion())
                 .motivoRechazo(t.getMotivoRechazo())
                 .fechaRegistro(t.getFechaRegistro())

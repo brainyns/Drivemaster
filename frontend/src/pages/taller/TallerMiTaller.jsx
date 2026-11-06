@@ -4,7 +4,8 @@ import HorarioSemanal, { HorarioResumen } from "../../components/servicio/Horari
 import { formatFecha, formatPrecio } from "../../components/servicio/estadosServicio";
 import FormCuentaBancaria from "../../components/ui/FormCuentaBancaria";
 import {
-  actualizarDatosTaller, actualizarUbicacionTaller, guardarCuentaBancariaTaller, guardarTelefonoTaller, miTaller, subirLogoTaller,
+  actualizarDatosTaller, actualizarUbicacionTaller, agregarNitTaller, guardarCuentaBancariaTaller, guardarTelefonoTaller, miTaller,
+  subirLogoTaller,
 } from "../../services/tallerService";
 import { guardarHorario, obtenerHorario } from "../../services/horarioService";
 import {
@@ -24,6 +25,7 @@ import Calificacion from "../../components/ui/Calificacion";
 import CabeceraNegocio from "../../components/ui/CabeceraNegocio";
 import VistaPrevia from "../../components/ui/VistaPrevia";
 import Dato from "../../components/ui/Dato";
+import AgregarNit from "../../components/ui/AgregarNit";
 import ValorSensible from "../../components/ui/ValorSensible";
 import PieFormulario from "../../components/ui/PieFormulario";
 import Icon from "../../components/public/Icon";
@@ -301,6 +303,10 @@ export default function TallerMiTaller({ taller, token, cargando, error, onRecar
             descripcion="Con estos datos te identifican los clientes y DriveMaster." nota={ADMIN}>
             <dl className="ui-datos">
               <Dato etiqueta="Nombre del taller">{taller.nombre}</Dato>
+              <Dato etiqueta="NIT">
+                <AgregarNit id="mt" nit={taller.nit} guardar={(nit) => agregarNitTaller(token, nit)}
+                  onGuardado={(t) => { onActualizado?.(t); avisar("NIT guardado."); }} />
+              </Dato>
               <Dato etiqueta="Ciudad">{taller.ciudad}</Dato>
               <Dato etiqueta="Fecha de registro">{taller.fechaRegistro && formatFecha(taller.fechaRegistro)}</Dato>
             </dl>

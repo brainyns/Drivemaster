@@ -21,7 +21,7 @@ public final class NegociosPlataformaDTO {
      * datosPorCompletar: qué le falta para operar bien en el marketplace (vacío = completo).
      * logoUrl: el logo o la foto que subió el negocio (null = la pantalla muestra sus iniciales).
      */
-    public record NegocioFila(String tipo, String id, String nombre, String ciudad, String estado, boolean activo,
+    public record NegocioFila(String tipo, String id, String nombre, String nit, String ciudad, String estado, boolean activo,
                               LocalDateTime registrado, String motivoRechazo, PlanActual plan,
                               Double calificacion, long calificaciones,
                               Long productos, Long productosActivos, Long ordenes, Long ordenesEntregadas,

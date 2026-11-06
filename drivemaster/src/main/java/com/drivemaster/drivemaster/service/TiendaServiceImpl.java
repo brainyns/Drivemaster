@@ -153,6 +153,16 @@ public class TiendaServiceImpl implements TiendaService {
     }
 
     @Override
+    public TiendaDTO agregarNit(String correoUsuario, String nit) {
+        Tienda tienda = obtenerPorUsuario(correoUsuario);
+        if (tienda.getNit() != null && !tienda.getNit().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tu tienda ya tiene NIT. Para cambiarlo, escríbele al administrador de DriveMaster.");
+        }
+        tienda.setNit(cuentaNegocioService.nitLibre(CuentaNegocioService.TIENDA, tienda.getId(), nit));
+        return toDTO(tiendaRepository.save(tienda));
+    }
+
+    @Override
     public TiendaDTO guardarHorario(String correoUsuario, java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> franjas) {
         Tienda tienda = obtenerPorUsuario(correoUsuario);
         var porDia = com.drivemaster.drivemaster.util.HorarioSemanal.validar(franjas);

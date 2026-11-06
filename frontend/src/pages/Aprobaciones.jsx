@@ -297,6 +297,7 @@ export default function Aprobaciones({ token }) {
                           <LogoNegocio url={n.logoUrl} nombre={n.nombre} />
                           <span className="apr-negocio__texto">
                             <strong>{n.nombre}</strong>
+                            <span className="pp-sub">{n.nit ? `NIT ${n.nit}` : <span className="pp-tenue">NIT sin registrar</span>}</span>
                             <span className="pp-sub">{unir([nombreTipo(n), unir([n.direccion, capitalizar(n.barrio)], ", ") || "Sin dirección"])}</span>
                           </span>
                         </span>

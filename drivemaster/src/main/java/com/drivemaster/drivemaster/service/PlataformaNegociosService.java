@@ -92,7 +92,7 @@ public class PlataformaNegociosService {
             Map<String, Long> total = conteoPor(Producto.class, "tiendaId", null);
             Map<String, Long> activos = conteoPor(Producto.class, "tiendaId", Criteria.where("activo").ne(false));
             for (Tienda x : tiendas) {
-                filas.add(new NegocioFila(TIENDA, x.getId(), x.getNombre(), x.getCiudad(), estadoDe(x.getEstadoAprobacion()),
+                filas.add(new NegocioFila(TIENDA, x.getId(), x.getNombre(), x.getNit(), x.getCiudad(), estadoDe(x.getEstadoAprobacion()),
                         !Boolean.FALSE.equals(x.getActivo()), x.getFechaRegistro(), x.getMotivoRechazo(),
                         planes.get(TIENDA + ":" + x.getId()), null, 0,
                         total.getOrDefault(x.getId(), 0L), activos.getOrDefault(x.getId(), 0L), null, null,
@@ -108,7 +108,7 @@ public class PlataformaNegociosService {
                 double[] n = notas.get(x.getId());
                 // Double.valueOf: con n[0] primitivo el ternario desempaquetaría getRating(), que es null en un taller sin calificaciones
                 Double calificacion = n != null ? Double.valueOf(n[0]) : x.getRating();
-                filas.add(new NegocioFila(TALLER, x.getId(), x.getNombre(), x.getCiudad(), estadoDe(x.getEstadoAprobacion()),
+                filas.add(new NegocioFila(TALLER, x.getId(), x.getNombre(), x.getNit(), x.getCiudad(), estadoDe(x.getEstadoAprobacion()),
                         !Boolean.FALSE.equals(x.getActivo()), x.getFechaRegistro(), x.getMotivoRechazo(),
                         planes.get(TALLER + ":" + x.getId()), calificacion, n != null ? (long) n[1] : 0,
                         null, null, o[0], o[1], faltantesTaller(x), x.getLogoUrl()));
@@ -140,7 +140,7 @@ public class PlataformaNegociosService {
                     x.getFechaRegistro(), faltantesTienda(x)));
         }
         for (Taller x : mongo.find(Query.query(pendiente), Taller.class)) {
-            r.add(new NegocioPendiente(TALLER, x.getId(), x.getNombre(), x.getCiudad(), x.getDireccion(), null,
+            r.add(new NegocioPendiente(TALLER, x.getId(), x.getNombre(), x.getCiudad(), x.getDireccion(), x.getNit(),
                     x.getFechaRegistro(), faltantesTaller(x)));
         }
         r.sort(Comparator.comparing(NegocioPendiente::registrado, Comparator.nullsLast(Comparator.reverseOrder())));

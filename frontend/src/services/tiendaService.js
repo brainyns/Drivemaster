@@ -79,6 +79,16 @@ export async function guardarTelefonoTienda(token, telefono) {
   return handle(res, "No se pudo guardar el teléfono");
 }
 
+/** Una tienda registrada sin NIT lo agrega una vez ("900123456-7"). Devuelve la tienda actualizada. */
+export async function agregarNitTienda(token, nit) {
+  const res = await apiFetch(`${BASE}/mi-tienda/nit`, {
+    method: "PUT",
+    headers: headers(token),
+    body: JSON.stringify({ nit }),
+  });
+  return handle(res, "No se pudo guardar el NIT");
+}
+
 export async function actualizarMiTienda(token, datos) {
   const res = await apiFetch(`${BASE}/mi-tienda`, {
     method: "PUT",

@@ -7,7 +7,7 @@ import {
 } from "../src/pages/pasosRegistroNegocio.js";
 
 const BASE = {
-  nombreNegocio: "Taller El Pistón", nit: "", telefono: "300 123 4567",
+  nombreNegocio: "Taller El Pistón", nit: "900.123.456-7", telefono: "300 123 4567",
   ciudad: "Cartagena", barrio: "", direccion: "Calle 30 # 17-25",
   latitud: 10.42, longitud: -75.54,
   especialidades: "Frenos, Motor ,", precioManoObra: "80000", tarifaHora: "", horario: "",
@@ -61,7 +61,7 @@ test("se envían los mismos datos que antes", () => {
   assert.deepEqual(taller.especialidades, ["Frenos", "Motor"]);
   assert.equal(taller.precioManoObra, 80000);
   assert.equal(taller.tarifaHora, null);
-  assert.equal(taller.nit, null);
+  assert.equal(taller.nit, "900123456-7", "se envía sin puntos");
   assert.equal(taller.horario, null);
   const tienda = datosRegistro("TIENDA", { ...BASE, horario: " L-V 8-18 " });
   assert.equal(tienda.precioManoObra, undefined);
@@ -85,4 +85,26 @@ test("los correos conservan sus letras: solo se quitan los espacios y se pasan a
   const normalizar = auth.match(/const normalizarCorreo = (.+);/)[1];
   assert.equal(new Function(`return ${normalizar}`)()(" Sebas.Rios @Gmail.com "), "sebas.rios@gmail.com");
   assert.ok(!/replace\(\/s[+*]\//.test(auth), "ningún replace(/s+/) sin barra en authService");
+});
+
+test("el NIT es obligatorio y acepta el formato colombiano, con o sin dígito de verificación", () => {
+  assert.equal(erroresDePasos("TALLER", { ...BASE, nit: "" }, ["negocio"]).nit, "Escribe el NIT del negocio.");
+  for (const bueno of ["900123456-7", "900123456", "900.123.456-7", "1047123456-3"]) {
+    assert.equal(erroresDePasos("TIENDA", { ...BASE, nit: bueno }, ["negocio"]).nit, undefined, bueno);
+  }
+  for (const malo of ["ABC", "900-123-456", "12345", "900123456-78"]) {
+    assert.match(erroresDePasos("TALLER", { ...BASE, nit: malo }, ["negocio"]).nit, /dígito de verificación/, malo);
+  }
+  const pagina = readFileSync(new URL("../src/pages/RegistroNegocio.jsx", import.meta.url), "utf8");
+  const lineaNit = pagina.slice(pagina.indexOf('campo("nit"'), pagina.indexOf('campo("telefono"'));
+  assert.ok(lineaNit && !lineaNit.includes("opcional"), "el campo del NIT ya no es opcional");
+});
+
+test("el NIT se ve en Aprobaciones, en Tiendas y talleres y en Mi taller / Mi tienda", () => {
+  const leer = (ruta) => readFileSync(new URL(ruta, import.meta.url), "utf8");
+  for (const ruta of ["../src/pages/Aprobaciones.jsx", "../src/pages/NegociosPlataforma.jsx"]) {
+    assert.match(leer(ruta), /NIT \$\{n\.nit\}/, ruta);
+  }
+  assert.match(leer("../src/pages/taller/TallerMiTaller.jsx"), /<AgregarNit id="mt" nit=\{taller\.nit\}/);
+  assert.match(leer("../src/pages/DatosMiTienda.jsx"), /<AgregarNit id="mtd" nit=\{t\.nit\}/);
 });

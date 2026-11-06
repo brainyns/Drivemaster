@@ -60,6 +60,12 @@ public class TallerController {
         return ResponseEntity.ok(tallerService.guardarCuentaBancaria(auth.getName(), dto));
     }
 
+    /** Un taller registrado sin NIT lo agrega: {"nit": "900123456-7"}. */
+    @PutMapping("/mi-taller/nit")
+    public ResponseEntity<TallerDTO> agregarNit(@RequestBody java.util.Map<String, String> body, Authentication auth) {
+        return ResponseEntity.ok(tallerService.agregarNit(auth.getName(), body == null ? null : body.get("nit")));
+    }
+
     @GetMapping("/mi-taller/mecanicos")
     public ResponseEntity<List<Mecanico>> listarMecanicos(Authentication auth) {
         return ResponseEntity.ok(tallerService.listarMecanicos(auth.getName()));

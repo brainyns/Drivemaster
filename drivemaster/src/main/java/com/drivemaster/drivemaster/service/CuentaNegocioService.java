@@ -10,6 +10,7 @@ import com.drivemaster.drivemaster.repository.TiendaRepository;
 import com.drivemaster.drivemaster.repository.UsuarioRepository;
 import com.drivemaster.drivemaster.security.RolPermisos;
 import com.drivemaster.drivemaster.util.Correos;
+import com.drivemaster.drivemaster.util.NitColombia;
 import com.drivemaster.drivemaster.util.PatronBusqueda;
 import com.drivemaster.drivemaster.util.PlantillaCorreo;
 import org.slf4j.Logger;
@@ -104,6 +105,8 @@ public class CuentaNegocioService {
         if (vacio(r.getCorreo()) || vacio(r.getPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo y contraseña son obligatorios");
         }
+        // Obligatorio desde el registro de la feria: se guarda sin puntos ni espacios
+        r.setNit(NitColombia.validar(r.getNit()));
     }
 
     public static final String TIENDA = "TIENDA";
@@ -112,29 +115,48 @@ public class CuentaNegocioService {
     /**
      * Antes de crear una tienda o un taller: que no haya otro del mismo tipo con el mismo nombre o NIT, ni una tienda
      * con el mismo correo de contacto. Se compara sin mayúsculas, tildes ni espacios ("Taller  Central" = "taller
-     * central"), y el NIT solo por sus dígitos ("900.123.456-7" = "9001234567"). Bloquean los aprobados, los
-     * pendientes de aprobación y los archivados; los rechazados no, para que puedan volver a registrarse con sus datos
-     * corregidos. (El correo de la cuenta ya es único para todos: lo revisa crearUsuario.)
+     * central"), y el NIT por sus dígitos o por su número sin el dígito de verificación ("900.123.456-7" = "9001234567"
+     * = "900123456", ver NitColombia.mismo). Bloquean los aprobados, los pendientes de aprobación y los archivados; los
+     * rechazados no, para que puedan volver a registrarse con sus datos corregidos. (El correo de la cuenta ya es único
+     * para todos: lo revisa crearUsuario.)
      */
     public void validarSinDuplicados(String tipo, RegistroNegocioRequest r) {
         String nombre = clave(r.getNombreNegocio());
-        String nit = soloDigitos(r.getNit());
         String correo = clave(r.getCorreo());
-        String etiqueta = TALLER.equals(tipo) ? "un taller registrado" : "una tienda registrada";
+        String etiqueta = etiqueta(tipo);
         if (TALLER.equals(tipo)) {
             for (Taller t : tallerRepository.findAll()) {
                 if (!bloquea(t.getEstadoAprobacion())) continue;
                 if (nombre != null && nombre.equals(clave(t.getNombre()))) throw duplicado(etiqueta, "ese nombre");
-                if (nit != null && nit.equals(soloDigitos(t.getNit()))) throw duplicado(etiqueta, "ese NIT");
+                if (NitColombia.mismo(r.getNit(), t.getNit())) throw duplicado(etiqueta, "ese NIT");
             }
         } else {
             for (Tienda t : tiendaRepository.findAll()) {
                 if (!bloquea(t.getEstadoAprobacion())) continue;
                 if (nombre != null && nombre.equals(clave(t.getNombre()))) throw duplicado(etiqueta, "ese nombre");
-                if (nit != null && nit.equals(soloDigitos(t.getNit()))) throw duplicado(etiqueta, "ese NIT");
+                if (NitColombia.mismo(r.getNit(), t.getNit())) throw duplicado(etiqueta, "ese NIT");
                 if (correo != null && correo.equals(clave(t.getCorreoContacto()))) throw duplicado(etiqueta, "ese correo");
             }
         }
+    }
+
+    /**
+     * El NIT que agrega desde Mi taller o Mi tienda un negocio registrado sin él: con formato válido y sin otro del mismo
+     * tipo que ya lo tenga (los rechazados no cuentan, como en el registro). Devuelve el NIT como se guarda.
+     */
+    public String nitLibre(String tipo, String idPropio, String nit) {
+        String limpio = NitColombia.validar(nit);
+        boolean repetido = TALLER.equals(tipo)
+                ? tallerRepository.findAll().stream().anyMatch(t -> !t.getId().equals(idPropio) && bloquea(t.getEstadoAprobacion())
+                        && NitColombia.mismo(limpio, t.getNit()))
+                : tiendaRepository.findAll().stream().anyMatch(t -> !t.getId().equals(idPropio) && bloquea(t.getEstadoAprobacion())
+                        && NitColombia.mismo(limpio, t.getNit()));
+        if (repetido) throw duplicado(etiqueta(tipo), "ese NIT");
+        return limpio;
+    }
+
+    private static String etiqueta(String tipo) {
+        return TALLER.equals(tipo) ? "un taller registrado" : "una tienda registrada";
     }
 
     /** Los rechazados no bloquean un registro nuevo; los demás (aprobados, pendientes, archivados o sin estado) sí. */
@@ -149,12 +171,6 @@ public class CuentaNegocioService {
         return c.isEmpty() ? null : c;
     }
 
-    /** Solo los dígitos del NIT; null si no tiene ninguno. */
-    static String soloDigitos(String nit) {
-        if (nit == null) return null;
-        String d = nit.replaceAll("\\D", "");
-        return d.isEmpty() ? null : d;
-    }
 
     private static ResponseStatusException duplicado(String etiqueta, String dato) {
         return new ResponseStatusException(HttpStatus.CONFLICT, "Ya hay " + etiqueta + " con " + dato + ".");

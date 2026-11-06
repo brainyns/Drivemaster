@@ -2,6 +2,7 @@
 // mismas); aquí solo se reparten por paso para validar cada uno antes de seguir. Funciones puras.
 
 import { parsePesos } from "../utils/formato.js";
+import { errorNit, normalizarNit } from "../utils/nit.js";
 
 export const vacio = (v) => v === null || v === undefined || String(v).trim() === "";
 
@@ -33,6 +34,8 @@ export const CAMPOS_PASO = {
 export function validarNegocio(tipo, f) {
   const e = {};
   if (vacio(f.nombreNegocio)) e.nombreNegocio = "Escribe el nombre del negocio.";
+  const nit = errorNit(f.nit);
+  if (nit) e.nit = nit;
   if (vacio(f.ciudad)) e.ciudad = "Indica la ciudad.";
   if (vacio(f.direccion)) e.direccion = "Indica la dirección.";
   // La tienda vende con retiro en su local: el horario es obligatorio (el servidor también lo exige)
@@ -84,7 +87,7 @@ export function datosRegistro(tipo, form) {
   const numero = (v) => (vacio(v) ? null : parsePesos(v));
   const datos = {
     nombreNegocio: form.nombreNegocio.trim(),
-    nit: form.nit.trim() || null,
+    nit: normalizarNit(form.nit) || form.nit.trim(),
     telefono: form.telefono.trim() || null,
     ciudad: form.ciudad.trim(),
     barrio: form.barrio.trim() || null,

@@ -230,7 +230,8 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
                 {campo("nombreNegocio", "Nombre del negocio",
                   { placeholder: esTaller ? "Ej. Taller El Pistón" : "Ej. Autopartes La 80", autoComplete: "organization" },
                   { ancho: true })}
-                {campo("nit", "NIT", { placeholder: "900.123.456-7" }, { opcional: true })}
+                {campo("nit", "NIT", { placeholder: "900123456-7", inputMode: "numeric" },
+                  { ayuda: "Con o sin dígito de verificación, como aparece en tu RUT." })}
                 {campo("telefono", "Teléfono", { type: "tel", inputMode: "tel", placeholder: "300 123 4567", autoComplete: "tel" },
                   { opcional: true })}
               </div>

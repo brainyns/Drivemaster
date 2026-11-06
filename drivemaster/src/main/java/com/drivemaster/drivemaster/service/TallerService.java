@@ -39,6 +39,9 @@ public interface TallerService {
 
     TallerDTO guardarCuentaBancaria(String correoTaller, CuentaBancariaDTO dto);
 
+    /** Un taller registrado sin NIT lo agrega una sola vez; si ya tiene uno, cambiarlo lo hace el ADMIN (409). */
+    TallerDTO agregarNit(String correoTaller, String nit);
+
     List<Mecanico> listarMecanicos(String correoTaller);
 
     Mecanico agregarMecanico(String correoTaller, Mecanico mecanico);

@@ -30,6 +30,9 @@ public interface TiendaService {
     /** Solo el teléfono de la tienda de la sesión (celular o fijo colombiano, ver TelefonoColombia). */
     TiendaDTO actualizarTelefono(String correoUsuario, String telefono);
 
+    /** Una tienda registrada sin NIT lo agrega una sola vez; si ya tiene uno, cambiarlo lo hace el ADMIN (409). */
+    TiendaDTO agregarNit(String correoUsuario, String nit);
+
     /** Reemplaza el horario por días de la tienda (mismas reglas que el del taller) y regenera el texto que ve el cliente. */
     TiendaDTO guardarHorario(String correoUsuario, java.util.List<com.drivemaster.drivemaster.dto.taller.FranjaHorarioDTO> franjas);
 

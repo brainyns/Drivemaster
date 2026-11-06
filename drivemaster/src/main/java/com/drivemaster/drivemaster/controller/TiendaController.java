@@ -52,6 +52,12 @@ public class TiendaController {
         return ResponseEntity.ok(tiendaService.actualizarTelefono(auth.getName(), body == null ? null : body.get("telefono")));
     }
 
+    /** Una tienda registrada sin NIT lo agrega: {"nit": "900123456-7"}. */
+    @PutMapping("/mi-tienda/nit")
+    public ResponseEntity<TiendaDTO> agregarNit(@RequestBody Map<String, String> body, Authentication auth) {
+        return ResponseEntity.ok(tiendaService.agregarNit(auth.getName(), body == null ? null : body.get("nit")));
+    }
+
     /** Horario por días (el mismo formato que /api/talleres/{id}/horario): reemplaza el de la semana completa. */
     @PutMapping("/mi-tienda/horario")
     public ResponseEntity<TiendaDTO> horario(@RequestBody List<FranjaHorarioDTO> franjas, Authentication auth) {
