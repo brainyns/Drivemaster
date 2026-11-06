@@ -60,6 +60,10 @@ import Alerta from "./components/ui/Alerta";
 import Avisos from "./components/ui/Avisos";
 import PedirCiudad from "./components/cliente/PedirCiudad";
 import { miTienda } from "./services/tiendaService";
+import { miTaller } from "./services/tallerService";
+import EstadoNegocio from "./components/EstadoNegocio";
+import Esqueleto from "./components/ui/Esqueleto";
+import { PAGINAS_SIN_APROBAR, estadoDelNegocio, paginaBloqueada } from "./utils/negocio";
 import { setIvaPct } from "./components/marketplace/iva";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
@@ -183,6 +187,9 @@ function App() {
   // false: la tienda propia de DriveMaster tiene ciudad, dirección y horario (si no, sus productos no se muestran)
   // true si la tienda (rol TIENDA) aún no completó ciudad, dirección y horario: no se muestra en el catálogo
   const [tiendaIncompleta, setTiendaIncompleta] = useState(false);
+  // Datos del taller o la tienda con sesión: su estado de aprobación decide qué secciones del panel se pueden abrir.
+  // clave: el correo de esa sesión, para no usar los de otra cuenta tras cerrar e iniciar sesión.
+  const [negocio, setNegocio] = useState({ clave: null, datos: null });
 
   // El diseño base es claro; solo se recuerda lo que el usuario elige con el toggle. La clave vieja "theme"
   // se guardaba en cada carga (no distingue una elección real), por eso se descarta.
@@ -349,14 +356,26 @@ function App() {
   };
   const esTienda = user?.rol === "TIENDA";
 
+  const esNegocio = user?.rol === "TIENDA" || user?.rol === "TALLER";
+  const negocioListo = esNegocio && negocio.clave === user?.correo;
+  const estadoNegocio = negocioListo ? estadoDelNegocio(negocio.datos) : null;
+  // Mientras la cuenta no está aprobada se vuelve a consultar al cambiar de sección: así la aprobación se nota sin recargar
+  const revisarDeNuevo = negocioListo && estadoNegocio && estadoNegocio !== "APROBADO" ? pagina : null;
+
   useEffect(() => {
-    if (user?.rol !== "TIENDA") return undefined;
+    if (!esNegocio) return undefined;
     let vivo = true;
-    miTienda(getToken())
-      .then((t) => { if (vivo) setTiendaIncompleta(t.datosCompletos === false); })
-      .catch(() => {});
+    const clave = user.correo;
+    (user.rol === "TIENDA" ? miTienda(getToken()) : miTaller(getToken()))
+      .then((n) => {
+        if (!vivo) return;
+        setNegocio({ clave, datos: n });
+        if (user.rol === "TIENDA") setTiendaIncompleta(n.datosCompletos === false);
+      })
+      // Sin datos no se bloquea nada: cada sección muestra su propio error si el backend no responde
+      .catch(() => { if (vivo) setNegocio({ clave, datos: null }); });
     return () => { vivo = false; };
-  }, [user?.rol]);
+  }, [esNegocio, user?.rol, user?.correo, revisarDeNuevo]);
 
   // Tras un pago aprobado se vacían del carrito solo los productos que se pagaron; el otro grupo se queda
   const vaciarCarritoPagado = () => {
@@ -591,6 +610,16 @@ function App() {
       <div style={{ padding: "40px" }}>Acceso no autorizado a esta sección.</div>
     );
 
+    // Taller o tienda sin aprobar: solo Mi taller / Mi tienda. Lo demás muestra la tarjeta de revisión y no se monta,
+    // así no se llaman sus endpoints. Hasta saber el estado, un esqueleto (nunca el error de una sección cerrada).
+    if (esNegocio && !PAGINAS_SIN_APROBAR[user.rol].includes(pagina)) {
+      if (!negocioListo) return <div className="app-negocio-espera"><Esqueleto variante="lista" cantidad={4} texto="Cargando tu panel…" /></div>;
+      if (paginaBloqueada(user.rol, pagina, estadoNegocio)) {
+        return <div className="app-negocio-revision"><EstadoNegocio negocio={negocio.datos} tipo={user.rol === "TALLER" ? "taller" : "tienda"}
+          onIrDatos={() => irA(PAGINAS_SIN_APROBAR[user.rol][0])} /></div>;
+      }
+    }
+
     // SUPERADMIN: panel de la plataforma. ADMIN: su resumen operativo. VENDEDOR: rol retirado, solo un aviso.
     if (pagina === "dashboard-main") {
       if (user?.rol === "SUPERADMIN") return <DashboardPlataforma token={token} onIr={(p, id) => irA(p, id)} />;
@@ -665,6 +694,7 @@ function App() {
           irA={irA}
           userRole={user?.rol}
           resumenTaller={resumenTaller}
+          estadoNegocio={estadoNegocio}
           abierto={sidebarAbierto}
           onCerrar={() => setSidebarAbierto(false)}
         />
@@ -687,6 +717,16 @@ function App() {
           <Alerta tono="aviso" className="app-aviso-tienda">
             Tus productos aún no se muestran en el catálogo: faltan la ciudad, la dirección o el horario de tu tienda.{" "}
             <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => irA("mi-tienda")}>Completar Mi tienda</button>
+          </Alerta>
+        )}
+
+        {esNegocio && estadoNegocio && estadoNegocio !== "APROBADO" && PAGINAS_SIN_APROBAR[user.rol].includes(pagina) && (
+          <Alerta tono="aviso" className="app-aviso-tienda">
+            {estadoNegocio === "PENDIENTE"
+              ? "Tu cuenta está en revisión. Aquí puedes corregir tus datos; las demás secciones se activan cuando la aprobemos."
+              : estadoNegocio === "RECHAZADO"
+                ? `Tu registro no fue aprobado${negocio.datos?.motivoRechazo ? `: ${negocio.datos.motivoRechazo}` : ""}. Corrige tus datos aquí y escríbenos para revisarlo de nuevo.`
+                : "Tu cuenta está desactivada. Comunícate con DriveMaster para reactivarla."}
           </Alerta>
         )}
 

@@ -86,3 +86,12 @@
     padding: var(--sp-lg);
   }
 }
+
+/* Secciones cerradas del panel mientras la cuenta no está aprobada (App): la tarjeta va con el margen de la página */
+.app-negocio-revision,
+.app-negocio-espera { padding: var(--ui-sp-5) var(--ui-sp-5) var(--ui-sp-7); }
+.estado-negocio__accion { margin-top: var(--ui-sp-4); }
+@media (max-width: 640px) {
+  .app-negocio-revision,
+  .app-negocio-espera { padding: var(--ui-sp-4); }
+}

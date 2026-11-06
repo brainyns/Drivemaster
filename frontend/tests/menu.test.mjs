@@ -92,3 +92,29 @@ test("Mi perfil: el taller va a Mi taller y la tienda a Mi tienda, nunca al avis
   assert.ok(app.includes('pagina === "mi-perfil" && perfilDelRol(user.rol).pagina !== "mi-perfil") setPagina(perfilDelRol(user.rol).pagina)'),
     "si llega directo a Mi perfil se le lleva a su página antes de pintar el aviso");
 });
+
+test("Negocio en revisión: solo Mi tienda / Mi taller; el resto gris, con candado y sin llamar a sus endpoints", async () => {
+  const { estadoDelNegocio, paginaBloqueada, AVISO_BLOQUEADO } = await import("../src/utils/negocio.js");
+  assert.equal(estadoDelNegocio(null), null, "sin datos todavía no se sabe");
+  assert.equal(estadoDelNegocio({}), "APROBADO", "los negocios anteriores al marketplace no tienen estado");
+  assert.equal(estadoDelNegocio({ estadoAprobacion: "PENDIENTE" }), "PENDIENTE");
+  assert.equal(estadoDelNegocio({ estadoAprobacion: "RECHAZADO" }), "RECHAZADO");
+  assert.equal(estadoDelNegocio({ estadoAprobacion: "APROBADO", activo: false }), "INACTIVO");
+  assert.equal(paginaBloqueada("TIENDA", "proveedores", "PENDIENTE"), true);
+  assert.equal(paginaBloqueada("TIENDA", "mi-tienda", "PENDIENTE"), false, "Mi tienda queda activa para corregir datos");
+  assert.equal(paginaBloqueada("TALLER", "taller-solicitudes", "RECHAZADO"), true);
+  assert.equal(paginaBloqueada("TALLER", "taller-mitaller", "PENDIENTE"), false);
+  assert.equal(paginaBloqueada("TIENDA", "proveedores", "APROBADO"), false);
+  assert.equal(paginaBloqueada("TIENDA", "proveedores", null), false, "sin saber el estado no se bloquea aquí: App espera");
+  assert.equal(paginaBloqueada("CLIENTE", "catalogo", "PENDIENTE"), false);
+  assert.equal(AVISO_BLOQUEADO, "Disponible cuando aprobemos tu cuenta");
+
+  assert.ok(sidebar.includes('aria-disabled="true"') && sidebar.includes('name="lock"') && sidebar.includes("{AVISO_BLOQUEADO}"));
+  assert.ok(app.includes("estadoNegocio={estadoNegocio}"), "el menú recibe el estado");
+  assert.ok(app.includes("paginaBloqueada(user.rol, pagina, estadoNegocio)") && app.includes("<EstadoNegocio negocio={negocio.datos}"),
+    "por URL, la tarjeta de revisión en vez de la sección (que no se monta)");
+  assert.ok(app.includes('<Esqueleto variante="lista" cantidad={4} texto="Cargando tu panel…" />'), "nunca el error rojo mientras se sabe el estado");
+  const panel = readFileSync(new URL("../src/pages/PanelTaller.jsx", import.meta.url), "utf8");
+  assert.ok(panel.includes('if (estado && estado !== "APROBADO")'), "el taller sin aprobar no pide la bandeja ni las órdenes");
+  assert.ok(panel.includes('negocio={seccion === "mitaller" ? null : taller}'), "Mi taller se abre aunque esté en revisión");
+});

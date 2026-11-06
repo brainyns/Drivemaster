@@ -2,6 +2,7 @@ import { useState } from "react";
 import Logo from "./Logo";
 import "../css/sidebar.css";
 import Icon from "./public/Icon";
+import { AVISO_BLOQUEADO, paginaBloqueada } from "../utils/negocio";
 
 const Icons = {
   dashboard:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
@@ -81,7 +82,7 @@ const MENU_ADMIN = ["dashboard-main", "pedidos-envios", "aprobaciones", "admin-t
 // Dentro de "Finanzas": las liquidaciones son solo del SUPERADMIN; los problemas de envío también los resuelve el ADMIN
 const SUB_SOLO_SUPERADMIN = ["liquidaciones"];
 
-function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar, resumenTaller }) {
+function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar, resumenTaller, estadoNegocio = null }) {
   const [abiertos, setAbiertos] = useState([]);
 
   const toggleAbierto = (key) => {
@@ -128,6 +129,20 @@ function Sidebar({ paginaActual, irA, userRole, abierto, onCerrar, resumenTaller
           const subItems = (item.subItems || []).filter((s) => !SUB_SOLO_SUPERADMIN.includes(s.key) || userRole === "SUPERADMIN");
           const tieneSubItems = subItems.length > 0;
           const estaAbierto   = abiertos.includes(item.key);
+          // Negocio en revisión o rechazado: el apartado se ve, gris y con candado, pero no se abre
+          if (paginaBloqueada(userRole, item.key, estadoNegocio)) {
+            return (
+              <div key={item.key} className="sidebar-bloqueado">
+                <button type="button" className="sidebar-item sidebar-item--bloqueado" aria-disabled="true"
+                  aria-describedby={`sidebar-aviso-${item.key}`} onClick={(e) => e.preventDefault()}>
+                  <span className="sidebar-item-icon">{Icons[item.icon]}</span>
+                  <span>{item.label}</span>
+                  <Icon name="lock" size={14} className="sidebar-candado" />
+                </button>
+                <span id={`sidebar-aviso-${item.key}`} role="tooltip" className="sidebar-tooltip">{AVISO_BLOQUEADO}</span>
+              </div>
+            );
+          }
           const activo =
             paginaActual === item.key ||
             (tieneSubItems && subItems.some(s => s.key === paginaActual));

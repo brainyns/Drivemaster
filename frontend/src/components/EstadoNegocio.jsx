@@ -1,3 +1,4 @@
+import { estadoDelNegocio } from "../utils/negocio";
 import "../css/estado-negocio.css";
 
 const TEXTOS = {
@@ -15,23 +16,14 @@ const TEXTOS = {
   },
 };
 
-/** El negocio puede operar cuando está aprobado y activo. */
-function puedeOperar(negocio) {
-  const aprobado = !negocio.estadoAprobacion || negocio.estadoAprobacion === "APROBADO";
-  return aprobado && negocio.activo !== false;
-}
-
 /**
  * Muestra el contenido (children) solo si el taller o la tienda puede operar.
  * Si está pendiente de aprobación, rechazado o desactivado, muestra el aviso.
  * Sin datos del negocio (aún cargando o sin perfil) muestra el contenido.
  */
-export default function EstadoNegocio({ negocio, tipo = "negocio", children }) {
-  if (!negocio || puedeOperar(negocio)) return children;
-
-  const estado = negocio?.estadoAprobacion === "RECHAZADO" ? "RECHAZADO"
-    : negocio?.estadoAprobacion === "PENDIENTE" ? "PENDIENTE"
-    : "INACTIVO";
+export default function EstadoNegocio({ negocio, tipo = "negocio", children, onIrDatos }) {
+  const estado = estadoDelNegocio(negocio);
+  if (!estado || estado === "APROBADO") return children ?? null;
   const { titulo, detalle } = TEXTOS[estado];
 
   return (
@@ -45,6 +37,12 @@ export default function EstadoNegocio({ negocio, tipo = "negocio", children }) {
         <p className="estado-negocio__motivo">
           <strong>Motivo:</strong> {negocio.motivoRechazo}
         </p>
+      )}
+
+      {onIrDatos && (
+        <button type="button" className="ui-btn ui-btn--secundario estado-negocio__accion" onClick={onIrDatos}>
+          {tipo === "taller" ? "Revisar los datos de mi taller" : "Revisar los datos de mi tienda"}
+        </button>
       )}
 
       {estado === "PENDIENTE" && (

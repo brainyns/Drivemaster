@@ -212,3 +212,25 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Negocio en revisión o rechazado ─────────────────────────────────────────
+   Los apartados que aún no puede usar se ven en gris, con candado, y no se abren. Al pasar el mouse o llegar con el
+   teclado se explica por qué. Solo Mi tienda / Mi taller queda activo. */
+.sidebar-bloqueado { position: relative; }
+.sidebar-item--bloqueado,
+.sidebar-item--bloqueado:hover {
+  color: var(--ui-muted); background: transparent; cursor: not-allowed; opacity: 0.55;
+}
+.sidebar-item--bloqueado:hover .sidebar-item-icon { opacity: 0.5; }
+.sidebar-candado { margin-left: auto; flex-shrink: 0; }
+.sidebar-tooltip {
+  position: absolute; left: 0.85rem; top: calc(100% - 2px); z-index: 5;
+  padding: 6px 10px; border-radius: var(--ui-r-md);
+  background: var(--ui-surface); color: var(--ui-text); border: 1px solid var(--ui-line);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  font-size: 0.78rem; font-weight: 500; white-space: nowrap;
+  opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.15s ease;
+}
+.sidebar-bloqueado:hover .sidebar-tooltip,
+.sidebar-item--bloqueado:focus-visible + .sidebar-tooltip { opacity: 1; visibility: visible; }
+@media (prefers-reduced-motion: reduce) { .sidebar-tooltip { transition: none; } }

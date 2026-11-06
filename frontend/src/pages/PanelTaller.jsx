@@ -18,6 +18,7 @@ import "../css/servicios.css";
 import "../css/panel-taller.css";
 import "../css/taller-panel.css";
 import { textoError } from "../utils/errores";
+import { estadoDelNegocio } from "../utils/negocio";
 
 /**
  * Contenedor del panel del taller: carga lo común (datos del taller, solicitudes y órdenes del
@@ -38,12 +39,17 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
   const cargar = useCallback(async () => {
     setError(null);
     const version = ++versionBandeja.current;
-    // Cada fuente falla por separado: una caída no deja el panel en blanco.
-    const [t, s, o] = await Promise.allSettled([
-      miTaller(token), bandejaSolicitudesTaller(token), ordenesDelTaller(token),
-    ]);
+    // Primero el taller: sin aprobar solo puede abrir Mi taller, y no se piden la bandeja ni las órdenes (no son suyas aún)
+    const [t] = await Promise.allSettled([miTaller(token)]);
     if (t.status === "fulfilled") setTaller(t.value);
     setErrorTaller(t.status === "rejected" ? textoError(t.reason, "No se pudieron cargar los datos del taller.") : null);
+    const estado = t.status === "fulfilled" ? estadoDelNegocio(t.value) : null;
+    if (estado && estado !== "APROBADO") {
+      setCargando(false);
+      return;
+    }
+    // Cada fuente falla por separado: una caída no deja el panel en blanco.
+    const [s, o] = await Promise.allSettled([bandejaSolicitudesTaller(token), ordenesDelTaller(token)]);
     if (version === versionBandeja.current) {
       if (s.status === "fulfilled") setSolicitudes(s.value || []);
       else setError(textoError(s.reason, "No se pudieron cargar las solicitudes."));
@@ -101,7 +107,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
   }, [seccion, cargando, anteriores.length, irA]);
 
   return (
-    <EstadoNegocio negocio={taller} tipo="taller">
+    <EstadoNegocio negocio={seccion === "mitaller" ? null : taller} tipo="taller" onIrDatos={() => irA("taller-mitaller")}>
       <div className="pt-root tp-root">
         {seccion === "inicio" && (
           <TallerInicio
