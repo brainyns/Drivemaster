@@ -3,6 +3,12 @@
 
 export const LIMITE_MS = 20000;
 
+// Las consultas (GET) esperan más: el backend de Render tarda hasta un minuto en despertar, y mientras tanto la pantalla
+// muestra su esqueleto, no un error. Las acciones que guardan conservan los 20 s.
+export const LIMITE_LECTURA_MS = 60000;
+
+const limitePorDefecto = (options) => (String(options?.method || "GET").toUpperCase() === "GET" ? LIMITE_LECTURA_MS : LIMITE_MS);
+
 export const MENSAJE_SIN_CONEXION = "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo";
 
 /** Error de red o de tiempo: el servidor no respondió. Su message es MENSAJE_SIN_CONEXION. */
@@ -17,10 +23,10 @@ export class ErrorConexion extends Error {
 export const esErrorConexion = (e) => e?.name === "ErrorConexion" || e?.message === MENSAJE_SIN_CONEXION;
 
 /**
- * fetch que se rinde a los `limite` ms. Si quien llama pasa su propio signal y aborta, se respeta su AbortError (no es
+ * fetch que se rinde a los `limite` ms (por defecto, 60 s una consulta y 20 s lo demás). Si quien llama pasa su propio signal y aborta, se respeta su AbortError (no es
  * un problema de conexión). Un fallo de red (TypeError de fetch) o el tiempo vencido lanzan ErrorConexion.
  */
-export async function fetchConLimite(url, options = {}, limite = LIMITE_MS) {
+export async function fetchConLimite(url, options = {}, limite = limitePorDefecto(options)) {
   const control = new AbortController();
   let vencido = false;
   const reloj = setTimeout(() => { vencido = true; control.abort(); }, limite);

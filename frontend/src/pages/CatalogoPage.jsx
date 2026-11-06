@@ -13,6 +13,7 @@ import ProductList from "../components/public/ProductList";
 import ProductDetail from "../components/public/ProductDetail";
 import Footer from "../components/public/Footer";
 import Icon from "../components/public/Icon";
+import Esqueleto from "../components/ui/Esqueleto";
 import "../css/catalog.css";
 import { textoError } from "../utils/errores";
 
@@ -343,10 +344,7 @@ export default function CatalogoPage({
 
                 <div className="dm-cat-results">
                   {cargando ? (
-                    <div className="dm-empty">
-                      <Icon name="box" size={35} />
-                      <h3>Cargando catálogo...</h3>
-                    </div>
+                    <Esqueleto variante="tarjetas" cantidad={8} texto="Cargando el catálogo…" />
                   ) : error ? (
                     <div className="dm-empty">
                       <Icon name="shield" size={35} />

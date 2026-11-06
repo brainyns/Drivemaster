@@ -119,8 +119,9 @@ test("Categorías: con tilde en la interfaz, sin cambiar el valor guardado ni el
 });
 
 test("Conexión: a los 20 s o sin red, un error con mensaje claro; una cancelación propia no cuenta como falta de conexión", async () => {
-  const { fetchConLimite, ErrorConexion, MENSAJE_SIN_CONEXION, LIMITE_MS, esErrorConexion } = await import("../src/services/conexion.js");
+  const { fetchConLimite, ErrorConexion, MENSAJE_SIN_CONEXION, LIMITE_MS, LIMITE_LECTURA_MS, esErrorConexion } = await import("../src/services/conexion.js");
   assert.equal(LIMITE_MS, 20000);
+  assert.equal(LIMITE_LECTURA_MS, 60000, "una consulta espera a que Render despierte antes de dar error");
   const original = globalThis.fetch;
   try {
     // Servidor que nunca responde: se rinde al vencer el límite
@@ -261,4 +262,21 @@ test("el asistente se oculta con cualquier diálogo abierto, y todos los diálog
     .filter((a) => /role="(alert)?dialog"/.test(leer(`../src/${a}`)));
   assert.ok(dialogos.length >= 6, dialogos.join());
   for (const a of dialogos) assert.ok(leer(`../src/${a}`).includes('aria-modal="true"'), a);
+});
+
+test("Esqueleto: tabla, indicadores y tarjetas con brillo suave, quieto con movimiento reducido y aviso si tarda", () => {
+  const e = leer("../src/components/ui/Esqueleto.jsx");
+  for (const v of ['variante === "tabla"', 'variante === "indicadores"', 'variante === "tarjetas"']) assert.ok(e.includes(v), v);
+  assert.ok(e.includes("ESPERA_LARGA_MS") && e.includes("el servidor se está despertando"), "explica la espera, no muestra un error");
+  const css = leer("../src/css/ui.css");
+  assert.match(css, /\.ui-skeleton \{[^}]*animation: ui-brillo/);
+  assert.match(css, /prefers-reduced-motion: reduce\) \{\s*\.ui-skeleton \{ animation: none; \}/);
+  assert.ok(!/#000\b|black/.test(css.slice(css.indexOf(".ui-skeleton {"), css.indexOf(".ui-esqueleto__espera"))), "sin negro");
+  // Dónde se usa: tarjetas del catálogo, tablas de los paneles y cifras de los dashboards
+  assert.ok(leer("../src/pages/CatalogoPage.jsx").includes('<Esqueleto variante="tarjetas"'));
+  for (const p of ["Productos", "PedidosTienda", "Compras", "Proveedores", "Liquidaciones", "Movimientos"]) {
+    assert.ok(leer(`../src/pages/${p}.jsx`).includes('<Esqueleto variante="tabla"'), p);
+  }
+  assert.ok(leer("../src/pages/DashboardPlataforma.jsx").includes('<Esqueleto variante="indicadores"'));
+  assert.ok(leer("../src/pages/taller/TallerInicio.jsx").includes('<Esqueleto variante="indicadores"'));
 });

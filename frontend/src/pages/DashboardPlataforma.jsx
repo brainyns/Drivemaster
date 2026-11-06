@@ -136,10 +136,8 @@ export default function DashboardPlataforma({ token, onIr }) {
           <Alerta onReintentar={cargar} reintentando={cargando}>{error}</Alerta>
         ) : (
           <>
-            <div className="ui-indicadores pp-seccion" aria-hidden="true">
-              {[0, 1, 2, 3].map((i) => <span key={i} className="ui-skeleton pp-esqueleto-indicador" />)}
-            </div>
-            <Esqueleto variante="lista" cantidad={3} texto="Cargando el panel…" />
+            <div className="pp-seccion"><Esqueleto variante="indicadores" cantidad={4} texto="Cargando el panel…" /></div>
+            <Esqueleto variante="tabla" cantidad={4} columnas={4} texto="Cargando las tablas del panel…" conAviso={false} />
           </>
         )}
       </div>

@@ -334,7 +334,7 @@ export default function PedidosTienda({ param, irA }) {
     return (
       <div className="ss-panel ss-panel--tienda pdt-root">
         <EncabezadoPagina titulo="Pedidos" descripcion="Pedidos de clientes y talleres a tu tienda." />
-        <Esqueleto variante="lista" cantidad={4} texto="Cargando pedidos…" />
+        <Esqueleto variante="tabla" cantidad={5} columnas={5} texto="Cargando pedidos…" />
       </div>
     );
   }
@@ -619,7 +619,7 @@ export default function PedidosTienda({ param, irA }) {
       </div>
 
       {!datos && !error ? (
-        <Esqueleto variante="lista" cantidad={4} texto="Cargando pedidos…" />
+        <Esqueleto variante="tabla" cantidad={5} columnas={5} texto="Cargando pedidos…" />
       ) : enPagina.length === 0 ? (
         q || fechas.desde || fechas.hasta ? (
           <EstadoVacio icono="search" titulo="Nada coincide con tu búsqueda"

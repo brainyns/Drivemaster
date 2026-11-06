@@ -41,7 +41,7 @@ export default function ComisionGanada({ token, onVerReporte }) {
         <FiltroFechas id="pp-comision-fechas" etiqueta="Periodo de la comisión" valor={periodo} onCambiar={setPeriodo} />
       </div>
       {cargando ? (
-        <Esqueleto variante="lista" cantidad={1} texto="Cargando la comisión…" />
+        <Esqueleto variante="indicadores" cantidad={1} texto="Cargando la comisión…" />
       ) : estado.error ? (
         <p className="pp-comision__error" role="alert">{estado.error}</p>
       ) : (

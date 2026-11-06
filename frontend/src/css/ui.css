@@ -829,11 +829,19 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   display: block;
   min-height: 1em;
   border-radius: var(--ui-r-sm);
-  background: var(--ui-surface-2);
-  animation: ui-pulso 1.4s ease-in-out infinite;
+  /* Bloque gris con un brillo suave que lo recorre (sin animación con prefers-reduced-motion: ver abajo) */
+  background-color: var(--ui-surface-2);
+  background-image: linear-gradient(100deg, transparent 30%,
+    color-mix(in srgb, var(--ui-surface) 70%, transparent) 50%, transparent 70%);
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: ui-brillo 1.6s ease-in-out infinite;
 }
 
-@keyframes ui-pulso { 50% { opacity: 0.55; } }
+@keyframes ui-brillo {
+  from { background-position: 130% 0; }
+  to { background-position: -30% 0; }
+}
 
 .ui-esqueleto { display: grid; gap: 12px; }
 .ui-esqueleto__fila { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--ui-line-soft); border-radius: var(--ui-r-xl); }
@@ -847,6 +855,26 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
 .ui-esqueleto__campo { display: grid; gap: 8px; }
 .ui-esqueleto__etiqueta { width: 120px; height: 12px; }
 .ui-esqueleto__control { height: 46px; border-radius: var(--ui-r-lg); }
+
+/* Tabla: una fila de cabecera y filas falsas con sus columnas; en celular, cada fila como una tarjeta */
+.ui-esqueleto--tabla { display: block; }
+.ui-esqueleto__tabla { border: 1px solid var(--ui-line-soft); border-radius: var(--ui-r-xl); overflow: hidden; }
+.ui-esqueleto__tabla-fila {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 16px;
+  padding: 16px; border-top: 1px solid var(--ui-line-soft);
+}
+.ui-esqueleto__tabla-fila:first-child { border-top: 0; }
+.ui-esqueleto__tabla-fila--cabecera { background: var(--ui-surface-2); }
+.ui-esqueleto__tabla-fila--cabecera .ui-esqueleto__celda { width: 55%; height: 10px; }
+.ui-esqueleto__celda { height: 14px; width: 80%; }
+.ui-esqueleto__celda:first-child { width: 90%; }
+
+/* Indicadores: las tarjetas de cifras de un dashboard */
+.ui-esqueleto--indicadores { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.ui-esqueleto__indicador { display: grid; gap: 10px; padding: 16px 18px; border: 1px solid var(--ui-line-soft); border-radius: var(--ui-r-xl); }
+.ui-esqueleto__cifra { width: 60%; height: 28px; }
+
+.ui-esqueleto__espera { margin: 12px 0 0; font-size: 0.875rem; color: var(--ui-muted); }
 
 /* ── Barra inferior con la acción principal (BarraAccionMovil) ─────────── */
 .ui-barra-movil { display: none; }
@@ -1404,6 +1432,11 @@ label.ui-vehiculo:hover { border-color: var(--ui-muted); }
   .ui-page-header .ui-page-header__titulo { font-size: 1.6rem; }
   .ui-vehiculos,
   .ui-esqueleto--tarjetas { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  /* Como las tablas en celular (ui-table--tarjetas): cada fila es una tarjeta y la cabecera no se ve */
+  .ui-esqueleto__tabla { border: 0; display: grid; gap: 12px; }
+  .ui-esqueleto__tabla-fila { grid-auto-flow: row; gap: 10px; border: 1px solid var(--ui-line-soft); border-radius: var(--ui-r-xl); }
+  .ui-esqueleto__tabla-fila:first-child { border-top: 1px solid var(--ui-line-soft); }
+  .ui-esqueleto__tabla-fila--cabecera { display: none; }
 
   /* Pasos: las columnas son angostas y el paso actual ya se nombra arriba; los nombres quedan
      para lectores de pantalla */

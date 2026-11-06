@@ -213,7 +213,7 @@ function InventarioTienda({ onNuevo, onEditar, token }) {
     return (
       <div className="ss-panel--tienda prt-root">
         <EncabezadoPagina titulo="Productos" descripcion="Tu catálogo e inventario." />
-        <Esqueleto variante="lista" cantidad={4} texto="Cargando productos…" />
+        <Esqueleto variante="tabla" cantidad={5} columnas={5} texto="Cargando productos…" />
       </div>
     );
   }
@@ -355,7 +355,7 @@ function ProductosGenerales({ onNuevo, onEditar, token }) {
     return (
       <div className="ss-panel--tienda prt-root">
         <EncabezadoPagina titulo="Productos" descripcion="Tu catálogo e inventario." />
-        <Esqueleto variante="lista" cantidad={4} texto="Cargando productos…" />
+        <Esqueleto variante="tabla" cantidad={5} columnas={5} texto="Cargando productos…" />
       </div>
     );
   }

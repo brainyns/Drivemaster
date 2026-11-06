@@ -138,10 +138,8 @@ export default function TallerInicio({ taller, solicitudes, anteriores, cargando
 
       {cargando ? (
         <>
-          <div className="ui-indicadores ini-indicadores" aria-hidden="true">
-            {[0, 1, 2, 3].map((i) => <span key={i} className="ui-skeleton ini-esqueleto" />)}
-          </div>
-          <Esqueleto variante="lista" cantidad={3} texto="Cargando el resumen del día…" />
+          <div className="ini-indicadores"><Esqueleto variante="indicadores" cantidad={4} texto="Cargando el resumen del día…" /></div>
+          <Esqueleto variante="lista" cantidad={3} texto="Cargando las solicitudes…" conAviso={false} />
         </>
       ) : sinActividad && !error ? (
         <EstadoVacio icono="tool" titulo="Aún no tienes solicitudes"

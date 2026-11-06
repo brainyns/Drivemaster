@@ -1,5 +1,5 @@
 import { apiFetch } from "./http";
-import { fetchConLimite } from "./conexion";
+import { LIMITE_LECTURA_MS, fetchConLimite } from "./conexion";
 
 const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api`;
 
@@ -82,7 +82,7 @@ export async function login(correo, password) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ correo: normalizarCorreo(correo), password }),
-  });
+  }, LIMITE_LECTURA_MS); // suele ser la primera petición: espera a que Render despierte
   const data = await handleResponse(res);
   guardarSesion(data);
   return data;
@@ -93,7 +93,7 @@ export async function loginInterno(correo, password) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ correo: normalizarCorreo(correo), password }),
-  });
+  }, LIMITE_LECTURA_MS);
   const data = await handleResponse(res);
   guardarSesion(data);
   return data;
@@ -104,7 +104,7 @@ export async function googleLogin(idToken) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken }),
-  });
+  }, LIMITE_LECTURA_MS);
   const data = await handleResponse(res);
   guardarSesion(data);
   return data;

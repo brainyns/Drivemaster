@@ -335,7 +335,7 @@ export default function Liquidaciones({ vistaInicial = null }) {
       {errorCarga && <Alerta className="pp-bloque-sep" onReintentar={cargar} reintentando={cargando}>{errorCarga}</Alerta>}
 
       {cargando && filas.length === 0 ? (
-        <Esqueleto variante="lista" cantidad={4} texto="Cargando…" />
+        <Esqueleto variante="tabla" cantidad={5} columnas={5} texto="Cargando…" />
       ) : listaVacia ? (
         <EstadoVacio icono={esRepartos ? "file" : "refresh"} titulo="No hay registros en esta lista"
           texto={esRepartos ? "Prueba con otro estado u otras fechas: aquí aparecen los pagos a talleres y tiendas según avanzan las órdenes."

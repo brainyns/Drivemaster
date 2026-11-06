@@ -84,7 +84,7 @@ function Compras({ onNueva, onDetalle, token }) {
     return (
       <div className="ss-panel--tienda cmp-root">
         <EncabezadoPagina titulo="Compras" descripcion="Compras a tus proveedores." />
-        <Esqueleto variante="lista" cantidad={4} texto="Cargando compras…" />
+        <Esqueleto variante="tabla" cantidad={5} columnas={5} texto="Cargando compras…" />
       </div>
     );
   }

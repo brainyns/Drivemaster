@@ -276,7 +276,7 @@ export default function TallerMovimientos({ irA, piezaInicial = null }) {
       )}
 
       {!datos && !error ? (
-        <Esqueleto variante="lista" cantidad={4} texto="Cargando movimientos…" />
+        <Esqueleto variante="tabla" cantidad={5} columnas={5} texto="Cargando movimientos…" />
       ) : (
         <>
           <section aria-labelledby="mov-resumen" className="mov-alerta">

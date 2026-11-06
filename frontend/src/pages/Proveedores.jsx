@@ -94,7 +94,7 @@ export default function Proveedores({ onNuevo, onEditar, onDetalle, token }) {
     return (
       <div className="ss-panel--tienda prv-root">
         <EncabezadoPagina titulo="Proveedores" descripcion="A quién le compras para surtir tu inventario." />
-        <Esqueleto variante="lista" cantidad={4} texto="Cargando proveedores…" />
+        <Esqueleto variante="tabla" cantidad={5} columnas={5} texto="Cargando proveedores…" />
       </div>
     );
   }
