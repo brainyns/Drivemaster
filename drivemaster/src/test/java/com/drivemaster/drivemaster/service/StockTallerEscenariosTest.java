@@ -469,9 +469,9 @@ class StockTallerEscenariosTest {
         elTallerCompraYRecibe(1);
         RepartoPago lineaTienda = lineas.stream().filter(r -> RepartoPago.TIENDA.equals(r.getBeneficiarioTipo())).findFirst().orElseThrow();
         RepartoPago comisionCompra = lineas.stream().filter(r -> RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())).findFirst().orElseThrow();
-        assertEquals(8_000, lineaTienda.getComisionRetenida(), "10 % de lo que pagó el taller: 80.000 sin IVA");
-        assertEquals(87_200, lineaTienda.getMonto(), "95.200 con IVA menos la comisión");
-        assertEquals(8_000, comisionCompra.getMonto());
+        assertEquals(9_520, lineaTienda.getComisionRetenida(), "10 % de lo que pagó el taller: 80.000 + IVA 15.200");
+        assertEquals(85_680, lineaTienda.getMonto(), "95.200 con IVA menos la comisión");
+        assertEquals(9_520, comisionCompra.getMonto());
 
         PagoEntity venta = elClientePaga(itemTaller(1, 135_000), manoDeObra(50_000));
 
@@ -479,16 +479,16 @@ class StockTallerEscenariosTest {
         RepartoPago comisionVenta = lineas.stream().filter(r -> venta.getId().equals(r.getPagoId())
                 && RepartoPago.PLATAFORMA.equals(r.getBeneficiarioTipo())).findFirst().orElseThrow();
         assertNotEquals(comisionCompra.getPagoId(), comisionVenta.getPagoId());
-        assertEquals(185_000, lineaVenta.getComisionBase());
-        assertEquals(18_500, lineaVenta.getComisionRetenida());
-        assertEquals(18_500, comisionVenta.getMonto());
+        assertEquals(220_150, lineaVenta.getComisionBase());
+        assertEquals(22_015, lineaVenta.getComisionRetenida());
+        assertEquals(22_015, comisionVenta.getMonto());
         assertEquals(RepartoPago.RETENIDA, comisionVenta.getEstado());
         assertEquals(220_150, lineaVenta.getMontoBruto(), "(135.000 + 50.000) + 19 %");
-        assertEquals(201_650, lineaVenta.getMonto());
+        assertEquals(198_135, lineaVenta.getMonto());
         // Las piezas de la línea, aparte de la mano de obra
         assertEquals(135_000, lineaVenta.getPiezasBase());
         assertEquals(160_650, lineaVenta.getPiezasBruto());
-        assertEquals(147_150, lineaVenta.getPiezasNeto());
+        assertEquals(144_585, lineaVenta.getPiezasNeto(), "160.650 − 16.065");
     }
 
     @Test
@@ -500,7 +500,7 @@ class StockTallerEscenariosTest {
 
         RepartoPago linea = lineaTaller(venta);
         assertEquals(220_150, linea.getMonto());
-        assertEquals(18_500, linea.getComisionCalculada());
+        assertEquals(22_015, linea.getComisionCalculada());
         assertEquals(0, linea.getComisionRetenida());
         assertEquals(160_650, linea.getPiezasNeto());
     }

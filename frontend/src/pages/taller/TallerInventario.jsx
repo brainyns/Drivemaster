@@ -123,7 +123,7 @@ function PedidoEnCamino({ p, token, onInventario, onAviso }) {
  * para que el cliente no pague más que en la tienda. El backend también lo valida. Las cifras se ven mientras se escribe
  * y se guardan al confirmar. Vender en pérdida se avisa, pero no se bloquea: es decisión del taller.
  */
-function EditorPrecio({ pieza, comisionPct, token, onGuardada }) {
+function EditorPrecio({ pieza, comisionPct, ivaPct, token, onGuardada }) {
   const [precio, setPrecio] = useState(pieza.precioVenta ? Math.round(pieza.precioVenta) : "");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -131,7 +131,7 @@ function EditorPrecio({ pieza, comisionPct, token, onGuardada }) {
   const tope = pieza.tope;
   const supera = tope != null && numero > tope;
   const cambio = numero > 0 && numero !== Math.round(pieza.precioVenta || 0);
-  const vista = cifrasPieza(numero, pieza.costoUnitario, comisionPct);
+  const vista = cifrasPieza(numero, pieza.costoUnitario, comisionPct, ivaPct);
 
   const guardar = async () => {
     setGuardando(true);
@@ -300,7 +300,7 @@ function Pieza({ pieza, datos, token, onGuardada, onInventario, irA }) {
       {abierta && (
         <div className="iv-pieza__detalle" id={`iv-detalle-${pieza.id}`}>
           <div className="iv-pieza__ajustes">
-            <EditorPrecio pieza={pieza} comisionPct={datos.comisionPct}
+            <EditorPrecio pieza={pieza} comisionPct={datos.comisionPct} ivaPct={datos.ivaPct}
               token={token} onGuardada={onGuardada} />
             <EditorMinimo pieza={pieza} token={token} onInventario={onInventario} />
             {irA && (
@@ -439,7 +439,7 @@ export default function TallerInventario({ onComprar, irA }) {
             <div className="ui-card__header">
               <h2 id="iv-piezas" className="ui-card__titulo">Piezas</h2>
               <span className="ui-card__sub">
-                Precios antes de IVA. La ganancia resta la comisión del {porcentaje(d.comisionPct)}{d.comisionSeDescuenta ? "." : ", que todavía no se descuenta."}
+                Precios antes de IVA. La ganancia resta la comisión del {porcentaje(d.comisionPct)} sobre el precio con IVA{d.comisionSeDescuenta ? "." : ", que todavía no se descuenta."}
               </span>
             </div>
             {bajas.length > 0 && (

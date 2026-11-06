@@ -199,8 +199,8 @@ class InventarioTallerServiceTest {
         assertEquals(100_000, p.costoUnitario());
         assertEquals(50.0, p.recargoPct());
         assertEquals(33.3, p.margenPct());
-        assertEquals(15_000, p.comision());
-        assertEquals(35_000, p.gananciaDespuesComision());
+        assertEquals(17_850, p.comision(), "10 % de 150.000 + 19 %");
+        assertEquals(32_150, p.gananciaDespuesComision());
         assertFalse(p.enPerdida());
     }
 
@@ -212,7 +212,7 @@ class InventarioTallerServiceTest {
         InventarioTallerDTO.Pieza p = service.cambiarPrecio(CORREO, PIEZA, 105_000.0);
 
         assertEquals(105_000, p.precioVenta());
-        assertEquals(-5_500, p.gananciaDespuesComision());
+        assertEquals(-7_495, p.gananciaDespuesComision(), "105.000 − 100.000 − 12.495");
         assertTrue(p.enPerdida());
     }
 
@@ -276,7 +276,7 @@ class InventarioTallerServiceTest {
         assertTrue(p.topado());
         assertEquals(140_000, p.precioVenta());
         assertEquals(110_000, p.precioCobrado());
-        assertEquals(110_000 - 100_000 - 11_000, p.gananciaDespuesComision());
+        assertEquals(110_000 - 100_000 - 13_090, p.gananciaDespuesComision());
         assertTrue(p.perdidaConTope(), "Con el tope ya no cubre costo y comisión");
     }
 

@@ -5,7 +5,7 @@ import java.util.List;
 
 /**
  * Lo que ve un negocio de su dinero: venta, comisión de DriveMaster y lo que recibe. Va sin notas internas, motivos de
- * fallo ni datos de cuentas. Venta es lo que le corresponde con IVA; la comisión sale de comisionBase, sin IVA.
+ * fallo ni datos de cuentas. Venta es lo que le corresponde con IVA; la comisión sale de comisionBase (precio con IVA, sin envío; sin IVA en los pagos anteriores al cambio).
  */
 public final class DesgloseLiquidacionDTO {
 

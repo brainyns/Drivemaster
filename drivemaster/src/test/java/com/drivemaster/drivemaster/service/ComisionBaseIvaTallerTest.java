@@ -9,8 +9,9 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Base de la comisión con el IVA por taller: siempre el precio sin IVA, sea cual sea el IVA del taller. Diagnóstico +
- * cotización suman la comisión del subtotal completo (el anticipo no se cuenta dos veces).
+ * Base de la comisión con el IVA por taller: siempre el precio con IVA (el que tenga el taller, 0 % si no es
+ * responsable). La cotización descuenta el adelanto con su IVA, que ya pagó comisión en el diagnóstico. Como la base ya
+ * no deja ver el IVA, cada línea lo guarda aparte (ivaIncluido): aquí se prueba que da lo mismo que antes.
  */
 class ComisionBaseIvaTallerTest {
 
@@ -22,16 +23,17 @@ class ComisionBaseIvaTallerTest {
     }
 
     @Test
-    void elDiagnosticoCobraSobreLaBaseResponsableONo() {
-        assertEquals(new BigDecimal("50000"), ComisionPlataforma.baseDiagnostico(diagnostico(50_000, 19), 59_500.0, IVA));
-        assertEquals(new BigDecimal("50000"), ComisionPlataforma.baseDiagnostico(diagnostico(50_000, 0), 50_000.0, IVA));
+    void elDiagnosticoCobraSobreLaTarifaConSuIvaResponsableONo() {
+        assertEquals(new BigDecimal("59500"), ComisionPlataforma.baseDiagnostico(59_500.0));
+        assertEquals(new BigDecimal("50000"), ComisionPlataforma.baseDiagnostico(50_000.0));
     }
 
     @Test
-    void elDiagnosticoAnteriorTraiaElIvaIncluidoYSeLeQuita() {
+    void elIvaDelDiagnosticoSaleDeSuBaseCongeladaODelIvaGlobalEnLosAnteriores() {
+        assertEquals(new BigDecimal("9500"), ComisionPlataforma.ivaDiagnostico(diagnostico(50_000, 19), 59_500.0, IVA));
+        assertEquals(BigDecimal.ZERO, ComisionPlataforma.ivaDiagnostico(diagnostico(50_000, 0), 50_000.0, IVA));
         OrdenServicio anterior = OrdenServicio.builder().tarifaDiagnostico(59_500.0).build();
-
-        assertEquals(new BigDecimal("50000"), ComisionPlataforma.baseDiagnostico(anterior, 59_500.0, IVA));
+        assertEquals(new BigDecimal("9500"), ComisionPlataforma.ivaDiagnostico(anterior, 59_500.0, IVA));
     }
 
     private static Cotizacion cotizacion(double repuestos, double manoObra, double pctMano, double anticipo) {
@@ -45,38 +47,42 @@ class ComisionBaseIvaTallerTest {
     }
 
     @Test
-    void laCotizacionDeUnTallerNoResponsableCobraSobreElSubtotal() {
+    void laCotizacionDeUnTallerNoResponsableCobraSobreLoQuePagaElCliente() {
         Cotizacion c = cotizacion(100_000, 80_000, 0, 0);
 
-        // Pagado 199.000 (repuestos con IVA + mano de obra sin IVA): quitarle un 19 % a todo daría 167.227
-        assertEquals(new BigDecimal("180000"), ComisionPlataforma.baseCotizacion(c, new OrdenServicio(), c.getTotalAPagar(), IVA));
+        // 100.000 + 19.000 de IVA de los repuestos + 80.000 de mano de obra sin IVA
+        assertEquals(new BigDecimal("199000"), ComisionPlataforma.baseCotizacion(c, c.getTotalAPagar()));
     }
 
     @Test
-    void laCotizacionDescuentaLaBaseDelDiagnosticoYaPagado() {
-        // Responsable: diagnóstico 50.000 + 19 % = 59.500 pagado antes
+    void laCotizacionDescuentaElAdelantoConSuIva() {
+        // Responsable: 214.200 con IVA − 59.500 del diagnóstico (50.000 + 19 %) pagado antes
         Cotizacion responsable = cotizacion(100_000, 80_000, 19, 59_500);
-        assertEquals(new BigDecimal("130000"),
-                ComisionPlataforma.baseCotizacion(responsable, diagnostico(50_000, 19), responsable.getTotalAPagar(), IVA));
+        assertEquals(new BigDecimal("154700"), ComisionPlataforma.baseCotizacion(responsable, responsable.getTotalAPagar()));
+        assertEquals(responsable.getTotalAPagar(), ComisionPlataforma.baseCotizacion(responsable, 0.0).doubleValue(),
+                "la base es lo que paga el cliente en este pago");
 
-        // No responsable: diagnóstico 50.000 sin IVA
+        // No responsable: 199.000 − 50.000 del diagnóstico sin IVA
         Cotizacion noResponsable = cotizacion(100_000, 80_000, 0, 50_000);
-        assertEquals(new BigDecimal("130000"),
-                ComisionPlataforma.baseCotizacion(noResponsable, diagnostico(50_000, 0), noResponsable.getTotalAPagar(), IVA));
+        assertEquals(new BigDecimal("149000"), ComisionPlataforma.baseCotizacion(noResponsable, noResponsable.getTotalAPagar()));
     }
 
     @Test
-    void conUnaSolaTarifaDaLoMismoQueAntes() {
-        Cotizacion c = cotizacion(100_000, 80_000, 19, 0);
-        BigDecimal antes = ComisionPlataforma.baseSinIva(c.getTotalAPagar(), IVA);
+    void elIvaDeLaLineaDelTallerEsElDeAntes() {
+        // Línea del taller: 80.000 + 15.200 − 59.500 = 35.700. Antes su base era 30.000 (130.000 − 100.000 de la tienda)
+        Cotizacion responsable = cotizacion(100_000, 80_000, 19, 59_500);
+        assertEquals(new BigDecimal("5700"),
+                ComisionPlataforma.ivaCotizacionTaller(responsable, diagnostico(50_000, 19), new BigDecimal("19000"), IVA));
 
-        assertEquals(antes, ComisionPlataforma.baseCotizacion(c, new OrdenServicio(), c.getTotalAPagar(), IVA));
+        Cotizacion noResponsable = cotizacion(100_000, 80_000, 0, 50_000);
+        assertEquals(BigDecimal.ZERO,
+                ComisionPlataforma.ivaCotizacionTaller(noResponsable, diagnostico(50_000, 0), new BigDecimal("19000"), IVA));
     }
 
     @Test
-    void lasCotizacionesAnterioresSiguenConSuIvaPctUnico() {
-        Cotizacion anterior = Cotizacion.builder().ivaPct(19.0).subtotal(180_000.0).totalAPagar(214_200.0).build();
+    void lasCotizacionesSinTotalesGuardadosCobranSobreLoPagado() {
+        Cotizacion anterior = Cotizacion.builder().ivaPct(19.0).totalAPagar(214_200.0).build();
 
-        assertEquals(new BigDecimal("180000"), ComisionPlataforma.baseCotizacion(anterior, null, 214_200.0, IVA));
+        assertEquals(new BigDecimal("214200"), ComisionPlataforma.baseCotizacion(anterior, 214_200.0));
     }
 }

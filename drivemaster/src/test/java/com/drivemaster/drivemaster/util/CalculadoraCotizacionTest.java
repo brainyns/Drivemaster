@@ -82,10 +82,10 @@ class CalculadoraCotizacionTest {
     }
 
     @Test
-    void comisionInformativaSobreElSubtotalSinIva() {
+    void comisionInformativaSobreElTotalConIvaMenosElAnticipo() {
         CalculadoraCotizacion.Totales t = CalculadoraCotizacion.calcular(
                 List.of(repuesto(1, 100_000), manoObraFija(50_000)), 19, 19, 0, 10);
-        assertEquals(15_000, t.comision());
+        assertEquals(17_850, t.comision(), "10 % de 178.500");
         // La comisión no cambia lo que paga el cliente
         assertEquals(t.total(), t.totalAPagar());
     }
@@ -107,7 +107,7 @@ class CalculadoraCotizacionTest {
         assertEquals(0, t.ivaManoObra());
         assertEquals(17_100, t.iva());
         assertEquals(187_100, t.total());
-        assertEquals(17_000, t.comision(), "la comisión sigue sobre el subtotal sin IVA");
+        assertEquals(18_710, t.comision(), "sobre lo que paga el cliente: 187.100");
     }
 
     @Test

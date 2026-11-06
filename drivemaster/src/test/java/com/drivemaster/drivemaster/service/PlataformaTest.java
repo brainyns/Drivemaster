@@ -42,12 +42,13 @@ class PlataformaTest {
     // ─── Comisión ────────────────────────────────────────────────────────────
 
     @Test
-    void laBaseSeCalculaAntesDeIvaYLaComisionEnPesosEnteros() {
-        assertEquals(new BigDecimal("50000"), ComisionPlataforma.baseSinIva(59_500.0, 19));
-        assertEquals(new BigDecimal("5000"), ComisionPlataforma.monto(new BigDecimal("50000"), 10));
-        // 50.000 con IVA 19% -> 42.017 de base -> 10% = 4.202 (redondeo a pesos)
-        assertEquals(new BigDecimal("42017"), ComisionPlataforma.baseSinIva(50_000.0, 19));
-        assertEquals(new BigDecimal("4202"), ComisionPlataforma.monto(new BigDecimal("42017"), 10));
+    void laBaseLlevaElIvaYLaComisionSeRedondeaAPesosEnteros() {
+        assertEquals(new BigDecimal("59500"), ComisionPlataforma.baseConIva(50_000.0, 9_500.0));
+        assertEquals(new BigDecimal("5950"), ComisionPlataforma.monto(new BigDecimal("59500"), 10));
+        // 19.500 + 3.705 = 23.205 -> 10 % = 2.320,5 -> 2.321 (mitad hacia arriba)
+        assertEquals(new BigDecimal("23205"), ComisionPlataforma.baseConIva(19_500.0, 3_705.0));
+        assertEquals(new BigDecimal("2321"), ComisionPlataforma.monto(new BigDecimal("23205"), 10));
+        assertEquals(new BigDecimal("50000"), ComisionPlataforma.baseConIva(50_000.0, null), "sin IVA (no responsable), el precio tal cual");
     }
 
     @Test

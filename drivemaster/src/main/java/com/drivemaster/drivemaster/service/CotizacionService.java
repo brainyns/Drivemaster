@@ -215,11 +215,13 @@ public class CotizacionService {
         dto.setDiagnosticoPagado(tarifaDiagnosticoDe(c));
         double manoObra = c.getSubtotalManoObra() != null ? c.getSubtotalManoObra() : 0;
         double ivaManoObra = c.getIvaManoObra() != null ? c.getIvaManoObra() : Math.round(manoObra * c.pctManoObra() / 100.0);
-        // Sus repuestos son una venta suya: pagan comisión sobre el precio sin IVA y le llegan con su IVA
+        // Sus repuestos son una venta suya: pagan comisión sobre el precio con IVA y le llegan con su IVA. La comisión es la
+        // de todo lo suyo, diagnóstico incluido: la del adelanto ya se cobró en ese pago y el resto en el de la cotización
         double piezas = c.getSubtotalRepuestosTaller() != null ? c.getSubtotalRepuestosTaller() : 0;
         double ivaPiezas = c.getIvaRepuestosTaller() != null ? c.getIvaRepuestosTaller() : 0;
         boolean seDescuenta = parametros.comisionRetenida();
-        double comision = Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(manoObra + piezas), parametros.comisionPct()));
+        double comision = Dinero.aDouble(ComisionPlataforma.monto(
+                ComisionPlataforma.baseConIva(manoObra + piezas, ivaManoObra + ivaPiezas), parametros.comisionPct()));
         dto.setComisionTaller(comision);
         dto.setComisionSeDescuenta(seDescuenta);
         dto.setRecibeTaller(manoObra + ivaManoObra + piezas + ivaPiezas - (seDescuenta ? comision : 0));

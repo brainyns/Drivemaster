@@ -117,7 +117,7 @@ public class MysqlDataInitializer implements CommandLineRunner {
     new Object[]{"ESTADO_VENTA_DEFAULT", "PAGADA", "Estado por defecto al registrar venta"},
     // ─── Marketplace (valores iniciales; los ajusta el ADMIN) ───
     new Object[]{"TARIFA_DIAGNOSTICO",       "50000", "Tarifa fija de diagnóstico en COP (ingreso del taller, descontable de la reparación)"},
-    new Object[]{"COMISION_PCT",             "10",    "Comisión de la plataforma (%) sobre el valor antes de IVA, de 0 a 50; se descuenta solo con COMISION_RETENIDA_ENABLED"},
+    new Object[]{"COMISION_PCT",             "10",    "Comisión de la plataforma (%) sobre el precio con IVA, sin envío, de 0 a 50; se descuenta solo con COMISION_RETENIDA_ENABLED"},
     new Object[]{"TIMEOUT_TALLER_MIN",       "120",   "Minutos que tiene un taller para aceptar una solicitud antes de reasignarla"},
     new Object[]{"VIGENCIA_COTIZACION_DIAS", "7",     "Días de vigencia de una cotización"},
     new Object[]{"PAGO_DIAGNOSTICO_REQUERIDO",   "false", "Si es true, la solicitud pasa a revisión solo cuando el cliente paga el diagnóstico (Fase 3)"},

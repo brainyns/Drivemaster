@@ -39,7 +39,7 @@ export function textoEntrega(e) {
 
 /**
  * Lo que dice el bloque del reparto: la parte de cada uno y, si el pago cubre varios pedidos, que la comisión es de
- * todo el pago (se registra una sola vez sobre el valor sin IVA ni envío).
+ * todo el pago (se registra una sola vez sobre el precio con IVA, sin envío).
  */
 export function notaReparto(pago, reparto = []) {
   const n = pago?.pedidosDelPago || 0;

@@ -9,11 +9,18 @@ const pesos = (t) => t.replace(/ /g, " ");
 
 const linea = (cambios = {}) => ({ estado: "PAGADO", comisionPct: 10, comisionBase: 200000, comision: 20000, estadoComision: "DESCONTADA", ...cambios });
 
-test("la comisión descontada explica su base: sin IVA", () => {
+test("la comisión descontada dice su base sin calificarla: la de los pagos viejos era sin IVA y la de los nuevos con IVA", () => {
   const f = filaComision(linea());
   assert.equal(f.etiqueta, "Comisión DriveMaster (10 %)");
   assert.ok(pesos(f.valor).startsWith("− "));
-  assert.ok(pesos(f.nota).includes("10 % sobre") && f.nota.includes("sin IVA"));
+  assert.equal(pesos(f.nota), "10 % sobre $ 200.000");
+  assert.ok(!f.nota.includes("IVA"));
+});
+
+test("los totales y la orden explican que la base es el precio con IVA, sin envío", () => {
+  assert.equal(filaComisionResumen({ comisionSeDescuenta: true, comision: 20000, comisionDescontada: 20000 }).nota,
+    "Sobre el precio con IVA, sin envío, de cada venta");
+  assert.equal(filaComisionOrden({ comisionDescontada: 20000, comision: 20000 }).nota, "Sobre el precio con IVA, sin envío");
 });
 
 test("con la bandera apagada la comisión se ve, pero dice que no se descuenta", () => {

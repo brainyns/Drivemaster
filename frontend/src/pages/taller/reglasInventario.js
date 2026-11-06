@@ -8,11 +8,13 @@ const redondeo1 = (n) => Math.round(n * 10) / 10;
  *  - recargo: cuánto le sumó al costo, sobre el costo;
  *  - margen: qué parte del precio de venta es suya, sobre el precio;
  *  - ganancia: lo que le queda después de la comisión de DriveMaster.
+ * La comisión va sobre el precio con el IVA del taller (ivaPct; 0 si no es responsable), como en el backend.
  * null si falta el precio o el costo.
  */
-export function cifrasPieza(precio, costo, comisionPct) {
+export function cifrasPieza(precio, costo, comisionPct, ivaPct = 0) {
   if (!(precio > 0) || costo == null) return null;
-  const comision = Math.round((precio * comisionPct) / 100);
+  const conIva = Math.round((precio * (100 + ivaPct)) / 100);
+  const comision = Math.round((conIva * comisionPct) / 100);
   const ganancia = precio - costo - comision;
   return {
     recargoPct: costo > 0 ? redondeo1(((precio - costo) * 100) / costo) : null,

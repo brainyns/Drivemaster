@@ -63,7 +63,7 @@ class InventarioTallerWebTest {
         when(inventario.inventario("a@demo.com")).thenReturn(new InventarioTallerDTO.Inventario(List.of(new InventarioTallerDTO.Pieza(
                 "t1|REF:X", "Filtro", null, null, null, null, 2, 135_000.0, 100_000.0, 35.0, 25.9, 13_500.0, 21_500.0, false, true, List.of(), List.of(),
                 150_000.0, 178_500.0, "Repuestos Sur", 150_000.0, 135_000.0, false, false, null, false)),
-                List.of(), 10, true, 35, 200_000, 270_000, List.of(), true));
+                List.of(), 10, true, 35, 200_000, 270_000, List.of(), true, 19));
 
         mvc.perform(get(URL + "?tallerId=otro").with(user("a@demo.com").roles("TALLER")))
                 .andExpect(status().isOk())

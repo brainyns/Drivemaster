@@ -38,7 +38,7 @@ public record DashboardPlataformaDTO(
      * comisionRegistrada: suma de las líneas informativas de comisión, sin lo anulado por reembolsos (no es dinero cobrado).
      * comisionRetenida: la que sí se descontó a los negocios; comisionSeDescuenta: la bandera. saldosAFavorPendientes: lo
      *               que hay que cobrarles a los negocios a mano por reembolsos de líneas ya pagadas.
-     * baseComision: sobre qué se calculó esa comisión: el valor sin IVA ni envío de cada pago desde comisionDesde, sin los
+     * baseComision: sobre qué se calculó esa comisión: el precio con IVA, sin envío, de cada pago desde comisionDesde (sin IVA en los anteriores al cambio), sin los
      *               reembolsos (comisionRegistrada = comisionPct % de baseComision).
      * porLiquidar: habilitado y aún sin pagar a los negocios; enEspera: espera la entrega o la recepción del pedido;
      * liquidado: ya pagado (liquidadoSimulado, la parte que pagó la dispersión simulada); liquidacionAutomatica: el modo

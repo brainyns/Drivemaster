@@ -87,7 +87,7 @@ public class InventarioTallerService {
                 parametros.comisionRetenida(), PiezaTaller.RECARGO_SUGERIDO_PCT, aCosto, aVenta,
                 reembolsos.saldosPendientesDe(com.drivemaster.drivemaster.model.mysql.RepartoPago.TALLER, taller.getId()).stream()
                         .map(b -> new InventarioTallerDTO.Saldo(b.getId(), b.getSaldoAFavor(), b.getMotivo(), b.getOrdenServicioId(), b.getFechaCreacion()))
-                        .toList(), IvaTaller.esResponsable(taller));
+                        .toList(), IvaTaller.esResponsable(taller), IvaTaller.pct(taller, parametros.ivaPct()));
     }
 
     /**
@@ -239,15 +239,17 @@ public class InventarioTallerService {
         Double margen = null;
         Double comision = null;
         Double ganancia = null;
+        double ivaTaller = IvaTaller.pct(taller, parametros.ivaPct());
         if (cobrado != null && cobrado > 0 && costo != null) {
-            comision = Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(cobrado), comisionPct));
+            // La comisión se cobra sobre el precio con el IVA del taller; la ganancia sigue antes de IVA
+            comision = Dinero.aDouble(ComisionPlataforma.monto(ComisionPlataforma.baseUnidad(cobrado, ivaTaller), comisionPct));
             ganancia = cobrado - costo - comision;
             margen = porcentaje(cobrado - costo, cobrado);
             recargo = costo > 0 ? porcentaje(cobrado - costo, costo) : null;
         }
         Double gananciaConTope = null;
         if (tope != null && costo != null) {
-            gananciaConTope = tope - costo - Dinero.aDouble(ComisionPlataforma.monto(Dinero.pesos(tope), comisionPct));
+            gananciaConTope = tope - costo - Dinero.aDouble(ComisionPlataforma.monto(ComisionPlataforma.baseUnidad(tope, ivaTaller), comisionPct));
         }
         List<InventarioTallerDTO.Lote> lotes = p.getLotes().stream().sorted(FIFO)
                 .map(l -> new InventarioTallerDTO.Lote(l.getId(), l.getCompraId(), l.getPedidoId(), l.getTiendaNombre(), l.getCantidad(),

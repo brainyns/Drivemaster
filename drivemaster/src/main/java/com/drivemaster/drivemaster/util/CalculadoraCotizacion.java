@@ -16,7 +16,8 @@ import java.util.List;
  *    taller = mano de obra + su IVA − anticipo.
  *  - Anticipo: tarifa de diagnóstico ya pagada, descontada del total. Nunca supera
  *    la mano de obra con su IVA, para no tocar la parte de la tienda.
- *  - Comisión: porcentaje sobre el subtotal antes de IVA; solo informativa.
+ *  - Comisión: porcentaje sobre lo que paga el cliente en este pago: subtotal + IVA − anticipo (el anticipo ya pagó la
+ *    suya en el diagnóstico). Es la misma base que ComisionPlataforma.baseCotizacion; aquí solo es informativa.
  */
 public final class CalculadoraCotizacion {
 
@@ -62,7 +63,7 @@ public final class CalculadoraCotizacion {
         double iva = ivaRepuestos + ivaRepuestosTaller + ivaManoObra;
         double total = subtotal + iva;
         double anticipo = Math.min(Math.max(anticipoDisponible, 0), manoObra + ivaManoObra);
-        double comision = redondear(subtotal * comisionPct / 100.0);
+        double comision = redondear((total - anticipo) * comisionPct / 100.0);
 
         return new Totales(repuestos, repuestosTaller, manoObra, subtotal, ivaRepuestos, ivaRepuestosTaller, ivaManoObra, iva, total,
                 anticipo, total - anticipo, comision);

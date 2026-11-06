@@ -89,9 +89,13 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
             + "or (r.estado <> 'LIQUIDADO' and r.fechaCreacion >= :desde))")
     List<String> pedidosDeNegocioDesde(@Param("tipo") String tipo, @Param("id") String id, @Param("desde") LocalDateTime desde);
 
-    /** Para el total de un periodo, con las mismas fechas: [órdenes con líneas, base sin IVA, líneas antiguas sin base]. */
-    @Query("select count(distinct r.ordenServicioId), coalesce(sum(r.comisionBase), 0), "
-            + "coalesce(sum(case when r.comisionBase is null then 1 else 0 end), 0) from RepartoPago r "
+    /**
+     * Para el total de un periodo, con las mismas fechas: [órdenes con líneas, valor sin IVA, líneas antiguas sin el dato].
+     * El valor sin IVA es bruto − ivaIncluido; en las líneas anteriores a la comisión con IVA, su base (era sin IVA).
+     */
+    @Query("select count(distinct r.ordenServicioId), coalesce(sum(case when r.ivaIncluido is not null "
+            + "then coalesce(r.montoBruto, r.monto) - r.ivaIncluido else r.comisionBase end), 0), "
+            + "coalesce(sum(case when r.ivaIncluido is null and r.comisionBase is null then 1 else 0 end), 0) from RepartoPago r "
             + "where r.beneficiarioTipo = :tipo and r.beneficiarioId = :id and r.estado <> 'ANULADO' and "
             + "((r.estado = 'LIQUIDADO' and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde) "
             + "or (r.estado <> 'LIQUIDADO' and r.fechaCreacion >= :desde))")

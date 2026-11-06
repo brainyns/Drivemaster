@@ -1,7 +1,9 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.model.CompraCatalogo;
 import com.drivemaster.drivemaster.model.Cotizacion;
 import com.drivemaster.drivemaster.model.OrdenServicio;
+import com.drivemaster.drivemaster.model.PedidoTienda;
 import com.drivemaster.drivemaster.model.mysql.PagoEntity;
 import com.drivemaster.drivemaster.model.mysql.RepartoPago;
 import com.drivemaster.drivemaster.repository.mysql.RepartoPagoRepository;
@@ -29,35 +31,72 @@ final class ComisionPlataforma {
     private ComisionPlataforma() {
     }
 
-    /** Base antes de IVA de un pago que ya incluye IVA. */
-    static BigDecimal baseSinIva(Double montoConIva, double ivaPct) {
-        BigDecimal divisor = BigDecimal.valueOf(100).add(BigDecimal.valueOf(ivaPct));
-        return Dinero.pesos(montoConIva).multiply(BigDecimal.valueOf(100)).divide(divisor, 0, RoundingMode.HALF_UP);
+    /**
+     * La base de la comisión es siempre el precio CON IVA y sin el envío, como cobra un marketplace: aquí se arma y en
+     * ningún otro lugar. Los pagos ya registrados guardan su base en la línea (comisionBase) y no se recalculan.
+     */
+    static BigDecimal baseConIva(Double subtotal, Double iva) {
+        return Dinero.pesos(subtotal).add(Dinero.pesos(iva)).max(BigDecimal.ZERO);
+    }
+
+    /** Base de una compra por catálogo: sus productos con IVA (con el descuento si compró un taller), sin el envío. */
+    static BigDecimal baseCompra(CompraCatalogo compra) {
+        return baseConIva(compra.getSubtotal(), compra.getIva());
+    }
+
+    /** Base del pedido de una tienda: sus productos con IVA, sin el envío. */
+    static BigDecimal basePedido(PedidoTienda pedido) {
+        return baseConIva(pedido.getSubtotal(), pedido.getIva());
+    }
+
+    /** Base de la comisión del diagnóstico: la tarifa que pagó el cliente, con su IVA si lo lleva. */
+    static BigDecimal baseDiagnostico(Double montoPagado) {
+        return Dinero.pesos(montoPagado).max(BigDecimal.ZERO);
     }
 
     /**
-     * Base de la comisión del diagnóstico: siempre el precio base sin IVA. Desde el IVA por taller la solicitud lo trae
-     * congelado (tarifaDiagnosticoBase); las anteriores cobraban el parámetro con el IVA global incluido y se le quita.
+     * Base de la comisión del pago de una cotización: (subtotal + IVA) − el adelanto del diagnóstico con su IVA, que
+     * ya pagó su comisión. Es lo que paga el cliente en este pago; sin los totales guardados, lo pagado.
      */
-    static BigDecimal baseDiagnostico(OrdenServicio orden, Double montoPagado, double ivaGlobal) {
-        if (orden != null && orden.getTarifaDiagnosticoBase() != null) return Dinero.pesos(orden.getTarifaDiagnosticoBase());
-        return baseSinIva(montoPagado, ivaGlobal);
+    static BigDecimal baseCotizacion(Cotizacion c, Double montoPagado) {
+        if (c.getSubtotal() == null || c.getIva() == null) return baseDiagnostico(montoPagado);
+        return baseConIva(c.getSubtotal(), c.getIva()).subtract(Dinero.pesos(c.getAnticipoDiagnostico())).max(BigDecimal.ZERO);
+    }
+
+    /** Base por unidad de algo que se vende a precioSinIva con ivaPct de IVA (para las cifras que se muestran antes de vender). */
+    static BigDecimal baseUnidad(double precioSinIva, double ivaPct) {
+        return Dinero.pesos(BigDecimal.valueOf(precioSinIva).multiply(BigDecimal.valueOf(100 + ivaPct))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+    }
+
+    /** El IVA que trae un monto con ivaPct de IVA incluido. */
+    private static BigDecimal ivaDentroDe(Double montoConIva, double ivaPct) {
+        BigDecimal monto = Dinero.pesos(montoConIva);
+        BigDecimal sinIva = monto.multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(100).add(BigDecimal.valueOf(ivaPct)), 0, RoundingMode.HALF_UP);
+        return monto.subtract(sinIva).max(BigDecimal.ZERO);
     }
 
     /**
-     * Base de la comisión del pago de una cotización: su subtotal antes de IVA menos la parte sin IVA del diagnóstico ya
-     * pagado (esa ya tuvo su comisión). Con dos porcentajes de IVA no sirve quitarle uno solo al monto pagado.
-     * El anticipo se lleva a su base con el IVA con que se cobró el diagnóstico: el de la solicitud o, en las
-     * anteriores al IVA por taller, el global (como se calculó su comisión).
-     * Las cotizaciones anteriores al IVA por taller (un solo ivaPct) siguen con la fórmula de antes.
+     * IVA de la línea del diagnóstico. Desde el IVA por taller la solicitud trae su precio base congelado
+     * (tarifaDiagnosticoBase); las anteriores cobraban el parámetro con el IVA global incluido.
      */
-    static BigDecimal baseCotizacion(Cotizacion c, OrdenServicio orden, Double montoPagado, double ivaGlobal) {
-        if (c.getIvaRepuestosPct() == null || c.getIvaManoObraPct() == null) {
-            return baseSinIva(montoPagado, c.getIvaPct() != null ? c.getIvaPct() : ivaGlobal);
+    static BigDecimal ivaDiagnostico(OrdenServicio orden, Double montoPagado, double ivaGlobal) {
+        if (orden != null && orden.getTarifaDiagnosticoBase() != null) {
+            return Dinero.pesos(montoPagado).subtract(Dinero.pesos(orden.getTarifaDiagnosticoBase())).max(BigDecimal.ZERO);
         }
-        double ivaDiagnostico = orden != null && orden.getIvaDiagnosticoPct() != null ? orden.getIvaDiagnosticoPct() : ivaGlobal;
-        BigDecimal anticipoBase = baseSinIva(c.getAnticipoDiagnostico() != null ? c.getAnticipoDiagnostico() : 0, ivaDiagnostico);
-        return Dinero.pesos(c.getSubtotal()).subtract(anticipoBase).max(BigDecimal.ZERO);
+        return ivaDentroDe(montoPagado, ivaGlobal);
+    }
+
+    /**
+     * IVA de la línea del taller en el pago de una cotización: el IVA de la cotización menos el de las tiendas y menos el
+     * del adelanto, que ya quedó en la línea del diagnóstico. El adelanto lleva el IVA con que se cobró el diagnóstico:
+     * el de la solicitud o, en las anteriores al IVA por taller, el global.
+     */
+    static BigDecimal ivaCotizacionTaller(Cotizacion c, OrdenServicio orden, BigDecimal ivaTiendas, double ivaGlobal) {
+        double ivaDiag = orden != null && orden.getIvaDiagnosticoPct() != null ? orden.getIvaDiagnosticoPct() : ivaGlobal;
+        return Dinero.pesos(c.getIva()).subtract(ivaTiendas)
+                .subtract(ivaDentroDe(c.getAnticipoDiagnostico(), ivaDiag)).max(BigDecimal.ZERO);
     }
 
     /** Monto de la comisión en pesos enteros. */
@@ -216,7 +255,7 @@ final class ComisionPlataforma {
                     .liquidacionPorEvento(false)
                     .nota("Comisión retenida " + com.drivemaster.drivemaster.util.CalculadoraCotizacion.pct(pct) + " sobre "
                             + Dinero.texto(suma(lineas, r -> Dinero.pesos(r.getComisionBase())))
-                            + " (antes de IVA)")
+                            + " (precio con IVA, sin envío)")
                     .fechaCreacion(LocalDateTime.now())
                     .build());
         } catch (RuntimeException e) {
@@ -246,7 +285,7 @@ final class ComisionPlataforma {
                     .monto(Dinero.aDouble(comision))
                     .estado(RepartoPago.INFORMATIVA)
                     .liquidacionPorEvento(false)
-                    .nota("Comisión informativa " + com.drivemaster.drivemaster.util.CalculadoraCotizacion.pct(pct) + " sobre " + Dinero.texto(base) + " (antes de IVA)")
+                    .nota("Comisión informativa " + com.drivemaster.drivemaster.util.CalculadoraCotizacion.pct(pct) + " sobre " + Dinero.texto(base) + " (precio con IVA, sin envío)")
                     .fechaCreacion(LocalDateTime.now())
                     .build());
         } catch (RuntimeException e) {

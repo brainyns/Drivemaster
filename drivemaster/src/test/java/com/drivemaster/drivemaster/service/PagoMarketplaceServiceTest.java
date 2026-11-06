@@ -219,7 +219,7 @@ class PagoMarketplaceServiceTest {
     }
 
     @Test
-    void elDiagnosticoPagadoRegistraLaComisionSobreLaBaseSinIva() {
+    void elDiagnosticoPagadoRegistraLaComisionSobreLaTarifaConIva() {
         when(parametros.comisionPct()).thenReturn(10.0);
         when(parametros.ivaPct()).thenReturn(19.0);
         orden.setEstado(EstadoOrden.ASIGNADA_A_TALLER);
@@ -233,11 +233,11 @@ class PagoMarketplaceServiceTest {
         RepartoPago comision = lineas.get(1);
         assertEquals(RepartoPago.PLATAFORMA, comision.getBeneficiarioTipo());
         assertEquals(RepartoPago.INFORMATIVA, comision.getEstado());
-        assertEquals(4_202, comision.getMonto()); // 10% de 42.017 (50.000 sin IVA 19%)
+        assertEquals(5_000, comision.getMonto()); // 10 % de los 50.000 pagados, IVA incluido
     }
 
     @Test
-    void laCotizacionPagadaRegistraLaComisionSobreLoPagadoSinIva() {
+    void laCotizacionPagadaRegistraLaComisionSobreLoPagadoConIva() {
         when(parametros.comisionPct()).thenReturn(10.0);
         cotizacion(new ArrayList<>(List.of(
                 repuesto("p1", "s1", 2, 90_000, "DISPONIBLE"),
@@ -248,7 +248,7 @@ class PagoMarketplaceServiceTest {
         List<RepartoPago> lineas = lineasGuardadas(3);
         RepartoPago comision = lineas.get(lineas.size() - 1);
         assertEquals(RepartoPago.PLATAFORMA, comision.getBeneficiarioTipo());
-        assertEquals(17_798, comision.getMonto()); // 10% de 177.983 (211.800 sin IVA 19%)
+        assertEquals(21_180, comision.getMonto()); // 10 % de los 211.800 pagados, IVA incluido
         assertNull(comision.getPedidoTiendaId());
     }
 
@@ -597,22 +597,36 @@ class PagoMarketplaceServiceTest {
         RepartoPago tienda = lineas.get(0);
         assertEquals(RepartoPago.TIENDA, tienda.getBeneficiarioTipo());
         assertEquals(238_000, tienda.getMontoBruto());
-        assertEquals(200_000, tienda.getComisionBase());
-        assertEquals(20_000, tienda.getComisionRetenida());
-        assertEquals(218_000, tienda.getMonto());
+        assertEquals(238_000, tienda.getComisionBase(), "repuestos con su IVA");
+        assertEquals(38_000, tienda.getIvaIncluido());
+        assertEquals(23_800, tienda.getComisionRetenida());
+        assertEquals(214_200, tienda.getMonto());
 
         RepartoPago taller = lineas.get(1);
         assertEquals(RepartoPago.TALLER, taller.getBeneficiarioTipo());
         assertEquals(59_500, taller.getMontoBruto());
-        assertEquals(50_000, taller.getComisionBase(), "mano de obra menos la base del diagnóstico, que ya pagó comisión");
-        assertEquals(5_000, taller.getComisionRetenida());
-        assertEquals(54_500, taller.getMonto());
+        assertEquals(59_500, taller.getComisionBase(), "mano de obra con IVA menos el adelanto con IVA, que ya pagó comisión");
+        assertEquals(9_500, taller.getIvaIncluido(), "19.000 de IVA de la mano de obra − 9.500 del adelanto");
+        assertEquals(5_950, taller.getComisionRetenida());
+        assertEquals(53_550, taller.getMonto());
 
         RepartoPago comision = lineas.get(2);
         assertEquals(RepartoPago.PLATAFORMA, comision.getBeneficiarioTipo());
         assertEquals(RepartoPago.RETENIDA, comision.getEstado());
-        assertEquals(25_000, comision.getMonto());
+        assertEquals(29_750, comision.getMonto());
         assertEquals(297_500, tienda.getMonto() + taller.getMonto() + comision.getMonto(), "lo pagado = netos + comisión");
+    }
+
+    @Test
+    void comision_con_iva_cotizacion_con_adelanto_no_cobra_dos_veces_el_diagnostico() {
+        service.confirmar(cotizacionConDiagnostico(true), "txn-1");
+
+        List<RepartoPago> lineas = lineasGuardadas(3);
+        // (300.000 + 57.000) − 59.500 del adelanto con IVA = 297.500, justo lo que paga el cliente en este pago
+        assertEquals(297_500, lineas.get(0).getComisionBase() + lineas.get(1).getComisionBase());
+        assertEquals(29_750, lineas.get(2).getMonto(), "10 % de 297.500");
+        // Con el diagnóstico (5.950 sobre 59.500), DriveMaster cobra el 10 % de los 357.000 una sola vez
+        assertEquals(35_700, lineas.get(2).getMonto() + 5_950);
     }
 
     @Test
@@ -621,15 +635,15 @@ class PagoMarketplaceServiceTest {
 
         List<RepartoPago> lineas = lineasGuardadas(3);
         assertEquals(238_000, lineas.get(0).getMonto());
-        assertEquals(20_000, lineas.get(0).getComisionCalculada());
+        assertEquals(23_800, lineas.get(0).getComisionCalculada());
         assertEquals(0, lineas.get(0).getComisionRetenida());
         assertEquals(59_500, lineas.get(1).getMonto());
         assertEquals(RepartoPago.INFORMATIVA, lineas.get(2).getEstado());
-        assertEquals(25_000, lineas.get(2).getMonto());
+        assertEquals(29_750, lineas.get(2).getMonto());
     }
 
     @Test
-    void elDiagnosticoRetieneSobreSuBaseSinIva() {
+    void comision_con_iva_diagnostico_sobre_la_tarifa_con_iva() {
         when(parametros.comisionPct()).thenReturn(10.0);
         when(parametros.ivaPct()).thenReturn(19.0);
         when(parametros.comisionRetenida()).thenReturn(true);
@@ -641,10 +655,12 @@ class PagoMarketplaceServiceTest {
 
         List<RepartoPago> lineas = lineasGuardadas(2);
         assertEquals(59_500, lineas.get(0).getMontoBruto());
-        assertEquals(5_000, lineas.get(0).getComisionRetenida());
-        assertEquals(54_500, lineas.get(0).getMonto());
+        assertEquals(59_500, lineas.get(0).getComisionBase(), "la tarifa con su IVA");
+        assertEquals(9_500, lineas.get(0).getIvaIncluido());
+        assertEquals(5_950, lineas.get(0).getComisionRetenida());
+        assertEquals(53_550, lineas.get(0).getMonto());
         assertEquals(RepartoPago.RETENIDA, lineas.get(1).getEstado());
-        assertEquals(5_000, lineas.get(1).getMonto());
+        assertEquals(5_950, lineas.get(1).getMonto());
     }
 
     // ─── Reembolsos con comisión retenida ────────────────────────────────────

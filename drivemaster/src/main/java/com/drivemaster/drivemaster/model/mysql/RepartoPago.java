@@ -76,6 +76,9 @@ public class RepartoPago {
     private Double comisionPct;
     private Double comisionCalculada;
     private Double comisionRetenida;
+    // IVA que trae esta línea. Desde la comisión con IVA la base ya no deja ver cuánto era IVA, así que se guarda aquí.
+    // Nulo en las líneas anteriores: en esas la base era sin IVA y su IVA es bruto − comisionBase
+    private Double ivaIncluido;
 
     // Parte de esta línea que son repuestos del inventario del taller (nulos si no los hay): su valor con IVA, su base sin
     // IVA y lo que le queda tras la comisión. Va en la misma línea para hacer una sola transferencia por orden

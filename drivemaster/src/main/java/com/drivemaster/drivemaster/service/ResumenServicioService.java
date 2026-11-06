@@ -113,10 +113,14 @@ public class ResumenServicioService {
                 && (orden.getPagoCotizacionId() != null || CotizacionService.sinSaldo(c));
     }
 
-    /** Lo que no es base es IVA. Si una línea antigua no guardó su base, no se inventa la cifra. */
+    /**
+     * El IVA de las líneas: el que guardó cada una o, en las anteriores a la comisión con IVA, lo que no era base. Si una
+     * línea antigua no guardó ninguno de los dos, no se inventa la cifra.
+     */
     private static Double iva(List<RepartoPago> vivas, double total) {
-        if (vivas.isEmpty() || vivas.stream().anyMatch(r -> r.getComisionBase() == null)) return null;
-        return (double) Math.max(0, Math.round(total - suma(vivas, RepartoPago::getComisionBase)));
+        if (vivas.isEmpty() || vivas.stream().anyMatch(r -> r.getIvaIncluido() == null && r.getComisionBase() == null)) return null;
+        double sinIva = suma(vivas, r -> r.getIvaIncluido() != null ? bruto(r) - r.getIvaIncluido() : r.getComisionBase());
+        return (double) Math.max(0, Math.round(total - sinIva));
     }
 
     /** Si todas las líneas están igual, ese es el estado; si ya se pagó algo, PARCIAL; si no, lo más cercano a pagarse. */

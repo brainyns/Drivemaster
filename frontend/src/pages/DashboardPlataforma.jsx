@@ -223,7 +223,7 @@ export default function DashboardPlataforma({ token, onIr }) {
             pie="Pagos aprobados que pasaron por la plataforma, con IVA y envío. No es ingreso de DriveMaster." />
           {/* La base y la comisión salen de lo mismo: comisión = 10 % de la base (mismo período, sin reembolsos) */}
           <Indicador titulo="Base de la comisión" valor={cop(d.dinero.baseComision)}
-            pie={`Valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}, sin reembolsos.`} />
+            pie={`Precio con IVA, sin envío, de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}, sin reembolsos.`} />
           {d.dinero.comisionRetenida?.porCobrar > 0 && (
             <Indicador titulo="Comisión por cobrar" valor={cop(d.dinero.comisionRetenida.porCobrar)}
               pie="Retenida en pagos que aún no se transfieren a los negocios."

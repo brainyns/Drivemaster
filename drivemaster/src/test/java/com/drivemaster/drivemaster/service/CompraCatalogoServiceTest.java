@@ -278,17 +278,18 @@ class CompraCatalogoServiceTest {
 
         service.aplicar(pago);
 
-        // s1: 40.000 + IVA 7.600. s2: 30.000 + IVA 5.700 + envío 8.000
+        // s1: 40.000 + IVA 7.600. s2: 30.000 + IVA 5.700 + envío 8.000. La comisión va sobre el precio con IVA
         assertEquals(47_600.0, lineaDe("s1").getMontoBruto());
-        assertEquals(4_000.0, lineaDe("s1").getComisionRetenida());
-        assertEquals(43_600.0, lineaDe("s1").getMonto());
+        assertEquals(4_760.0, lineaDe("s1").getComisionRetenida());
+        assertEquals(42_840.0, lineaDe("s1").getMonto());
         assertEquals(43_700.0, lineaDe("s2").getMontoBruto());
-        assertEquals(30_000.0, lineaDe("s2").getComisionBase(), "el envío no paga comisión");
-        assertEquals(3_000.0, lineaDe("s2").getComisionRetenida());
-        assertEquals(40_700.0, lineaDe("s2").getMonto());
+        assertEquals(35_700.0, lineaDe("s2").getComisionBase(), "el envío no paga comisión");
+        assertEquals(5_700.0, lineaDe("s2").getIvaIncluido(), "la línea guarda su IVA: la base ya no lo deja ver");
+        assertEquals(3_570.0, lineaDe("s2").getComisionRetenida());
+        assertEquals(40_130.0, lineaDe("s2").getMonto());
         assertEquals(1, comisiones().size());
         assertEquals(RepartoPago.RETENIDA, comisiones().get(0).getEstado());
-        assertEquals(7_000.0, comisiones().get(0).getMonto());
+        assertEquals(8_330.0, comisiones().get(0).getMonto());
         assertEquals(91_300.0, lineaDe("s1").getMonto() + lineaDe("s2").getMonto() + comisiones().get(0).getMonto());
     }
 
@@ -299,9 +300,48 @@ class CompraCatalogoServiceTest {
         service.aplicar(pago);
 
         assertEquals(47_600.0, lineaDe("s1").getMonto());
-        assertEquals(4_000.0, lineaDe("s1").getComisionCalculada());
+        assertEquals(4_760.0, lineaDe("s1").getComisionCalculada());
         assertEquals(0.0, lineaDe("s1").getComisionRetenida());
         assertEquals(RepartoPago.INFORMATIVA, comisiones().get(0).getEstado());
+        assertEquals(8_330.0, comisiones().get(0).getMonto(), "la informativa usa la misma base: productos con IVA, sin envío");
+    }
+
+    // ─── Comisión con IVA: un caso por flujo ─────────────────────────────────
+
+    @Test
+    void comision_con_iva_catalogo_con_envio_el_ejemplo_de_33205() {
+        when(parametros.comisionRetenida()).thenReturn(true);
+        tiendas.get(1).setCostoEnvio(10_000.0);
+        productos.put("bujia", producto("bujia", "s2", 19_500, 4, "STOCK"));
+        PagoEntity pago = pagado(iniciarYObtenerPago(new CompraRequest(List.of(item("bujia", 1)),
+                List.of(entrega("s2", "ENVIO")), envio(), null)));
+        assertEquals(33_205.0, pago.getMonto(), "19.500 + IVA 3.705 + envío 10.000");
+
+        service.aplicar(pago);
+
+        RepartoPago linea = lineaDe("s2");
+        assertEquals(23_205.0, linea.getComisionBase(), "producto con IVA, sin el envío");
+        assertEquals(2_321.0, linea.getComisionRetenida(), "10 % de 23.205 = 2.320,5, redondeado al peso");
+        assertEquals(30_884.0, linea.getMonto(), "la tienda recibe 33.205 − 2.321");
+        assertEquals(3_705.0, linea.getIvaIncluido());
+        assertEquals(2_321.0, comisiones().get(0).getMonto());
+    }
+
+    @Test
+    void comision_con_iva_compra_de_taller_sobre_el_precio_con_descuento_mas_iva() {
+        when(parametros.comisionRetenida()).thenReturn(true);
+        compraUnTaller(taller("APROBADO", true));
+        PagoEntity pago = pagado(iniciarYObtenerPago(new CompraRequest(List.of(item("filtro", 2)),
+                List.of(entrega("s1", "RETIRO")), null, null)));
+
+        service.aplicar(pago);
+
+        // 2 × (20.000 − 20 %) = 32.000 + IVA 6.080 = 38.080
+        RepartoPago linea = lineaDe("s1");
+        assertEquals(38_080.0, linea.getComisionBase());
+        assertEquals(3_808.0, linea.getComisionRetenida());
+        assertEquals(34_272.0, linea.getMonto());
+        assertEquals(3_808.0, comisiones().get(0).getMonto());
     }
 
     private PagoEntity iniciarYObtenerPago(CompraRequest r) {
@@ -545,10 +585,10 @@ class CompraCatalogoServiceTest {
         assertEquals(91_300.0, repartosDeNegocio().stream().mapToDouble(RepartoPago::getMonto).sum());
         assertEquals(p1.getId(), repartosDeNegocio().stream().filter(r -> r.getBeneficiarioId().equals("s1")).findFirst().orElseThrow().getPedidoTiendaId());
 
-        // Comisión de la plataforma: 10% del subtotal antes de IVA (70.000, sin envío), solo informativa
+        // Comisión de la plataforma: 10 % de los productos con IVA (83.300, sin envío), solo informativa
         assertEquals(1, comisiones().size());
         RepartoPago comision = comisiones().get(0);
-        assertEquals(7_000.0, comision.getMonto());
+        assertEquals(8_330.0, comision.getMonto()); // 47.600 + 35.700
         assertEquals(RepartoPago.INFORMATIVA, comision.getEstado());
         assertEquals("CATALOGO", comision.getConcepto());
         assertNotNull(comision.getCompraCatalogoId());
@@ -959,7 +999,7 @@ class CompraCatalogoServiceTest {
         assertFalse(pedidos.isEmpty());
         assertTrue(pedidos.values().stream().allMatch(p -> "t1".equals(p.getCompradorTallerId())));
         // La tienda vende con su descuento para talleres (20 % inicial) y su comisión es sobre lo que pagó el taller
-        assertEquals(3_200.0, lineaDe("s1").getComisionCalculada());
+        assertEquals(3_808.0, lineaDe("s1").getComisionCalculada(), "32.000 con descuento + IVA 6.080");
     }
 
     @Test

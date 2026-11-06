@@ -54,7 +54,7 @@ public class CotizacionDTO {
     private Double totalAPagar;
     // Solo en la vista completa
     private Double comisionInformativa;
-    // Solo para el taller: su comisión sobre la mano de obra sin IVA y lo que recibe en total, diagnóstico incluido.
+    // Solo para el taller: su comisión sobre la mano de obra y sus piezas con IVA y lo que recibe en total, diagnóstico incluido.
     // Es un estimado: lo real se fija al aprobarse el pago
     private Double comisionTaller;
     private Double recibeTaller;

@@ -4,7 +4,7 @@
 export const GLOSARIO = {
   "Ventas": "Lo que pagaron los clientes en el período, con IVA incluido.",
   "IVA": "El impuesto que va incluido en el precio. No es ganancia: se le paga al Estado.",
-  "Comisión": "Lo que cobra DriveMaster por cada venta: un porcentaje del valor sin IVA ni envío.",
+  "Comisión": "Lo que cobra DriveMaster por cada venta: un porcentaje del precio con IVA, sin envío.",
   "Lo tuyo": "Lo que te queda de las ventas después de quitar el IVA y la comisión.",
   "Ya te pagaron": "DriveMaster ya te transfirió este dinero a tu cuenta.",
   "Por recibir": "El pedido ya se entregó: DriveMaster te lo transfiere cuando apruebe el pago.",

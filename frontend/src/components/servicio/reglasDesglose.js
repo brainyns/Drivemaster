@@ -26,7 +26,7 @@ const NOTA_SIN_DESCUENTO = { TODAVIA_NO: "No se descuenta todavía", NO_EN_ESTE_
 export function filaComision(l) {
   const etiqueta = l.comisionPct != null ? `Comisión DriveMaster (${porcentaje(l.comisionPct)})` : "Comisión DriveMaster";
   if (l.estadoComision === "DESCONTADA") {
-    return { etiqueta, valor: `− ${formatPrecio(l.comision)}`, nota: `${porcentaje(l.comisionPct)} sobre ${formatPrecio(l.comisionBase)} sin IVA` };
+    return { etiqueta, valor: `− ${formatPrecio(l.comision)}`, nota: `${porcentaje(l.comisionPct)} sobre ${formatPrecio(l.comisionBase)}` };
   }
   return { etiqueta, valor: formatPrecio(l.comision), nota: NOTA_SIN_DESCUENTO[l.estadoComision] };
 }
@@ -34,14 +34,14 @@ export function filaComision(l) {
 /** La fila de la comisión en los totales de un informe. */
 export function filaComisionResumen(r) {
   return r.comisionSeDescuenta
-    ? { etiqueta: "Comisión DriveMaster", valor: `− ${formatPrecio(r.comisionDescontada)}`, nota: "Sobre el valor sin IVA de cada venta" }
+    ? { etiqueta: "Comisión DriveMaster", valor: `− ${formatPrecio(r.comisionDescontada)}`, nota: "Sobre el precio con IVA, sin envío, de cada venta" }
     : { etiqueta: "Comisión DriveMaster", valor: formatPrecio(r.comision), nota: NOTA_SIN_DESCUENTO.TODAVIA_NO };
 }
 
 /** La comisión de toda una orden: lo descontado si hubo descuento; si no, cuánto corresponde y por qué no se restó. */
 export function filaComisionOrden(r) {
   const etiqueta = "Comisión DriveMaster";
-  if (r.comisionDescontada > 0) return { etiqueta, valor: `− ${formatPrecio(r.comisionDescontada)}`, nota: "Sobre el valor sin IVA" };
+  if (r.comisionDescontada > 0) return { etiqueta, valor: `− ${formatPrecio(r.comisionDescontada)}`, nota: "Sobre el precio con IVA, sin envío" };
   return { etiqueta, valor: formatPrecio(r.comision), nota: r.comisionSeDescuenta ? NOTA_SIN_DESCUENTO.NO_EN_ESTE_PAGO : NOTA_SIN_DESCUENTO.TODAVIA_NO };
 }
 

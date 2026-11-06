@@ -56,7 +56,7 @@ import java.util.Map;
  *  - Si una tienda se queda sin stock después de pagar: todo o nada. Se devuelve el stock ya
  *    descontado, la compra queda NO_APLICADA y se registra el reembolso completo.
  *  - El pago se reparte a la tienda dueña de cada producto (RepartoPago por pedido), con el IVA y
- *    el envío de su pedido. La comisión, si se retiene, sale de los productos sin IVA y sin el envío (ver ComisionPlataforma).
+ *    el envío de su pedido. La comisión, si se retiene, sale de los productos con IVA y sin el envío (ver ComisionPlataforma).
  *  - La liquidación sigue la misma regla por evento de la 4-B (ver LiquidacionService).
  *
  * La confirmación entra por PagoMarketplaceService.confirmar (ya verificada con Wompi y tomada
@@ -248,7 +248,8 @@ public class CompraCatalogoService {
                 PedidoTienda pedido = crearPedido(pago, compra, entrega, codigos);
                 pedidos.add(pedido);
                 RepartoPago linea = reparto(pago, compra, pedido);
-                ComisionPlataforma.aplicar(linea, Dinero.pesos(pedido.getSubtotal()), pct, retener);
+                ComisionPlataforma.aplicar(linea, ComisionPlataforma.basePedido(pedido), pct, retener);
+                linea.setIvaIncluido(Dinero.aDouble(Dinero.pesos(pedido.getIva())));
                 repartoRepository.save(linea);
                 repartos.add(linea);
             }
@@ -257,8 +258,8 @@ public class CompraCatalogoService {
             compra.setFechaPago(pago.getFechaPago() != null ? pago.getFechaPago() : LocalDateTime.now());
             compra.setPagoId(pago.getId());
             compraRepository.save(compra);
-            // 3. Comisión, sobre los productos, antes de IVA y sin el envío
-            ComisionPlataforma.registrar(repartoRepository, pago, Dinero.pesos(compra.getSubtotal()), pct, retener, repartos);
+            // 3. Comisión, sobre los productos con IVA y sin el envío
+            ComisionPlataforma.registrar(repartoRepository, pago, ComisionPlataforma.baseCompra(compra), pct, retener, repartos);
         } catch (RuntimeException e) {
             log.error("No se pudo aplicar el pago {} de la compra {}: se deshace todo", pago.getReferencia(), compra.getId(), e);
             deshacer(pedidos, repartos);

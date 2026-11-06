@@ -17,6 +17,12 @@ test("recargo, margen y ganancia después de comisión son tres cifras distintas
   assert.equal(cifrasPieza(135_000, null, 10), null, "sin costo tampoco");
 });
 
+test("la comisión de una pieza va sobre el precio con el IVA del taller", () => {
+  // 135.000 + 19 % = 160.650 → comisión 16.065; la ganancia sigue antes de IVA
+  assert.deepEqual(cifrasPieza(135_000, 100_000, 10, 19), { recargoPct: 35, margenPct: 25.9, comision: 16_065, ganancia: 18_935, enPerdida: false });
+  assert.equal(cifrasPieza(135_000, 100_000, 10, 0).comision, 13_500, "un taller no responsable de IVA, sobre el precio tal cual");
+});
+
 test("el recargo sugerido lleva el costo al precio y se escribe en español", () => {
   assert.equal(precioConRecargo(100_000, 35), 135_000);
   assert.equal(precioConRecargo(33_333, 35), 45_000);

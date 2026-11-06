@@ -59,7 +59,7 @@ public class ParametrosMarketplace {
     }
 
     /**
-     * Comisión de la plataforma (%) sobre el valor antes de IVA. Siempre dentro de 0 a {@value #COMISION_MAXIMA}: un valor
+     * Comisión de la plataforma (%) sobre el precio con IVA, sin envío. Siempre dentro de 0 a {@value #COMISION_MAXIMA}: un valor
      * escrito directo en la base no puede llevarse el dinero del negocio.
      */
     public double comisionPct() {

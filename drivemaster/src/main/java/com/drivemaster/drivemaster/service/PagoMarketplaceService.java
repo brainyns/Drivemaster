@@ -58,8 +58,8 @@ import java.util.Set;
  * del inventario del taller salen de sus lotes, sin pedido, y su valor va en la línea del taller; el
  * taller, la mano de obra con su IVA menos el anticipo del diagnóstico (que ya
  * recibió en el reparto del diagnóstico). Si la comisión se retiene, cada uno la paga
- * sobre lo suyo sin IVA (ver ComisionPlataforma): la tienda sobre sus repuestos y el
- * taller sobre su mano de obra menos la base del diagnóstico.
+ * sobre lo suyo con IVA y sin envío (ver ComisionPlataforma): la tienda sobre sus repuestos y el
+ * taller sobre su mano de obra y sus piezas menos el adelanto del diagnóstico con su IVA.
  */
 @Service
 public class PagoMarketplaceService {
@@ -336,12 +336,13 @@ public class PagoMarketplaceService {
         // Desde aquí, un fallo reembolsa todo el pago (ver confirmar): la orden no puede seguir como si estuviera pagada
         try {
             Taller taller = tallerRepository.findById(enRevision.getTallerId()).orElse(null);
-            BigDecimal base = ComisionPlataforma.baseDiagnostico(enRevision, pago.getMonto(), parametros.ivaPct());
+            BigDecimal base = ComisionPlataforma.baseDiagnostico(pago.getMonto());
             double pct = parametros.comisionPct();
             boolean retener = parametros.comisionRetenida();
             RepartoPago lineaTaller = reparto(pago, RepartoPago.TALLER, enRevision.getTallerId(),
                     taller != null ? taller.getNombre() : null, pago.getMonto(), null);
             ComisionPlataforma.aplicar(lineaTaller, base, pct, retener);
+            lineaTaller.setIvaIncluido(Dinero.aDouble(ComisionPlataforma.ivaDiagnostico(enRevision, pago.getMonto(), parametros.ivaPct())));
             repartoRepository.save(lineaTaller);
             ComisionPlataforma.registrar(repartoRepository, pago, base, pct, retener, List.of(lineaTaller));
         } catch (RuntimeException e) {
@@ -562,28 +563,32 @@ public class PagoMarketplaceService {
         List<PedidoTienda> pedidos = crearPedidos(pago, pagada, cotizacion, taller);
         // Montos en pesos enteros y con BigDecimal: lo del taller es el resto exacto del pago, y su base de comisión, el
         // resto de la base: así la comisión de las líneas suma la de todo el pago
-        BigDecimal base = ComisionPlataforma.baseCotizacion(cotizacion, pagada, pago.getMonto(), parametros.ivaPct());
+        BigDecimal base = ComisionPlataforma.baseCotizacion(cotizacion, pago.getMonto());
         double pct = parametros.comisionPct();
         boolean retener = parametros.comisionRetenida();
         List<RepartoPago> lineas = new ArrayList<>();
         BigDecimal paraTiendas = BigDecimal.ZERO;
         BigDecimal baseTiendas = BigDecimal.ZERO;
+        BigDecimal ivaTiendas = BigDecimal.ZERO;
         for (PedidoTienda p : pedidos) {
             BigDecimal montoTienda = Dinero.pesos(p.getTotal());
-            BigDecimal baseTienda = Dinero.pesos(p.getSubtotal());
+            BigDecimal baseTienda = ComisionPlataforma.basePedido(p);
             RepartoPago linea = reparto(pago, RepartoPago.TIENDA, p.getTiendaId(), p.getTiendaNombre(),
                     Dinero.aDouble(montoTienda), p.getId());
             ComisionPlataforma.aplicar(linea, baseTienda, pct, retener);
+            linea.setIvaIncluido(Dinero.aDouble(Dinero.pesos(p.getIva())));
             repartoRepository.save(linea);
             lineas.add(linea);
             paraTiendas = paraTiendas.add(montoTienda);
             baseTiendas = baseTiendas.add(baseTienda);
+            ivaTiendas = ivaTiendas.add(Dinero.pesos(p.getIva()));
         }
         BigDecimal paraTaller = Dinero.pesos(pago.getMonto()).subtract(paraTiendas).max(BigDecimal.ZERO);
         if (paraTaller.signum() > 0) {
             RepartoPago linea = reparto(pago, RepartoPago.TALLER, orden.getTallerId(),
                     taller != null ? taller.getNombre() : cotizacion.getTallerNombre(), Dinero.aDouble(paraTaller), null);
             ComisionPlataforma.aplicar(linea, base.subtract(baseTiendas), pct, retener);
+            linea.setIvaIncluido(Dinero.aDouble(ComisionPlataforma.ivaCotizacionTaller(cotizacion, pagada, ivaTiendas, parametros.ivaPct())));
             anotarPiezas(linea, cotizacion, pct, retener);
             repartoRepository.save(linea);
             lineas.add(linea);
@@ -825,7 +830,7 @@ public class PagoMarketplaceService {
         BigDecimal base = Dinero.pesos(c.getSubtotalRepuestosTaller());
         if (base.signum() <= 0) return;
         BigDecimal bruto = base.add(Dinero.pesos(c.getIvaRepuestosTaller()));
-        BigDecimal comision = retener ? ComisionPlataforma.monto(base, pct) : BigDecimal.ZERO;
+        BigDecimal comision = retener ? ComisionPlataforma.monto(bruto, pct) : BigDecimal.ZERO;
         linea.setPiezasBase(Dinero.aDouble(base));
         linea.setPiezasBruto(Dinero.aDouble(bruto));
         linea.setPiezasNeto(Dinero.aDouble(bruto.subtract(comision).max(BigDecimal.ZERO)));

@@ -163,7 +163,7 @@ class CotizacionServiceTest {
         assertEquals(214_200, c.getTotal());
         assertEquals(50_000, c.getAnticipoDiagnostico());
         assertEquals(164_200, c.getTotalAPagar());
-        assertEquals(18_000, c.getComisionInformativa());
+        assertEquals(16_420, c.getComisionInformativa(), "10 % de 164.200: total con IVA menos el adelanto");
         assertEquals(3, c.getDiasEntregaRepuestos());
         assertEquals("s1", c.getItems().get(0).getTiendaId());
         assertEquals(45_000, c.getItems().get(0).getPrecioUnitario());
@@ -223,7 +223,7 @@ class CotizacionServiceTest {
 
         CotizacionDTO dto = service.delTaller(CORREO_TALLER).get(0);
 
-        assertEquals(10_000, dto.getComisionTaller(), "solo sobre su mano de obra sin IVA, no sobre los repuestos de la tienda");
+        assertEquals(11_900, dto.getComisionTaller(), "sobre su mano de obra con IVA, no sobre los repuestos de la tienda");
         assertEquals(119_000, dto.getRecibeTaller());
         assertFalse(dto.getComisionSeDescuenta());
     }
@@ -237,7 +237,7 @@ class CotizacionServiceTest {
 
         CotizacionDTO dto = service.delTaller(CORREO_TALLER).get(0);
 
-        assertEquals(109_000, dto.getRecibeTaller());
+        assertEquals(107_100, dto.getRecibeTaller(), "119.000 − 11.900");
         assertTrue(dto.getComisionSeDescuenta());
     }
 
