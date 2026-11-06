@@ -36,34 +36,59 @@ function prepararEventos(eventos, vistaTaller) {
   return cronologicos.reverse();
 }
 
+/** Junta los eventos seguidos con el mismo estado: un solo título y, debajo, cada evento con su hora, nota y quién. */
+function agruparPorEstado(ordenados) {
+  const grupos = [];
+  for (const e of ordenados) {
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.estado === e.estado) ultimo.eventos.push(e);
+    else grupos.push({ estado: e.estado, eventos: [e] });
+  }
+  return grupos;
+}
+
+function DetalleEvento({ e, conHora }) {
+  return (
+    <>
+      {conHora && <time className="ss-timeline__hora" dateTime={e.fecha}>{formatFechaHora(e.fecha)}</time>}
+      {e.nota && <p className="ss-timeline__nota">{e.nota}</p>}
+      {(e.actor || e.mecanico) && (
+        <span className="ss-timeline__actor">
+          {[e.actor, e.mecanico && `Mecánico: ${e.mecanico}`].filter(Boolean).join(" · ")}
+        </span>
+      )}
+    </>
+  );
+}
+
 /**
  * Avance de la solicitud: cada evento con su fecha, quién lo hizo y la nota. catalogo da el nombre de cada estado.
- * vistaTaller quita del historial lo que el taller ya sabe (su nombre, el mecánico repetido). resumida muestra solo
- * el último evento y un botón para ver el historial completo.
+ * vistaTaller quita del historial lo que el taller ya sabe (su nombre, el mecánico repetido). Los eventos seguidos con
+ * el mismo estado van bajo un solo título. resumida muestra solo el último grupo y un botón para ver el historial.
  */
 export default function LineaTiempo({ eventos = [], catalogo = ESTADOS, vistaTaller = false, resumida = false }) {
   const [abierta, setAbierta] = useState(false);
   if (!eventos.length) return null;
   const ordenados = prepararEventos(eventos, vistaTaller);
-  const visibles = resumida && !abierta ? ordenados.slice(0, 1) : ordenados;
+  const grupos = agruparPorEstado(ordenados);
+  const visibles = resumida && !abierta ? grupos.slice(0, 1) : grupos;
 
   return (
     <>
       <ol className="ss-timeline">
-        {visibles.map((e, i) => (
-          <li key={`${e.fecha}-${i}`} className={`ss-timeline__item${i === 0 ? " ss-timeline__item--actual" : ""}`}>
+        {visibles.map((g, i) => (
+          <li key={`${g.eventos[0].fecha}-${i}`} className={`ss-timeline__item${i === 0 ? " ss-timeline__item--actual" : ""}`}>
             <span className="ss-timeline__marca" aria-hidden="true" />
             <div className="ss-timeline__cuerpo">
               <div className="ss-timeline__cabecera">
-                <strong>{catalogo[e.estado]?.label || e.estado}</strong>
-                <time dateTime={e.fecha}>{formatFechaHora(e.fecha)}</time>
+                <strong>{catalogo[g.estado]?.label || g.estado}</strong>
+                <time dateTime={g.eventos[0].fecha}>{formatFechaHora(g.eventos[0].fecha)}</time>
               </div>
-              {e.nota && <p className="ss-timeline__nota">{e.nota}</p>}
-              {(e.actor || e.mecanico) && (
-                <span className="ss-timeline__actor">
-                  {[e.actor, e.mecanico && `Mecánico: ${e.mecanico}`].filter(Boolean).join(" · ")}
-                </span>
-              )}
+              {g.eventos.map((e, j) => (
+                <div key={`${e.fecha}-${j}`} className={j > 0 ? "ss-timeline__sub" : undefined}>
+                  <DetalleEvento e={e} conHora={j > 0} />
+                </div>
+              ))}
             </div>
           </li>
         ))}

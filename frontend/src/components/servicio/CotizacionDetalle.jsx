@@ -9,8 +9,9 @@ import { horas } from "../../utils/formato";
  * Desglose de una cotización (repuestos, mano de obra, IVA, anticipo y total a
  * pagar). Lo usan el cliente, el taller y la página pública del correo.
  * Los montos vienen calculados del backend; aquí solo se muestran.
+ * horaMasIva: la tarifa por hora se lee "+ IVA" (solo la cotización de ejemplo del inicio).
  */
-export default function CotizacionDetalle({ cotizacion: c, mostrarComision = false, sinEstado = false }) {
+export default function CotizacionDetalle({ cotizacion: c, mostrarComision = false, sinEstado = false, horaMasIva = false }) {
   const repuestos = (c.items || []).filter((i) => i.tipo === "REPUESTO");
   const delTaller = repuestos.filter(esDelTaller);
   const deTiendas = repuestos.filter((i) => !esDelTaller(i));
@@ -62,7 +63,7 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
                 <span className="ct-item__desc">
                   {i.descripcion}
                   {i.modalidad === "HORAS" && (
-                    <span className="ss-meta">{i.horas} h × {formatPrecio(i.precioUnitario)}</span>
+                    <span className="ss-meta">{i.horas} h × {formatPrecio(i.precioUnitario)}{horaMasIva ? " + IVA" : ""}</span>
                   )}
                 </span>
                 <span className="ct-item__valor">{formatPrecio(totalLinea(c, i))}</span>
