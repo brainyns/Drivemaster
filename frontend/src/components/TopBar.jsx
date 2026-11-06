@@ -4,6 +4,7 @@ import NotificationDropdown from "./NotificationDropdown";
 import useNoLeidas from "../hooks/useNoLeidas";
 import { tieneCampanita, textoContador } from "../services/notificacionesUtil";
 import "../css/topbar.css";
+import { perfilDelRol } from "../utils/navegacion";
 
 const IcoSettings = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -106,6 +107,8 @@ function DropdownConfig({ onClose, theme, onToggleTheme }) {
 
 // ── Dropdown Perfil ───────────────────────────────────────────────────────────
 function DropdownPerfil({ user, onClose, onLogout, onNavigate }) {
+  // El taller y la tienda van a Mi taller y Mi tienda; los demás, a Mi perfil
+  const perfil = perfilDelRol(user?.rol);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -128,9 +131,9 @@ function DropdownPerfil({ user, onClose, onLogout, onNavigate }) {
       <div className="tb-dropdown-divider" />
 
       <div className="tb-perfil-menu">
-        <button className="tb-perfil-item" onClick={() => { onClose(); onNavigate?.("mi-perfil"); }}>
+        <button className="tb-perfil-item" onClick={() => { onClose(); onNavigate?.(perfil.pagina); }}>
           <span className="tb-perfil-item-ico"><IcoUser /></span>
-          <span>Mi perfil</span>
+          <span>{perfil.texto}</span>
         </button>
       </div>
 

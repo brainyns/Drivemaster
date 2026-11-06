@@ -63,6 +63,7 @@ import { miTienda } from "./services/tiendaService";
 import { setIvaPct } from "./components/marketplace/iva";
 import { consumirPagoPendiente } from "./components/marketplace/pagoPendiente";
 import { guardarDestinoPostLogin, consumirDestinoPostLogin, limpiarDestinoPostLogin } from "./services/destinoPostLogin";
+import { perfilDelRol } from "./utils/navegacion";
 
 const storedUser  = getUser();
 const storedToken = getToken();
@@ -220,6 +221,8 @@ function App() {
   // Se ajusta durante el render (patrón de React para corregir estado) para que no alcance a pintarse.
   const inicioDelRol = user ? INICIO_POR_ROL[user.rol] || "dashboard-main" : "catalogo";
   if (user && pagina === "registro-negocio") setPagina(inicioDelRol);
+  // "Mi perfil" es de los roles internos: el taller y la tienda llegan a Mi taller y Mi tienda, nunca al aviso de acceso
+  if (user && pagina === "mi-perfil" && perfilDelRol(user.rol).pagina !== "mi-perfil") setPagina(perfilDelRol(user.rol).pagina);
   const irARegistroNegocio = () => setPagina(user ? inicioDelRol : "registro-negocio");
 
   // Sesión expirada: limpiamos localmente pero conservamos el flag

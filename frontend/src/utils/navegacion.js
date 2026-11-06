@@ -25,3 +25,16 @@ export function destinoReferencia(ref, volverA) {
   if (ref.destino === "COMPRA") return { pagina: "compraDetalle", param: ref.id };
   return null;
 }
+
+/**
+ * La página de perfil de cada rol: el taller y la tienda no tienen "Mi perfil" (la página de los roles internos), su
+ * perfil es Mi taller y Mi tienda. CLIENTE y SUPERADMIN siguen con el suyo.
+ */
+const PERFIL_DE_NEGOCIO = {
+  TALLER: { pagina: "taller-mitaller", texto: "Mi taller" },
+  TIENDA: { pagina: "mi-tienda", texto: "Mi tienda" },
+};
+
+export function perfilDelRol(rol) {
+  return PERFIL_DE_NEGOCIO[rol] || { pagina: "mi-perfil", texto: "Mi perfil" };
+}

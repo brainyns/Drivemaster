@@ -79,3 +79,16 @@ test("las páginas del taller están permitidas solo para TALLER", () => {
     assert.ok(!paginas.some((p) => p.startsWith("taller-")), `${rol} no debería abrir páginas del taller`);
   }
 });
+
+test("Mi perfil: el taller va a Mi taller y la tienda a Mi tienda, nunca al aviso de acceso no autorizado", async () => {
+  const { perfilDelRol } = await import("../src/utils/navegacion.js");
+  assert.deepEqual(perfilDelRol("TALLER"), { pagina: "taller-mitaller", texto: "Mi taller" });
+  assert.deepEqual(perfilDelRol("TIENDA"), { pagina: "mi-tienda", texto: "Mi tienda" });
+  assert.deepEqual(perfilDelRol("CLIENTE"), { pagina: "mi-perfil", texto: "Mi perfil" });
+  assert.deepEqual(perfilDelRol("SUPERADMIN"), { pagina: "mi-perfil", texto: "Mi perfil" });
+  const topbar = readFileSync(new URL("../src/components/TopBar.jsx", import.meta.url), "utf8");
+  assert.ok(topbar.includes("onNavigate?.(perfil.pagina)") && topbar.includes("{perfil.texto}"), "el menú del avatar usa la página del rol");
+  const app = readFileSync(new URL("../src/App.jsx", import.meta.url), "utf8");
+  assert.ok(app.includes('pagina === "mi-perfil" && perfilDelRol(user.rol).pagina !== "mi-perfil") setPagina(perfilDelRol(user.rol).pagina)'),
+    "si llega directo a Mi perfil se le lleva a su página antes de pintar el aviso");
+});
