@@ -31,11 +31,18 @@ skills-lock.json
 *.docx
 *.pdf
 TERCERA_ENTREGA_PA_*.pdf
+CRITERIOS_DE_ACEPTACION_*.md
+generar_pdf_*.py
+generar_documento_*.py
+documentos_generados/
+generados/
 ml/__pycache__/
 __pycache__/
 ml/graficos_apa/
 ml/pdf_preview/
 ml/generar_pdf_apa.py
 ml/generar_graficos_apa.py
+
+
 
 
