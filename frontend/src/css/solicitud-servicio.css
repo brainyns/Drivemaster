@@ -415,6 +415,9 @@
 .ss-timeline__cabecera time { font-size: 0.75rem; color: var(--text-muted); }
 .ss-timeline__nota { margin: 4px 0 2px; font-size: 0.85rem; line-height: 1.45; }
 .ss-timeline__actor { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+/* Otro evento del mismo estado, bajo el mismo título: su hora encima y una línea suave que lo separa */
+.ss-timeline__sub { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--ui-line, var(--border)); }
+.ss-timeline__hora { display: block; font-size: 0.75rem; color: var(--text-muted); }
 
 /* ── Filtros de la bandeja ── */
 .ss-panel { display: flex; flex-direction: column; gap: var(--sp-md); }
