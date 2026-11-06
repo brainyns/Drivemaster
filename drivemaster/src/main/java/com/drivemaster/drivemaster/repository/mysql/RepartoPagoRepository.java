@@ -115,6 +115,18 @@ public interface RepartoPagoRepository extends JpaRepository<RepartoPago, Long>,
             + "and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde")
     List<RepartoPago> comisionCobradaDesde(@Param("desde") LocalDateTime desde);
 
+    /** Líneas de comisión de la plataforma (retenidas, informativas y sus anulaciones) creadas en [desde, antesDe). */
+    @Query("select r from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA' and r.fechaCreacion >= :desde "
+            + "and r.fechaCreacion < :antesDe")
+    List<RepartoPago> comisionEntre(@Param("desde") LocalDateTime desde, @Param("antesDe") LocalDateTime antesDe);
+
+    /** Como comisionCobradaDesde, pero solo las líneas pagadas en [desde, antesDe). */
+    @Query("select r from RepartoPago r where r.beneficiarioTipo <> 'PLATAFORMA' and r.comisionRetenida > 0 "
+            + "and r.estado = 'LIQUIDADO' and coalesce(r.modoLiquidacion, '') <> 'SIMULADO' "
+            + "and (coalesce(r.modoLiquidacion, '') <> 'WOMPI' or r.referenciaLiquidacion like '%[ID:%') "
+            + "and coalesce(r.fechaLiquidacion, r.fechaCreacion) >= :desde and coalesce(r.fechaLiquidacion, r.fechaCreacion) < :antesDe")
+    List<RepartoPago> comisionCobradaEntre(@Param("desde") LocalDateTime desde, @Param("antesDe") LocalDateTime antesDe);
+
     /** Líneas de comisión (registradas y anuladas) desde una fecha, para el reporte por mes. */
     @Query("select r from RepartoPago r where r.beneficiarioTipo = 'PLATAFORMA' and r.fechaCreacion >= :desde "
             + "order by r.fechaCreacion")

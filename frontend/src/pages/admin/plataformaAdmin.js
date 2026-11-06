@@ -4,6 +4,7 @@
 import { esErrorConexion } from "../../services/conexion.js";
 import { textoError } from "../../utils/errores.js";
 import { MINIMO_MOTIVO } from "../../utils/motivo.js";
+import { claveDeRango } from "../../components/ui/reglasTabla.js";
 
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 const cop = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
@@ -379,4 +380,14 @@ export function resumenReembolsos(lista) {
   if (pendientes.length === 0) return null;
   const total = pendientes.reduce((s, r) => s + (Number(r.monto) || 0), 0);
   return { cantidad: pendientes.length, total };
+}
+
+/** Cómo se lee junto a "Comisión ganada" el periodo elegido en su filtro de fechas. */
+export function textoPeriodoComision(valor, ahora = new Date()) {
+  const clave = claveDeRango(valor, ahora);
+  if (clave === "mes") return "este mes";
+  if (clave === "hoy") return "hoy";
+  if (clave === "7d") return "en los últimos 7 días";
+  if (!clave) return "desde el inicio";
+  return "en el periodo elegido";
 }

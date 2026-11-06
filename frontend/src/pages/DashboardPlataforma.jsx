@@ -8,11 +8,11 @@ import Alerta from "../components/ui/Alerta";
 import Esqueleto from "../components/ui/Esqueleto";
 import BarraProgreso from "../components/ui/BarraProgreso";
 import Icon from "../components/public/Icon";
+import ComisionGanada from "../components/admin/ComisionGanada";
 import { barras, resumenReembolsos, urgentesDashboard } from "./admin/plataformaAdmin";
 import "../css/dashboard-plataforma.css";
 import "../css/panel-plataforma.css";
 import { textoError } from "../utils/errores";
-import { porcentaje } from "../utils/formato";
 
 const REFRESCO_MS = 60000;
 
@@ -218,15 +218,14 @@ export default function DashboardPlataforma({ token, onIr }) {
 
       <section className="pp-seccion" aria-labelledby="pp-dinero">
         <h2 id="pp-dinero" className="pp-titulo">Dinero</h2>
+        {/* Un solo bloque de comisión, del periodo elegido: las cifras de todo el historial están en Reportes */}
+        <ComisionGanada token={token} onVerReporte={() => ir("reportes-plataforma", "comision")} />
         <div className="ui-indicadores pp-indicadores-dinero">
           <Indicador titulo="Total movido" valor={cop(d.dinero.movido)}
             pie="Pagos aprobados que pasaron por la plataforma, con IVA y envío. No es ingreso de DriveMaster." />
           {/* La base y la comisión salen de lo mismo: comisión = 10 % de la base (mismo período, sin reembolsos) */}
           <Indicador titulo="Base de la comisión" valor={cop(d.dinero.baseComision)}
             pie={`Valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}, sin reembolsos.`} />
-          <Indicador titulo="Comisión cobrada" valor={cop(d.dinero.comisionRetenida?.cobrada)} tono="ok"
-            pie={d.dinero.comisionSeDescuenta ? "Retenida en pagos ya transferidos a los negocios." : "El cobro está apagado: la comisión no se descuenta todavía."}
-            onClick={() => ir("reportes-plataforma", "comision")} />
           {d.dinero.comisionRetenida?.porCobrar > 0 && (
             <Indicador titulo="Comisión por cobrar" valor={cop(d.dinero.comisionRetenida.porCobrar)}
               pie="Retenida en pagos que aún no se transfieren a los negocios."
@@ -237,9 +236,6 @@ export default function DashboardPlataforma({ token, onIr }) {
               pie="Reembolsos de pagos ya transferidos: se les cobran a los negocios a mano."
               onClick={() => ir("reportes-plataforma", "comision")} />
           )}
-          <Indicador titulo="Comisión informativa" valor={cop(d.dinero.comisionRegistrada)}
-            pie={`${porcentaje(d.dinero.comisionPct)} sobre el valor sin IVA ni envío de cada pago${d.dinero.comisionDesde ? `, desde el ${diaMes(d.dinero.comisionDesde)}` : ""}. Informativa: no es dinero cobrado.`}
-            onClick={() => ir("reportes-plataforma", "comision")} />
           {d.dinero.liquidacionAutomatica && !d.dinero.porLiquidar ? (
             <Indicador titulo="Pagado automáticamente (simulado)" valor={cop(d.dinero.liquidadoSimulado)}
               pie={`El pago simulado le paga a cada negocio al entregarse el pedido. Pagado en total: ${cop(d.dinero.liquidado)}.`}

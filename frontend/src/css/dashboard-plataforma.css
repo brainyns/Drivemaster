@@ -37,3 +37,28 @@
 }
 .pp-enlace:hover { color: var(--primary-text); }
 .pp-enlace:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: 2px; border-radius: var(--ui-r-sm); }
+
+/* Comisión ganada: una sola cifra grande del periodo; lo liquidado y lo informativo, en pequeño debajo. Blanco con el
+   naranja solo en el borde, como "Este mes" de los informes. */
+.pp-comision {
+  margin-bottom: var(--ui-sp-4); padding: var(--ui-sp-4) var(--ui-sp-5);
+  border-left: 4px solid var(--primary);
+}
+.pp-comision__cabecera { display: flex; flex-direction: column; gap: var(--ui-sp-3); margin-bottom: var(--ui-sp-3); }
+.pp-comision__titulo { margin: 0; font-size: 0.9375rem; font-weight: 600; color: var(--ui-muted); }
+.pp-comision__titulo::first-letter { text-transform: uppercase; }
+.pp-comision__valor {
+  margin: 0; font-size: 2.25rem; font-weight: 800; line-height: 1.1; color: var(--ui-text);
+  font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.pp-comision__detalle {
+  display: flex; flex-wrap: wrap; gap: var(--ui-sp-1) var(--ui-sp-5);
+  margin: var(--ui-sp-2) 0 0; padding: 0; list-style: none; font-size: 0.875rem; color: var(--ui-muted);
+}
+.pp-comision__detalle strong { color: var(--ui-text); font-variant-numeric: tabular-nums; }
+.pp-comision__nota { margin: var(--ui-sp-2) 0 0; font-size: 0.8125rem; color: var(--ui-muted); }
+.pp-comision__error { margin: 0; color: var(--ui-error); }
+@media (max-width: 640px) {
+  .pp-comision { padding: var(--ui-sp-4); }
+  .pp-comision__valor { font-size: 1.875rem; }
+}

@@ -158,3 +158,8 @@ export async function cancelarOrdenPagada(token, id, motivo) {
   try { const data = await res.json(); mensaje = data.error || data.message || mensaje; } catch { /* sin cuerpo */ }
   throw new Error(mensaje);
 }
+
+/** Comisión ganada en un periodo ({ desde, hasta } AAAA-MM-DD; sin fechas, el mes en curso), ya liquidada e informativa. */
+export async function comisionGanadaPlataforma(token, filtros) {
+  return leer(await apiFetch(`${BASE}/comision-ganada${consulta(filtros)}`, { headers: headers(token) }), "No pudimos cargar la comisión.");
+}

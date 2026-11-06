@@ -458,9 +458,25 @@ test("Liquidaciones: bruto, comisión y neto de cada fila", () => {
 test("Reportes y dashboard: la comisión cobrada va separada de la informativa", () => {
   const p = leer("../src/pages/ReportesPlataforma.jsx");
   for (const texto of ['titulo="Cobrada"', 'titulo="Por cobrar"', 'titulo="Sin id de Wompi"', "Comisión informativa", "marcarSaldoCobrado(token, marcando.id)"]) assert.ok(p.includes(texto), texto);
+  // El dashboard tiene un solo bloque de comisión, del periodo elegido; las cifras de todo el historial están en Reportes
   const d = leer("../src/pages/DashboardPlataforma.jsx");
-  assert.ok(d.includes('titulo="Comisión cobrada"') && d.includes('titulo="Comisión informativa"'));
-  assert.ok(d.includes("El cobro está apagado"), "con la bandera apagada no aparenta haber cobrado");
+  assert.ok(d.includes("<ComisionGanada token={token}"));
+  assert.ok(!d.includes('titulo="Comisión cobrada"') && !d.includes('titulo="Comisión informativa"'), "sin tres cifras que confundan");
+  const c = leer("../src/components/admin/ComisionGanada.jsx");
+  for (const texto of ["Ya cobrada:", "Informativa, no cobrada:", 'rangoRapido("mes")', "comisionGanadaPlataforma(token, filtros)", "<FiltroFechas"]) {
+    assert.ok(c.includes(texto), texto);
+  }
+  assert.ok(c.includes("El cobro está apagado"), "con la bandera apagada no aparenta haber cobrado");
+});
+
+test("Comisión ganada: el título dice el periodo elegido, con Este mes por defecto", async () => {
+  const { textoPeriodoComision } = await import("../src/pages/admin/plataformaAdmin.js");
+  const { rangoRapido } = await import("../src/components/ui/reglasTabla.js");
+  const ahora = new Date("2026-11-20T15:00:00-05:00");
+  assert.equal(textoPeriodoComision(rangoRapido("mes", ahora), ahora), "este mes");
+  assert.equal(textoPeriodoComision({ desde: "", hasta: "" }, ahora), "desde el inicio");
+  assert.equal(textoPeriodoComision({ desde: "2026-10-01", hasta: "2026-10-31" }, ahora), "en el periodo elegido");
+  assert.match(leer("../src/services/plataformaService.js"), /\/comision-ganada\$\{consulta\(filtros\)\}/);
 });
 
 test("Reportes de plataforma: sistema compartido, comisión con Indicador y la comisión del dashboard abre su reporte", () => {

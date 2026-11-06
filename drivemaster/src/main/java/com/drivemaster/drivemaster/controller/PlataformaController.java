@@ -9,6 +9,7 @@ import com.drivemaster.drivemaster.dto.comun.RangoFechas;
 import com.drivemaster.drivemaster.dto.plataforma.DashboardPlataformaDTO;
 import com.drivemaster.drivemaster.dto.plataforma.DetallePlataformaDTO;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ClientesConMasCompras;
+import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ComisionGanada;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ComisionNeta;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ProductosMasVendidos;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ServiciosPorTaller;
@@ -169,6 +170,16 @@ public class PlataformaController {
     @GetMapping("/reportes/comision")
     public ResponseEntity<ComisionNeta> comisionNeta(@RequestParam(defaultValue = "12") int meses) {
         return ResponseEntity.ok(reportes.comisionNeta(meses));
+    }
+
+    /**
+     * Comisión ganada por DriveMaster en un periodo (desde/hasta como AAAA-MM-DD, hora de Colombia); sin fechas, el mes
+     * en curso. Retenida menos anulada por reembolsos; la informativa va aparte y no suma.
+     */
+    @GetMapping("/comision-ganada")
+    public ResponseEntity<ComisionGanada> comisionGanada(@RequestParam(required = false) String desde,
+                                                         @RequestParam(required = false) String hasta) {
+        return ResponseEntity.ok(reportes.comisionGanada(RangoFechas.de(desde, hasta)));
     }
 
     /** Usuarios del sistema con filtros por rol y estado, búsqueda y correo enmascarado. */

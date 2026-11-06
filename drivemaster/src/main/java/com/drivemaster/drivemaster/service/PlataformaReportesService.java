@@ -1,6 +1,8 @@
 package com.drivemaster.drivemaster.service;
 
+import com.drivemaster.drivemaster.dto.comun.RangoFechas;
 import com.drivemaster.drivemaster.dto.plataforma.DashboardPlataformaDTO;
+import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ComisionGanada;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ClienteCompras;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ClientesConMasCompras;
 import com.drivemaster.drivemaster.dto.plataforma.ReportesPlataformaDTO.ComisionNeta;
@@ -259,6 +261,39 @@ public class PlataformaReportesService {
                 DashboardPlataformaDTO.ComisionRetenida.de(repartoRepository.comisionRetenidaPorEstado()),
                 parametros.comisionRetenida(), saldosAFavor(),
                 pagoRepository == null ? 0 : pagoRepository.sumaMovidaMarketplaceDesde(desde));
+    }
+
+    // ─── Comisión ganada en un periodo ───────────────────────────────────────
+
+    /** La comisión del periodo; sin fechas, el mes en curso (hora de Colombia). */
+    public ComisionGanada comisionGanada(RangoFechas rango) {
+        return comisionGanada(rango, RangoFechas.hoy());
+    }
+
+    /**
+     * Sale de las mismas líneas que Liquidaciones: la línea PLATAFORMA RETENIDA de cada pago es la suma de la comisión
+     * retenida en sus líneas de negocio (ComisionPlataforma.registrar) y cada reembolso la anula con una línea negativa
+     * (ComisionPlataforma.anular). Así, ganada = suma de la columna "Comisión" de Liquidaciones sin las líneas anuladas.
+     */
+    ComisionGanada comisionGanada(RangoFechas rango, java.time.LocalDate hoy) {
+        LocalDateTime inicioMes = hoy.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime desde = rango != null && rango.desde() != null ? rango.desde() : inicioMes;
+        LocalDateTime antesDe = rango != null && rango.antesDe() != null ? rango.antesDe()
+                : (rango != null && rango.desde() != null ? hoy.plusDays(1).atStartOfDay() : inicioMes.plusMonths(1));
+        double retenida = 0, anulada = 0, informativa = 0;
+        for (RepartoPago r : repartoRepository.comisionEntre(desde, antesDe)) {
+            double monto = r.getMonto() == null ? 0 : r.getMonto();
+            if (RepartoPago.RETENIDA.equals(r.getEstado())) {
+                if (monto >= 0) retenida += monto;
+                else anulada += -monto;
+            } else if (RepartoPago.INFORMATIVA.equals(r.getEstado())) {
+                informativa += monto;
+            }
+        }
+        double liquidada = repartoRepository.comisionCobradaEntre(desde, antesDe).stream()
+                .mapToDouble(r -> r.getComisionRetenida() == null ? 0 : r.getComisionRetenida()).sum();
+        return new ComisionGanada(desde, antesDe, retenida - anulada, retenida, anulada, liquidada,
+                Math.max(0, informativa), parametros.comisionRetenida());
     }
 
     private SaldosAFavor saldosAFavor() {

@@ -59,6 +59,16 @@ public final class ReportesPlataformaDTO {
                                DashboardPlataformaDTO.ComisionRetenida retenida, boolean comisionSeDescuenta,
                                SaldosAFavor saldosAFavor, double movido) {}
 
+    /**
+     * Comisión de DriveMaster en un periodo [desde, antesDe), en hora de Colombia. ganada: la retenida en los pagos aprobados
+     * del periodo (líneas PLATAFORMA RETENIDA) menos la anulada por reembolsos en el periodo; nunca cuenta la informativa.
+     * retenida y anulada son sus dos partes. liquidada: la retenida en líneas ya pagadas al negocio en el periodo (mismas
+     * reglas que "Comisión cobrada": sin las simuladas y, en Wompi, solo con el id del pago). informativa: la que solo se
+     * registró porque el cobro estaba apagado, neta de sus anulaciones. comisionSeDescuenta: la bandera vigente.
+     */
+    public record ComisionGanada(LocalDateTime desde, LocalDateTime antesDe, double ganada, double retenida, double anulada,
+                                 double liquidada, double informativa, boolean comisionSeDescuenta) {}
+
     // ─── Usuarios ────────────────────────────────────────────────────────────
 
     /** Correo enmascarado en la lista; los datos completos solo se tocan al editar. */
