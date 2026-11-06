@@ -215,7 +215,7 @@ export function CotizacionEjemplo({ onSolicitarDiagnostico }) {
           <span>Nombres, precios y repuestos inventados.</span>
         </figcaption>
         <div className="dm-ejemplo__tarjeta">
-          <CotizacionDetalle cotizacion={COTIZACION_EJEMPLO} sinEstado />
+          <CotizacionDetalle cotizacion={COTIZACION_EJEMPLO} sinEstado horaMasIva />
         </div>
       </figure>
     </section>
@@ -349,13 +349,9 @@ export function ParaNegocios({ onRegistroNegocio }) {
   );
 }
 
-/* ── Beneficios + métricas ────────────────────────────────────────────────
-   Las métricas del mockup eran ilustrativas (+500 repuestos, +50 marcas).
-   Aquí se calculan con los datos reales del catálogo. */
-export function Beneficios({ productos = [], onIrVehiculo }) {
-  const marcas = new Set(productos.map((p) => p.marca).filter(Boolean));
-  const categorias = new Set(productos.map((p) => p.categoria).filter(Boolean));
-
+/* ── Beneficios ────────────────────────────────────────────────────────────
+   Sin contadores de repuestos, categorías y marcas: con pocos productos se ven pobres. */
+export function Beneficios({ onIrVehiculo }) {
   const beneficios = [
     {
       icon: "search",
@@ -379,12 +375,6 @@ export function Beneficios({ productos = [], onIrVehiculo }) {
     },
   ];
 
-  const metricas = [
-    { valor: productos.length, sufijo: "+", label: "Repuestos catalogados" },
-    { valor: categorias.size, sufijo: "", label: "Categorías disponibles" },
-    { valor: marcas.size, sufijo: "", label: "Marcas en catálogo" },
-  ];
-
   return (
     <section className="dm-section dm-container" id="dm-nosotros">
       <div className="dm-section-heading">
@@ -393,7 +383,7 @@ export function Beneficios({ productos = [], onIrVehiculo }) {
             <span className="dm-line" /> HECHO PARA EL MUNDO AUTOMOTRIZ
           </div>
           <h2>
-            No solo vendemos piezas.
+            Conectamos tu vehículo con quien sabe.
             <br />
             <span>Te acompañamos.</span>
           </h2>
@@ -440,26 +430,6 @@ export function Beneficios({ productos = [], onIrVehiculo }) {
           </p>
         </div>
       </div>
-
-      {/* Sin catálogo (vacío o la API falló) no se muestran ceros: igual que la tira de marcas */}
-      {productos.length > 0 && (
-        <div className="dm-metrics">
-          <div className="dm-metrics__intro">
-            <span className="dm-eyebrow">CATÁLOGO DRIVEMASTER</span>
-            <p>Datos reales del inventario para compra directa.</p>
-          </div>
-          {metricas.map((m) => (
-            <div key={m.label}>
-              <strong>
-                {m.sufijo && m.sufijo === "+" ? "+" : ""}
-                {m.valor}
-                <span>↗</span>
-              </strong>
-              <p>{m.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
 
       <div className="dm-catalog-note">
         <Icon name="car" size={18} />

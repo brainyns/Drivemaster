@@ -231,7 +231,7 @@ export default function CatalogoPage({
                 <span className="dm-line" /> COMPRA DIRECTA
               </div>
               <h2>¿Prefieres comprar el repuesto tú mismo?</h2>
-              <p>Identifica tu vehículo y te avisamos qué repuestos le sirven, de DriveMaster y de las demás tiendas.</p>
+              <p>Identifica tu vehículo y te avisamos qué repuestos le sirven en las tiendas aliadas.</p>
             </div>
 
             <VehiculoSelector
@@ -245,7 +245,7 @@ export default function CatalogoPage({
 
             <MarcasStrip productos={todos} />
 
-            <Beneficios productos={todos} onIrVehiculo={irAlVehiculo} />
+            <Beneficios onIrVehiculo={irAlVehiculo} />
 
             <CierreBanner onSolicitarDiagnostico={onSolicitarDiagnostico} />
           </div>
@@ -274,7 +274,7 @@ export default function CatalogoPage({
                   <p className="dm-catalogo__lead">
                     {hayFiltrosDeVehiculo
                       ? "Los compatibles salen primero y te avisamos si alguno no le sirve. Compara y elige con confianza."
-                      : "Productos de DriveMaster y de las tiendas aliadas. Explora, compara y encuentra la solución correcta."}
+                      : "Productos de las tiendas aliadas. Explora, compara y encuentra la solución correcta."}
                   </p>
                 </div>
                 <span className="dm-tag">{cargando ? "CARGANDO" : `${todos.length} PRODUCTOS · ${opciones.tiendas.length} TIENDAS`}</span>
