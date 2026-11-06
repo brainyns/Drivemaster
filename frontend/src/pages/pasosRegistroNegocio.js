@@ -1,6 +1,8 @@
 // Pasos y validación del registro de talleres y tiendas. Las reglas son las de siempre (el servidor exige las
 // mismas); aquí solo se reparten por paso para validar cada uno antes de seguir. Funciones puras.
 
+import { parsePesos } from "../utils/formato.js";
+
 export const vacio = (v) => v === null || v === undefined || String(v).trim() === "";
 
 /** Pasos según el tipo: la tienda no tiene el paso "Servicio" (mano de obra y especialidades). */
@@ -37,9 +39,9 @@ export function validarNegocio(tipo, f) {
   if (tipo === "TIENDA" && vacio(f.horario)) e.horario = "Indica el horario de atención: lo necesita el cliente para retirar.";
   if (!vacio(f.telefono) && !/^[0-9+\s()-]{7,20}$/.test(f.telefono.trim())) e.telefono = "Teléfono no válido: usa solo números, espacios o +.";
   if (tipo === "TALLER") {
-    const precio = Number(f.precioManoObra);
+    const precio = parsePesos(f.precioManoObra);
     if (vacio(f.precioManoObra) || isNaN(precio) || precio <= 0) e.precioManoObra = "Indica el valor de tu mano de obra.";
-    if (!vacio(f.tarifaHora) && (isNaN(Number(f.tarifaHora)) || Number(f.tarifaHora) <= 0)) e.tarifaHora = "Tarifa no válida.";
+    if (!vacio(f.tarifaHora) && (!Number.isFinite(parsePesos(f.tarifaHora)) || parsePesos(f.tarifaHora) <= 0)) e.tarifaHora = "Tarifa no válida.";
     // Con la ubicación el taller aparece en el mapa del cliente
     if (vacio(f.latitud) || vacio(f.longitud)) e.ubicacion = "Marca la ubicación de tu taller en el mapa.";
   }
@@ -79,7 +81,7 @@ export const pasoDelCampo = (tipo, campo) => pasosDe(tipo).find((p) => CAMPOS_PA
 
 /** Los datos que se envían al backend: los mismos de antes. */
 export function datosRegistro(tipo, form) {
-  const numero = (v) => (vacio(v) ? null : Number(v));
+  const numero = (v) => (vacio(v) ? null : parsePesos(v));
   const datos = {
     nombreNegocio: form.nombreNegocio.trim(),
     nit: form.nit.trim() || null,

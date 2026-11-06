@@ -13,6 +13,7 @@ import SelectorOrden from "../../components/ui/SelectorOrden";
 import Indicador from "../../components/ui/Indicador";
 import SeccionEditable from "../../components/ui/SeccionEditable";
 import Campo from "../../components/ui/Campo";
+import CampoPesos from "../../components/ui/CampoPesos";
 import ChipEstado from "../../components/ui/ChipEstado";
 import Alerta from "../../components/ui/Alerta";
 import EstadoVacio from "../../components/ui/EstadoVacio";
@@ -26,7 +27,7 @@ import { formatPrecio } from "../../components/servicio/estadosServicio";
 import {
   CLASES, CLASES_MANUALES, FILTROS_TIPO, cantidadConSigno, erroresMovimientoTaller, stockResultante,
 } from "./movimientosTaller";
-import { plural } from "../../utils/formato";
+import { parsePesos, plural } from "../../utils/formato";
 import { destinoReferencia } from "../../utils/navegacion";
 import "../../css/movimientos.css";
 import { textoError } from "../../utils/errores";
@@ -81,7 +82,7 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
     try {
       await registrarMovimientoTaller(token, {
         clase: form.clase, piezaId: carga ? null : form.piezaId, productoId: carga ? form.productoId : null,
-        cantidad: Number(form.cantidad), costo: carga ? Number(String(form.costo).replace(/\./g, "")) : null, motivo: form.motivo.trim(),
+        cantidad: Number(form.cantidad), costo: carga ? parsePesos(form.costo) : null, motivo: form.motivo.trim(),
       });
       onGuardado(carga
         ? `Stock inicial registrado: ${plural(Number(form.cantidad), "unidad", "unidades")} de ${pieza.nombre}.`
@@ -98,7 +99,7 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
         <ConfirmarAccion titulo={`¿Registrar ${tipo.label.toLowerCase()} de ${pieza.nombre}?`} textoConfirmar="Sí, registrar"
           peligro={tipo.sentido === "sale"}
           mensaje={carga
-            ? `Entran ${plural(Number(form.cantidad), "unidad", "unidades")} como un lote nuevo, a ${formatPrecio(Number(String(form.costo).replace(/\./g, "")))} cada una. No mueve dinero.`
+            ? `Entran ${plural(Number(form.cantidad), "unidad", "unidades")} como un lote nuevo, a ${formatPrecio(parsePesos(form.costo))} cada una. No mueve dinero.`
             : `El stock pasa de ${pieza.stock} a ${resultado}. No mueve dinero y queda en el historial con tu nombre.`}
           onCancelar={() => setConfirmando(false)} onConfirmar={guardar}>
           <figure className="ui-motivo-cita">
@@ -141,7 +142,7 @@ function FormMovimiento({ piezas, responsableIva, piezaInicial, token, onGuardad
         {carga && (
           <Campo id="mov-costo" label={responsableIva ? "Costo por unidad, sin IVA" : "Costo por unidad, con el IVA que pagaste"}
             error={errores.costo} ayuda="Con este costo se calculan tu margen y tu ganancia.">
-            <input className="ui-field__input" name="costo" type="text" inputMode="numeric" placeholder="Ej. 21000"
+            <CampoPesos name="costo" placeholder="Ej. 21.000"
               value={form.costo} onChange={cambiar} />
           </Campo>
         )}

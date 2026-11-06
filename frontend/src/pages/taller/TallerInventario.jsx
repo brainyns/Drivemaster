@@ -11,7 +11,8 @@ import Esqueleto from "../../components/ui/Esqueleto";
 import EstadoVacio from "../../components/ui/EstadoVacio";
 import Icon from "../../components/public/Icon";
 import { cifrasPieza, estadoEnCamino, pct } from "./reglasInventario";
-import { plural, porcentaje } from "../../utils/formato";
+import { parsePesos, plural, porcentaje } from "../../utils/formato";
+import CampoPesos from "../../components/ui/CampoPesos";
 import "../../css/inventario-taller.css";
 import { textoError } from "../../utils/errores";
 import ConfirmarAccion from "../../components/marketplace/ConfirmarAccion";
@@ -123,10 +124,10 @@ function PedidoEnCamino({ p, token, onInventario, onAviso }) {
  * y se guardan al confirmar. Vender en pérdida se avisa, pero no se bloquea: es decisión del taller.
  */
 function EditorPrecio({ pieza, comisionPct, token, onGuardada }) {
-  const [precio, setPrecio] = useState(pieza.precioVenta ? String(Math.round(pieza.precioVenta)) : "");
+  const [precio, setPrecio] = useState(pieza.precioVenta ? Math.round(pieza.precioVenta) : "");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
-  const numero = Number(precio);
+  const numero = parsePesos(precio) || 0;
   const tope = pieza.tope;
   const supera = tope != null && numero > tope;
   const cambio = numero > 0 && numero !== Math.round(pieza.precioVenta || 0);
@@ -150,9 +151,9 @@ function EditorPrecio({ pieza, comisionPct, token, onGuardada }) {
         <span className="iv-etiqueta">Tu precio al cliente, antes de IVA</span>
         <span className={`iv-moneda${supera ? " iv-moneda--error" : ""}`}>
           <span aria-hidden="true">$</span>
-          <input inputMode="numeric" value={precio} aria-label={`Precio de venta de ${pieza.nombre}, antes de IVA`}
+          <CampoPesos className="" value={precio} maxLength={11} aria-label={`Precio de venta de ${pieza.nombre}, antes de IVA`}
             aria-invalid={supera || undefined} aria-describedby={`iv-tope-${pieza.id}`}
-            onChange={(e) => setPrecio(e.target.value.replace(/\D/g, "").slice(0, 9))} />
+            onChange={(e) => setPrecio(e.target.value)} />
         </span>
       </label>
       {tope != null && (
@@ -180,7 +181,7 @@ function EditorPrecio({ pieza, comisionPct, token, onGuardada }) {
           </button>
         )}
         {tope != null && numero !== tope && (
-          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => setPrecio(String(Math.round(tope)))}>
+          <button type="button" className="ui-btn ui-btn--texto ui-btn--chico" onClick={() => setPrecio(Math.round(tope))}>
             Usar el precio público ({formatPrecio(tope)})
           </button>
         )}

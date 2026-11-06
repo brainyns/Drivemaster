@@ -5,6 +5,7 @@ import Logo from "../components/Logo";
 import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
 import Pasos from "../components/ui/Pasos";
 import Campo from "../components/ui/Campo";
+import CampoPesos from "../components/ui/CampoPesos";
 import CampoClave from "../components/ui/CampoClave";
 import Alerta from "../components/ui/Alerta";
 import Icon from "../components/public/Icon";
@@ -15,6 +16,7 @@ import {
 import "../css/Login.css";
 import "../css/registro-negocio.css";
 import { textoError } from "../utils/errores";
+import { parsePesos } from "../utils/formato";
 
 const TIPOS = [
   {
@@ -175,7 +177,9 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
   const campo = (nombre, label, props = {}, extra = {}) => (
     <Campo id={`rn-${nombre}`} label={label} error={errores[nombre]} opcional={extra.opcional}
       ayuda={extra.ayuda} className={extra.ancho ? "rn-ancho" : ""}>
-      <input name={nombre} className="ui-field__input" value={form[nombre]} onChange={cambiar} {...props} />
+      {extra.pesos
+        ? <CampoPesos name={nombre} value={form[nombre]} onChange={cambiar} {...props} />
+        : <input name={nombre} className="ui-field__input" value={form[nombre]} onChange={cambiar} {...props} />}
     </Campo>
   );
 
@@ -262,10 +266,10 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
 
           {paso === "servicio" && (
             <div className="rn-grid">
-              {campo("precioManoObra", "Mano de obra por servicio (COP)", { type: "number", min: "0", inputMode: "numeric", placeholder: "80000" },
-                { ayuda: "El valor base que cobras por un servicio." })}
-              {campo("tarifaHora", "Tarifa por hora (COP)", { type: "number", min: "0", inputMode: "numeric", placeholder: "45000" },
-                { opcional: true, ayuda: "Se usa al cotizar trabajos por horas." })}
+              {campo("precioManoObra", "Mano de obra por servicio (COP)", { placeholder: "80.000" },
+                { pesos: true, ayuda: "El valor base que cobras por un servicio." })}
+              {campo("tarifaHora", "Tarifa por hora (COP)", { placeholder: "45.000" },
+                { pesos: true, opcional: true, ayuda: "Se usa al cotizar trabajos por horas." })}
               {campo("especialidades", "Especialidades", { placeholder: "Frenos, Suspensión, Motor" },
                 { opcional: true, ancho: true, ayuda: "Sepáralas con comas." })}
             </div>
@@ -309,8 +313,8 @@ export default function RegistroNegocio({ onIrLogin, onVolver }) {
                 <section className="rn-revision__grupo" aria-labelledby="rn-r-servicio">
                   <header><h3 id="rn-r-servicio">Servicio</h3>{editar("servicio")}</header>
                   <dl>
-                    <Dato etiqueta="Mano de obra">{vacio(form.precioManoObra) ? "" : formatPrecio(Number(form.precioManoObra))}</Dato>
-                    <Dato etiqueta="Tarifa por hora">{vacio(form.tarifaHora) ? "" : formatPrecio(Number(form.tarifaHora))}</Dato>
+                    <Dato etiqueta="Mano de obra">{vacio(form.precioManoObra) ? "" : formatPrecio(parsePesos(form.precioManoObra))}</Dato>
+                    <Dato etiqueta="Tarifa por hora">{vacio(form.tarifaHora) ? "" : formatPrecio(parsePesos(form.tarifaHora))}</Dato>
                     <Dato etiqueta="Especialidades">{form.especialidades.trim()}</Dato>
                   </dl>
                 </section>

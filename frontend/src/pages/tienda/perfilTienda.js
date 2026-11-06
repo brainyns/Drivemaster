@@ -1,6 +1,8 @@
 // Mi tienda: qué tan completo está el perfil, validación de lo que la tienda edita y cómo la ve el cliente. Sin
 // componentes: lo prueban los tests con node --test. Los límites son los del backend (TiendaServiceImpl).
 
+import { parsePesos } from "../../utils/formato.js";
+
 export const COSTO_ENVIO_MAX = 500000;
 
 const lleno = (s) => !!s && String(s).trim() !== "";
@@ -52,8 +54,8 @@ export function errorHorarioTienda(semana, errorDia) {
 export function errorCostoEnvio(ofreceEnvio, costo) {
   if (!ofreceEnvio) return null;
   if (String(costo ?? "").trim() === "") return "Escribe el costo fijo de envío (puede ser 0).";
-  const n = Number(costo);
-  if (!Number.isFinite(n)) return "Escribe solo números, sin puntos ni signos.";
+  const n = parsePesos(costo);
+  if (!Number.isFinite(n)) return "Escribe solo números, por ejemplo 10.000.";
   if (n < 0 || n > COSTO_ENVIO_MAX) return "El costo de envío debe estar entre $ 0 y $ 500.000.";
   return null;
 }

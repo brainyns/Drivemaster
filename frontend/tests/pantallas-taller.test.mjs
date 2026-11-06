@@ -28,7 +28,8 @@ test("Mi taller: la tarifa y el horario se validan en línea con los límites de
   assert.equal(errorTarifa(""), "Escribe la tarifa por hora.");
   assert.equal(errorTarifa("0"), "La tarifa debe ser mayor que 0.");
   assert.match(errorTarifa("1000001"), /no puede pasar/);
-  assert.equal(errorTarifa("abc"), "Escribe solo números, sin puntos ni signos.");
+  assert.equal(errorTarifa("abc"), "Escribe solo números, por ejemplo 65.000.");
+  assert.equal(errorTarifa("65.000"), null, "con punto de miles");
   assert.equal(errorTarifa("65000"), null);
   assert.equal(errorHorario("x".repeat(200)), null);
   assert.match(errorHorario("x".repeat(201)), /200 caracteres/);
@@ -91,7 +92,7 @@ test("Mi taller edita por sección y solo con los endpoints que ya existen", () 
   for (const seccion of ["mt-negocio", "mt-servicios", "mt-ubicacion", "mt-horario", "mt-contacto"]) {
     assert.ok(pagina.includes(`id="${seccion}"`), `existe la sección ${seccion}`);
   }
-  assert.ok(pagina.includes("actualizarDatosTaller(token, { tarifaHora: sinTarifa ? undefined : Number(tarifa), responsableIva })"),
+  assert.ok(pagina.includes("actualizarDatosTaller(token, { tarifaHora: sinTarifa ? undefined : parsePesos(tarifa), responsableIva })"),
     "la tarifa viaja con el IVA del taller y nada más (el horario queda como estaba)");
   assert.ok(pagina.includes("guardarHorario(token, taller.id, franjasDesdeSemana(semana))"), "el horario viaja completo, por días");
   assert.ok(pagina.includes("<SelectorUbicacion"), "usa el selector de mapa existente");

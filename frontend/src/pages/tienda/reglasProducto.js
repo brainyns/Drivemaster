@@ -1,6 +1,8 @@
 // Formulario de producto de la tienda: listas (categorías, marcas, modelos) y validación en línea. Sin
 // componentes: lo prueban los tests con node --test. Las reglas son las de siempre; solo cambian los textos.
 
+
+import { parsePesos } from "../../utils/formato.js";
 export const CATEGORIAS = [
   "Motor",
   "Transmision y Embrague",
@@ -110,13 +112,13 @@ export function validarFormulario(form, productosExistentes, esEdicion, id) {
       errores.diasEntregaEncargo = "Escribe entre 1 y 120 días.";
   }
 
-  const compra = Number(form.precioCompra);
-  const venta  = Number(form.precioVenta);
+  const compra = parsePesos(form.precioCompra);
+  const venta  = parsePesos(form.precioVenta);
   if (campoVacio(form.precioCompra) || isNaN(compra) || compra < 0)
-    errores.precioCompra = "Escribe un precio de compra válido (solo números).";
+    errores.precioCompra = "Escribe un precio de compra válido, por ejemplo 481.500.";
   // Vender por debajo del costo no es un error: se advierte y se confirma al guardar (perdidaPorUnidad)
   if (campoVacio(form.precioVenta) || isNaN(venta) || venta < 0)
-    errores.precioVenta = "Escribe un precio de venta válido (solo números).";
+    errores.precioVenta = "Escribe un precio de venta válido, por ejemplo 481.500.";
 
   const stockActual  = Number(form.stockActual);
   const stockMinimo  = Number(form.stockMinimo);
@@ -166,8 +168,8 @@ export { TIPOS_IMAGEN, IMAGEN_MAX_MB, errorImagen } from "../../utils/imagen.js"
 
 /** Ganancia en pesos por unidad (venta − compra), o null si falta algún precio. Negativa si se vende con pérdida. */
 export function margenPesos(precioCompra, precioVenta) {
-  const compra = Number(precioCompra);
-  const venta = Number(precioVenta);
+  const compra = parsePesos(precioCompra);
+  const venta = parsePesos(precioVenta);
   return compra > 0 && venta > 0 ? Math.round(venta - compra) : null;
 }
 
@@ -198,13 +200,13 @@ export function erroresDelServidor(campos) {
 
 /** Margen sobre el precio de compra, con un decimal, o null si falta algún precio. */
 export function margen(precioCompra, precioVenta) {
-  const compra = Number(precioCompra);
-  const venta = Number(precioVenta);
+  const compra = parsePesos(precioCompra);
+  const venta = parsePesos(precioVenta);
   return compra > 0 && venta > 0 ? Math.round(((venta - compra) / compra) * 1000) / 10 : null;
 }
 
 /** Precio que ve el cliente: el de venta (sin IVA) más el IVA del parámetro (ivaRate en fracción, 0.19). null si no hay precio. */
 export function precioConIva(precioVenta, ivaRate) {
-  const venta = Number(precioVenta);
+  const venta = parsePesos(precioVenta);
   return venta > 0 && typeof ivaRate === "number" && ivaRate >= 0 ? Math.round(venta * (1 + ivaRate)) : null;
 }

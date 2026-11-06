@@ -8,6 +8,8 @@ import Icon from "../public/Icon";
 import { MAX_TIEMPO_HORAS, errorCotizacion } from "./reglasFormulariosTaller";
 import { unaALaVez } from "../../utils/unaALaVez";
 import { textoError } from "../../utils/errores";
+import { parsePesos } from "../../utils/formato";
+import CampoPesos from "../ui/CampoPesos";
 import ConfirmarAccion from "../marketplace/ConfirmarAccion";
 
 const lineaVacia = () => ({ descripcion: "", modalidad: "ITEM", valor: "", horas: "" });
@@ -38,7 +40,7 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
       .map((l) => ({
         descripcion: l.descripcion.trim(),
         modalidad: l.modalidad,
-        valor: l.modalidad === "ITEM" ? Number(l.valor) : null,
+        valor: l.modalidad === "ITEM" ? parsePesos(l.valor) : null,
         horas: l.modalidad === "HORAS" ? Number(l.horas) : null,
       })),
     tiempoEstimadoHoras: tiempo ? Number(tiempo) : null,
@@ -91,7 +93,7 @@ export default function CotizacionForm({ token, solicitud, tarifaHora, onEmitida
               <option value="HORAS">Por horas</option>
             </select>
             {l.modalidad === "ITEM" ? (
-              <input className="ss-input ct-linea__num" type="number" min="1" step="1" placeholder="Valor sin IVA"
+              <CampoPesos className="ss-input ct-linea__num" placeholder="Valor sin IVA"
                 aria-label="Valor sin IVA" value={l.valor} onChange={(e) => cambiar(n, "valor", e.target.value)} />
             ) : (
               <input className="ss-input ct-linea__num" type="number" min="0.25" step="0.25" placeholder="Horas"

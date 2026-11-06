@@ -5,7 +5,8 @@ import { ordenesPorTallerAdmin } from "../services/ordenServicioService";
 import SelectorUbicacion from "../components/mapa/SelectorUbicacion";
 import DrawerAdmin from "../components/admin/DrawerAdmin";
 import ConfirmacionAdmin from "../components/admin/ConfirmacionAdmin";
-import { capitalizar, decimal } from "../utils/formato";
+import { capitalizar, decimal, parsePesos } from "../utils/formato";
+import CampoPesos from "../components/ui/CampoPesos";
 import Calificacion from "../components/ui/Calificacion";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import Paginacion from "../components/ui/Paginacion";
@@ -130,7 +131,7 @@ export default function AdminTalleres() {
         especialidades: form.especialidades
           ? form.especialidades.split(",").map(s => s.trim()).filter(Boolean)
           : [],
-        precioManoObra: form.precioManoObra === "" ? null : Number(form.precioManoObra),
+        precioManoObra: form.precioManoObra === "" ? null : parsePesos(form.precioManoObra),
       };
       if (!editandoId) {
         payload.correoUsuario = form.correoUsuario;
@@ -402,8 +403,8 @@ export default function AdminTalleres() {
                 <Campo id="srv-ciudad" label="Ciudad">
                   <input className="ui-field__input" required value={form.ciudad} onChange={cambiar("ciudad")} />
                 </Campo>
-                <Campo id="srv-mano-obra" label="Precio mano de obra" ayuda="En pesos, sin puntos.">
-                  <input className="ui-field__input" type="number" step="any" min="0" inputMode="decimal" required
+                <Campo id="srv-mano-obra" label="Precio mano de obra" ayuda="En pesos, con o sin puntos de miles.">
+                  <CampoPesos required
                     value={form.precioManoObra} onChange={cambiar("precioManoObra")} />
                 </Campo>
               </div>

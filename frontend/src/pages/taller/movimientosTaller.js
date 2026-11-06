@@ -2,6 +2,8 @@
 // lleva cada referencia. Sin componentes: lo prueban los tests con node --test. Las reglas son las del backend
 // (StockTallerService.registrarManual y MovimientosTallerService).
 
+import { parsePesos } from "../../utils/formato.js";
+
 /** Lo que el taller registra a mano. sentido: lo que hace con el stock. Ninguno mueve dinero. */
 export const CLASES_MANUALES = {
   AJUSTE: { label: "Conteo físico", sentido: "fija", campo: "Stock contado",
@@ -69,7 +71,7 @@ export function erroresMovimientoTaller({ clase, cantidad, costo, motivo }, piez
     e.cantidad = "Es el mismo stock que ya tienes: no hay nada que ajustar.";
   }
   if (clase === "CARGA_INICIAL") {
-    const c = Number(String(costo ?? "").replace(/\./g, ""));
+    const c = parsePesos(costo);
     if (String(costo ?? "").trim() === "" || !Number.isFinite(c) || c <= 0) e.costo = "Escribe lo que te costó cada unidad.";
   }
   if (!String(motivo ?? "").trim()) e.motivo = "Cuéntanos el motivo: queda en el historial.";

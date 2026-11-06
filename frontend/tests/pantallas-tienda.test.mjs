@@ -100,6 +100,8 @@ test("Mi tienda: perfil completo con lo que pide el catálogo y validación en l
   assert.equal(errorCostoEnvio(true, "0"), null);
   assert.match(errorCostoEnvio(true, ""), /puede ser 0/);
   assert.match(errorCostoEnvio(true, "600000"), /entre \$ 0 y \$ 500\.000/);
+  assert.equal(errorCostoEnvio(true, "10.000"), null, "con punto de miles son diez mil");
+  assert.match(errorCostoEnvio(true, "600.000"), /entre/);
   assert.deepEqual(comoLaVeElCliente({ ...completa, nombre: "Repuestos Sol", costoEnvio: 8000, nit: "900", correoUsuario: "x@y.com" }),
     { id: undefined, nombre: "Repuestos Sol", ciudad: "Cali", barrio: undefined, direccion: "Cra 1", horario: "L-V 8-18",
       horarioSemanal: undefined, ofreceEnvio: true, costoEnvio: 8000, logoUrl: "https://img/sol.png" });
@@ -492,4 +494,31 @@ test("Pedidos: la acción de cada fila sigue el flujo real y un retiro nunca va 
   assert.equal(diasSinRetirar(listo(4), ahora), 4);
   assert.ok(!sinRetirar(listo(2), ahora) && sinRetirar(listo(3), ahora), "se marca desde los 3 días");
   assert.equal(diasSinRetirar(p("RETIRADO", { fechaListoRetiro: new Date(ahora - 9 * dia).toISOString() }), ahora), 0);
+});
+
+test("Precio e inventario: 481.500 son cuatrocientos ochenta y un mil quinientos, no 481,5", async () => {
+  const { parsePesos, formatPesos, pesosAlEscribir } = await import("../src/utils/formato.js");
+  const { margen, margenPesos, precioConIva, validarFormulario } = await import("../src/pages/tienda/reglasProducto.js");
+  assert.equal(parsePesos("481.500"), 481500);
+  assert.equal(parsePesos("481500"), 481500);
+  assert.equal(parsePesos("$ 1.234,5"), 1234.5, "la coma es decimal");
+  assert.equal(parsePesos(481500), 481500, "un número llega igual");
+  assert.equal(parsePesos(""), null);
+  assert.ok(Number.isNaN(parsePesos("abc")));
+  assert.equal(formatPesos(481500), "481.500");
+  assert.equal(formatPesos(10000), "10.000");
+  assert.equal(formatPesos(null), "");
+  assert.equal(pesosAlEscribir("481500"), "481.500", "se ve formateado mientras se escribe");
+  assert.equal(pesosAlEscribir("481.5000"), "4.815.000", "los puntos que se escriben se vuelven a poner donde van");
+  assert.equal(pesosAlEscribir("12,", { decimales: true }), "12,", "se puede seguir escribiendo el decimal");
+  // Lo que se ve en el formulario: antes "el cliente verá $ 573" y "Margen $ 111"
+  assert.equal(precioConIva("481.500", 0.19), 572985);
+  assert.equal(margenPesos("370.000", "481.500"), 111500);
+  assert.equal(margen("370.000", "481.500"), 30.1);
+  const base = { nombre: "Kit de embrague", categoria: "Motor", marca: "Valeo", codigo: "EMB-1", precioCompra: "370.000",
+    precioVenta: "481.500", stockActual: "3", stockMinimo: "1", compatibilidadUniversal: true };
+  assert.equal(validarFormulario(base, [], false).precioVenta, undefined, "con puntos de miles es un precio válido");
+  // Lo que se envía al backend sale de parsePesos: llega 481500
+  assert.match(leer("../src/pages/ProductoForm.jsx"), /precioVenta: parsePesos\(form\.precioVenta\)/);
+  assert.doesNotMatch(leer("../src/pages/ProductoForm.jsx"), /Number\(form\.precio(Compra|Venta)\)/);
 });

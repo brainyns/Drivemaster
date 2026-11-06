@@ -10,6 +10,7 @@ import Campo from "../components/ui/Campo";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
 import Esqueleto from "../components/ui/Esqueleto";
+import CampoPesos from "../components/ui/CampoPesos";
 import Icon from "../components/public/Icon";
 import ChipEstado from "../components/ui/ChipEstado";
 import { ESTADOS_COMPRA, estadoCompra, filtrarCompras, refCompra, resumenCompras, topProveedores, unidades } from "./tienda/comprasTienda";
@@ -176,11 +177,11 @@ function Compras({ onNueva, onDetalle, token }) {
                     onChange={(e) => filtrar({ hasta: e.target.value })} />
                 </Campo>
                 <Campo id="cmp-minimo" label="Total mínimo (COP)" className="cmp-filtro">
-                  <input className="ui-field__input" type="number" min="0" inputMode="numeric" value={filtros.minimo}
+                  <CampoPesos value={filtros.minimo}
                     onChange={(e) => filtrar({ minimo: e.target.value })} />
                 </Campo>
                 <Campo id="cmp-maximo" label="Total máximo (COP)" className="cmp-filtro">
-                  <input className="ui-field__input" type="number" min="0" inputMode="numeric" value={filtros.maximo}
+                  <CampoPesos value={filtros.maximo}
                     onChange={(e) => filtrar({ maximo: e.target.value })} />
                 </Campo>
               </div>

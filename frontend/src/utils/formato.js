@@ -96,3 +96,46 @@ export const horas = (n) => (n == null ? "—" : `${decimal(n)} h`);
 
 /** "0,7 km". */
 export const kilometros = (n) => (n == null ? "—" : `${decimal(n)} km`);
+
+// ── Montos en pesos escritos por la persona ─────────────────────────────────────────────────────────────────────────
+// En Colombia "481.500" son cuatrocientos ochenta y un mil quinientos, no 481,5: el punto separa miles y la coma, los
+// decimales. Number("481.500") da 481.5; por eso todo monto que se escribe pasa por parsePesos.
+
+/**
+ * El número de un monto escrito: quita "$", espacios y los puntos de miles, y acepta coma decimal.
+ * parsePesos("481.500") → 481500 · parsePesos("$ 1.234,5") → 1234.5 · un número llega igual. Vacío → null; texto que
+ * no es un monto → NaN.
+ */
+export function parsePesos(texto) {
+  if (typeof texto === "number") return Number.isFinite(texto) ? texto : NaN;
+  if (texto == null) return null;
+  const limpio = String(texto).replace(/[$\s]/g, "");
+  if (!limpio) return null;
+  if (!/^-?[\d.]*(,\d*)?$/.test(limpio) || !/\d/.test(limpio)) return NaN;
+  return Number(limpio.replace(/\./g, "").replace(",", "."));
+}
+
+/** Un monto para mostrar, con punto de miles: formatPesos(481500) → "481.500". Sin número → "". */
+export function formatPesos(n, maxDecimales = 2) {
+  const v = typeof n === "number" ? n : parsePesos(n);
+  if (v == null || !Number.isFinite(v)) return "";
+  return v.toLocaleString("es-CO", { maximumFractionDigits: maxDecimales });
+}
+
+/**
+ * Lo que se ve en un campo de dinero mientras se escribe: solo dígitos y una coma decimal (si se permiten), con los
+ * puntos de miles puestos. "481500" → "481.500" · "1234,5" → "1.234,5" · "12," se queda así para seguir escribiendo.
+ */
+export function pesosAlEscribir(texto, { decimales = false } = {}) {
+  let t = String(texto ?? "").replace(/[^\d,]/g, "");
+  let decimal = null;
+  const coma = t.indexOf(",");
+  if (coma >= 0) {
+    decimal = decimales ? t.slice(coma + 1).replace(/,/g, "").slice(0, 2) : null;
+    t = t.slice(0, coma);
+  }
+  const entero = t.replace(/^0+(?=\d)/, "");
+  const conMiles = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (decimal == null) return conMiles;
+  return `${conMiles || "0"},${decimal}`;
+}

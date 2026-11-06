@@ -3,6 +3,8 @@
 // RECIBIDA suma el stock (movimiento ENTRADA); una PENDIENTE lo suma al marcarla recibida; una CANCELADA no lo toca.
 // Sin estado = RECIBIDA (las compras anteriores a los estados sumaron el stock al registrarse).
 
+import { parsePesos } from "../../utils/formato.js";
+
 /** La misma referencia que usa el PDF del backend: PO- y los últimos 5 caracteres del id. */
 export const refCompra = (id) => `PO-${String(id || "").slice(-5).toUpperCase()}`;
 
@@ -72,8 +74,8 @@ export function filtrarCompras(compras, { busqueda = "", desde = "", hasta = "",
     const f = c.fecha ? new Date(c.fecha) : null;
     if (f && inicio && f < inicio) return false;
     if (f && fin && f > fin) return false;
-    if (minimo !== "" && (c.total || 0) < Number(minimo)) return false;
-    if (maximo !== "" && (c.total || 0) > Number(maximo)) return false;
+    if (minimo !== "" && (c.total || 0) < parsePesos(minimo)) return false;
+    if (maximo !== "" && (c.total || 0) > parsePesos(maximo)) return false;
     return true;
   }).sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
 }
@@ -112,7 +114,7 @@ export function erroresLinea({ producto, cantidad, costo }) {
   if (!producto) e.producto = "Busca y elige un producto de tu catálogo.";
   const n = Number(cantidad);
   if (String(cantidad ?? "").trim() === "" || !Number.isInteger(n) || n < 1) e.cantidad = "Escribe una cantidad entera desde 1.";
-  const c = Number(costo);
+  const c = parsePesos(costo);
   if (String(costo ?? "").trim() === "" || !Number.isFinite(c) || c < 0) e.costo = "Escribe el costo por unidad (puede ser 0).";
   return e;
 }
@@ -136,6 +138,6 @@ export function agregarLinea(items, { producto, cantidad, costo }) {
   return [...items, {
     productoId: producto.id, nombre: producto.nombre, imagenUrl: producto.imagenUrl,
     sku: producto.codigo || String(producto.id).slice(-6).toUpperCase(),
-    costo: Number(costo), cantidad: n, subtotal: Number(costo) * n,
+    costo: parsePesos(costo), cantidad: n, subtotal: parsePesos(costo) * n,
   }];
 }

@@ -7,6 +7,7 @@ import Campo from "../components/ui/Campo";
 import ChipEstado from "../components/ui/ChipEstado";
 import Alerta from "../components/ui/Alerta";
 import Esqueleto from "../components/ui/Esqueleto";
+import CampoPesos from "../components/ui/CampoPesos";
 import BarraAccionMovil from "../components/ui/BarraAccionMovil";
 import ImagenProducto from "../components/marketplace/ImagenProducto";
 import ConfirmarAccion from "../components/marketplace/ConfirmarAccion";
@@ -32,7 +33,7 @@ function unirErrores(servidor, cliente) {
 }
 import "../css/producto-form.css";
 import { etiquetaCategoria } from "../utils/categorias";
-import { formatoCop } from "../utils/formato";
+import { formatoCop, parsePesos } from "../utils/formato";
 import { textoError } from "../utils/errores";
 
 /**
@@ -151,7 +152,7 @@ function Dinero(props) {
   return (
     <span className="pfm-prefijo">
       <span aria-hidden="true">$</span>
-      <input {...props} className="ui-field__input" type="text" inputMode="decimal" placeholder="0" />
+      <CampoPesos {...props} placeholder="0" />
     </span>
   );
 }
@@ -251,7 +252,7 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
       setImagenPreview(url);
       actualizar({ imagenUrl: url, imagenIa: true });
     } catch (err) {
-      setErrorFoto(err.message);
+      setErrorFoto(textoError(err, "No pudimos generar la foto. Inténtalo de nuevo o sube una tuya."));
     } finally {
       setGenerandoIa(false);
     }
@@ -324,8 +325,8 @@ function ProductoForm({ id, onVolver, token, esTienda = false, ivaRate = null })
         // Solo aplica a productos por encargo (tiempo estimado que ve el taller al cotizar).
         diasEntregaEncargo: form.tipo === "ENCARGO" && String(form.diasEntregaEncargo).trim() !== ""
           ? Number(form.diasEntregaEncargo) : null,
-        precioCompra: Number(form.precioCompra),
-        precioVenta: Number(form.precioVenta),
+        precioCompra: parsePesos(form.precioCompra),
+        precioVenta: parsePesos(form.precioVenta),
         stockActual: Number(form.stockActual),
         tipo: form.tipo,
         stockMinimo: Number(form.stockMinimo),

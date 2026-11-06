@@ -14,6 +14,7 @@ import FormCuentaBancaria from "../components/ui/FormCuentaBancaria";
 import SeccionContacto from "../components/ui/SeccionContacto";
 import ChipEstado from "../components/ui/ChipEstado";
 import Campo from "../components/ui/Campo";
+import CampoPesos from "../components/ui/CampoPesos";
 import Dato from "../components/ui/Dato";
 import ValorSensible from "../components/ui/ValorSensible";
 import PieFormulario from "../components/ui/PieFormulario";
@@ -27,6 +28,7 @@ import {
 } from "./tienda/perfilTienda";
 import "../css/mi-tienda.css";
 import { textoError } from "../utils/errores";
+import { parsePesos } from "../utils/formato";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
 const ESTADO = {
@@ -161,7 +163,7 @@ function FormHorario({ tienda, token, onGuardado, onCancelar }) {
 /** Retiro en la tienda siempre; el envío a domicilio es opcional, con un costo fijo y solo dentro de la ciudad. */
 function FormEntrega({ tienda, token, onGuardado, onCancelar }) {
   const [ofreceEnvio, setOfreceEnvio] = useState(tienda.costoEnvio != null);
-  const [costo, setCosto] = useState(tienda.costoEnvio != null ? String(tienda.costoEnvio) : "");
+  const [costo, setCosto] = useState(tienda.costoEnvio ?? "");
   const [errorCampo, setErrorCampo] = useState(null);
   const { guardar, guardando, error } = useGuardar(token, onGuardado);
 
@@ -169,7 +171,7 @@ function FormEntrega({ tienda, token, onGuardado, onCancelar }) {
     e.preventDefault();
     const err = errorCostoEnvio(ofreceEnvio, costo);
     setErrorCampo(err);
-    if (!err) guardar({ ofreceEnvio, costoEnvio: ofreceEnvio ? Number(costo) : null });
+    if (!err) guardar({ ofreceEnvio, costoEnvio: ofreceEnvio ? parsePesos(costo) : null });
   };
 
   return (
@@ -183,7 +185,7 @@ function FormEntrega({ tienda, token, onGuardado, onCancelar }) {
       {ofreceEnvio && (
         <Campo id="mtd-costo" label="Costo fijo del envío (COP)" error={errorCampo}
           ayuda={`Puede ser $ 0. Máximo ${formatPrecio(COSTO_ENVIO_MAX)}. El cliente lo paga al comprar.`}>
-          <input className="ui-field__input ui-form__corto" type="number" inputMode="numeric" min="0" step="500"
+          <CampoPesos className="ui-field__input ui-form__corto" placeholder="0"
             value={costo} onChange={(e) => { setCosto(e.target.value); if (errorCampo) setErrorCampo(null); }} />
         </Campo>
       )}
@@ -194,13 +196,13 @@ function FormEntrega({ tienda, token, onGuardado, onCancelar }) {
 
 /** Descuento sobre el precio público para talleres aprobados que compran en el catálogo. Los clientes no lo ven. */
 function FormDescuentoTalleres({ tienda, token, onGuardado, onCancelar }) {
-  const [pct, setPct] = useState(String(tienda.descuentoTalleresPct ?? 20));
+  const [pct, setPct] = useState(tienda.descuentoTalleresPct ?? 20);
   const [errorCampo, setErrorCampo] = useState(null);
   const { guardar, guardando, error } = useGuardar(token, onGuardado);
 
   const enviar = (e) => {
     e.preventDefault();
-    const n = Number(String(pct).replace(",", "."));
+    const n = parsePesos(pct);
     const err = pct === "" || !Number.isFinite(n) || n < 0 || n > 50 ? "Escribe un descuento de 0 a 50 %." : null;
     setErrorCampo(err);
     if (!err) guardar({ descuentoTalleresPct: n });
@@ -210,7 +212,7 @@ function FormDescuentoTalleres({ tienda, token, onGuardado, onCancelar }) {
     <form className="ui-form" onSubmit={enviar} noValidate>
       <Campo id="mtd-descuento" label="Descuento para talleres (%)" error={errorCampo}
         ayuda="De 0 a 50 %. Los talleres aprobados ven y pagan tu precio con este descuento; tu comisión es sobre lo que pagan. Con 0 % pagan el precio público.">
-        <input className="ui-field__input ui-form__corto" type="number" inputMode="decimal" min="0" max="50" step="0.5" autoFocus
+        <CampoPesos className="ui-field__input ui-form__corto" decimales autoFocus
           value={pct} onChange={(e) => { setPct(e.target.value); if (errorCampo) setErrorCampo(null); }} />
       </Campo>
       <PieFormulario guardando={guardando} error={error} onCancelar={onCancelar} textoGuardar="Guardar descuento" />

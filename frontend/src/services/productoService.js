@@ -1,5 +1,5 @@
 import { apiFetch } from "./http";
-import { errorDeRespuesta } from "../utils/errores";
+import { errorDeRespuesta, mensajeDeError } from "../utils/errores";
 import { consultaTabla } from "../components/ui/reglasTabla";
 const BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/api/productos`;
 
@@ -104,7 +104,7 @@ export async function generarImagenIa({ nombre, categoria, marca, referencia }, 
     body: JSON.stringify({ nombre, categoria, marca, referencia }),
   });
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.message || "No se pudo generar la imagen");
+  if (!res.ok) throw new Error(mensajeDeError(data, "No pudimos generar la foto. Inténtalo de nuevo o sube una tuya."));
   return data;
 }
 

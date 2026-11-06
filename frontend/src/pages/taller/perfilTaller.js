@@ -2,6 +2,7 @@
 // node --test). Los límites son los del backend (DatosTallerService).
 
 import { errorImagen } from "../../utils/imagen.js";
+import { parsePesos } from "../../utils/formato.js";
 
 export const TARIFA_MAX = 1000000;
 export const HORARIO_MAX = 200;
@@ -37,8 +38,8 @@ export function completitudPerfil(taller, mecanicosActivos = 0) {
 /** Error de la tarifa por hora, o null si sirve. Vacía no se puede guardar: el backend la deja como estaba. */
 export function errorTarifa(texto) {
   if (String(texto ?? "").trim() === "") return "Escribe la tarifa por hora.";
-  const valor = Number(texto);
-  if (!Number.isFinite(valor)) return "Escribe solo números, sin puntos ni signos.";
+  const valor = parsePesos(texto);
+  if (!Number.isFinite(valor)) return "Escribe solo números, por ejemplo 65.000.";
   if (valor <= 0) return "La tarifa debe ser mayor que 0.";
   if (valor > TARIFA_MAX) return "La tarifa no puede pasar de $ 1.000.000 por hora.";
   return null;

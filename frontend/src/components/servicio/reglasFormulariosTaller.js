@@ -1,5 +1,7 @@
 // Reglas de los formularios del mecánico, con los mismos límites del backend. Sin componentes: las prueban los tests.
 
+import { parsePesos } from "../../utils/formato.js";
+
 export const MAX_FALLAS = 20;
 export const MAX_TEXTO_FALLA = 200;
 export const MIN_TEXTO_TRABAJO = 3;
@@ -36,7 +38,7 @@ function errorLinea(l, n, tarifaHora) {
     if (!(tarifaHora > 0)) return `Para cotizar por horas configura tu tarifa por hora en "Mi taller", o usa valor fijo.`;
     return null;
   }
-  const valor = Number(l.valor);
+  const valor = parsePesos(l.valor);
   if (!(valor > 0) || valor > MAX_VALOR) return `${trabajo} necesita un valor mayor que 0.`;
   return null;
 }

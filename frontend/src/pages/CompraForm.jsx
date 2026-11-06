@@ -6,6 +6,7 @@ import { formatPrecio } from "../components/servicio/estadosServicio";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import SeccionEditable from "../components/ui/SeccionEditable";
 import Campo from "../components/ui/Campo";
+import CampoPesos from "../components/ui/CampoPesos";
 import Dato from "../components/ui/Dato";
 import Alerta from "../components/ui/Alerta";
 import EstadoVacio from "../components/ui/EstadoVacio";
@@ -63,7 +64,7 @@ function CompraForm({ onVolver, token }) {
 
   const elegir = (p) => {
     // El costo se propone con el precio de compra del producto; la tienda lo puede cambiar
-    setLinea({ producto: p, cantidad: "1", costo: p.precioCompra != null ? String(p.precioCompra) : "" });
+    setLinea({ producto: p, cantidad: "1", costo: p.precioCompra ?? "" });
     setTocadaLinea(false);
     requestAnimationFrame(() => document.getElementById("cmp-cantidad")?.focus());
   };
@@ -196,7 +197,7 @@ function CompraForm({ onVolver, token }) {
                     onChange={(e) => setLinea((l) => ({ ...l, cantidad: e.target.value }))} />
                 </Campo>
                 <Campo id="cmp-costo" label="Costo por unidad (COP)" error={erroresL.costo}>
-                  <input className="ui-field__input" type="number" min="0" inputMode="numeric" value={linea.costo}
+                  <CampoPesos value={linea.costo} placeholder="0"
                     onChange={(e) => setLinea((l) => ({ ...l, costo: e.target.value }))} />
                 </Campo>
               </div>

@@ -31,6 +31,8 @@ import { comoLoVeElCliente, completitudPerfil, errorTarifa } from "./perfilTalle
 import LogoEditable from "../../components/ui/LogoEditable";
 import "../../css/mi-taller.css";
 import { textoError } from "../../utils/errores";
+import { parsePesos } from "../../utils/formato";
+import CampoPesos from "../../components/ui/CampoPesos";
 
 const ADMIN = "Para cambiarlo, escríbele al administrador de DriveMaster.";
 
@@ -47,7 +49,7 @@ const textoRegimenIva = (responsable) => (responsable === false ? "No cobra IVA 
  * Sin tarifa todavía, se puede guardar solo el IVA.
  */
 function FormTarifa({ taller, token, onGuardado, onCancelar }) {
-  const [tarifa, setTarifa] = useState(taller?.tarifaHora != null ? String(taller.tarifaHora) : "");
+  const [tarifa, setTarifa] = useState(taller?.tarifaHora ?? "");
   const [responsableIva, setResponsableIva] = useState(taller?.responsableIva !== false);
   const [tocado, setTocado] = useState(false);
   const [error, setError] = useState(null);
@@ -62,7 +64,7 @@ function FormTarifa({ taller, token, onGuardado, onCancelar }) {
     setGuardando(true);
     setError(null);
     try {
-      onGuardado(await actualizarDatosTaller(token, { tarifaHora: sinTarifa ? undefined : Number(tarifa), responsableIva }));
+      onGuardado(await actualizarDatosTaller(token, { tarifaHora: sinTarifa ? undefined : parsePesos(tarifa), responsableIva }));
     } catch (err) {
       setError(textoError(err));
       setGuardando(false);
@@ -73,7 +75,7 @@ function FormTarifa({ taller, token, onGuardado, onCancelar }) {
     <form className="ui-form" onSubmit={guardar} noValidate>
       <Campo id="mt-tarifa" label="Tarifa por hora (COP)" error={errorCampo}
         ayuda="Se usa al cotizar por horas. Las cotizaciones que ya emitiste no cambian.">
-        <input className="ui-field__input ui-form__corto" type="number" inputMode="numeric" min="1" step="any" autoFocus
+        <CampoPesos className="ui-field__input ui-form__corto" autoFocus
           value={tarifa} onChange={(e) => setTarifa(e.target.value)} onBlur={() => setTocado(true)} />
       </Campo>
       <fieldset className="mt-iva">
