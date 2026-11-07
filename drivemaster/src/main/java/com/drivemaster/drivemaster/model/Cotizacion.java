@@ -1,5 +1,6 @@
 package com.drivemaster.drivemaster.model;
 
+import com.drivemaster.drivemaster.dto.PrediccionAprobacionDTO;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -91,6 +92,9 @@ public class Cotizacion {
     private String emitidaPor;
     private LocalDateTime fechaRespuesta;
     private String motivoRespuesta;
+
+    // Diagnóstico y probabilidad calculados por el modelo de IA predictiva
+    private PrediccionAprobacionDTO prediccionAprobacion;
 
     /** IVA de los repuestos; las cotizaciones anteriores al IVA por taller usan su ivaPct único (o 0 si no hay). */
     public double pctRepuestos() {

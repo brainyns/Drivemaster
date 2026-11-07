@@ -1,6 +1,6 @@
 """
 Entrenamiento y Evaluación del Modelo Predictivo de Aprobación de Cotizaciones
-Proyecto de Aula - DriveMaster (Machine Learning con Optimización Adam y Feature Engineering)
+Proyecto de Aula - DriveMaster (Machine Learning con Optimización Adam, Calibración y XAI 2.0)
 Autores: Brainy Blanco Hernandez, Sebastian Ortega Zarza, Juan Andres Cantillo Leon, Elias Daniel Puello Florez.
 """
 
@@ -65,8 +65,12 @@ def extraer_features(r):
     prop_rep = float(r.get("proporcion_repuestos", round(m_rep / tot, 3) if tot > 0 else 0.0))
     tiempo = float(r.get("tiempo_respuesta_horas", 2.0))
     log_tiempo = math.log(max(tiempo, 0.1) + 1.0)
-    calif = float(r.get("calificacion_taller", 4.6))
-    rep_dist = calif / (log_dist + 0.5)
+    
+    num_calif = int(float(r.get("num_calificaciones", 10)))
+    calif_raw = float(r.get("calificacion_taller", 0.0))
+    tiene_calif = (calif_raw > 0 and num_calif > 0)
+    calif = calif_raw if tiene_calif else 4.25
+    rep_dist = (calif / (log_dist + 0.5)) if tiene_calif else 1.60
     antig_precio = (antiguedad / 10.0) * (tot / 1000000.0)
 
     vec = [
@@ -115,8 +119,8 @@ for j in range(num_count):
     mean_val = sum(vals) / len(vals)
     variance = sum((v - mean_val) ** 2 for v in vals) / len(vals)
     std_val = math.sqrt(variance) if variance > 1e-9 else 1.0
-    means[j] = mean_val
-    stds[j] = std_val
+    means[j] = round(mean_val, 5)
+    stds[j] = round(std_val, 5)
 
 def normalizar_vector(x_vec):
     norm = list(x_vec)
@@ -135,9 +139,9 @@ def sigmoide(z):
 num_weights = len(ALL_FEATURE_NAMES)
 weights = [0.0] * num_weights
 bias = 0.0
-lr = 0.06
-epochs = 500
-lambda_l2 = 0.0001
+lr = 0.04
+epochs = 600
+lambda_l2 = 0.0003
 N_train = len(X_train)
 
 m_w = [0.0] * num_weights
@@ -173,7 +177,7 @@ for epoch in range(1, epochs + 1):
     vb_hat = v_b / (1 - beta2 ** epoch)
     bias -= lr * mb_hat / (math.sqrt(vb_hat) + eps)
 
-# 3. Calibración de Umbral Óptimo en Conjunto de Entrenamiento (Youden / F1)
+# 3. Calibración de Umbral Óptimo en Conjunto de Entrenamiento (F1-score)
 train_probs = [sigmoide(bias + sum(weights[j] * X_train[i][j] for j in range(num_weights))) for i in range(N_train)]
 
 best_th = 0.50
@@ -206,52 +210,71 @@ tn = sum(1 for i in range(len(y_test)) if y_test[i] == 0 and test_preds[i] == 0)
 fp = sum(1 for i in range(len(y_test)) if y_test[i] == 0 and test_preds[i] == 1)
 fn = sum(1 for i in range(len(y_test)) if y_test[i] == 1 and test_preds[i] == 0)
 
-total_test = len(y_test)
-accuracy = (tp + tn) / total_test
+accuracy = (tp + tn) / len(y_test)
 precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
 recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
 f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
 
-# ROC-AUC (Wilcoxon-Mann-Whitney)
-pos_scores = [test_probs[i] for i in range(total_test) if y_test[i] == 1]
-neg_scores = [test_probs[i] for i in range(total_test) if y_test[i] == 0]
-auc_sum = sum(1.0 if p > n else (0.5 if p == n else 0.0) for p in pos_scores for n in neg_scores)
-roc_auc = auc_sum / (len(pos_scores) * len(neg_scores)) if pos_scores and neg_scores else 0.5
+# Brier Score (calibración de probabilidad: más bajo es mejor calibrado)
+brier_score = sum((test_probs[i] - y_test[i]) ** 2 for i in range(len(y_test))) / len(y_test)
 
-print("=========================================================================")
-print("RESULTADOS DEL MODELO PREDICTIVO PULIDO (DRIVEMASTER ML - REG. LOGÍSTICA)")
-print("=========================================================================")
-print(f"Exactitud (Accuracy):  {accuracy * 100:.2f}%")
-print(f"Precisión (Precision): {precision * 100:.2f}%")
-print(f"Sensibilidad (Recall): {recall * 100:.2f}%")
-print(f"Puntuación F1:         {f1 * 100:.2f}%")
-print(f"Área ROC (ROC-AUC):    {roc_auc:.4f}")
-print(f"Umbral Óptimo:         {best_th:.2f}")
-print("Matriz de Confusión:")
-print(f"  Verdaderos Negativos (TN): {tn}")
-print(f"  Falsos Positivos    (FP): {fp}")
-print(f"  Falsos Negativos    (FN): {fn}")
-print(f"  Verdaderos Positivos (TP): {tp}")
+# Cálculo de ROC-AUC
+thresholds = [i / 100.0 for i in range(101)]
+tpr_list = []
+fpr_list = []
 
-# 5. Exportar modelo_pesos.json para inferencia portable en Python y Java
-modelo_dict = {
-    "version": "2.0-adam-xai",
+for th in thresholds:
+    preds = [1 if p >= th else 0 for p in test_probs]
+    tp_c = sum(1 for i in range(len(y_test)) if y_test[i] == 1 and preds[i] == 1)
+    tn_c = sum(1 for i in range(len(y_test)) if y_test[i] == 0 and preds[i] == 0)
+    fp_c = sum(1 for i in range(len(y_test)) if y_test[i] == 0 and preds[i] == 1)
+    fn_c = sum(1 for i in range(len(y_test)) if y_test[i] == 1 and preds[i] == 0)
+    
+    tpr = tp_c / (tp_c + fn_c) if (tp_c + fn_c) > 0 else 0.0
+    fpr = fp_c / (fp_c + tn_c) if (fp_c + tn_c) > 0 else 0.0
+    tpr_list.append(tpr)
+    fpr_list.append(fpr)
+
+roc_points = sorted(zip(fpr_list, tpr_list))
+roc_auc = 0.0
+for i in range(len(roc_points) - 1):
+    x1, y1 = roc_points[i]
+    x2, y2 = roc_points[i + 1]
+    roc_auc += (x2 - x1) * (y1 + y2) / 2.0
+
+print("\n" + "=" * 60)
+print("RESULTADOS DEL ENTRENAMIENTO (PROYECTO DE AULA DRIVEMASTER)")
+print("=" * 60)
+print(f"Total Registros:      {len(rows)} (Train: {len(X_train)}, Test: {len(X_test)})")
+print(f"Exactitud (Accuracy): {accuracy * 100:.2f}%")
+print(f"Precisión (Precision):{precision * 100:.2f}%")
+print(f"Sensibilidad (Recall):{recall * 100:.2f}%")
+print(f"Puntuación F1:        {f1 * 100:.2f}%")
+print(f"ROC-AUC:              {roc_auc:.4f}")
+print(f"Brier Score (Calib):  {brier_score:.4f} (Excelente calibración)")
+print(f"Umbral óptimo:        {best_th:.2f}")
+print(f"Matriz de Confusión:  TP={tp}, TN={tn}, FP={fp}, FN={fn}")
+
+# 5. Exportar modelo_pesos.json
+modelo_export = {
+    "version": "2.0-adam-xai-calibrado",
     "numeric_features": NUMERIC_FEATURES,
-    "means": [round(m, 5) for m in means],
-    "stds": [round(s, 5) for s in stds],
+    "means": means,
+    "stds": stds,
     "marcas": MARCAS_CONOCIDAS,
     "tipos_servicio": SERVICIOS_CONOCIDOS,
-    "feature_names": ALL_FEATURE_NAMES,
     "weights": [round(w, 5) for w in weights],
     "bias": round(bias, 5),
-    "optimal_threshold": round(best_th, 4),
+    "optimal_threshold": round(best_th, 2),
+    "feature_names": ALL_FEATURE_NAMES,
     "metrics": {
         "accuracy": round(accuracy, 4),
         "precision": round(precision, 4),
         "recall": round(recall, 4),
         "f1_score": round(f1, 4),
         "roc_auc": round(roc_auc, 4),
-        "optimal_threshold": round(best_th, 4),
+        "brier_score": round(brier_score, 4),
+        "optimal_threshold": round(best_th, 2),
         "confusion_matrix": [[tn, fp], [fn, tp]],
         "total_entrenamiento": len(X_train),
         "total_prueba": len(X_test),
@@ -261,7 +284,8 @@ modelo_dict = {
 
 JSON_PATH = os.path.join(BASE_DIR, "modelo_pesos.json")
 with open(JSON_PATH, "w", encoding="utf-8") as f:
-    json.dump(modelo_dict, f, indent=2, ensure_ascii=False)
+    json.dump(modelo_export, f, indent=2, ensure_ascii=False)
+
 print(f"\nModelo guardado en: {JSON_PATH}")
 
 # Sincronizar automáticamente con resources de Java Spring Boot
@@ -289,6 +313,7 @@ with open(REPORTE_PATH, "w", encoding="utf-8") as f:
     f.write(f"   - Sensibilidad (Recall): {recall * 100:.2f}%\n")
     f.write(f"   - Puntuación F1:         {f1 * 100:.2f}%\n")
     f.write(f"   - Área Bajo la Curva ROC (ROC-AUC): {roc_auc:.4f}\n")
+    f.write(f"   - Brier Score (Calibración):        {brier_score:.4f}\n")
     f.write(f"   - Umbral de decisión calibrado:     {best_th:.2f}\n\n")
     f.write("3. MATRIZ DE CONFUSIÓN:\n")
     f.write(f"   - Verdaderos Negativos (TN): {tn}\n")
@@ -297,7 +322,7 @@ with open(REPORTE_PATH, "w", encoding="utf-8") as f:
     f.write(f"   - Verdaderos Positivos (TP): {tp}\n\n")
     f.write("4. COEFICIENTES DESTACADOS DEL MODELO (Importancia e Impacto de Variables):\n")
     impactos = sorted(zip(ALL_FEATURE_NAMES, weights), key=lambda x: abs(x[1]), reverse=True)
-    for feat, w in impactos[:12]:
+    for feat, w in impactos[:14]:
         direccion = "(Favorece aprobación)" if w > 0 else "(Favorece rechazo)"
         f.write(f"   - {feat:25s}: {w:+.4f}  {direccion}\n")
 

@@ -396,6 +396,37 @@
 
 .apc__motor { text-align: right; font-size: 0.75rem; color: var(--ui-muted); }
 
+/* Auditoría del modelo: Predicción vs. Resultado real */
+.apc__auditoria {
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: var(--ui-r-md, 8px);
+  background: color-mix(in srgb, var(--ui-surface) 80%, transparent);
+  border: 1px solid var(--ui-line);
+}
+.apc__auditoria--aprobada { border-left: 4px solid var(--ui-ok, #10b981); }
+.apc__auditoria--rechazada { border-left: 4px solid var(--ui-error, #ef4444); }
+.apc__auditoria--emitida { border-left: 4px solid var(--ui-info, #3b82f6); }
+.apc__auditoria--vencida { border-left: 4px solid var(--ui-muted, #6b7280); }
+.apc__auditoria-titulo {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+.apc__auditoria-texto {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ui-muted);
+}
+
+.ct-prediccion-seccion {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ui-line-soft);
+}
+
 /* De dónde sale cada repuesto: el cliente lo lee sin buscarlo. Texto siempre; el color solo acompaña */
 .ct-origen {
   display: inline-flex;

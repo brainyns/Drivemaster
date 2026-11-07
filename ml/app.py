@@ -34,10 +34,18 @@ def sigmoide(z):
     return 1.0 / (1.0 + math.exp(-z))
 
 def construir_vector_caracteristicas(data):
-    anio = float(data.get("anio_vehiculo", 2018))
-    antiguedad = max(0.0, 2026.0 - anio)
-    dist = float(data.get("distancia_km", 5.0))
+    tiene_anio = bool("anio_vehiculo" in data and data["anio_vehiculo"] is not None)
+    if tiene_anio:
+        anio = float(data["anio_vehiculo"])
+        antiguedad = max(0.0, 2026.0 - anio)
+    else:
+        anio = None
+        antiguedad = MEANS[0]
+
+    tiene_dist = bool("distancia_km" in data and data["distancia_km"] is not None)
+    dist = float(data["distancia_km"]) if tiene_dist else MEANS[1]
     log_dist = math.log(max(dist, 0.1) + 1.0)
+
     cant_rep = float(data.get("cantidad_repuestos", 2))
     num_t = float(data.get("num_tiendas", 1))
     m_rep = float(data.get("monto_repuestos", 0.0))
@@ -45,11 +53,18 @@ def construir_vector_caracteristicas(data):
     subtotal = m_rep + m_mo
     tot = float(data.get("total_con_iva") or round(subtotal * 1.19, 2))
     prop_rep = round(m_rep / tot, 3) if tot > 0 else 0.0
+
     tiempo = float(data.get("tiempo_respuesta_horas", 2.0))
     log_tiempo = math.log(max(tiempo, 0.1) + 1.0)
-    calif = float(data.get("calificacion_taller", 4.6))
-    rep_dist = calif / (log_dist + 0.5)
-    antig_precio = (antiguedad / 10.0) * (tot / 1000000.0)
+
+    # Calificación del taller: solo si tiene calificaciones reales
+    calif_raw = data.get("calificacion_taller")
+    num_calif = int(data.get("num_calificaciones", 0) or 0)
+    tiene_calif = bool(calif_raw is not None and float(calif_raw) > 0 and num_calif > 0)
+    calif = float(calif_raw) if tiene_calif else MEANS[11]
+
+    rep_dist = (calif / (log_dist + 0.5)) if (tiene_calif and tiene_dist) else MEANS[12]
+    antig_precio = ((antiguedad / 10.0) * (tot / 1000000.0)) if tiene_anio else MEANS[13]
 
     raw_nums = [
         antiguedad,
@@ -74,7 +89,7 @@ def construir_vector_caracteristicas(data):
         val_norm = (raw_nums[j] - MEANS[j]) / (STDS[j] if STDS[j] > 1e-9 else 1.0)
         x_vec.append(val_norm)
 
-    marca_req = str(data.get("marca_vehiculo", "Chevrolet")).strip().lower()
+    marca_req = str(data.get("marca_vehiculo", "")).strip().lower()
     for m in MARCAS:
         x_vec.append(1.0 if marca_req == m.lower() else 0.0)
 
@@ -83,15 +98,20 @@ def construir_vector_caracteristicas(data):
         x_vec.append(1.0 if servicio_req == s.upper() else 0.0)
 
     info_contexto = {
-        "antiguedad": antiguedad,
-        "distancia_km": dist,
+        "tiene_calificacion": tiene_calif,
+        "calificacion": round(calif, 1) if tiene_calif else None,
+        "num_calificaciones": num_calif,
+        "tiene_distancia": tiene_dist,
+        "distancia_km": dist if tiene_dist else None,
+        "tiene_anio": tiene_anio,
+        "anio": anio if tiene_anio else None,
+        "antiguedad": antiguedad if tiene_anio else None,
         "tiempo_horas": tiempo,
-        "calificacion": calif,
         "total_con_iva": tot,
         "monto_repuestos": m_rep,
         "monto_mano_obra": m_mo,
         "num_tiendas": num_t,
-        "marca": data.get("marca_vehiculo", "Chevrolet"),
+        "marca": data.get("marca_vehiculo"),
         "servicio": data.get("tipo_servicio", "MANTENIMIENTO_PREVENTIVO")
     }
 
@@ -127,9 +147,21 @@ def predecir_probabilidad(data):
     factores_favor = []
     factores_riesgo = []
 
+    # Filtrar contribuciones de variables sin datos reales
+    contribuciones_validas = []
+    for c in contribuciones:
+        nombre = c[0]
+        if ("calificacion" in nombre or "reputacion" in nombre) and not ctx["tiene_calificacion"]:
+            continue
+        if "distancia" in nombre and not ctx["tiene_distancia"]:
+            continue
+        if "antiguedad" in nombre and not ctx["tiene_anio"]:
+            continue
+        contribuciones_validas.append(c)
+
     # Ordenar por magnitud positiva y negativa
-    favor_sorted = sorted([c for c in contribuciones if c[1] > 0.05], key=lambda c: c[1], reverse=True)
-    riesgo_sorted = sorted([c for c in contribuciones if c[1] < -0.05], key=lambda c: c[1])
+    favor_sorted = sorted([c for c in contribuciones_validas if c[1] > 0.05], key=lambda c: c[1], reverse=True)
+    riesgo_sorted = sorted([c for c in contribuciones_validas if c[1] < -0.05], key=lambda c: c[1])
 
     def describir_factor(nombre, contrib, es_favor):
         impacto_pct = round(abs(contrib) * 10.0, 1)
@@ -142,9 +174,14 @@ def predecir_probabilidad(data):
                 return "Respuesta ágil", f"Respondiste en {ctx['tiempo_horas']:.1f}h (muy rápido). Maximiza el interés del cliente.", impacto_pct
             return "Tiempo de respuesta", f"Respuesta en {ctx['tiempo_horas']:.1f}h. Enviar antes de 4h eleva mucho la probabilidad.", impacto_pct
         if "antiguedad_x_precio" in nombre:
+            monto_fmt = f"${int(round(ctx['total_con_iva'])):,}".replace(",", ".")
+            if ctx['total_con_iva'] <= 0:
+                if es_favor:
+                    return "Excelente relación costo/vehículo", f"Presupuesto competitivo para un auto modelo {int(2026 - ctx['antiguedad'])}.", impacto_pct
+                return "Relación vehículo / costo", f"El valor estimado se percibe elevado para un vehículo de {int(ctx['antiguedad'])} años.", impacto_pct
             if es_favor:
-                return "Excelente relación costo/vehículo", f"Presupuesto muy proporcionado (${ctx['total_con_iva']:,.0f}) para un auto modelo {int(2026 - ctx['antiguedad'])}.", impacto_pct
-            return "Relación vehículo / costo", f"El valor (${ctx['total_con_iva']:,.0f}) se percibe elevado para un vehículo de {int(ctx['antiguedad'])} años.", impacto_pct
+                return "Excelente relación costo/vehículo", f"Presupuesto muy proporcionado ({monto_fmt}) para un auto modelo {int(2026 - ctx['antiguedad'])}.", impacto_pct
+            return "Relación vehículo / costo", f"El valor ({monto_fmt}) se percibe elevado para un vehículo de {int(ctx['antiguedad'])} años.", impacto_pct
         if "reputacion_vs_distancia" in nombre:
             if es_favor:
                 return "Balance reputación y cercanía", "La reputación del taller compensa con creces la distancia.", impacto_pct
@@ -154,9 +191,14 @@ def predecir_probabilidad(data):
                 return "Proximidad geográfica", f"El taller está a solo {ctx['distancia_km']:.1f} km del cliente.", impacto_pct
             return "Distancia geográfica", f"El cliente se encuentra a {ctx['distancia_km']:.1f} km de distancia.", impacto_pct
         if "monto_repuestos" in nombre or "monto_mano_obra" in nombre or "total" in nombre:
+            monto_fmt = f"${int(round(ctx['total_con_iva'])):,}".replace(",", ".")
+            if ctx['total_con_iva'] <= 0:
+                if es_favor:
+                    return "Precio competitivo", "Presupuesto atractivo y competitivo para el mercado.", impacto_pct
+                return "Costo del servicio", "El presupuesto total se percibe por encima de la media.", impacto_pct
             if es_favor:
-                return "Precio competitivo", f"Presupuesto de ${ctx['total_con_iva']:,.0f} atractivo y competitivo para el mercado.", impacto_pct
-            return "Costo del servicio", f"El presupuesto total de ${ctx['total_con_iva']:,.0f} se percibe por encima de la media.", impacto_pct
+                return "Precio competitivo", f"Presupuesto de {monto_fmt} atractivo y competitivo para el mercado.", impacto_pct
+            return "Costo del servicio", f"El presupuesto total de {monto_fmt} se percibe por encima de la media.", impacto_pct
         if "tiendas" in nombre:
             if es_favor:
                 return "Logística optimizada", "Repuestos centralizados en un único proveedor.", impacto_pct
@@ -205,15 +247,17 @@ def predecir_probabilidad(data):
     elif ctx["tiempo_horas"] > 6.0:
         recs.append("Procura responder en menos de 3 horas para asegurar una tasa de conversión óptima.")
         
-    if ctx["distancia_km"] > 18.0:
+    if ctx["tiene_distancia"] and ctx["distancia_km"] and ctx["distancia_km"] > 18.0:
         recs.append(f"El cliente está a {ctx['distancia_km']:.1f} km. Ofrece facilidades de agenda, vehículo sustituto o recogida.")
         
-    if ctx["antiguedad"] > 8 and ctx["total_con_iva"] > 800000.0:
+    if ctx["tiene_anio"] and ctx["antiguedad"] and ctx["antiguedad"] > 8 and ctx["total_con_iva"] > 800000.0:
         recs.append("Vehículo con más de 8 años: ofrece opciones de repuestos genéricos garantizados o financiación para evitar rechazo.")
     elif ctx["total_con_iva"] > 1500000.0:
         recs.append("Monto total elevado. Desglosa con claridad las garantías de repuestos y mano de obra para justificar la inversión.")
         
-    if ctx["calificacion"] < 4.2:
+    if not ctx["tiene_calificacion"]:
+        recs.append("Consigue tus primeras calificaciones de clientes para potenciar la confianza y tasa de aprobación.")
+    elif ctx["calificacion"] and ctx["calificacion"] < 4.2:
         recs.append("Promueve que clientes satisfechos califiquen tu taller; cada 0.2 estrellas adicionales aumentan tus conversiones.")
         
     if prob_aprob >= 0.70:
@@ -264,9 +308,26 @@ class MLRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path in ["/predict", "/api/predict"]:
             try:
-                content_length = int(self.headers.get("Content-Length", 0))
-                body = self.rfile.read(content_length).decode("utf-8")
+                te = self.headers.get("Transfer-Encoding", "").lower()
+                if "chunked" in te:
+                    chunks = []
+                    while True:
+                        line = self.rfile.readline().strip()
+                        if not line:
+                            break
+                        chunk_len = int(line, 16)
+                        if chunk_len == 0:
+                            self.rfile.readline()
+                            break
+                        chunks.append(self.rfile.read(chunk_len))
+                        self.rfile.readline()
+                    body = b"".join(chunks).decode("utf-8")
+                else:
+                    content_length = int(self.headers.get("Content-Length") or self.headers.get("content-length") or 0)
+                    body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else ""
+
                 data = json.loads(body) if body else {}
+                print(f"DEBUG PREDICT RECEIVED: {json.dumps(data)}", flush=True)
                 resultado = predecir_probabilidad(data)
                 self._set_headers(200)
                 self.wfile.write(json.dumps(resultado, ensure_ascii=False).encode("utf-8"))

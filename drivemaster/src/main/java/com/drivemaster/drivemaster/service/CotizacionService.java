@@ -2,7 +2,9 @@ package com.drivemaster.drivemaster.service;
 
 import com.drivemaster.drivemaster.dto.CotizacionDTO;
 import com.drivemaster.drivemaster.dto.CrearCotizacionRequest;
+import com.drivemaster.drivemaster.dto.FactorExplicativoDTO;
 import com.drivemaster.drivemaster.dto.OfertaRepuestoDTO;
+import com.drivemaster.drivemaster.dto.PrediccionAprobacionDTO;
 import com.drivemaster.drivemaster.dto.RespuestaCotizacionRequest;
 import com.drivemaster.drivemaster.model.Cotizacion;
 import com.drivemaster.drivemaster.model.CotizacionItem;
@@ -111,44 +113,126 @@ public class CotizacionService {
         Taller taller = tallerOperativo(correoTaller);
         OrdenServicio orden = ordenCotizable(taller, ordenId);
         Cotizacion cotizacion = armar(taller, orden, r);
-        CotizacionDTO dto = paraTaller(cotizacion);
-        dto.setPrediccionAprobacion(calcularPrediccion(taller, orden, cotizacion));
-        return dto;
+        cotizacion.setPrediccionAprobacion(calcularPrediccion(taller, orden, cotizacion));
+        return paraTaller(cotizacion);
     }
 
     private com.drivemaster.drivemaster.dto.PrediccionAprobacionDTO calcularPrediccion(Taller taller, OrdenServicio orden, Cotizacion cot) {
+        if (taller == null || orden == null || cot == null) return null;
         try {
-            Vehiculo vehiculo = orden.getVehiculoId() != null ? vehiculoService.obtenerEntidad(orden.getVehiculoId()) : null;
+            Vehiculo vehiculo = null;
+            if (orden.getVehiculoId() != null) {
+                try {
+                    vehiculo = vehiculoService.obtenerEntidad(orden.getVehiculoId());
+                } catch (Exception e) {
+                    log.debug("No se pudo obtener entidad vehículo {}: {}", orden.getVehiculoId(), e.getMessage());
+                }
+            }
+
+            String marca = null;
+            Integer anio = null;
+            if (vehiculo != null) {
+                if (vehiculo.getMarca() != null && !vehiculo.getMarca().isBlank()) marca = vehiculo.getMarca();
+                if (vehiculo.getAnio() != null && vehiculo.getAnio() > 1950) anio = vehiculo.getAnio();
+            } else if (orden.getVehiculoDescripcion() != null) {
+                String desc = orden.getVehiculoDescripcion().trim();
+                for (String m : List.of("Chevrolet", "Renault", "Mazda", "Kia", "Toyota", "Nissan", "Ford", "Hyundai")) {
+                    if (desc.toLowerCase().contains(m.toLowerCase())) {
+                        marca = m;
+                        break;
+                    }
+                }
+                java.util.regex.Matcher mat = java.util.regex.Pattern.compile("\\b(19\\d\\d|20\\d\\d)\\b").matcher(desc);
+                if (mat.find()) {
+                    try { anio = Integer.parseInt(mat.group(1)); } catch (Exception ignored) {}
+                }
+            }
+
+            double repuestos = (cot.getSubtotalRepuestos() != null ? cot.getSubtotalRepuestos() : 0.0)
+                    + (cot.getSubtotalRepuestosTaller() != null ? cot.getSubtotalRepuestosTaller() : 0.0);
+            double manoObra = cot.getSubtotalManoObra() != null ? cot.getSubtotalManoObra() : 0.0;
+            double totalConIva = cot.getTotal() != null ? cot.getTotal() : 0.0;
+
+            if (totalConIva <= 0 && cot.getItems() != null && !cot.getItems().isEmpty()) {
+                double rSum = 0;
+                double mSum = 0;
+                for (CotizacionItem it : cot.getItems()) {
+                    double precio = it.getPrecioUnitario() != null ? it.getPrecioUnitario() : 0.0;
+                    double sub = it.getSubtotal() != null ? it.getSubtotal()
+                            : (precio * (it.getHoras() != null ? it.getHoras() : (it.getCantidad() != null ? it.getCantidad() : 1)));
+                    if (CotizacionItem.REPUESTO.equals(it.getTipo())) rSum += sub;
+                    else mSum += sub;
+                }
+                repuestos = rSum;
+                manoObra = mSum;
+                totalConIva = Math.round((repuestos * 1.19 + manoObra * 1.19) * 100.0) / 100.0;
+            }
+
+            if (totalConIva <= 0) {
+                return null;
+            }
 
             java.util.Map<String, Object> p = new java.util.HashMap<>();
-            p.put("monto_repuestos", (cot.getSubtotalRepuestos() != null ? cot.getSubtotalRepuestos() : 0.0)
-                    + (cot.getSubtotalRepuestosTaller() != null ? cot.getSubtotalRepuestosTaller() : 0.0));
-            p.put("monto_mano_obra", cot.getSubtotalManoObra() != null ? cot.getSubtotalManoObra() : 0.0);
-            p.put("total_con_iva", cot.getTotal() != null ? cot.getTotal() : 0.0);
+            p.put("monto_repuestos", repuestos);
+            p.put("monto_mano_obra", manoObra);
+            p.put("total_con_iva", totalConIva);
 
             long cantRepuestos = cot.getItems() != null ? cot.getItems().stream().filter(i -> CotizacionItem.REPUESTO.equals(i.getTipo())).count() : 0;
             long numTiendas = cot.getItems() != null ? cot.getItems().stream().filter(i -> CotizacionItem.REPUESTO.equals(i.getTipo()) && i.getTiendaId() != null).map(CotizacionItem::getTiendaId).distinct().count() : 0;
 
             p.put("cantidad_repuestos", cantRepuestos);
             p.put("num_tiendas", numTiendas);
-            p.put("tipo_servicio", orden.getProductoNombre() != null ? orden.getProductoNombre() : "MANTENIMIENTO_PREVENTIVO");
-            p.put("marca_vehiculo", vehiculo != null && vehiculo.getMarca() != null ? vehiculo.getMarca() : "Chevrolet");
-            p.put("anio_vehiculo", vehiculo != null && vehiculo.getAnio() != null ? vehiculo.getAnio() : 2018);
-            p.put("distancia_km", 5.0); // distancia estimada
+            p.put("tipo_servicio", deducirTipoServicio(orden, cot));
+            if (marca != null) p.put("marca_vehiculo", marca);
+            if (anio != null) p.put("anio_vehiculo", anio);
+            if (orden.getDistanciaTallerKm() != null && orden.getDistanciaTallerKm() > 0) {
+                p.put("distancia_km", orden.getDistanciaTallerKm());
+            }
 
-            // Tiempo de respuesta: horas desde la creación de la orden hasta hoy
+            // Tiempo de respuesta: horas desde la creación de la orden hasta la emisión (o hasta hoy si aún no se emite)
             double horas = 2.0;
+            LocalDateTime referencia = cot.getFechaEmision() != null ? cot.getFechaEmision() : LocalDateTime.now();
             if (orden.getFechaCreacion() != null) {
-                horas = Math.max(0.5, java.time.Duration.between(orden.getFechaCreacion(), LocalDateTime.now()).toMinutes() / 60.0);
+                horas = Math.max(0.1, java.time.Duration.between(orden.getFechaCreacion(), referencia).toMinutes() / 60.0);
             }
             p.put("tiempo_respuesta_horas", Math.round(horas * 10.0) / 10.0);
-            p.put("calificacion_taller", taller.getRating() != null ? taller.getRating() : 4.6);
+
+            // Calificación del taller: SOLO si tiene calificaciones reales en la plataforma
+            if (taller.getCalificaciones() != null && taller.getCalificaciones() > 0 && taller.getRating() != null && taller.getRating() > 0) {
+                p.put("calificacion_taller", taller.getRating());
+                p.put("num_calificaciones", taller.getCalificaciones());
+            } else {
+                p.put("num_calificaciones", 0);
+            }
 
             return predictor.predecir(p);
         } catch (Exception e) {
             log.warn("No se pudo calcular predicción de cotización: {}", e.getMessage());
             return null;
         }
+    }
+
+    private String deducirTipoServicio(OrdenServicio orden, Cotizacion cot) {
+        StringBuilder sb = new StringBuilder();
+        if (orden.getProductoNombre() != null) sb.append(orden.getProductoNombre()).append(" ");
+        if (orden.getDiagnostico() != null) {
+            if (orden.getDiagnostico().getHallazgos() != null) sb.append(orden.getDiagnostico().getHallazgos()).append(" ");
+            if (orden.getDiagnostico().getFallas() != null) sb.append(String.join(" ", orden.getDiagnostico().getFallas())).append(" ");
+        }
+        if (cot.getItems() != null) {
+            for (CotizacionItem it : cot.getItems()) {
+                if (it.getDescripcion() != null) sb.append(it.getDescripcion()).append(" ");
+                if (it.getProductoNombre() != null) sb.append(it.getProductoNombre()).append(" ");
+            }
+        }
+        String texto = sb.toString().toLowerCase();
+        if (texto.contains("freno") || texto.contains("pastilla") || texto.contains("disco")) return "FRENOS";
+        if (texto.contains("suspens") || texto.contains("amortiguador") || texto.contains("espiral")) return "SUSPENSION";
+        if (texto.contains("electr") || texto.contains("bateria") || texto.contains("alternador") || texto.contains("arranque")) return "SISTEMA_ELECTRICO";
+        if (texto.contains("embrague") || texto.contains("clutch") || texto.contains("caja") || texto.contains("transmision")) return "EMBRAGUE_TRANSMISION";
+        if (texto.contains("motor") || texto.contains("afinamiento") || texto.contains("bujia") || texto.contains("valvula") || texto.contains("correa")) return "MOTOR_AFINAMIENTO";
+        if (texto.contains("diagnost") || texto.contains("escaner") || texto.contains("inspeccion")) return "DIAGNOSTICO_GENERAL";
+        return "MANTENIMIENTO_PREVENTIVO";
     }
 
     /** Emite la cotización: la guarda, pasa la orden a COTIZADA y envía el correo al cliente. */
@@ -166,6 +250,7 @@ public class CotizacionService {
         cotizacion.setTokenUsado(false);
         cotizacion.setFechaEmision(LocalDateTime.now());
         cotizacion.setEmitidaPor(taller.getNombre());
+        cotizacion.setPrediccionAprobacion(calcularPrediccion(taller, orden, cotizacion));
         cotizacion = cotizacionRepository.save(cotizacion);
 
         OrdenServicio guardada;
@@ -213,6 +298,15 @@ public class CotizacionService {
     private CotizacionDTO paraTaller(Cotizacion c) {
         CotizacionDTO dto = CotizacionDTO.completa(c);
         dto.setDiagnosticoPagado(tarifaDiagnosticoDe(c));
+
+        // Adjuntar predicción persistida o calcularla al vuelo si la cotización no la tenía guardada
+        if (dto.getPrediccionAprobacion() == null || esPrediccionInvalida(dto.getPrediccionAprobacion())) {
+            PrediccionAprobacionDTO calculada = calcularPrediccionParaCotizacionExistente(c);
+            if (calculada != null) {
+                dto.setPrediccionAprobacion(calculada);
+            }
+        }
+
         double manoObra = c.getSubtotalManoObra() != null ? c.getSubtotalManoObra() : 0;
         double ivaManoObra = c.getIvaManoObra() != null ? c.getIvaManoObra() : Math.round(manoObra * c.pctManoObra() / 100.0);
         // Sus repuestos son una venta suya: pagan comisión sobre el precio con IVA y le llegan con su IVA. La comisión es la
@@ -226,6 +320,37 @@ public class CotizacionService {
         dto.setComisionSeDescuenta(seDescuenta);
         dto.setRecibeTaller(manoObra + ivaManoObra + piezas + ivaPiezas - (seDescuenta ? comision : 0));
         return dto;
+    }
+
+    private boolean esPrediccionInvalida(PrediccionAprobacionDTO p) {
+        if (p == null) return true;
+        if (p.getFactoresFavor() == null || p.getFactoresFavor().isEmpty()) return true;
+        for (FactorExplicativoDTO f : p.getFactoresFavor()) {
+            if (f.getDescripcion() != null && (f.getDescripcion().contains("$0") || f.getDescripcion().contains("$ 0"))) {
+                return true;
+            }
+        }
+        if (p.getFactoresRiesgo() != null) {
+            for (FactorExplicativoDTO f : p.getFactoresRiesgo()) {
+                if (f.getDescripcion() != null && (f.getDescripcion().contains("$0") || f.getDescripcion().contains("$ 0"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private PrediccionAprobacionDTO calcularPrediccionParaCotizacionExistente(Cotizacion c) {
+        if (c == null || c.getTallerId() == null || c.getOrdenId() == null) return null;
+        try {
+            Taller taller = tallerService.obtenerEntidad(c.getTallerId());
+            OrdenServicio orden = ordenRepository.findById(c.getOrdenId()).orElse(null);
+            if (taller == null || orden == null) return null;
+            return calcularPrediccion(taller, orden, c);
+        } catch (Exception e) {
+            log.debug("No se pudo calcular predicción diferida para cotización {}: {}", c.getId(), e.getMessage());
+            return null;
+        }
     }
 
     // ─── Consulta con sesión ─────────────────────────────────────────────────

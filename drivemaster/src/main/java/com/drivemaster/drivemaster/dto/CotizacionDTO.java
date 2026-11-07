@@ -75,6 +75,7 @@ public class CotizacionDTO {
                 .ordenId(c.getOrdenId())
                 .comisionInformativa(c.getComisionInformativa())
                 .motivoRespuesta(c.getMotivoRespuesta())
+                .prediccionAprobacion(c.getPrediccionAprobacion())
                 .build();
     }
 

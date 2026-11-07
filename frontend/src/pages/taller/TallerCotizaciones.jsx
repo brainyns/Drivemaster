@@ -13,6 +13,7 @@ import Alerta from "../../components/ui/Alerta";
 import EstadoVacio from "../../components/ui/EstadoVacio";
 import Esqueleto from "../../components/ui/Esqueleto";
 import Icon from "../../components/public/Icon";
+import { porcentaje } from "../../utils/formato";
 import { FILTROS, VACIO, vencida, vencePronto, contarPorFiltro, filtrar, otrasVersiones } from "./filtrosCotizaciones";
 import "../../css/servicios.css";
 import "../../css/solicitud-servicio.css";
@@ -193,6 +194,19 @@ export default function TallerCotizaciones({ irA }) {
                   </span>
                   <span className="tc-fila__total ui-precio">{formatPrecio(c.total)}</span>
                   <span className="tc-fila__chips">
+                    {c.prediccionAprobacion && (
+                      <ChipEstado
+                        tono={
+                          c.prediccionAprobacion.nivelRiesgo === "BAJO"
+                            ? "ok"
+                            : c.prediccionAprobacion.nivelRiesgo === "ALTO"
+                            ? "error"
+                            : "aviso"
+                        }
+                      >
+                        {porcentaje(Math.round((c.prediccionAprobacion.probabilidadAprobacion || 0) * 100))} IA
+                      </ChipEstado>
+                    )}
                     <ChipEstado estado={vencida(c, ahora) ? "VENCIDA" : c.estado} catalogo={ESTADOS_COTIZACION_TALLER} />
                     {vencePronto(c, ahora) && <ChipEstado tono="aviso">Vence pronto</ChipEstado>}
                   </span>

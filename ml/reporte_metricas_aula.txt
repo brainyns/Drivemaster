@@ -5,35 +5,38 @@ Integrantes: Brainy Blanco Hernandez, Sebastian Ortega Zarza, Juan Andres Cantil
 ===========================================================================
 
 1. RESUMEN DE DATOS:
-   - Total de registros: 2500
-   - Tamaño conjunto de entrenamiento (80%): 2000
-   - Tamaño conjunto de prueba (20%):        500
-   - Tasa de aprobación en dataset:          50.08%
+   - Total de registros: 5000
+   - Tamaño conjunto de entrenamiento (80%): 4000
+   - Tamaño conjunto de prueba (20%):        1000
+   - Tasa de aprobación en dataset:          49.94%
 
 2. MÉTRICAS DE CLASIFICACIÓN (Evaluadas en conjunto de prueba independiente):
-   - Exactitud (Accuracy):  91.80%
-   - Precisión (Precision): 88.04%
-   - Sensibilidad (Recall): 96.81%
-   - Puntuación F1:         92.22%
-   - Área Bajo la Curva ROC (ROC-AUC): 0.9715
-   - Umbral de decisión calibrado:     0.40
+   - Exactitud (Accuracy):  80.20%
+   - Precisión (Precision): 75.47%
+   - Sensibilidad (Recall): 88.64%
+   - Puntuación F1:         81.53%
+   - Área Bajo la Curva ROC (ROC-AUC): 0.9019
+   - Brier Score (Calibración):        0.1279
+   - Umbral de decisión calibrado:     0.41
 
 3. MATRIZ DE CONFUSIÓN:
-   - Verdaderos Negativos (TN): 216
-   - Falsos Positivos    (FP): 33
-   - Falsos Negativos    (FN): 8
-   - Verdaderos Positivos (TP): 243
+   - Verdaderos Negativos (TN): 365
+   - Falsos Positivos    (FP): 142
+   - Falsos Negativos    (FN): 56
+   - Verdaderos Positivos (TP): 437
 
 4. COEFICIENTES DESTACADOS DEL MODELO (Importancia e Impacto de Variables):
-   - calificacion_taller      : +2.6879  (Favorece aprobación)
-   - antiguedad_x_precio      : -1.7562  (Favorece rechazo)
-   - log_tiempo_respuesta     : -1.6431  (Favorece rechazo)
-   - log_distancia            : -1.4305  (Favorece rechazo)
-   - monto_repuestos          : -1.3474  (Favorece rechazo)
-   - total_con_iva            : -1.1955  (Favorece rechazo)
-   - servicio_DIAGNOSTICO_GENERAL: -0.6376  (Favorece rechazo)
-   - monto_mano_obra          : -0.6221  (Favorece rechazo)
-   - num_tiendas              : -0.5824  (Favorece rechazo)
-   - servicio_EMBRAGUE_TRANSMISION: +0.5769  (Favorece aprobación)
-   - reputacion_vs_distancia  : -0.4329  (Favorece rechazo)
-   - marca_Ford               : -0.3594  (Favorece rechazo)
+   - antiguedad_x_precio      : -1.3421  (Favorece rechazo)
+   - servicio_DIAGNOSTICO_GENERAL: -1.0569  (Favorece rechazo)
+   - servicio_FRENOS          : +1.0268  (Favorece aprobación)
+   - calificacion_taller      : +1.0007  (Favorece aprobación)
+   - monto_repuestos          : -0.7789  (Favorece rechazo)
+   - servicio_MANTENIMIENTO_PREVENTIVO: -0.7433  (Favorece rechazo)
+   - total_con_iva            : -0.6853  (Favorece rechazo)
+   - servicio_EMBRAGUE_TRANSMISION: +0.5895  (Favorece aprobación)
+   - log_distancia            : -0.3971  (Favorece rechazo)
+   - servicio_MOTOR_AFINAMIENTO: +0.3799  (Favorece aprobación)
+   - log_tiempo_respuesta     : -0.2489  (Favorece rechazo)
+   - num_tiendas              : -0.2194  (Favorece rechazo)
+   - tiempo_respuesta_horas   : -0.1975  (Favorece rechazo)
+   - marca_Chevrolet          : -0.1775  (Favorece rechazo)

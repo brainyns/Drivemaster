@@ -76,9 +76,11 @@ public class PredictorCotizacionService {
     public PrediccionAprobacionDTO predecir(Map<String, Object> params) {
         // 1. Intentar llamar al microservicio Python
         try {
+            byte[] jsonBytes = objectMapper.writeValueAsBytes(params != null ? params : Map.of());
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(params, headers);
+            headers.setContentLength(jsonBytes.length);
+            HttpEntity<byte[]> entity = new HttpEntity<>(jsonBytes, headers);
 
             Map<?, ?> response = restTemplate.postForObject(PYTHON_ML_URL, entity, Map.class);
             if (response != null && response.containsKey("probabilidad_aprobacion")) {
@@ -148,10 +150,14 @@ public class PredictorCotizacionService {
                     .build();
         }
 
-        double anio = getDouble(params, "anio_vehiculo", 2018.0);
-        double antiguedad = Math.max(0.0, 2026.0 - anio);
-        double distKm = getDouble(params, "distancia_km", 5.0);
+        boolean tieneAnio = params.containsKey("anio_vehiculo") && params.get("anio_vehiculo") != null;
+        double anio = tieneAnio ? getDouble(params, "anio_vehiculo", 2018.0) : 2018.0;
+        double antiguedad = tieneAnio ? Math.max(0.0, 2026.0 - anio) : (means.size() > 0 ? means.get(0) : 9.97);
+
+        boolean tieneDist = params.containsKey("distancia_km") && params.get("distancia_km") != null;
+        double distKm = tieneDist ? getDouble(params, "distancia_km", 5.0) : (means.size() > 1 ? means.get(1) : 13.0);
         double logDist = Math.log(Math.max(distKm, 0.1) + 1.0);
+
         double cantRep = getDouble(params, "cantidad_repuestos", 2.0);
         double numTiendas = getDouble(params, "num_tiendas", 1.0);
         double montoRep = getDouble(params, "monto_repuestos", 0.0);
@@ -161,9 +167,12 @@ public class PredictorCotizacionService {
         double propRep = totalConIva > 0 ? (montoRep / totalConIva) : 0.0;
         double tiempoH = getDouble(params, "tiempo_respuesta_horas", 2.0);
         double logTiempo = Math.log(Math.max(tiempoH, 0.1) + 1.0);
-        double calif = getDouble(params, "calificacion_taller", 4.6);
-        double repDist = calif / (logDist + 0.5);
-        double antigPrecio = (antiguedad / 10.0) * (totalConIva / 1000000.0);
+
+        int numCalif = params.containsKey("num_calificaciones") ? ((Number) params.get("num_calificaciones")).intValue() : 0;
+        boolean tieneCalif = params.containsKey("calificacion_taller") && params.get("calificacion_taller") != null && numCalif > 0;
+        double calif = tieneCalif ? getDouble(params, "calificacion_taller", 4.6) : (means.size() > 11 ? means.get(11) : 4.34);
+        double repDist = (tieneCalif && tieneDist) ? (calif / (logDist + 0.5)) : (means.size() > 12 ? means.get(12) : 1.65);
+        double antigPrecio = tieneAnio ? ((antiguedad / 10.0) * (totalConIva / 1000000.0)) : (means.size() > 13 ? means.get(13) : 0.73);
 
         double[] rawNums = new double[]{
                 antiguedad,
@@ -230,13 +239,25 @@ public class PredictorCotizacionService {
         List<FactorExplicativoDTO> factoresRiesgo = new ArrayList<>();
 
         contribuciones.stream()
-                .filter(e -> e.getValue() > 0.05)
+                .filter(e -> {
+                    String k = e.getKey();
+                    if ((k.contains("calificacion") || k.contains("reputacion")) && !tieneCalif) return false;
+                    if (k.contains("distancia") && !tieneDist) return false;
+                    if (k.contains("antiguedad") && !tieneAnio) return false;
+                    return e.getValue() > 0.05;
+                })
                 .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                 .limit(3)
                 .forEach(e -> factoresFavor.add(armarFactorDTO(e.getKey(), e.getValue(), true, calif, tiempoH, distKm, totalConIva, antiguedad)));
 
         contribuciones.stream()
-                .filter(e -> e.getValue() < -0.05)
+                .filter(e -> {
+                    String k = e.getKey();
+                    if ((k.contains("calificacion") || k.contains("reputacion")) && !tieneCalif) return false;
+                    if (k.contains("distancia") && !tieneDist) return false;
+                    if (k.contains("antiguedad") && !tieneAnio) return false;
+                    return e.getValue() < -0.05;
+                })
                 .sorted(Comparator.comparingDouble(Map.Entry::getValue))
                 .limit(3)
                 .forEach(e -> factoresRiesgo.add(armarFactorDTO(e.getKey(), e.getValue(), false, calif, tiempoH, distKm, totalConIva, antiguedad)));
@@ -249,17 +270,19 @@ public class PredictorCotizacionService {
             recs.add("Procura responder en menos de 3 horas para asegurar una tasa de conversión óptima.");
         }
 
-        if (distKm > 18.0) {
+        if (tieneDist && distKm > 18.0) {
             recs.add("El cliente está a " + com.drivemaster.drivemaster.util.Dinero.decimal(distKm) + " km. Ofrece facilidades de agenda o inspección rápida.");
         }
 
-        if (antiguedad > 8 && totalConIva > 800000.0) {
+        if (tieneAnio && antiguedad > 8 && totalConIva > 800000.0) {
             recs.add("Vehículo de más de 8 años: ofrece alternativas de repuestos homologados o facilidades de pago.");
         } else if (totalConIva > 1500000.0) {
             recs.add("Monto total elevado. Detalla las garantías de repuestos y mano de obra para dar certidumbre al cliente.");
         }
 
-        if (calif < 4.2) {
+        if (!tieneCalif) {
+            recs.add("Consigue tus primeras calificaciones de clientes para potenciar la confianza y tasa de aprobación.");
+        } else if (calif < 4.2) {
             recs.add("Promueve que clientes satisfechos califiquen tu taller; cada 0.2 estrellas adicionales aumentan tus conversiones.");
         }
 

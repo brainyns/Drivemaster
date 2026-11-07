@@ -1,4 +1,5 @@
 import Etiqueta from "./Etiqueta";
+import AlertaPrediccionCotizacion from "./AlertaPrediccionCotizacion";
 import { ESTADOS_COTIZACION, formatFechaHora, formatPrecio } from "./estadosServicio";
 import { aclaracionUnidad, explicacionAdelanto, totalesCotizacion, totalLinea } from "./desgloseIva";
 import { esDelTaller, etiquetaOrigen } from "./reglasRepuestos";
@@ -106,6 +107,13 @@ export default function CotizacionDetalle({ cotizacion: c, mostrarComision = fal
       </p>
       {c.observaciones && <p className="ss-texto">Nota del taller: {c.observaciones}</p>}
       {c.motivoRespuesta && <p className="ss-meta">Comentario: {c.motivoRespuesta}</p>}
+
+      {/* Diagnóstico permanente del Modelo Predictivo con XAI para el taller */}
+      {mostrarComision && c.prediccionAprobacion && (
+        <div className="ct-prediccion-seccion">
+          <AlertaPrediccionCotizacion prediccion={c.prediccionAprobacion} estadoReal={c.estado} />
+        </div>
+      )}
     </div>
   );
 }

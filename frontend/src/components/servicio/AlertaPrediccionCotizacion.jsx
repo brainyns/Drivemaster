@@ -16,7 +16,7 @@ const RIESGO = {
   ALTO: { tono: "error", etiqueta: "Riesgo alto de rechazo" },
 };
 
-export default function AlertaPrediccionCotizacion({ prediccion }) {
+export default function AlertaPrediccionCotizacion({ prediccion, estadoReal }) {
   if (!prediccion) return null;
 
   const {
@@ -32,6 +32,14 @@ export default function AlertaPrediccionCotizacion({ prediccion }) {
 
   const listFavor = factoresFavor || factores_favor || [];
   const listRiesgo = factoresRiesgo || factores_riesgo || [];
+
+  // Si la predicción viene con valores en $0 (registro corrupto pendiente de saneamiento), ocultar la tarjeta
+  const tieneCeroCorrupto = [...listFavor, ...listRiesgo].some(
+    (f) => (f.descripcion || "").includes("$0") || (f.descripcion || "").includes("$ 0")
+  );
+  if (tieneCeroCorrupto) {
+    return null;
+  }
 
   const pctAprobacion = Math.round((probabilidadAprobacion || 0) * 100);
   const pctRechazo = Math.round((probabilidadRechazo || 0) * 100);
@@ -63,6 +71,33 @@ export default function AlertaPrediccionCotizacion({ prediccion }) {
         <span>Aprobación estimada: {porcentaje(pctAprobacion)}</span>
         <span>Probabilidad de rechazo: {porcentaje(pctRechazo)}</span>
       </div>
+
+      {/* Auditoría del Modelo: Predicción vs. Resultado Real */}
+      {estadoReal && ["APROBADA", "RECHAZADA", "EMITIDA", "VENCIDA"].includes(estadoReal) && (
+        <div className={`apc__auditoria apc__auditoria--${(estadoReal || "").toLowerCase()}`}>
+          <span className="apc__auditoria-titulo">
+            Auditoría de IA: Predicción vs. Resultado Real
+          </span>
+          <p className="apc__auditoria-texto">
+            {estadoReal === "APROBADA" && (
+              pctAprobacion >= 50
+                ? `El modelo estimó un ${porcentaje(pctAprobacion)} de éxito y el cliente efectivamente APROBÓ la cotización (Acierto predictivo de alta viabilidad comercial).`
+                : `El cliente APROBÓ la cotización superando el pronóstico conservador de ${porcentaje(pctAprobacion)} del modelo.`
+            )}
+            {estadoReal === "RECHAZADA" && (
+              pctAprobacion < 50
+                ? `El modelo anticipó oportunamente el riesgo (${porcentaje(pctRechazo)} de probabilidad de rechazo) y el cliente efectivamente RECHAZÓ la cotización.`
+                : `El cliente RECHAZÓ la cotización pese a la viabilidad proyectada de ${porcentaje(pctAprobacion)}.`
+            )}
+            {estadoReal === "EMITIDA" && (
+              `Cotización vigente: esperando respuesta del cliente con un ${porcentaje(pctAprobacion)} proyectado de aprobación.`
+            )}
+            {estadoReal === "VENCIDA" && (
+              `Cotización vencida por inactividad comercial: el cliente no respondió en el plazo estipulado.`
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Desglose de Factores Matemáticos (Explicabilidad XAI) */}
       {(listFavor.length > 0 || listRiesgo.length > 0) && (
