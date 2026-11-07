@@ -65,7 +65,8 @@ public class PredictorCotizacionService {
                     }
 
                     fallbackCargado = true;
-                    log.info("DriveMaster Predictor: Modelo XAI 2.0 en Java cargado exitosamente (umbral={})", optimalThreshold);
+                    log.info("DriveMaster Predictor: Modelo XAI 2.0 en Java cargado exitosamente (umbral={})",
+                            optimalThreshold);
                 }
             }
         } catch (Exception e) {
@@ -88,8 +89,12 @@ public class PredictorCotizacionService {
                 Double probRech = ((Number) response.get("probabilidad_rechazo")).doubleValue();
                 String pred = (String) response.get("prediccion");
                 String riesgo = (String) response.get("nivel_riesgo");
-                Double logit = response.containsKey("score_logit") ? ((Number) response.get("score_logit")).doubleValue() : null;
-                Double umbral = response.containsKey("umbral_decision") ? ((Number) response.get("umbral_decision")).doubleValue() : optimalThreshold;
+                Double logit = response.containsKey("score_logit")
+                        ? ((Number) response.get("score_logit")).doubleValue()
+                        : null;
+                Double umbral = response.containsKey("umbral_decision")
+                        ? ((Number) response.get("umbral_decision")).doubleValue()
+                        : optimalThreshold;
 
                 List<FactorExplicativoDTO> favor = parsearFactores(response.get("factores_favor"));
                 List<FactorExplicativoDTO> riesg = parsearFactores(response.get("factores_riesgo"));
@@ -118,7 +123,8 @@ public class PredictorCotizacionService {
 
     @SuppressWarnings("unchecked")
     private List<FactorExplicativoDTO> parsearFactores(Object obj) {
-        if (!(obj instanceof List<?> list)) return List.of();
+        if (!(obj instanceof List<?> list))
+            return List.of();
         List<FactorExplicativoDTO> resultado = new ArrayList<>();
         for (Object item : list) {
             if (item instanceof Map<?, ?> m) {
@@ -168,13 +174,18 @@ public class PredictorCotizacionService {
         double tiempoH = getDouble(params, "tiempo_respuesta_horas", 2.0);
         double logTiempo = Math.log(Math.max(tiempoH, 0.1) + 1.0);
 
-        int numCalif = params.containsKey("num_calificaciones") ? ((Number) params.get("num_calificaciones")).intValue() : 0;
-        boolean tieneCalif = params.containsKey("calificacion_taller") && params.get("calificacion_taller") != null && numCalif > 0;
-        double calif = tieneCalif ? getDouble(params, "calificacion_taller", 4.6) : (means.size() > 11 ? means.get(11) : 4.34);
-        double repDist = (tieneCalif && tieneDist) ? (calif / (logDist + 0.5)) : (means.size() > 12 ? means.get(12) : 1.65);
-        double antigPrecio = tieneAnio ? ((antiguedad / 10.0) * (totalConIva / 1000000.0)) : (means.size() > 13 ? means.get(13) : 0.73);
+        int numCalif = params.containsKey("num_calificaciones") ? ((Number) params.get("num_calificaciones")).intValue()
+                : 0;
+        boolean tieneCalif = params.containsKey("calificacion_taller") && params.get("calificacion_taller") != null
+                && numCalif > 0;
+        double calif = tieneCalif ? getDouble(params, "calificacion_taller", 4.6)
+                : (means.size() > 11 ? means.get(11) : 4.34);
+        double repDist = (tieneCalif && tieneDist) ? (calif / (logDist + 0.5))
+                : (means.size() > 12 ? means.get(12) : 1.65);
+        double antigPrecio = tieneAnio ? ((antiguedad / 10.0) * (totalConIva / 1000000.0))
+                : (means.size() > 13 ? means.get(13) : 0.73);
 
-        double[] rawNums = new double[]{
+        double[] rawNums = new double[] {
                 antiguedad,
                 distKm,
                 logDist,
@@ -241,49 +252,62 @@ public class PredictorCotizacionService {
         contribuciones.stream()
                 .filter(e -> {
                     String k = e.getKey();
-                    if ((k.contains("calificacion") || k.contains("reputacion")) && !tieneCalif) return false;
-                    if (k.contains("distancia") && !tieneDist) return false;
-                    if (k.contains("antiguedad") && !tieneAnio) return false;
+                    if ((k.contains("calificacion") || k.contains("reputacion")) && !tieneCalif)
+                        return false;
+                    if (k.contains("distancia") && !tieneDist)
+                        return false;
+                    if (k.contains("antiguedad") && !tieneAnio)
+                        return false;
                     return e.getValue() > 0.05;
                 })
                 .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                 .limit(3)
-                .forEach(e -> factoresFavor.add(armarFactorDTO(e.getKey(), e.getValue(), true, calif, tiempoH, distKm, totalConIva, antiguedad)));
+                .forEach(e -> factoresFavor.add(armarFactorDTO(e.getKey(), e.getValue(), true, calif, tiempoH, distKm,
+                        totalConIva, antiguedad)));
 
         contribuciones.stream()
                 .filter(e -> {
                     String k = e.getKey();
-                    if ((k.contains("calificacion") || k.contains("reputacion")) && !tieneCalif) return false;
-                    if (k.contains("distancia") && !tieneDist) return false;
-                    if (k.contains("antiguedad") && !tieneAnio) return false;
+                    if ((k.contains("calificacion") || k.contains("reputacion")) && !tieneCalif)
+                        return false;
+                    if (k.contains("distancia") && !tieneDist)
+                        return false;
+                    if (k.contains("antiguedad") && !tieneAnio)
+                        return false;
                     return e.getValue() < -0.05;
                 })
                 .sorted(Comparator.comparingDouble(Map.Entry::getValue))
                 .limit(3)
-                .forEach(e -> factoresRiesgo.add(armarFactorDTO(e.getKey(), e.getValue(), false, calif, tiempoH, distKm, totalConIva, antiguedad)));
+                .forEach(e -> factoresRiesgo.add(armarFactorDTO(e.getKey(), e.getValue(), false, calif, tiempoH, distKm,
+                        totalConIva, antiguedad)));
 
         // Recomendaciones
         List<String> recs = new ArrayList<>();
         if (tiempoH > 24.0) {
-            recs.add("El tiempo de respuesta fue mayor a 24 horas. Responder en las primeras 4 horas eleva la probabilidad significativamente.");
+            recs.add(
+                    "El tiempo de respuesta fue mayor a 24 horas. Responder en las primeras 4 horas eleva la probabilidad significativamente.");
         } else if (tiempoH > 6.0) {
             recs.add("Procura responder en menos de 3 horas para asegurar una tasa de conversión óptima.");
         }
 
         if (tieneDist && distKm > 18.0) {
-            recs.add("El cliente está a " + com.drivemaster.drivemaster.util.Dinero.decimal(distKm) + " km. Ofrece facilidades de agenda o inspección rápida.");
+            recs.add("El cliente está a " + com.drivemaster.drivemaster.util.Dinero.decimal(distKm)
+                    + " km. Ofrece facilidades de agenda o inspección rápida.");
         }
 
         if (tieneAnio && antiguedad > 8 && totalConIva > 800000.0) {
             recs.add("Vehículo de más de 8 años: ofrece alternativas de repuestos homologados o facilidades de pago.");
         } else if (totalConIva > 1500000.0) {
-            recs.add("Monto total elevado. Detalla las garantías de repuestos y mano de obra para dar certidumbre al cliente.");
+            recs.add(
+                    "Monto total elevado. Detalla las garantías de repuestos y mano de obra para dar certidumbre al cliente.");
         }
 
         if (!tieneCalif) {
-            recs.add("Consigue tus primeras calificaciones de clientes para potenciar la confianza y tasa de aprobación.");
+            recs.add(
+                    "Consigue tus primeras calificaciones de clientes para potenciar la confianza y tasa de aprobación.");
         } else if (calif < 4.2) {
-            recs.add("Promueve que clientes satisfechos califiquen tu taller; cada 0.2 estrellas adicionales aumentan tus conversiones.");
+            recs.add(
+                    "Promueve que clientes satisfechos califiquen tu taller; cada 0.2 estrellas adicionales aumentan tus conversiones.");
         }
 
         if (probAprob >= 0.70) {
@@ -304,7 +328,8 @@ public class PredictorCotizacionService {
                 .build();
     }
 
-    private FactorExplicativoDTO armarFactorDTO(String feat, double contrib, boolean esFavor, double calif, double tiempo, double dist, double total, double antig) {
+    private FactorExplicativoDTO armarFactorDTO(String feat, double contrib, boolean esFavor, double calif,
+            double tiempo, double dist, double total, double antig) {
         double imp = Math.round(Math.abs(contrib) * 100.0) / 10.0;
         String titulo;
         String desc;
@@ -327,11 +352,19 @@ public class PredictorCotizacionService {
                     : "El cliente se encuentra a " + dist + " km de distancia.";
         } else if (feat.contains("total") || feat.contains("monto")) {
             titulo = esFavor ? "Precio competitivo" : "Costo del servicio";
-            desc = esFavor ? "Presupuesto de " + com.drivemaster.drivemaster.util.Dinero.texto(com.drivemaster.drivemaster.util.Dinero.pesos(total)) + " COP atractivo y competitivo."
-                    : "El presupuesto de " + com.drivemaster.drivemaster.util.Dinero.texto(com.drivemaster.drivemaster.util.Dinero.pesos(total)) + " COP está por encima de la media.";
+            desc = esFavor
+                    ? "Presupuesto de "
+                            + com.drivemaster.drivemaster.util.Dinero
+                                    .texto(com.drivemaster.drivemaster.util.Dinero.pesos(total))
+                            + " COP atractivo y competitivo."
+                    : "El presupuesto de "
+                            + com.drivemaster.drivemaster.util.Dinero
+                                    .texto(com.drivemaster.drivemaster.util.Dinero.pesos(total))
+                            + " COP está por encima de la media.";
         } else {
             titulo = feat.replace("_", " ");
-            desc = esFavor ? "Factor que incrementa la probabilidad de aprobación." : "Factor que penaliza la probabilidad de aprobación.";
+            desc = esFavor ? "Factor que incrementa la probabilidad de aprobación."
+                    : "Factor que penaliza la probabilidad de aprobación.";
         }
 
         return FactorExplicativoDTO.builder()
@@ -350,7 +383,8 @@ public class PredictorCotizacionService {
 
     private double getDouble(Map<String, Object> map, String key, double defaultVal) {
         Object val = map.get(key);
-        if (val instanceof Number) return ((Number) val).doubleValue();
+        if (val instanceof Number)
+            return ((Number) val).doubleValue();
         return defaultVal;
     }
 }
