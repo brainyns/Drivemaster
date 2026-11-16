@@ -17,7 +17,7 @@ export default function ProductList({
     <>
       <div className="dm-results">
         <span>
-          <strong>{productos.length}</strong> repuestos disponibles
+          <strong>{productos.length}</strong> {productos.length === 1 ? "repuesto" : "repuestos"}
         </span>
         <span>{subtitulo || "Precios en COP"}</span>
       </div>

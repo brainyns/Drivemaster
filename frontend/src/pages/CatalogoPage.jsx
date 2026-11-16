@@ -171,6 +171,7 @@ export default function CatalogoPage({
     setTiendaActiva("");
     setMarcaActiva("");
     setPrecioElegido(null);
+    setSort("recommended");
   }, []);
 
   const filtrosActivos =
@@ -274,7 +275,9 @@ export default function CatalogoPage({
                   </h1>
                   <p className="dm-catalogo__lead">
                     {hayFiltrosDeVehiculo
-                      ? "Los compatibles salen primero y te avisamos si alguno no le sirve. Compara y elige con confianza."
+                      ? sort === "recommended"
+                        ? "Los compatibles salen primero y te avisamos si alguno no le sirve. Compara y elige con confianza."
+                        : "Ordenados por precio. Te avisamos si alguno no le sirve a tu vehículo."
                       : "Productos de las tiendas aliadas. Explora, compara y encuentra la solución correcta."}
                   </p>
                 </div>
@@ -358,7 +361,7 @@ export default function CatalogoPage({
                         titulo="No encontramos repuestos con estos filtros."
                         subtitulo={
                           precioMax < precioTecho
-                            ? `Hasta ${formatPrecio(precioMax)} COP`
+                            ? `Hasta $ ${formatPrecio(precioMax)} COP`
                             : "Precios en COP"
                         }
                         onProductoClick={abrirProducto}
