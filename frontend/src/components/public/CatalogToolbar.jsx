@@ -52,7 +52,7 @@ export default function CatalogToolbar({
         onChange={(e) => onSortChange(e.target.value)}
         aria-label="Ordenar repuestos"
       >
-        <option value="recommended">Recomendados</option>
+        <option value="recommended">Más relevantes</option>
         <option value="low">Menor precio</option>
         <option value="high">Mayor precio</option>
       </select>
