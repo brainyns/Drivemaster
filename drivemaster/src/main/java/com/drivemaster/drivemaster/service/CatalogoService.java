@@ -45,7 +45,7 @@ public class CatalogoService {
 
     static final int MAX_COINCIDENCIAS = 2000;
     static final int TAMANIO_MAX = 60;
-    static final int TAMANIO_DEFECTO = 24;
+    static final int TAMANIO_DEFECTO = 20;
     static final int STOCK_VISIBLE_MAX = 20;
     private static final int MIN_TEXTO = 2;
 

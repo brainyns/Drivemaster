@@ -317,8 +317,9 @@ class CatalogoServiceTest {
         PaginaCatalogoDTO pag2 = service.buscar(null, null, null, null, null, null, "precio_asc", 2, 2);
         assertEquals(List.of("p5"), pag2.items().stream().map(ProductoCatalogoDTO::id).toList());
 
-        // Tamaño fuera de rango se acota
+        // Tamaño fuera de rango se acota y por defecto son 20 productos
         assertEquals(60, service.buscar(null, null, null, null, null, null, null, 0, 9999).tamanio());
+        assertEquals(20, service.buscar(null, null, null, null, null, null, null, 0, null).tamanio());
     }
 
     @Test

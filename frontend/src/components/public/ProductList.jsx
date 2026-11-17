@@ -8,16 +8,18 @@ import "../../css/product-list.css";
  */
 export default function ProductList({
   productos,
+  total,
   titulo = "CATÁLOGO",
   subtitulo,
   onProductoClick,
   onRestablecer,
 }) {
+  const totalItems = total !== undefined ? total : productos.length;
   return (
     <>
       <div className="dm-results">
         <span>
-          <strong>{productos.length}</strong> {productos.length === 1 ? "repuesto" : "repuestos"}
+          <strong>{totalItems}</strong> {totalItems === 1 ? "repuesto" : "repuestos"}
         </span>
         <span>{subtitulo || "Precios en COP"}</span>
       </div>
@@ -28,7 +30,7 @@ export default function ProductList({
         ))}
       </div>
 
-      {!productos.length && (
+      {!totalItems && (
         <div className="dm-empty">
           <Icon name="search" size={35} />
           <h3>{titulo}</h3>

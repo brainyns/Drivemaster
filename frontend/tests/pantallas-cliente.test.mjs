@@ -144,3 +144,10 @@ test("Catálogo: tiendas aliadas, envío con punto de miles legible y fotos pare
   assert.match(css, /\.dm-card__picture \{[^}]*width: 100%;[^}]*background: #fff;/);
   assert.match(css, /\.dm-card__image \{[^}]*object-fit: contain;/);
 });
+
+test("Catálogo: paginación de 20 productos con componente compartido Paginacion", () => {
+  const catalogo = leer("../src/pages/CatalogoPage.jsx");
+  assert.ok(catalogo.includes("<Paginacion"), "CatalogoPage usa el componente Paginacion");
+  assert.ok(catalogo.includes("paginar(") && catalogo.includes("usePaginacion("), "CatalogoPage usa paginar y usePaginacion");
+  assert.ok(catalogo.includes("POR_PAGINA"), "CatalogoPage usa POR_PAGINA");
+});

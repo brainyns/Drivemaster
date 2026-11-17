@@ -11,6 +11,8 @@ import CatalogToolbar from "../components/public/CatalogToolbar";
 import CatalogFilters from "../components/public/CatalogFilters";
 import ProductList from "../components/public/ProductList";
 import ProductDetail from "../components/public/ProductDetail";
+import Paginacion from "../components/ui/Paginacion";
+import { paginar, usePaginacion, POR_PAGINA } from "../components/ui/reglasPaginacion";
 import Footer from "../components/public/Footer";
 import Icon from "../components/public/Icon";
 import Esqueleto from "../components/ui/Esqueleto";
@@ -117,6 +119,16 @@ export default function CatalogoPage({
       return true;
     }),
     [consultados, marcaActiva, precioMax]
+  );
+
+  const clavePaginacion = useMemo(
+    () => [q, ciudadActiva, tiendaActiva, categoriaActiva, marcaActiva, precioMax, vehiculoId, sort].join("|"),
+    [q, ciudadActiva, tiendaActiva, categoriaActiva, marcaActiva, precioMax, vehiculoId, sort]
+  );
+  const pag = usePaginacion(filtrados.length, clavePaginacion, POR_PAGINA);
+  const productosPagina = useMemo(
+    () => paginar(filtrados, pag.pagina, pag.porPagina),
+    [filtrados, pag.pagina, pag.porPagina]
   );
 
   /* ── Vistas: el mockup es un SPA de dos páginas (home | catalog) ────── */
@@ -357,7 +369,8 @@ export default function CatalogoPage({
                   ) : (
                     <>
                       <ProductList
-                        productos={filtrados}
+                        productos={productosPagina}
+                        total={filtrados.length}
                         titulo="No encontramos repuestos con estos filtros."
                         subtitulo={
                           precioMax < precioTecho
@@ -366,6 +379,14 @@ export default function CatalogoPage({
                         }
                         onProductoClick={abrirProducto}
                         onRestablecer={limpiarFiltros}
+                      />
+                      <Paginacion
+                        pagina={pag.pagina}
+                        total={filtrados.length}
+                        porPagina={pag.porPagina}
+                        onCambiar={pag.cambiar}
+                        etiqueta="Páginas del catálogo"
+                        ancla="dm-catalogo"
                       />
                       <p className="dm-disclaimer">
                         Los precios ya incluyen IVA. Las existencias y el envío los define cada tienda (el envío se elige al pagar);
