@@ -65,6 +65,12 @@ public class AsistenteTiendaIA {
                 List.of("Nombre, marca y referencia que escribiste", "Lista de categorías del formulario"));
     }
 
+    /** Asistente del TALLER: mismo workflow, modo "taller". El contexto ya viene armado solo con datos de ese taller. */
+    public Resultado conversarTaller(Map<String, Object> contextoTaller, String mensaje, List<Map<String, String>> historial,
+                                     List<String> datos) {
+        return llamar("taller", mensaje, historial, contextoTaller, datos);
+    }
+
     private Resultado llamar(String modo, String mensaje, List<Map<String, String>> historial, Map<String, Object> ctx,
                              List<String> datos) {
         long inicio = System.currentTimeMillis();
