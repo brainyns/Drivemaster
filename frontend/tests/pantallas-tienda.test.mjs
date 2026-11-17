@@ -332,7 +332,11 @@ test("Asistente: cabecera compartida, sugerencias en chips y pestañas que se mu
   assert.ok(pagina.includes("<EncabezadoPagina") && pagina.includes('className="ui-chip" onClick={() => enviar(s)}'));
   assert.ok(pagina.includes("tabIndex={pestana === p.id ? 0 : -1} onKeyDown={mover}"), "patrón de pestañas de ARIA");
   assert.ok(!pagina.includes("adm-"));
-  assert.ok(pagina.includes("preguntarAsistente(token, limpia, historial)"));
+  assert.ok(pagina.includes("t.preguntar(token, limpia, historial)"));
+  // La misma página es el asistente del taller: su propio servicio y su entrada en el panel del taller
+  assert.ok(pagina.includes("preguntar: preguntarAsistente,") && pagina.includes("preguntar: preguntarAsistenteTaller,"));
+  assert.ok(leer("../src/pages/PanelTaller.jsx").includes('<AsistenteTienda token={token} tipo="taller"'));
+  assert.ok(leer("../src/services/informesTallerService.js").includes('"/asistente"'));
 });
 
 test("Logo de la tienda: el mismo componente y las mismas reglas que el del taller, en Mi tienda y en Vendido por", async () => {

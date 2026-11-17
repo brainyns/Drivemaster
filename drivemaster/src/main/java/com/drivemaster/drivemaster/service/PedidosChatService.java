@@ -34,7 +34,7 @@ public class PedidosChatService {
 
     static final String SIN_DETALLE = "no se puede dar el detalle por el chat; el cliente debe revisarlo en Mis compras.";
     // shortcut: lista de palabras, no atrapa todo intento de manipular al modelo; si hay abuso real, quitar la nota de despacho del resumen.
-    private static final Pattern SOSPECHOSO = Pattern.compile(
+    static final Pattern SOSPECHOSO = Pattern.compile(
             "(?i)ignor|instrucci|prompt|\\bsystem\\b|asistente|olvida|\\bdi que\\b|\\bdile\\b|\\{\\{|[<>]|https?://");
     private static final int MAX_TEXTO = 100;
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { preguntarAsistente } from "../services/informesTiendaService";
+import { preguntarAsistenteTaller } from "../services/informesTallerService";
 import { miTienda } from "../services/tiendaService";
 import EncabezadoPagina from "../components/ui/EncabezadoPagina";
 import ChipEstado from "../components/ui/ChipEstado";
@@ -8,15 +9,43 @@ import "../css/asistente-tienda.css";
 import { textoError } from "../utils/errores";
 import { decimal } from "../utils/formato";
 
-const SUGERENCIAS = [
-  "¿Cómo van mis ventas frente al mes pasado?",
-  "¿Qué debo reponer y cuánto?",
-  "¿A qué proveedor le compro más barato?",
-  "¿Qué pedidos despacho primero?",
-  "¿Cuánto me van a pagar y cuándo?",
-  "¿Qué productos no se venden hace 3 meses?",
-  "¿Qué producto me deja más ganancia?",
-];
+// La misma página sirve a la tienda y al taller: solo cambian los textos y a qué servicio se pregunta.
+const TIPOS = {
+  tienda: {
+    negocio: "tu tienda",
+    clase: "ss-panel--tienda as-root",
+    preguntar: preguntarAsistente,
+    descripcion: "Pregunta por tus ventas, inventario, pedidos y dinero. La IA solo lee y sugiere: nada cambia sin ti.",
+    ejemplo: "Ej.: ¿qué producto se vende más y cuánto stock me queda?",
+    aviso: "Lo escribe una IA con los datos de tu tienda: revisa las cifras antes de comprar o cambiar precios.",
+    sugerencias: [
+      "¿Cómo van mis ventas frente al mes pasado?",
+      "¿Qué debo reponer y cuánto?",
+      "¿A qué proveedor le compro más barato?",
+      "¿Qué pedidos despacho primero?",
+      "¿Cuánto me van a pagar y cuándo?",
+      "¿Qué productos no se venden hace 3 meses?",
+      "¿Qué producto me deja más ganancia?",
+    ],
+  },
+  taller: {
+    negocio: "tu taller",
+    clase: "as-root",
+    preguntar: preguntarAsistenteTaller,
+    descripcion: "Pregunta por tu agenda, solicitudes, ingresos e inventario. La IA solo lee y sugiere: nada cambia sin ti.",
+    ejemplo: "Ej.: ¿qué citas tengo mañana y qué piezas me faltan?",
+    aviso: "Lo escribe una IA con los datos de tu taller: revisa las cifras antes de comprar, cotizar o cambiar precios.",
+    sugerencias: [
+      "¿Qué tengo agendado esta semana?",
+      "¿Cuántas solicitudes esperan mi respuesta?",
+      "¿Cómo van mis ingresos frente al mes pasado?",
+      "¿Qué piezas tengo con stock bajo?",
+      "¿Qué piezas estoy vendiendo en pérdida?",
+      "¿Qué dicen mis clientes en las calificaciones?",
+      "¿Cuánto me falta por cobrar?",
+    ],
+  },
+};
 
 const PESTANAS = [
   { id: "seguridad", etiqueta: "Seguridad" },
@@ -27,7 +56,7 @@ const PESTANAS = [
 const num = (n) => new Intl.NumberFormat("es-CO").format(n || 0);
 
 /** Qué pasó en el sistema para responder el último mensaje: seguridad, modelo y datos consultados. */
-function DetrasDeEscena({ detras }) {
+function DetrasDeEscena({ detras, negocio }) {
   const [pestana, setPestana] = useState("seguridad");
 
   // Pestañas con el patrón de teclado de ARIA: flechas, Inicio y Fin mueven el foco y la selección
@@ -58,7 +87,7 @@ function DetrasDeEscena({ detras }) {
       </div>
       <div role="tabpanel" id={`as-tabpanel-${pestana}`} aria-labelledby={`as-tab-${pestana}`} className="as-detras__cuerpo" tabIndex={0}>
         {!detras ? (
-          <p className="as-tenue">Envía un mensaje para ver aquí qué datos se usaron y cómo se protegió tu tienda.</p>
+          <p className="as-tenue">Envía un mensaje para ver aquí qué datos se usaron y cómo se protegió {negocio}.</p>
         ) : pestana === "seguridad" ? (
           <ul className="as-lista as-lista--ok">{detras.seguridad.map((s) => <li key={s}>{s}</li>)}</ul>
         ) : pestana === "modelo" ? (
@@ -82,8 +111,10 @@ function DetrasDeEscena({ detras }) {
 /**
  * Asistente de la TIENDA: preguntas en lenguaje natural sobre sus propios datos, con un panel que muestra qué pasó
  * detrás de cada respuesta. Solo lee y sugiere; el backend toma la tienda de la sesión.
+ * Con tipo="taller" es el asistente del taller (el panel del taller ya tiene su nombre y lo pasa en nombreNegocio).
  */
-export default function AsistenteTienda({ token }) {
+export default function AsistenteTienda({ token, tipo = "tienda", nombreNegocio }) {
+  const t = TIPOS[tipo];
   const [tienda, setTienda] = useState(null);
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState("");
@@ -93,22 +124,23 @@ export default function AsistenteTienda({ token }) {
   const campo = useRef(null);
 
   useEffect(() => {
+    if (tipo !== "tienda") return undefined;
     let vivo = true;
-    miTienda(token).then((t) => { if (vivo) setTienda(t); }).catch(() => {});
+    miTienda(token).then((datos) => { if (vivo) setTienda(datos); }).catch(() => {});
     return () => { vivo = false; };
-  }, [token]);
+  }, [token, tipo]);
 
   useEffect(() => { fin.current?.scrollIntoView({ block: "nearest" }); }, [mensajes, pensando]);
 
   async function enviar(pregunta) {
     const limpia = pregunta.trim();
     if (!limpia || pensando) return;
-    const historial = mensajes.filter((m) => !m.error).slice(-6).map(({ rol, texto: t }) => ({ rol, texto: t }));
+    const historial = mensajes.filter((m) => !m.error).slice(-6).map((m) => ({ rol: m.rol, texto: m.texto }));
     setMensajes((m) => [...m, { rol: "usuario", texto: limpia }]);
     setTexto("");
     setPensando(true);
     try {
-      const r = await preguntarAsistente(token, limpia, historial);
+      const r = await t.preguntar(token, limpia, historial);
       setMensajes((m) => [...m, { rol: "asistente", texto: r.respuesta, error: r.error }]);
       setDetras(r.detras);
     } catch (e) {
@@ -119,12 +151,11 @@ export default function AsistenteTienda({ token }) {
     }
   }
 
-  const nombre = tienda?.nombre || "tu tienda";
+  const nombre = nombreNegocio || tienda?.nombre || t.negocio;
 
   return (
-    <div className="ss-panel--tienda as-root">
-      <EncabezadoPagina titulo="Asistente de tu tienda"
-        descripcion="Pregunta por tus ventas, inventario, pedidos y dinero. La IA solo lee y sugiere: nada cambia sin ti." />
+    <div className={t.clase}>
+      <EncabezadoPagina titulo={`Asistente de ${t.negocio}`} descripcion={t.descripcion} />
 
       <div className="as-rejilla">
         <section className="as-panel as-chat" aria-labelledby="as-chat-titulo">
@@ -137,7 +168,7 @@ export default function AsistenteTienda({ token }) {
             <div className="as-inicio">
               <p className="as-tenue">Prueba con una de estas preguntas:</p>
               <ul className="as-sugerencias ui-filtros">
-                {SUGERENCIAS.map((s) => <li key={s}><button type="button" className="ui-chip" onClick={() => enviar(s)}>{s}</button></li>)}
+                {t.sugerencias.map((s) => <li key={s}><button type="button" className="ui-chip" onClick={() => enviar(s)}>{s}</button></li>)}
               </ul>
             </div>
           ) : (
@@ -147,7 +178,7 @@ export default function AsistenteTienda({ token }) {
                   <span className="as-solo-lectores">{m.rol === "usuario" ? "Tú:" : "Asistente:"}</span>{m.texto}
                 </li>
               ))}
-              {pensando && <li className="as-msg is-asistente is-pensando" role="status">Revisando los datos de tu tienda…</li>}
+              {pensando && <li className="as-msg is-asistente is-pensando" role="status">Revisando los datos de {t.negocio}…</li>}
               <li ref={fin} aria-hidden="true" />
             </ol>
           )}
@@ -156,16 +187,16 @@ export default function AsistenteTienda({ token }) {
             <label htmlFor="as-campo" className="ui-field__label">Mensaje</label>
             <div className="as-form__fila">
               <input id="as-campo" ref={campo} className="ui-field__input" value={texto} maxLength={500} autoComplete="off"
-                placeholder="Ej.: ¿qué producto se vende más y cuánto stock me queda?" onChange={(e) => setTexto(e.target.value)} />
+                placeholder={t.ejemplo} onChange={(e) => setTexto(e.target.value)} />
               <button type="submit" className="ui-btn ui-btn--primario ui-btn--grande" disabled={pensando || !texto.trim()} aria-busy={pensando}>
                 {pensando ? "Pensando…" : "Enviar"}
               </button>
             </div>
           </form>
-          <p className="as-tenue as-aviso">Lo escribe una IA con los datos de tu tienda: revisa las cifras antes de comprar o cambiar precios.</p>
+          <p className="as-tenue as-aviso">{t.aviso}</p>
         </section>
 
-        <DetrasDeEscena detras={detras} />
+        <DetrasDeEscena detras={detras} negocio={t.negocio} />
       </div>
     </div>
   );

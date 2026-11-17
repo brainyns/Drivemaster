@@ -71,6 +71,7 @@ const MENU_TALLER = [
   { key: "taller-movimientos", label: "Movimientos", icon: "movimientos" },
   { key: "taller-mitaller",    label: "Mi taller",   icon: "garaje" },
   { key: "taller-informes",     label: "Informes",    icon: "reportes" },
+  { key: "taller-asistente",   label: "Asistente",   icon: "asistente" },
 ];
 
 // Tienda del marketplace: sus pedidos, su catálogo y los movimientos de su inventario.

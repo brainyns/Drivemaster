@@ -9,6 +9,7 @@ import TallerInicio from "./taller/TallerInicio";
 import TallerMiTaller from "./taller/TallerMiTaller";
 import TallerCotizaciones from "./taller/TallerCotizaciones";
 import TallerInformes from "./taller/TallerInformes";
+import AsistenteTienda from "./AsistenteTienda";
 import TallerInventario from "./taller/TallerInventario";
 import TallerMovimientos from "./taller/TallerMovimientos";
 import TallerAgenda from "./taller/TallerAgenda";
@@ -128,6 +129,7 @@ export default function PanelTaller({ seccion = "inicio", param = null, irA, onR
         {seccion === "agenda" && <TallerAgenda taller={taller} irA={irA} />}
         {seccion === "cotizaciones" && <TallerCotizaciones irA={irA} />}
         {seccion === "informes" && <TallerInformes />}
+        {seccion === "asistente" && <AsistenteTienda token={token} tipo="taller" nombreNegocio={taller?.nombre} />}
         {seccion === "inventario" && <TallerInventario onComprar={onComprarInventario} irA={irA} />}
         {seccion === "movimientos" && <TallerMovimientos key={destino.abrir || "movimientos"} irA={irA} piezaInicial={destino.abrir} />}
         {seccion === "mitaller" && (
